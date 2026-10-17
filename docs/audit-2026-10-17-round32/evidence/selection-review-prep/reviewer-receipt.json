@@ -1,0 +1,85 @@
+{
+  "frozenUTC": "2026-10-17T12:12:14.434530+00:00",
+  "formalBaselineProvidedByRoot": "4be4016b8661c6a10c60f4eb0f218552b4b7c5d0",
+  "peerOriginalPrepParent": "4dad999bd43b776995b5d212dde275dab86a1ddd",
+  "selfExcluded": true,
+  "artifactCount": 12,
+  "files": [
+    {
+      "path": "consumer-initial-pins.json",
+      "bytes": 2463,
+      "sha256": "d9f50f0326a9553e150e67532b51f350f36dc58a63821eca83497780c34a9abe"
+    },
+    {
+      "path": "history-initial-pins.json",
+      "bytes": 1335,
+      "sha256": "74d66d4656d49c9e6b13c0a3e08908eb46e3cb3ce7086ac56da7c1296886810a"
+    },
+    {
+      "path": "history-method.py",
+      "bytes": 3307,
+      "sha256": "4d44d4903135c4747d33565f51e3abfbef6c2e8163bf5d50077f70a9ad1cc42f"
+    },
+    {
+      "path": "history.json",
+      "bytes": 628116,
+      "sha256": "f77f57fcab88e23dcf7c2ef4a056d523bb23d2f26fbce3eec4fe18f3521b3f91"
+    },
+    {
+      "path": "initial-pins.json",
+      "bytes": 1960,
+      "sha256": "0ea3048d01c1cd1126202b6ff7d0bf26dea9552dd68925354ac270b4d2ddd340"
+    },
+    {
+      "path": "prep-finalizer.first.exit.json",
+      "bytes": 887,
+      "sha256": "b8ccafbfd84098de68046a05f771b0aff460f91dea5352628ecb7651afbe9263"
+    },
+    {
+      "path": "raw-api-initial-pin.json",
+      "bytes": 306,
+      "sha256": "c65ff9860115c560fc359e4aa777b6f91eff5c076c26ded7fec5bc1ca3e47454"
+    },
+    {
+      "path": "raw-ipc-initial-pin.json",
+      "bytes": 302,
+      "sha256": "44339cc627bef72ee71b5593e5bd10735ed34558cc014196e3d45ee266f66383"
+    },
+    {
+      "path": "raw-reader-initial-pin.json",
+      "bytes": 316,
+      "sha256": "117b5737affb9dda9425d2e19421f961c590920e9d96ce4cfac74b9ff8c2ae60"
+    },
+    {
+      "path": "review.md",
+      "bytes": 4894,
+      "sha256": "4cc019dbedc7949c72d2a8dff021322ed1cfd4a255ef8343fe8818db72a67b11"
+    },
+    {
+      "path": "source-manifest.json",
+      "bytes": 23427,
+      "sha256": "f893d9a0d9c2bc0f0bbc8321659ba5b015dcad7f03d09497563696092e5e1082"
+    },
+    {
+      "path": "transcript-initial-pin.json",
+      "bytes": 303,
+      "sha256": "49f16f787a3bb803916724c5594a827d018a453b7e9e827449235b51d2109007"
+    }
+  ],
+  "classification": {
+    "formal": 0,
+    "candidate": 0,
+    "newRelated": 0
+  },
+  "semanticSourceCount": 16,
+  "productTestLines": 1709,
+  "priorReportLines": 86,
+  "hashOnlySources": 3,
+  "productAttempts": 0,
+  "testsExecuted": 0,
+  "gitCommands": 0,
+  "runtimePasses": 0,
+  "runtimeExpectations": 0,
+  "metadataFirstFailure": "prep-finalizer.first.exit.json",
+  "sourceSemanticRetry": false
+}

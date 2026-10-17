@@ -1,0 +1,17 @@
+{
+  "baseline": "4be4016b8661c6a10c60f4eb0f218552b4b7c5d0",
+  "runs": [],
+  "totals": {
+    "productAttempts": 0,
+    "passedTests": 0,
+    "expectations": 0,
+    "productReruns": 0
+  },
+  "mode": "Static ordinary producer/consumer contracts only; no model, real session/fork, attachment, browser or native execution.",
+  "validations": [
+    "evidence/selection-validation.json",
+    "evidence/taskparse-validation.json",
+    "evidence/review-taskparse-validation.json",
+    "evidence/review-selection-source-manifest.json"
+  ]
+}

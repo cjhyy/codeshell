@@ -1,3 +1,4 @@
+import type { TurnDiffSnapshot } from "@cjhyy/code-shell-core";
 import type { FileEditEntry, Message, SessionFileDiff, ToolMessage } from "../types";
 import {
   composeFileEdits,
@@ -210,6 +211,7 @@ function entryFor(t: ToolMessage): ToolEditChange | ToolEditChange[] | null {
     };
   }
   if (NOTEBOOK_TOOLS.has(name)) {
+    if (args.action === "read") return null;
     const oldText = stringOf(args.old_source);
     const newText = stringOf(args.new_source);
     return {
@@ -242,7 +244,7 @@ export function aggregateFileChanges(messages: Message[]): FileEditEntry[] | nul
 
 export function aggregateFileChangeSummary(
   messages: Message[],
-): { files: FileEditEntry[]; sessionDiffs: SessionFileDiff[] } | null {
+): { files: FileEditEntry[]; sessionDiffs: SessionFileDiff[]; unresolvedPaths?: string[] } | null {
   // Find the last REAL user turn. Engine-injected user messages (step-gap
   // steering / goal wakeup continuation, marked injected) are transparent: a
   // goal-driven task spans many engine.run boundaries — each inserts an injected
@@ -260,6 +262,56 @@ export function aggregateFileChangeSummary(
   if (start < 0) return null;
   const boundary = messages[start];
   const boundaryClientMessageId = boundary.kind === "user" ? boundary.clientMessageId : undefined;
+
+  // Execution snapshots replace previews for every tracked path, including
+  // paths absent from files because the turn restored their original content.
+  const snapshots = new Map<string, TurnDiffSnapshot>();
+  const snapshotCapturedAt = new Map<string, number | undefined>();
+  for (const message of messages.slice(start + 1)) {
+    if (message.kind === "system" && message.turnDiff) {
+      const snapshot = message.turnDiff;
+      if (
+        boundary.kind === "user" &&
+        boundary.sourceEventId &&
+        snapshot.turnId !== boundary.sourceEventId
+      )
+        continue;
+      snapshots.set(snapshot.turnId, snapshot);
+      snapshotCapturedAt.set(snapshot.turnId, message.turnDiffCapturedAt);
+    }
+  }
+  const trackedPaths = new Set<string>();
+  const trackedToolCallIds = new Set<string>();
+  const capturedAtByPath = new Map<string, number | undefined>();
+  for (const snapshot of snapshots.values()) {
+    snapshot.trackedPaths.forEach((path) => {
+      const identity = resolveFilePath(snapshot.cwd, path);
+      trackedPaths.add(identity);
+      capturedAtByPath.set(identity, snapshotCapturedAt.get(snapshot.turnId));
+    });
+    snapshot.toolCallIds.forEach((id) => trackedToolCallIds.add(id));
+  }
+  const executionCwd = Array.from(snapshots.values()).at(-1)?.cwd;
+  const toolIdentity = (path: string) =>
+    executionCwd ? resolveFilePath(executionCwd, path) : normalizeFilePath(path);
+  const executionTouchCounts = new Map<string, Set<string>>();
+  // Detached children can finish after a parent capture. Retain their operation
+  // evidence until execution publishes a newer aggregate; never call stale bytes final.
+  const unresolvedPaths = new Set<string>();
+  for (const message of messages.slice(start + 1)) {
+    if (message.kind !== "agent") continue;
+    for (const tool of message.toolCalls) {
+      if (trackedToolCallIds.has(tool.id)) continue;
+      const changes = entryFor({ ...tool, status: "succeeded" });
+      for (const change of Array.isArray(changes) ? changes : changes ? [changes] : []) {
+        const identity = toolIdentity(change.path);
+        if (!trackedPaths.has(identity)) continue;
+        const capturedAt = capturedAtByPath.get(identity);
+        if (capturedAt === undefined || tool.endedAt === undefined || tool.endedAt >= capturedAt)
+          unresolvedPaths.add(identity);
+      }
+    }
+  }
 
   // External completion carries its own cwd. Keep that absolute identity for
   // display/open targets; a relative tool path has no caller-cwd evidence and
@@ -347,18 +399,36 @@ export function aggregateFileChangeSummary(
     const m = messages[i];
     if (m.kind === "tool") {
       const e = entryFor(m);
-      if (Array.isArray(e)) e.forEach((change) => consume(m.id, change, null));
-      else if (e) consume(m.id, e, null);
+      for (const change of Array.isArray(e) ? e : e ? [e] : []) {
+        const identity = toolIdentity(change.path);
+        if (
+          !unresolvedPaths.has(identity) &&
+          (trackedToolCallIds.has(m.id) || trackedPaths.has(identity))
+        ) {
+          const ids = executionTouchCounts.get(identity) ?? new Set<string>();
+          ids.add(m.id);
+          executionTouchCounts.set(identity, ids);
+          continue;
+        }
+        consume(m.id, change, null, identity);
+      }
     } else if (m.kind === "agent") {
       for (const t of m.toolCalls) {
         const e = entryFor(t);
-        if (Array.isArray(e)) e.forEach((change) => consume(t.id, change, m.id));
-        else if (e) consume(t.id, e, m.id);
+        for (const change of Array.isArray(e) ? e : e ? [e] : []) {
+          const identity = toolIdentity(change.path);
+          if (
+            unresolvedPaths.has(identity) ||
+            (!trackedToolCallIds.has(t.id) && !trackedPaths.has(identity))
+          )
+            consume(t.id, change, m.id, identity);
+        }
       }
     }
   }
 
   for (const external of externalFiles) {
+    if (trackedPaths.has(external.identity)) continue;
     consume(
       `external:${external.sourceId}`,
       { path: external.path, added: 0, removed: 0, diff: "" },
@@ -394,6 +464,27 @@ export function aggregateFileChangeSummary(
         diff: composed.diff,
       });
   }
-  if (byPath.size === 0) return null;
-  return { files: Array.from(byPath.values()), sessionDiffs };
+  for (const snapshot of snapshots.values()) {
+    for (const file of snapshot.files) {
+      const identity = resolveFilePath(snapshot.cwd, file.path);
+      if (unresolvedPaths.has(identity)) continue;
+      byPath.set(identity, {
+        path: identity,
+        added: file.added,
+        removed: file.removed,
+        count: Math.max(1, executionTouchCounts.get(identity)?.size ?? 0),
+      });
+      sessionDiffs.push({
+        path: identity,
+        toolCallId: `turn-diff:${snapshot.turnId}:${identity}`,
+        diff: file.diff,
+      });
+    }
+  }
+  if (byPath.size === 0 && unresolvedPaths.size === 0) return null;
+  return {
+    files: Array.from(byPath.values()),
+    sessionDiffs,
+    ...(unresolvedPaths.size ? { unresolvedPaths: Array.from(unresolvedPaths) } : {}),
+  };
 }

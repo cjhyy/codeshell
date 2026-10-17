@@ -34,6 +34,8 @@ export type {
   TerminalReason,
   TurnCompletionKind,
   StreamEvent,
+  TurnDiffSnapshot,
+  TurnDiffFile,
   StreamCallback,
   LLMConfig,
   ClientDefaults,

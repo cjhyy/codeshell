@@ -1,0 +1,181 @@
+{
+  "reviewedUtc": "2026-10-17T12:06:36.590753+00:00",
+  "retainedContextsInspected": 29,
+  "contexts": [
+    {
+      "pattern": "task-image-parser",
+      "retainedIndexZeroBased": 19,
+      "path": "docs/archive/electron-image-input-design.md",
+      "at": "$"
+    },
+    {
+      "pattern": "task-image-parser",
+      "retainedIndexZeroBased": 20,
+      "path": "docs/archive/electron-image-input-design.md",
+      "at": "$"
+    },
+    {
+      "pattern": "task-image-parser",
+      "retainedIndexZeroBased": 21,
+      "path": "docs/archive/electron-image-input-design.md",
+      "at": "$"
+    },
+    {
+      "pattern": "task-image-parser",
+      "retainedIndexZeroBased": 22,
+      "path": "docs/archive/electron-image-input-design.md",
+      "at": "$"
+    },
+    {
+      "pattern": "task-image-parser",
+      "retainedIndexZeroBased": 23,
+      "path": "docs/archive/electron-image-input-design.md",
+      "at": "$"
+    },
+    {
+      "pattern": "task-image-parser",
+      "retainedIndexZeroBased": 24,
+      "path": "docs/archive/electron-image-input-design.md",
+      "at": "$"
+    },
+    {
+      "pattern": "task-image-parser",
+      "retainedIndexZeroBased": 25,
+      "path": "docs/archive/electron-image-input-design.md",
+      "at": "$"
+    },
+    {
+      "pattern": "task-image-parser",
+      "retainedIndexZeroBased": 26,
+      "path": "docs/archive/electron-image-input-design.md",
+      "at": "$"
+    },
+    {
+      "pattern": "task-image-parser",
+      "retainedIndexZeroBased": 27,
+      "path": "docs/archive/electron-image-input-design.md",
+      "at": "$"
+    },
+    {
+      "pattern": "task-image-parser",
+      "retainedIndexZeroBased": 28,
+      "path": "docs/archive/electron-image-input-design.md",
+      "at": "$"
+    },
+    {
+      "pattern": "task-image-parser",
+      "retainedIndexZeroBased": 29,
+      "path": "docs/archive/electron-image-input-design.md",
+      "at": "$"
+    },
+    {
+      "pattern": "task-image-parser",
+      "retainedIndexZeroBased": 30,
+      "path": "docs/archive/electron-image-input-design.md",
+      "at": "$"
+    },
+    {
+      "pattern": "task-image-parser",
+      "retainedIndexZeroBased": 31,
+      "path": "docs/archive/electron-image-input-design.md",
+      "at": "$"
+    },
+    {
+      "pattern": "task-image-parser",
+      "retainedIndexZeroBased": 56,
+      "path": "docs/archive/review-2026-07-09/24-input-attachment-pipeline-review.md",
+      "at": "$"
+    },
+    {
+      "pattern": "task-image-parser",
+      "retainedIndexZeroBased": 58,
+      "path": "docs/audit-2026-10-17-round15/candidates.json",
+      "at": "$[\"candidates\"][3][\"source\"]"
+    },
+    {
+      "pattern": "task-image-parser",
+      "retainedIndexZeroBased": 59,
+      "path": "docs/audit-2026-10-17-round15/candidates.json",
+      "at": "$[\"candidates\"][3][\"contractSource\"]"
+    },
+    {
+      "pattern": "task-image-parser",
+      "retainedIndexZeroBased": 60,
+      "path": "docs/audit-2026-10-17-round15/candidates.json",
+      "at": "$[\"candidates\"][3][\"actualEvidence\"]"
+    },
+    {
+      "pattern": "task-image-parser",
+      "retainedIndexZeroBased": 61,
+      "path": "docs/audit-2026-10-17-round15/candidates.json",
+      "at": "$[\"candidates\"][3][\"controls\"]"
+    },
+    {
+      "pattern": "image-text-order",
+      "retainedIndexZeroBased": 2,
+      "path": "docs/archive/electron-image-input-design.md",
+      "at": "$"
+    },
+    {
+      "pattern": "image-text-order",
+      "retainedIndexZeroBased": 13,
+      "path": "docs/archive/review-2026-07-09/24-input-attachment-pipeline-review.md",
+      "at": "$"
+    },
+    {
+      "pattern": "image-text-order",
+      "retainedIndexZeroBased": 14,
+      "path": "docs/archive/review-2026-07-09/24-input-attachment-pipeline-review.md",
+      "at": "$"
+    },
+    {
+      "pattern": "image-text-order",
+      "retainedIndexZeroBased": 48,
+      "path": "docs/audit-2026-10-17-round15/candidates.json",
+      "at": "$[\"candidates\"][3][\"controls\"]"
+    },
+    {
+      "pattern": "image-text-order",
+      "retainedIndexZeroBased": 81,
+      "path": "docs/audit-2026-10-17-round15/evidence/review-injection.md",
+      "at": "$"
+    },
+    {
+      "pattern": "image-text-order",
+      "retainedIndexZeroBased": 82,
+      "path": "docs/audit-2026-10-17-round15/injection.md",
+      "at": "$"
+    },
+    {
+      "pattern": "image-text-order",
+      "retainedIndexZeroBased": 83,
+      "path": "docs/audit-2026-10-17-round15/injection.md",
+      "at": "$"
+    },
+    {
+      "pattern": "image-text-order",
+      "retainedIndexZeroBased": 84,
+      "path": "docs/audit-2026-10-17-round15/injection.md",
+      "at": "$"
+    },
+    {
+      "pattern": "wire-attrs",
+      "retainedIndexZeroBased": 17,
+      "path": "docs/audit-2026-10-17-round16/tasknoise.md",
+      "at": "$"
+    },
+    {
+      "pattern": "wire-attrs",
+      "retainedIndexZeroBased": 23,
+      "path": "docs/audit-2026-10-17-round9/attachments.md",
+      "at": "$"
+    },
+    {
+      "pattern": "wire-attrs",
+      "retainedIndexZeroBased": 24,
+      "path": "docs/audit-2026-10-17-round9/attachments.md",
+      "at": "$"
+    }
+  ],
+  "limits": "Saved context path inventory was inspected for all groups; these29 targeted contexts were read as excerpts. Not all300 retained contexts or830 total occurrences were semantically reviewed."
+}

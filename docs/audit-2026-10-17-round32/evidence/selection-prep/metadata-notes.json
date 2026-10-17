@@ -1,0 +1,21 @@
+{
+  "productExecution": false,
+  "productReruns": 0,
+  "events": [
+    {
+      "type": "Initial static hypothesis refuted before any finding",
+      "initial": "Initial coordination message treated an old/peripheral turn_boundary loop-start description as if it described the current producer.",
+      "counterevidence": "Current turn-loop554–570 closes completed model turn; lastCompletedModelTurn1199 is set after model return; ordinary turn_end1961 and catch1978 call the idempotent finalize helper. No loop-start append at the inspected current producer.",
+      "classification": "Withdrawn hypothesis, not product bug/candidate or runtime failure; no experiment or alternate validation ran."
+    },
+    {
+      "type": "Late first durable source pins",
+      "paths": [
+        "packages/desktop/src/renderer/MessageStream.tsx",
+        "docs/audit-2026-10-17-round13/search.md",
+        "docs/audit-2026-10-17-round13/evidence/review-search.md"
+      ],
+      "meaning": "MessageStream first dedicated pin followed rg caller snippets; old report pins followed history excerpts. Initial semantic hashes stay null; first durable pins precede direct selected/full text only."
+    }
+  ]
+}

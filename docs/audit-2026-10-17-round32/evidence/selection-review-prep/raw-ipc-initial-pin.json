@@ -1,0 +1,8 @@
+{
+  "capturedUTC": "2026-10-17T12:07:44.297904+00:00",
+  "path": "packages/desktop/src/main/session-transcript-ipc.ts",
+  "bytes": 3840,
+  "lineCount": 106,
+  "sha256": "61edf03fe6f7804842f60b0d8dba12cd1d4f55872fdd3c660f0cafb4c17fb686",
+  "timing": "Before direct source read; filename locator only"
+}

@@ -1,0 +1,35 @@
+[
+  {
+    "manifest": "docs/audit-2026-10-17/evidence/ui-source-manifest.json",
+    "rows": [
+      {
+        "path": "packages/desktop/src/renderer/contextSelection.ts",
+        "sha256": "4b591ae3a417be3da46b475498a8ff64f07f4bcd3f503fbf13b2d205f67e78b1",
+        "matchesFrozenGitBlob": true
+      }
+    ]
+  },
+  {
+    "manifest": "docs/audit-2026-10-17-round13/evidence/search-source-manifest.json",
+    "rows": [
+      {
+        "path": "packages/desktop/src/renderer/modelSelection.ts",
+        "frozenGitBlob": "54f7d6f8ecb7593764dd9a8d64e7d4bfae1cfa10",
+        "frozenSha256": "604e510a54c7d192f051cbab9b914a3dc8ac41be38af20f37311a2585d5bb827",
+        "sha256": "604e510a54c7d192f051cbab9b914a3dc8ac41be38af20f37311a2585d5bb827",
+        "frozenBytes": 714,
+        "currentEqualsFrozen": true,
+        "inspectionScope": "entire file; production callback helper executed"
+      },
+      {
+        "path": "packages/desktop/src/renderer/modelSelection.test.ts",
+        "frozenGitBlob": "7c8c65100842d196534742dc7ef43d2e41f8d882",
+        "frozenSha256": "bbe31914974e4679c0f04c20f71085c77ffc9e2d118a185fd5098dcef5ad86af",
+        "sha256": "bbe31914974e4679c0f04c20f71085c77ffc9e2d118a185fd5098dcef5ad86af",
+        "frozenBytes": 1235,
+        "currentEqualsFrozen": true,
+        "inspectionScope": "entire file; 2 existing tests executed once"
+      }
+    ]
+  }
+]

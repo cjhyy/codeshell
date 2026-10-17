@@ -5,7 +5,7 @@
  * Message; one tool call (start → result) is one Message.
  */
 
-import type { StreamEvent } from "@cjhyy/code-shell-core";
+import type { StreamEvent, TurnDiffSnapshot } from "@cjhyy/code-shell-core";
 import { projectOutputUserEvent } from "@cjhyy/code-shell-web";
 import type { TaskInfo } from "@cjhyy/code-shell-core/internal";
 import type { ApprovalRequestEnvelope } from "../preload/types";
@@ -163,6 +163,10 @@ export interface SystemMessage {
   kind: "system";
   id: string;
   text: string;
+  /** Latest execution-owned aggregate; empty files are an authoritative net-zero result. */
+  turnDiff?: TurnDiffSnapshot;
+  /** Capture timestamp retained when late child events rebuild this turn's card. */
+  turnDiffCapturedAt?: number;
   /** Hidden attribution payload carried by a DriveAgent completion marker. */
   externalFileChanges?: {
     sourceId: string;
@@ -292,15 +296,14 @@ export interface SessionFileDiff {
   path: string;
   /** Tool call that produced this diff; used only as stable provenance. */
   toolCallId: string;
-  /** Cumulative per-file preview composed from the successful edit payloads. */
+  /** Execution-owned original-to-final diff, or a legacy tool-payload preview. */
   diff: string;
 }
 
 /**
  * Codex-style "files changed this turn" summary card, appended on
- * turn_complete when at least one successful Edit/Write/NotebookEdit
- * fired since the last user message. Renderer-computed — no engine
- * event for this; see fileChangeAggregator.ts.
+ * execution updates and turn_complete. New runs use authoritative turn_diff
+ * snapshots; older transcripts retain tool-payload previews.
  */
 export interface FilesChangedSummaryMessage {
   kind: "files_changed";
@@ -309,9 +312,9 @@ export interface FilesChangedSummaryMessage {
   totalAdded: number;
   totalRemoved: number;
   /**
-   * Session/turn-scoped previews, grouped by file and composed where the
-   * successful tool payloads establish a continuous edit. Avoids asking Git for the
-   * whole working tree, which can include changes from other sessions.
+   * Execution-owned original-to-final diffs, one per file. Older transcripts
+   * and unresolved child writes retain explicitly incomplete tool previews.
+   * Avoids including unrelated changes from the working tree.
    */
   sessionDiffs?: SessionFileDiff[];
 }
@@ -601,8 +604,126 @@ function withTurnTiming(
     };
   }
   const next = messages.slice();
-  next[index] = { ...user, turnTiming: timing };
+  next[index] = {
+    ...user,
+    ...(event.type === "session_started" && event.runId
+      ? { sourceEventId: user.sourceEventId ?? event.runId }
+      : {}),
+    turnTiming: timing,
+  };
   return next;
+}
+
+/** Replace the aggregate inside its original user turn, including late/replayed updates. */
+function applyTurnDiff(
+  state: MessagesReducerState,
+  event: Extract<StreamEvent, { type: "turn_diff" }>,
+  capturedAt: number | undefined,
+): MessagesReducerState {
+  if (event.agentId) return state;
+  const run = Object.values(state.streamRuns ?? {}).find((item) => item.runId === event.turnId);
+  const start = state.messages.findIndex(
+    (message) =>
+      message.kind === "user" &&
+      !message.injected &&
+      (message.sourceEventId === event.turnId || message.id === run?.userMessageId),
+  );
+  // A paged history can omit the owner. Never attach its diff to a newer user turn.
+  if (start < 0) return state;
+  const offset = state.messages
+    .slice(start + 1)
+    .findIndex((message) => message.kind === "user" && !message.injected);
+  const end = offset < 0 ? state.messages.length : start + offset + 1;
+  const scoped = state.messages.slice(start, end);
+  const previousSnapshot = scoped.find(
+    (message) => message.kind === "system" && message.turnDiff?.turnId === event.turnId,
+  );
+  if (
+    capturedAt !== undefined &&
+    previousSnapshot?.kind === "system" &&
+    previousSnapshot.turnDiffCapturedAt !== undefined &&
+    capturedAt < previousSnapshot.turnDiffCapturedAt
+  )
+    return state;
+  const previous = scoped.find((message) => message.kind === "files_changed");
+  const snapshot: TurnDiffSnapshot = {
+    turnId: event.turnId,
+    cwd: event.cwd,
+    files: event.files,
+    trackedPaths: event.trackedPaths,
+    toolCallIds: event.toolCallIds,
+    complete: event.complete,
+    omissions: event.omissions,
+    ...(event.capturedAt !== undefined ? { capturedAt: event.capturedAt } : {}),
+  };
+  const marker: SystemMessage = {
+    kind: "system",
+    id: `turn-diff:${event.turnId}`,
+    text: event.complete
+      ? ""
+      : `${translate(loadUILanguage(), "msg.files.incompleteDiff")} ${event.omissions
+          .map((omission) => `${omission.path}: ${omission.reason}`)
+          .join("; ")}`.trim(),
+    turnDiff: snapshot,
+    turnDiffCapturedAt: capturedAt,
+  };
+  const logicalTurn = [
+    ...scoped.filter(
+      (message) =>
+        message.kind !== "files_changed" &&
+        !(message.kind === "system" && message.turnDiff?.turnId === event.turnId),
+    ),
+    marker,
+  ];
+  const summary = aggregateFileChangeSummary(logicalTurn);
+  if (summary?.unresolvedPaths?.length) {
+    marker.text = [
+      marker.text,
+      `${translate(loadUILanguage(), "msg.files.lateChangesDiff")} ${summary.unresolvedPaths.join("; ")}`,
+    ]
+      .filter(Boolean)
+      .join(" ");
+  }
+  if (summary?.files.length) logicalTurn.push(filesChangedMessage(summary, previous?.id));
+  const messages = [
+    ...state.messages.slice(0, start),
+    ...logicalTurn,
+    ...state.messages.slice(end),
+  ];
+  return {
+    ...state,
+    messages,
+    agentMessageIndex: Object.fromEntries(
+      messages.flatMap((message, index) => (message.kind === "agent" ? [[message.id, index]] : [])),
+    ),
+  };
+}
+
+function refreshTurnDiffForAgent(
+  state: MessagesReducerState,
+  agentId: string,
+): MessagesReducerState {
+  const index = state.agentMessageIndex[agentId];
+  if (index === undefined) return state;
+  let start = index;
+  while (start >= 0) {
+    const message = state.messages[start];
+    if (message.kind === "user" && !message.injected) break;
+    start--;
+  }
+  if (start < 0) return state;
+  for (let i = start + 1; i < state.messages.length; i++) {
+    const message = state.messages[i];
+    if (message.kind === "user" && !message.injected) break;
+    if (message.kind === "system" && message.turnDiff) {
+      return applyTurnDiff(
+        state,
+        { type: "turn_diff", ...message.turnDiff },
+        message.turnDiffCapturedAt,
+      );
+    }
+  }
+  return state;
 }
 
 /** Shared text for a background-task completion (video etc.) — used by the
@@ -794,13 +915,19 @@ export function applyStreamEvent(
     event.agentId
   )
     return state;
+  if (event.type === "turn_diff") return applyTurnDiff(state, event, event.capturedAt ?? eventTime);
   event = projectOutputUserEvent(event);
   if (
     ("agentId" in event && event.agentId !== undefined) ||
     event.type === "session_user_message" ||
     event.type === "steer_injected"
   ) {
-    return applyStreamEventToTurn(state, event, now);
+    const next = applyStreamEventToTurn(state, event, now);
+    return "agentId" in event &&
+      event.agentId &&
+      ["tool_use_start", "tool_result", "agent_end"].includes(event.type)
+      ? refreshTurnDiffForAgent(next, event.agentId)
+      : next;
   }
   const runs = state.streamRuns ?? {};
   const knownKey = Object.keys(runs).find((key) =>
@@ -1895,7 +2022,7 @@ function applyStreamEventToTurn(
         finalized = finalized.filter((m, i) => !(i > lastUserIdx && m.kind === "files_changed"));
       }
       const summary = aggregateFileChangeSummary(finalized);
-      if (summary) {
+      if (summary?.files.length) {
         const card = filesChangedMessage(summary);
         const entries = card.files;
         finalized = [...finalized, card];

@@ -29,3 +29,27 @@ export function patchBackupTargets(patchText: string, cwd: string): string[] {
   // but be defensive — saveSnapshot is idempotent on identical content anyway).
   return [...new Set(out)];
 }
+
+/**
+ * Every filesystem destination an ApplyPatch can change. Unlike undo backup
+ * targets, turn diffs need absent paths too: additions and move destinations
+ * must be captured before execution to distinguish creation from overwrite.
+ * Moves are represented by their source and destination; the tracker compares
+ * each path's real before/after state rather than inferring a rename from text.
+ */
+export function patchDiffTargets(patchText: string, cwd: string): string[] {
+  let parsed;
+  try {
+    parsed = parsePatch(patchText, "lenient");
+  } catch {
+    return [];
+  }
+  const out: string[] = [];
+  for (const hunk of parsed.hunks) {
+    out.push(resolvePath(cwd, hunk.path));
+    if (hunk.kind === "update" && hunk.movePath) {
+      out.push(resolvePath(cwd, hunk.movePath));
+    }
+  }
+  return [...new Set(out)];
+}

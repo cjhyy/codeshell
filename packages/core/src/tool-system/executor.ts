@@ -85,12 +85,25 @@ export class ToolExecutor {
   private guard?: InvestigationGuard;
   private taskGuard?: TaskGuard;
   private parentTraceEventId?: string;
+  private completionObservers = new Set<
+    (toolCallId: string, isError: boolean) => void | Promise<void>
+  >();
 
   constructor(
     private readonly registry: ToolRegistry,
     private readonly permission: PermissionClassifier,
     private readonly hooks: HookRegistry,
   ) {}
+
+  /** Trusted execution observers run after all tool hooks, including on failure. */
+  observeCompletion(
+    observer: (toolCallId: string, isError: boolean) => void | Promise<void>,
+  ): () => void {
+    this.completionObservers.add(observer);
+    return () => {
+      this.completionObservers.delete(observer);
+    };
+  }
 
   setInvestigationGuard(guard: InvestigationGuard | undefined): void {
     this.guard = guard;
@@ -153,6 +166,7 @@ export class ToolExecutor {
       input: { toolCallId: callIn.id, args: effectiveInput },
     });
     recordModelTraceEvent({ ...event(), status: "running", first: true });
+    let isError = true;
     try {
       const result = await this.executeSingleAuthorized(callIn, constraint, {
         id,
@@ -161,6 +175,7 @@ export class ToolExecutor {
           recordModelTraceEvent({ ...event(), status: "running" });
         },
       });
+      isError = result.isError === true;
       recordModelTraceEvent({
         ...event(),
         endedAt: Date.now(),
@@ -180,6 +195,17 @@ export class ToolExecutor {
       });
       await this.toolCtx?.operations?.onToolFailure?.();
       throw error;
+    } finally {
+      for (const observer of this.completionObservers) {
+        try {
+          await observer(callIn.id, isError);
+        } catch (error) {
+          this.log.warn("tool.completion_observer_failed", {
+            toolCallId: callIn.id,
+            error: error instanceof Error ? error.message : String(error),
+          });
+        }
+      }
     }
   }
 
@@ -671,6 +697,7 @@ export class ToolExecutor {
                 // without racing another call's executor state. Authority, rules,
                 // hooks, guards and recording remain the same as the parent call.
                 const nested = new ToolExecutor(this.registry, this.permission, this.hooks);
+                nested.completionObservers = this.completionObservers;
                 nested.setContext(
                   this.toolCtx
                     ? {

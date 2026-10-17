@@ -1,0 +1,8 @@
+{
+  "capturedUTC": "2026-10-17T12:08:14.322614+00:00",
+  "path": "packages/desktop/src/main/rawTranscript.ts",
+  "bytes": 4696,
+  "lineCount": 134,
+  "sha256": "89cae6c364927314077d562e8e217c2f72c281963442d3255e79017e6577f8fd",
+  "timing": "Before independent raw reader direct read; import filename locator only"
+}

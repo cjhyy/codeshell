@@ -1,0 +1,147 @@
+{
+  "parentReportedContext": "4dad999bd43b776995b5d212dde275dab86a1ddd",
+  "formalRound32Baseline": null,
+  "prepOnly": true,
+  "frozenUtc": "2026-10-17T12:06:36.590753+00:00",
+  "sourceRoot": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell",
+  "files": [
+    {
+      "path": "packages/core/src/engine/parse-task.ts",
+      "bytes": 7206,
+      "lines": 190,
+      "sha256": "e93cf2d985b1787138537020aefb5b20fb403125a9ea12129bae9fa8c0dd2c0a",
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          190
+        ]
+      ],
+      "semanticLines": 190,
+      "firstFilesystemSha256": "e93cf2d985b1787138537020aefb5b20fb403125a9ea12129bae9fa8c0dd2c0a",
+      "initialSemanticReadSha256": "e93cf2d985b1787138537020aefb5b20fb403125a9ea12129bae9fa8c0dd2c0a",
+      "captureTiming": "Before source semantic read; initial filename/symbol locators only",
+      "initialCaptureUtc": "2026-10-17T12:03:47.258209+00:00",
+      "frozenUtc": "2026-10-17T12:06:36.590753+00:00",
+      "gitBlobCompared": false,
+      "semanticReadUtc": null,
+      "timingLimit": "Per-read semantic timestamps not recorded."
+    },
+    {
+      "path": "tests/parse-task.test.ts",
+      "bytes": 6432,
+      "lines": 140,
+      "sha256": "c954709faa7f0b75825d521a4cff002cc48a259f111a5fc50405c758fe5de540",
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          140
+        ]
+      ],
+      "semanticLines": 140,
+      "firstFilesystemSha256": "c954709faa7f0b75825d521a4cff002cc48a259f111a5fc50405c758fe5de540",
+      "initialSemanticReadSha256": "c954709faa7f0b75825d521a4cff002cc48a259f111a5fc50405c758fe5de540",
+      "captureTiming": "Before source semantic read; initial filename/symbol locators only",
+      "initialCaptureUtc": "2026-10-17T12:04:15.161137+00:00",
+      "frozenUtc": "2026-10-17T12:06:36.590753+00:00",
+      "gitBlobCompared": false,
+      "semanticReadUtc": null,
+      "timingLimit": "Per-read semantic timestamps not recorded."
+    },
+    {
+      "path": "packages/desktop/src/renderer/chat/attachments.ts",
+      "bytes": 13388,
+      "lines": 391,
+      "sha256": "a16e8fa7250c3265e7fcb7d9c18a371f301acc265e4ee6d7c7a765f23d590621",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          230,
+          280
+        ]
+      ],
+      "semanticLines": 51,
+      "firstFilesystemSha256": "a16e8fa7250c3265e7fcb7d9c18a371f301acc265e4ee6d7c7a765f23d590621",
+      "initialSemanticReadSha256": "a16e8fa7250c3265e7fcb7d9c18a371f301acc265e4ee6d7c7a765f23d590621",
+      "captureTiming": "Before source semantic read; initial filename/symbol locators only",
+      "initialCaptureUtc": "2026-10-17T12:04:15.163912+00:00",
+      "frozenUtc": "2026-10-17T12:06:36.590753+00:00",
+      "gitBlobCompared": false,
+      "semanticReadUtc": null,
+      "timingLimit": "Per-read semantic timestamps not recorded."
+    },
+    {
+      "path": "packages/core/src/engine/run-image-input.ts",
+      "bytes": 9480,
+      "lines": 243,
+      "sha256": "0ff0d1d149ac28e9c25a87a52bb6a1fffbeb6db5f8154265418cb49c6097802e",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          1,
+          95
+        ],
+        [
+          104,
+          113
+        ],
+        [
+          188,
+          199
+        ],
+        [
+          214,
+          228
+        ]
+      ],
+      "semanticLines": 132,
+      "firstFilesystemSha256": "0ff0d1d149ac28e9c25a87a52bb6a1fffbeb6db5f8154265418cb49c6097802e",
+      "initialSemanticReadSha256": "0ff0d1d149ac28e9c25a87a52bb6a1fffbeb6db5f8154265418cb49c6097802e",
+      "captureTiming": "Before source semantic read; initial filename/symbol locators only",
+      "initialCaptureUtc": "2026-10-17T12:04:15.164654+00:00",
+      "frozenUtc": "2026-10-17T12:06:36.590753+00:00",
+      "gitBlobCompared": false,
+      "semanticReadUtc": null,
+      "timingLimit": "Per-read semantic timestamps not recorded."
+    }
+  ],
+  "hashOnlyFiles": [
+    {
+      "path": "packages/core/src/engine/input-attachments.test.ts",
+      "bytes": 14707,
+      "lines": 415,
+      "sha256": "ae5f28f480e197992f6400c97c95c63ffac339b37e2030d8c949f500559446df",
+      "coverage": "hash-only",
+      "selectedLineRanges": [],
+      "semanticLines": 0,
+      "firstFilesystemSha256": "ae5f28f480e197992f6400c97c95c63ffac339b37e2030d8c949f500559446df",
+      "initialSemanticReadSha256": null,
+      "captureTiming": "Before possible source read; never semantically read in this prep.",
+      "initialCaptureUtc": "2026-10-17T12:04:15.165383+00:00",
+      "frozenUtc": "2026-10-17T12:06:36.590753+00:00",
+      "gitBlobCompared": false,
+      "semanticReadUtc": null,
+      "timingLimit": "Per-read semantic timestamps not recorded."
+    }
+  ],
+  "stats": {
+    "semanticSourcePaths": 4,
+    "fullPaths": 2,
+    "selectedPaths": 2,
+    "semanticLines": 513,
+    "productSemanticLines": 373,
+    "testDeclarationLines": 140,
+    "hashOnlyPaths": 1,
+    "lateSemanticPins": 0
+  },
+  "limits": [
+    "The leaf matches the old inventory SHA; this is not proof of previous unread status. R9 and R15 explicitly covered this leaf.",
+    "run-image-input.ts ranges include the DTO call/error shape and image ContentBlock projection. The buildInputAttachmentContext permission/session/workspace boundary was encountered statically and not followed into its implementation.",
+    "No authority/approval/permission/lock/identity/journal/native or model/real-task experiment. File metadata/capability policy calls were not executed.",
+    "input-attachments.test.ts was pinned but not read; it adds no semantic coverage. Engine.ts symbol locators are navigation only and are not counted as semantic reading.",
+    "Tests are declarations only; no syntax/language/helper fixture or test/import/function ran."
+  ],
+  "productAttempts": 0,
+  "gitCommands": 0
+}

@@ -1,0 +1,27 @@
+{
+  "frozenUtc": "2026-10-17T12:06:36.590753+00:00",
+  "parentReportedContext": "4dad999bd43b776995b5d212dde275dab86a1ddd",
+  "formalRound32Baseline": null,
+  "runs": [],
+  "productAttempts": 0,
+  "testsExecuted": 0,
+  "helperOrEngineFunctionInvocations": 0,
+  "moduleImports": 0,
+  "languageFixturesExecuted": 0,
+  "modelActions": 0,
+  "realTaskActions": 0,
+  "lockOrApprovalActions": 0,
+  "permissionOrAuthorityActions": 0,
+  "nativeActions": 0,
+  "networkRequests": 0,
+  "gitCommands": 0,
+  "runtimePasses": 0,
+  "runtimeExpectations": 0,
+  "metadataFailures": [],
+  "limits": [
+    "Metadata Python stdlib filesystem/hash/JSON/regex and shell source locators/readers only. No product/parser language fixture executed.",
+    "No inherited successful tests or expected outputs are counted as current runtime evidence.",
+    "IMAGE-R15-C1 older parser fixture remains historical evidence and was not repeated.",
+    "All previously failed dynamic directions remain skipped. No full build/typecheck/lint/suite."
+  ]
+}

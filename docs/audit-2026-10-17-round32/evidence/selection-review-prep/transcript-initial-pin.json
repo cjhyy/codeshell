@@ -1,0 +1,8 @@
+{
+  "capturedUTC": "2026-10-17T12:06:59.791056+00:00",
+  "path": "packages/core/src/session/transcript.ts",
+  "bytes": 51303,
+  "lineCount": 1377,
+  "sha256": "0d2e32dd2e530200c626dd2f94f563d3268f9ae9ad2e37e3497d1a849669d829",
+  "timing": "Before direct transcript source read; filename locator only"
+}

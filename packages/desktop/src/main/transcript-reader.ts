@@ -7,7 +7,7 @@
  * TranscriptEvent shape: packages/core/src/types.ts:84-90.
  * StreamEvent shapes:     packages/core/src/types.ts:241-271.
  */
-import { sessionsRoot, type ContentBlock } from "@cjhyy/code-shell-core";
+import { sessionsRoot, type ContentBlock, type TurnDiffSnapshot } from "@cjhyy/code-shell-core";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import type { FoldItem } from "../preload/types";
@@ -22,6 +22,71 @@ interface TranscriptEvent {
   timestamp?: number;
   turnNumber: number;
   data: Record<string, unknown>;
+}
+
+/** Persisted data is untrusted; reject malformed snapshots as a unit. */
+function turnDiffFromData(data: Record<string, unknown>): TurnDiffSnapshot | undefined {
+  if (
+    typeof data.turnId !== "string" ||
+    !data.turnId ||
+    typeof data.cwd !== "string" ||
+    !data.cwd ||
+    typeof data.complete !== "boolean" ||
+    (data.capturedAt !== undefined &&
+      (typeof data.capturedAt !== "number" ||
+        !Number.isFinite(data.capturedAt) ||
+        data.capturedAt < 0)) ||
+    !Array.isArray(data.files) ||
+    !Array.isArray(data.trackedPaths) ||
+    !Array.isArray(data.toolCallIds) ||
+    !Array.isArray(data.omissions) ||
+    data.files.length > 2048 ||
+    data.trackedPaths.length > 2048 ||
+    data.toolCallIds.length > 100000 ||
+    data.omissions.length > 2048 ||
+    !data.trackedPaths.every((value) => typeof value === "string" && value.length > 0) ||
+    !data.toolCallIds.every((value) => typeof value === "string" && value.length > 0)
+  )
+    return undefined;
+  const validCount = (value: unknown) =>
+    typeof value === "number" && Number.isSafeInteger(value) && value >= 0;
+  if (
+    !data.files.every(
+      (file) =>
+        !!file &&
+        typeof file === "object" &&
+        typeof file.path === "string" &&
+        file.path.length > 0 &&
+        ["added", "modified", "deleted"].includes(file.status) &&
+        typeof file.diff === "string" &&
+        validCount(file.added) &&
+        validCount(file.removed),
+    ) ||
+    !data.omissions.every(
+      (omission) =>
+        !!omission &&
+        typeof omission === "object" &&
+        typeof omission.path === "string" &&
+        typeof omission.reason === "string",
+    )
+  )
+    return undefined;
+  return {
+    turnId: data.turnId,
+    cwd: data.cwd,
+    complete: data.complete,
+    ...(typeof data.capturedAt === "number" ? { capturedAt: data.capturedAt } : {}),
+    files: data.files.map(({ path, status, diff, added, removed }) => ({
+      path,
+      status,
+      diff,
+      added,
+      removed,
+    })),
+    trackedPaths: data.trackedPaths,
+    toolCallIds: data.toolCallIds,
+    omissions: data.omissions.map(({ path, reason }) => ({ path, reason })),
+  };
 }
 
 interface ContentBlockLike {
@@ -454,6 +519,21 @@ export function transcriptToFoldItems(jsonl: string): FoldItem[] {
             timestamp: ts,
           });
         }
+        break;
+      }
+      case "turn_diff": {
+        const snapshot = turnDiffFromData(d);
+        if (!snapshot) break;
+        items.push({
+          kind: "stream",
+          event: {
+            type: "turn_diff",
+            ...snapshot,
+            ...(typeof d.runId === "string" ? { runId: d.runId } : {}),
+            ...(typeof d.agentId === "string" ? { agentId: d.agentId } : {}),
+          },
+          timestamp: ts,
+        });
         break;
       }
       case "external_file_changes": {
