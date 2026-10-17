@@ -1,0 +1,190 @@
+{
+  "kind": "Frozen future47 author prep, self excluded",
+  "directory": "/tmp/codeshell-audit-round47-ui-data-frontier",
+  "frozenUTC": "2026-10-17T14:40:57.415275+00:00",
+  "files": [
+    {
+      "path": "cause-history-method.first.exit.json",
+      "bytes": 673,
+      "sha256": "9ceed79c56f4273ab3747fddb80f2792beb8b4c2336409171b32f6e048778e9d"
+    },
+    {
+      "path": "cause-history-method.first.raw.py",
+      "bytes": 3056,
+      "sha256": "12e0ae8e1b313ac7aa7b16365a033d38c42e2fe375c1d812a8e45b19c2b97290"
+    },
+    {
+      "path": "cause-history-method.py",
+      "bytes": 3057,
+      "sha256": "d6b2e784bd636a13538f1af3c2d16ff57ddb1fd88cc27feb9cf6b9bdf1240488"
+    },
+    {
+      "path": "cause-history.json",
+      "bytes": 212673,
+      "sha256": "d83a12126679daefd7f3e0818aadb3eb0a7e27bead653551a37f03816bea9027"
+    },
+    {
+      "path": "consumer-initial-pins.json",
+      "bytes": 1022,
+      "sha256": "9a4b4b9bd474b91e7c4aafd7711eea024c26883f3e47df73cbb946d0e83d8814"
+    },
+    {
+      "path": "coverage-gate-rows.json",
+      "bytes": 24895,
+      "sha256": "439dab8a14b78c5ee95b373d51979c941ff960e826b65c293206962d7a9c4ca0"
+    },
+    {
+      "path": "decisions.json",
+      "bytes": 4216,
+      "sha256": "c42ff9bf384e9dc642ddecedd2f84321f118c6df8518946204fc6877e37215ab"
+    },
+    {
+      "path": "finish-checks.json",
+      "bytes": 2928,
+      "sha256": "e0b9d03688e3bccee57253f33392f9387ff6a87ea64109d73eeb796194d5cacc"
+    },
+    {
+      "path": "history-contexts.json",
+      "bytes": 240532,
+      "sha256": "24521cc48937990df3f7354716a15dc0045eab96fc171ef7227ecbd544437cc3"
+    },
+    {
+      "path": "history-method.py",
+      "bytes": 3816,
+      "sha256": "335af6180d83042056ba0f58eb416ae767da183cce6308520e257958dfff8edb"
+    },
+    {
+      "path": "history.json",
+      "bytes": 749011,
+      "sha256": "5423ad199b1547658cd1124fe7dcf247a52d11679f37434cf9482477f03ba4b3"
+    },
+    {
+      "path": "initial-pins.json",
+      "bytes": 1181,
+      "sha256": "b88003f5232caa3f400478ba6759d3a8695ea201943d6c6b805ad74044b79b19"
+    },
+    {
+      "path": "metadata-notes.json",
+      "bytes": 2100,
+      "sha256": "c4af9d2327743ea840b3c802febd46ee15b68fa019af057b184a06c347d08f57"
+    },
+    {
+      "path": "report.md",
+      "bytes": 5552,
+      "sha256": "5951b2996c998f95e8c8b8566f138ec0b0097b7ee8dc77e1b39f93bfa643116d"
+    },
+    {
+      "path": "source-excerpts.json",
+      "bytes": 49441,
+      "sha256": "176d8d5df5d51cede7cc0db78e45e8ac31b3ef30e23869aaf09655588ab77493"
+    },
+    {
+      "path": "source-manifest.json",
+      "bytes": 10554,
+      "sha256": "f710b18a9a76a4ecc526d0b6f94c91d206b5e87c43446e15d591196b347cf2c4"
+    }
+  ],
+  "fileCountExcludingSelf": 16,
+  "totalFilesIncludingSelf": 17,
+  "classification": {
+    "newFormal": 0,
+    "newCandidate": 0,
+    "newRelated": 0
+  },
+  "oldExactCauseExclusions": [
+    "R04/D5 delayed plugin expansion overwrites next selected conversation draft"
+  ],
+  "sourceCounts": {
+    "actualSourceRows": 5,
+    "currentProductSelectedFiles": 2,
+    "currentProductSemanticLines": 448,
+    "historicalReportSemanticLines": 39,
+    "allSemanticLines": 487,
+    "allDisplayedLines": 742,
+    "navigationOnlyFiles": 2,
+    "hashOnlyFiles": 2,
+    "testSemanticLines": 0,
+    "testRuns": 0
+  },
+  "byteCheckedPaths": 9,
+  "allSourceAndHistoricalPinsStable": true,
+  "historyFiles": 3773,
+  "historyScope": "frozen41 include archives/exclude42–47",
+  "endingHistoryAddedRemovedChanged": 0,
+  "causeQueryHits": [
+    0,
+    105,
+    2
+  ],
+  "causeSavedCounts": [
+    0,
+    100,
+    2
+  ],
+  "actualBoundedCauseQueryWindowsRead": 12,
+  "actualUniqueCauseUnitsRead": 11,
+  "testsReadSemantically": 0,
+  "testsRun": 0,
+  "productRuns": 0,
+  "fixtures": 0,
+  "gitCommands": 0,
+  "onlyExactTmpWrites": true,
+  "metadataCompileSyntaxErrorExit1Preserved": true,
+  "metadataTruncatedPrintExit0Disclosed": true,
+  "oldFailedDirectionsReopened": false,
+  "runtimePassesClaimed": 0,
+  "reportLinks": [
+    {
+      "target": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/packages/desktop/src/renderer/ChatView.tsx",
+      "existsOrSelf": true
+    },
+    {
+      "target": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/packages/desktop/src/renderer/App.tsx:418",
+      "existsOrSelf": true
+    },
+    {
+      "target": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/review-2026-10-12/desktop-round1.md:58",
+      "existsOrSelf": true
+    },
+    {
+      "target": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/review-2026-10-12/desktop-quality-round10.md:24",
+      "existsOrSelf": true
+    },
+    {
+      "target": "history.json",
+      "existsOrSelf": true
+    },
+    {
+      "target": "cause-history.json",
+      "existsOrSelf": true
+    },
+    {
+      "target": "source-manifest.json",
+      "existsOrSelf": true
+    },
+    {
+      "target": "cause-history-method.first.raw.py",
+      "existsOrSelf": true
+    },
+    {
+      "target": "cause-history-method.first.exit.json",
+      "existsOrSelf": true
+    },
+    {
+      "target": "metadata-notes.json",
+      "existsOrSelf": true
+    },
+    {
+      "target": "finish-checks.json",
+      "existsOrSelf": true
+    },
+    {
+      "target": "decisions.json",
+      "existsOrSelf": true
+    },
+    {
+      "target": "artifact-receipt.json",
+      "existsOrSelf": true
+    }
+  ]
+}

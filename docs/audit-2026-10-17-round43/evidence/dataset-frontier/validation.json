@@ -1,0 +1,32 @@
+{
+  "capturedAtUTC": "2026-10-17T14:40:33.172969+00:00",
+  "productExecution": 0,
+  "imports": 0,
+  "helperCalls": 0,
+  "schemaParserCalls": 0,
+  "languageFixtures": 0,
+  "testsRun": 0,
+  "reactRenders": 0,
+  "browserDom": 0,
+  "modelTraining": 0,
+  "network": 0,
+  "native": 0,
+  "gitCommands": 0,
+  "existingTestDeclarationsRead": {
+    "pureHelperFull": 7,
+    "completeInteractionWithinSelectedRange": 5,
+    "extraNavigationDeclarationsNotCountedAsSemanticTests": true
+  },
+  "validationMethod": "Static source and ordinary DTO contract/consumer review only. Standard-library filesystem/JSON/hash/regex metadata scripts do not invoke product code.",
+  "runtimeVerdict": "not validated",
+  "oldFailureDirections": "Remain skipped; no import path repair, retry, alternate runtime or use of old pass to validate current behavior.",
+  "missingGuessedPath": {
+    "path": "packages/desktop/src/renderer/optimization-lab/OptimizationLabWorkspace.tsx",
+    "result": "does not exist; saved before-read pin inventory; navigation assumption only, no execution failure. Actual consumer is OptimizationLabPage.tsx."
+  },
+  "limitations": [
+    "No actual typing/clicking/React event or page execution.",
+    "No worker parser/schema function, import/export callback, filesystem data operation, model/provider or experiment invoked.",
+    "Worker validation validity/authority treated as an existing static boundary, not fully audited."
+  ]
+}

@@ -1,0 +1,37 @@
+{
+  "diagnostics": [
+    {
+      "toolChunk": "77ac7f",
+      "observedExitCode": 1,
+      "kind": "Metadata scanner compile-time SyntaxError before any focused scan ran",
+      "message": "SyntaxError: expected 'else' after 'if' expression",
+      "line": 14,
+      "cause": "Own metadata conditional expression had missing space in else0; not product code or fixture",
+      "originalMethodBytes": 3056,
+      "originalMethodSha256": "12e0ae8e1b313ac7aa7b16365a033d38c42e2fe375c1d812a8e45b19c2b97290",
+      "firstSourcePreserved": "cause-history-method.first.raw.py",
+      "focusedHistoryHadRun": false,
+      "productAttempts": 0,
+      "correction": "Only whitespace in own metadata method else0→else 0; then first actual focused scan"
+    },
+    {
+      "toolChunk": "724425",
+      "observedExitCode": 0,
+      "kind": "Metadata locator print truncated, original4144tokens/output budget3800",
+      "meaning": "Counts and savedJSON complete, not all100 wide contexts or giantvalues semantically read; no product failure"
+    }
+  ],
+  "unrelatedDisplayedCodeExcluded": [
+    "ChatView1240–1280 attachment staging block printed while locating keyboard handler; no native/real file/permission path audit or execution",
+    "ChatView1315–1339 drag/drop staging,636–638 media cleanup,App permission prop neighbors excluded",
+    "Old historical pass/guard/native statements printed adjacent to exact R04 paragraphs do not become new execution or borrowed passes"
+  ],
+  "historyLimits": [
+    "Initial target caps100 remain explicit (ChatView224/Sidebar192)",
+    "Focused plugin-expand literal symbols0 does not mean cause absent; broader ordinary-data AND query found exact D5/R04 despite symbol spelling/description differences",
+    "Wide draft-plugin-race105 cap100 includes giant old JSONscalars and template false-context possibilities; only recorded selected bounded windows are interpreted",
+    "No dependency on old R36 popout/native identity-route validation; exact old D5/R04 is separately recorded"
+  ],
+  "onlyExactTmpWrites": true,
+  "oldFailedDirectionsReopened": false
+}

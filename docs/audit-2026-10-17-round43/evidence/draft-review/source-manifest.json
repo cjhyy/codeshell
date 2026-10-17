@@ -1,0 +1,217 @@
+{
+  "capturedUTC": "2026-10-17T14:38:52.638922+00:00",
+  "scope": "Independent47 prep; current source body reads0 because exact historical cause was established before product body. No Git binding by this agent. Whole-byte pins never imply full reading.",
+  "files": [
+    {
+      "path": "packages/desktop/src/renderer/ChatView.tsx",
+      "bytes": 106169,
+      "sha256": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+      "lineCount": 2622,
+      "capturedBeforeSemanticRead": true,
+      "capturedUTC": "2026-10-17T14:36:52.500927+00:00",
+      "coverage": "hash-only",
+      "selectedLineRanges": [],
+      "coveredLineCount": 0,
+      "displayedLineRanges": [],
+      "displayedLineCount": 0,
+      "finishFilesystemSha256": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+      "finishBytes": 106169,
+      "endingCapturedUTC": "2026-10-17T14:38:52.629763+00:00",
+      "unchangedFromInitial": true,
+      "role": "current-product-or-test-hash-only"
+    },
+    {
+      "path": "packages/desktop/src/renderer/App.tsx",
+      "bytes": 122863,
+      "sha256": "02ae12bfccf26878226720ad90282a6a11a1fdc3e05efd1ce54a09d256d5d715",
+      "lineCount": 2924,
+      "capturedBeforeSemanticRead": true,
+      "capturedUTC": "2026-10-17T14:36:52.503802+00:00",
+      "coverage": "hash-only",
+      "selectedLineRanges": [],
+      "coveredLineCount": 0,
+      "displayedLineRanges": [],
+      "displayedLineCount": 0,
+      "finishFilesystemSha256": "02ae12bfccf26878226720ad90282a6a11a1fdc3e05efd1ce54a09d256d5d715",
+      "finishBytes": 122863,
+      "endingCapturedUTC": "2026-10-17T14:38:52.631899+00:00",
+      "unchangedFromInitial": true,
+      "role": "current-product-or-test-hash-only"
+    },
+    {
+      "path": "packages/desktop/src/renderer/app/SessionPanelDock.tsx",
+      "bytes": 10859,
+      "sha256": "92858a55a71f223a307fd0def53445610b417cf93fa5839fb475dabb38666396",
+      "lineCount": 242,
+      "capturedBeforeSemanticRead": true,
+      "capturedUTC": "2026-10-17T14:36:52.504763+00:00",
+      "coverage": "hash-only",
+      "selectedLineRanges": [],
+      "coveredLineCount": 0,
+      "displayedLineRanges": [],
+      "displayedLineCount": 0,
+      "finishFilesystemSha256": "92858a55a71f223a307fd0def53445610b417cf93fa5839fb475dabb38666396",
+      "finishBytes": 10859,
+      "endingCapturedUTC": "2026-10-17T14:38:52.633160+00:00",
+      "unchangedFromInitial": true,
+      "role": "current-product-or-test-hash-only"
+    },
+    {
+      "path": "packages/desktop/src/renderer/panels/QuickChatPanel.tsx",
+      "bytes": 10423,
+      "sha256": "2ba6bc347641787b10c7c5ae1b3c6d650403ffdc5d846eea03c12811bdf31570",
+      "lineCount": 273,
+      "capturedBeforeSemanticRead": true,
+      "capturedUTC": "2026-10-17T14:36:52.505655+00:00",
+      "coverage": "hash-only",
+      "selectedLineRanges": [],
+      "coveredLineCount": 0,
+      "displayedLineRanges": [],
+      "displayedLineCount": 0,
+      "finishFilesystemSha256": "2ba6bc347641787b10c7c5ae1b3c6d650403ffdc5d846eea03c12811bdf31570",
+      "finishBytes": 10423,
+      "endingCapturedUTC": "2026-10-17T14:38:52.634171+00:00",
+      "unchangedFromInitial": true,
+      "role": "current-product-or-test-hash-only"
+    },
+    {
+      "path": "packages/desktop/src/renderer/ChatView.plugin-commands.test.tsx",
+      "bytes": 12557,
+      "sha256": "48650599430dc3ad7166586996c647b70ad45c72cafe6074d1c55e39e85cd785",
+      "lineCount": 397,
+      "capturedBeforeSemanticRead": true,
+      "capturedUTC": "2026-10-17T14:36:52.506815+00:00",
+      "coverage": "hash-only",
+      "selectedLineRanges": [],
+      "coveredLineCount": 0,
+      "displayedLineRanges": [],
+      "displayedLineCount": 0,
+      "finishFilesystemSha256": "48650599430dc3ad7166586996c647b70ad45c72cafe6074d1c55e39e85cd785",
+      "finishBytes": 12557,
+      "endingCapturedUTC": "2026-10-17T14:38:52.635166+00:00",
+      "unchangedFromInitial": true,
+      "role": "current-product-or-test-hash-only"
+    },
+    {
+      "path": "packages/desktop/src/renderer/ChatView.ephemeral-lifecycle.test.tsx",
+      "bytes": 15939,
+      "sha256": "9b4199afec8a2062bd10b6161106d0ff7b4cecaac52029622ee76e017b27c0fb",
+      "lineCount": 478,
+      "capturedBeforeSemanticRead": true,
+      "capturedUTC": "2026-10-17T14:36:52.507620+00:00",
+      "coverage": "hash-only",
+      "selectedLineRanges": [],
+      "coveredLineCount": 0,
+      "displayedLineRanges": [],
+      "displayedLineCount": 0,
+      "finishFilesystemSha256": "9b4199afec8a2062bd10b6161106d0ff7b4cecaac52029622ee76e017b27c0fb",
+      "finishBytes": 15939,
+      "endingCapturedUTC": "2026-10-17T14:38:52.636014+00:00",
+      "unchangedFromInitial": true,
+      "role": "current-product-or-test-hash-only"
+    },
+    {
+      "path": "AGENTS.md",
+      "bytes": 206,
+      "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "lineCount": 5,
+      "coverage": "hash-only",
+      "semanticInitialSha": null,
+      "selectedLineRanges": [],
+      "coveredLineCount": 0,
+      "displayedLineRanges": [],
+      "displayedLineCount": 0,
+      "finishFilesystemSha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "finishBytes": 206,
+      "endingCapturedUTC": "2026-10-17T14:38:52.636490+00:00",
+      "unchangedFromInitial": true,
+      "role": "instruction-hash-carry"
+    },
+    {
+      "path": "CODESHELL.md",
+      "bytes": 17639,
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "lineCount": 217,
+      "coverage": "hash-only",
+      "semanticInitialSha": null,
+      "selectedLineRanges": [],
+      "coveredLineCount": 0,
+      "displayedLineRanges": [],
+      "displayedLineCount": 0,
+      "finishFilesystemSha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "finishBytes": 17639,
+      "endingCapturedUTC": "2026-10-17T14:38:52.637166+00:00",
+      "unchangedFromInitial": true,
+      "role": "instruction-hash-carry"
+    },
+    {
+      "path": "docs/review-2026-10-12/desktop-quality-round10.md",
+      "bytes": 16192,
+      "sha256": "cf1787e7670bc910890e01f75da20fb4470b7f115a7ab206a9b1130cc786a90e",
+      "lineCount": 84,
+      "coverage": "selected-prior-history-document",
+      "selectedLineRanges": [
+        [
+          24,
+          32
+        ]
+      ],
+      "coveredLineCount": 9,
+      "displayedLineRanges": [
+        [
+          1,
+          40
+        ]
+      ],
+      "displayedLineCount": 40,
+      "initialFilesystemSha256": "cf1787e7670bc910890e01f75da20fb4470b7f115a7ab206a9b1130cc786a90e",
+      "initialPinTiming": "history-initial-pins.json fresh corpus before direct historical doc read; not current product read",
+      "finishFilesystemSha256": "cf1787e7670bc910890e01f75da20fb4470b7f115a7ab206a9b1130cc786a90e",
+      "unchangedFromInitial": true,
+      "role": "prior-exact-cause-document"
+    },
+    {
+      "path": "docs/review-2026-10-12/desktop-round1.md",
+      "bytes": 13844,
+      "sha256": "b216b26c4273d04dbae0597115b63ef8b686fe7eda0996868bf4c387e93977d4",
+      "lineCount": 111,
+      "coverage": "selected-prior-history-document",
+      "selectedLineRanges": [
+        [
+          58,
+          68
+        ]
+      ],
+      "coveredLineCount": 11,
+      "displayedLineRanges": [
+        [
+          45,
+          70
+        ]
+      ],
+      "displayedLineCount": 26,
+      "initialFilesystemSha256": "b216b26c4273d04dbae0597115b63ef8b686fe7eda0996868bf4c387e93977d4",
+      "initialPinTiming": "history-initial-pins.json fresh corpus before direct historical doc read; not current product read",
+      "finishFilesystemSha256": "b216b26c4273d04dbae0597115b63ef8b686fe7eda0996868bf4c387e93977d4",
+      "unchangedFromInitial": true,
+      "role": "prior-exact-cause-document"
+    }
+  ],
+  "counts": {
+    "currentProductSemanticFiles": 0,
+    "currentProductSemanticLines": 0,
+    "currentTestSemanticFiles": 0,
+    "currentTestSemanticLines": 0,
+    "currentProductOrTestHashOnlyFiles": 6,
+    "instructionHashOnlyFiles": 2,
+    "priorHistorySelectedFiles": 2,
+    "priorHistorySemanticLines": 20,
+    "priorHistoryDisplayedLines": 66
+  },
+  "parentContext": "Root branch/source bytes only; formal future baseline not invented",
+  "sourceToolChunks": [
+    "cad96f",
+    "2c210e",
+    "555540"
+  ]
+}

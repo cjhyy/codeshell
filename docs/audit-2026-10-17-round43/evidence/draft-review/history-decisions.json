@@ -1,0 +1,62 @@
+{
+  "capturedUTC": "2026-10-17T14:38:53.785543+00:00",
+  "classification": {
+    "formal": 0,
+    "candidates": 0,
+    "related": 0,
+    "oldExactExclusions": 1
+  },
+  "exactOldCause": {
+    "labels": [
+      "D5",
+      "R04"
+    ],
+    "files": [
+      {
+        "path": "docs/review-2026-10-12/desktop-round1.md",
+        "selectedLineRanges": [
+          [
+            58,
+            68
+          ]
+        ]
+      },
+      {
+        "path": "docs/review-2026-10-12/desktop-quality-round10.md",
+        "selectedLineRanges": [
+          [
+            24,
+            32
+          ]
+        ]
+      }
+    ],
+    "reason": "Same ordinary producer and consumer: delayed plugin expansion A while unkeyed ChatView remains mounted, mountedRef-only guard, parent current active draft bucket B; existing B draft is replaced. Old control explicitly covers disabled composer versus enabled navigation and unmount recovery. Not just R36 follow-state family.",
+    "decision": "Exclude the one lead before any current product body reading. Do not retry archived dynamic work or add new related finding."
+  },
+  "scopeGate": {
+    "samePathShaStructuredRows": 20,
+    "explicitCurrentFullDetectedInThoseRows": false,
+    "notGlobalNeverReadProof": true,
+    "priorSelectedRanges": "R9 attachments, R27 aggregator consumer, R36 follow state; metadata-only here",
+    "pathMatches": 307,
+    "filenameMatches": 399,
+    "cap160": true
+  },
+  "focused": {
+    "totals": {
+      "plugin_expand": 38,
+      "draft_switch": 586,
+      "expansion_recovery": 124
+    },
+    "retained": {
+      "plugin_expand": 38,
+      "draft_switch": 160,
+      "expansion_recovery": 124
+    },
+    "capPerGroup": 160,
+    "allRetainedContextsSemanticallyRead": false,
+    "actualSemanticDecision": "Only direct old doc20 lines; broad retained windows are navigation locators, not all context coverage"
+  },
+  "priorRuntimeReports": "Archived reported outcomes are history evidence only; this review performed0 product/test runs."
+}

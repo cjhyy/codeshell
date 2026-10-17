@@ -1,0 +1,61 @@
+packages/desktop/src/renderer/optimization-lab/DatasetEditor.tsx:12:  duplicateEditableCase,
+packages/desktop/src/renderer/optimization-lab/DatasetEditor.tsx:15:  parseEditableDataset,
+packages/desktop/src/renderer/optimization-lab/DatasetEditor.tsx:16:  serializeEditableDataset,
+packages/desktop/src/renderer/optimization-lab/DatasetEditor.tsx:27:  onChange,
+packages/desktop/src/renderer/optimization-lab/DatasetEditor.tsx:33:  onChange(values: string[]): void;
+packages/desktop/src/renderer/optimization-lab/DatasetEditor.tsx:49:            onChange={(event) =>
+packages/desktop/src/renderer/optimization-lab/DatasetEditor.tsx:50:              onChange(values.map((item, i) => (i === index ? event.target.value : item)))
+packages/desktop/src/renderer/optimization-lab/DatasetEditor.tsx:58:            onClick={() => onChange(values.filter((_, i) => i !== index))}
+packages/desktop/src/renderer/optimization-lab/DatasetEditor.tsx:69:        onClick={() => onChange([...values, ""])}
+packages/desktop/src/renderer/optimization-lab/DatasetEditor.tsx:79:  onChange,
+packages/desktop/src/renderer/optimization-lab/DatasetEditor.tsx:84:  onChange(value: HardAssertion): void;
+packages/desktop/src/renderer/optimization-lab/DatasetEditor.tsx:103:            onChange={(event) => onChange({ ...value, id: event.target.value })}
+packages/desktop/src/renderer/optimization-lab/DatasetEditor.tsx:113:            onChange={(kind) => onChange(changeAssertionKind(value, kind))}
+packages/desktop/src/renderer/optimization-lab/DatasetEditor.tsx:129:            onChange={(path) => onChange({ ...value, path })}
+packages/desktop/src/renderer/optimization-lab/DatasetEditor.tsx:138:              onChange={(type) =>
+packages/desktop/src/renderer/optimization-lab/DatasetEditor.tsx:139:                onChange({
+packages/desktop/src/renderer/optimization-lab/DatasetEditor.tsx:161:            onChange={(event) => onChange({ ...value, value: event.target.value })}
+packages/desktop/src/renderer/optimization-lab/DatasetEditor.tsx:173:            onChange={(event) => {
+packages/desktop/src/renderer/optimization-lab/DatasetEditor.tsx:175:              if (Number.isFinite(next)) onChange({ ...value, value: next });
+packages/desktop/src/renderer/optimization-lab/DatasetEditor.tsx:187:            onChange={(next) => onChange({ ...value, value: next === "true" })}
+packages/desktop/src/renderer/optimization-lab/DatasetEditor.tsx:203:  onChange,
+packages/desktop/src/renderer/optimization-lab/DatasetEditor.tsx:208:  onChange(text: string): void;
+packages/desktop/src/renderer/optimization-lab/DatasetEditor.tsx:213:  const [mode, setMode] = useState<"form" | "json">("form");
+packages/desktop/src/renderer/optimization-lab/DatasetEditor.tsx:215:  const parsed = parseEditableDataset(value);
+packages/desktop/src/renderer/optimization-lab/DatasetEditor.tsx:218:  const emit = (next: NonNullable<typeof dataset>) => onChange(serializeEditableDataset(next));
+packages/desktop/src/renderer/optimization-lab/DatasetEditor.tsx:249:      onChange: (event: { target: { value: string } }) =>
+packages/desktop/src/renderer/optimization-lab/DatasetEditor.tsx:276:        onChange={(next) => updateCase(index, { [key]: next })}
+packages/desktop/src/renderer/optimization-lab/DatasetEditor.tsx:294:          onClick={() => setMode("form")}
+packages/desktop/src/renderer/optimization-lab/DatasetEditor.tsx:304:          onClick={() => setMode("json")}
+packages/desktop/src/renderer/optimization-lab/DatasetEditor.tsx:326:          onChange={(event) => onChange(event.target.value)}
+packages/desktop/src/renderer/optimization-lab/DatasetEditor.tsx:338:                onChange={(event) => emit({ ...dataset, title: event.target.value })}
+packages/desktop/src/renderer/optimization-lab/DatasetEditor.tsx:348:                onChange={(event) => emit({ ...dataset, taskFamily: event.target.value })}
+packages/desktop/src/renderer/optimization-lab/DatasetEditor.tsx:398:                        disabled={dataset.cases.length >= 200}
+packages/desktop/src/renderer/optimization-lab/DatasetEditor.tsx:400:                          setExpandedCase(dataset.cases.length);
+packages/desktop/src/renderer/optimization-lab/DatasetEditor.tsx:403:                            cases: [...dataset.cases, duplicateEditableCase(dataset, index)],
+packages/desktop/src/renderer/optimization-lab/DatasetEditor.tsx:447:                        onChange={(event) => {
+packages/desktop/src/renderer/optimization-lab/DatasetEditor.tsx:485:                      onChange={(event) => {
+packages/desktop/src/renderer/optimization-lab/DatasetEditor.tsx:505:                      onChange={(fixtureRefs) => updateCase(index, { fixtureRefs })}
+packages/desktop/src/renderer/optimization-lab/DatasetEditor.tsx:512:                      onChange={(missingEvidence) => updateCase(index, { missingEvidence })}
+packages/desktop/src/renderer/optimization-lab/DatasetEditor.tsx:528:                            onChange={(event) =>
+packages/desktop/src/renderer/optimization-lab/DatasetEditor.tsx:543:                            onChange={(event) =>
+packages/desktop/src/renderer/optimization-lab/DatasetEditor.tsx:557:                            onChange={(event) =>
+packages/desktop/src/renderer/optimization-lab/DatasetEditor.tsx:605:                          onChange={(next) =>
+packages/desktop/src/renderer/optimization-lab/DatasetEditor.tsx:651:            disabled={dataset.cases.length >= 200}
+packages/desktop/src/renderer/optimization-lab/DatasetEditor.tsx:653:              setExpandedCase(dataset.cases.length);
+packages/desktop/src/renderer/optimization-lab/OptimizationLabPage.tsx:277:        onChange={(event) =>
+packages/desktop/src/renderer/optimization-lab/OptimizationLabPage.tsx:330:            onChange={(id) => {
+packages/desktop/src/renderer/optimization-lab/OptimizationLabPage.tsx:398:                onChange={setExecutionMode}
+packages/desktop/src/renderer/optimization-lab/OptimizationLabPage.tsx:434:                    onChange={setSkillName}
+packages/desktop/src/renderer/optimization-lab/OptimizationLabPage.tsx:462:                      onChange={item.set}
+packages/desktop/src/renderer/optimization-lab/OptimizationLabPage.tsx:489:                  onChange={(event) => {
+packages/desktop/src/renderer/optimization-lab/OptimizationLabPage.tsx:588:              onChange={editDataset}
+packages/desktop/src/renderer/optimization-lab/OptimizationLabPage.tsx:631:                  onChange={(value) =>
+packages/desktop/src/renderer/optimization-lab/OptimizationLabPage.tsx:645:                  onChange={setObjective}
+packages/desktop/src/renderer/optimization-lab/OptimizationLabPage.tsx:701:                    onChange={setAdoptionScope}
+packages/desktop/src/renderer/optimization-lab/OptimizationLabPage.tsx:713:                      onChange={(event) => setAdoptionSessionId(event.target.value)}
+packages/desktop/src/renderer/optimization-lab/OptimizationLabPage.tsx:784:                    onChange={(e) => setAuthorizationRequests(Number(e.target.value))}
+packages/desktop/src/renderer/optimization-lab/OptimizationLabPage.tsx:796:                    onChange={(e) => setAuthorizationExecutionMs(Number(e.target.value))}
+packages/desktop/src/renderer/optimization-lab/OptimizationLabPage.tsx:809:                    onChange={(e) => setMaxTokens(e.target.value)}
+packages/desktop/src/renderer/optimization-lab/OptimizationLabPage.tsx:822:                    onChange={(e) => setMaxFee(e.target.value)}
+packages/desktop/src/renderer/optimization-lab/OptimizationLabPage.tsx:832:                    onChange={(e) => setExpiryMinutes(Number(e.target.value))}

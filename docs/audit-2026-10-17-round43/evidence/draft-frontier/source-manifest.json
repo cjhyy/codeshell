@@ -1,0 +1,395 @@
+{
+  "scope": "Future47 bounded Desktop controlled-composer/draft/keyboard state source review, oldexact R04/D5 excluded",
+  "files": [
+    {
+      "path": "packages/desktop/src/renderer/ChatView.tsx",
+      "bytes": 106169,
+      "sha256": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+      "lineCount": 2622,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          134,
+          153
+        ],
+        [
+          250,
+          258
+        ],
+        [
+          454,
+          475
+        ],
+        [
+          483,
+          489
+        ],
+        [
+          601,
+          601
+        ],
+        [
+          614,
+          617
+        ],
+        [
+          639,
+          640
+        ],
+        [
+          783,
+          799
+        ],
+        [
+          801,
+          821
+        ],
+        [
+          827,
+          838
+        ],
+        [
+          873,
+          894
+        ],
+        [
+          936,
+          946
+        ],
+        [
+          1077,
+          1111
+        ],
+        [
+          1133,
+          1159
+        ],
+        [
+          1172,
+          1188
+        ],
+        [
+          1193,
+          1223
+        ],
+        [
+          1341,
+          1440
+        ],
+        [
+          2228,
+          2277
+        ],
+        [
+          2288,
+          2293
+        ]
+      ],
+      "semanticLineCount": 414,
+      "displayedLineRanges": [
+        [
+          130,
+          153
+        ],
+        [
+          250,
+          263
+        ],
+        [
+          454,
+          475
+        ],
+        [
+          480,
+          491
+        ],
+        [
+          598,
+          624
+        ],
+        [
+          636,
+          640
+        ],
+        [
+          783,
+          840
+        ],
+        [
+          870,
+          896
+        ],
+        [
+          936,
+          948
+        ],
+        [
+          1076,
+          1112
+        ],
+        [
+          1130,
+          1224
+        ],
+        [
+          1240,
+          1280
+        ],
+        [
+          1315,
+          1446
+        ],
+        [
+          2225,
+          2300
+        ]
+      ],
+      "displayedLineCount": 583,
+      "role": "ordinary-composer-data",
+      "beforeCurrentSemanticReadSha256": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+      "pinUTC": "2026-10-17T14:32:07.696865+00:00",
+      "pinOrigin": "direct-current-initial-pin",
+      "firstEverSemanticReadClaim": false,
+      "finishUTC": "2026-10-17T14:39:15.296276+00:00",
+      "finishSha256": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+      "unchanged": true,
+      "scopeLimits": "Ordinary frontend draft/text/selection only; displayed native/staging/authority/model adjacency excluded, no execution"
+    },
+    {
+      "path": "packages/desktop/src/renderer/App.tsx",
+      "bytes": 122863,
+      "sha256": "02ae12bfccf26878226720ad90282a6a11a1fdc3e05efd1ce54a09d256d5d715",
+      "lineCount": 2924,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          394,
+          394
+        ],
+        [
+          414,
+          426
+        ],
+        [
+          2570,
+          2571
+        ],
+        [
+          2603,
+          2612
+        ],
+        [
+          2645,
+          2652
+        ]
+      ],
+      "semanticLineCount": 34,
+      "displayedLineRanges": [
+        [
+          391,
+          399
+        ],
+        [
+          410,
+          438
+        ],
+        [
+          2566,
+          2580
+        ],
+        [
+          2599,
+          2616
+        ],
+        [
+          2638,
+          2670
+        ]
+      ],
+      "displayedLineCount": 104,
+      "role": "controlled-draft-producer-consumer",
+      "beforeCurrentSemanticReadSha256": "02ae12bfccf26878226720ad90282a6a11a1fdc3e05efd1ce54a09d256d5d715",
+      "pinUTC": "2026-10-17T14:33:15.318459+00:00",
+      "pinOrigin": "direct-current-initial-pin",
+      "firstEverSemanticReadClaim": false,
+      "finishUTC": "2026-10-17T14:39:15.296276+00:00",
+      "finishSha256": "02ae12bfccf26878226720ad90282a6a11a1fdc3e05efd1ce54a09d256d5d715",
+      "unchanged": true,
+      "scopeLimits": "Ordinary frontend draft/text/selection only; displayed native/staging/authority/model adjacency excluded, no execution"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round36/evidence/chat-view-frontier/report.md",
+      "bytes": 6408,
+      "sha256": "96de25be63fb54a3c12c6e137fe0b86efb964359f97e40b69a6c7936a4e74d39",
+      "lineCount": 19,
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          19
+        ]
+      ],
+      "semanticLineCount": 19,
+      "displayedLineRanges": [
+        [
+          1,
+          19
+        ]
+      ],
+      "displayedLineCount": 19,
+      "role": "old-R36-scope-boundary",
+      "beforeCurrentSemanticReadSha256": "96de25be63fb54a3c12c6e137fe0b86efb964359f97e40b69a6c7936a4e74d39",
+      "pinUTC": "2026-10-17T14:32:11.473728+00:00",
+      "pinOrigin": "history.json all-file inventory before history excerpt/body read",
+      "firstEverSemanticReadClaim": false,
+      "finishUTC": "2026-10-17T14:39:15.296276+00:00",
+      "finishSha256": "96de25be63fb54a3c12c6e137fe0b86efb964359f97e40b69a6c7936a4e74d39",
+      "unchanged": true,
+      "scopeLimits": "Ordinary frontend draft/text/selection only; displayed native/staging/authority/model adjacency excluded, no execution"
+    },
+    {
+      "path": "docs/review-2026-10-12/desktop-round1.md",
+      "bytes": 13844,
+      "sha256": "b216b26c4273d04dbae0597115b63ef8b686fe7eda0996868bf4c387e93977d4",
+      "lineCount": 111,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          58,
+          68
+        ]
+      ],
+      "semanticLineCount": 11,
+      "displayedLineRanges": [
+        [
+          53,
+          72
+        ]
+      ],
+      "displayedLineCount": 20,
+      "role": "old-D5-exact-cause",
+      "beforeCurrentSemanticReadSha256": "b216b26c4273d04dbae0597115b63ef8b686fe7eda0996868bf4c387e93977d4",
+      "pinUTC": "2026-10-17T14:32:11.473728+00:00",
+      "pinOrigin": "history.json all-file inventory before history excerpt/body read",
+      "firstEverSemanticReadClaim": false,
+      "finishUTC": "2026-10-17T14:39:15.296276+00:00",
+      "finishSha256": "b216b26c4273d04dbae0597115b63ef8b686fe7eda0996868bf4c387e93977d4",
+      "unchanged": true,
+      "scopeLimits": "Ordinary frontend draft/text/selection only; displayed native/staging/authority/model adjacency excluded, no execution"
+    },
+    {
+      "path": "docs/review-2026-10-12/desktop-quality-round10.md",
+      "bytes": 16192,
+      "sha256": "cf1787e7670bc910890e01f75da20fb4470b7f115a7ab206a9b1130cc786a90e",
+      "lineCount": 84,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          24,
+          32
+        ]
+      ],
+      "semanticLineCount": 9,
+      "displayedLineRanges": [
+        [
+          20,
+          35
+        ]
+      ],
+      "displayedLineCount": 16,
+      "role": "old-R04-exact-independent-cause",
+      "beforeCurrentSemanticReadSha256": "cf1787e7670bc910890e01f75da20fb4470b7f115a7ab206a9b1130cc786a90e",
+      "pinUTC": "2026-10-17T14:32:11.473728+00:00",
+      "pinOrigin": "history.json all-file inventory before history excerpt/body read",
+      "firstEverSemanticReadClaim": false,
+      "finishUTC": "2026-10-17T14:39:15.296276+00:00",
+      "finishSha256": "cf1787e7670bc910890e01f75da20fb4470b7f115a7ab206a9b1130cc786a90e",
+      "unchanged": true,
+      "scopeLimits": "Ordinary frontend draft/text/selection only; displayed native/staging/authority/model adjacency excluded, no execution"
+    }
+  ],
+  "navigationOnlyFiles": [
+    {
+      "path": "packages/desktop/src/renderer/AppDraftOverrides.test.tsx",
+      "bytes": 10680,
+      "sha256": "63f39fcb49763af140b83b952225ea3d6c76b02cf52084d30fc99af5425c316a",
+      "selectedLineRanges": [],
+      "semanticRead": false,
+      "coverage": "navigation-matches-only",
+      "matchedLineNumbers": [
+        193,
+        248,
+        288
+      ],
+      "meaning": "Test titles/navigation only, no body reading, no React/fixture/test execution; permission-related titles incidental and not audited"
+    },
+    {
+      "path": "packages/desktop/src/renderer/ChatView.composer-variant.test.tsx",
+      "bytes": 6398,
+      "sha256": "afc5a7f4bd731991d30638871950f35011c3688223d7df0b5eed174728159325",
+      "selectedLineRanges": [],
+      "semanticRead": false,
+      "coverage": "navigation-matches-only",
+      "matchedLineNumbers": [
+        58,
+        59,
+        71,
+        83,
+        91,
+        104,
+        105,
+        119,
+        130,
+        146,
+        160,
+        166
+      ],
+      "meaning": "Test titles/navigation only, no body reading, no React/fixture/test execution; permission-related titles incidental and not audited"
+    }
+  ],
+  "hashOnlyFiles": [
+    {
+      "path": "packages/desktop/src/renderer/Sidebar.tsx",
+      "bytes": 58805,
+      "sha256": "f97da3b8ae4d8f4973acfa5afb30425e3755ec7fef58b462efde95c62c324d87",
+      "selectedLineRanges": [],
+      "semanticRead": false,
+      "coverage": "hash-only inventory candidate",
+      "reason": "Unselected Sidebar/CommentBox, no body reading"
+    },
+    {
+      "path": "packages/desktop/src/renderer/chat/CommentBox.tsx",
+      "bytes": 2450,
+      "sha256": "73fd0ab7120bbf488371c30b3d24a50632f4ec3967c273be67ed4eae99b04ae4",
+      "selectedLineRanges": [],
+      "semanticRead": false,
+      "coverage": "hash-only inventory candidate",
+      "reason": "Unselected Sidebar/CommentBox, no body reading"
+    }
+  ],
+  "counts": {
+    "actualSourceRows": 5,
+    "currentProductSelectedFiles": 2,
+    "currentProductSemanticLines": 448,
+    "historicalReportSemanticLines": 39,
+    "allSemanticLines": 487,
+    "allDisplayedLines": 742,
+    "navigationOnlyFiles": 2,
+    "hashOnlyFiles": 2,
+    "testSemanticLines": 0,
+    "testRuns": 0
+  },
+  "versionContext": {
+    "rootReportedFrozen41": "5dcd3ee21756eab037f82193fb80b801fb24112e",
+    "formal42MutableExcluded": true,
+    "future43through47Excluded": true,
+    "ownGitCommands": 0,
+    "formalBaseline": null
+  },
+  "coverageGate": "Original explicit scope/ranges prioritized over ranking; sameSHA selected oldChatView reads acknowledged, no explicit current-full receipt established. Unknown/hash inventory never means historically unread.",
+  "allSourcePinsStable": true,
+  "ownRuntime": {
+    "productImports": 0,
+    "functionsHelpersFixturesTestsReactBrowserDOMNetworkNativeModelIdentityAuthorityGit": 0
+  }
+}

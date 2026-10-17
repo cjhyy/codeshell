@@ -1,0 +1,295 @@
+[
+  {
+    "historyPath": "docs/audit-2026-10-17-round10/evidence/diagnostics-source-manifest.json",
+    "at": "$[\"files\"][5]",
+    "row": {
+      "path": "packages/browser-devtools/src/inspector.ts",
+      "frozenSha256": "bab4ae5c83c666db5529acc5eae364c4301bfa21d0a093a96c08da5cc176c6e2",
+      "currentSha256": "bab4ae5c83c666db5529acc5eae364c4301bfa21d0a093a96c08da5cc176c6e2",
+      "currentEqualsFrozen": true
+    }
+  },
+  {
+    "historyPath": "docs/audit-2026-10-17-round10/source-manifest.json",
+    "at": "$[\"files\"][13]",
+    "row": {
+      "path": "packages/browser-devtools/src/inspector.ts",
+      "bytes": 8534,
+      "sha256": "bab4ae5c83c666db5529acc5eae364c4301bfa21d0a093a96c08da5cc176c6e2",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true
+    }
+  },
+  {
+    "historyPath": "docs/audit-2026-10-17-round11/evidence/chat-source-manifest.json",
+    "at": "$[\"files\"][3]",
+    "row": {
+      "path": "packages/chat/src/notification-progress.ts",
+      "frozenSha256": "e1f787e6aabe7d5a49f86aa80af15c4599a5583f83d7f85207e3acfb7677b617",
+      "currentSha256": "e1f787e6aabe7d5a49f86aa80af15c4599a5583f83d7f85207e3acfb7677b617",
+      "currentMatchesFrozen": true,
+      "scope": "full helper read; memory progress execution; File store static only"
+    }
+  },
+  {
+    "historyPath": "docs/audit-2026-10-17-round11/source-manifest.json",
+    "at": "$[\"files\"][19]",
+    "row": {
+      "path": "packages/chat/src/notification-progress.ts",
+      "bytes": 13655,
+      "sha256": "e1f787e6aabe7d5a49f86aa80af15c4599a5583f83d7f85207e3acfb7677b617",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true
+    }
+  },
+  {
+    "historyPath": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+    "at": "$[\"files\"][33]",
+    "row": {
+      "path": "packages/browser-devtools/src/inspector.ts",
+      "bytes": 8534,
+      "lines": 227,
+      "sha256": "bab4ae5c83c666db5529acc5eae364c4301bfa21d0a093a96c08da5cc176c6e2",
+      "status": "current-sha-pin-only-no-semantic-coverage",
+      "currentFullClaimVariants": 0,
+      "currentSelectedClaimVariants": 0,
+      "currentSelectedUnionLines": 0,
+      "currentSelectedUnionRanges": [],
+      "priorVersionClaimVariants": 0,
+      "currentPinOnlyVariants": 1,
+      "claimVariants": 1,
+      "claims": [
+        {
+          "sourceSha256": "bab4ae5c83c666db5529acc5eae364c4301bfa21d0a093a96c08da5cc176c6e2",
+          "matchesCurrentFilesystem": true,
+          "coverageKind": "scope-unknown-pin-only",
+          "rawCoverageLabel": null,
+          "selectedLineRanges": [],
+          "validRangeBoundsForCurrentFile": true,
+          "manifests": [
+            {
+              "path": "docs/audit-2026-10-17-round10/evidence/diagnostics-source-manifest.json",
+              "jsonLocation": "$[\"files\"][5]"
+            },
+            {
+              "path": "docs/audit-2026-10-17-round10/source-manifest.json",
+              "jsonLocation": "$[\"files\"][13]"
+            },
+            {
+              "path": "docs/audit-2026-10-17-round3/source-manifest.json",
+              "jsonLocation": "$[\"files\"][32]"
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "historyPath": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+    "at": "$[\"files\"][66]",
+    "row": {
+      "path": "packages/chat/src/notification-progress.ts",
+      "bytes": 13655,
+      "lines": 367,
+      "sha256": "e1f787e6aabe7d5a49f86aa80af15c4599a5583f83d7f85207e3acfb7677b617",
+      "status": "current-sha-pin-only-no-semantic-coverage",
+      "currentFullClaimVariants": 0,
+      "currentSelectedClaimVariants": 0,
+      "currentSelectedUnionLines": 0,
+      "currentSelectedUnionRanges": [],
+      "priorVersionClaimVariants": 0,
+      "currentPinOnlyVariants": 1,
+      "claimVariants": 1,
+      "claims": [
+        {
+          "sourceSha256": "e1f787e6aabe7d5a49f86aa80af15c4599a5583f83d7f85207e3acfb7677b617",
+          "matchesCurrentFilesystem": true,
+          "coverageKind": "scope-unknown-pin-only",
+          "rawCoverageLabel": null,
+          "selectedLineRanges": [],
+          "validRangeBoundsForCurrentFile": true,
+          "manifests": [
+            {
+              "path": "docs/audit-2026-10-17-round11/evidence/chat-source-manifest.json",
+              "jsonLocation": "$[\"files\"][3]"
+            },
+            {
+              "path": "docs/audit-2026-10-17-round11/source-manifest.json",
+              "jsonLocation": "$[\"files\"][19]"
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "historyPath": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+    "at": "$[\"files\"][62]",
+    "row": {
+      "path": "packages/browser-devtools/src/inspector.ts",
+      "bytes": 8534,
+      "lines": 227,
+      "sha256": "bab4ae5c83c666db5529acc5eae364c4301bfa21d0a093a96c08da5cc176c6e2"
+    }
+  },
+  {
+    "historyPath": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+    "at": "$[\"files\"][107]",
+    "row": {
+      "path": "packages/chat/src/notification-progress.ts",
+      "bytes": 13655,
+      "lines": 367,
+      "sha256": "e1f787e6aabe7d5a49f86aa80af15c4599a5583f83d7f85207e3acfb7677b617"
+    }
+  },
+  {
+    "historyPath": "docs/audit-2026-10-17-round3/evidence/cdp-receipt.json",
+    "at": "$[\"files\"][7]",
+    "row": {
+      "path": "packages/browser-devtools/src/inspector.ts",
+      "sha256": "bab4ae5c83c666db5529acc5eae364c4301bfa21d0a093a96c08da5cc176c6e2"
+    }
+  },
+  {
+    "historyPath": "docs/audit-2026-10-17-round3/source-manifest.json",
+    "at": "$[\"files\"][32]",
+    "row": {
+      "path": "packages/browser-devtools/src/inspector.ts",
+      "bytes": 8534,
+      "sha256": "bab4ae5c83c666db5529acc5eae364c4301bfa21d0a093a96c08da5cc176c6e2",
+      "matchesFrozenGitBlob": true
+    }
+  },
+  {
+    "historyPath": "docs/audit-2026-10-17-round33/evidence/devtools-frontier/initial-pins.json",
+    "at": "$[\"files\"][0]",
+    "row": {
+      "path": "packages/browser-devtools/src/inspector.ts",
+      "bytes": 8534,
+      "lineCount": 227,
+      "sha256": "bab4ae5c83c666db5529acc5eae364c4301bfa21d0a093a96c08da5cc176c6e2",
+      "pinBeforeSemanticRead": true
+    }
+  },
+  {
+    "historyPath": "docs/audit-2026-10-17-round33/evidence/devtools-frontier/source-manifest.json",
+    "at": "$[\"files\"][0]",
+    "row": {
+      "path": "packages/browser-devtools/src/inspector.ts",
+      "bytes": 8534,
+      "lineCount": 227,
+      "sha256": "bab4ae5c83c666db5529acc5eae364c4301bfa21d0a093a96c08da5cc176c6e2",
+      "pinBeforeSemanticRead": true,
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          227
+        ]
+      ],
+      "semanticLines": 227,
+      "initialSemanticReadSha256": "bab4ae5c83c666db5529acc5eae364c4301bfa21d0a093a96c08da5cc176c6e2"
+    }
+  },
+  {
+    "historyPath": "docs/audit-2026-10-17-round33/evidence/devtools-review/initial-pins.json",
+    "at": "$[\"files\"][2]",
+    "row": {
+      "path": "packages/browser-devtools/src/inspector.ts",
+      "bytes": 8534,
+      "lineCount": 227,
+      "sha256": "bab4ae5c83c666db5529acc5eae364c4301bfa21d0a093a96c08da5cc176c6e2",
+      "coverage": "hash-only before direct semantic read",
+      "timing": "Before independent direct source reading; exact user-provided filenames"
+    }
+  },
+  {
+    "historyPath": "docs/audit-2026-10-17-round33/evidence/devtools-review/prior-source-comparison.json",
+    "at": "$[\"checks\"][4]",
+    "row": {
+      "path": "packages/browser-devtools/src/inspector.ts",
+      "oldR10FrozenSha256": "bab4ae5c83c666db5529acc5eae364c4301bfa21d0a093a96c08da5cc176c6e2",
+      "independentCurrentReadStartSha256": "bab4ae5c83c666db5529acc5eae364c4301bfa21d0a093a96c08da5cc176c6e2",
+      "sameSha256": true,
+      "historicalCoverageStatement": "R10 explicitly says full browser-devtools src/README/tests; desktop callers excerpt only. Hash match does not expand old consumer excerpt scope."
+    }
+  },
+  {
+    "historyPath": "docs/audit-2026-10-17-round33/evidence/devtools-review/source-manifest.json",
+    "at": "$[\"files\"][0]",
+    "row": {
+      "path": "packages/browser-devtools/src/inspector.ts",
+      "bytes": 8534,
+      "lineCount": 227,
+      "sha256": "bab4ae5c83c666db5529acc5eae364c4301bfa21d0a093a96c08da5cc176c6e2",
+      "initialFilesystemSha256": "bab4ae5c83c666db5529acc5eae364c4301bfa21d0a093a96c08da5cc176c6e2",
+      "finishFilesystemSha256": "bab4ae5c83c666db5529acc5eae364c4301bfa21d0a093a96c08da5cc176c6e2",
+      "initialEqualsFinish": true,
+      "captureRecord": "initial-pins.json",
+      "captureUTC": "2026-10-17T12:16:17.436836+00:00",
+      "pinTiming": "Before independent direct source reading; exact user-provided filenames",
+      "gitBlobComparedByReviewer": false,
+      "runtimeExecuted": false,
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          227
+        ]
+      ],
+      "coveredLineCount": 227,
+      "initialSemanticReadSha256": "bab4ae5c83c666db5529acc5eae364c4301bfa21d0a093a96c08da5cc176c6e2",
+      "pinTimingLimitation": null
+    }
+  },
+  {
+    "historyPath": "docs/audit-2026-10-17-round33/evidence/devtools-review/source-manifest.json",
+    "at": "$[\"priorVersionComparison\"][\"checks\"][4]",
+    "row": {
+      "path": "packages/browser-devtools/src/inspector.ts",
+      "oldR10FrozenSha256": "bab4ae5c83c666db5529acc5eae364c4301bfa21d0a093a96c08da5cc176c6e2",
+      "independentCurrentReadStartSha256": "bab4ae5c83c666db5529acc5eae364c4301bfa21d0a093a96c08da5cc176c6e2",
+      "sameSha256": true,
+      "historicalCoverageStatement": "R10 explicitly says full browser-devtools src/README/tests; desktop callers excerpt only. Hash match does not expand old consumer excerpt scope."
+    }
+  },
+  {
+    "historyPath": "docs/audit-2026-10-17-round33/source-manifest.json",
+    "at": "$[\"files\"][8]",
+    "row": {
+      "path": "packages/browser-devtools/src/inspector.ts",
+      "bytes": 8534,
+      "sha256": "bab4ae5c83c666db5529acc5eae364c4301bfa21d0a093a96c08da5cc176c6e2",
+      "currentBytes": 8534,
+      "currentSha256": "bab4ae5c83c666db5529acc5eae364c4301bfa21d0a093a96c08da5cc176c6e2",
+      "mainBytes": 8534,
+      "mainSha256": "bab4ae5c83c666db5529acc5eae364c4301bfa21d0a093a96c08da5cc176c6e2",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true
+    }
+  },
+  {
+    "historyPath": "docs/audit-2026-10-17-round33/source-manifest.json",
+    "at": "$[\"workerSourceChecks\"][15]",
+    "row": {
+      "manifest": "devtools-review/source-manifest.json",
+      "path": "packages/browser-devtools/src/inspector.ts",
+      "sha256": "bab4ae5c83c666db5529acc5eae364c4301bfa21d0a093a96c08da5cc176c6e2",
+      "coverage": "full",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Same prep semantic read reused once; timing/null and selected ranges stay in copied source record."
+    }
+  },
+  {
+    "historyPath": "docs/audit-2026-10-17-round33/source-manifest.json",
+    "at": "$[\"workerSourceChecks\"][43]",
+    "row": {
+      "manifest": "devtools-frontier/source-manifest.json",
+      "path": "packages/browser-devtools/src/inspector.ts",
+      "sha256": "bab4ae5c83c666db5529acc5eae364c4301bfa21d0a093a96c08da5cc176c6e2",
+      "coverage": "full",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Same prep semantic read reused once; timing/null and selected ranges stay in copied source record."
+    }
+  }
+]

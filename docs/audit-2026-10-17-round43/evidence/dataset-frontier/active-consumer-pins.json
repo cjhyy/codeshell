@@ -1,0 +1,45 @@
+{
+  "capturedAtUTC": "2026-10-17T14:36:50.728377+00:00",
+  "files": [
+    {
+      "path": "packages/desktop/src/renderer/optimization-lab/DatasetEditor.tsx",
+      "bytes": 27688,
+      "lines": 672,
+      "sha256": "a65788ebda96d2a9936901c3d7175ec2aafc9eacee18588d3eab58b2114cdeed",
+      "semanticRead": false
+    },
+    {
+      "path": "packages/desktop/src/renderer/optimization-lab/dataset-editor.test.ts",
+      "bytes": 5978,
+      "lines": 160,
+      "sha256": "e490a36c94d8824a8c48b7f715a53df5ab60d411c1140ed4ec7e2c252846f958",
+      "semanticRead": false
+    },
+    {
+      "path": "packages/desktop/src/renderer/optimization-lab/DatasetEditor.interaction.test.tsx",
+      "bytes": 11212,
+      "lines": 286,
+      "sha256": "e72e04301cb573bd8466d9ccfa109e787feca25f2d110bb5e1e66d277814615a",
+      "semanticRead": false
+    },
+    {
+      "path": "packages/optimization-lab/src/contracts/dataset.ts",
+      "bytes": 12327,
+      "lines": 345,
+      "sha256": "7de3ade87671b80d7f01410b39a2452aa9aad757db294c3d9b41702421808e02",
+      "semanticRead": false
+    },
+    {
+      "path": "packages/optimization-lab/src/index.ts",
+      "bytes": 587,
+      "lines": 13,
+      "sha256": "70059bca695d1027694771c7a82e6840d0ca1c216742ae2c158f4aee57a9f6ac",
+      "semanticRead": false
+    },
+    {
+      "path": "packages/desktop/src/renderer/optimization-lab/OptimizationLabWorkspace.tsx",
+      "exists": false
+    }
+  ],
+  "note": "First before-content pins for actual leaf consumers/test declarations/contracts; no runtime/import."
+}

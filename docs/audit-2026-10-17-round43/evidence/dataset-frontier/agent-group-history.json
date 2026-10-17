@@ -1,0 +1,963 @@
+{
+  "inventorySha": "47ef0e5ccf80391d9c3203990262ad79c4dafa1dba05e383572c1674ae916cb1",
+  "capturedAtUTC": "2026-10-17T14:32:12.424677+00:00",
+  "query": "agentGroup|52529df60ce7729cc27f8b0f39aef6c8092b3c0434802de1331f8e76db1565c6",
+  "hitCount": 170,
+  "contextCap": null,
+  "hits": [
+    {
+      "path": "docs/archive/background-agent-visibility-design.md",
+      "location": "21",
+      "excerpt": "rn 里所有 `done:false` 的 agent 误标 done——但转后台的 agent 恰恰是 done:false 还在跑。被误标 done → `anyRunning=false` → AgentGroupCard 折叠 + 不显示运行中。"
+    },
+    {
+      "path": "docs/archive/background-agent-visibility-design.md",
+      "location": "22",
+      "excerpt": "2. **转后台导致产出被折叠**。`AgentGroupCard` 默认折叠状态 = `useState(anyRunning)`，本意\"在跑就展开、跑完才折\"。但问题1 把 running 误清了 → 一律折叠。**所以问题2 是问题1 的派生**——修好运行中状态，折叠自然对。"
+    },
+    {
+      "path": "docs/archive/background-agent-visibility-design.md",
+      "location": "47",
+      "excerpt": "  - `summarizeAgentGroup`：`backgrounded` 计入 `running`/`anyRunning` → AgentGroupCard 默认展开（问题2 自动解决）。"
+    },
+    {
+      "path": "docs/archive/background-agent-visibility-design.md",
+      "location": "47",
+      "excerpt": "  - `summarizeAgentGroup`：`backgrounded` 计入 `running`/`anyRunning` → AgentGroupCard 默认展开（问题2 自动解决）。"
+    },
+    {
+      "path": "docs/archive/todo/review-desktop-2026-07-08.md",
+      "location": "79",
+      "excerpt": ".ts:701-724`, `types.ts:767-792`). Agent group wall time is calculated from those fields (`messages/agentGroup.ts:49-82`)."
+    },
+    {
+      "path": "docs/audit-2026-10-16/inventory.json",
+      "location": "$[\"source_inventory\"][1543]",
+      "excerpt": "packages/desktop/src/renderer/messages/AgentGroupCard.tsx"
+    },
+    {
+      "path": "docs/audit-2026-10-16/inventory.json",
+      "location": "$[\"source_inventory\"][1566]",
+      "excerpt": "packages/desktop/src/renderer/messages/agentGroup.ts"
+    },
+    {
+      "path": "docs/audit-2026-10-17/desktop-data.md",
+      "location": "61",
+      "excerpt": "x:1–195`（目录/预览请求取消、切目录重置、定位）；Desktop `messages/time.ts`、`messages/CollapsibleContent.tsx`、`messages/agentGroup.ts`、`messages/streamGroups.ts` 关键纯状态路径、`transcriptsReducer.ts` hydrate 分支和 `sessionPersistence.ts:1–190`。另读 Core `turn-loop.ts` 已有 steer 与 turn_boundary 持久化段以排除误把模型内部 continuation 当新用户任务；没有运行 Core/Engine。"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round13/evidence/groups-dedup.json",
+      "location": "$[\"pattern\"]",
+      "excerpt": "aggregateFileChange|fileChangeAggregator|streamGroups|agentGroup|summarizeAgent|foldAgent|formatMessageTime|消息.{0,12}(时间|聚合|文件|折叠)|替换.{0,12}(行数|计数)|ApplyPatch.{0,30}(diff|显示|统计)|diff.{0,12}(统计|聚合)"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round13/evidence/groups-dedup.json",
+      "location": "$[\"hits\"][4][\"text\"]",
+      "excerpt": "rn 里所有 `done:false` 的 agent 误标 done——但转后台的 agent 恰恰是 done:false 还在跑。被误标 done → `anyRunning=false` → AgentGroupCard 折叠 + 不显示运行中。"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round13/evidence/groups-dedup.json",
+      "location": "$[\"hits\"][5][\"text\"]",
+      "excerpt": "2. **转后台导致产出被折叠**。`AgentGroupCard` 默认折叠状态 = `useState(anyRunning)`，本意\"在跑就展开、跑完才折\"。但问题1 把 running 误清了 → 一律折叠。**所以问题2 是问题1 的派生**——修好运行中状态，折叠自然对。"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round13/evidence/groups-dedup.json",
+      "location": "$[\"hits\"][6][\"text\"]",
+      "excerpt": "  - `summarizeAgentGroup`：`backgrounded` 计入 `running`/`anyRunning` → AgentGroupCard 默认展开（问题2 自动解决）。"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round13/evidence/groups-dedup.json",
+      "location": "$[\"hits\"][6][\"text\"]",
+      "excerpt": "  - `summarizeAgentGroup`：`backgrounded` 计入 `running`/`anyRunning` → AgentGroupCard 默认展开（问题2 自动解决）。"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round13/evidence/groups-dedup.json",
+      "location": "$[\"hits\"][44][\"text\"]",
+      "excerpt": ".ts:701-724`, `types.ts:767-792`). Agent group wall time is calculated from those fields (`messages/agentGroup.ts:49-82`)."
+    },
+    {
+      "path": "docs/audit-2026-10-17-round13/evidence/groups-dedup.json",
+      "location": "$[\"hits\"][45][\"text\"]",
+      "excerpt": "packages/desktop/src/renderer/messages/AgentGroupCard.tsx"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round13/evidence/groups-dedup.json",
+      "location": "$[\"hits\"][46][\"text\"]",
+      "excerpt": "packages/desktop/src/renderer/messages/agentGroup.ts"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round13/evidence/groups-dedup.json",
+      "location": "$[\"hits\"][49][\"text\"]",
+      "excerpt": "x:1–195`（目录/预览请求取消、切目录重置、定位）；Desktop `messages/time.ts`、`messages/CollapsibleContent.tsx`、`messages/agentGroup.ts`、`messages/streamGroups.ts` 关键纯状态路径、`transcriptsReducer.ts` hydrate 分支和 `sessionPersistence.ts:1–190`。另读 Core `turn-loop.ts` 已有 steer 与 turn_boundary 持久化段以排除误把模型内部 continuation 当新用户任务；没有运行 Core/Engine。"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round13/evidence/groups-dedup.json",
+      "location": "$[\"hits\"][75][\"text\"]",
+      "excerpt": ".ts:701-724`, `types.ts:767-792`). Agent group wall time is calculated from those fields (`messages/agentGroup.ts:49-82`)."
+    },
+    {
+      "path": "docs/audit-2026-10-17-round13/evidence/groups-dedup.json",
+      "location": "$[\"hits\"][76][\"text\"]",
+      "excerpt": "x:1–195`（目录/预览请求取消、切目录重置、定位）；Desktop `messages/time.ts`、`messages/CollapsibleContent.tsx`、`messages/agentGroup.ts`、`messages/streamGroups.ts` 关键纯状态路径、`transcriptsReducer.ts` hydrate 分支和 `sessionPersistence.ts:1–190`。另读 Core `turn-loop.ts` 已有 steer 与 turn_boundary 持久化段以排除误把模型内部 continuation 当新用户任务；没有运行 Core/Engine。"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round13/evidence/groups-dedup.json",
+      "location": "$[\"hits\"][83][\"text\"]",
+      "excerpt": "packages/desktop/src/renderer/messages/AgentGroupCard.test.tsx"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round13/evidence/groups-dedup.json",
+      "location": "$[\"hits\"][84][\"text\"]",
+      "excerpt": "/tmp/codeshell-review-20261012/desktop-baseline/116-AgentGroupCard.test.tsx.log"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round13/evidence/groups-dedup.json",
+      "location": "$[\"hits\"][85][\"text\"]",
+      "excerpt": "packages/desktop/src/renderer/messages/agentGroup.test.ts"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round13/evidence/groups-dedup.json",
+      "location": "$[\"hits\"][86][\"text\"]",
+      "excerpt": "/tmp/codeshell-review-20261012/desktop-baseline/125-agentGroup.test.ts.log"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round13/evidence/groups-dedup.json",
+      "location": "$[\"hits\"][93][\"text\"]",
+      "excerpt": "packages/desktop/src/renderer/messages/AgentGroupCard.test.tsx"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round13/evidence/groups-dedup.json",
+      "location": "$[\"hits\"][94][\"text\"]",
+      "excerpt": "/tmp/codeshell-review-20261012/desktop-baseline/116-AgentGroupCard.test.tsx.log"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round13/evidence/groups-dedup.json",
+      "location": "$[\"hits\"][95][\"text\"]",
+      "excerpt": "/private/tmp/codeshell-review-20261012/desktop-baseline/116-AgentGroupCard.test.tsx.log"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round13/evidence/groups-dedup.json",
+      "location": "$[\"hits\"][96][\"text\"]",
+      "excerpt": "116-AgentGroupCard.test.tsx.log"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round13/evidence/groups-dedup.json",
+      "location": "$[\"hits\"][97][\"text\"]",
+      "excerpt": "packages/desktop/src/renderer/messages/agentGroup.test.ts"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round13/evidence/groups-dedup.json",
+      "location": "$[\"hits\"][98][\"text\"]",
+      "excerpt": "/tmp/codeshell-review-20261012/desktop-baseline/125-agentGroup.test.ts.log"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round13/evidence/groups-dedup.json",
+      "location": "$[\"hits\"][99][\"text\"]",
+      "excerpt": "/private/tmp/codeshell-review-20261012/desktop-baseline/125-agentGroup.test.ts.log"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round13/evidence/groups-dedup.json",
+      "location": "$[\"hits\"][100][\"text\"]",
+      "excerpt": "125-agentGroup.test.ts.log"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round13/evidence/groups-dedup.json",
+      "location": "$[\"hits\"][113][\"text\"]",
+      "excerpt": "packages/desktop/src/renderer/messages/AgentGroupCard.test.tsx"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round13/evidence/groups-dedup.json",
+      "location": "$[\"hits\"][114][\"text\"]",
+      "excerpt": "/tmp/codeshell-review-20261012/desktop-baseline/116-AgentGroupCard.test.tsx.log"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round13/evidence/groups-dedup.json",
+      "location": "$[\"hits\"][115][\"text\"]",
+      "excerpt": "desktop-renderer/116-AgentGroupCard.test.tsx.log"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round13/evidence/groups-dedup.json",
+      "location": "$[\"hits\"][116][\"text\"]",
+      "excerpt": "packages/desktop/src/renderer/messages/agentGroup.test.ts"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round13/evidence/groups-dedup.json",
+      "location": "$[\"hits\"][117][\"text\"]",
+      "excerpt": "/tmp/codeshell-review-20261012/desktop-baseline/125-agentGroup.test.ts.log"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round13/evidence/groups-dedup.json",
+      "location": "$[\"hits\"][118][\"text\"]",
+      "excerpt": "desktop-renderer/125-agentGroup.test.ts.log"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round13/evidence/groups-dedup.json",
+      "location": "$[\"hits\"][175][\"text\"]",
+      "excerpt": "- 把**相邻 ≥2 个 agent 消息**折成一个 `AgentGroup`(派生项,不改 reducer 数据)。"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round13/evidence/groups-dedup.json",
+      "location": "$[\"hits\"][176][\"text\"]",
+      "excerpt": "- `AgentGroupCard`:汇总头(✓X ✗Y · N tools · 耗时)+ 可折叠的成员列表,每员复用 `AgentMessageView`。"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round13/evidence/groups-dedup.json",
+      "location": "$[\"hits\"][177][\"text\"]",
+      "excerpt": "  → foldAgentGroups(items)        ← 新 post-pass"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round13/evidence/groups-dedup.json",
+      "location": "$[\"hits\"][178][\"text\"]",
+      "excerpt": "`foldAgentGroups(items: StreamItem[]): StreamItem[]`:"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round13/evidence/groups-dedup.json",
+      "location": "$[\"hits\"][179][\"text\"]",
+      "excerpt": "- 线性扫描;遇到连续 ≥2 个 `kind:\"agent\"` 的项 → 包成 `AgentGroup { kind:\"agent_group\", id, agents: AgentMessage[] }`;<2 个原样保留。"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round13/evidence/groups-dedup.json",
+      "location": "$[\"hits\"][180][\"text\"]",
+      "excerpt": "s_group.items` 里(turn 卡 span 到最后一个 tool,中间的 agent 被纳入)。所以对 `turn_process_group` 的 `items` 也跑一遍 `foldAgentGroups`,把其内部的 agent 组也折起来。`tool_group` 内不会有 agent(agent 非 toolish),不必递归。"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round13/evidence/groups-dedup.json",
+      "location": "$[\"hits\"][181][\"text\"]",
+      "excerpt": "- `AgentGroup.id` 用首个成员的 id(`ag-<firstAgentId>`),React key 稳定。"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round13/evidence/groups-dedup.json",
+      "location": "$[\"hits\"][183][\"text\"]",
+      "excerpt": "// messages/agentGroup.ts"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round13/evidence/groups-dedup.json",
+      "location": "$[\"hits\"][184][\"text\"]",
+      "excerpt": "interface AgentGroupStats {"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round13/evidence/groups-dedup.json",
+      "location": "$[\"hits\"][185][\"text\"]",
+      "excerpt": "function summarizeAgentGroup(agents: AgentMessage[]): AgentGroupStats"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round13/evidence/groups-dedup.json",
+      "location": "$[\"hits\"][185][\"text\"]",
+      "excerpt": "function summarizeAgentGroup(agents: AgentMessage[]): AgentGroupStats"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round13/evidence/groups-dedup.json",
+      "location": "$[\"hits\"][186][\"text\"]",
+      "excerpt": "function foldAgentGroups(items: StreamItem[]): StreamItem[]   // 上面的扫描+递归"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round13/evidence/groups-dedup.json",
+      "location": "$[\"hits\"][187][\"text\"]",
+      "excerpt": "## UI(AgentGroupCard)"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round13/evidence/groups-dedup.json",
+      "location": "$[\"hits\"][188][\"text\"]",
+      "excerpt": "- **单测** `agentGroup.test.ts`:"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round13/evidence/groups-dedup.json",
+      "location": "$[\"hits\"][189][\"text\"]",
+      "excerpt": "  - `summarizeAgentGroup`:全成/有败/有 running 的 count;toolTotal 求和;wallMs = max(end)-min(start),有 running→0。"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round13/evidence/groups-dedup.json",
+      "location": "$[\"hits\"][190][\"text\"]",
+      "excerpt": "  - `foldAgentGroups`:2+ 相邻 agent → 1 个 agent_group;单 agent 不折;非 agent 打断分组;**递归**进 turn_process_group.items 折其中的 agent 组;空/无 agent 输入原样返回。"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round13/evidence/groups-dedup.json",
+      "location": "$[\"hits\"][192][\"text\"]",
+      "excerpt": "- 新增:`messages/agentGroup.ts`(纯函数)+ `.test.ts`;`messages/AgentGroupCard.tsx` + 渲染 smoke。"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round13/evidence/groups-dedup.json",
+      "location": "$[\"hits\"][192][\"text\"]",
+      "excerpt": "- 新增:`messages/agentGroup.ts`(纯函数)+ `.test.ts`;`messages/AgentGroupCard.tsx` + 渲染 smoke。"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round13/evidence/groups-dedup.json",
+      "location": "$[\"hits\"][193][\"text\"]",
+      "excerpt": "- 改:`MessageStream.tsx`(items pipeline 末尾加 foldAgentGroups + 顶层渲染 agent_group → AgentGroupCard);`TurnProcessGroupCard.tsx`(其 items.map 的 kind switch 加 `agent_group` 分支——turn 卡内部的 agent 组也要能渲染);`reconcileStreamItems` 让 post-pass 在 reconcile 后跑以避开它(无需改)。"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round13/evidence/groups-dedup.json",
+      "location": "$[\"hits\"][193][\"text\"]",
+      "excerpt": "- 改:`MessageStream.tsx`(items pipeline 末尾加 foldAgentGroups + 顶层渲染 agent_group → AgentGroupCard);`TurnProcessGroupCard.tsx`(其 items.map 的 kind switch 加 `agent_group` 分支——turn 卡内部的 agent 组也要能渲染);`reconcileStreamItems` 让 post-pass 在 reconcile 后跑以避开它(无需改)。"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round13/evidence/groups-dedup.json",
+      "location": "$[\"hits\"][194][\"text\"]",
+      "excerpt": "- AgentGroup 类型放 `agentGroup.ts` 并由 streamGroups 的 StreamItem 联合纳入(StreamItem 加 `| AgentGroup`)。"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round13/evidence/groups-dedup.json",
+      "location": "$[\"hits\"][194][\"text\"]",
+      "excerpt": "- AgentGroup 类型放 `agentGroup.ts` 并由 streamGroups 的 StreamItem 联合纳入(StreamItem 加 `| AgentGroup`)。"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round13/evidence/groups-dedup.json",
+      "location": "$[\"hits\"][194][\"text\"]",
+      "excerpt": "- AgentGroup 类型放 `agentGroup.ts` 并由 streamGroups 的 StreamItem 联合纳入(StreamItem 加 `| AgentGroup`)。"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round13/evidence/groups-existing-baseline.first.exit.json",
+      "location": "$[\"command\"][6]",
+      "excerpt": "packages/desktop/src/renderer/messages/agentGroup.test.ts"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round13/evidence/groups-skip-note.md",
+      "location": "5",
+      "excerpt": "1. 现有 `fileChangeAggregator.test.ts`、`fileChangeAggregator.count.test.ts`、`agentGroup.test.ts` 的一个独立 guarded 首跑完整通过：33 pass / 66 expect / 0 fail / 0 skip。该基线已有的 ApplyPatch 示例只有普通 Add/Update，不能证明 Delete、Move 或符号前缀内容正确。"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round13/evidence/groups-source-manifest.json",
+      "location": "$[\"files\"][4][\"path\"]",
+      "excerpt": "packages/desktop/src/renderer/messages/agentGroup.ts"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round13/evidence/groups-source-manifest.json",
+      "location": "$[\"files\"][4][\"frozenSha256\"]",
+      "excerpt": "52529df60ce7729cc27f8b0f39aef6c8092b3c0434802de1331f8e76db1565c6"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round13/evidence/groups-source-manifest.json",
+      "location": "$[\"files\"][4][\"sha256\"]",
+      "excerpt": "52529df60ce7729cc27f8b0f39aef6c8092b3c0434802de1331f8e76db1565c6"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round13/evidence/groups-source-manifest.json",
+      "location": "$[\"files\"][5][\"path\"]",
+      "excerpt": "packages/desktop/src/renderer/messages/agentGroup.test.ts"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round13/evidence/groups-source-manifest.json",
+      "location": "$[\"files\"][6][\"path\"]",
+      "excerpt": "packages/desktop/src/renderer/messages/AgentGroupCard.tsx"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round13/evidence/groups-validation.json",
+      "location": "$[\"runs\"][0][\"command\"][6]",
+      "excerpt": "packages/desktop/src/renderer/messages/agentGroup.test.ts"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round13/evidence/groups-validation.json",
+      "location": "$[\"scope\"]",
+      "excerpt": "Pure existing aggregateFileChangeSummary/countLines/agentGroup and baseline parseUnifiedDiff only. All new candidate producer/consumer claims source-only. streamGroups/time/turnTiming not executed. No new external dependency."
+    },
+    {
+      "path": "docs/audit-2026-10-17-round13/evidence/review-groups.md",
+      "location": "7",
+      "excerpt": "0 failures；exit JSON 为 0。命令仅三份已有纯测试，fixture 的实际 import/代码片段对应 aggregateFileChangeSummary、countLines、agentGroup，已有 summary 测试调用 parseUnifiedDiff。报告没有把 streamGroups/time/turnTiming 误算成已执行。"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round13/evidence/root-dedup.json",
+      "location": "$[\"hits\"][\"transcript_projection\"][17][\"context\"]",
+      "excerpt": ".ts:701-724`, `types.ts:767-792`). Agent group wall time is calculated from those fields (`messages/agentGroup.ts:49-82`)."
+    },
+    {
+      "path": "docs/audit-2026-10-17-round13/evidence/root-dedup.json",
+      "location": "$[\"hits\"][\"transcript_projection\"][55][\"context\"]",
+      "excerpt": ".ts:701-724`, `types.ts:767-792`). Agent group wall time is calculated from those fields (`messages/agentGroup.ts:49-82`)."
+    },
+    {
+      "path": "docs/audit-2026-10-17-round13/groups.md",
+      "location": "7",
+      "excerpt": "阅读 `packages/desktop/src/renderer/messages/streamGroups.ts` 的核心分组/时间/签名路径，完整阅读 `agentGroup.ts`、`fileChangeAggregator.ts`、`time.ts` 及其三份现有基线、时间测试；选择性阅读 `turnTiming.test.ts`、`MessageStream.tsx:416` 的实际折叠管线、`types.ts:1224` 工具消息 producer、`:1335` 结果终态 producer、`:1897` 文件摘要消费，以及 `FilesChangedCard.tsx:30` 的摘要卡合同。另静态核对 Coding `tools/apply-patch/parser.ts` / `types.ts` / `index.ts:25` 中本地 V4A 合同。大消费者文件只核对指定相关片段，没有声称通读或端到端验收。"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round13/groups.md",
+      "location": "9",
+      "excerpt": "只执行了一份现有纯逻辑基线：真实 `aggregateFileChangeSummary` / `countLines` / `summarizeAgentGroup` / `foldAgentGroups`，以及已有测试调用的 `parseUnifiedDiff`。33 tests / 66 expect / 0 fail / 0 skip，guarded runner 完整 Completed。`streamGroups` / `time` / `turnTiming` 没有动态验证；没有运行 React、Electron、DOM、原生工具、真实补丁、Git 产品调用、模型、网络或用户数据。"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round13/groups.md",
+      "location": "9",
+      "excerpt": "只执行了一份现有纯逻辑基线：真实 `aggregateFileChangeSummary` / `countLines` / `summarizeAgentGroup` / `foldAgentGroups`，以及已有测试调用的 `parseUnifiedDiff`。33 tests / 66 expect / 0 fail / 0 skip，guarded runner 完整 Completed。`streamGroups` / `time` / `turnTiming` 没有动态验证；没有运行 React、Electron、DOM、原生工具、真实补丁、Git 产品调用、模型、网络或用户数据。"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round13/groups.md",
+      "location": "34",
+      "excerpt": "- `agentGroup.ts` 的成功/失败/运行数、并行 wallMs、单 agent 保持、相邻与嵌套折叠在既有基线中通过。普通 agent_start/agent_end 对 done 和时间的生产写入仅静态核对。没有从畸形手工对象推出“正常子代理失败被计成功”等结论。"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round13/source-manifest.json",
+      "location": "$[\"files\"][31][\"path\"]",
+      "excerpt": "packages/desktop/src/renderer/messages/AgentGroupCard.tsx"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round13/source-manifest.json",
+      "location": "$[\"files\"][33][\"path\"]",
+      "excerpt": "packages/desktop/src/renderer/messages/agentGroup.test.ts"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round13/source-manifest.json",
+      "location": "$[\"files\"][34][\"path\"]",
+      "excerpt": "packages/desktop/src/renderer/messages/agentGroup.ts"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round13/source-manifest.json",
+      "location": "$[\"files\"][34][\"sha256\"]",
+      "excerpt": "52529df60ce7729cc27f8b0f39aef6c8092b3c0434802de1331f8e76db1565c6"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round13/source-manifest.json",
+      "location": "$[\"workerSourceChecks\"][22][\"path\"]",
+      "excerpt": "packages/desktop/src/renderer/messages/agentGroup.ts"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round13/source-manifest.json",
+      "location": "$[\"workerSourceChecks\"][22][\"sha256\"]",
+      "excerpt": "52529df60ce7729cc27f8b0f39aef6c8092b3c0434802de1331f8e76db1565c6"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round13/source-manifest.json",
+      "location": "$[\"workerSourceChecks\"][23][\"path\"]",
+      "excerpt": "packages/desktop/src/renderer/messages/agentGroup.test.ts"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round13/source-manifest.json",
+      "location": "$[\"workerSourceChecks\"][24][\"path\"]",
+      "excerpt": "packages/desktop/src/renderer/messages/AgentGroupCard.tsx"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round13/validation.json",
+      "location": "$[\"runs\"][3][\"command\"][6]",
+      "excerpt": "packages/desktop/src/renderer/messages/agentGroup.test.ts"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round23/evidence/room-data-dedup.json",
+      "location": "$[\"hits\"][\"history_projection\"][12][\"context\"]",
+      "excerpt": ".ts:701-724`, `types.ts:767-792`). Agent group wall time is calculated from those fields (`messages/agentGroup.ts"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round23/evidence/room-data-dedup.json",
+      "location": "$[\"hits\"][\"history_projection\"][25][\"context\"]",
+      "excerpt": ".ts:701-724`, `types.ts:767-792`). Agent group wall time is calculated from those fields (`messages/agentGroup.ts"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round23/evidence/room-data-dedup.json",
+      "location": "$[\"hits\"][\"history_projection\"][27][\"context\"]",
+      "excerpt": ".ts:701-724`, `types.ts:767-792`). Agent group wall time is calculated from those fields (`messages/agentGroup.ts"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round23/evidence/room-data-dedup.json",
+      "location": "$[\"hits\"][\"history_projection\"][30][\"context\"]",
+      "excerpt": ".ts:701-724`, `types.ts:767-792`). Agent group wall time is calculated from those fields (`messages/agentGroup.ts"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round23/evidence/room-data-dedup.json",
+      "location": "$[\"hits\"][\"history_projection\"][33][\"context\"]",
+      "excerpt": ".ts:701-724`, `types.ts:767-792`). Agent group wall time is calculated from those fields (`messages/agentGroup.ts"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round23/evidence/room-data-dedup.json",
+      "location": "$[\"hits\"][\"history_projection\"][138][\"context\"]",
+      "excerpt": ".ts:701-724`, `types.ts:767-792`). Agent group wall time is calculated from those fields (`messages/agentGroup.ts"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round27/evidence/aggregator-dedup.json",
+      "location": "$[\"matches\"][\"exact\"][20][\"excerpt\"]",
+      "excerpt": "aggregateFileChange|fileChangeAggregator|streamGroups|agentGroup|summarizeAgent|foldAgent|formatMessageTime|消息.{0,12}(时间|聚合|文件|折叠)|替换.{0,12}(行数|计数)|ApplyPatch.{0,30}(diff|显示|统计)|diff.{0,12}(统计|聚合)"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round27/evidence/aggregator-dedup.json",
+      "location": "$[\"matches\"][\"exact\"][73][\"excerpt\"]",
+      "excerpt": "1. 现有 `fileChangeAggregator.test.ts`、`fileChangeAggregator.count.test.ts`、`agentGroup.test.ts` 的一个独立 guarded 首跑完整通过：33 pass / 66 expect / 0 fail / 0 skip。该基线已有的 ApplyPatch 示例只有普通 Add/Update，不能证明 Delete、Move 或符号前缀内容正确。"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round27/evidence/aggregator-dedup.json",
+      "location": "$[\"matches\"][\"exact\"][74][\"excerpt\"]",
+      "excerpt": "1. 现有 `fileChangeAggregator.test.ts`、`fileChangeAggregator.count.test.ts`、`agentGroup.test.ts` 的一个独立 guarded 首跑完整通过：33 pass / 66 expect / 0 fail / 0 skip。该基线已有的 ApplyPatch 示例只有普通 Add/Update，不能证明 Delete、Move 或符号前缀内容正确。"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round27/evidence/aggregator-dedup.json",
+      "location": "$[\"matches\"][\"exact\"][81][\"excerpt\"]",
+      "excerpt": "阅读 `packages/desktop/src/renderer/messages/streamGroups.ts` 的核心分组/时间/签名路径，完整阅读 `agentGroup.ts`、`fileChangeAggregator.ts`、`time.ts` 及其三份现有基线、时间测试；选择性阅读 `turnTiming.test.ts`、`MessageStream.tsx:416` 的实际折叠管线、`types.ts:1224` 工具消息 producer、`:1335` 结果终态 producer、`:1897` 文件摘要消费，以及 `FilesChangedCard.tsx:30` 的摘要卡合同。另静态核对 Coding `tools/apply-patch/parser.ts` / `types.ts` / `index.ts:25` 中本地 V4A 合同。大消费者文件只核对指定相关片段，没有声称通读或端到端验收。"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round27/evidence/aggregator-dedup.json",
+      "location": "$[\"matches\"][\"grouping\"][17][\"excerpt\"]",
+      "excerpt": "aggregateFileChange|fileChangeAggregator|streamGroups|agentGroup|summarizeAgent|foldAgent|formatMessageTime|消息.{0,12}(时间|聚合|文件|折叠)|替换.{0,12}(行数|计数)|ApplyPatch.{0,30}(diff|显示|统计)|diff.{0,12}(统计|聚合)"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round27/evidence/aggregator-dedup.json",
+      "location": "$[\"matches\"][\"grouping\"][91][\"excerpt\"]",
+      "excerpt": "1. 现有 `fileChangeAggregator.test.ts`、`fileChangeAggregator.count.test.ts`、`agentGroup.test.ts` 的一个独立 guarded 首跑完整通过：33 pass / 66 expect / 0 fail / 0 skip。该基线已有的 ApplyPatch 示例只有普通 Add/Update，不能证明 Delete、Move 或符号前缀内容正确。"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round27/evidence/aggregator-dedup.json",
+      "location": "$[\"matches\"][\"grouping\"][97][\"excerpt\"]",
+      "excerpt": "Pure existing aggregateFileChangeSummary/countLines/agentGroup and baseline parseUnifiedDiff only. All new candidate producer/consumer claims source-only. streamGroups/time/turnTiming not executed. No new external dependency."
+    },
+    {
+      "path": "docs/audit-2026-10-17-round27/evidence/aggregator-dedup.json",
+      "location": "$[\"matches\"][\"grouping\"][98][\"excerpt\"]",
+      "excerpt": "0 failures；exit JSON 为 0。命令仅三份已有纯测试，fixture 的实际 import/代码片段对应 aggregateFileChangeSummary、countLines、agentGroup，已有 summary 测试调用 parseUnifiedDiff。报告没有把 streamGroups/time/turnTiming 误算成已执行。"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round27/evidence/aggregator-dedup.json",
+      "location": "$[\"matches\"][\"grouping\"][100][\"excerpt\"]",
+      "excerpt": "阅读 `packages/desktop/src/renderer/messages/streamGroups.ts` 的核心分组/时间/签名路径，完整阅读 `agentGroup.ts`、`fileChangeAggregator.ts`、`time.ts` 及其三份现有基线、时间测试；选择性阅读 `turnTiming.test.ts`、`MessageStream.tsx:416` 的实际折叠管线、`types.ts:1224` 工具消息 producer、`:1335` 结果终态 producer、`:1897` 文件摘要消费，以及 `FilesChangedCard.tsx:30` 的摘要卡合同。另静态核对 Coding `tools/apply-patch/parser.ts` / `types.ts` / `index.ts:25` 中本地 V4A 合同。大消费者文件只核对指定相关片段，没有声称通读或端到端验收。"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round27/evidence/aggregator-dedup.json",
+      "location": "$[\"matches\"][\"grouping\"][101][\"excerpt\"]",
+      "excerpt": "只执行了一份现有纯逻辑基线：真实 `aggregateFileChangeSummary` / `countLines` / `summarizeAgentGroup` / `foldAgentGroups`，以及已有测试调用的 `parseUnifiedDiff`。33 tests / 66 expect / 0 fail / 0 skip，guarded runner 完整 Completed。`streamGroups` / `time` / `turnTiming` 没有动态验证；没有运行 React、Electron、DOM、原生工具、真实补丁、Git 产品调用、模型、网络或用户数据。"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round27/evidence/aggregator-dedup.json",
+      "location": "$[\"matches\"][\"grouping\"][101][\"excerpt\"]",
+      "excerpt": "只执行了一份现有纯逻辑基线：真实 `aggregateFileChangeSummary` / `countLines` / `summarizeAgentGroup` / `foldAgentGroups`，以及已有测试调用的 `parseUnifiedDiff`。33 tests / 66 expect / 0 fail / 0 skip，guarded runner 完整 Completed。`streamGroups` / `time` / `turnTiming` 没有动态验证；没有运行 React、Electron、DOM、原生工具、真实补丁、Git 产品调用、模型、网络或用户数据。"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round27/evidence/compose-dedup.json",
+      "location": "$[\"hits\"][\"aggregation-snapshot\"][46][\"context\"]",
+      "excerpt": "1. 现有 `fileChangeAggregator.test.ts`、`fileChangeAggregator.count.test.ts`、`agentGroup.test.ts` 的一个独立 guarded 首跑完整通过：33 pass / 66 expect / 0 fail / 0 skip。该基线已有的 ApplyPatch 示例只有普通 Add/Update，不能证明 Delete、Move 或符号前缀内容正确。"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round27/evidence/compose-dedup.json",
+      "location": "$[\"hits\"][\"aggregation-snapshot\"][50][\"context\"]",
+      "excerpt": "Pure existing aggregateFileChangeSummary/countLines/agentGroup and baseline parseUnifiedDiff only. All new candidate producer/consumer claims source-only. streamGroups/time/turnTiming not executed. No new external dependency."
+    },
+    {
+      "path": "docs/audit-2026-10-17-round27/evidence/compose-dedup.json",
+      "location": "$[\"hits\"][\"aggregation-snapshot\"][51][\"context\"]",
+      "excerpt": "0 failures；exit JSON 为 0。命令仅三份已有纯测试，fixture 的实际 import/代码片段对应 aggregateFileChangeSummary、countLines、agentGroup，已有 summary 测试调用 parseUnifiedDiff。报告没有把 streamGroups/time/turnTiming 误算成已执行。"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round27/evidence/compose-dedup.json",
+      "location": "$[\"hits\"][\"aggregation-snapshot\"][52][\"context\"]",
+      "excerpt": "阅读 `packages/desktop/src/renderer/messages/streamGroups.ts` 的核心分组/时间/签名路径，完整阅读 `agentGroup.ts`、`fileChangeAggregator.ts`、`time.ts` 及其三份现有基线、时间测试；选择性阅读 `turnTiming.test.ts`、`MessageStream.tsx:416` 的实际折叠管线、`types.ts:1224` 工具消息 producer、`:1335` 结果终态 producer、`:1897` 文件摘要消费，以及 `FilesChangedCard.tsx:30` 的摘要卡合同。另静态核对 Coding `tools/apply-patch/parser.ts` / `types.ts` / `index.ts:25` 中本地 V4A 合同。大消费者文件只核对指定相关片段，没有声称通读或端到端验收。"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round27/evidence/compose-dedup.json",
+      "location": "$[\"hits\"][\"aggregation-snapshot\"][53][\"context\"]",
+      "excerpt": "只执行了一份现有纯逻辑基线：真实 `aggregateFileChangeSummary` / `countLines` / `summarizeAgentGroup` / `foldAgentGroups`，以及已有测试调用的 `parseUnifiedDiff`。33 tests / 66 expect / 0 fail / 0 skip，guarded runner 完整 Completed。`streamGroups` / `time` / `turnTiming` 没有动态验证；没有运行 React、Electron、DOM、原生工具、真实补丁、Git 产品调用、模型、网络或用户数据。"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round27/evidence/compose-dedup.json",
+      "location": "$[\"hits\"][\"aggregation-snapshot\"][53][\"context\"]",
+      "excerpt": "只执行了一份现有纯逻辑基线：真实 `aggregateFileChangeSummary` / `countLines` / `summarizeAgentGroup` / `foldAgentGroups`，以及已有测试调用的 `parseUnifiedDiff`。33 tests / 66 expect / 0 fail / 0 skip，guarded runner 完整 Completed。`streamGroups` / `time` / `turnTiming` 没有动态验证；没有运行 React、Electron、DOM、原生工具、真实补丁、Git 产品调用、模型、网络或用户数据。"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round27/evidence/compose-prep/history.json",
+      "location": "$[\"hits\"][\"aggregation-snapshot\"][46][\"excerpt\"]",
+      "excerpt": "1. 现有 `fileChangeAggregator.test.ts`、`fileChangeAggregator.count.test.ts`、`agentGroup.test.ts` 的一个独立 guarded 首跑完整通过：33 pass / 66 expect / 0 fail / 0 skip。该基线已有的 ApplyPatch 示例只有普通 Add/Update，不能证明 Delete、Move 或符号前缀内容正确。"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round27/evidence/compose-prep/history.json",
+      "location": "$[\"hits\"][\"aggregation-snapshot\"][50][\"excerpt\"]",
+      "excerpt": "Pure existing aggregateFileChangeSummary/countLines/agentGroup and baseline parseUnifiedDiff only. All new candidate producer/consumer claims source-only. streamGroups/time/turnTiming not executed. No new external dependency."
+    },
+    {
+      "path": "docs/audit-2026-10-17-round27/evidence/compose-prep/history.json",
+      "location": "$[\"hits\"][\"aggregation-snapshot\"][51][\"excerpt\"]",
+      "excerpt": "0 failures；exit JSON 为 0。命令仅三份已有纯测试，fixture 的实际 import/代码片段对应 aggregateFileChangeSummary、countLines、agentGroup，已有 summary 测试调用 parseUnifiedDiff。报告没有把 streamGroups/time/turnTiming 误算成已执行。"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round27/evidence/compose-prep/history.json",
+      "location": "$[\"hits\"][\"aggregation-snapshot\"][52][\"excerpt\"]",
+      "excerpt": "阅读 `packages/desktop/src/renderer/messages/streamGroups.ts` 的核心分组/时间/签名路径，完整阅读 `agentGroup.ts`、`fileChangeAggregator.ts`、`time.ts` 及其三份现有基线、时间测试；选择性阅读 `turnTiming.test.ts`、`MessageStream.tsx:416` 的实际折叠管线、`types.ts:1224` 工具消息 producer、`:1335` 结果终态 producer、`:1897` 文件摘要消费，以及 `FilesChangedCard.tsx:30` 的摘要卡合同。另静态核对 Coding `tools/apply-patch/parser.ts` / `types.ts` / `index.ts:25` 中本地 V4A 合同。大消费者文件只核对指定相关片段，没有声称通读或端到端验收。"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round27/evidence/compose-prep/history.json",
+      "location": "$[\"hits\"][\"aggregation-snapshot\"][53][\"excerpt\"]",
+      "excerpt": "只执行了一份现有纯逻辑基线：真实 `aggregateFileChangeSummary` / `countLines` / `summarizeAgentGroup` / `foldAgentGroups`，以及已有测试调用的 `parseUnifiedDiff`。33 tests / 66 expect / 0 fail / 0 skip，guarded runner 完整 Completed。`streamGroups` / `time` / `turnTiming` 没有动态验证；没有运行 React、Electron、DOM、原生工具、真实补丁、Git 产品调用、模型、网络或用户数据。"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round27/evidence/compose-prep/history.json",
+      "location": "$[\"hits\"][\"aggregation-snapshot\"][53][\"excerpt\"]",
+      "excerpt": "只执行了一份现有纯逻辑基线：真实 `aggregateFileChangeSummary` / `countLines` / `summarizeAgentGroup` / `foldAgentGroups`，以及已有测试调用的 `parseUnifiedDiff`。33 tests / 66 expect / 0 fail / 0 skip，guarded runner 完整 Completed。`streamGroups` / `time` / `turnTiming` 没有动态验证；没有运行 React、Electron、DOM、原生工具、真实补丁、Git 产品调用、模型、网络或用户数据。"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+      "location": "$[\"files\"][691][\"path\"]",
+      "excerpt": "packages/desktop/src/renderer/messages/AgentGroupCard.tsx"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+      "location": "$[\"files\"][699][\"path\"]",
+      "excerpt": "packages/desktop/src/renderer/messages/agentGroup.test.ts"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+      "location": "$[\"files\"][700][\"path\"]",
+      "excerpt": "packages/desktop/src/renderer/messages/agentGroup.ts"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+      "location": "$[\"files\"][700][\"sha256\"]",
+      "excerpt": "52529df60ce7729cc27f8b0f39aef6c8092b3c0434802de1331f8e76db1565c6"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+      "location": "$[\"files\"][700][\"claims\"][0][\"sourceSha256\"]",
+      "excerpt": "52529df60ce7729cc27f8b0f39aef6c8092b3c0434802de1331f8e76db1565c6"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-ranking.json",
+      "location": "$[\"rankedCandidates\"][207][\"path\"]",
+      "excerpt": "packages/desktop/src/renderer/messages/agentGroup.ts"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-ranking.json",
+      "location": "$[\"rankedCandidates\"][207][\"sha256\"]",
+      "excerpt": "52529df60ce7729cc27f8b0f39aef6c8092b3c0434802de1331f8e76db1565c6"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+      "location": "$[\"files\"][2762][\"path\"]",
+      "excerpt": "packages/desktop/src/renderer/messages/AgentGroupCard.test.tsx"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+      "location": "$[\"files\"][2763][\"path\"]",
+      "excerpt": "packages/desktop/src/renderer/messages/AgentGroupCard.tsx"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+      "location": "$[\"files\"][2790][\"path\"]",
+      "excerpt": "packages/desktop/src/renderer/messages/agentGroup.test.ts"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+      "location": "$[\"files\"][2791][\"path\"]",
+      "excerpt": "packages/desktop/src/renderer/messages/agentGroup.ts"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+      "location": "$[\"files\"][2791][\"sha256\"]",
+      "excerpt": "52529df60ce7729cc27f8b0f39aef6c8092b3c0434802de1331f8e76db1565c6"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round36/evidence/root-history.json",
+      "location": "$[\"hits\"][\"chat-view\"][15][\"context\"]",
+      "excerpt": ".ts:701-724`, `types.ts:767-792`). Agent group wall time is calculated from those fields (`messages/agentGroup.ts:49-82`).\n\nImpact: reopening histori"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+      "location": "$[\"hits\"][72][\"matches\"][0][\"text\"]",
+      "excerpt": ".ts:701-724`, `types.ts:767-792`). Agent group wall time is calculated from those fields (`messages/agentGroup.ts:49-82`)."
+    },
+    {
+      "path": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+      "location": "$[\"hits\"][83][\"matches\"][4][\"text\"]",
+      "excerpt": "x:1–195`（目录/预览请求取消、切目录重置、定位）；Desktop `messages/time.ts`、`messages/CollapsibleContent.tsx`、`messages/agentGroup.ts`、`messages/streamGroups.ts` 关键纯状态路径、`transcriptsReducer.ts` hydrate 分支和 `sessionPersistence.ts:1–190`。另读 Core `turn-loop.ts` 已有 steer 与 turn_boundary 持久化段以排除误把模型内部 continuation 当新用户任务；没有运行 Core/Engine。"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/desktop-renderer-results.json",
+      "location": "$[116][\"file\"]",
+      "excerpt": "packages/desktop/src/renderer/messages/AgentGroupCard.test.tsx"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/desktop-renderer-results.json",
+      "location": "$[116][\"log\"]",
+      "excerpt": "/tmp/codeshell-review-20261012/desktop-baseline/116-AgentGroupCard.test.tsx.log"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/desktop-renderer-results.json",
+      "location": "$[125][\"file\"]",
+      "excerpt": "packages/desktop/src/renderer/messages/agentGroup.test.ts"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/desktop-renderer-results.json",
+      "location": "$[125][\"log\"]",
+      "excerpt": "/tmp/codeshell-review-20261012/desktop-baseline/125-agentGroup.test.ts.log"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-baseline-evidence-round28/independent-existing-tests.receipt.json",
+      "location": "$[\"groups\"][1][\"rawLogs\"][116][\"file\"]",
+      "excerpt": "packages/desktop/src/renderer/messages/AgentGroupCard.test.tsx"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-baseline-evidence-round28/independent-existing-tests.receipt.json",
+      "location": "$[\"groups\"][1][\"rawLogs\"][116][\"log\"]",
+      "excerpt": "/tmp/codeshell-review-20261012/desktop-baseline/116-AgentGroupCard.test.tsx.log"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-baseline-evidence-round28/independent-existing-tests.receipt.json",
+      "location": "$[\"groups\"][1][\"rawLogs\"][116][\"resolvedLog\"]",
+      "excerpt": "/private/tmp/codeshell-review-20261012/desktop-baseline/116-AgentGroupCard.test.tsx.log"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-baseline-evidence-round28/independent-existing-tests.receipt.json",
+      "location": "$[\"groups\"][1][\"rawLogs\"][116][\"archiveMemberBasename\"]",
+      "excerpt": "116-AgentGroupCard.test.tsx.log"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-baseline-evidence-round28/independent-existing-tests.receipt.json",
+      "location": "$[\"groups\"][1][\"rawLogs\"][125][\"file\"]",
+      "excerpt": "packages/desktop/src/renderer/messages/agentGroup.test.ts"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-baseline-evidence-round28/independent-existing-tests.receipt.json",
+      "location": "$[\"groups\"][1][\"rawLogs\"][125][\"log\"]",
+      "excerpt": "/tmp/codeshell-review-20261012/desktop-baseline/125-agentGroup.test.ts.log"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-baseline-evidence-round28/independent-existing-tests.receipt.json",
+      "location": "$[\"groups\"][1][\"rawLogs\"][125][\"resolvedLog\"]",
+      "excerpt": "/private/tmp/codeshell-review-20261012/desktop-baseline/125-agentGroup.test.ts.log"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-baseline-evidence-round28/independent-existing-tests.receipt.json",
+      "location": "$[\"groups\"][1][\"rawLogs\"][125][\"archiveMemberBasename\"]",
+      "excerpt": "125-agentGroup.test.ts.log"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-baseline-evidence-round28/manifest.json",
+      "location": "$[\"logs\"][257][\"file\"]",
+      "excerpt": "packages/desktop/src/renderer/messages/AgentGroupCard.test.tsx"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-baseline-evidence-round28/manifest.json",
+      "location": "$[\"logs\"][257][\"originalLog\"]",
+      "excerpt": "/tmp/codeshell-review-20261012/desktop-baseline/116-AgentGroupCard.test.tsx.log"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-baseline-evidence-round28/manifest.json",
+      "location": "$[\"logs\"][257][\"tarMember\"]",
+      "excerpt": "desktop-renderer/116-AgentGroupCard.test.tsx.log"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-baseline-evidence-round28/manifest.json",
+      "location": "$[\"logs\"][266][\"file\"]",
+      "excerpt": "packages/desktop/src/renderer/messages/agentGroup.test.ts"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-baseline-evidence-round28/manifest.json",
+      "location": "$[\"logs\"][266][\"originalLog\"]",
+      "excerpt": "/tmp/codeshell-review-20261012/desktop-baseline/125-agentGroup.test.ts.log"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-baseline-evidence-round28/manifest.json",
+      "location": "$[\"logs\"][266][\"tarMember\"]",
+      "excerpt": "desktop-renderer/125-agentGroup.test.ts.log"
+    },
+    {
+      "path": "docs/superpowers/specs/2026-06-07-agent-summary-view-design.md",
+      "location": "19",
+      "excerpt": "- 把**相邻 ≥2 个 agent 消息**折成一个 `AgentGroup`(派生项,不改 reducer 数据)。"
+    },
+    {
+      "path": "docs/superpowers/specs/2026-06-07-agent-summary-view-design.md",
+      "location": "21",
+      "excerpt": "- `AgentGroupCard`:汇总头(✓X ✗Y · N tools · 耗时)+ 可折叠的成员列表,每员复用 `AgentMessageView`。"
+    },
+    {
+      "path": "docs/superpowers/specs/2026-06-07-agent-summary-view-design.md",
+      "location": "32",
+      "excerpt": "  → foldAgentGroups(items)        ← 新 post-pass"
+    },
+    {
+      "path": "docs/superpowers/specs/2026-06-07-agent-summary-view-design.md",
+      "location": "35",
+      "excerpt": "`foldAgentGroups(items: StreamItem[]): StreamItem[]`:"
+    },
+    {
+      "path": "docs/superpowers/specs/2026-06-07-agent-summary-view-design.md",
+      "location": "36",
+      "excerpt": "- 线性扫描;遇到连续 ≥2 个 `kind:\"agent\"` 的项 → 包成 `AgentGroup { kind:\"agent_group\", id, agents: AgentMessage[] }`;<2 个原样保留。"
+    },
+    {
+      "path": "docs/superpowers/specs/2026-06-07-agent-summary-view-design.md",
+      "location": "37",
+      "excerpt": "s_group.items` 里(turn 卡 span 到最后一个 tool,中间的 agent 被纳入)。所以对 `turn_process_group` 的 `items` 也跑一遍 `foldAgentGroups`,把其内部的 agent 组也折起来。`tool_group` 内不会有 agent(agent 非 toolish),不必递归。"
+    },
+    {
+      "path": "docs/superpowers/specs/2026-06-07-agent-summary-view-design.md",
+      "location": "41",
+      "excerpt": "- `AgentGroup.id` 用首个成员的 id(`ag-<firstAgentId>`),React key 稳定。"
+    },
+    {
+      "path": "docs/superpowers/specs/2026-06-07-agent-summary-view-design.md",
+      "location": "47",
+      "excerpt": "// messages/agentGroup.ts"
+    },
+    {
+      "path": "docs/superpowers/specs/2026-06-07-agent-summary-view-design.md",
+      "location": "48",
+      "excerpt": "interface AgentGroupStats {"
+    },
+    {
+      "path": "docs/superpowers/specs/2026-06-07-agent-summary-view-design.md",
+      "location": "52",
+      "excerpt": "function summarizeAgentGroup(agents: AgentMessage[]): AgentGroupStats"
+    },
+    {
+      "path": "docs/superpowers/specs/2026-06-07-agent-summary-view-design.md",
+      "location": "52",
+      "excerpt": "function summarizeAgentGroup(agents: AgentMessage[]): AgentGroupStats"
+    },
+    {
+      "path": "docs/superpowers/specs/2026-06-07-agent-summary-view-design.md",
+      "location": "53",
+      "excerpt": "function foldAgentGroups(items: StreamItem[]): StreamItem[]   // 上面的扫描+递归"
+    },
+    {
+      "path": "docs/superpowers/specs/2026-06-07-agent-summary-view-design.md",
+      "location": "56",
+      "excerpt": "## UI(AgentGroupCard)"
+    },
+    {
+      "path": "docs/superpowers/specs/2026-06-07-agent-summary-view-design.md",
+      "location": "75",
+      "excerpt": "- **单测** `agentGroup.test.ts`:"
+    },
+    {
+      "path": "docs/superpowers/specs/2026-06-07-agent-summary-view-design.md",
+      "location": "76",
+      "excerpt": "  - `summarizeAgentGroup`:全成/有败/有 running 的 count;toolTotal 求和;wallMs = max(end)-min(start),有 running→0。"
+    },
+    {
+      "path": "docs/superpowers/specs/2026-06-07-agent-summary-view-design.md",
+      "location": "77",
+      "excerpt": "  - `foldAgentGroups`:2+ 相邻 agent → 1 个 agent_group;单 agent 不折;非 agent 打断分组;**递归**进 turn_process_group.items 折其中的 agent 组;空/无 agent 输入原样返回。"
+    },
+    {
+      "path": "docs/superpowers/specs/2026-06-07-agent-summary-view-design.md",
+      "location": "84",
+      "excerpt": "- 新增:`messages/agentGroup.ts`(纯函数)+ `.test.ts`;`messages/AgentGroupCard.tsx` + 渲染 smoke。"
+    },
+    {
+      "path": "docs/superpowers/specs/2026-06-07-agent-summary-view-design.md",
+      "location": "84",
+      "excerpt": "- 新增:`messages/agentGroup.ts`(纯函数)+ `.test.ts`;`messages/AgentGroupCard.tsx` + 渲染 smoke。"
+    },
+    {
+      "path": "docs/superpowers/specs/2026-06-07-agent-summary-view-design.md",
+      "location": "85",
+      "excerpt": "- 改:`MessageStream.tsx`(items pipeline 末尾加 foldAgentGroups + 顶层渲染 agent_group → AgentGroupCard);`TurnProcessGroupCard.tsx`(其 items.map 的 kind switch 加 `agent_group` 分支——turn 卡内部的 agent 组也要能渲染);`reconcileStreamItems` 让 post-pass 在 reconcile 后跑以避开它(无需改)。"
+    },
+    {
+      "path": "docs/superpowers/specs/2026-06-07-agent-summary-view-design.md",
+      "location": "85",
+      "excerpt": "- 改:`MessageStream.tsx`(items pipeline 末尾加 foldAgentGroups + 顶层渲染 agent_group → AgentGroupCard);`TurnProcessGroupCard.tsx`(其 items.map 的 kind switch 加 `agent_group` 分支——turn 卡内部的 agent 组也要能渲染);`reconcileStreamItems` 让 post-pass 在 reconcile 后跑以避开它(无需改)。"
+    },
+    {
+      "path": "docs/superpowers/specs/2026-06-07-agent-summary-view-design.md",
+      "location": "86",
+      "excerpt": "- AgentGroup 类型放 `agentGroup.ts` 并由 streamGroups 的 StreamItem 联合纳入(StreamItem 加 `| AgentGroup`)。"
+    },
+    {
+      "path": "docs/superpowers/specs/2026-06-07-agent-summary-view-design.md",
+      "location": "86",
+      "excerpt": "- AgentGroup 类型放 `agentGroup.ts` 并由 streamGroups 的 StreamItem 联合纳入(StreamItem 加 `| AgentGroup`)。"
+    },
+    {
+      "path": "docs/superpowers/specs/2026-06-07-agent-summary-view-design.md",
+      "location": "86",
+      "excerpt": "- AgentGroup 类型放 `agentGroup.ts` 并由 streamGroups 的 StreamItem 联合纳入(StreamItem 加 `| AgentGroup`)。"
+    }
+  ],
+  "directSourceObjects": [
+    {
+      "path": "docs/audit-2026-10-17-round13/evidence/groups-source-manifest.json",
+      "location": "$[\"files\"][4]",
+      "object": {
+        "path": "packages/desktop/src/renderer/messages/agentGroup.ts",
+        "frozenSha256": "52529df60ce7729cc27f8b0f39aef6c8092b3c0434802de1331f8e76db1565c6",
+        "sha256": "52529df60ce7729cc27f8b0f39aef6c8092b3c0434802de1331f8e76db1565c6",
+        "frozenBytes": 4292,
+        "currentEqualsFrozen": true
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round13/source-manifest.json",
+      "location": "$[\"files\"][34]",
+      "object": {
+        "path": "packages/desktop/src/renderer/messages/agentGroup.ts",
+        "bytes": 4292,
+        "sha256": "52529df60ce7729cc27f8b0f39aef6c8092b3c0434802de1331f8e76db1565c6",
+        "frozenBlobVerified": true,
+        "currentWorkingTreeMatchesFrozenBlob": true
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round13/source-manifest.json",
+      "location": "$[\"workerSourceChecks\"][22]",
+      "object": {
+        "manifest": "groups-source-manifest.json",
+        "path": "packages/desktop/src/renderer/messages/agentGroup.ts",
+        "sha256": "52529df60ce7729cc27f8b0f39aef6c8092b3c0434802de1331f8e76db1565c6"
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+      "location": "$[\"files\"][700]",
+      "object": {
+        "path": "packages/desktop/src/renderer/messages/agentGroup.ts",
+        "bytes": 4292,
+        "lines": 133,
+        "sha256": "52529df60ce7729cc27f8b0f39aef6c8092b3c0434802de1331f8e76db1565c6",
+        "status": "current-sha-pin-only-no-semantic-coverage",
+        "currentFullClaimVariants": 0,
+        "currentSelectedClaimVariants": 0,
+        "currentSelectedUnionLines": 0,
+        "currentSelectedUnionRanges": [],
+        "priorVersionClaimVariants": 0,
+        "currentPinOnlyVariants": 1,
+        "claimVariants": 1,
+        "claims": [
+          {
+            "sourceSha256": "52529df60ce7729cc27f8b0f39aef6c8092b3c0434802de1331f8e76db1565c6",
+            "matchesCurrentFilesystem": true,
+            "coverageKind": "scope-unknown-pin-only",
+            "rawCoverageLabel": null,
+            "selectedLineRanges": [],
+            "validRangeBoundsForCurrentFile": true,
+            "manifests": [
+              {
+                "path": "docs/audit-2026-10-17-round13/evidence/groups-source-manifest.json",
+                "jsonLocation": "$[\"files\"][4]"
+              },
+              {
+                "path": "docs/audit-2026-10-17-round13/source-manifest.json",
+                "jsonLocation": "$[\"files\"][34]"
+              },
+              {
+                "path": "docs/audit-2026-10-17-round13/source-manifest.json",
+                "jsonLocation": "$[\"workerSourceChecks\"][22]"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-ranking.json",
+      "location": "$[\"rankedCandidates\"][207]",
+      "object": {
+        "path": "packages/desktop/src/renderer/messages/agentGroup.ts",
+        "bytes": 4292,
+        "lines": 133,
+        "sha256": "52529df60ce7729cc27f8b0f39aef6c8092b3c0434802de1331f8e76db1565c6",
+        "coverageStatus": "current-sha-pin-only-no-semantic-coverage",
+        "currentFullClaimVariants": 0,
+        "currentSelectedUnionLines": 0,
+        "priorVersionClaimVariants": 0,
+        "claimVariants": 1,
+        "runtimeImportLines": [],
+        "typeOnlyImportLineCount": 3,
+        "requiresRootSourceReadAndBoundaryReview": true
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+      "location": "$[\"files\"][2791]",
+      "object": {
+        "path": "packages/desktop/src/renderer/messages/agentGroup.ts",
+        "bytes": 4292,
+        "lines": 133,
+        "sha256": "52529df60ce7729cc27f8b0f39aef6c8092b3c0434802de1331f8e76db1565c6"
+      }
+    }
+  ],
+  "drift": []
+}

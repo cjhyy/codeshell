@@ -1,0 +1,24 @@
+{
+  "addedFiles": 96,
+  "patterns": {
+    "dataset-editor": "dataset-editor|parseEditableDataset",
+    "plugin-draft": "(?:plugin|插件).{0,160}(?:draft|草稿)|(?:draft|草稿).{0,160}(?:plugin|插件)",
+    "active-ref-draft": "activeBucketRef.{0,160}(?:expand|草稿|draft)|(?:expand|草稿|draft).{0,160}activeBucketRef"
+  },
+  "counts": {
+    "dataset-editor": 0,
+    "plugin-draft": 0,
+    "active-ref-draft": 0
+  },
+  "hits": {
+    "dataset-editor": [],
+    "plugin-draft": [],
+    "active-ref-draft": []
+  },
+  "contextCapEach": 80,
+  "productRuns": 0,
+  "limitations": [
+    "Only96 frozen42 new MD/JSON, original3696/3773 prep histories retained.",
+    "Counts and retained contexts do not mean full-history or full-scalar semantic reading."
+  ]
+}

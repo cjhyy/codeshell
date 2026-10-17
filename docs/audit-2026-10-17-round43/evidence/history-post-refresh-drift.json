@@ -1,0 +1,19 @@
+{
+  "initialInventoryFiles": 3869,
+  "changed": [
+    {
+      "before": {
+        "path": "docs/todo/release-real-operations-2026-10-16.md",
+        "bytes": 199956,
+        "sha256": "8c1b9ca1624268007d7c7c6b92af69c58b619e20cc8cc991b4de1676a12c2db3"
+      },
+      "after": {
+        "path": "docs/todo/release-real-operations-2026-10-16.md",
+        "bytes": 212262,
+        "sha256": "f654cd5e3acdacf39eb2156514322d048d5ea1d548daad46fd9504060d7f470e"
+      }
+    }
+  ],
+  "productRuns": 0,
+  "datedSnapshotPreserved": true
+}

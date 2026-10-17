@@ -1,0 +1,48 @@
+{
+  "capturedAtUTC": "2026-10-17T14:34:49.891698+00:00",
+  "files": [
+    {
+      "path": "packages/browser-devtools/src/inspector.ts",
+      "bytes": 8534,
+      "lines": 227,
+      "sha256": "bab4ae5c83c666db5529acc5eae364c4301bfa21d0a093a96c08da5cc176c6e2",
+      "semanticRead": false
+    },
+    {
+      "path": "packages/browser-devtools/src/contracts.ts",
+      "bytes": 1183,
+      "lines": 36,
+      "sha256": "fd9493faf494f65e6c3a3fefe446bba458d89571127e7a97567db8169a1650c2",
+      "semanticRead": false
+    },
+    {
+      "path": "packages/chat/src/notification-progress.ts",
+      "bytes": 13655,
+      "lines": 367,
+      "sha256": "e1f787e6aabe7d5a49f86aa80af15c4599a5583f83d7f85207e3acfb7677b617",
+      "semanticRead": false
+    },
+    {
+      "path": "packages/chat/src/protocol.ts",
+      "bytes": 3521,
+      "lines": 122,
+      "sha256": "ac7e097c07b4d4ffbca59a7958e2cf71fa68b2ccc9833f8f07043ef6d9afb65a",
+      "semanticRead": false
+    },
+    {
+      "path": "packages/chat/src/media.ts",
+      "bytes": 9244,
+      "lines": 272,
+      "sha256": "9cd43efac474d03615408fd8ab094c3136ef1972d399b72fc30c362487dabe14",
+      "semanticRead": false
+    },
+    {
+      "path": "packages/chat/src/attachments.ts",
+      "bytes": 3512,
+      "lines": 93,
+      "sha256": "58a2c3b5b566db4d7d3dc1a74bedc371c74972368fae3d9dbf6d400fcd29fc82",
+      "semanticRead": false
+    }
+  ],
+  "note": "Source inventory/hash only. Root suggested browser diagnostic normalization or chat text formatting; all native/transport/identity mechanisms excluded."
+}

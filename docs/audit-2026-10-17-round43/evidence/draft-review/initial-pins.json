@@ -1,0 +1,70 @@
+{
+  "capturedUTC": "2026-10-17T14:36:52.509674+00:00",
+  "scope": "prepOnly47; parent current repository contextual only, no Git command; source whole-byte pins before body reads",
+  "files": [
+    {
+      "path": "packages/desktop/src/renderer/ChatView.tsx",
+      "bytes": 106169,
+      "sha256": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+      "lineCount": 2622,
+      "capturedBeforeSemanticRead": true,
+      "capturedUTC": "2026-10-17T14:36:52.500927+00:00"
+    },
+    {
+      "path": "packages/desktop/src/renderer/App.tsx",
+      "bytes": 122863,
+      "sha256": "02ae12bfccf26878226720ad90282a6a11a1fdc3e05efd1ce54a09d256d5d715",
+      "lineCount": 2924,
+      "capturedBeforeSemanticRead": true,
+      "capturedUTC": "2026-10-17T14:36:52.503802+00:00"
+    },
+    {
+      "path": "packages/desktop/src/renderer/app/SessionPanelDock.tsx",
+      "bytes": 10859,
+      "sha256": "92858a55a71f223a307fd0def53445610b417cf93fa5839fb475dabb38666396",
+      "lineCount": 242,
+      "capturedBeforeSemanticRead": true,
+      "capturedUTC": "2026-10-17T14:36:52.504763+00:00"
+    },
+    {
+      "path": "packages/desktop/src/renderer/panels/QuickChatPanel.tsx",
+      "bytes": 10423,
+      "sha256": "2ba6bc347641787b10c7c5ae1b3c6d650403ffdc5d846eea03c12811bdf31570",
+      "lineCount": 273,
+      "capturedBeforeSemanticRead": true,
+      "capturedUTC": "2026-10-17T14:36:52.505655+00:00"
+    },
+    {
+      "path": "packages/desktop/src/renderer/ChatView.plugin-commands.test.tsx",
+      "bytes": 12557,
+      "sha256": "48650599430dc3ad7166586996c647b70ad45c72cafe6074d1c55e39e85cd785",
+      "lineCount": 397,
+      "capturedBeforeSemanticRead": true,
+      "capturedUTC": "2026-10-17T14:36:52.506815+00:00"
+    },
+    {
+      "path": "packages/desktop/src/renderer/ChatView.ephemeral-lifecycle.test.tsx",
+      "bytes": 15939,
+      "sha256": "9b4199afec8a2062bd10b6161106d0ff7b4cecaac52029622ee76e017b27c0fb",
+      "lineCount": 478,
+      "capturedBeforeSemanticRead": true,
+      "capturedUTC": "2026-10-17T14:36:52.507620+00:00"
+    },
+    {
+      "path": "AGENTS.md",
+      "bytes": 206,
+      "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "lineCount": 5,
+      "coverage": "carried instruction hash only",
+      "semanticInitialSha": null
+    },
+    {
+      "path": "CODESHELL.md",
+      "bytes": 17639,
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "lineCount": 217,
+      "coverage": "carried instruction hash only",
+      "semanticInitialSha": null
+    }
+  ]
+}

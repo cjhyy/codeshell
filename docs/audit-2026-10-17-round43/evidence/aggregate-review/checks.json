@@ -1,0 +1,2060 @@
+{
+  "capturedAtUTC": "2026-10-17T14:47:17.057814+00:00",
+  "scope": "Formal43 preparation: frozen inputs metadata aggregation only; no formal branch/head certification",
+  "files": [],
+  "newProductSemanticReading": 0,
+  "currentProductBytesOpened": 0,
+  "sourceExcerptArtifactsDecoded": 0,
+  "gitCommands": 0,
+  "productRuns": 0,
+  "fixtureRuns": 0,
+  "testRuns": 0,
+  "inputArtifacts": [
+    {
+      "label": "author46",
+      "directory": "/tmp/codeshell-audit-round46-core-data-frontier",
+      "role": "Own-author metadata only",
+      "fileCount": 29,
+      "receiptRows": 28,
+      "receiptSelfExcluded": true,
+      "files": [
+        {
+          "path": "active-consumer-pins.json",
+          "bytes": 1539,
+          "sha256": "1388362c6344262449c2d5eb4b2a5ac10f2ebb972c568a23e127052655c9947c",
+          "receiptRow": true
+        },
+        {
+          "path": "active-history.json",
+          "bytes": 13170,
+          "sha256": "23baf1ae701b99635addf190db082d9da91e39d245da668df6b9f73e9b575543",
+          "receiptRow": true
+        },
+        {
+          "path": "agent-group-history.json",
+          "bytes": 57849,
+          "sha256": "90afe906f3afad8cf571e2f2503720145aa0eb01b62234584f30de853bb55844",
+          "receiptRow": true
+        },
+        {
+          "path": "agent-group-initial-pins.json",
+          "bytes": 982,
+          "sha256": "c3c43f2900347b7abd6a70b475bfa690552ba0f84534333eea8746b81235c565",
+          "receiptRow": true
+        },
+        {
+          "path": "artifact-receipt.json",
+          "bytes": 4706,
+          "sha256": "86cdbdc6fb577c7732f48b78831fa19b74e473adaf1c5149707b7621b9bfae27",
+          "receiptRow": false
+        },
+        {
+          "path": "author-metadata-checks.json",
+          "bytes": 10375,
+          "sha256": "639aab6d7bea71f41498920a285475b2b8557a59757e71dde23a69b0127238d4",
+          "receiptRow": true
+        },
+        {
+          "path": "classification.json",
+          "bytes": 650,
+          "sha256": "2a29109de528cb3e638bb25ab62ac7e28e01be5380d48f3595eba795bc7834d9",
+          "receiptRow": true
+        },
+        {
+          "path": "consumer-initial-pins.json",
+          "bytes": 984,
+          "sha256": "f358fd7ff4127668d19bfd6d60909156b94265dea793d88a26281678a0129ded",
+          "receiptRow": true
+        },
+        {
+          "path": "data-selection-history.json",
+          "bytes": 231771,
+          "sha256": "27cd461eb89814739256f8af38f01c80142baedc7eb1daea2242463dddab5320",
+          "receiptRow": true
+        },
+        {
+          "path": "data-selection-pins.json",
+          "bytes": 1556,
+          "sha256": "06e8451dcf83005909c605a263b778ff2965afc75df1d8946408153a8a00f35e",
+          "receiptRow": true
+        },
+        {
+          "path": "final-selection-history.json",
+          "bytes": 106314,
+          "sha256": "7b87f0f00eebd364209af8f6ecbf9a28e653ea95ff6e52c256631c3955d34832",
+          "receiptRow": true
+        },
+        {
+          "path": "final-selection-pins.json",
+          "bytes": 1353,
+          "sha256": "2b4453aa29fb480d0a26e4eebbfccd630740ded4d533a2f319a2cf3eecefcef4",
+          "receiptRow": true
+        },
+        {
+          "path": "finish-hash-checks.json",
+          "bytes": 12188,
+          "sha256": "d73fed66003f251a7ca6402b477dbc59731337bd4b5067b773747de608494387",
+          "receiptRow": true
+        },
+        {
+          "path": "history-decisions.json",
+          "bytes": 5138,
+          "sha256": "aa2c117f0fe883d8661e76d09abfd4648df49d3ca42ca90c0394f278ff473387",
+          "receiptRow": true
+        },
+        {
+          "path": "history-method.py",
+          "bytes": 3658,
+          "sha256": "b08ad94a8efc9ef8a23970a44d6fbdff85e11e82da28c7c3f33edcfecb1ffa25",
+          "receiptRow": true
+        },
+        {
+          "path": "history.json",
+          "bytes": 834246,
+          "sha256": "d7f5b39ed23b4d5ec4fdc6f199e53150465cf0190f38a664b3a159fdafd630d5",
+          "receiptRow": true
+        },
+        {
+          "path": "page-initial-pin.json",
+          "bytes": 330,
+          "sha256": "bca807ac8de09aec28af7f87a0bbb22ee74d7cca471b9b85e4d0ec01a7e5ace6",
+          "receiptRow": true
+        },
+        {
+          "path": "replacement-history.json",
+          "bytes": 95867,
+          "sha256": "7e8975fa1af30b0797126f31d6f17d00ca298bc45ef9008c69f833f4dfcc2444",
+          "receiptRow": true
+        },
+        {
+          "path": "report.md",
+          "bytes": 5257,
+          "sha256": "42453ea4d4e69bd87461a22b4ad90a5c5596607755cdb9618d7a5165d8cd6e49",
+          "receiptRow": true
+        },
+        {
+          "path": "second-selection-history.json",
+          "bytes": 209011,
+          "sha256": "4ea1323cb749df9549fbe1a4b5f72a931bd331694e3f5a531ce898c5f320ccff",
+          "receiptRow": true
+        },
+        {
+          "path": "second-selection-pins.json",
+          "bytes": 1124,
+          "sha256": "250b1ff25af116a15e252a6e739161f45513c87a228a0516613ec1aab9e56c2c",
+          "receiptRow": true
+        },
+        {
+          "path": "selection-gate-method.py",
+          "bytes": 1581,
+          "sha256": "b5fa5fa60a5c7fb80a2ff37beac9090c43988eafb3060b3f95debc76aebd54ba",
+          "receiptRow": true
+        },
+        {
+          "path": "selection-history-notes.json",
+          "bytes": 2949,
+          "sha256": "ab689935a7ce5e5dcbe3228139a7003013659f84e047ef2ca393ead7e0d243aa",
+          "receiptRow": true
+        },
+        {
+          "path": "selection-initial-pins.json",
+          "bytes": 1137,
+          "sha256": "18458dfd7631be1060e95f7705327683a034ef038b08855ece4ce6f1be9c1bb9",
+          "receiptRow": true
+        },
+        {
+          "path": "source-excerpts.txt",
+          "bytes": 43949,
+          "sha256": "6887659bdd81bc4f48799ef65524b40b1865a66d36cf6fab58f0fa18fcf2851a",
+          "receiptRow": true
+        },
+        {
+          "path": "source-manifest.json",
+          "bytes": 20671,
+          "sha256": "776b69bece8ea58b3894faa6fef71d2248e77ecd55ad8ef95aa6ee90e89f6dda",
+          "receiptRow": true
+        },
+        {
+          "path": "third-selection-history.json",
+          "bytes": 225878,
+          "sha256": "9dc3987b1428283bb36ae6ae51a6ecd57cc37a6b0ca7668e30d7912a95071761",
+          "receiptRow": true
+        },
+        {
+          "path": "third-selection-pins.json",
+          "bytes": 1049,
+          "sha256": "1521379c1b6ddf6aed7498cc370979b09057f7605439492d1b690545d0e7731a",
+          "receiptRow": true
+        },
+        {
+          "path": "validation.json",
+          "bytes": 1436,
+          "sha256": "ff6ad7135dd5e7da1a404569e992af1764de0b3a717f84aba24affad3c0528f8",
+          "receiptRow": true
+        }
+      ],
+      "allReceiptRowsMatch": true,
+      "noUnlistedFiles": true
+    },
+    {
+      "label": "root46",
+      "directory": "/tmp/codeshell-audit-round46-root-review",
+      "role": "Separate source counter-review after knowing author stage opinion, not blind",
+      "fileCount": 22,
+      "receiptRows": 21,
+      "receiptSelfExcluded": true,
+      "files": [
+        {
+          "path": "artifact-receipt.json",
+          "bytes": 3422,
+          "sha256": "ad7eee40cccc35f6a00a54956f98a3e6b0574750e1dfb679183d5147747ad676",
+          "receiptRow": false
+        },
+        {
+          "path": "consumer-excerpts.first.json",
+          "bytes": 6759,
+          "sha256": "aac5c938e3c00f274c67b2cab619a4837ca290d4b6a239b9dace944cb7de18f4",
+          "receiptRow": true
+        },
+        {
+          "path": "consumer-initial-pins.json",
+          "bytes": 633,
+          "sha256": "82285fdad91b1e711c5ce3405840e34bd57d931e42f25fb94971723b67dbb6e0",
+          "receiptRow": true
+        },
+        {
+          "path": "consumer-navigation.first-exit.json",
+          "bytes": 37,
+          "sha256": "1eb47f8cd0e269039c6cd8a39d93f40006fbfd41f759576d6b51344ab3397c28",
+          "receiptRow": true
+        },
+        {
+          "path": "consumer-navigation.first.txt",
+          "bytes": 7627,
+          "sha256": "0aa2ed28dda971679d56d8bc772e6a560acf8c26a2773fa39183e62df1462fef",
+          "receiptRow": true
+        },
+        {
+          "path": "coverage-rows.json",
+          "bytes": 11474,
+          "sha256": "daec75ba580e521f601316fb10853d29fb27ca240cc259942b8d1e2051514ef9",
+          "receiptRow": true
+        },
+        {
+          "path": "decisions.json",
+          "bytes": 1236,
+          "sha256": "b55f6b6578b12e7491eed846fa5c8f558e39d37f0ba9527aba97fc4b57398837",
+          "receiptRow": true
+        },
+        {
+          "path": "finish-checks.json",
+          "bytes": 166,
+          "sha256": "b48703ccdd9ee7cb96013757fbfc5c067840bfa1b8fcb18e328f68584efdd28e",
+          "receiptRow": true
+        },
+        {
+          "path": "history-first-exit.json",
+          "bytes": 37,
+          "sha256": "1eb47f8cd0e269039c6cd8a39d93f40006fbfd41f759576d6b51344ab3397c28",
+          "receiptRow": true
+        },
+        {
+          "path": "history-first.log.txt",
+          "bytes": 211,
+          "sha256": "e4283757fb3f5d1bb086877787263b6bc1a16924cc92aba6a099f0a04681e6a3",
+          "receiptRow": true
+        },
+        {
+          "path": "history.json",
+          "bytes": 804885,
+          "sha256": "861fb6cb21735b82f908b366b3d226fd8bceff31b6056788660a421037d43427",
+          "receiptRow": true
+        },
+        {
+          "path": "replacement-history-first-exit.json",
+          "bytes": 37,
+          "sha256": "1eb47f8cd0e269039c6cd8a39d93f40006fbfd41f759576d6b51344ab3397c28",
+          "receiptRow": true
+        },
+        {
+          "path": "replacement-history-first.log.txt",
+          "bytes": 1204,
+          "sha256": "21c510643958292e7f56bf7c6061745857664303ec482f1f521671e86c74361a",
+          "receiptRow": true
+        },
+        {
+          "path": "replacement-history.json",
+          "bytes": 2039,
+          "sha256": "0a1128c9a4023c695734f701ad8ce8ade4eac60d223baa5bdfbb2bc37e328c1d",
+          "receiptRow": true
+        },
+        {
+          "path": "replacement-history.py",
+          "bytes": 1954,
+          "sha256": "506e2a86904a078f07e7314e32b476ecebf63f0bbf6cd587e2d223a968e3893a",
+          "receiptRow": true
+        },
+        {
+          "path": "replacement-initial-pin.json",
+          "bytes": 290,
+          "sha256": "3215d66016ddb719f8397ceae796c7e6eae5bbbf8da83f8684657562082a9eb9",
+          "receiptRow": true
+        },
+        {
+          "path": "review.md",
+          "bytes": 2691,
+          "sha256": "ba3b3b6e7fccf76706b400b969b68fdfa1ce719c481cf48785e9b9ed017dbc85",
+          "receiptRow": true
+        },
+        {
+          "path": "scan-history.py",
+          "bytes": 2748,
+          "sha256": "bd49b7ba3ea57fc05aba8532f5274739952c1c9203ac5494afcaef86a6ada720",
+          "receiptRow": true
+        },
+        {
+          "path": "selection-initial-pins.json",
+          "bytes": 668,
+          "sha256": "cc306d31a0b65129d86489ff8db565d3e0ca46fcbf26c7904f6814f1b467c1bf",
+          "receiptRow": true
+        },
+        {
+          "path": "source-excerpts.first.json",
+          "bytes": 11050,
+          "sha256": "ff11c22ce968995c2c7880074d87a0da3507e7901f529d3d4d0c04bf59145e25",
+          "receiptRow": true
+        },
+        {
+          "path": "source-manifest.json",
+          "bytes": 7039,
+          "sha256": "89121f8407ec4f1dee0366ff798e39fb78c4fbdd5e8a8674fa31beabf57767d0",
+          "receiptRow": true
+        },
+        {
+          "path": "validation.json",
+          "bytes": 263,
+          "sha256": "9db6a36624a98f77f69ce80bd92c03d39be5901af85b224feb0f812869f79889",
+          "receiptRow": true
+        }
+      ],
+      "allReceiptRowsMatch": true,
+      "noUnlistedFiles": true
+    },
+    {
+      "label": "author47",
+      "directory": "/tmp/codeshell-audit-round47-ui-data-frontier",
+      "role": "Ordinary current product selected-source author",
+      "fileCount": 17,
+      "receiptRows": 16,
+      "receiptSelfExcluded": true,
+      "files": [
+        {
+          "path": "artifact-receipt.json",
+          "bytes": 5379,
+          "sha256": "395bad53928ea4426fe507cd3e2c740c3bd2e84e6c57e0e28aa2d64575aa33e7",
+          "receiptRow": false
+        },
+        {
+          "path": "cause-history-method.first.exit.json",
+          "bytes": 673,
+          "sha256": "9ceed79c56f4273ab3747fddb80f2792beb8b4c2336409171b32f6e048778e9d",
+          "receiptRow": true
+        },
+        {
+          "path": "cause-history-method.first.raw.py",
+          "bytes": 3056,
+          "sha256": "12e0ae8e1b313ac7aa7b16365a033d38c42e2fe375c1d812a8e45b19c2b97290",
+          "receiptRow": true
+        },
+        {
+          "path": "cause-history-method.py",
+          "bytes": 3057,
+          "sha256": "d6b2e784bd636a13538f1af3c2d16ff57ddb1fd88cc27feb9cf6b9bdf1240488",
+          "receiptRow": true
+        },
+        {
+          "path": "cause-history.json",
+          "bytes": 212673,
+          "sha256": "d83a12126679daefd7f3e0818aadb3eb0a7e27bead653551a37f03816bea9027",
+          "receiptRow": true
+        },
+        {
+          "path": "consumer-initial-pins.json",
+          "bytes": 1022,
+          "sha256": "9a4b4b9bd474b91e7c4aafd7711eea024c26883f3e47df73cbb946d0e83d8814",
+          "receiptRow": true
+        },
+        {
+          "path": "coverage-gate-rows.json",
+          "bytes": 24895,
+          "sha256": "439dab8a14b78c5ee95b373d51979c941ff960e826b65c293206962d7a9c4ca0",
+          "receiptRow": true
+        },
+        {
+          "path": "decisions.json",
+          "bytes": 4216,
+          "sha256": "c42ff9bf384e9dc642ddecedd2f84321f118c6df8518946204fc6877e37215ab",
+          "receiptRow": true
+        },
+        {
+          "path": "finish-checks.json",
+          "bytes": 2928,
+          "sha256": "e0b9d03688e3bccee57253f33392f9387ff6a87ea64109d73eeb796194d5cacc",
+          "receiptRow": true
+        },
+        {
+          "path": "history-contexts.json",
+          "bytes": 240532,
+          "sha256": "24521cc48937990df3f7354716a15dc0045eab96fc171ef7227ecbd544437cc3",
+          "receiptRow": true
+        },
+        {
+          "path": "history-method.py",
+          "bytes": 3816,
+          "sha256": "335af6180d83042056ba0f58eb416ae767da183cce6308520e257958dfff8edb",
+          "receiptRow": true
+        },
+        {
+          "path": "history.json",
+          "bytes": 749011,
+          "sha256": "5423ad199b1547658cd1124fe7dcf247a52d11679f37434cf9482477f03ba4b3",
+          "receiptRow": true
+        },
+        {
+          "path": "initial-pins.json",
+          "bytes": 1181,
+          "sha256": "b88003f5232caa3f400478ba6759d3a8695ea201943d6c6b805ad74044b79b19",
+          "receiptRow": true
+        },
+        {
+          "path": "metadata-notes.json",
+          "bytes": 2100,
+          "sha256": "c4af9d2327743ea840b3c802febd46ee15b68fa019af057b184a06c347d08f57",
+          "receiptRow": true
+        },
+        {
+          "path": "report.md",
+          "bytes": 5552,
+          "sha256": "5951b2996c998f95e8c8b8566f138ec0b0097b7ee8dc77e1b39f93bfa643116d",
+          "receiptRow": true
+        },
+        {
+          "path": "source-excerpts.json",
+          "bytes": 49441,
+          "sha256": "176d8d5df5d51cede7cc0db78e45e8ac31b3ef30e23869aaf09655588ab77493",
+          "receiptRow": true
+        },
+        {
+          "path": "source-manifest.json",
+          "bytes": 10554,
+          "sha256": "f710b18a9a76a4ecc526d0b6f94c91d206b5e87c43446e15d591196b347cf2c4",
+          "receiptRow": true
+        }
+      ],
+      "allReceiptRowsMatch": true,
+      "noUnlistedFiles": true
+    },
+    {
+      "label": "peer47",
+      "directory": "/tmp/codeshell-audit-round47-chatview-review",
+      "role": "Independent history exclusion; no current product/test semantic body",
+      "fileCount": 17,
+      "receiptRows": 16,
+      "receiptSelfExcluded": true,
+      "files": [
+        {
+          "path": "artifact-receipt.json",
+          "bytes": 2827,
+          "sha256": "cc75d3c669377e900dcc0d98cbd537d3579fd96a1a2441e1c401d0540765b40c",
+          "receiptRow": false
+        },
+        {
+          "path": "history-contexts.json",
+          "bytes": 536342,
+          "sha256": "851246c4f9de3a1795474a48f2f08a16be4faa950d3fb1622fbd11755fa762c8",
+          "receiptRow": true
+        },
+        {
+          "path": "history-decisions.json",
+          "bytes": 2003,
+          "sha256": "883f9a9cc960c3108182126afecf12bfb30ae5da0104a2156dc366f3aadab4b2",
+          "receiptRow": true
+        },
+        {
+          "path": "history-finish-check.json",
+          "bytes": 358,
+          "sha256": "9e74c062798c3ebd88c35d1aa55303a54f466420ad5981c98b66181b8db8e2a7",
+          "receiptRow": true
+        },
+        {
+          "path": "history-focused.json",
+          "bytes": 327744,
+          "sha256": "4e25135927eddee1fb4b28674f1d434bda91adde1f6f5b9b270327e39b9bcc0b",
+          "receiptRow": true
+        },
+        {
+          "path": "history-initial-pins.json",
+          "bytes": 829139,
+          "sha256": "b0a8b67b49275bc9b2c6e293ddd3422b335d1740d690673d5c76d51b8a05539c",
+          "receiptRow": true
+        },
+        {
+          "path": "history-inventory.raw.txt",
+          "bytes": 242637,
+          "sha256": "e57a496872d4b9cbce3a4d58b9391f1382769875ae08ede11273aabb6fa5b34d",
+          "receiptRow": true
+        },
+        {
+          "path": "history-old-cause-selected.json",
+          "bytes": 11513,
+          "sha256": "b7aa321262e2e7449a1eefec264bfa8a6f7c81634027cfb28576b9ebaf5322b8",
+          "receiptRow": true
+        },
+        {
+          "path": "history-selected-contexts.json",
+          "bytes": 64479,
+          "sha256": "34dd0d579fabda44520c4b6856b721922dff9f6166e7b6b6c85605db8c29e275",
+          "receiptRow": true
+        },
+        {
+          "path": "history.json",
+          "bytes": 829495,
+          "sha256": "fe0b7c0c2b682c8c541c9082b41d919b9cfb67b65505e72a7a644d78d0c2fde9",
+          "receiptRow": true
+        },
+        {
+          "path": "initial-pins.json",
+          "bytes": 2582,
+          "sha256": "b1edb59cc9d78de71111cbb8c1acc8b4bda45e96e2f1a14b789a0dd6225e64e5",
+          "receiptRow": true
+        },
+        {
+          "path": "links-check.json",
+          "bytes": 2354,
+          "sha256": "99a0aac09754c8aa346a7cdbbc0e1432a533acb36f5fb17598f3858bff588821",
+          "receiptRow": true
+        },
+        {
+          "path": "metadata-diagnostics.json",
+          "bytes": 1073,
+          "sha256": "2eb8af65298db9246fb38828b5f1ce5e5f4ce64635ab4b80820264e69eb2d26d",
+          "receiptRow": true
+        },
+        {
+          "path": "review.md",
+          "bytes": 4360,
+          "sha256": "15e6c7ac964cb2771f05a0c6536920d609b5977cb517bf1015b17c1916a5a28f",
+          "receiptRow": true
+        },
+        {
+          "path": "scan-history.py",
+          "bytes": 5561,
+          "sha256": "f7c6134c4474ae5aba68019a7d04bb8804c45b350292fa3aa70963476ddb2b25",
+          "receiptRow": true
+        },
+        {
+          "path": "source-manifest.json",
+          "bytes": 8318,
+          "sha256": "392f2c8518079a981b5fa8afcc5fa2331c8c73dd52ca83f390c3c1c1b18f7de9",
+          "receiptRow": true
+        },
+        {
+          "path": "validation.json",
+          "bytes": 774,
+          "sha256": "089fc66173fce8f476be1bda66abc1ad90e17a5949465083a97119d8f1c67b2a",
+          "receiptRow": true
+        }
+      ],
+      "allReceiptRowsMatch": true,
+      "noUnlistedFiles": true
+    }
+  ],
+  "counts": {
+    "inputFiles": 85,
+    "receiptRows": 81,
+    "receiptSelfExcludedFiles": 4,
+    "inputMarkdownLinks": 36,
+    "relativeInputMarkdownLinks": 32,
+    "absoluteInputLinksExistenceOnly": 4
+  },
+  "providedFreezeShaChecks": [
+    {
+      "pack": "author46",
+      "path": "report.md",
+      "sha256": "42453ea4d4e69bd87461a22b4ad90a5c5596607755cdb9618d7a5165d8cd6e49",
+      "matches": true
+    },
+    {
+      "pack": "author46",
+      "path": "source-manifest.json",
+      "sha256": "776b69bece8ea58b3894faa6fef71d2248e77ecd55ad8ef95aa6ee90e89f6dda",
+      "matches": true
+    },
+    {
+      "pack": "author46",
+      "path": "artifact-receipt.json",
+      "sha256": "86cdbdc6fb577c7732f48b78831fa19b74e473adaf1c5149707b7621b9bfae27",
+      "matches": true
+    },
+    {
+      "pack": "root46",
+      "path": "review.md",
+      "sha256": "ba3b3b6e7fccf76706b400b969b68fdfa1ce719c481cf48785e9b9ed017dbc85",
+      "matches": true
+    },
+    {
+      "pack": "root46",
+      "path": "source-manifest.json",
+      "sha256": "89121f8407ec4f1dee0366ff798e39fb78c4fbdd5e8a8674fa31beabf57767d0",
+      "matches": true
+    },
+    {
+      "pack": "root46",
+      "path": "artifact-receipt.json",
+      "sha256": "ad7eee40cccc35f6a00a54956f98a3e6b0574750e1dfb679183d5147747ad676",
+      "matches": true
+    }
+  ],
+  "inputSourceRangeMetadataChecks": [
+    {
+      "pack": "author46",
+      "path": "packages/desktop/src/renderer/optimization-lab/dataset-editor.ts",
+      "sha256FromFrozenManifest": "98d955bd4a0ae6006d14c275f947e89dceb21412034335022b598caa5e2424b7",
+      "kind": "product",
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          251
+        ]
+      ],
+      "semanticLines": 251,
+      "displayedLineRanges": null,
+      "displayedLines": null,
+      "displayPolicy": "Unquantified additional navigation; explicit selected body only",
+      "rangeBoundsValidAgainstManifestLineCount": true,
+      "currentSourceBytesOpened": false,
+      "noAdditionalSemanticReading": true
+    },
+    {
+      "pack": "author46",
+      "path": "packages/desktop/src/renderer/optimization-lab/DatasetEditor.tsx",
+      "sha256FromFrozenManifest": "a65788ebda96d2a9936901c3d7175ec2aafc9eacee18588d3eab58b2114cdeed",
+      "kind": "product",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          1,
+          24
+        ],
+        [
+          201,
+          279
+        ],
+        [
+          282,
+          351
+        ],
+        [
+          379,
+          423
+        ],
+        [
+          638,
+          672
+        ]
+      ],
+      "semanticLines": 253,
+      "displayedLineRanges": null,
+      "displayedLines": null,
+      "displayPolicy": "Unquantified additional navigation; explicit selected body only",
+      "rangeBoundsValidAgainstManifestLineCount": true,
+      "currentSourceBytesOpened": false,
+      "noAdditionalSemanticReading": true
+    },
+    {
+      "pack": "author46",
+      "path": "packages/desktop/src/renderer/optimization-lab/dataset-editor.test.ts",
+      "sha256FromFrozenManifest": "e490a36c94d8824a8c48b7f715a53df5ab60d411c1140ed4ec7e2c252846f958",
+      "kind": "test",
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          160
+        ]
+      ],
+      "semanticLines": 160,
+      "displayedLineRanges": null,
+      "displayedLines": null,
+      "displayPolicy": "Unquantified additional navigation; explicit selected body only",
+      "rangeBoundsValidAgainstManifestLineCount": true,
+      "currentSourceBytesOpened": false,
+      "noAdditionalSemanticReading": true
+    },
+    {
+      "pack": "author46",
+      "path": "packages/optimization-lab/src/contracts/dataset.ts",
+      "sha256FromFrozenManifest": "7de3ade87671b80d7f01410b39a2452aa9aad757db294c3d9b41702421808e02",
+      "kind": "product",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          1,
+          181
+        ]
+      ],
+      "semanticLines": 181,
+      "displayedLineRanges": null,
+      "displayedLines": null,
+      "displayPolicy": "Unquantified additional navigation; explicit selected body only",
+      "rangeBoundsValidAgainstManifestLineCount": true,
+      "currentSourceBytesOpened": false,
+      "noAdditionalSemanticReading": true
+    },
+    {
+      "pack": "author46",
+      "path": "packages/desktop/src/renderer/optimization-lab/DatasetEditor.interaction.test.tsx",
+      "sha256FromFrozenManifest": "e72e04301cb573bd8466d9ccfa109e787feca25f2d110bb5e1e66d277814615a",
+      "kind": "test",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          136,
+          258
+        ]
+      ],
+      "semanticLines": 123,
+      "displayedLineRanges": null,
+      "displayedLines": null,
+      "displayPolicy": "Unquantified additional navigation; explicit selected body only",
+      "rangeBoundsValidAgainstManifestLineCount": true,
+      "currentSourceBytesOpened": false,
+      "noAdditionalSemanticReading": true
+    },
+    {
+      "pack": "author46",
+      "path": "packages/desktop/src/renderer/optimization-lab/OptimizationLabPage.tsx",
+      "sha256FromFrozenManifest": "6ab2eacb4075b5f4d2550759b19ee7f2b6cd4c67a0bb82d2a2432190d74d81c1",
+      "kind": "product",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          1,
+          10
+        ],
+        [
+          74,
+          84
+        ],
+        [
+          118,
+          128
+        ],
+        [
+          570,
+          594
+        ]
+      ],
+      "semanticLines": 57,
+      "displayedLineRanges": null,
+      "displayedLines": null,
+      "displayPolicy": "Unquantified additional navigation; explicit selected body only",
+      "rangeBoundsValidAgainstManifestLineCount": true,
+      "currentSourceBytesOpened": false,
+      "noAdditionalSemanticReading": true
+    },
+    {
+      "pack": "root46",
+      "path": "packages/desktop/src/renderer/optimization-lab/dataset-editor.ts",
+      "sha256FromFrozenManifest": "98d955bd4a0ae6006d14c275f947e89dceb21412034335022b598caa5e2424b7",
+      "kind": "product",
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          251
+        ]
+      ],
+      "semanticLines": 251,
+      "displayedLineRanges": [
+        [
+          1,
+          251
+        ]
+      ],
+      "displayedLines": 251,
+      "displayPolicy": "Canonical ranges including separately recorded navigation fields",
+      "rangeBoundsValidAgainstManifestLineCount": true,
+      "currentSourceBytesOpened": false,
+      "noAdditionalSemanticReading": true
+    },
+    {
+      "pack": "root46",
+      "path": "packages/desktop/src/renderer/optimization-lab/DatasetEditor.tsx",
+      "sha256FromFrozenManifest": "a65788ebda96d2a9936901c3d7175ec2aafc9eacee18588d3eab58b2114cdeed",
+      "kind": "product",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          210,
+          230
+        ],
+        [
+          286,
+          330
+        ],
+        [
+          394,
+          407
+        ],
+        [
+          647,
+          660
+        ]
+      ],
+      "semanticLines": 94,
+      "displayedLineRanges": [
+        [
+          12,
+          12
+        ],
+        [
+          15,
+          16
+        ],
+        [
+          27,
+          27
+        ],
+        [
+          33,
+          33
+        ],
+        [
+          49,
+          50
+        ],
+        [
+          58,
+          58
+        ],
+        [
+          69,
+          69
+        ],
+        [
+          79,
+          79
+        ],
+        [
+          84,
+          84
+        ],
+        [
+          103,
+          103
+        ],
+        [
+          113,
+          113
+        ],
+        [
+          129,
+          129
+        ],
+        [
+          138,
+          139
+        ],
+        [
+          161,
+          161
+        ],
+        [
+          173,
+          173
+        ],
+        [
+          175,
+          175
+        ],
+        [
+          187,
+          187
+        ],
+        [
+          203,
+          203
+        ],
+        [
+          208,
+          208
+        ],
+        [
+          210,
+          230
+        ],
+        [
+          249,
+          249
+        ],
+        [
+          276,
+          276
+        ],
+        [
+          286,
+          330
+        ],
+        [
+          338,
+          338
+        ],
+        [
+          348,
+          348
+        ],
+        [
+          394,
+          407
+        ],
+        [
+          447,
+          447
+        ],
+        [
+          485,
+          485
+        ],
+        [
+          505,
+          505
+        ],
+        [
+          512,
+          512
+        ],
+        [
+          528,
+          528
+        ],
+        [
+          543,
+          543
+        ],
+        [
+          557,
+          557
+        ],
+        [
+          605,
+          605
+        ],
+        [
+          647,
+          660
+        ]
+      ],
+      "displayedLines": 128,
+      "displayPolicy": "Canonical ranges including separately recorded navigation fields",
+      "rangeBoundsValidAgainstManifestLineCount": true,
+      "currentSourceBytesOpened": false,
+      "noAdditionalSemanticReading": true
+    },
+    {
+      "pack": "root46",
+      "path": "packages/desktop/src/renderer/optimization-lab/OptimizationLabPage.tsx",
+      "sha256FromFrozenManifest": "6ab2eacb4075b5f4d2550759b19ee7f2b6cd4c67a0bb82d2a2432190d74d81c1",
+      "kind": "product",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          77,
+          79
+        ],
+        [
+          121,
+          125
+        ],
+        [
+          584,
+          591
+        ]
+      ],
+      "semanticLines": 16,
+      "displayedLineRanges": [
+        [
+          77,
+          79
+        ],
+        [
+          121,
+          125
+        ],
+        [
+          277,
+          277
+        ],
+        [
+          330,
+          330
+        ],
+        [
+          398,
+          398
+        ],
+        [
+          434,
+          434
+        ],
+        [
+          462,
+          462
+        ],
+        [
+          489,
+          489
+        ],
+        [
+          584,
+          591
+        ],
+        [
+          631,
+          631
+        ],
+        [
+          645,
+          645
+        ],
+        [
+          701,
+          701
+        ],
+        [
+          713,
+          713
+        ],
+        [
+          784,
+          784
+        ],
+        [
+          796,
+          796
+        ],
+        [
+          809,
+          809
+        ],
+        [
+          822,
+          822
+        ],
+        [
+          832,
+          832
+        ]
+      ],
+      "displayedLines": 31,
+      "displayPolicy": "Canonical ranges including separately recorded navigation fields",
+      "rangeBoundsValidAgainstManifestLineCount": true,
+      "currentSourceBytesOpened": false,
+      "noAdditionalSemanticReading": true
+    },
+    {
+      "pack": "author47",
+      "path": "packages/desktop/src/renderer/ChatView.tsx",
+      "sha256FromFrozenManifest": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+      "kind": "product",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          134,
+          153
+        ],
+        [
+          250,
+          258
+        ],
+        [
+          454,
+          475
+        ],
+        [
+          483,
+          489
+        ],
+        [
+          601,
+          601
+        ],
+        [
+          614,
+          617
+        ],
+        [
+          639,
+          640
+        ],
+        [
+          783,
+          799
+        ],
+        [
+          801,
+          821
+        ],
+        [
+          827,
+          838
+        ],
+        [
+          873,
+          894
+        ],
+        [
+          936,
+          946
+        ],
+        [
+          1077,
+          1111
+        ],
+        [
+          1133,
+          1159
+        ],
+        [
+          1172,
+          1188
+        ],
+        [
+          1193,
+          1223
+        ],
+        [
+          1341,
+          1440
+        ],
+        [
+          2228,
+          2277
+        ],
+        [
+          2288,
+          2293
+        ]
+      ],
+      "semanticLines": 414,
+      "displayedLineRanges": [
+        [
+          130,
+          153
+        ],
+        [
+          250,
+          263
+        ],
+        [
+          454,
+          475
+        ],
+        [
+          480,
+          491
+        ],
+        [
+          598,
+          624
+        ],
+        [
+          636,
+          640
+        ],
+        [
+          783,
+          840
+        ],
+        [
+          870,
+          896
+        ],
+        [
+          936,
+          948
+        ],
+        [
+          1076,
+          1112
+        ],
+        [
+          1130,
+          1224
+        ],
+        [
+          1240,
+          1280
+        ],
+        [
+          1315,
+          1446
+        ],
+        [
+          2225,
+          2300
+        ]
+      ],
+      "displayedLines": 583,
+      "displayPolicy": "Canonical ranges including separately recorded navigation fields",
+      "rangeBoundsValidAgainstManifestLineCount": true,
+      "currentSourceBytesOpened": false,
+      "noAdditionalSemanticReading": true
+    },
+    {
+      "pack": "author47",
+      "path": "packages/desktop/src/renderer/App.tsx",
+      "sha256FromFrozenManifest": "02ae12bfccf26878226720ad90282a6a11a1fdc3e05efd1ce54a09d256d5d715",
+      "kind": "product",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          394,
+          394
+        ],
+        [
+          414,
+          426
+        ],
+        [
+          2570,
+          2571
+        ],
+        [
+          2603,
+          2612
+        ],
+        [
+          2645,
+          2652
+        ]
+      ],
+      "semanticLines": 34,
+      "displayedLineRanges": [
+        [
+          391,
+          399
+        ],
+        [
+          410,
+          438
+        ],
+        [
+          2566,
+          2580
+        ],
+        [
+          2599,
+          2616
+        ],
+        [
+          2638,
+          2670
+        ]
+      ],
+      "displayedLines": 104,
+      "displayPolicy": "Canonical ranges including separately recorded navigation fields",
+      "rangeBoundsValidAgainstManifestLineCount": true,
+      "currentSourceBytesOpened": false,
+      "noAdditionalSemanticReading": true
+    },
+    {
+      "pack": "author47",
+      "path": "docs/audit-2026-10-17-round36/evidence/chat-view-frontier/report.md",
+      "sha256FromFrozenManifest": "96de25be63fb54a3c12c6e137fe0b86efb964359f97e40b69a6c7936a4e74d39",
+      "kind": "history-document",
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          19
+        ]
+      ],
+      "semanticLines": 19,
+      "displayedLineRanges": [
+        [
+          1,
+          19
+        ]
+      ],
+      "displayedLines": 19,
+      "displayPolicy": "Canonical ranges including separately recorded navigation fields",
+      "rangeBoundsValidAgainstManifestLineCount": true,
+      "currentSourceBytesOpened": false,
+      "noAdditionalSemanticReading": true
+    },
+    {
+      "pack": "author47",
+      "path": "docs/review-2026-10-12/desktop-round1.md",
+      "sha256FromFrozenManifest": "b216b26c4273d04dbae0597115b63ef8b686fe7eda0996868bf4c387e93977d4",
+      "kind": "history-document",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          58,
+          68
+        ]
+      ],
+      "semanticLines": 11,
+      "displayedLineRanges": [
+        [
+          53,
+          72
+        ]
+      ],
+      "displayedLines": 20,
+      "displayPolicy": "Canonical ranges including separately recorded navigation fields",
+      "rangeBoundsValidAgainstManifestLineCount": true,
+      "currentSourceBytesOpened": false,
+      "noAdditionalSemanticReading": true
+    },
+    {
+      "pack": "author47",
+      "path": "docs/review-2026-10-12/desktop-quality-round10.md",
+      "sha256FromFrozenManifest": "cf1787e7670bc910890e01f75da20fb4470b7f115a7ab206a9b1130cc786a90e",
+      "kind": "history-document",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          24,
+          32
+        ]
+      ],
+      "semanticLines": 9,
+      "displayedLineRanges": [
+        [
+          20,
+          35
+        ]
+      ],
+      "displayedLines": 16,
+      "displayPolicy": "Canonical ranges including separately recorded navigation fields",
+      "rangeBoundsValidAgainstManifestLineCount": true,
+      "currentSourceBytesOpened": false,
+      "noAdditionalSemanticReading": true
+    },
+    {
+      "pack": "peer47",
+      "path": "packages/desktop/src/renderer/ChatView.tsx",
+      "sha256FromFrozenManifest": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+      "kind": "product",
+      "coverage": "hash-only",
+      "selectedLineRanges": [],
+      "semanticLines": 0,
+      "displayedLineRanges": [],
+      "displayedLines": 0,
+      "displayPolicy": "Canonical ranges including separately recorded navigation fields",
+      "rangeBoundsValidAgainstManifestLineCount": true,
+      "currentSourceBytesOpened": false,
+      "noAdditionalSemanticReading": true
+    },
+    {
+      "pack": "peer47",
+      "path": "packages/desktop/src/renderer/App.tsx",
+      "sha256FromFrozenManifest": "02ae12bfccf26878226720ad90282a6a11a1fdc3e05efd1ce54a09d256d5d715",
+      "kind": "product",
+      "coverage": "hash-only",
+      "selectedLineRanges": [],
+      "semanticLines": 0,
+      "displayedLineRanges": [],
+      "displayedLines": 0,
+      "displayPolicy": "Canonical ranges including separately recorded navigation fields",
+      "rangeBoundsValidAgainstManifestLineCount": true,
+      "currentSourceBytesOpened": false,
+      "noAdditionalSemanticReading": true
+    },
+    {
+      "pack": "peer47",
+      "path": "packages/desktop/src/renderer/app/SessionPanelDock.tsx",
+      "sha256FromFrozenManifest": "92858a55a71f223a307fd0def53445610b417cf93fa5839fb475dabb38666396",
+      "kind": "product",
+      "coverage": "hash-only",
+      "selectedLineRanges": [],
+      "semanticLines": 0,
+      "displayedLineRanges": [],
+      "displayedLines": 0,
+      "displayPolicy": "Canonical ranges including separately recorded navigation fields",
+      "rangeBoundsValidAgainstManifestLineCount": true,
+      "currentSourceBytesOpened": false,
+      "noAdditionalSemanticReading": true
+    },
+    {
+      "pack": "peer47",
+      "path": "packages/desktop/src/renderer/panels/QuickChatPanel.tsx",
+      "sha256FromFrozenManifest": "2ba6bc347641787b10c7c5ae1b3c6d650403ffdc5d846eea03c12811bdf31570",
+      "kind": "product",
+      "coverage": "hash-only",
+      "selectedLineRanges": [],
+      "semanticLines": 0,
+      "displayedLineRanges": [],
+      "displayedLines": 0,
+      "displayPolicy": "Canonical ranges including separately recorded navigation fields",
+      "rangeBoundsValidAgainstManifestLineCount": true,
+      "currentSourceBytesOpened": false,
+      "noAdditionalSemanticReading": true
+    },
+    {
+      "pack": "peer47",
+      "path": "packages/desktop/src/renderer/ChatView.plugin-commands.test.tsx",
+      "sha256FromFrozenManifest": "48650599430dc3ad7166586996c647b70ad45c72cafe6074d1c55e39e85cd785",
+      "kind": "test",
+      "coverage": "hash-only",
+      "selectedLineRanges": [],
+      "semanticLines": 0,
+      "displayedLineRanges": [],
+      "displayedLines": 0,
+      "displayPolicy": "Canonical ranges including separately recorded navigation fields",
+      "rangeBoundsValidAgainstManifestLineCount": true,
+      "currentSourceBytesOpened": false,
+      "noAdditionalSemanticReading": true
+    },
+    {
+      "pack": "peer47",
+      "path": "packages/desktop/src/renderer/ChatView.ephemeral-lifecycle.test.tsx",
+      "sha256FromFrozenManifest": "9b4199afec8a2062bd10b6161106d0ff7b4cecaac52029622ee76e017b27c0fb",
+      "kind": "test",
+      "coverage": "hash-only",
+      "selectedLineRanges": [],
+      "semanticLines": 0,
+      "displayedLineRanges": [],
+      "displayedLines": 0,
+      "displayPolicy": "Canonical ranges including separately recorded navigation fields",
+      "rangeBoundsValidAgainstManifestLineCount": true,
+      "currentSourceBytesOpened": false,
+      "noAdditionalSemanticReading": true
+    },
+    {
+      "pack": "peer47",
+      "path": "AGENTS.md",
+      "sha256FromFrozenManifest": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "kind": "instruction",
+      "coverage": "hash-only",
+      "selectedLineRanges": [],
+      "semanticLines": 0,
+      "displayedLineRanges": [],
+      "displayedLines": 0,
+      "displayPolicy": "Canonical ranges including separately recorded navigation fields",
+      "rangeBoundsValidAgainstManifestLineCount": true,
+      "currentSourceBytesOpened": false,
+      "noAdditionalSemanticReading": true
+    },
+    {
+      "pack": "peer47",
+      "path": "CODESHELL.md",
+      "sha256FromFrozenManifest": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "kind": "instruction",
+      "coverage": "hash-only",
+      "selectedLineRanges": [],
+      "semanticLines": 0,
+      "displayedLineRanges": [],
+      "displayedLines": 0,
+      "displayPolicy": "Canonical ranges including separately recorded navigation fields",
+      "rangeBoundsValidAgainstManifestLineCount": true,
+      "currentSourceBytesOpened": false,
+      "noAdditionalSemanticReading": true
+    },
+    {
+      "pack": "peer47",
+      "path": "docs/review-2026-10-12/desktop-quality-round10.md",
+      "sha256FromFrozenManifest": "cf1787e7670bc910890e01f75da20fb4470b7f115a7ab206a9b1130cc786a90e",
+      "kind": "history-document",
+      "coverage": "selected-prior-history-document",
+      "selectedLineRanges": [
+        [
+          24,
+          32
+        ]
+      ],
+      "semanticLines": 9,
+      "displayedLineRanges": [
+        [
+          1,
+          40
+        ]
+      ],
+      "displayedLines": 40,
+      "displayPolicy": "Canonical ranges including separately recorded navigation fields",
+      "rangeBoundsValidAgainstManifestLineCount": true,
+      "currentSourceBytesOpened": false,
+      "noAdditionalSemanticReading": true
+    },
+    {
+      "pack": "peer47",
+      "path": "docs/review-2026-10-12/desktop-round1.md",
+      "sha256FromFrozenManifest": "b216b26c4273d04dbae0597115b63ef8b686fe7eda0996868bf4c387e93977d4",
+      "kind": "history-document",
+      "coverage": "selected-prior-history-document",
+      "selectedLineRanges": [
+        [
+          58,
+          68
+        ]
+      ],
+      "semanticLines": 11,
+      "displayedLineRanges": [
+        [
+          45,
+          70
+        ]
+      ],
+      "displayedLines": 26,
+      "displayPolicy": "Canonical ranges including separately recorded navigation fields",
+      "rangeBoundsValidAgainstManifestLineCount": true,
+      "currentSourceBytesOpened": false,
+      "noAdditionalSemanticReading": true
+    }
+  ],
+  "perPackDeclaredCoverage": {
+    "author46": {
+      "semanticRows": 6,
+      "productSemanticLines": 742,
+      "testSemanticLines": 283,
+      "historicalSemanticLines": 0,
+      "allSemanticLines": 1025,
+      "displayedLinesDeclaredForRows": null
+    },
+    "root46": {
+      "semanticRows": 3,
+      "productSemanticLines": 361,
+      "testSemanticLines": 0,
+      "historicalSemanticLines": 0,
+      "allSemanticLines": 361,
+      "displayedLinesDeclaredForRows": 410
+    },
+    "author47": {
+      "semanticRows": 5,
+      "productSemanticLines": 448,
+      "testSemanticLines": 0,
+      "historicalSemanticLines": 39,
+      "allSemanticLines": 487,
+      "displayedLinesDeclaredForRows": 742
+    },
+    "peer47": {
+      "semanticRows": 2,
+      "productSemanticLines": 0,
+      "testSemanticLines": 0,
+      "historicalSemanticLines": 20,
+      "allSemanticLines": 20,
+      "displayedLinesDeclaredForRows": 66
+    }
+  },
+  "declaredSemanticRangeUnion": {
+    "derivedFromFrozenManifestOnly": true,
+    "notNewReadingOrIndependentCoverage": true,
+    "counts": {
+      "product": 1190,
+      "test": 283,
+      "history-document": 39
+    },
+    "allKinds": 1512,
+    "root46SubsetAuthor46": true,
+    "peer47HistorySubsetAuthor47": true
+  },
+  "classification": {
+    "newFormal": 0,
+    "newCandidate": 0,
+    "newRelated": 0,
+    "uniqueOldExactCauseExclusions": 1,
+    "oldCauseLabels": [
+      "D5",
+      "R04"
+    ],
+    "oldStatusChanged": false
+  },
+  "roleBoundary": "Own-author46 metadata check is not an independent source review; Root46 knew author stage opinion; peer47 supports history exclusion only and read no current product/test body.",
+  "opaqueArtifacts": [
+    {
+      "pack": "author46",
+      "path": "source-excerpts.txt",
+      "handling": "opaque artifact bytes hashed only; not decoded"
+    },
+    {
+      "pack": "root46",
+      "path": "consumer-excerpts.first.json",
+      "handling": "opaque artifact bytes hashed only; not decoded"
+    },
+    {
+      "pack": "root46",
+      "path": "consumer-navigation.first.txt",
+      "handling": "opaque artifact bytes hashed only; not decoded"
+    },
+    {
+      "pack": "root46",
+      "path": "source-excerpts.first.json",
+      "handling": "opaque artifact bytes hashed only; not decoded"
+    },
+    {
+      "pack": "author47",
+      "path": "source-excerpts.json",
+      "handling": "opaque artifact bytes hashed only; not decoded"
+    }
+  ],
+  "inputMarkdownLinks": [
+    {
+      "pack": "author46",
+      "source": "report.md",
+      "target": "source-manifest.json",
+      "relative": true,
+      "exists": true,
+      "canonicalInsideInputDirectory": true,
+      "sourceLineContentNotRead": true,
+      "lineNumberIfPresent": null,
+      "lineBoundsNotNewlyVerifiedFromSource": false
+    },
+    {
+      "pack": "author46",
+      "source": "report.md",
+      "target": "source-manifest.json",
+      "relative": true,
+      "exists": true,
+      "canonicalInsideInputDirectory": true,
+      "sourceLineContentNotRead": true,
+      "lineNumberIfPresent": null,
+      "lineBoundsNotNewlyVerifiedFromSource": false
+    },
+    {
+      "pack": "author46",
+      "source": "report.md",
+      "target": "finish-hash-checks.json",
+      "relative": true,
+      "exists": true,
+      "canonicalInsideInputDirectory": true,
+      "sourceLineContentNotRead": true,
+      "lineNumberIfPresent": null,
+      "lineBoundsNotNewlyVerifiedFromSource": false
+    },
+    {
+      "pack": "author46",
+      "source": "report.md",
+      "target": "history.json",
+      "relative": true,
+      "exists": true,
+      "canonicalInsideInputDirectory": true,
+      "sourceLineContentNotRead": true,
+      "lineNumberIfPresent": null,
+      "lineBoundsNotNewlyVerifiedFromSource": false
+    },
+    {
+      "pack": "author46",
+      "source": "report.md",
+      "target": "history-decisions.json",
+      "relative": true,
+      "exists": true,
+      "canonicalInsideInputDirectory": true,
+      "sourceLineContentNotRead": true,
+      "lineNumberIfPresent": null,
+      "lineBoundsNotNewlyVerifiedFromSource": false
+    },
+    {
+      "pack": "author46",
+      "source": "report.md",
+      "target": "active-history.json",
+      "relative": true,
+      "exists": true,
+      "canonicalInsideInputDirectory": true,
+      "sourceLineContentNotRead": true,
+      "lineNumberIfPresent": null,
+      "lineBoundsNotNewlyVerifiedFromSource": false
+    },
+    {
+      "pack": "author46",
+      "source": "report.md",
+      "target": "classification.json",
+      "relative": true,
+      "exists": true,
+      "canonicalInsideInputDirectory": true,
+      "sourceLineContentNotRead": true,
+      "lineNumberIfPresent": null,
+      "lineBoundsNotNewlyVerifiedFromSource": false
+    },
+    {
+      "pack": "author46",
+      "source": "report.md",
+      "target": "validation.json",
+      "relative": true,
+      "exists": true,
+      "canonicalInsideInputDirectory": true,
+      "sourceLineContentNotRead": true,
+      "lineNumberIfPresent": null,
+      "lineBoundsNotNewlyVerifiedFromSource": false
+    },
+    {
+      "pack": "author46",
+      "source": "report.md",
+      "target": "source-excerpts.txt",
+      "relative": true,
+      "exists": true,
+      "canonicalInsideInputDirectory": true,
+      "sourceLineContentNotRead": true,
+      "lineNumberIfPresent": null,
+      "lineBoundsNotNewlyVerifiedFromSource": false
+    },
+    {
+      "pack": "author46",
+      "source": "report.md",
+      "target": "artifact-receipt.json",
+      "relative": true,
+      "exists": true,
+      "canonicalInsideInputDirectory": true,
+      "sourceLineContentNotRead": true,
+      "lineNumberIfPresent": null,
+      "lineBoundsNotNewlyVerifiedFromSource": false
+    },
+    {
+      "pack": "root46",
+      "source": "review.md",
+      "target": "source-manifest.json",
+      "relative": true,
+      "exists": true,
+      "canonicalInsideInputDirectory": true,
+      "sourceLineContentNotRead": true,
+      "lineNumberIfPresent": null,
+      "lineBoundsNotNewlyVerifiedFromSource": false
+    },
+    {
+      "pack": "root46",
+      "source": "review.md",
+      "target": "artifact-receipt.json",
+      "relative": true,
+      "exists": true,
+      "canonicalInsideInputDirectory": true,
+      "sourceLineContentNotRead": true,
+      "lineNumberIfPresent": null,
+      "lineBoundsNotNewlyVerifiedFromSource": false
+    },
+    {
+      "pack": "author47",
+      "source": "report.md",
+      "target": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/packages/desktop/src/renderer/ChatView.tsx",
+      "relative": false,
+      "exists": true,
+      "canonicalInsideInputDirectory": false,
+      "sourceLineContentNotRead": true,
+      "lineNumberIfPresent": null,
+      "lineBoundsNotNewlyVerifiedFromSource": false
+    },
+    {
+      "pack": "author47",
+      "source": "report.md",
+      "target": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/packages/desktop/src/renderer/App.tsx:418",
+      "relative": false,
+      "exists": true,
+      "canonicalInsideInputDirectory": false,
+      "sourceLineContentNotRead": true,
+      "lineNumberIfPresent": 418,
+      "lineBoundsNotNewlyVerifiedFromSource": true
+    },
+    {
+      "pack": "author47",
+      "source": "report.md",
+      "target": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/review-2026-10-12/desktop-round1.md:58",
+      "relative": false,
+      "exists": true,
+      "canonicalInsideInputDirectory": false,
+      "sourceLineContentNotRead": true,
+      "lineNumberIfPresent": 58,
+      "lineBoundsNotNewlyVerifiedFromSource": true
+    },
+    {
+      "pack": "author47",
+      "source": "report.md",
+      "target": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/review-2026-10-12/desktop-quality-round10.md:24",
+      "relative": false,
+      "exists": true,
+      "canonicalInsideInputDirectory": false,
+      "sourceLineContentNotRead": true,
+      "lineNumberIfPresent": 24,
+      "lineBoundsNotNewlyVerifiedFromSource": true
+    },
+    {
+      "pack": "author47",
+      "source": "report.md",
+      "target": "history.json",
+      "relative": true,
+      "exists": true,
+      "canonicalInsideInputDirectory": true,
+      "sourceLineContentNotRead": true,
+      "lineNumberIfPresent": null,
+      "lineBoundsNotNewlyVerifiedFromSource": false
+    },
+    {
+      "pack": "author47",
+      "source": "report.md",
+      "target": "cause-history.json",
+      "relative": true,
+      "exists": true,
+      "canonicalInsideInputDirectory": true,
+      "sourceLineContentNotRead": true,
+      "lineNumberIfPresent": null,
+      "lineBoundsNotNewlyVerifiedFromSource": false
+    },
+    {
+      "pack": "author47",
+      "source": "report.md",
+      "target": "source-manifest.json",
+      "relative": true,
+      "exists": true,
+      "canonicalInsideInputDirectory": true,
+      "sourceLineContentNotRead": true,
+      "lineNumberIfPresent": null,
+      "lineBoundsNotNewlyVerifiedFromSource": false
+    },
+    {
+      "pack": "author47",
+      "source": "report.md",
+      "target": "cause-history-method.first.raw.py",
+      "relative": true,
+      "exists": true,
+      "canonicalInsideInputDirectory": true,
+      "sourceLineContentNotRead": true,
+      "lineNumberIfPresent": null,
+      "lineBoundsNotNewlyVerifiedFromSource": false
+    },
+    {
+      "pack": "author47",
+      "source": "report.md",
+      "target": "cause-history-method.first.exit.json",
+      "relative": true,
+      "exists": true,
+      "canonicalInsideInputDirectory": true,
+      "sourceLineContentNotRead": true,
+      "lineNumberIfPresent": null,
+      "lineBoundsNotNewlyVerifiedFromSource": false
+    },
+    {
+      "pack": "author47",
+      "source": "report.md",
+      "target": "metadata-notes.json",
+      "relative": true,
+      "exists": true,
+      "canonicalInsideInputDirectory": true,
+      "sourceLineContentNotRead": true,
+      "lineNumberIfPresent": null,
+      "lineBoundsNotNewlyVerifiedFromSource": false
+    },
+    {
+      "pack": "author47",
+      "source": "report.md",
+      "target": "finish-checks.json",
+      "relative": true,
+      "exists": true,
+      "canonicalInsideInputDirectory": true,
+      "sourceLineContentNotRead": true,
+      "lineNumberIfPresent": null,
+      "lineBoundsNotNewlyVerifiedFromSource": false
+    },
+    {
+      "pack": "author47",
+      "source": "report.md",
+      "target": "decisions.json",
+      "relative": true,
+      "exists": true,
+      "canonicalInsideInputDirectory": true,
+      "sourceLineContentNotRead": true,
+      "lineNumberIfPresent": null,
+      "lineBoundsNotNewlyVerifiedFromSource": false
+    },
+    {
+      "pack": "author47",
+      "source": "report.md",
+      "target": "artifact-receipt.json",
+      "relative": true,
+      "exists": true,
+      "canonicalInsideInputDirectory": true,
+      "sourceLineContentNotRead": true,
+      "lineNumberIfPresent": null,
+      "lineBoundsNotNewlyVerifiedFromSource": false
+    },
+    {
+      "pack": "peer47",
+      "source": "review.md",
+      "target": "history-old-cause-selected.json",
+      "relative": true,
+      "exists": true,
+      "canonicalInsideInputDirectory": true,
+      "sourceLineContentNotRead": true,
+      "lineNumberIfPresent": null,
+      "lineBoundsNotNewlyVerifiedFromSource": false
+    },
+    {
+      "pack": "peer47",
+      "source": "review.md",
+      "target": "history-decisions.json",
+      "relative": true,
+      "exists": true,
+      "canonicalInsideInputDirectory": true,
+      "sourceLineContentNotRead": true,
+      "lineNumberIfPresent": null,
+      "lineBoundsNotNewlyVerifiedFromSource": false
+    },
+    {
+      "pack": "peer47",
+      "source": "review.md",
+      "target": "initial-pins.json",
+      "relative": true,
+      "exists": true,
+      "canonicalInsideInputDirectory": true,
+      "sourceLineContentNotRead": true,
+      "lineNumberIfPresent": null,
+      "lineBoundsNotNewlyVerifiedFromSource": false
+    },
+    {
+      "pack": "peer47",
+      "source": "review.md",
+      "target": "source-manifest.json",
+      "relative": true,
+      "exists": true,
+      "canonicalInsideInputDirectory": true,
+      "sourceLineContentNotRead": true,
+      "lineNumberIfPresent": null,
+      "lineBoundsNotNewlyVerifiedFromSource": false
+    },
+    {
+      "pack": "peer47",
+      "source": "review.md",
+      "target": "history.json",
+      "relative": true,
+      "exists": true,
+      "canonicalInsideInputDirectory": true,
+      "sourceLineContentNotRead": true,
+      "lineNumberIfPresent": null,
+      "lineBoundsNotNewlyVerifiedFromSource": false
+    },
+    {
+      "pack": "peer47",
+      "source": "review.md",
+      "target": "history-selected-contexts.json",
+      "relative": true,
+      "exists": true,
+      "canonicalInsideInputDirectory": true,
+      "sourceLineContentNotRead": true,
+      "lineNumberIfPresent": null,
+      "lineBoundsNotNewlyVerifiedFromSource": false
+    },
+    {
+      "pack": "peer47",
+      "source": "review.md",
+      "target": "history-focused.json",
+      "relative": true,
+      "exists": true,
+      "canonicalInsideInputDirectory": true,
+      "sourceLineContentNotRead": true,
+      "lineNumberIfPresent": null,
+      "lineBoundsNotNewlyVerifiedFromSource": false
+    },
+    {
+      "pack": "peer47",
+      "source": "review.md",
+      "target": "history-finish-check.json",
+      "relative": true,
+      "exists": true,
+      "canonicalInsideInputDirectory": true,
+      "sourceLineContentNotRead": true,
+      "lineNumberIfPresent": null,
+      "lineBoundsNotNewlyVerifiedFromSource": false
+    },
+    {
+      "pack": "peer47",
+      "source": "review.md",
+      "target": "metadata-diagnostics.json",
+      "relative": true,
+      "exists": true,
+      "canonicalInsideInputDirectory": true,
+      "sourceLineContentNotRead": true,
+      "lineNumberIfPresent": null,
+      "lineBoundsNotNewlyVerifiedFromSource": false
+    },
+    {
+      "pack": "peer47",
+      "source": "review.md",
+      "target": "validation.json",
+      "relative": true,
+      "exists": true,
+      "canonicalInsideInputDirectory": true,
+      "sourceLineContentNotRead": true,
+      "lineNumberIfPresent": null,
+      "lineBoundsNotNewlyVerifiedFromSource": false
+    },
+    {
+      "pack": "peer47",
+      "source": "review.md",
+      "target": "artifact-receipt.json",
+      "relative": true,
+      "exists": true,
+      "canonicalInsideInputDirectory": true,
+      "sourceLineContentNotRead": true,
+      "lineNumberIfPresent": null,
+      "lineBoundsNotNewlyVerifiedFromSource": false
+    }
+  ],
+  "datedHistory": {
+    "author46": {
+      "files": 3696,
+      "md": 1379,
+      "json": 2317,
+      "strings": 1130742,
+      "scalars": 1704078,
+      "includedFrozenThrough": 40,
+      "excludedExactRounds": [
+        41,
+        42,
+        43,
+        44,
+        45,
+        46
+      ],
+      "parseErrors": 0,
+      "archiveDefinition": "Exact archive/_archive path components",
+      "archiveCount": 169
+    },
+    "root46AndAuthor47AndPeer47": {
+      "files": 3773,
+      "md": 1385,
+      "json": 2388,
+      "strings": 1180902,
+      "scalars": 1782213,
+      "includedFrozenThrough": 41,
+      "excludedExactRounds": [
+        42,
+        43,
+        44,
+        45,
+        46,
+        47
+      ],
+      "parseErrors": 0
+    },
+    "archiveDifference": "Author47 reports169 exact archive/_archive. Peer47 reports175 substring archiv and162 exact archive/archives. Different algorithms preserved; no invented common count.",
+    "endingChecks": "Frozen inputs declare zero dated byte drift; current aggregation verifies artifact bytes only, not repository history bytes.",
+    "rootFormal43ContextOnly": {
+      "reportedFutureFiles": 3869,
+      "reportedIncludesFrozen42": true,
+      "verifiedByThisAggregation": false,
+      "noBackfillIntoOriginalHistories": true
+    }
+  },
+  "historicalQueryLimits": "Caps, truncated outputs, initial wrong-path navigation and old failed directions retained as input evidence. No full-context semantic reading inferred.",
+  "preservedMetadataDiagnostics": {
+    "author46": "toolDisplay161/cron259 console truncations; index.ts broad4696 cap100; source navigation truncation; actual selected-source snapshot after display and exact display wall-clock null.",
+    "root46": "Initial160/25/34/6 cap60 contexts not all read,19 original metadata objects and replacement4contexts read; product zero-run boundary.",
+    "author47": "Metadata cause scanner compile-time SyntaxError else0 preserved before focused scan; whitespace correction then first actual metadata scan. Locator print truncation exit0 retained. Neither a product test or retry.",
+    "peer47": "Three console truncations; exact old-cause document20semantic/66display and current6product/test hash-only retained."
+  },
+  "metadataErrors": [],
+  "limitations": [
+    "No external absolute source link line contents or current source hashes read; link target existence only.",
+    "No source-excerpts/consumer-excerpts/navigation-source dump decoded.",
+    "No all-UI, whole-package or runtime correctness conclusion; no new independent source verification."
+  ]
+}

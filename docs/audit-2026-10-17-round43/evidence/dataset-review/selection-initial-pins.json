@@ -1,0 +1,22 @@
+{
+  "atUTC": "2026-10-17T14:35:53.080576+00:00",
+  "files": [
+    {
+      "path": "packages/browser-devtools/src/inspector.ts",
+      "bytes": 8534,
+      "sha256": "bab4ae5c83c666db5529acc5eae364c4301bfa21d0a093a96c08da5cc176c6e2",
+      "lineCount": 227,
+      "coverage": "hash-only before independent selection",
+      "semanticRead": false
+    },
+    {
+      "path": "packages/chat/src/notification-progress.ts",
+      "bytes": 13655,
+      "sha256": "e1f787e6aabe7d5a49f86aa80af15c4599a5583f83d7f85207e3acfb7677b617",
+      "lineCount": 367,
+      "coverage": "hash-only before independent selection",
+      "semanticRead": false
+    }
+  ],
+  "productRuns": 0
+}

@@ -1,0 +1,19 @@
+{
+  "count": 1,
+  "items": [
+    {
+      "ids": [
+        "D5",
+        "R04"
+      ],
+      "kind": "exact old-cause exclusion",
+      "newFormal": false,
+      "newRelated": false,
+      "sources": [
+        "docs/review-2026-10-12/desktop-round1.md",
+        "docs/review-2026-10-12/desktop-quality-round10.md"
+      ],
+      "scope": "Plugin expansion late-result overwrites newly selected draft; independent47 body0 excludes before product reading, no old runtime revalidation."
+    }
+  ]
+}

@@ -1,0 +1,23 @@
+{
+  "baseline": "c2db5d9259afcc4c7264d190ab6bb673d49d5fe0",
+  "mainHead": "07e5791b1fc1ad1fcfd5c55c2913d8a45f1b20cb",
+  "formal": 0,
+  "candidates": 0,
+  "related": 0,
+  "uniqueSourcePins": 47,
+  "activeSourceChecks": 16,
+  "incidentalSourceChecks": 2,
+  "hashOnlyChecks": 40,
+  "receiptChecks": 176,
+  "verbatimCopies": 91,
+  "frozenWhitespaceArtifacts": 1,
+  "historyFiles": 3869,
+  "history": {
+    "markdownFiles": 1391,
+    "jsonFiles": 2478,
+    "stringLeaves": 1255894,
+    "scalarLeaves": 1896731
+  },
+  "productRuns": 0,
+  "goalStillActive": true
+}

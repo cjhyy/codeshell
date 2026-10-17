@@ -1,0 +1,24 @@
+{
+  "frozenAtUTC": "2026-10-17T14:48:06.042544+00:00",
+  "scope": "Formal43 preparation metadata aggregation only; four frozen packs; no formal revision certification",
+  "files": [
+    {
+      "path": "checks.json",
+      "bytes": 59260,
+      "sha256": "12b1ccea84f40f02a98971fbe5f9ec81424446f842c637df99ddab4f8fbf4e05"
+    },
+    {
+      "path": "review.md",
+      "bytes": 3779,
+      "sha256": "afb800a6061e40d3803ff076573c0fb1db1e38c87cd130c920e7a831e9978b7f"
+    }
+  ],
+  "receiptSelfExcluded": true,
+  "filesIncludingSelf": 3,
+  "inputFiles": 85,
+  "inputReceiptRows": 81,
+  "newProductSemanticReading": 0,
+  "currentProductBytesOpened": 0,
+  "productRuns": 0,
+  "gitCommands": 0
+}

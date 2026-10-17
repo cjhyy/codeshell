@@ -1,0 +1,29 @@
+{
+  "files": [
+    {
+      "path": "packages/core/src/context/tool-output-budget.ts",
+      "bytes": 6990,
+      "sha256": "d1c25d1d8329d37b050fdb9f3fd01508da83c1804f37085a845d65dcdd2e4171",
+      "lineCount": 173,
+      "pinTimeUTC": "2026-10-17T14:30:07.065108+00:00",
+      "coverage": "hash-only metadata choice before source body read"
+    },
+    {
+      "path": "packages/core/src/context/notes.ts",
+      "bytes": 13654,
+      "sha256": "06f4e83e1c0a1f12b8676b3f5326220ab7d29cfc9461599b7957b21e8d9db2db",
+      "lineCount": 355,
+      "pinTimeUTC": "2026-10-17T14:30:07.065108+00:00",
+      "coverage": "hash-only metadata choice before source body read"
+    },
+    {
+      "path": "packages/core/src/engine/patch-orphaned-tools.ts",
+      "bytes": 4854,
+      "sha256": "131af860d6be7205d5246d2500f88b832fa9a4d5dcbca1888359c20754bfc025",
+      "lineCount": 114,
+      "pinTimeUTC": "2026-10-17T14:30:07.065108+00:00",
+      "coverage": "hash-only metadata choice before source body read"
+    }
+  ],
+  "cronExcluded": "Same SHA explicit full207 R23 cron-source-manifest and oldTIME1; no body read or fixture retry"
+}

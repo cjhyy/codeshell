@@ -1,0 +1,34 @@
+{
+  "capturedAtUTC": "2026-10-17T14:34:23.122552+00:00",
+  "files": [
+    {
+      "path": "packages/desktop/src/renderer/app/mergeHistoryWindows.ts",
+      "bytes": 5653,
+      "lines": 140,
+      "sha256": "6426dde6503e36bd66e534715eaf3840ea388f15dbe52762df46ff642eb0678b",
+      "semanticRead": false
+    },
+    {
+      "path": "packages/core/src/utils/theme.ts",
+      "bytes": 27387,
+      "lines": 658,
+      "sha256": "13b425bf8f9fd0d768fd7f630561e669855d411329e3909c07252d2a8ba51849",
+      "semanticRead": false
+    },
+    {
+      "path": "packages/arena/src/iterate/formats/index.ts",
+      "bytes": 12743,
+      "lines": 317,
+      "sha256": "db2f7169256419c1ccd7c40557f0d30ffe7bf3539aab13e853e691a995be7e37",
+      "semanticRead": false
+    },
+    {
+      "path": "packages/arena/src/iterate/parse.ts",
+      "bytes": 4762,
+      "lines": 131,
+      "sha256": "f014b02ff4f9f40f463cbc3fb60bb279bfceb7ddc7c7b009589b3f007a155d7d",
+      "semanticRead": false
+    }
+  ],
+  "note": "Candidate metadata only; no product source content read."
+}

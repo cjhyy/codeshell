@@ -1,0 +1,12 @@
+{
+  "capturedAtUTC": "2026-10-17T14:37:12.323424+00:00",
+  "files": [
+    {
+      "path": "packages/desktop/src/renderer/optimization-lab/OptimizationLabPage.tsx",
+      "bytes": 41600,
+      "lines": 995,
+      "sha256": "6ab2eacb4075b5f4d2550759b19ee7f2b6cd4c67a0bb82d2a2432190d74d81c1",
+      "semanticRead": false
+    }
+  ]
+}

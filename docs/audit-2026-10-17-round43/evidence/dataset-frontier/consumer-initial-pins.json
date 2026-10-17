@@ -1,0 +1,28 @@
+{
+  "files": [
+    {
+      "path": "packages/core/src/index.internal.ts",
+      "bytes": 17401,
+      "sha256": "ac63a7fbe2f7400c45cf4f400f2ba196b599cfd535b27859bad22c275cd2c0ab",
+      "lineCount": 536,
+      "pinTimeUTC": "2026-10-17T14:28:16.522390+00:00",
+      "coverage": "hash-only before current consumer content read"
+    },
+    {
+      "path": "packages/tui/src/ui/components/ToolCall.tsx",
+      "bytes": 13567,
+      "sha256": "ad36b061a8c6856d63ce8b85169164d8df60d38da91e196e70ee9bc5120868f8",
+      "lineCount": 407,
+      "pinTimeUTC": "2026-10-17T14:28:16.522390+00:00",
+      "coverage": "hash-only before current consumer content read"
+    },
+    {
+      "path": "packages/web/app/MessageContent.tsx",
+      "bytes": 9846,
+      "sha256": "76d03d244e420ffef0921946267aa7f508b394ec78a5db356b4c827424ece87e",
+      "lineCount": 295,
+      "pinTimeUTC": "2026-10-17T14:28:16.522390+00:00",
+      "coverage": "hash-only before current consumer content read"
+    }
+  ]
+}

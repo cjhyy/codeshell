@@ -1,0 +1,32 @@
+{
+  "rootReportedContext": "Frozen formal41 at5dcd3ee21756eab037f82193fb80b801fb24112e; formal42 mutable; no ownGit",
+  "files": [
+    {
+      "path": "packages/desktop/src/renderer/ChatView.tsx",
+      "bytes": 106169,
+      "sha256": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+      "lineCount": 2622,
+      "pinUTC": "2026-10-17T14:32:07.696865+00:00",
+      "coverage": "hash-only before any current body reading",
+      "semanticRead": false
+    },
+    {
+      "path": "packages/desktop/src/renderer/Sidebar.tsx",
+      "bytes": 58805,
+      "sha256": "f97da3b8ae4d8f4973acfa5afb30425e3755ec7fef58b462efde95c62c324d87",
+      "lineCount": 1629,
+      "pinUTC": "2026-10-17T14:32:07.698084+00:00",
+      "coverage": "hash-only before any current body reading",
+      "semanticRead": false
+    },
+    {
+      "path": "packages/desktop/src/renderer/chat/CommentBox.tsx",
+      "bytes": 2450,
+      "sha256": "73fd0ab7120bbf488371c30b3d24a50632f4ec3967c273be67ed4eae99b04ae4",
+      "lineCount": 73,
+      "pinUTC": "2026-10-17T14:32:07.698599+00:00",
+      "coverage": "hash-only before any current body reading",
+      "semanticRead": false
+    }
+  ]
+}
