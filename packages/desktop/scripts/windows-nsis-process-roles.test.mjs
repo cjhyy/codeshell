@@ -377,3 +377,48 @@ test("normal Main exit retains descendant-only cleanup and unknown faults cannot
   assert.equal(f.child.exitCode, 0);
   assert.equal(f.child.signalCode, null);
 });
+
+// The injected-clock fixtures above must not hide a broken real default receiver.
+test("real default clock yields finite role sample and failure age without a native query", () => {
+  console.log(
+    JSON.stringify({
+      kind: "default-clock-runtime",
+      node: process.version,
+      platform: process.platform,
+      arch: process.arch,
+    }),
+  );
+  const calls = [];
+  // Deliberately omit now: use the actual module default, with only execFile inert.
+  const observer = createNsisReplacementRoleObserver({
+    ...hints,
+    execFile: (...args) => {
+      calls.push(args);
+      return JSON.stringify({
+        processes: identities([rootProcess]),
+        roles: [{ ...rootProcess, role: "setup-path-match" }],
+        truncated: false,
+      });
+    },
+  });
+  assert.equal(observer.receipt.observerFault, false, "Real default clock must initialize");
+  const current = observer.snapshot();
+  observed(observer, current);
+  assert.equal(calls.length, 1);
+  assert.equal(calls[0][0], "C:\\Program Files\\PowerShell\\7\\pwsh.exe");
+  assert.equal(calls[0][2].timeout, 5000);
+  assert.deepEqual(current, [rootProcess]);
+  assert.equal(observer.receipt.observerFault, false);
+  assert.equal(observer.receipt.sampleCount, 1);
+  const sample = observer.receipt.samples[0];
+  assert.equal(Number.isFinite(sample.sampledElapsedMs), true);
+  assert.ok(sample.sampledElapsedMs >= 0);
+  assert.deepEqual(sample.rows, [{ ...rootProcess, role: "setup-path-match" }]);
+  observer.markFailure();
+  const failure = observer.receipt.failureObservation;
+  assert.equal(failure.sampleQuerySequence, sample.querySequence);
+  assert.equal(failure.samplePhase, "initial");
+  assert.equal(Number.isFinite(failure.sampleAgeMs), true);
+  assert.ok(failure.sampleAgeMs >= 0);
+  assert.equal(observer.receipt.observerFault, false);
+});
