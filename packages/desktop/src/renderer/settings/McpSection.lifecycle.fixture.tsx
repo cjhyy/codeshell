@@ -10,16 +10,20 @@ import https from "node:https";
 import net from "node:net";
 import tls from "node:tls";
 import children from "node:child_process";
+import { readFileSync } from "node:fs";
+import { createHash } from "node:crypto";
+import ts from "typescript";
 
 ensureMiniDom();
 const scenario = process.argv[2];
 const argsScenario = scenario.startsWith("args-");
+const renameScenario = scenario.startsWith("rename-");
 const denied: string[] = [];
 let guardProbes = 0;
-if (argsScenario) {
+if (argsScenario || renameScenario) {
   const deny = (kind: string): never => {
     denied.push(kind);
-    throw new Error(`Owned MCP args fixture denied ${kind}`);
+    throw new Error(`Owned MCP ${renameScenario ? "rename" : "args"} fixture denied ${kind}`);
   };
   for (const [object, keys, kind] of [
     [globalThis, ["fetch"], "fetch"],
@@ -48,7 +52,7 @@ if (argsScenario) {
     () => Bun.spawn(["owned-denied-executable"]),
     () => process.kill(0, 0),
   ])
-    assert.throws(probe, /Owned MCP args fixture denied /);
+    assert.throws(probe, /Owned MCP (?:args|rename) fixture denied /);
   guardProbes = denied.length;
   denied.length = 0;
 }
@@ -65,6 +69,93 @@ const importedArgs = [
 const argsServers: Record<string, Record<string, unknown>> = scenario === "args-imported"
   ? { "server-a": { command: "fixture-tool", args: [...importedArgs] } }
   : {};
+// Execute only these three pinned, import-free source declarations, not the
+// settings-service module (which imports Core and owns actual filesystem I/O).
+const mergeSourceSHA256 = "025fea64b52ad94d36bcb76759dfe586a363eb8667cf7bbb7118b8caeae21511";
+let mergeSettings:
+  | ((current: Record<string, unknown>, patch: Record<string, unknown>) => Record<string, unknown>)
+  | undefined;
+function extractPureMergeDeclarations(sourceText: string): string {
+  sourceText = sourceText.replace(/\r\n/g, "\n");
+  const source = ts.createSourceFile(
+    "settings-service.ts",
+    sourceText,
+    ts.ScriptTarget.Latest,
+    true,
+  );
+  const names = ["FORBIDDEN_SETTING_KEYS", "deepMerge", "stripNulls"];
+  const declarations = names
+    .map((name) => {
+      const matches = source.statements.filter((node) =>
+        ts.isFunctionDeclaration(node)
+          ? node.name?.text === name
+          : ts.isVariableStatement(node) &&
+            node.declarationList.declarations.some(
+              (entry) => ts.isIdentifier(entry.name) && entry.name.text === name,
+            ),
+      );
+      assert.equal(matches.length, 1, `Exactly one complete ${name} declaration`);
+      const declaration = matches[0];
+      const inspect = (node: ts.Node) => {
+        assert.ok(
+          !ts.isImportDeclaration(node) &&
+            !ts.isImportEqualsDeclaration(node) &&
+            !ts.isExportDeclaration(node),
+        );
+        if (ts.isCallExpression(node)) {
+          const called = node.expression.getText(source);
+          assert.ok(
+            [
+              "Object.entries",
+              "Array.isArray",
+              "deepMerge",
+              "stripNulls",
+              "FORBIDDEN_SETTING_KEYS.has",
+            ].includes(called),
+            `Only reviewed pure dependency ${called}`,
+          );
+        }
+        if (ts.isNewExpression(node)) assert.equal(node.expression.getText(source), "Set");
+        ts.forEachChild(node, inspect);
+      };
+      inspect(declaration);
+      return declaration.getText(source);
+    })
+    .join("\n\n");
+  return declarations;
+}
+if (renameScenario) {
+  const sourceText = readFileSync(
+    new URL("../../main/settings-service.ts", import.meta.url),
+    "utf8",
+  );
+  const lfSource = sourceText.replace(/\r\n/g, "\n");
+  const declarations = extractPureMergeDeclarations(sourceText);
+  // Two real text representations, one pinned import-free function program.
+  assert.equal(extractPureMergeDeclarations(lfSource), declarations);
+  assert.equal(extractPureMergeDeclarations(lfSource.replace(/\n/g, "\r\n")), declarations);
+  assert.equal(createHash("sha256").update(declarations).digest("hex"), mergeSourceSHA256);
+  const pureJs = new Bun.Transpiler({ loader: "ts", target: "bun" }).transformSync(declarations);
+  mergeSettings = new Function(`${pureJs}\nreturn deepMerge;`)();
+}
+
+const manualOptions = { connectTimeoutMs: 90_000, connectRetries: 0, inlineImages: false };
+const originalConfig = {
+  command: "fixture-tool",
+  args: ["--label", "a b"],
+  env: { KEEP: "old", DROP: "old" },
+  allowedTools: ["read"],
+  enabled: false,
+  ...manualOptions,
+};
+let renameStore: Record<string, any> = {
+  mcpServers: {
+    "server-a": structuredClone(originalConfig),
+    sibling: { command: "sibling-tool", connectRetries: 2 },
+  },
+  unrelated: { value: "unchanged" },
+};
+
 const writes: unknown[][] = [];
 const unhandled: string[] = [];
 process.on("unhandledRejection", (reason) => unhandled.push(String(reason)));
@@ -78,6 +169,8 @@ function deferred<T>() {
 const confirmation = deferred<boolean>();
 const pendingRead = deferred<Record<string, unknown>>();
 const pendingWrite = deferred<void>();
+const pendingRenameRefresh = deferred<Record<string, unknown>>();
+let holdRenameRefresh = scenario === "rename-options-project";
 const server = (name: string) => ({
   [name]: {
     command: "fixture-tool",
@@ -109,6 +202,10 @@ mock.module("../ui/ConfirmDialog", () => ({
 mock.module("../ui/ToastProvider", () => ({ useToast: () => () => {} }));
 mock.module("../settingsAuthority", () => ({
   readScopedSettings: async (_scope: string, path: string) => {
+    if (renameScenario) {
+      if (holdRenameRefresh && writes.length > 0) return pendingRenameRefresh.promise;
+      return structuredClone(renameStore);
+    }
     if (scenario === "stale-load" && path.endsWith("project-a")) return pendingRead.promise;
     return {
       mcpServers: argsScenario
@@ -120,6 +217,11 @@ mock.module("../settingsAuthority", () => ({
   },
   updateScopedSettings: async (...args: unknown[]) => {
     writes.push(args);
+    if (renameScenario) {
+      // Real production merge function, JSON patch transport, owned memory sink.
+      // Never import Main settings I/O or touch an actual configuration file.
+      renameStore = mergeSettings!(renameStore, JSON.parse(JSON.stringify(args[1])));
+    }
     if (argsScenario) {
       // Owned in-memory settings sink; the component still authors the real patch.
       for (const [name, patch] of Object.entries((args[1] as any).mcpServers ?? {})) {
@@ -145,6 +247,24 @@ Object.assign(window, {
   codeshell: {
     listMergedMcpServers: async (value: unknown, _disabled: unknown, target: unknown) => {
       mergedTargets.push(target);
+      if (renameScenario) {
+        if (scenario === "rename-plugin-override")
+          return {
+            "owned-plugin:server-a": { ...originalConfig, source: "plugin", editable: false },
+          };
+        return Object.fromEntries(
+          Object.entries(value as Record<string, object>).map(([name, config]) => [
+            name,
+            {
+              ...config,
+              source: "settings",
+              editable: true,
+              hasOverride: true,
+              pluginDisabled: false,
+            },
+          ]),
+        );
+      }
       return scenario === "editor-switch"
         ? { ...server("server-a"), ...server("server-b") }
         : value;
@@ -197,7 +317,11 @@ async function click(text: string) {
 async function render() {
   await update(() =>
     root.render(
-      <McpSection scope="project" activeProjectPath={null} settingsProjectPath={projectPath} />,
+      <McpSection
+        scope={scenario === "rename-options-user" ? "user" : "project"}
+        activeProjectPath={null}
+        settingsProjectPath={projectPath}
+      />,
     ),
   );
 }
@@ -213,7 +337,123 @@ async function fillDraft() {
 }
 try {
   await render();
-  if (argsScenario) {
+  if (renameScenario) {
+    const setField = async (tagName: string, placeholder: string, value: string) =>
+      update(() =>
+        props(find((n) => n.tagName === tagName && props(n).placeholder === placeholder)).onChange({
+          target: { value },
+        }),
+      );
+    const before = structuredClone(renameStore);
+    if (scenario === "rename-plugin-override") {
+      await click("settingsX.mcp.supplementCred");
+      assert.equal(
+        props(find((n) => n.tagName === "INPUT" && props(n).placeholder === "my-server")).disabled,
+        true,
+      );
+      await setField("TEXTAREA", "FOO=bar\nBAZ=qux", "KEEP=override");
+      await click("settingsX.mcp.save");
+      assert.equal(writes.length, 1);
+      assert.equal(writes[0][0], "user");
+      assert.equal(writes[0][2], undefined);
+      assert.deepEqual(Object.keys(writes[0][1] as object), ["mcpServerOverrides"]);
+      const patch = (writes[0][1] as any).mcpServerOverrides["owned-plugin:server-a"];
+      for (const field of [
+        "name",
+        "command",
+        "args",
+        "url",
+        "transport",
+        ...Object.keys(manualOptions),
+      ])
+        assert.ok(!Object.hasOwn(patch, field));
+      assert.deepEqual(renameStore.mcpServers, before.mcpServers);
+      assert.deepEqual(renameStore.mcpServerOverrides["owned-plugin:server-a"].env, {
+        KEEP: "override",
+      });
+    } else {
+      const editButtons = nodes(container).filter(
+        (n) => n.tagName === "BUTTON" && props(n).title === "settingsX.mcp.edit",
+      );
+      await update(() => props(editButtons[0]).onClick());
+      const renamed = scenario !== "rename-same-name";
+      if (renamed) await setField("INPUT", "my-server", "renamed 中文");
+      if (["rename-edited-cleared", "rename-same-name"].includes(scenario))
+        await setField("INPUT", "npx", "fixture-other-tool");
+      if (scenario === "rename-edited-cleared") {
+        await setField("INPUT", "-y @playwright/mcp@latest", "");
+        await setField("TEXTAREA", "FOO=bar\nBAZ=qux", "");
+        await setField("TEXTAREA", "search\nread_document", "");
+      }
+      await click("settingsX.mcp.save");
+      assert.equal(writes.length, 1, "One atomic patch, including the old-key tombstone");
+      const record = (writes[0][1] as any).mcpServers;
+      const name = renamed ? "renamed 中文" : "server-a";
+      assert.equal(writes[0][0], scenario === "rename-options-user" ? "user" : "project");
+      assert.equal(writes[0][2], scenario === "rename-options-user" ? undefined : projectPath);
+      assert.deepEqual(
+        Object.keys(record).sort(),
+        renamed ? ["renamed 中文", "server-a"] : ["server-a"],
+      );
+      if (renamed) {
+        assert.equal(record["server-a"], null);
+        assert.ok(!Object.hasOwn(renameStore.mcpServers, "server-a"));
+      }
+      const stored = renameStore.mcpServers[name];
+      for (const [field, expected] of Object.entries(manualOptions))
+        assert.equal(stored[field], expected, `Preserve supported unedited ${field}`);
+      for (const field of ["name", "source", "editable", "hasOverride", "pluginDisabled"])
+        assert.ok(!Object.hasOwn(stored, field), `Do not persist UI metadata ${field}`);
+      assert.equal(stored.enabled, false);
+      assert.deepEqual(renameStore.mcpServers.sibling, before.mcpServers.sibling);
+      assert.deepEqual(renameStore.unrelated, before.unrelated);
+      assert.equal(
+        stored.command,
+        ["rename-edited-cleared", "rename-same-name"].includes(scenario)
+          ? "fixture-other-tool"
+          : originalConfig.command,
+      );
+      if (scenario === "rename-edited-cleared") {
+        for (const field of ["args", "env", "allowedTools"]) {
+          assert.equal(record[name][field], null);
+          assert.ok(!Object.hasOwn(stored, field), `Explicit clear survives merge for ${field}`);
+        }
+      } else
+        assert.deepEqual(
+          stored.args,
+          originalConfig.args,
+          "The separate args09e fix remains intact",
+        );
+      if (scenario === "rename-options-project") {
+        // Keep the production settings-refresh result pending so the second
+        // editor opens from the component's just-saved local next, not a reload.
+        const row = find((n) => n.tagName === "ARTICLE" && textOf(n).includes("renamed 中文"));
+        await update(() =>
+          props(
+            nodes(row).find(
+              (n) => n.tagName === "BUTTON" && props(n).title === "settingsX.mcp.edit",
+            ),
+          ).onClick(),
+        );
+        await setField("INPUT", "my-server", "renamed twice");
+        await click("settingsX.mcp.save");
+        assert.equal(writes.length, 2);
+        const secondPatch = (writes[1][1] as any).mcpServers;
+        assert.deepEqual(Object.keys(secondPatch).sort(), ["renamed twice", "renamed 中文"]);
+        assert.equal(secondPatch["renamed 中文"], null);
+        assert.ok(!Object.hasOwn(renameStore.mcpServers, "renamed 中文"));
+        for (const [field, expected] of Object.entries(manualOptions))
+          assert.equal(
+            renameStore.mcpServers["renamed twice"][field],
+            expected,
+            `Local editor preserves ${field} before refresh`,
+          );
+        assert.deepEqual(renameStore.mcpServers.sibling, before.mcpServers.sibling);
+        holdRenameRefresh = false;
+        await update(() => pendingRenameRefresh.resolve(structuredClone(renameStore)));
+      }
+    }
+  } else if (argsScenario) {
     const setField = async (placeholder: string, value: string) =>
       update(() =>
         props(find((n) => n.tagName === "INPUT" && props(n).placeholder === placeholder)).onChange({
@@ -384,6 +624,14 @@ try {
   } else throw new Error(`Unknown scenario: ${scenario}`);
   await new Promise((resolve) => setTimeout(resolve, 20));
   assert.deepEqual(unhandled, [], "Async failures must be handled in the UI");
+  if (renameScenario) {
+    assert.equal(guardProbes, 8);
+    assert.deepEqual(denied, []);
+    console.log(
+      "OWNED_MCP_RENAME_GUARD " +
+        JSON.stringify({ probes: guardProbes, actualAttempts: denied.length, mergeSourceSHA256 }),
+    );
+  }
   if (argsScenario) {
     assert.equal(guardProbes, 8);
     assert.deepEqual(denied, []);

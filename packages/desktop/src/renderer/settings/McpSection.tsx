@@ -42,6 +42,10 @@ interface McpServer {
   /** Exact raw MCP tool-name policy. Deny is applied after allow. */
   allowedTools?: string[];
   disabledTools?: string[];
+  /** Supported settings options retained across editor renames, not authored here. */
+  connectTimeoutMs?: number;
+  connectRetries?: number;
+  inlineImages?: boolean;
   source?: "settings" | "plugin";
   editable?: boolean;
   /** Plugin server whose OWNER plugin is disabled — listed but inert
@@ -426,18 +430,31 @@ function McpSectionForTarget({ scope, activeProjectPath, settingsProjectPath }: 
       // delete a key, so { mcpServers: { new: {...}, old: null } } does both.
       // Patch only the edited server; replaying the loaded list could overwrite
       // an unrelated server changed by another window while this editor was open.
+      const previous = servers.find((server) => server.name === originalName);
+      const preserved: Pick<McpServer, "connectTimeoutMs" | "connectRetries" | "inlineImages"> = {
+        ...(previous?.connectTimeoutMs !== undefined
+          ? { connectTimeoutMs: previous.connectTimeoutMs }
+          : {}),
+        ...(previous?.connectRetries !== undefined
+          ? { connectRetries: previous.connectRetries }
+          : {}),
+        ...(previous?.inlineImages !== undefined ? { inlineImages: previous.inlineImages } : {}),
+      };
+      const savedNext = { ...preserved, ...next };
       const record: Record<string, unknown> = {
-        [next.name]: buildMcpSettingsPatch(
-          next,
-          servers.find((server) => server.name === originalName),
-        ),
+        [next.name]: {
+          // A new name has no previous object for the settings merge to retain.
+          // Transfer only supported non-editor options, then apply edits/clears.
+          ...(originalName && originalName !== next.name ? preserved : {}),
+          ...buildMcpSettingsPatch(next, previous),
+        },
         ...(originalName && originalName !== next.name ? { [originalName]: null } : {}),
       };
       await updateScopedSettings(scope, { mcpServers: record }, projectPath);
       if (mounted.current) {
         setServers((current) => [
           ...current.filter((s) => s.name !== originalName && s.name !== next.name),
-          next,
+          savedNext,
         ]);
       }
       if (originalName && originalName !== next.name) {
@@ -447,7 +464,7 @@ function McpSectionForTarget({ scope, activeProjectPath, settingsProjectPath }: 
       broadcastSettingsChanged();
       if (!mounted.current) return;
       if (editRef.current === owner) setEdit({ kind: "closed" });
-      void runProbe([next], true);
+      void runProbe([savedNext], true);
     });
 
   // Save (or clear) the env/credential supplement for a PLUGIN server. Always
