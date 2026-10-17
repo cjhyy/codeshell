@@ -1,0 +1,86 @@
+{
+  "baseline": "9a421b3e65d5bfe662b78062cb86bd99483a683a",
+  "count": 5,
+  "priorities": {
+    "P2": 3,
+    "P3": 2
+  },
+  "findings": [
+    {
+      "id": "WEB-R5-01",
+      "priority": "P2",
+      "title": "子代理事件改写主任务全局运行状态",
+      "report": "root-web.md",
+      "reportLine": 5,
+      "source": "packages/web/src/lib/streamReducer.ts",
+      "line": 206,
+      "logs": [
+        "evidence/root-web-state.first.log",
+        "evidence/root-web-background.first.log"
+      ],
+      "evidenceLevel": "真实reducer/snapshot/Agent后台分支+内存spawner",
+      "limitations": "父terminal模拟；无真实Engine/Host/WS/UI；主后续生命周期或snapshot可恢复",
+      "status": "confirmed-at-frozen-source-baseline"
+    },
+    {
+      "id": "WEB-R5-02",
+      "priority": "P3",
+      "title": "乱序结果回填遗漏正常显示清理",
+      "report": "root-web.md",
+      "reportLine": 16,
+      "source": "packages/web/src/lib/streamReducer.ts",
+      "line": 291,
+      "logs": [
+        "evidence/root-web-state.first.log"
+      ],
+      "evidenceLevel": "真实reducer有序/支持的乱序分支对照",
+      "limitations": "普通附注显示差异；未证明真实传输乱序/敏感泄露",
+      "status": "confirmed-at-frozen-source-baseline"
+    },
+    {
+      "id": "PROFILE-R5-01",
+      "priority": "P2",
+      "title": "不同catalog source键碰撞并互相删除缓存",
+      "report": "profile.md",
+      "reportLine": 7,
+      "source": "packages/core/src/profile/catalog.ts",
+      "line": 94,
+      "logs": [
+        "evidence/profile-catalog-data.first.log"
+      ],
+      "evidenceLevel": "真实key/registry/reader/remover+自有tmp",
+      "limitations": "手动seed正常格式缓存；未clone/install/网络/真实Desktop/已安装profile删除",
+      "status": "confirmed-at-frozen-source-baseline"
+    },
+    {
+      "id": "PROMPT-01",
+      "priority": "P3",
+      "title": "祖先local和后代project指令优先序违背声明",
+      "report": "prompt.md",
+      "reportLine": 14,
+      "source": "packages/core/src/prompt/instruction-scanner.ts",
+      "line": 108,
+      "logs": [
+        "evidence/prompt-instruction-order.first.log"
+      ],
+      "evidenceLevel": "真实scanner/composer/自有文件/注入boundary",
+      "limitations": "顺序合同偏差；未证明模型服从结果/安全影响",
+      "status": "confirmed-at-frozen-source-baseline"
+    },
+    {
+      "id": "CHAT-R5-01",
+      "priority": "P2",
+      "title": "LINE原生按钮投影超过平台label/URI限制",
+      "report": "chat-text.md",
+      "reportLine": 5,
+      "source": "packages/chat/src/line.ts",
+      "line": 121,
+      "logs": [
+        "evidence/chat-line-button-contract.first.log"
+      ],
+      "evidenceLevel": "真实Mimi/Gateway/LINE send+内存transport",
+      "limitations": "当前内部schema接受；只观测超限请求，无真实平台拒绝/用户界面/重试结果",
+      "status": "confirmed-at-frozen-source-baseline"
+    }
+  ]
+}
