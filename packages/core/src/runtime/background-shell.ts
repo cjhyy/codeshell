@@ -54,6 +54,36 @@ const DISK_CAP_BYTES = 8 * 1024 * 1024;
 /** BashOutput single-return cap (strip后尾部 ~16KB) so one read can't blow context. */
 const READ_RETURN_CAP = 16 * 1024;
 
+/** Keep only a potentially valid, incomplete UTF-8 suffix for the next live peek. */
+function completeUtf8PrefixLength(buf: Buffer): number {
+  if (buf.length === 0) return 0;
+  let start = buf.length - 1;
+  while (start > 0 && buf.length - start < 4 && (buf[start] & 0xc0) === 0x80) start--;
+  const lead = buf[start];
+  const required =
+    lead >= 0xc2 && lead <= 0xdf
+      ? 2
+      : lead >= 0xe0 && lead <= 0xef
+        ? 3
+        : lead >= 0xf0 && lead <= 0xf4
+          ? 4
+          : 0;
+  const available = buf.length - start;
+  if (!required || available >= required) return buf.length;
+  // Invalid/overlong/surrogate/out-of-range prefixes cannot become valid by
+  // waiting. Preserve replacement decoding and forward progress for those.
+  const second = buf[start + 1];
+  if (
+    available > 1 &&
+    ((lead === 0xe0 && second < 0xa0) ||
+      (lead === 0xed && second > 0x9f) ||
+      (lead === 0xf0 && second < 0x90) ||
+      (lead === 0xf4 && second > 0x8f))
+  )
+    return buf.length;
+  return start;
+}
+
 const KILL_GRACE_MS = 3000;
 
 interface PidfileRecord {
@@ -477,8 +507,15 @@ export class BackgroundShellManager {
     // Absolute stream cursor — survives ring wraparound (a window-relative
     // offset would silently skip new bytes once the window slides).
     const sliceBuf = sh.ring.sliceFromAbsolute(sh.agentReadOffset);
-    let consumedBytes = sliceBuf.length;
-    let rawBuf = sliceBuf;
+    // A live stream may currently end inside a character. Leave its bytes at
+    // the absolute cursor until more arrive. Terminal/orphan snapshots consume
+    // an incomplete EOF with normal replacement decoding instead of waiting.
+    const availableBytes =
+      sh.status === "running" || sh.status === "starting"
+        ? completeUtf8PrefixLength(sliceBuf)
+        : sliceBuf.length;
+    let consumedBytes = availableBytes;
+    let rawBuf = sliceBuf.subarray(0, availableBytes);
     if (rawBuf.length > READ_RETURN_CAP) {
       // Cap on RAW bytes (not cleaned length): cleanOutput only ever shrinks,
       // so the cleaned result of the first 16KB raw bytes is itself ≤ 16KB and
