@@ -42,11 +42,35 @@ const wer = () => ({
 });
 const projection = (applicationErrors = [row()], windowsErrors = [wer()]) =>
   JSON.stringify({ schemaVersion: 1, queryStatus: "ok", applicationErrors, windowsErrors });
+const privateEnvironment = {
+  HOME: "D:\\owned\\private-build\\home",
+  USERPROFILE: "D:\\owned\\private-build\\home",
+  APPDATA: "D:\\owned\\private-build\\home\\AppData\\Roaming",
+  LOCALAPPDATA: "D:\\owned\\private-build\\home\\AppData\\Local",
+  XDG_CONFIG_HOME: "D:\\owned\\private-build\\home\\.config",
+  XDG_DATA_HOME: "D:\\owned\\private-build\\home\\.local\\share",
+  XDG_CACHE_HOME: "D:\\owned\\private-build\\home\\.cache",
+  XDG_STATE_HOME: "D:\\owned\\private-build\\home\\.local\\state",
+  XDG_RUNTIME_DIR: "D:\\owned\\private-build\\home\\.run",
+  TEMP: "D:\\owned\\private-build\\tmp",
+  TMP: "D:\\owned\\private-build\\tmp",
+  TMPDIR: "D:\\owned\\private-build\\tmp",
+};
 const options = () => ({
   root: "D:\\owned",
   ci: { runner: "github-hosted/windows-2022/x64", run: "39037383789", source: "a".repeat(40) },
   installer: { path: target.path, sha256: "b".repeat(64), size: 123 },
-  environment: { SystemRoot: "C:\\Windows", SECRET_TOKEN: "must not inherit" },
+  environment: {
+    ...privateEnvironment,
+    SystemRoot: "C:\\Windows",
+    PATH: "foreign",
+    SECRET_TOKEN: "must not inherit",
+    NODE_OPTIONS: "must not inherit",
+    PSModulePath: "must not inherit",
+    CODE_SHELL_HOME: "D:\\owned\\private-build\\home\\.code-shell",
+    CODE_SHELL_TEST_HOME: "D:\\owned\\private-build\\home\\.code-shell",
+    CODESHELL_FLAG: "must not inherit",
+  },
   observedAt: target.observedAt,
   operation: {
     label: "install",
@@ -218,6 +242,7 @@ test("single fixed PS7 query has original 30s read-only budget, stdin identity a
         "JSON timestamps must not be auto-coerced by PowerShell",
       );
       assert.deepEqual(config.env, {
+        ...privateEnvironment,
         SystemRoot: "C:\\Windows",
         WINDIR: "C:\\Windows",
         PATH: "C:\\Windows\\System32",
@@ -233,6 +258,29 @@ test("single fixed PS7 query has original 30s read-only budget, stdin identity a
   assert.equal(calls, 1);
   assert.equal(result.status, "matched");
   assert.match(result.scriptSHA256, /^[a-f0-9]{64}$/);
+});
+
+test("all actual owned HOME/config/temp keys are required; missing/foreign/alias never queries", () => {
+  for (const key of Object.keys(privateEnvironment)) {
+    for (const replacement of [
+      undefined,
+      "C:\\Users\\foreign",
+      "D:\\owned\\private-build\\home\\..\\home",
+    ]) {
+      const value = options();
+      value.environment[key] = replacement;
+      let queries = 0;
+      const result = collect(value, {
+        query: () => {
+          queries++;
+          return projection();
+        },
+      });
+      assert.equal(queries, 0);
+      assert.equal(result.queried, false);
+      assert.equal(result.reason, "unproven-query-isolation");
+    }
+  }
 });
 
 test("no query without original actual exit, exact pinned owned birth and completed clean custody", () => {
