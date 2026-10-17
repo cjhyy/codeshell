@@ -1,0 +1,124 @@
+{
+  "capturedUTC": "2026-10-17T17:19:17.768090+00:00",
+  "postReadCapture": true,
+  "files": [
+    {
+      "path": "packages/desktop/src/renderer/chat/ContextRing.tsx",
+      "sha256": "b28fbfc2e74fdb645cc5b2cb935eb0fb6a5e1f896b6150a121a75294013baa3d",
+      "captureTiming": "After actual display; metadata archival capture, not pre-read snapshot or additional semantic reading.",
+      "displayedLineRanges": [
+        [
+          1,
+          247
+        ]
+      ],
+      "ranges": [
+        {
+          "start": 1,
+          "end": 247,
+          "text": "import React, { useEffect, useRef, useState } from \"react\";\nimport { createPortal } from \"react-dom\";\nimport { useAnchoredPopover } from \"./useAnchoredPopover\";\nimport { useT } from \"../i18n/I18nProvider\";\n\ninterface Props {\n  used: number;\n  /**\n   * Active model's maxContextTokens, from settings.json. Undefined when\n   * the user's chosen model entry doesn't declare one (e.g. openai\n   * models in the default config). We fall back to FALLBACK_MAX and\n   * surface a note in the hover tooltip so users don't misread the\n   * ring as the wrong fullness.\n   */\n  max?: number;\n  /** True while an agent run is in flight — show breathing animation. */\n  busy?: boolean;\n  /** Prompt-cache counts for the current turn only. */\n  singleTurnPromptTokens?: number;\n  singleTurnCacheReadTokens?: number;\n  singleTurnCacheCreationTokens?: number;\n  /** Monotonic prompt-cache counts summed from session start. */\n  cumulativePromptTokens?: number;\n  cumulativeCacheReadTokens?: number;\n  cumulativeCacheCreationTokens?: number;\n}\n\n/**\n * Prompt-cache hit rate, same formula as core's cacheHitRate:\n *   read / (read + creation + uncachedInput), uncachedInput = prompt − read − creation.\n * Returns null when there's no cache signal at all, so the tooltip hides the\n * row rather than showing a misleading 0%.\n */\nfunction computeHitRate(\n  prompt: number,\n  read: number | undefined,\n  creation: number | undefined,\n): number | null {\n  const r = read ?? 0;\n  const cr = creation ?? 0;\n  if (r === 0 && cr === 0) return null;\n  const uncached = Math.max(0, prompt - r - cr);\n  const denom = r + cr + uncached;\n  if (denom === 0) return null;\n  return r / denom;\n}\n\n// Fallback when the active model entry doesn't declare maxContextTokens.\n// 200k is closer to what most current frontier models actually offer\n// (GPT-5/Claude/Gemini Pro all sit at ≥200k); a 128k default kept making\n// 200k-context models look ~50% fuller than they really were.\nconst FALLBACK_MAX = 200_000;\n\nexport function ContextRing({\n  used,\n  max,\n  busy,\n  singleTurnPromptTokens,\n  singleTurnCacheReadTokens,\n  singleTurnCacheCreationTokens,\n  cumulativePromptTokens,\n  cumulativeCacheReadTokens,\n  cumulativeCacheCreationTokens,\n}: Props) {\n  const { t } = useT();\n  const [hover, setHover] = useState(false);\n  const anchorRef = useRef<HTMLDivElement>(null);\n  const popoverRef = useRef<HTMLDivElement>(null);\n  const closeTimer = useRef<number | null>(null);\n  const cancelClose = () => {\n    if (closeTimer.current !== null) window.clearTimeout(closeTimer.current);\n    closeTimer.current = null;\n  };\n  const openPopover = () => {\n    cancelClose();\n    setHover(true);\n  };\n  const scheduleClose = () => {\n    cancelClose();\n    closeTimer.current = window.setTimeout(() => setHover(false), 120);\n  };\n  useEffect(() => () => cancelClose(), []);\n  // Anchored to the viewport with flip + four-edge clamp so the card can't spill\n  // off-screen when the TopBar narrows (was `absolute bottom-full right-0`).\n  const popoverStyle = useAnchoredPopover(hover, anchorRef, popoverRef, {\n    preferredSide: \"top\",\n    align: \"end\",\n    gap: 4,\n  });\n\n  const hasDeclaredMax = typeof max === \"number\" && max > 0;\n  const safeMax = hasDeclaredMax ? (max as number) : FALLBACK_MAX;\n  const ratio = Math.max(0, Math.min(1, used / safeMax));\n  const pct = Math.round(ratio * 100);\n  const remaining = Math.max(0, safeMax - used);\n  const hasUsage = used > 0;\n  const singleTurnHitRate = computeHitRate(\n    singleTurnPromptTokens ?? 0,\n    singleTurnCacheReadTokens,\n    singleTurnCacheCreationTokens,\n  );\n  const cumulativeHitRate = computeHitRate(\n    cumulativePromptTokens ?? 0,\n    cumulativeCacheReadTokens,\n    cumulativeCacheCreationTokens,\n  );\n\n  const size = 22;\n  const stroke = 3;\n  const r = (size - stroke) / 2;\n  const c = 2 * Math.PI * r;\n  const offset = c * (1 - ratio);\n\n  const tone = !hasUsage\n    ? \"hsl(var(--cs-muted-foreground))\"\n    : ratio >= 0.9\n      ? \"hsl(var(--cs-status-err))\"\n      : ratio >= 0.7\n        ? \"hsl(var(--cs-status-warn))\"\n        : \"hsl(var(--cs-status-ok))\";\n\n  const pctLabel = !hasUsage ? (busy ? \"·\" : \"—\") : `${pct}%`;\n\n  return (\n    <div\n      ref={anchorRef}\n      className={\"relative inline-flex items-center gap-1\" + (busy ? \" animate-pulse\" : \"\")}\n      data-context-used={used}\n      data-cache-read={singleTurnCacheReadTokens ?? 0}\n      data-cache-created={singleTurnCacheCreationTokens ?? 0}\n      onMouseEnter={openPopover}\n      onMouseLeave={scheduleClose}\n    >\n      <div className=\"leading-none\">\n        <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>\n          <circle\n            cx={size / 2}\n            cy={size / 2}\n            r={r}\n            fill=\"none\"\n            stroke=\"hsl(var(--cs-border))\"\n            strokeWidth={stroke}\n          />\n          {hasUsage && (\n            <circle\n              cx={size / 2}\n              cy={size / 2}\n              r={r}\n              fill=\"none\"\n              stroke={tone}\n              strokeWidth={stroke}\n              strokeDasharray={c}\n              strokeDashoffset={offset}\n              strokeLinecap=\"round\"\n              transform={`rotate(-90 ${size / 2} ${size / 2})`}\n            />\n          )}\n        </svg>\n      </div>\n      <span className=\"text-xs font-medium\" style={{ color: tone }}>\n        {pctLabel}\n      </span>\n\n      {hover &&\n        createPortal(\n          <div\n            ref={popoverRef}\n            style={popoverStyle}\n            onMouseEnter={openPopover}\n            onMouseLeave={scheduleClose}\n            className=\"w-64 rounded-md border bg-popover p-3 text-popover-foreground shadow-md\"\n          >\n            {!hasUsage ? (\n              <div className=\"text-sm\">\n                {busy ? t(\"chat.contextRing.waitingEngine\") : t(\"chat.contextRing.newSession\")}\n                <div className=\"mt-1 text-xs text-muted-foreground\">\n                  {t(\"chat.contextRing.max\", { value: formatTok(safeMax) })}\n                  {!hasDeclaredMax && t(\"chat.contextRing.maxDefaultNote\")}\n                </div>\n              </div>\n            ) : (\n              <>\n                <div className=\"flex items-center justify-between text-sm\">\n                  <span className=\"text-muted-foreground\">{t(\"chat.contextRing.used\")}</span>\n                  <span>{formatTok(used)}</span>\n                </div>\n                <div className=\"flex items-center justify-between text-sm\">\n                  <span className=\"text-muted-foreground\">{t(\"chat.contextRing.remaining\")}</span>\n                  <span>{formatTok(remaining)}</span>\n                </div>\n                <div className=\"flex items-center justify-between text-sm\">\n                  <span className=\"text-muted-foreground\">{t(\"chat.contextRing.maxLabel\")}</span>\n                  <span>\n                    {formatTok(safeMax)}\n                    {!hasDeclaredMax && (\n                      <span className=\"text-muted-foreground\">\n                        {t(\"chat.contextRing.defaultSuffix\")}\n                      </span>\n                    )}\n                  </span>\n                </div>\n                <div className=\"mt-2 h-1.5 overflow-hidden rounded-full bg-muted\">\n                  <div\n                    className=\"h-full rounded-full\"\n                    style={{ width: `${pct}%`, background: tone }}\n                  />\n                </div>\n                {(singleTurnHitRate !== null || cumulativeHitRate !== null) && (\n                  <div className=\"mt-2 space-y-1\">\n                    {singleTurnHitRate !== null && (\n                      <div className=\"flex items-center justify-between gap-3 text-sm\">\n                        <span className=\"min-w-0 text-muted-foreground\">\n                          {t(\"chat.contextRing.cacheHitSingleTurn\")}\n                        </span>\n                        <span className=\"shrink-0\">{Math.round(singleTurnHitRate * 100)}%</span>\n                      </div>\n                    )}\n                    {cumulativeHitRate !== null && (\n                      <div className=\"flex items-center justify-between gap-3 text-sm\">\n                        <span className=\"min-w-0 text-muted-foreground\">\n                          {t(\"chat.contextRing.cacheHitCumulative\")}\n                        </span>\n                        <span className=\"shrink-0\">{Math.round(cumulativeHitRate * 100)}%</span>\n                      </div>\n                    )}\n                  </div>\n                )}\n                {!hasDeclaredMax && (\n                  <div className=\"mt-2 text-xs text-muted-foreground\">\n                    {t(\"chat.contextRing.fallbackNote\")}\n                  </div>\n                )}\n              </>\n            )}\n          </div>,\n          document.body,\n        )}\n    </div>\n  );\n}\n\n/** Compact token count (\"1.23M\" / \"45.6k\"). Shared with the turn-usage line. */\nexport function formatTok(n: number): string {\n  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(2)}M`;\n  if (n >= 1_000) return `${(n / 1_000).toFixed(1)}k`;\n  return String(n);\n}\n"
+        }
+      ]
+    },
+    {
+      "path": "packages/desktop/src/renderer/ChatView.tsx",
+      "sha256": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+      "captureTiming": "After actual display; metadata archival capture, not pre-read snapshot or additional semantic reading.",
+      "displayedLineRanges": [
+        [
+          214,
+          226
+        ],
+        [
+          429,
+          442
+        ],
+        [
+          2400,
+          2422
+        ]
+      ],
+      "ranges": [
+        {
+          "start": 214,
+          "end": 226,
+          "text": "  onGoalToggle: (next: boolean) => void;\n  modelOptions: ModelOption[];\n  activeModelKey: string | null;\n  onModelChange: (opt: ModelOption) => void;\n  contextTokens: number;\n  contextMax?: number;\n  singleTurnPromptTokens?: number;\n  singleTurnCacheReadTokens?: number;\n  singleTurnCacheCreationTokens?: number;\n  cumulativePromptTokens?: number;\n  cumulativeCacheReadTokens?: number;\n  cumulativeCacheCreationTokens?: number;\n\n"
+        },
+        {
+          "start": 429,
+          "end": 442,
+          "text": "  onGoalToggle,\n  modelOptions,\n  activeModelKey,\n  onModelChange,\n  contextTokens,\n  contextMax,\n  singleTurnPromptTokens,\n  singleTurnCacheReadTokens,\n  singleTurnCacheCreationTokens,\n  cumulativePromptTokens,\n  cumulativeCacheReadTokens,\n  cumulativeCacheCreationTokens,\n  projects,\n  onSelectProject,\n"
+        },
+        {
+          "start": 2400,
+          "end": 2422,
+          "text": "                <div\n                  className={cn(\n                    \"flex min-w-0 items-center justify-end gap-1.5\",\n                    variant === \"quickChat\" && \"ml-auto\",\n                  )}\n                >\n                  {variant === \"main\" && (\n                    <div data-composer-control=\"context-usage\">\n                      <ContextRing\n                        used={contextTokens}\n                        max={contextMax}\n                        busy={busy}\n                        singleTurnPromptTokens={singleTurnPromptTokens}\n                        singleTurnCacheReadTokens={singleTurnCacheReadTokens}\n                        singleTurnCacheCreationTokens={singleTurnCacheCreationTokens}\n                        cumulativePromptTokens={cumulativePromptTokens}\n                        cumulativeCacheReadTokens={cumulativeCacheReadTokens}\n                        cumulativeCacheCreationTokens={cumulativeCacheCreationTokens}\n                      />\n                    </div>\n                  )}\n                  <ModelPill\n                    activeKey={activeModelKey}\n"
+        }
+      ]
+    },
+    {
+      "path": "packages/desktop/src/renderer/App.tsx",
+      "sha256": "02ae12bfccf26878226720ad90282a6a11a1fdc3e05efd1ce54a09d256d5d715",
+      "captureTiming": "After actual display; metadata archival capture, not pre-read snapshot or additional semantic reading.",
+      "displayedLineRanges": [
+        [
+          2666,
+          2690
+        ]
+      ],
+      "ranges": [
+        {
+          "start": 2666,
+          "end": 2690,
+          "text": "                        : undefined\n                    }\n                    permissionMode={permissionMode}\n                    onPermissionChange={onPermissionChange}\n                    goalEnabled={goalEnabled}\n                    onGoalToggle={onGoalToggle}\n                    modelOptions={modelOptions}\n                    activeModelKey={activeModelKey}\n                    onModelChange={onModelChange}\n                    contextTokens={state.promptTokens}\n                    contextMax={\n                      modelOptions.find((o) => o.key === activeModelKey)?.maxContextTokens\n                    }\n                    singleTurnPromptTokens={state.singleTurnPromptTokens}\n                    singleTurnCacheReadTokens={state.singleTurnCacheReadTokens}\n                    singleTurnCacheCreationTokens={state.singleTurnCacheCreationTokens}\n                    cumulativePromptTokens={state.cumulativePromptTokens}\n                    cumulativeCacheReadTokens={state.cumulativeCacheReadTokens}\n                    cumulativeCacheCreationTokens={state.cumulativeCacheCreationTokens}\n                    projects={projects}\n                    // Picking a project (or 不使用项目) from the composer's\n                    // ProjectPicker enters a fresh draft for that project rather than a\n                    // bare setActiveProjectId — otherwise the chat snaps to whatever\n                    // session that bucket last had active (the top of its list),\n                    // which reads as an unexpected auto-jump. (The reload-time\n"
+        }
+      ]
+    },
+    {
+      "path": "packages/desktop/src/renderer/types.ts",
+      "sha256": "6d7b173656e7ebe22d5c9347b7097d2040793610135c1f797d76139aa6f69845",
+      "captureTiming": "After actual display; metadata archival capture, not pre-read snapshot or additional semantic reading.",
+      "displayedLineRanges": [
+        [
+          352,
+          379
+        ],
+        [
+          1858,
+          1940
+        ]
+      ],
+      "ranges": [
+        {
+          "start": 352,
+          "end": 379,
+          "text": "  /**\n   * Track which assistant message id is currently streaming. Set on\n   * `stream_request_start` (we open a fresh assistant message),\n   * cleared on `turn_complete`.\n   */\n  streamingAssistantId: string | null;\n  /** Currently-streaming thinking-message id, if any. */\n  streamingThinkingId: string | null;\n  /** Authoritative engine session id (set on session_started). */\n  sessionId: string | null;\n  /** Latest known context token count (session_started / usage_update). */\n  promptTokens: number;\n  /** Prompt-cache totals for the current turn only. */\n  singleTurnPromptTokens: number;\n  singleTurnCacheReadTokens: number;\n  singleTurnCacheCreationTokens: number;\n  /** Whole-session monotonic prompt-cache totals. */\n  cacheUsageVersion?: 1;\n  cumulativePromptTokens: number;\n  cumulativeCacheReadTokens: number;\n  cumulativeCacheCreationTokens: number;\n  /** Legacy aliases kept for localStorage migration. */\n  sessionCacheReadTokens: number;\n  sessionCacheCreationTokens: number;\n  sessionPromptTokens: number;\n  /** Currently-active sub-agents by id. */\n  activeAgents: Record<string, AgentRuntime>;\n  /**\n"
+        },
+        {
+          "start": 1858,
+          "end": 1940,
+          "text": "        },\n      };\n    }\n\n    case \"goal_cleared\": {\n      if (state.activeGoal && isStaleGoalEvent(state.activeGoal, event)) {\n        return state;\n      }\n      return { ...state, activeGoal: null };\n    }\n\n    case \"usage_update\": {\n      const acceptsCacheUsage = state.cacheUsageVersion !== 1 || event.cacheUsageVersion === 1;\n      // Fields update independently and additively — a single event can carry\n      // any combination of them. The turn-loop's per-response emit carries the\n      // context reading + single-turn cache + cumulative cache all at once, so\n      // we must NOT early-return on cumulative presence (that dropped the\n      // single-turn metric and left its tooltip row stuck at nothing).\n      const hasCumulative =\n        event.cumulativePromptTokens !== undefined || event.sessionPromptTokens !== undefined;\n      const hasSingleTurn =\n        event.singleTurnPromptTokens !== undefined ||\n        event.cacheReadTokens !== undefined ||\n        event.cacheCreationTokens !== undefined;\n      // A pure cumulative-only heartbeat (engine turn boundary) carries a\n      // cumulative-derived promptTokens that must NOT clobber the live context\n      // reading. Only adopt event.promptTokens when it's a real reading, i.e.\n      // not a heartbeat that lacks any single-turn signal.\n      const isCumulativeHeartbeat = hasCumulative && !hasSingleTurn;\n      const hasLivePromptReading = Number.isFinite(event.promptTokens) && event.promptTokens > 0;\n      return {\n        ...state,\n        ...(event.cacheUsageVersion === 1 && state.cacheUsageVersion !== 1\n          ? {\n              singleTurnPromptTokens: 0,\n              singleTurnCacheReadTokens: 0,\n              singleTurnCacheCreationTokens: 0,\n              cumulativePromptTokens: 0,\n              cumulativeCacheReadTokens: 0,\n              cumulativeCacheCreationTokens: 0,\n              sessionPromptTokens: 0,\n              sessionCacheReadTokens: 0,\n              sessionCacheCreationTokens: 0,\n            }\n          : {}),\n        ...(isCumulativeHeartbeat || !hasLivePromptReading\n          ? {}\n          : { promptTokens: event.promptTokens }),\n        ...(acceptsCacheUsage && event.cacheUsageVersion === 1 ? { cacheUsageVersion: 1 } : {}),\n        ...(hasSingleTurn && acceptsCacheUsage\n          ? {\n              singleTurnPromptTokens: event.singleTurnPromptTokens ?? event.promptTokens,\n              singleTurnCacheReadTokens:\n                event.singleTurnCacheReadTokens ?? event.cacheReadTokens ?? 0,\n              singleTurnCacheCreationTokens:\n                event.singleTurnCacheCreationTokens ?? event.cacheCreationTokens ?? 0,\n            }\n          : {}),\n        ...(hasCumulative && acceptsCacheUsage\n          ? (() => {\n              const cumulativePromptTokens =\n                event.cumulativePromptTokens ?? event.sessionPromptTokens ?? 0;\n              const cumulativeCacheReadTokens =\n                event.cumulativeCacheReadTokens ?? event.sessionCacheReadTokens ?? 0;\n              const cumulativeCacheCreationTokens =\n                event.cumulativeCacheCreationTokens ?? event.sessionCacheCreationTokens ?? 0;\n              return {\n                cumulativePromptTokens,\n                cumulativeCacheReadTokens,\n                cumulativeCacheCreationTokens,\n                sessionPromptTokens: cumulativePromptTokens,\n                sessionCacheReadTokens: cumulativeCacheReadTokens,\n                sessionCacheCreationTokens: cumulativeCacheCreationTokens,\n              };\n            })()\n          : {}),\n      };\n    }\n\n    case \"tombstone\": {\n      if (event.agentId) {\n        const index = state.agentMessageIndex[event.agentId];\n        const agent = index === undefined ? undefined : state.messages[index];\n"
+        }
+      ]
+    },
+    {
+      "path": "packages/desktop/src/renderer/messages/TurnUsageMessageView.tsx",
+      "sha256": "4f941fcbec7d2f0c8e225df7e3e661da27acf6bb8b02cf2ee65f8640f563bb8b",
+      "captureTiming": "After actual display; metadata archival capture, not pre-read snapshot or additional semantic reading.",
+      "displayedLineRanges": [
+        [
+          1,
+          52
+        ]
+      ],
+      "ranges": [
+        {
+          "start": 1,
+          "end": 52,
+          "text": "import React from \"react\";\nimport { ChartNoAxesColumn } from \"lucide-react\";\nimport type { TurnUsageMessage } from \"../types\";\nimport { formatTok } from \"../chat/ContextRing\";\nimport { useT } from \"../i18n/I18nProvider\";\n\n/**\n * What the turn just spent, in an optional footer below its output.\n * The TUI has always printed this after every turn; without\n * it the desktop gave no cost signal at all, so a 35-turn research run that\n * consumed 17.8M tokens looked the same as a one-line answer. The ContextRing\n * next to the composer shows how full the context window is — a different\n * question from what this turn cost.\n */\nfunction TurnUsageMessageViewImpl({ message }: { message: TurnUsageMessage }) {\n  const { t } = useT();\n  const { promptTokens, cacheReadTokens, cacheCreationTokens } = message;\n  // Cache counts are already included in promptTokens. Keep them as a breakdown,\n  // rather than adding them to the headline or implying this includes output.\n  const cacheMetrics = [\n    { label: t(\"msg.turnUsage.cached\"), value: cacheReadTokens },\n    { label: t(\"msg.turnUsage.cacheWrite\"), value: cacheCreationTokens },\n  ].filter(({ value }) => value > 0);\n  return (\n    <div className=\"min-w-0 px-4 py-1 text-xs text-muted-foreground\" data-message-kind=\"turn-usage\">\n      <div className=\"flex min-h-8 flex-wrap items-center gap-x-3 gap-y-1.5 py-1\">\n        <div className=\"flex items-center gap-2 whitespace-nowrap\">\n          <ChartNoAxesColumn size={14} className=\"shrink-0\" aria-hidden />\n          <span>{t(\"msg.turnUsage.summary\")}</span>\n          <span className=\"font-medium tabular-nums text-foreground/80\">\n            {t(\"msg.turnUsage.tokens\", { count: formatTok(promptTokens) })}\n          </span>\n        </div>\n        {cacheMetrics.length > 0 && (\n          <dl className=\"contents\">\n            {cacheMetrics.map(({ label, value }) => (\n              <div\n                key={label}\n                className=\"flex items-center gap-1.5 whitespace-nowrap rounded-md bg-muted/40 px-2 py-1\"\n              >\n                <dt>{label}</dt>\n                <dd className=\"font-medium tabular-nums text-foreground/80\">{formatTok(value)}</dd>\n              </div>\n            ))}\n          </dl>\n        )}\n      </div>\n    </div>\n  );\n}\n\nexport const TurnUsageMessageView = React.memo(TurnUsageMessageViewImpl);\n"
+        }
+      ]
+    }
+  ],
+  "lineNumberedNavigationStoredSeparately": "producer-navigation.json"
+}

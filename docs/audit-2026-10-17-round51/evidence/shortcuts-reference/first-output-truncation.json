@@ -1,0 +1,14 @@
+{
+  "toolChunk": "111c53",
+  "outerExitCode": 0,
+  "maxOutputTokens": 2900,
+  "originalTokenCount": 2990,
+  "metadataTruncation": true,
+  "observedWarning": "Warning: truncated output (original token count: 2990)",
+  "observedOmission": "90 tokens in the trailing historical locator-list JSON, around indices3\u20135",
+  "sourceBodySectionsBeforeMetadataLocatorListComplete": true,
+  "sourceBodyRerun": false,
+  "retainedMetadataContextsCompleteIn": "history-contexts.json",
+  "originalToolOutputNotRegeneratedAsRaw": true,
+  "productFailure": false
+}

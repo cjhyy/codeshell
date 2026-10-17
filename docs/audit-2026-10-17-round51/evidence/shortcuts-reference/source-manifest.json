@@ -1,0 +1,523 @@
+{
+  "root": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell",
+  "rootContextCommitExternal": "424ef9c8953eaaa295d24d63c49127aa8b3ea79e",
+  "GitVerifiedByThisAuthor": false,
+  "files": [
+    {
+      "path": "packages/desktop/src/renderer/settings/ShortcutsSection.tsx",
+      "bytes": 4521,
+      "sha256": "ee9161604475561743cab550fe144c9f0bd8fa045fe18d1ef8664d5c851dc1a4",
+      "lines": 110,
+      "pinnedUTC": "2026-10-17T17:20:36.240645+00:00",
+      "timing": "Before current98 contentlocator/body review",
+      "sourceKind": "product",
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          110
+        ]
+      ],
+      "coveredLineCount": 110,
+      "bodyDisplayedLineRanges": [
+        [
+          1,
+          110
+        ]
+      ],
+      "additionalNavigationSnippetLines": [],
+      "displayedLineRanges": [
+        [
+          1,
+          110
+        ]
+      ],
+      "displayedLineCount": 110,
+      "navigationOrIncidentalOnlyLines": 0,
+      "firstReadSha256": "ee9161604475561743cab550fe144c9f0bd8fa045fe18d1ef8664d5c851dc1a4",
+      "firstSemanticReadSha256": "ee9161604475561743cab550fe144c9f0bd8fa045fe18d1ef8664d5c851dc1a4",
+      "selectedBodyCaptureSha256": "ee9161604475561743cab550fe144c9f0bd8fa045fe18d1ef8664d5c851dc1a4",
+      "firstEverReadClaim": false,
+      "scope": "Whole readonly shortcut reference component: normal label/key/hint grouping, platform display and accessibility text. No onChange/reset/config persistence API exists here. DOM/render/native shortcut execution unobserved.",
+      "endingSha256": "ee9161604475561743cab550fe144c9f0bd8fa045fe18d1ef8664d5c851dc1a4"
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/ShortcutsSection.test.tsx",
+      "bytes": 2721,
+      "sha256": "ba16076628e88e408a0b7dfcb9566b597e12949c20b89ecfcd421029f918db02",
+      "lines": 67,
+      "pinnedUTC": "2026-10-17T17:21:10.123909+00:00",
+      "timing": "Before current98 contentlocator/body review; test filename only already inventoried",
+      "sourceKind": "test-declaration",
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          67
+        ]
+      ],
+      "coveredLineCount": 67,
+      "bodyDisplayedLineRanges": [
+        [
+          1,
+          67
+        ]
+      ],
+      "additionalNavigationSnippetLines": [],
+      "displayedLineRanges": [
+        [
+          1,
+          67
+        ]
+      ],
+      "displayedLineCount": 67,
+      "navigationOrIncidentalOnlyLines": 0,
+      "firstReadSha256": "ba16076628e88e408a0b7dfcb9566b597e12949c20b89ecfcd421029f918db02",
+      "firstSemanticReadSha256": "ba16076628e88e408a0b7dfcb9566b597e12949c20b89ecfcd421029f918db02",
+      "selectedBodyCaptureSha256": "ba16076628e88e408a0b7dfcb9566b597e12949c20b89ecfcd421029f918db02",
+      "firstEverReadClaim": false,
+      "scope": "Existing67-line test declaration statically read; localStorage stubs/render helper/imports never executed.",
+      "endingSha256": "ba16076628e88e408a0b7dfcb9566b597e12949c20b89ecfcd421029f918db02"
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/AdvancedSections.tsx",
+      "bytes": 75319,
+      "sha256": "3a18e0123775066a6ba3178934ed1bac9e1bc9f48d74dee3842ec422204fa014",
+      "lines": 2032,
+      "pinnedUTC": "2026-10-17T17:21:39.575592+00:00",
+      "timing": "Before current98 contentlocator/selected read; filename-only inventory already seen",
+      "sourceKind": "product",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          281,
+          281
+        ]
+      ],
+      "coveredLineCount": 1,
+      "bodyDisplayedLineRanges": [
+        [
+          279,
+          281
+        ]
+      ],
+      "additionalNavigationSnippetLines": [
+        281
+      ],
+      "displayedLineRanges": [
+        [
+          279,
+          281
+        ]
+      ],
+      "displayedLineCount": 3,
+      "navigationOrIncidentalOnlyLines": 2,
+      "firstReadSha256": "3a18e0123775066a6ba3178934ed1bac9e1bc9f48d74dee3842ec422204fa014",
+      "firstSemanticReadSha256": "3a18e0123775066a6ba3178934ed1bac9e1bc9f48d74dee3842ec422204fa014",
+      "selectedBodyCaptureSha256": "3a18e0123775066a6ba3178934ed1bac9e1bc9f48d74dee3842ec422204fa014",
+      "firstEverReadClaim": false,
+      "scope": "Compatibility export only; rest of281-line file displayed only closing boundary, not full read.",
+      "endingSha256": "3a18e0123775066a6ba3178934ed1bac9e1bc9f48d74dee3842ec422204fa014"
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/SettingsPage.tsx",
+      "bytes": 35851,
+      "sha256": "1ac7c97703cf3aa43063b35b13581b20efcb3f87abbad972272e1bc3fc396376",
+      "lines": 931,
+      "pinnedUTC": "2026-10-17T17:21:39.576702+00:00",
+      "timing": "Before current98 contentlocator/selected read; filename-only inventory already seen",
+      "sourceKind": "product",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          365,
+          365
+        ],
+        [
+          507,
+          509
+        ],
+        [
+          835,
+          835
+        ]
+      ],
+      "coveredLineCount": 5,
+      "bodyDisplayedLineRanges": [
+        [
+          359,
+          367
+        ],
+        [
+          505,
+          523
+        ],
+        [
+          830,
+          838
+        ]
+      ],
+      "additionalNavigationSnippetLines": [
+        62,
+        365,
+        390,
+        446,
+        509,
+        520,
+        521,
+        835
+      ],
+      "displayedLineRanges": [
+        [
+          62,
+          62
+        ],
+        [
+          359,
+          367
+        ],
+        [
+          390,
+          390
+        ],
+        [
+          446,
+          446
+        ],
+        [
+          505,
+          523
+        ],
+        [
+          830,
+          838
+        ]
+      ],
+      "displayedLineCount": 40,
+      "navigationOrIncidentalOnlyLines": 35,
+      "firstReadSha256": "1ac7c97703cf3aa43063b35b13581b20efcb3f87abbad972272e1bc3fc396376",
+      "firstSemanticReadSha256": "1ac7c97703cf3aa43063b35b13581b20efcb3f87abbad972272e1bc3fc396376",
+      "selectedBodyCaptureSha256": "1ac7c97703cf3aa43063b35b13581b20efcb3f87abbad972272e1bc3fc396376",
+      "firstEverReadClaim": false,
+      "scope": "isMac prop/mount and Mod+F key condition only. Search geometry/focus/listener DOM implementation displayed but not certified or executed.",
+      "endingSha256": "1ac7c97703cf3aa43063b35b13581b20efcb3f87abbad972272e1bc3fc396376"
+    },
+    {
+      "path": "packages/desktop/src/renderer/App.tsx",
+      "bytes": 122863,
+      "sha256": "02ae12bfccf26878226720ad90282a6a11a1fdc3e05efd1ce54a09d256d5d715",
+      "lines": 2924,
+      "pinnedUTC": "2026-10-17T17:23:29.833379+00:00",
+      "timing": "Before current98 selected body; after seven content navigation lines",
+      "firstNavigationReadSha256": null,
+      "pinBeforeAnyNavigation": false,
+      "pinBeforeSelectedBody": true,
+      "sourceKind": "product",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          390,
+          393
+        ],
+        [
+          1387,
+          1387
+        ],
+        [
+          1389,
+          1389
+        ],
+        [
+          1402,
+          1414
+        ],
+        [
+          1416,
+          1418
+        ],
+        [
+          2853,
+          2855
+        ],
+        [
+          2868,
+          2868
+        ]
+      ],
+      "coveredLineCount": 26,
+      "bodyDisplayedLineRanges": [
+        [
+          389,
+          396
+        ],
+        [
+          1383,
+          1436
+        ],
+        [
+          2852,
+          2871
+        ]
+      ],
+      "additionalNavigationSnippetLines": [
+        391,
+        1389,
+        1414,
+        2097,
+        2216,
+        2868,
+        2896
+      ],
+      "displayedLineRanges": [
+        [
+          389,
+          396
+        ],
+        [
+          1383,
+          1436
+        ],
+        [
+          2097,
+          2097
+        ],
+        [
+          2216,
+          2216
+        ],
+        [
+          2852,
+          2871
+        ],
+        [
+          2896,
+          2896
+        ]
+      ],
+      "displayedLineCount": 85,
+      "navigationOrIncidentalOnlyLines": 59,
+      "firstReadSha256": null,
+      "firstSemanticReadSha256": null,
+      "selectedBodyCaptureSha256": "02ae12bfccf26878226720ad90282a6a11a1fdc3e05efd1ce54a09d256d5d715",
+      "firstEverReadClaim": false,
+      "scope": "Platform boolean from bridge/fallback and actual SettingsPage prop; ordinary K/P/F/B/1–9 event conditions only. Native menu, project/session identity, navigation authority and effect lifecycle not audited. First navigation seven lines preceded persisted pin; first read SHA remainsnull; selected body later pinned/captured.",
+      "endingSha256": "02ae12bfccf26878226720ad90282a6a11a1fdc3e05efd1ce54a09d256d5d715"
+    },
+    {
+      "path": "packages/desktop/src/renderer/ChatView.tsx",
+      "bytes": 106169,
+      "sha256": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+      "lines": 2622,
+      "pinnedUTC": "2026-10-17T17:23:29.835382+00:00",
+      "timing": "Before current98 contentlocator/body read; canonical path now inventoried",
+      "firstNavigationReadSha256": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+      "pinBeforeAnyNavigation": true,
+      "pinBeforeSelectedBody": true,
+      "sourceKind": "product",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          1341,
+          1342
+        ],
+        [
+          1409,
+          1440
+        ]
+      ],
+      "coveredLineCount": 34,
+      "bodyDisplayedLineRanges": [
+        [
+          1340,
+          1344
+        ],
+        [
+          1407,
+          1440
+        ]
+      ],
+      "additionalNavigationSnippetLines": [
+        16,
+        468,
+        1342,
+        1352,
+        1357,
+        1368,
+        1390,
+        1395,
+        1400,
+        1409,
+        1417,
+        1421,
+        1428,
+        2560
+      ],
+      "displayedLineRanges": [
+        [
+          16,
+          16
+        ],
+        [
+          468,
+          468
+        ],
+        [
+          1340,
+          1344
+        ],
+        [
+          1352,
+          1352
+        ],
+        [
+          1357,
+          1357
+        ],
+        [
+          1368,
+          1368
+        ],
+        [
+          1390,
+          1390
+        ],
+        [
+          1395,
+          1395
+        ],
+        [
+          1400,
+          1400
+        ],
+        [
+          1407,
+          1440
+        ],
+        [
+          2560,
+          2560
+        ]
+      ],
+      "displayedLineCount": 48,
+      "navigationOrIncidentalOnlyLines": 14,
+      "firstReadSha256": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+      "firstSemanticReadSha256": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+      "selectedBodyCaptureSha256": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+      "firstEverReadClaim": false,
+      "scope": "Selected ordinary composer IME guard and Enter/history key conditions/values only. Popup/plugin expansion, async draft ownership, mention helpers and native/DOM correctness not reopened.",
+      "endingSha256": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7"
+    },
+    {
+      "path": "packages/desktop/src/renderer/i18n/ns/settings.ts",
+      "bytes": 132800,
+      "sha256": "c27620951b2c5ddfca0ebf0782f44e8bade2c0e7d42f5acdfc46a18da3569f24",
+      "lines": 2423,
+      "pinnedUTC": "2026-10-17T17:23:29.836577+00:00",
+      "timing": "Before current98 contentlocator/body read; canonical path now inventoried",
+      "firstNavigationReadSha256": "c27620951b2c5ddfca0ebf0782f44e8bade2c0e7d42f5acdfc46a18da3569f24",
+      "pinBeforeAnyNavigation": true,
+      "pinBeforeSelectedBody": true,
+      "sourceKind": "product",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          945,
+          962
+        ],
+        [
+          2195,
+          2214
+        ]
+      ],
+      "coveredLineCount": 38,
+      "bodyDisplayedLineRanges": [
+        [
+          940,
+          966
+        ],
+        [
+          2190,
+          2218
+        ]
+      ],
+      "additionalNavigationSnippetLines": [
+        946,
+        947,
+        948,
+        952,
+        954,
+        960,
+        2196,
+        2198,
+        2199,
+        2203,
+        2205,
+        2212
+      ],
+      "displayedLineRanges": [
+        [
+          940,
+          966
+        ],
+        [
+          2190,
+          2218
+        ]
+      ],
+      "displayedLineCount": 56,
+      "navigationOrIncidentalOnlyLines": 18,
+      "firstReadSha256": "c27620951b2c5ddfca0ebf0782f44e8bade2c0e7d42f5acdfc46a18da3569f24",
+      "firstSemanticReadSha256": "c27620951b2c5ddfca0ebf0782f44e8bade2c0e7d42f5acdfc46a18da3569f24",
+      "selectedBodyCaptureSha256": "c27620951b2c5ddfca0ebf0782f44e8bade2c0e7d42f5acdfc46a18da3569f24",
+      "firstEverReadClaim": false,
+      "scope": "Chinese/English shortcut labels/descriptions only. Adjacent instructions/hooks strings are incidental display, not feature/authority review.",
+      "endingSha256": "c27620951b2c5ddfca0ebf0782f44e8bade2c0e7d42f5acdfc46a18da3569f24"
+    }
+  ],
+  "instructionFiles": [
+    {
+      "path": "CODESHELL.md",
+      "bytes": 17639,
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "lines": 217,
+      "pinnedUTC": "2026-10-17T17:20:36.239449+00:00",
+      "timing": "Before current98 contentlocator/body review",
+      "coverage": "hash-only",
+      "selectedLineRanges": [],
+      "displayedLineRanges": [],
+      "currentInstructionBodyReadLines": 0,
+      "scope": "Current instruction bytes only; prior90CODESHELL read carried; no current body reading."
+    },
+    {
+      "path": "AGENTS.md",
+      "bytes": 206,
+      "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "lines": 5,
+      "pinnedUTC": "2026-10-17T17:20:36.240219+00:00",
+      "timing": "Before current98 contentlocator/body review",
+      "coverage": "hash-only",
+      "selectedLineRanges": [],
+      "displayedLineRanges": [],
+      "currentInstructionBodyReadLines": 0,
+      "scope": "Current instruction bytes only; prior90CODESHELL read carried; no current body reading."
+    }
+  ],
+  "totals": {
+    "productFiles": 6,
+    "productFull": 1,
+    "productSelected": 5,
+    "productSemanticLines": 214,
+    "testDeclarationFiles": 1,
+    "testDeclarationLines": 67,
+    "semanticPlusTestLines": 281,
+    "productDisplayLines": 342,
+    "testDisplayLines": 67,
+    "totalProductAndTestDisplayLines": 409,
+    "instructionHashOnlyFiles": 2,
+    "instructionBodyLines": 0,
+    "testsExecuted": 0
+  },
+  "rangeConvention": "Inclusive1-based canonical unions: displayed=body+additionalnavigation; selected is semantic subset. Unique lines per file, no repeated-display addition.",
+  "timingException": "App seven navigation lines preceded persisted pin due failed metadata pathstage; firstReadSha256/firstSemanticReadSha256 remainnull. Later selected body beforepin/capture and ending SHA do not retroactively prove firstnavigation SHA.",
+  "globalCoverageUpdated": false
+}

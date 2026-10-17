@@ -1,0 +1,522 @@
+{
+  "readUTC": "2026-10-17T17:19:17.751786+00:00",
+  "metadataProjectionRowsActuallyRead": [
+    {
+      "projectionIndex": 64,
+      "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/candidate-initial-pins.json",
+      "documentSha256": "18336da07c03ac249f82ae712c21a1313e0f84760a925e40bd903edd43600b8f",
+      "pointer": "/files/4",
+      "originalObjectKeys": [
+        "path",
+        "bytes",
+        "sha256",
+        "lines",
+        "pinnedUTC",
+        "coverage",
+        "oldInventoryRow",
+        "matchesOldInventorySha"
+      ],
+      "metadataProjection": {
+        "path": "packages/desktop/src/renderer/chat/ContextRing.tsx",
+        "bytes": 9089,
+        "sha256": "b28fbfc2e74fdb645cc5b2cb935eb0fb6a5e1f896b6150a121a75294013baa3d",
+        "lines": 247,
+        "coverage": "hash-only; no source body displayed or semantically read"
+      },
+      "directPathBearingFields": {
+        "path": "packages/desktop/src/renderer/chat/ContextRing.tsx"
+      },
+      "ancestorLimitations": [],
+      "projectionIsNotFullObjectOrSourceRead": true
+    },
+    {
+      "projectionIndex": 67,
+      "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-claims.json",
+      "documentSha256": "b63dfcf1da736a2fec6f16835f7b0535711c18821de092c472fa637b0c37a9c6",
+      "pointer": "/claims/6",
+      "originalObjectKeys": [
+        "document",
+        "documentSha256",
+        "jsonPointer",
+        "path",
+        "sameObjectUniqueSourcePath",
+        "sameObjectPathCount",
+        "hashFields",
+        "sameObjectUniqueHash",
+        "sameCurrentSourceSha",
+        "qualifiers",
+        "ranges",
+        "canonicalManifestNameHint"
+      ],
+      "metadataProjection": {
+        "path": "packages/desktop/src/renderer/chat/ContextRing.tsx",
+        "ranges": {}
+      },
+      "directPathBearingFields": {
+        "path": "packages/desktop/src/renderer/chat/ContextRing.tsx"
+      },
+      "ancestorLimitations": [],
+      "projectionIsNotFullObjectOrSourceRead": true
+    },
+    {
+      "projectionIndex": 68,
+      "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-claims.json",
+      "documentSha256": "b63dfcf1da736a2fec6f16835f7b0535711c18821de092c472fa637b0c37a9c6",
+      "pointer": "/claims/36",
+      "originalObjectKeys": [
+        "document",
+        "documentSha256",
+        "jsonPointer",
+        "path",
+        "sameObjectUniqueSourcePath",
+        "sameObjectPathCount",
+        "hashFields",
+        "sameObjectUniqueHash",
+        "sameCurrentSourceSha",
+        "qualifiers",
+        "ranges",
+        "canonicalManifestNameHint"
+      ],
+      "metadataProjection": {
+        "path": "packages/desktop/src/renderer/chat/ContextRing.tsx",
+        "ranges": {
+          "lines": 247
+        }
+      },
+      "directPathBearingFields": {
+        "path": "packages/desktop/src/renderer/chat/ContextRing.tsx"
+      },
+      "ancestorLimitations": [],
+      "projectionIsNotFullObjectOrSourceRead": true
+    },
+    {
+      "projectionIndex": 69,
+      "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-claims.json",
+      "documentSha256": "b63dfcf1da736a2fec6f16835f7b0535711c18821de092c472fa637b0c37a9c6",
+      "pointer": "/claims/146",
+      "originalObjectKeys": [
+        "document",
+        "documentSha256",
+        "jsonPointer",
+        "path",
+        "sameObjectUniqueSourcePath",
+        "sameObjectPathCount",
+        "hashFields",
+        "sameObjectUniqueHash",
+        "sameCurrentSourceSha",
+        "qualifiers",
+        "ranges",
+        "canonicalManifestNameHint"
+      ],
+      "metadataProjection": {
+        "path": "packages/desktop/src/renderer/chat/ContextRing.tsx",
+        "ranges": {
+          "rangeFields": {},
+          "rangeBoundsValidForCurrent": false
+        }
+      },
+      "directPathBearingFields": {
+        "path": "packages/desktop/src/renderer/chat/ContextRing.tsx"
+      },
+      "ancestorLimitations": [],
+      "projectionIsNotFullObjectOrSourceRead": true
+    },
+    {
+      "projectionIndex": 70,
+      "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-claims.json",
+      "documentSha256": "b63dfcf1da736a2fec6f16835f7b0535711c18821de092c472fa637b0c37a9c6",
+      "pointer": "/claims/147",
+      "originalObjectKeys": [
+        "document",
+        "documentSha256",
+        "jsonPointer",
+        "path",
+        "sameObjectUniqueSourcePath",
+        "sameObjectPathCount",
+        "hashFields",
+        "sameObjectUniqueHash",
+        "sameCurrentSourceSha",
+        "qualifiers",
+        "ranges",
+        "canonicalManifestNameHint"
+      ],
+      "metadataProjection": {
+        "path": "packages/desktop/src/renderer/chat/ContextRing.tsx",
+        "ranges": {
+          "rangeFields": {},
+          "rangeBoundsValidForCurrent": false
+        }
+      },
+      "directPathBearingFields": {
+        "path": "packages/desktop/src/renderer/chat/ContextRing.tsx"
+      },
+      "ancestorLimitations": [],
+      "projectionIsNotFullObjectOrSourceRead": true
+    },
+    {
+      "projectionIndex": 71,
+      "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-claims.json",
+      "documentSha256": "b63dfcf1da736a2fec6f16835f7b0535711c18821de092c472fa637b0c37a9c6",
+      "pointer": "/claims/148",
+      "originalObjectKeys": [
+        "document",
+        "documentSha256",
+        "jsonPointer",
+        "path",
+        "sameObjectUniqueSourcePath",
+        "sameObjectPathCount",
+        "hashFields",
+        "sameObjectUniqueHash",
+        "sameCurrentSourceSha",
+        "qualifiers",
+        "ranges",
+        "canonicalManifestNameHint"
+      ],
+      "metadataProjection": {
+        "path": "packages/desktop/src/renderer/chat/ContextRing.tsx",
+        "ranges": {
+          "rangeFields": {},
+          "rangeBoundsValidForCurrent": false
+        }
+      },
+      "directPathBearingFields": {
+        "path": "packages/desktop/src/renderer/chat/ContextRing.tsx"
+      },
+      "ancestorLimitations": [],
+      "projectionIsNotFullObjectOrSourceRead": true
+    },
+    {
+      "projectionIndex": 72,
+      "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-claims.json",
+      "documentSha256": "b63dfcf1da736a2fec6f16835f7b0535711c18821de092c472fa637b0c37a9c6",
+      "pointer": "/claims/242",
+      "originalObjectKeys": [
+        "document",
+        "documentSha256",
+        "jsonPointer",
+        "path",
+        "sameObjectUniqueSourcePath",
+        "sameObjectPathCount",
+        "hashFields",
+        "sameObjectUniqueHash",
+        "sameCurrentSourceSha",
+        "qualifiers",
+        "ranges",
+        "canonicalManifestNameHint"
+      ],
+      "metadataProjection": {
+        "path": "packages/desktop/src/renderer/chat/ContextRing.tsx",
+        "ranges": {
+          "lines": 247
+        }
+      },
+      "directPathBearingFields": {
+        "path": "packages/desktop/src/renderer/chat/ContextRing.tsx"
+      },
+      "ancestorLimitations": [],
+      "projectionIsNotFullObjectOrSourceRead": true
+    },
+    {
+      "projectionIndex": 73,
+      "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-claims.json",
+      "documentSha256": "b63dfcf1da736a2fec6f16835f7b0535711c18821de092c472fa637b0c37a9c6",
+      "pointer": "/claims/272",
+      "originalObjectKeys": [
+        "document",
+        "documentSha256",
+        "jsonPointer",
+        "path",
+        "sameObjectUniqueSourcePath",
+        "sameObjectPathCount",
+        "hashFields",
+        "sameObjectUniqueHash",
+        "sameCurrentSourceSha",
+        "qualifiers",
+        "ranges",
+        "canonicalManifestNameHint"
+      ],
+      "metadataProjection": {
+        "path": "packages/desktop/src/renderer/chat/ContextRing.tsx",
+        "ranges": {
+          "lines": 247
+        }
+      },
+      "directPathBearingFields": {
+        "path": "packages/desktop/src/renderer/chat/ContextRing.tsx"
+      },
+      "ancestorLimitations": [],
+      "projectionIsNotFullObjectOrSourceRead": true
+    },
+    {
+      "projectionIndex": 74,
+      "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-claims.json",
+      "documentSha256": "b63dfcf1da736a2fec6f16835f7b0535711c18821de092c472fa637b0c37a9c6",
+      "pointer": "/claims/302",
+      "originalObjectKeys": [
+        "document",
+        "documentSha256",
+        "jsonPointer",
+        "path",
+        "sameObjectUniqueSourcePath",
+        "sameObjectPathCount",
+        "hashFields",
+        "sameObjectUniqueHash",
+        "sameCurrentSourceSha",
+        "qualifiers",
+        "ranges",
+        "canonicalManifestNameHint"
+      ],
+      "metadataProjection": {
+        "path": "packages/desktop/src/renderer/chat/ContextRing.tsx",
+        "ranges": {
+          "lines": 247
+        }
+      },
+      "directPathBearingFields": {
+        "path": "packages/desktop/src/renderer/chat/ContextRing.tsx"
+      },
+      "ancestorLimitations": [],
+      "projectionIsNotFullObjectOrSourceRead": true
+    },
+    {
+      "projectionIndex": 97,
+      "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/source-manifest.json",
+      "documentSha256": "5343e12c9a27ab2fd6f616dc13ed3a6e0c8589fe4ae570fc21c892fc0c1303f9",
+      "pointer": "/files/4",
+      "originalObjectKeys": [
+        "path",
+        "bytes",
+        "sha256",
+        "lines",
+        "pinnedUTC",
+        "coverage",
+        "selectedLineRanges",
+        "displayedLineRanges",
+        "semanticLineCount",
+        "displayedLineCount",
+        "initialPinIsSemanticReadProof",
+        "endingSha256"
+      ],
+      "metadataProjection": {
+        "path": "packages/desktop/src/renderer/chat/ContextRing.tsx",
+        "bytes": 9089,
+        "sha256": "b28fbfc2e74fdb645cc5b2cb935eb0fb6a5e1f896b6150a121a75294013baa3d",
+        "lines": 247,
+        "coverage": "hash-only",
+        "selectedLineRanges": [],
+        "displayedLineRanges": [],
+        "semanticLineCount": 0
+      },
+      "directPathBearingFields": {
+        "path": "packages/desktop/src/renderer/chat/ContextRing.tsx"
+      },
+      "ancestorLimitations": [
+        {
+          "pointer": "",
+          "metadata": {
+            "totals": {
+              "productHashOnlyFiles": 30,
+              "productSourceBodiesDisplayed": 0,
+              "productSemanticFiles": 0,
+              "productSemanticLines": 0,
+              "productNavigationLines": 0,
+              "testDeclarationLines": 0,
+              "testsExecuted": 0
+            }
+          }
+        }
+      ],
+      "projectionIsNotFullObjectOrSourceRead": true
+    },
+    {
+      "projectionIndex": 116,
+      "document": "docs/audit-2026-10-17-round50/evidence/packet-review/checks.json",
+      "documentSha256": "93065b4c156a054749aa3d32ed3b331f7d85c0d82466c1e716c3502e7b9e9560",
+      "pointer": "/packets/3/manifestRangeChecks/4",
+      "originalObjectKeys": [
+        "pointer",
+        "path",
+        "sha256",
+        "coverage",
+        "declaredFileLines",
+        "selectedLineRanges",
+        "displayedLineRanges",
+        "navigationLineRanges",
+        "computedSemanticLines",
+        "declaredSemanticLines",
+        "computedBodyDisplayedLines",
+        "declaredBodyDisplayedLines",
+        "computedDisplayIncludingNavigationLines",
+        "declaredDisplayIncludingNavigationLines",
+        "allRangesWithinDeclaredFileLength",
+        "semanticWithinDisplayedOrNavigation",
+        "semanticCountMatches",
+        "bodyCountMatches",
+        "displayCountMatches",
+        "navigationOnlyComplementMatches",
+        "fullOnlyIfAllDeclaredLinesSelected",
+        "endingHashMatchesInitial",
+        "sourceKind",
+        "purposeOrScope"
+      ],
+      "metadataProjection": {
+        "path": "packages/desktop/src/renderer/chat/ContextRing.tsx",
+        "sha256": "b28fbfc2e74fdb645cc5b2cb935eb0fb6a5e1f896b6150a121a75294013baa3d",
+        "coverage": "hash-only",
+        "selectedLineRanges": [],
+        "displayedLineRanges": [],
+        "sourceKind": "product"
+      },
+      "directPathBearingFields": {
+        "path": "packages/desktop/src/renderer/chat/ContextRing.tsx"
+      },
+      "ancestorLimitations": [
+        {
+          "pointer": "",
+          "metadata": {
+            "scope": {
+              "allowedPacketsOnly": true,
+              "freshHistoryScan": false,
+              "mutable90_91_92Read": false,
+              "ownAuthorPackets": [
+                85,
+                88
+              ],
+              "newProductSemanticLines": 0,
+              "doesNotCertifySourceRootCauseOrRuntime": true
+            },
+            "totals": {
+              "packets": 6,
+              "actualInputArtifacts": 99,
+              "verifiedSelfExcludedReceiptRows": 93,
+              "reportLocalLinksChecked": 79,
+              "manifestRowsRangeChecked": 49,
+              "authorMetadataSourceSemanticsRepeatedByThisReview": 0,
+              "allInputsUnchanged": true,
+              "newFormal": 0,
+              "newCandidate": 0,
+              "newRelated": 0
+            },
+            "limits": [
+              "Exact six packet directories only; no fresh history scan or mutable90/91/92 reads.",
+              "Source ranges validated against declared manifest lengths/counts, not independently against product bodies or runtime.",
+              "Receipt-byte integrity does not certify author semantic/root-cause/runtime conclusions.",
+              "All historical query totals/caps and diagnostics remain dated author metadata; no independent full-history semantic review.",
+              "Source excerpts, methods and retained history captures were only opaque byte-hashed, never executed or decoded as new product semantics.",
+              "85 and88 were written by this reviewer and are own-author metadata self-checks.",
+              "No adding overlapping84/85 or other repeated source selections as unique/global coverage."
+            ]
+          }
+        }
+      ],
+      "projectionIsNotFullObjectOrSourceRead": true
+    },
+    {
+      "projectionIndex": 118,
+      "document": "docs/audit-2026-10-17-round50/source-manifest.json",
+      "documentSha256": "62ee29069f3994a9c24c4a4d22c99dded52da412235c938a8306bc166dc94fdb",
+      "pointer": "/hashOnlyChecks/8",
+      "originalObjectKeys": [
+        "manifest",
+        "collection",
+        "path",
+        "sha256",
+        "coverage",
+        "note"
+      ],
+      "metadataProjection": {
+        "path": "packages/desktop/src/renderer/chat/ContextRing.tsx",
+        "sha256": "b28fbfc2e74fdb645cc5b2cb935eb0fb6a5e1f896b6150a121a75294013baa3d",
+        "coverage": "hash-only"
+      },
+      "directPathBearingFields": {
+        "path": "packages/desktop/src/renderer/chat/ContextRing.tsx"
+      },
+      "ancestorLimitations": [],
+      "projectionIsNotFullObjectOrSourceRead": true
+    }
+  ],
+  "all122ObjectLocatorsInspected": true,
+  "oldCauseMarkdownWindowsActuallyRead": [
+    {
+      "queryIndex": 0,
+      "document": "docs/architecture/11-feature-inventory.md",
+      "documentSha256": "41bbe3899f733d787eabde4abd7b3be7c6feaf6f685f86e24737af45787ffab8",
+      "pointer": "markdown-text",
+      "text": "RPC 和顶栏目标状态 | `packages/desktop/src/renderer/chat/GoalToggle.tsx:23`，`packages/desktop/src/renderer/ChatView.tsx:1266`，`packages/desktop/src/preload/index.ts:262` | 发送前打开 Goal，运行中可延长/清除 |\n| **模型选择与上下文环** | ModelPill 切模型，ContextRing 显示上下文占用 | `packages/desktop/src/renderer/chat/ModelPill.tsx:32`，`packages/desktop/src/renderer/chat/ContextRing.tsx:53`，`packages/desktop/src/renderer/ChatView.tsx:1285` | 点击模型药丸选择 catalog 模型 |\n| **项目/分支选择** | 空会话 composer 下方选择项目和 Git 分支 | `packages/desktop/src/renderer/chat/ProjectPicker.tsx:29`，`packages/desktop/src/renderer/chat/BranchPicker.tsx:17`，`packages/desktop/src/renderer/ChatView.tsx:1392` | 新对话发首条消息前选择项目/分支 |\n| **停止 / 引导 / 后续变更队列** | 忙碌时可停止；输入新内容会入队或作为 guide 打断；队列可预览、移除、清空、全部引导 | `packages/desktop/src/renderer/ChatView.tsx:924`，`packages/desktop/src/renderer/ChatView.tsx:939`，`packages/de",
+      "valueCharacters": 41296,
+      "windowStart": 13501,
+      "windowEnd": 14341,
+      "boundedWindowNotFullValue": true
+    },
+    {
+      "queryIndex": 1,
+      "document": "docs/archive/todo/plan-group-b-compaction-ui.md",
+      "documentSha256": "8a7fc23991200d6d501054cbb4f8df44f887ec00658264afe4ac9cf105b51a74",
+      "pointer": "markdown-text",
+      "text": "ackages/desktop/src/renderer/ChatView.tsx:1229)：textarea 固定 `disabled={false}`。\n- [packages/desktop/src/renderer/ChatView.tsx](/Users/admin/Documents/个人学习/代码学习/codeshell/packages/desktop/src/renderer/ChatView.tsx:1288)：`ContextRing` 使用 `contextTokens`。\n- [packages/desktop/src/renderer/chat/ContextRing.tsx](/Users/admin/Documents/个人学习/代码学习/codeshell/packages/desktop/src/renderer/chat/ContextRing.tsx:78)：`ratio = used / safeMax`，没有额外校正。\n- [packages/desktop/src/renderer/messages/ContextBoundaryView.tsx](/Users/admin/Documents/个人学习/代码学习/codeshell/packages/desktop/src/renderer/messages/ContextBoundaryView.tsx:9)：横幅是简单居中灰字。\n- [packages/desktop/src/renderer/chat/compactFeedback.ts](/Users/admin/Documents/个人学习/代码学习/codeshell/packages/desktop/src/renderer/chat/compactFeedback.ts:65)：`compactBoundaryDetail()` 生成当前横幅详情文案。\n- [packages/deskt",
+      "valueCharacters": 23356,
+      "windowStart": 2910,
+      "windowEnd": 3750,
+      "boundedWindowNotFullValue": true
+    },
+    {
+      "queryIndex": 2,
+      "document": "docs/archive/todo/plan-overall-small-features.md",
+      "documentSha256": "dedc124a4879fa72e7b8951f16ae06d2add3b9312d1f489260b45e9389df62f9",
+      "pointer": "markdown-text",
+      "text": " TodoWrite resume snapshot restore`\n- A-3：`feat(core): scan .agents/skills as project skill base`\n- A-2：`feat(core): annotate prompt-token estimate source/confidence`\n- B-1+B-2：`feat(desktop): compact in-flight UI + fix context ring baseline`\n- B-3：`style(desktop): redesign context-compacted boundary banner`\n- C-1：`feat(desktop): show source-session badge in background work panel`\n- C-2：`fix(desktop): stable clientMessageId for automation/mobile announce bubbles`\n- C-3+C-4：`feat(desktop): real HEAD branch label + grouped worktree switcher`\n",
+      "valueCharacters": 9117,
+      "windowStart": 8571,
+      "windowEnd": 9117,
+      "boundedWindowNotFullValue": true
+    },
+    {
+      "queryIndex": 3,
+      "document": "docs/archive/todo/review-small-features.md",
+      "documentSha256": "9cb9d8210a92d9aa7dbecc6625092509a272b0df9cce1d7c43013f2ec88adf82",
+      "pointer": "markdown-text",
+      "text": "ages/core/src/engine/turn-loop-usage-cache.test.ts:173`、`:192`：新增测试同样使用 `onStream: (e) => events.push(e)`，返回 `number`，导致 `bun run typecheck` 失败。修法同上，改为 block body。\n\n### 25990f12 feat(desktop): compact in-flight UI + fix context ring baseline\n\n结论：B-1/B-2 关键语义正确。`compactingBuckets` 没合并进 `busyKeys`；重复 `/compact` 由 ref 拦截；`.finally()` 清理 bucket；no-op 只 toast，不降 ring；baseline helper 计算为 `after + max(0, currentPromptTokens - before)` 并有单测。\n\n发现：\n\n- 🟡 `packages/desktop/src/renderer/App.tsx:2489`、`packages/desktop/src/renderer/ChatView.tsx:471`：核心 UI 状态和重复 RPC guard 没有组件/集成测试，当前只测了 token baseline helper。修法：补一个 renderer 测试，mock `compactSession`，断言 compacting 时 composer disabled、重复触发不二次调用 RPC、失败也清理状态。\n\n### 69966c89 style(desktop): redesign context-compacted boundary banner\n\n结论：实现符合方案。横幅改成结构化系统事件条，复用组件覆盖 MessageStream/TurnProcessGroupCard；中",
+      "valueCharacters": 6468,
+      "windowStart": 1993,
+      "windowEnd": 2833,
+      "boundedWindowNotFullValue": true
+    },
+    {
+      "queryIndex": 90,
+      "document": "docs/superpowers/specs/2026-05-24-new-chat-context-bar-design.md",
+      "documentSha256": "e2c794c625a5d30ef76ee24ab06c502b3282c88d37cadad969704d2396230d6c",
+      "pointer": "markdown-text",
+      "text": "session semantics beyond using the selected project/branch before the first send.\n\n## UX\n\nThe composer layout becomes:\n\n1. Textarea row for prompt text.\n2. Existing composer controls row for attachment, permission mode, context ring, model, mic, and send/stop.\n3. New context bar row, visible only when `messages.length === 0`.\n\nThe context bar uses a quieter visual treatment than the textarea/card:\n\n- Subtle background\n- Thin border\n- Small label or muted text\n- Compact pill controls\n\nControls:\n\n- Project pill: reuse current `ProjectPicker` behavior.\n- Branch pill: new `BranchPicker` with current branch label and dropdown.\n\n## Branch behavior\n\nBranch selection is enabled only when an active project exists and the project path is a Git repository.\n\nBranch picker states:\n\n- Active Git repo: show current branch, list local branches,",
+      "valueCharacters": 3784,
+      "windowStart": 1111,
+      "windowEnd": 1951,
+      "boundedWindowNotFullValue": true
+    },
+    {
+      "queryIndex": 91,
+      "document": "docs/todo/session-cumulative-cache-usage-plan.md",
+      "documentSha256": "716e05f82807d9d90e76cdcbef3414052e31a73ed08de7bcdd82c613e7340bbf",
+      "pointer": "markdown-text",
+      "text": "`model_changed` StreamEvent;`server.ts` 切模型成功后广播;reducer 收到清零\n  cache 累计。\n- `session_started` reducer 初始化 cache 累计为 0(修残留)。\n- 加载时 goal 范式异步 `usageGet` 回灌 session 累计。\n- localStorage 持久化 renderer 侧累计(切会话重置)。\n\n**E. UI**\n- `ContextRing` tooltip 用 session 累计算命中率,文案\"本会话累计命中率\"(zh+en)。\n\n## 四、风险\n- **重复累加**(同 run 多次 turn-boundary / 同轮多次 usage_update):累加只认 LLM-response\n  级增量,turn-boundary 用 delta 不用绝对值。这是最大坑(类比 replay 时长漂移)。\n- **切模型时序**:清零要在下一个 run 的 usage_update 之前生效,否则闪旧值。\n- **cache 字段 undefined**:切到不支持缓存的模型返回 undefined,别把 undefined 当 0 覆盖\n  掉已清零状态(清零后保持 0,新值来了再累加)。\n",
+      "valueCharacters": 3020,
+      "windowStart": 2456,
+      "windowEnd": 3020,
+      "boundedWindowNotFullValue": true
+    },
+    {
+      "queryIndex": 92,
+      "document": "docs/todo/small-features-2026-07-10/PIPELINE-SUMMARY-QCBEHAVIOR.md",
+      "documentSha256": "dbd5c1643b45c5ca4003396e5726529aba5e95d2cfd8fca13b6c30e4c7d4caf7",
+      "pointer": "markdown-text",
+      "text": "skip\n  0 fail\n  14375 expect() calls\n  Ran 5842 tests across 832 files. [69.78s]\n  ```\n\n`ExternalAgentSessionStore concurrent writers` 预存基线失败本次仍未复现，全量没有新增失败。\n\n## 输入框对齐\n\n### 现状差异\n\n- 主线程 `ChatView` 是完整 Composer：附件、权限、Goal、ContextRing 用量、ModelPill、语音和发送均在同一控件栏。\n- 实现前的 `QuickChatPanel` 没有复用该 Composer，而是独立简化 textarea，只提供权限 pill 和发送/停止；确实缺少模型、语音和附件，当时也没有误带 Goal/ContextRing。\n- App 的运行层已会按 quick-chat bucket 读取 model override，但之前侧聊没有模型选择入口。\n\n### 改法与 commit\n\n- `d65b88f0` — `feat(quickchat): align side-chat composer`\n  - `QuickChatPanel` 直接复用 `ChatView`/Composer，通过 `variant=\"quickChat\"` 定义侧聊差异，不再维护第二套输入框。\n  - 侧聊保留 ModelPill、语音输入、附件/粘贴/拖放、权限 pill、发送/停止与正常消息流；隐藏 GoalToggle、ContextRing 用量和新对话项目/分支选择。\n  - 模型选择只写所属 quick-chat bucket，发送时将该 model 传入所属 side session；不更新全局默认、主线程或其他快聊。\n  - 附件状态和 run payload 按 quick-chat bucket 隔离；关闭/重建时一并清理草稿、附件和模型 o",
+      "valueCharacters": 13973,
+      "windowStart": 5795,
+      "windowEnd": 6635,
+      "boundedWindowNotFullValue": true
+    }
+  ],
+  "canonicalObjectsReadIn": "canonical-gate-selected.json",
+  "remainingRetainedWindowsNotSemanticallyRead": true,
+  "queryCapDoesNotMeanHistoryExhausted": true
+}

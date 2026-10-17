@@ -1,0 +1,683 @@
+{
+  "copies": [
+    {
+      "source": "/tmp/codeshell-audit-round94-context-ring/canonical-gate-selected.json",
+      "path": "evidence/context-ring/canonical-gate-selected.json",
+      "bytes": 5537,
+      "sha256": "6da36c9d0169054b3020bb6231cfae26f878b3c1683f583bd1179787ccaf12e0"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round94-context-ring/consumer-filename-inventory.json",
+      "path": "evidence/context-ring/consumer-filename-inventory.json",
+      "bytes": 528,
+      "sha256": "ef0afea9d5f1ce0b886b0a88a8073996c6898536f351240fa8854313a0c12b5e"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round94-context-ring/consumer-initial-pins.json",
+      "path": "evidence/context-ring/consumer-initial-pins.json",
+      "bytes": 1150,
+      "sha256": "7e00dbda1b7fb1991efe310e3f637b683ff25de4092766ce0d7991f3e97f9b36"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round94-context-ring/coverage-gate-objects.json",
+      "path": "evidence/context-ring/coverage-gate-objects.json",
+      "bytes": 200629,
+      "sha256": "6e14237b81bbd6ff771fbc940a48022952ea66c25d1e356296034e964eb55566"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round94-context-ring/ending-checks.json",
+      "path": "evidence/context-ring/ending-checks.json",
+      "bytes": 2030,
+      "sha256": "69ed641d7abecbd479bce764a4afdaf8cae85e9bd4fa6beee991b44adfa6771b"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round94-context-ring/filename-inventory.json",
+      "path": "evidence/context-ring/filename-inventory.json",
+      "bytes": 173,
+      "sha256": "ebc0b2d820f4dd0aed4dda1fd7d40c3404f613632e083d8ec2df0c38cf2c2cef"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round94-context-ring/gate-decision.json",
+      "path": "evidence/context-ring/gate-decision.json",
+      "bytes": 1986,
+      "sha256": "f93dc865d2f3691cb2cc26c6a391e365be7f62194a8e848728f646232941d04f"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round94-context-ring/history-contexts.json",
+      "path": "evidence/context-ring/history-contexts.json",
+      "bytes": 321578,
+      "sha256": "445e94e62fe74427ccd39c8db1eecb0b4e4ea03d26879f82af54e8788b6f5ff2"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round94-context-ring/history-method.py",
+      "path": "evidence/context-ring/history-method.py",
+      "bytes": 7682,
+      "sha256": "708583d46bddf0cee5c3d443fb133d082571cd972ed4560aff5d9c73d6d01675"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round94-context-ring/history-selected.json",
+      "path": "evidence/context-ring/history-selected.json",
+      "bytes": 24802,
+      "sha256": "2de83efabd0f373463c9be7a36c160b65baf59ea343955874fb6aedb6db39cc1"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round94-context-ring/history.json",
+      "path": "evidence/context-ring/history.json",
+      "bytes": 984006,
+      "sha256": "6a21091f9299ed4254b08b9f166da86a2b3203fcd0a8fb273350adbbf1c42b11"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round94-context-ring/initial-pins.json",
+      "path": "evidence/context-ring/initial-pins.json",
+      "bytes": 991,
+      "sha256": "b6239dac72713845694c05e05a8f5a16686efaea795c46166de65e3d82a5eb8c"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round94-context-ring/producer-navigation.json",
+      "path": "evidence/context-ring/producer-navigation.json",
+      "bytes": 3630,
+      "sha256": "bfdba499e800c9f0bc7724ca3d779248c46349d5b3d30d103c99974c122d8d81"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round94-context-ring/report.md",
+      "path": "evidence/context-ring/report.md",
+      "bytes": 4914,
+      "sha256": "62e237bb609f53dab51d2565a7f4021f6849d3622b59462e050ad0b72771d9f5"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round94-context-ring/reviewer-receipt.json",
+      "path": "evidence/context-ring/reviewer-receipt.json",
+      "bytes": 3393,
+      "sha256": "62ac51fb52090ef76a5505e6bedd8ef76aaa68b6e2748407fe8b3767917039dd"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round94-context-ring/source-display-pins.json",
+      "path": "evidence/context-ring/source-display-pins.json",
+      "bytes": 1846,
+      "sha256": "3514f4960389e50045af61a83844169c3c2da0141d3b36bd22cb31742b9b8f02"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round94-context-ring/source-excerpts.json",
+      "path": "evidence/context-ring/source-excerpts.json",
+      "bytes": 23422,
+      "sha256": "c94f79e86236189452cf0c5dc5490f0913799bc7ac900880921e4f218bd04f06"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round94-context-ring/source-manifest.json",
+      "path": "evidence/context-ring/source-manifest.json",
+      "bytes": 13684,
+      "sha256": "6bab3e691f584b5a4649e28465ae075d0bc6b46594e041b1b9f9f54fa092f366"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round94-context-ring/validation.json",
+      "path": "evidence/context-ring/validation.json",
+      "bytes": 828,
+      "sha256": "4a0ac36c0aac4a8c4b0892cf98256d2c47bc614010c8dbbb1715466a16878ce0"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round95-context-boundary/classification.json",
+      "path": "evidence/context-boundary/classification.json",
+      "bytes": 623,
+      "sha256": "a2f4d5eedd4ce44e6ed7fde5dd8f5fdda4d46d25371f6bb35c141850f5614780"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round95-context-boundary/consumer-initial-pins.json",
+      "path": "evidence/context-boundary/consumer-initial-pins.json",
+      "bytes": 1065,
+      "sha256": "d5a8a5841bedd21ce7e51cc966bf960d7b1669a5f259947c772a4f7e45fceb06"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round95-context-boundary/coverage-gate-objects.json",
+      "path": "evidence/context-boundary/coverage-gate-objects.json",
+      "bytes": 24979,
+      "sha256": "d803f7ef0e9991bf3dc4066e7a4dc54b3ad0277a7c6c9bc4c43d8f7b4b466879"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round95-context-boundary/ending-checks.json",
+      "path": "evidence/context-boundary/ending-checks.json",
+      "bytes": 3286,
+      "sha256": "2d4e33aefeefcaf22bee4cd384d1be9e24a1f4da26317b75fe31e3d934b83ac6"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round95-context-boundary/first-diagnostic.json",
+      "path": "evidence/context-boundary/first-diagnostic.json",
+      "bytes": 761,
+      "sha256": "a04ced1d9768fc4478f6d18f0bb6aff537dc90a3984f1fdbedcc451591829e71"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round95-context-boundary/gate-decision.json",
+      "path": "evidence/context-boundary/gate-decision.json",
+      "bytes": 670,
+      "sha256": "37017f32e2e67ae3df3efe86266079109376c52c9562726a90d32ef6c12531e5"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round95-context-boundary/gate-summary.json",
+      "path": "evidence/context-boundary/gate-summary.json",
+      "bytes": 9910,
+      "sha256": "c92f420dadb4e180c3253529dcbf033e52ae614c630fae2a9c8a37001db4a7eb"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round95-context-boundary/history-contexts.json",
+      "path": "evidence/context-boundary/history-contexts.json",
+      "bytes": 231461,
+      "sha256": "b3e5c815377c49f46f135311e7ff9254df93a5c820d11a65dc9d4d4ba71b9402"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round95-context-boundary/history-method.py",
+      "path": "evidence/context-boundary/history-method.py",
+      "bytes": 3873,
+      "sha256": "29587ab174e1d33e7724f843057117732dbd7a1f46ab817bc06c2d08671ddb78"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round95-context-boundary/history.json",
+      "path": "evidence/context-boundary/history.json",
+      "bytes": 1087863,
+      "sha256": "8d348f0bb60af90ec6345bb31175991d13089209fd406887310993e30f3a1d56"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round95-context-boundary/initial-pins.json",
+      "path": "evidence/context-boundary/initial-pins.json",
+      "bytes": 1011,
+      "sha256": "ca8e3f5c0812d13a9dd50a8163c0594b7823fb63110d62afb4dd8fe78cd325bf"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round95-context-boundary/old-cause-selected.json",
+      "path": "evidence/context-boundary/old-cause-selected.json",
+      "bytes": 8991,
+      "sha256": "5dbc8284a1b1f78e12f618c8aea48ab76e5a4c9ee8113bc770f4f49ecc8cd657"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round95-context-boundary/report.md",
+      "path": "evidence/context-boundary/report.md",
+      "bytes": 5931,
+      "sha256": "0320bbfa8d2c5f3b297cceba9356a6f6d81f12710c3332561d231e6303c77ee2"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round95-context-boundary/reviewer-receipt.json",
+      "path": "evidence/context-boundary/reviewer-receipt.json",
+      "bytes": 3392,
+      "sha256": "294985e56f07116586e6bc82f6338f5bbe3715189521ed3c64a53685c37439a4"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round95-context-boundary/source-excerpts.json",
+      "path": "evidence/context-boundary/source-excerpts.json",
+      "bytes": 31538,
+      "sha256": "5ec04031363636220a7a2d7f947bea0ad2e2346a2a3a18f909f100aebf73eab5"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round95-context-boundary/source-manifest.json",
+      "path": "evidence/context-boundary/source-manifest.json",
+      "bytes": 10818,
+      "sha256": "630c202f4da7a451d90dbb10e55c4b8fc1a356e59ffa5e8b51ab7af90bf11d6b"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round95-context-boundary/test-initial-pin.json",
+      "path": "evidence/context-boundary/test-initial-pin.json",
+      "bytes": 327,
+      "sha256": "d8d996abdc6ee457326d799833e99c908718eb65aa1d0cd5f0b9e090cc946aff"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round95-context-boundary/transcript-producer-initial-pin.json",
+      "path": "evidence/context-boundary/transcript-producer-initial-pin.json",
+      "bytes": 316,
+      "sha256": "ceb4cd3962bb3ceec5e307961ce128f81906c7205f3c05bf1d37ee986c31d05a"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round95-context-boundary/validation.json",
+      "path": "evidence/context-boundary/validation.json",
+      "bytes": 1301,
+      "sha256": "b8ec47ca9832153287c374b8bf8cbd6e50e9c7ea3f0012ff431f8638a6b1f6c9"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round96-message-time/artifact-receipt.json",
+      "path": "evidence/time-full-gate/artifact-receipt.json",
+      "bytes": 3331,
+      "sha256": "8d474bd446d486cab7559a3306097f4300ef5cb1a911f33c839c0774e859ccb5"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round96-message-time/canonical-gate-read.json",
+      "path": "evidence/time-full-gate/canonical-gate-read.json",
+      "bytes": 8297,
+      "sha256": "607dcd3cf7333c47abde4acad33c99d35658ea990e653ba671d4e61f00198f88"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round96-message-time/checks.json",
+      "path": "evidence/time-full-gate/checks.json",
+      "bytes": 775,
+      "sha256": "044cf346cec5a78173387c6da9c1f47bc2abe9370b6d334d642f269622a05f46"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round96-message-time/consumer-initial-pins.json",
+      "path": "evidence/time-full-gate/consumer-initial-pins.json",
+      "bytes": 770,
+      "sha256": "690c67fe0cba81b151d0f8679cb81ae4dd469caa4dd4b2eada53564b5cb255e1"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round96-message-time/ending-checks.json",
+      "path": "evidence/time-full-gate/ending-checks.json",
+      "bytes": 2172,
+      "sha256": "7724e183946bf82518d94a868f9e21e3f252180e40d72e035ad58c145654a863"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round96-message-time/finalize-metadata.py",
+      "path": "evidence/time-full-gate/finalize-metadata.py",
+      "bytes": 11459,
+      "sha256": "dbe6275a6294984825969b75074d85e760ff7dd582364569562326fa08f09d12"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round96-message-time/history-command.json",
+      "path": "evidence/time-full-gate/history-command.json",
+      "bytes": 207,
+      "sha256": "897f43ac11a61892c76a9cdaa7aa3d3e42e9f15720970b99e59f1c4ccebd523e"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round96-message-time/history-contexts.json",
+      "path": "evidence/time-full-gate/history-contexts.json",
+      "bytes": 110808,
+      "sha256": "36a7faad44efd3c5af826beeab862c565a6c3b1ec80e98068e9ceb026053e076"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round96-message-time/history-initial-inventory.json",
+      "path": "evidence/time-full-gate/history-initial-inventory.json",
+      "bytes": 982323,
+      "sha256": "99f6ad7440a5c8d5d239fd042b259c68195279a3b77f23a59ad4cad601073768"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round96-message-time/history-source-rows.json",
+      "path": "evidence/time-full-gate/history-source-rows.json",
+      "bytes": 44541,
+      "sha256": "6eac811ee4be657bc31c042c2d726ec4cccebf5232e353d26af0c402154593b2"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round96-message-time/history-summary.json",
+      "path": "evidence/time-full-gate/history-summary.json",
+      "bytes": 805,
+      "sha256": "d9c08ea547606b545c4c5dd241970d04b746ed1915bd647b326426d3fc331181"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round96-message-time/initial-pins.json",
+      "path": "evidence/time-full-gate/initial-pins.json",
+      "bytes": 1375,
+      "sha256": "f4744de0224783f7112ec6daba4149c102086ee9b7886108bb871ee03a328d0f"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round96-message-time/report.md",
+      "path": "evidence/time-full-gate/report.md",
+      "bytes": 4399,
+      "sha256": "af93ea7a3d782c541a2bbf3d3fbb01220b0aa231745951d339b867783fd35ae1"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round96-message-time/scan-history.py",
+      "path": "evidence/time-full-gate/scan-history.py",
+      "bytes": 5040,
+      "sha256": "61333b88cfcd58add62ab29cec4153535386cee249c4145dbd041bdd2a50a59b"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round96-message-time/scope-decision.json",
+      "path": "evidence/time-full-gate/scope-decision.json",
+      "bytes": 5228,
+      "sha256": "ce7fb8719eca96b67a7007d60df5d22f8abbf1966967e6206348838749ed6962"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round96-message-time/source-manifest.json",
+      "path": "evidence/time-full-gate/source-manifest.json",
+      "bytes": 6614,
+      "sha256": "db31a674354ce888e01caa09a1dbef81e3207b5f883650353b02d0408c11e5ce"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round96-message-time/validation.json",
+      "path": "evidence/time-full-gate/validation.json",
+      "bytes": 1622,
+      "sha256": "e6cb6b13157d72cb4f65c0db169224c009efbcbeaebed5a005fa10e95adeb60f"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round97-panel-resize/app-hook-source-supplement.json",
+      "path": "evidence/root-panel-resize/app-hook-source-supplement.json",
+      "bytes": 205,
+      "sha256": "50c0e438adda254218cfb8eb874a86ddf6fadb78e52eab0e63fbab1f96ab6b57"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round97-panel-resize/consumer-initial-pins.json",
+      "path": "evidence/root-panel-resize/consumer-initial-pins.json",
+      "bytes": 582,
+      "sha256": "d105f5700582a4c758422c4ded23ed5a09dfdac34a7af19526d5a202c1c1931c"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round97-panel-resize/consumer-navigation-first-exit.json",
+      "path": "evidence/root-panel-resize/consumer-navigation-first-exit.json",
+      "bytes": 16,
+      "sha256": "982b9e9bfb10ffe83cad665807abcfd3fa97b37822db5ab7831157a499548a9e"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round97-panel-resize/consumer-navigation-first.txt",
+      "path": "evidence/root-panel-resize/consumer-navigation-first.txt",
+      "bytes": 282,
+      "sha256": "eb26e38f5685e070c535ddb59278cc209d0016a5920ca868c0701ae39d4cdd83"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round97-panel-resize/consumer-source-excerpts.json",
+      "path": "evidence/root-panel-resize/consumer-source-excerpts.json",
+      "bytes": 6490,
+      "sha256": "bbc3643fd1c4ceb83ff1f58c2aff9a2dfd4f1506374e1155d7e97c589ec0f170"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round97-panel-resize/coverage-read.compact.json",
+      "path": "evidence/root-panel-resize/coverage-read.compact.json",
+      "bytes": 6910,
+      "sha256": "9197bf10a3cf173d5dea86b8c92b7e049e4c10cc76cd857ab3c696086491f721"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round97-panel-resize/coverage-rows.json",
+      "path": "evidence/root-panel-resize/coverage-rows.json",
+      "bytes": 19974,
+      "sha256": "40c0478af56a956bdc822970b25decfcadb638bdd53c8747a9ec0ab1ae3858a2"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round97-panel-resize/ending-checks.json",
+      "path": "evidence/root-panel-resize/ending-checks.json",
+      "bytes": 773,
+      "sha256": "1f3d50925e1ecf30394f4ae600968fdd260b2b5d9d3286fb13232eb47d2fb95b"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round97-panel-resize/entry-initial-pins.json",
+      "path": "evidence/root-panel-resize/entry-initial-pins.json",
+      "bytes": 572,
+      "sha256": "05045b85036efc9e9e35cb1de81c2cf43c1065d72155d776251d4f58e6188286"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round97-panel-resize/entry-navigation-first-exit.json",
+      "path": "evidence/root-panel-resize/entry-navigation-first-exit.json",
+      "bytes": 16,
+      "sha256": "982b9e9bfb10ffe83cad665807abcfd3fa97b37822db5ab7831157a499548a9e"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round97-panel-resize/entry-navigation-first.txt",
+      "path": "evidence/root-panel-resize/entry-navigation-first.txt",
+      "bytes": 828,
+      "sha256": "b3db4626bb1fa5bd3d7b5a33c57a4603f9aa958bf611615ff360434f8181cfc0"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round97-panel-resize/finalize-metadata.py",
+      "path": "evidence/root-panel-resize/finalize-metadata.py",
+      "bytes": 7171,
+      "sha256": "87c3b11b5362bd9838f5682499cf0e8272aef6f48874df2c8e7af98e2584098f"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round97-panel-resize/history-first-exit.json",
+      "path": "evidence/root-panel-resize/history-first-exit.json",
+      "bytes": 34,
+      "sha256": "6a2a61227c7931207aae5a8ac77fc667250273a841a2666d9c3abbe6ca419e88"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round97-panel-resize/history-first.txt",
+      "path": "evidence/root-panel-resize/history-first.txt",
+      "bytes": 207,
+      "sha256": "f2bec3e65c309f6a8635426695406ceaadf9ea1eb0e07466ac1f89b330726143"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round97-panel-resize/history.json",
+      "path": "evidence/root-panel-resize/history.json",
+      "bytes": 1056250,
+      "sha256": "0e2763a37b96ab56f24d54c8c92168a1b49001e3777a12ae1cdf441c03f3048a"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round97-panel-resize/metadata-diagnostic.json",
+      "path": "evidence/root-panel-resize/metadata-diagnostic.json",
+      "bytes": 361,
+      "sha256": "e7675045e187f4ef401e5d8fc35697e1ad4462c6189135b46faa7b15f838cba7"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round97-panel-resize/panel-area-initial-pin.json",
+      "path": "evidence/root-panel-resize/panel-area-initial-pin.json",
+      "bytes": 323,
+      "sha256": "c83ae777d88a9ef0d5e1abfbca6d6951e8cc056f6b371e7cfd0124b04eba994f"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round97-panel-resize/panel-area-navigation-first-exit.json",
+      "path": "evidence/root-panel-resize/panel-area-navigation-first-exit.json",
+      "bytes": 16,
+      "sha256": "982b9e9bfb10ffe83cad665807abcfd3fa97b37822db5ab7831157a499548a9e"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round97-panel-resize/panel-area-navigation-first.txt",
+      "path": "evidence/root-panel-resize/panel-area-navigation-first.txt",
+      "bytes": 310,
+      "sha256": "796d56000398cc75e99dd7ad8b580fac5c562ac4dcb37b95d14aeca1bc3169a9"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round97-panel-resize/panel-area-source-excerpts.json",
+      "path": "evidence/root-panel-resize/panel-area-source-excerpts.json",
+      "bytes": 2345,
+      "sha256": "85b7b940cf763b5c135528e1b338c42f455115aa0949081db659a7e121e90176"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round97-panel-resize/report.md",
+      "path": "evidence/root-panel-resize/report.md",
+      "bytes": 2332,
+      "sha256": "1f39961bb48212a4d14ed8c2e8fb822e020dc9abdf6fd8d140221e23604c4f98"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round97-panel-resize/reviewer-receipt.json",
+      "path": "evidence/root-panel-resize/reviewer-receipt.json",
+      "bytes": 4233,
+      "sha256": "fe6476c9895fa29a76879be61a93038d3bbcdc8c997d828576dce47e17f7f56c"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round97-panel-resize/scan-history.py",
+      "path": "evidence/root-panel-resize/scan-history.py",
+      "bytes": 2908,
+      "sha256": "e363d455f519e812b3a05eef297399bc323a55a1b8c7771e69e0ffcf6a3ae812"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round97-panel-resize/selection-initial-pins.json",
+      "path": "evidence/root-panel-resize/selection-initial-pins.json",
+      "bytes": 412,
+      "sha256": "0b18d06f52fa9a2522004a2c01a9eb1e4c5aad4b8b89dcc49c81acd76e1331ce"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round97-panel-resize/source-excerpts.json",
+      "path": "evidence/root-panel-resize/source-excerpts.json",
+      "bytes": 5915,
+      "sha256": "f08a0d5554c9d7f02cb42d1907aa4cadd2c266c52d7c46b9ddc0f17a1c7bd01e"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round97-panel-resize/source-manifest.json",
+      "path": "evidence/root-panel-resize/source-manifest.json",
+      "bytes": 7838,
+      "sha256": "ca3ebe5de3787018e99addf517fa58bfd9e45a612708042428a69497c2ebb4dd"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round97-panel-resize/validation.json",
+      "path": "evidence/root-panel-resize/validation.json",
+      "bytes": 263,
+      "sha256": "bf81ba2d91a82784456192cf0ce66ced532036874a4b8285f7b3300c3cd6269b"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round98-shortcuts-section/artifact-receipt.json",
+      "path": "evidence/shortcuts-reference/artifact-receipt.json",
+      "bytes": 4864,
+      "sha256": "7484b8d50f8a9e3fab101be9b03346feb188cedd5ddb6138abc2294967618a9b"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round98-shortcuts-section/canonical-gate-read.json",
+      "path": "evidence/shortcuts-reference/canonical-gate-read.json",
+      "bytes": 10869,
+      "sha256": "068f93e7a8bcf906f18d8b7bc2675fd367c4a82e1e09a2d2a64c875fd758c070"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round98-shortcuts-section/checks.json",
+      "path": "evidence/shortcuts-reference/checks.json",
+      "bytes": 1179,
+      "sha256": "9c42c0340cfc6bbba48805f487b24a87111356fe821e02deb860138d1a16e10e"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round98-shortcuts-section/consumer-initial-pins.json",
+      "path": "evidence/shortcuts-reference/consumer-initial-pins.json",
+      "bytes": 2277,
+      "sha256": "e7bc2d1b3ec89f94fd1db888fb44f14644bc63ca916aaf6093e7f87524b51550"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round98-shortcuts-section/ending-checks.json",
+      "path": "evidence/shortcuts-reference/ending-checks.json",
+      "bytes": 3247,
+      "sha256": "68ce4793e64021e84d0bd53b7d015bf94608028be9d48495f8142dbd3b4b63d9"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round98-shortcuts-section/finalize-metadata.first.py",
+      "path": "evidence/shortcuts-reference/finalize-metadata.first.py",
+      "bytes": 16526,
+      "sha256": "85839df2329621e7fb36697307a96d9eff52023bb2dfce8102c201cbf4c8316e"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round98-shortcuts-section/finalize-metadata.py",
+      "path": "evidence/shortcuts-reference/finalize-metadata.py",
+      "bytes": 16526,
+      "sha256": "7306f9a4e0c7a51815792bf642f58c3900bc31ef0a9614b6af124e4a637db957"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round98-shortcuts-section/first-display-count-diagnostic.json",
+      "path": "evidence/shortcuts-reference/first-display-count-diagnostic.json",
+      "bytes": 821,
+      "sha256": "233e4df0339f4903380c477d4cd9e3d2226ca9fe4510301f8a3bee1358b69bdc"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round98-shortcuts-section/first-locator-diagnostic.json",
+      "path": "evidence/shortcuts-reference/first-locator-diagnostic.json",
+      "bytes": 1336,
+      "sha256": "d7a77e62afb28ca432ff2888bf3bd58a228625f56caa893e3da2d47084ba4bda"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round98-shortcuts-section/first-locator-stderr.txt",
+      "path": "evidence/shortcuts-reference/first-locator-stderr.txt",
+      "bytes": 964,
+      "sha256": "ef4d2966434444f4dcab13c4a5a942ab8880a225e1dabb997bcb1ab2c372aa3d"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round98-shortcuts-section/first-output-truncation.json",
+      "path": "evidence/shortcuts-reference/first-output-truncation.json",
+      "bytes": 552,
+      "sha256": "da9e88a6c9f4be78bce9f4cd25d03151163b8c703401092df236fd48e5f4857a"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round98-shortcuts-section/history-command.json",
+      "path": "evidence/shortcuts-reference/history-command.json",
+      "bytes": 207,
+      "sha256": "897f43ac11a61892c76a9cdaa7aa3d3e42e9f15720970b99e59f1c4ccebd523e"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round98-shortcuts-section/history-contexts.json",
+      "path": "evidence/shortcuts-reference/history-contexts.json",
+      "bytes": 137258,
+      "sha256": "9a08bd07507ed4aec712a7b6cf6ef39243b8e5ce60f1930610e140e4ce3c68bd"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round98-shortcuts-section/history-initial-inventory.json",
+      "path": "evidence/shortcuts-reference/history-initial-inventory.json",
+      "bytes": 982318,
+      "sha256": "20b2481d2d49f8c038c18b48bb3d7f1400290fcc93ff25d12f732028ac6129ec"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round98-shortcuts-section/history-source-rows.json",
+      "path": "evidence/shortcuts-reference/history-source-rows.json",
+      "bytes": 58791,
+      "sha256": "52a237112052ebe6cefef3f5a561c6a71b2e0ed6bd940af184f1fe1ec3a49510"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round98-shortcuts-section/history-summary.json",
+      "path": "evidence/shortcuts-reference/history-summary.json",
+      "bytes": 774,
+      "sha256": "bf73d44fbca3e6acfe074db3622feb17dd4ed1f39d29fbd438aa816a25a12140"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round98-shortcuts-section/initial-pins.json",
+      "path": "evidence/shortcuts-reference/initial-pins.json",
+      "bytes": 1441,
+      "sha256": "c6dfd82d542d4e430caf2428becb609351d7337fae6a179bdababe3de966ed02"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round98-shortcuts-section/old-cause-selected-read.json",
+      "path": "evidence/shortcuts-reference/old-cause-selected-read.json",
+      "bytes": 7982,
+      "sha256": "42e763410b3b5386ff16ad9819d6fe2f5b9955e53fd37bf4fb09b00ab1fc0e90"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round98-shortcuts-section/read-ledger.json",
+      "path": "evidence/shortcuts-reference/read-ledger.json",
+      "bytes": 916,
+      "sha256": "fa51f6ff664c6cc80afca6d8af2e772d1c6eab98f4b94d4ae9972f85a03873ec"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round98-shortcuts-section/report.first.md",
+      "path": "evidence/shortcuts-reference/report.first.md",
+      "bytes": 5086,
+      "sha256": "f1468e1ada46c7cbcb8c5c63eb2743a9ebae327d03497b75681faa2571781d29"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round98-shortcuts-section/report.md",
+      "path": "evidence/shortcuts-reference/report.md",
+      "bytes": 5500,
+      "sha256": "21edf19f1f6aab7d615de34e0431f1d5dfd74d851f8e0b24ff71212b67f5707c"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round98-shortcuts-section/scan-history.py",
+      "path": "evidence/shortcuts-reference/scan-history.py",
+      "bytes": 4823,
+      "sha256": "9fc525a36ca9bddee563c131f337564321d33a1d3860a1c5771a809ddce89e4a"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round98-shortcuts-section/source-excerpts.json",
+      "path": "evidence/shortcuts-reference/source-excerpts.json",
+      "bytes": 22510,
+      "sha256": "efec017bc3b5cfbff38e7a724b7099a2e195791e4398cfa564380908f0f003ad"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round98-shortcuts-section/source-manifest.json",
+      "path": "evidence/shortcuts-reference/source-manifest.json",
+      "bytes": 15181,
+      "sha256": "19270b89b4e8c296313626ce1405261cdaf295daeb541b042bd952f695b18dc6"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round98-shortcuts-section/validation.json",
+      "path": "evidence/shortcuts-reference/validation.json",
+      "bytes": 2100,
+      "sha256": "9f6e48a7000ea134d0a2cab0e08a2173eb8cc45b5288275dea776b382a2c6eeb"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round99-time-full-gate-review/checks.json",
+      "path": "evidence/time-gate-review/checks.json",
+      "bytes": 24058,
+      "sha256": "c4fd41d1314a8c28e225ae7b3e50083dbd1c05e7242c3a42309a5d5afa573273"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round99-time-full-gate-review/inputs.json",
+      "path": "evidence/time-gate-review/inputs.json",
+      "bytes": 5837,
+      "sha256": "a29108ed168b97049cd8d1808479849814447b3c32b9b2af19d6e96e4f591d20"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round99-time-full-gate-review/report.md",
+      "path": "evidence/time-gate-review/report.md",
+      "bytes": 3078,
+      "sha256": "957a3c52c2b23c0dc4c0f337c776aa83a0c9cf21c488a4a24439fb705c6d975e"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round99-time-full-gate-review/reviewer-receipt.json",
+      "path": "evidence/time-gate-review/reviewer-receipt.json",
+      "bytes": 1237,
+      "sha256": "4153c88414ad2a9176f11f5157175acd1daa53bf40f1f65cef9367888b51b876"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round99-time-full-gate-review/source-manifest.first.json",
+      "path": "evidence/time-gate-review/source-manifest.first.json",
+      "bytes": 1212,
+      "sha256": "8fc507c58f94c7602e2a3f636d3b7539dc9b175ba935489566c5fde3b1e79d9f"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round99-time-full-gate-review/source-manifest.json",
+      "path": "evidence/time-gate-review/source-manifest.json",
+      "bytes": 1776,
+      "sha256": "10d6ee72bd3d4c8d6e030b74f61aed8de7bd72cbd8e55fe4e95bf594aee85167"
+    }
+  ],
+  "productRuns": 0
+}

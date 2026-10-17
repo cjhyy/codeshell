@@ -1,0 +1,12 @@
+{
+  "capturedUTC": "2026-10-17T17:17:54.411023+00:00",
+  "files": [
+    {
+      "path": "packages/desktop/src/renderer/chat/compactFeedback.test.ts",
+      "bytes": 2819,
+      "lines": 76,
+      "sha256": "cf8c432525d72eb8547b04baf07af4fcbba719245d4d807c2d8ae52c0e4c0b65",
+      "beforeBodyOrLineNavigation": true
+    }
+  ]
+}

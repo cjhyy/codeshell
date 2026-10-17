@@ -1,0 +1,391 @@
+{
+  "role": "Independent bounded ordinary boundary DTO/render/format source review, not runtime verifier.",
+  "rootReportedBaselineOnly": "424ef9c8953eaaa295d24d63c49127aa8b3ea79e",
+  "ownGitOperations": 0,
+  "files": [
+    {
+      "path": "packages/desktop/src/renderer/messages/ContextBoundaryView.tsx",
+      "bytes": 5293,
+      "lines": 103,
+      "sha256": "bff0c43715622ace107ab48493754d34304fb013120d013e6d52768a18e24699",
+      "beforeBodyOrLineNavigation": true,
+      "coverage": "full",
+      "sourceKind": "product",
+      "selectedLineRanges": [
+        [
+          1,
+          103
+        ]
+      ],
+      "semanticLines": 103,
+      "displayedLineRanges": [
+        [
+          1,
+          103
+        ]
+      ],
+      "additionalNavigationSnippetLines": [],
+      "uniqueDisplayedLines": 103,
+      "navigationOnlyDisplayedLineRanges": [],
+      "purpose": "Entire ordinary boundary render: transfer DTO branch versus compact before/after detail; no React/DOM execution.",
+      "initialSemanticReadSha256": "bff0c43715622ace107ab48493754d34304fb013120d013e6d52768a18e24699",
+      "initialPinBeforeBodyOrLineNavigation": true,
+      "firstEverReadingClaimed": false,
+      "finishSha256": "bff0c43715622ace107ab48493754d34304fb013120d013e6d52768a18e24699",
+      "finishMatchesInitial": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/types.ts",
+      "bytes": 93752,
+      "lines": 2479,
+      "sha256": "6d7b173656e7ebe22d5c9347b7097d2040793610135c1f797d76139aa6f69845",
+      "beforeBodyOrLineNavigation": true,
+      "coverage": "selected",
+      "sourceKind": "product",
+      "selectedLineRanges": [
+        [
+          149,
+          163
+        ],
+        [
+          1752,
+          1772
+        ]
+      ],
+      "semanticLines": 36,
+      "displayedLineRanges": [
+        [
+          149,
+          168
+        ],
+        [
+          1752,
+          1772
+        ]
+      ],
+      "additionalNavigationSnippetLines": [
+        332
+      ],
+      "uniqueDisplayedLines": 42,
+      "navigationOnlyDisplayedLineRanges": [
+        [
+          164,
+          168
+        ],
+        [
+          332,
+          332
+        ]
+      ],
+      "purpose": "Ordinary boundary type and live context_compact-to-message projection. No event delivery, permissions or identity mechanism review.",
+      "initialSemanticReadSha256": "6d7b173656e7ebe22d5c9347b7097d2040793610135c1f797d76139aa6f69845",
+      "initialPinBeforeBodyOrLineNavigation": true,
+      "firstEverReadingClaimed": false,
+      "finishSha256": "6d7b173656e7ebe22d5c9347b7097d2040793610135c1f797d76139aa6f69845",
+      "finishMatchesInitial": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/chat/compactFeedback.ts",
+      "bytes": 2980,
+      "lines": 88,
+      "sha256": "3a149cfd7df17d5d642a6f47d221e478e645c027898b7cf5be0542b8fc4a39e5",
+      "beforeBodyOrLineNavigation": true,
+      "coverage": "selected",
+      "sourceKind": "product",
+      "selectedLineRanges": [
+        [
+          1,
+          33
+        ],
+        [
+          39,
+          42
+        ],
+        [
+          55,
+          67
+        ],
+        [
+          82,
+          88
+        ]
+      ],
+      "semanticLines": 57,
+      "displayedLineRanges": [
+        [
+          1,
+          33
+        ],
+        [
+          39,
+          42
+        ],
+        [
+          55,
+          67
+        ],
+        [
+          82,
+          88
+        ]
+      ],
+      "additionalNavigationSnippetLines": [
+        35,
+        36,
+        43,
+        50,
+        51,
+        52,
+        69,
+        76
+      ],
+      "uniqueDisplayedLines": 65,
+      "navigationOnlyDisplayedLineRanges": [
+        [
+          35,
+          36
+        ],
+        [
+          43,
+          43
+        ],
+        [
+          50,
+          52
+        ],
+        [
+          69,
+          69
+        ],
+        [
+          76,
+          76
+        ]
+      ],
+      "purpose": "Necessary strategy-label fallback, safe token formatting, percentage and boundary-detail parameters only. Baseline/ring and outcome helper bodies not in semantic scope, including adjacent matched lines.",
+      "initialSemanticReadSha256": "3a149cfd7df17d5d642a6f47d221e478e645c027898b7cf5be0542b8fc4a39e5",
+      "initialPinBeforeBodyOrLineNavigation": true,
+      "firstEverReadingClaimed": false,
+      "finishSha256": "3a149cfd7df17d5d642a6f47d221e478e645c027898b7cf5be0542b8fc4a39e5",
+      "finishMatchesInitial": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/MessageStream.tsx",
+      "bytes": 37921,
+      "lines": 928,
+      "sha256": "f74d19bddcdc48c0de2e63921ba598d733e2f1c3d58f68e7c8c0b32046ddbd4c",
+      "beforeBodyOrLineNavigation": true,
+      "coverage": "selected",
+      "sourceKind": "product",
+      "selectedLineRanges": [
+        [
+          594,
+          595
+        ]
+      ],
+      "semanticLines": 2,
+      "displayedLineRanges": [
+        [
+          592,
+          597
+        ]
+      ],
+      "additionalNavigationSnippetLines": [
+        8
+      ],
+      "uniqueDisplayedLines": 7,
+      "navigationOnlyDisplayedLineRanges": [
+        [
+          8,
+          8
+        ],
+        [
+          592,
+          593
+        ],
+        [
+          596,
+          597
+        ]
+      ],
+      "purpose": "Flat boundary branch passes same message to target; adjacent goal branch unrelated.",
+      "initialSemanticReadSha256": "f74d19bddcdc48c0de2e63921ba598d733e2f1c3d58f68e7c8c0b32046ddbd4c",
+      "initialPinBeforeBodyOrLineNavigation": true,
+      "firstEverReadingClaimed": false,
+      "finishSha256": "f74d19bddcdc48c0de2e63921ba598d733e2f1c3d58f68e7c8c0b32046ddbd4c",
+      "finishMatchesInitial": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/messages/TurnProcessGroupCard.tsx",
+      "bytes": 10530,
+      "lines": 279,
+      "sha256": "d96ccf9fdd6d252cf6bb8e39a9fe74a3b55df401a92beadfe17f0816a4884128",
+      "beforeBodyOrLineNavigation": true,
+      "coverage": "selected",
+      "sourceKind": "product",
+      "selectedLineRanges": [
+        [
+          187,
+          188
+        ]
+      ],
+      "semanticLines": 2,
+      "displayedLineRanges": [
+        [
+          184,
+          191
+        ]
+      ],
+      "additionalNavigationSnippetLines": [
+        7
+      ],
+      "uniqueDisplayedLines": 9,
+      "navigationOnlyDisplayedLineRanges": [
+        [
+          7,
+          7
+        ],
+        [
+          184,
+          186
+        ],
+        [
+          189,
+          191
+        ]
+      ],
+      "purpose": "Grouped boundary branch passes same message to target; no general grouping/UI guarantee.",
+      "initialSemanticReadSha256": "d96ccf9fdd6d252cf6bb8e39a9fe74a3b55df401a92beadfe17f0816a4884128",
+      "initialPinBeforeBodyOrLineNavigation": true,
+      "firstEverReadingClaimed": false,
+      "finishSha256": "d96ccf9fdd6d252cf6bb8e39a9fe74a3b55df401a92beadfe17f0816a4884128",
+      "finishMatchesInitial": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/transcripts.ts",
+      "bytes": 43637,
+      "lines": 1146,
+      "sha256": "7a6ad6f03a9e7135851eca6f7e67e45b073a739920d0523b17ffa33cd2e63bc8",
+      "beforeBodyOrLineNavigation": true,
+      "coverage": "selected",
+      "sourceKind": "product",
+      "selectedLineRanges": [
+        [
+          62,
+          82
+        ]
+      ],
+      "semanticLines": 21,
+      "displayedLineRanges": [
+        [
+          40,
+          86
+        ]
+      ],
+      "additionalNavigationSnippetLines": [],
+      "uniqueDisplayedLines": 47,
+      "navigationOnlyDisplayedLineRanges": [
+        [
+          40,
+          61
+        ],
+        [
+          83,
+          86
+        ]
+      ],
+      "purpose": "Ordinary persisted context_transfer message projection and value preservation. Adjacent outputCursor comparison, bucket identity and storage/lifecycle boundaries not reviewed or certified.",
+      "initialSemanticReadSha256": "7a6ad6f03a9e7135851eca6f7e67e45b073a739920d0523b17ffa33cd2e63bc8",
+      "initialPinBeforeBodyOrLineNavigation": true,
+      "firstEverReadingClaimed": false,
+      "finishSha256": "7a6ad6f03a9e7135851eca6f7e67e45b073a739920d0523b17ffa33cd2e63bc8",
+      "finishMatchesInitial": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/chat/compactFeedback.test.ts",
+      "bytes": 2819,
+      "lines": 76,
+      "sha256": "cf8c432525d72eb8547b04baf07af4fcbba719245d4d807c2d8ae52c0e4c0b65",
+      "beforeBodyOrLineNavigation": true,
+      "coverage": "selected",
+      "sourceKind": "test-declaration",
+      "selectedLineRanges": [
+        [
+          31,
+          51
+        ]
+      ],
+      "semanticLines": 21,
+      "displayedLineRanges": [
+        [
+          31,
+          51
+        ]
+      ],
+      "additionalNavigationSnippetLines": [
+        18,
+        19,
+        53,
+        62,
+        71
+      ],
+      "uniqueDisplayedLines": 26,
+      "navigationOnlyDisplayedLineRanges": [
+        [
+          18,
+          19
+        ],
+        [
+          53,
+          53
+        ],
+        [
+          62,
+          62
+        ],
+        [
+          71,
+          71
+        ]
+      ],
+      "purpose": "Two existing success-detail/label declarations only as static intended contract, not run. Four other test titles only navigated.",
+      "initialSemanticReadSha256": "cf8c432525d72eb8547b04baf07af4fcbba719245d4d807c2d8ae52c0e4c0b65",
+      "initialPinBeforeBodyOrLineNavigation": true,
+      "firstEverReadingClaimed": false,
+      "finishSha256": "cf8c432525d72eb8547b04baf07af4fcbba719245d4d807c2d8ae52c0e4c0b65",
+      "finishMatchesInitial": true
+    }
+  ],
+  "instructionPins": [
+    {
+      "path": "AGENTS.md",
+      "bytes": 206,
+      "lines": 5,
+      "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "beforeBodyOrLineNavigation": true
+    },
+    {
+      "path": "CODESHELL.md",
+      "bytes": 17639,
+      "lines": 217,
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "beforeBodyOrLineNavigation": true
+    }
+  ],
+  "instructionStatus": "Unchanged earlier CODESHELL217/AGENTS5 reading carried, not newly counted.",
+  "counts": {
+    "semanticFiles": 7,
+    "full": 1,
+    "selected": 6,
+    "semanticLines": 242,
+    "productSemanticLines": 221,
+    "testDeclarationSemanticLines": 21,
+    "uniqueDisplayedLines": 299,
+    "existingTestTitlesNavigated": 6,
+    "ordinaryTestDeclarationsSelected": 2,
+    "testsExecuted": 0,
+    "sourceAndInstructionPins": 9
+  },
+  "coverageLimit": "Target no canonical sameSHA explicit full found in own fresh gate. Necessary producer/consumer/helper excerpts do not assert first-ever or first unique coverage; previous reading is not correctness proof.",
+  "sourceExcerptTiming": "Post actual display; every initial source pin preceded body/line navigation."
+}

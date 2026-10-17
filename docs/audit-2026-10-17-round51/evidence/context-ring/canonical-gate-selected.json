@@ -1,0 +1,124 @@
+{
+  "readUTC": "2026-10-17T17:16:53.760929+00:00",
+  "selected": [
+    {
+      "projectionIndex": 0,
+      "document": "docs/archive/review-2026-05-30/findings.json",
+      "documentSha256": "6937976e6107dbbbab93fd429900e6f236352d67ba4f287526f529a48e6a3a35",
+      "pointer": "/264",
+      "originalObject": {
+        "file": "packages/desktop/src/renderer/chat/ContextRing.tsx",
+        "line": "27",
+        "category": "simplify",
+        "severity": "low",
+        "confidence": "high",
+        "title": "Redundant type assertion after type narrowing",
+        "detail": "Line 27 uses `(max as number)` but `max` is already narrowed to `number` by the condition on line 26 (`typeof max === \"number\" && max > 0`). The type assertion is unnecessary and makes the code less clear.",
+        "fix": "Remove the `as number` assertion and use `max` directly since TypeScript has narrowed the type through the condition."
+      },
+      "sameHashAsFreshScan": true
+    },
+    {
+      "projectionIndex": 61,
+      "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-index.json",
+      "documentSha256": "78e65550fef49fec2bd688455b17edf6de8465486cd9651634b4cd483f5aacda",
+      "pointer": "/files/2851",
+      "originalObject": {
+        "path": "packages/desktop/src/renderer/chat/ContextRing.tsx",
+        "bytes": 9089,
+        "sha256": "b28fbfc2e74fdb645cc5b2cb935eb0fb6a5e1f896b6150a121a75294013baa3d",
+        "lines": 247,
+        "status": "historical-object-no-current-explicit-semantic-coverage",
+        "currentExplicitFullClaimIds": [],
+        "currentExplicitSelectedClaimIds": [],
+        "currentSelectedUnionLines": 0,
+        "claimIds": [
+          "C010145",
+          "C010146",
+          "C010147"
+        ],
+        "claimKindCounts": {
+          "incidental-path-or-pin-object": 3
+        }
+      },
+      "sameHashAsFreshScan": true
+    },
+    {
+      "projectionIndex": 65,
+      "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/candidates.json",
+      "documentSha256": "6fdc58be2ebe44cff414b5d853c242712f9d19596ec35b5848c2a45b679e6830",
+      "pointer": "/files/5",
+      "originalObject": {
+        "rank": 6,
+        "path": "packages/desktop/src/renderer/chat/ContextRing.tsx",
+        "bytes": 9089,
+        "sha256": "b28fbfc2e74fdb645cc5b2cb935eb0fb6a5e1f896b6150a121a75294013baa3d",
+        "lines": 247,
+        "status": "semantic-scope-not-confirmed",
+        "decisionReason": "No activated explicit same-SHA full/selected object for this path in this finite gate. This is not an unread claim; MD-only/other shapes not exhaustive.",
+        "activatedOldFull": false,
+        "nextStep": "Suggestion only; own fresh exact path/SHA/full/old-cause MD+JSON gate before any future body read; confirm ordinary consumer and stop authority/native boundaries.",
+        "canonicalSupportPointers": [],
+        "machineClaimCount": 8,
+        "locatorCount": 22,
+        "noCanonicalQualifiedRowProofOfUnread": false
+      },
+      "sameHashAsFreshScan": true
+    },
+    {
+      "projectionIndex": 97,
+      "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/source-manifest.json",
+      "documentSha256": "5343e12c9a27ab2fd6f616dc13ed3a6e0c8589fe4ae570fc21c892fc0c1303f9",
+      "pointer": "/files/4",
+      "originalObject": {
+        "path": "packages/desktop/src/renderer/chat/ContextRing.tsx",
+        "bytes": 9089,
+        "sha256": "b28fbfc2e74fdb645cc5b2cb935eb0fb6a5e1f896b6150a121a75294013baa3d",
+        "lines": 247,
+        "pinnedUTC": "2026-10-17T16:48:11.084489+00:00",
+        "coverage": "hash-only",
+        "selectedLineRanges": [],
+        "displayedLineRanges": [],
+        "semanticLineCount": 0,
+        "displayedLineCount": 0,
+        "initialPinIsSemanticReadProof": false,
+        "endingSha256": "b28fbfc2e74fdb645cc5b2cb935eb0fb6a5e1f896b6150a121a75294013baa3d"
+      },
+      "sameHashAsFreshScan": true
+    },
+    {
+      "projectionIndex": 117,
+      "document": "docs/audit-2026-10-17-round50/source-manifest.json",
+      "documentSha256": "62ee29069f3994a9c24c4a4d22c99dded52da412235c938a8306bc166dc94fdb",
+      "pointer": "/files/28",
+      "originalObject": {
+        "path": "packages/desktop/src/renderer/chat/ContextRing.tsx",
+        "bytes": 9089,
+        "sha256": "b28fbfc2e74fdb645cc5b2cb935eb0fb6a5e1f896b6150a121a75294013baa3d",
+        "currentBytes": 9089,
+        "currentSha256": "b28fbfc2e74fdb645cc5b2cb935eb0fb6a5e1f896b6150a121a75294013baa3d",
+        "mainBytes": 9089,
+        "mainSha256": "b28fbfc2e74fdb645cc5b2cb935eb0fb6a5e1f896b6150a121a75294013baa3d",
+        "currentWorkingTreeMatchesFrozenBlob": true,
+        "mainMatchesFrozenBlob": true
+      },
+      "sameHashAsFreshScan": true
+    },
+    {
+      "projectionIndex": 118,
+      "document": "docs/audit-2026-10-17-round50/source-manifest.json",
+      "documentSha256": "62ee29069f3994a9c24c4a4d22c99dded52da412235c938a8306bc166dc94fdb",
+      "pointer": "/hashOnlyChecks/8",
+      "originalObject": {
+        "manifest": "frontier-selection/source-manifest.json",
+        "collection": "files",
+        "path": "packages/desktop/src/renderer/chat/ContextRing.tsx",
+        "sha256": "b28fbfc2e74fdb645cc5b2cb935eb0fb6a5e1f896b6150a121a75294013baa3d",
+        "coverage": "hash-only",
+        "note": "Original timing/ranges/null and same-read limitations retained; formalization adds no repeated semantic read."
+      },
+      "sameHashAsFreshScan": true
+    }
+  ],
+  "notAllProjectedObjectsOrAllHistoryRead": true
+}

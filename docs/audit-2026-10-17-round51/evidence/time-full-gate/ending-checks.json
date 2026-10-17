@@ -1,0 +1,63 @@
+{
+  "checkedUTC": "2026-10-17T17:19:16.959627+00:00",
+  "sources": [
+    {
+      "path": "CODESHELL.md",
+      "bytes": 17639,
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "sameAsInitial": true,
+      "checkedUTC": "2026-10-17T17:19:15.264719+00:00"
+    },
+    {
+      "path": "AGENTS.md",
+      "bytes": 206,
+      "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "sameAsInitial": true,
+      "checkedUTC": "2026-10-17T17:19:15.265896+00:00"
+    },
+    {
+      "path": "packages/desktop/src/renderer/messages/time.ts",
+      "bytes": 3874,
+      "sha256": "aa7268c80a57df06eed92c7b0439e5d0eefed9c7410e6df6553ab160a82a5435",
+      "sameAsInitial": true,
+      "checkedUTC": "2026-10-17T17:19:15.266289+00:00"
+    },
+    {
+      "path": "packages/desktop/src/renderer/messages/time.test.ts",
+      "bytes": 2342,
+      "sha256": "cbe5812d2ce49fad4a01303f2a0d2f33e182a661d06f93cd8334a06007298c41",
+      "sameAsInitial": true,
+      "checkedUTC": "2026-10-17T17:19:15.266752+00:00"
+    },
+    {
+      "path": "packages/desktop/src/renderer/MessageStream.tsx",
+      "bytes": 37921,
+      "sha256": "f74d19bddcdc48c0de2e63921ba598d733e2f1c3d58f68e7c8c0b32046ddbd4c",
+      "sameAsInitial": true,
+      "checkedUTC": "2026-10-17T17:19:15.267497+00:00"
+    },
+    {
+      "path": "packages/desktop/src/renderer/messages/AssistantMessageView.tsx",
+      "bytes": 3880,
+      "sha256": "b08bd86c993873f10902024d091628d99a0d60a42dce74a3938fa2287f8bfe86",
+      "sameAsInitial": true,
+      "checkedUTC": "2026-10-17T17:19:15.268013+00:00"
+    }
+  ],
+  "allSourceAndInstructionPinsSame": true,
+  "history": {
+    "initialCount": 4895,
+    "endingIncludedPathCount": 4895,
+    "sameIncludedPathSet": true,
+    "changed": [],
+    "missing": [],
+    "addedIncludedPaths": [],
+    "removedIncludedPaths": [],
+    "excludedAudit51PlusPaths": [
+      "docs/audit-2026-10-17-round51/evidence/integration-before.json",
+      "docs/audit-2026-10-17-round51/evidence/integration-plan.json",
+      "docs/audit-2026-10-17-round51/evidence/worktrees-before.json"
+    ],
+    "initialInventoryPreserved": true
+  }
+}

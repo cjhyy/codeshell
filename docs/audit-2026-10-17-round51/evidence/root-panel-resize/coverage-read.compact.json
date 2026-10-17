@@ -1,0 +1,216 @@
+{
+  "actualProjectedRows": 34,
+  "rows": [
+    {
+      "document": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+      "at": "$[\"files\"][2416]",
+      "qualifiers": {}
+    },
+    {
+      "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "at": "$[\"claims\"][9728]",
+      "qualifiers": {
+        "coverageKind": "incidental-path-or-pin-object",
+        "scopeFields": {}
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "at": "$[\"claims\"][9729]",
+      "qualifiers": {
+        "coverageKind": "incidental-path-or-pin-object",
+        "scopeFields": {}
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-index.json",
+      "at": "$[\"files\"][2735]",
+      "qualifiers": {
+        "status": "historical-object-no-current-explicit-semantic-coverage"
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/package-inventory.json",
+      "at": "$[\"files\"][2735]",
+      "qualifiers": {}
+    },
+    {
+      "document": "docs/audit-2026-10-17-round44/evidence/coverage-status/current-inventory.json",
+      "at": "$[\"files\"][2736]",
+      "qualifiers": {}
+    },
+    {
+      "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/candidate-initial-pins.json",
+      "at": "$[\"files\"][1]",
+      "qualifiers": {
+        "coverage": "hash-only; no source body displayed or semantically read"
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/candidates.json",
+      "at": "$[\"files\"][8]",
+      "qualifiers": {
+        "status": "semantic-scope-not-confirmed"
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/ending-checks.json",
+      "at": "$[\"products\"][1]",
+      "qualifiers": {}
+    },
+    {
+      "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-claims.json",
+      "at": "$[\"claims\"][33]",
+      "qualifiers": {
+        "qualifiers": {}
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-claims.json",
+      "at": "$[\"claims\"][140]",
+      "qualifiers": {
+        "qualifiers": {
+          "coverageKind": "incidental-path-or-pin-object",
+          "scopeFields": {}
+        }
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-claims.json",
+      "at": "$[\"claims\"][141]",
+      "qualifiers": {
+        "qualifiers": {
+          "coverageKind": "incidental-path-or-pin-object",
+          "scopeFields": {}
+        }
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-claims.json",
+      "at": "$[\"claims\"][239]",
+      "qualifiers": {
+        "qualifiers": {}
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-claims.json",
+      "at": "$[\"claims\"][269]",
+      "qualifiers": {
+        "qualifiers": {}
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-claims.json",
+      "at": "$[\"claims\"][299]",
+      "qualifiers": {
+        "qualifiers": {
+          "coverageStatus": "semantic-coverage-not-confirmed-by-this-index"
+        }
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+      "at": "$[\"locators\"][39]",
+      "qualifiers": {}
+    },
+    {
+      "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+      "at": "$[\"locators\"][128]",
+      "qualifiers": {}
+    },
+    {
+      "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+      "at": "$[\"locators\"][129]",
+      "qualifiers": {}
+    },
+    {
+      "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+      "at": "$[\"locators\"][356]",
+      "qualifiers": {}
+    },
+    {
+      "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+      "at": "$[\"locators\"][357]",
+      "qualifiers": {}
+    },
+    {
+      "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+      "at": "$[\"locators\"][358]",
+      "qualifiers": {}
+    },
+    {
+      "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+      "at": "$[\"locators\"][359]",
+      "qualifiers": {}
+    },
+    {
+      "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+      "at": "$[\"locators\"][360]",
+      "qualifiers": {}
+    },
+    {
+      "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+      "at": "$[\"locators\"][623]",
+      "qualifiers": {}
+    },
+    {
+      "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+      "at": "$[\"locators\"][624]",
+      "qualifiers": {}
+    },
+    {
+      "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+      "at": "$[\"locators\"][683]",
+      "qualifiers": {}
+    },
+    {
+      "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+      "at": "$[\"locators\"][684]",
+      "qualifiers": {}
+    },
+    {
+      "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+      "at": "$[\"locators\"][743]",
+      "qualifiers": {}
+    },
+    {
+      "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+      "at": "$[\"locators\"][773]",
+      "qualifiers": {}
+    },
+    {
+      "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+      "at": "$[\"locators\"][774]",
+      "qualifiers": {}
+    },
+    {
+      "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/source-manifest.json",
+      "at": "$[\"files\"][1]",
+      "qualifiers": {
+        "coverage": "hash-only",
+        "selectedLineRanges": []
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round50/evidence/packet-review/checks.json",
+      "at": "$[\"packets\"][3][\"manifestRangeChecks\"][1]",
+      "qualifiers": {
+        "coverage": "hash-only",
+        "selectedLineRanges": []
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round50/source-manifest.json",
+      "at": "$[\"files\"][24]",
+      "qualifiers": {}
+    },
+    {
+      "document": "docs/audit-2026-10-17-round50/source-manifest.json",
+      "at": "$[\"hashOnlyChecks\"][5]",
+      "qualifiers": {
+        "coverage": "hash-only"
+      }
+    }
+  ],
+  "rawObjectsNotClaimedAllRead": true
+}

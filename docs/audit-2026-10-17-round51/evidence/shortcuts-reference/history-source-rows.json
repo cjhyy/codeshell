@@ -1,0 +1,1591 @@
+{
+  "rows": [
+    {
+      "document": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+      "documentSha256": "12c53ba7d8a17673382d352a48a8ca3afc25a4913fcc96d63d22319e7a00b1eb",
+      "jsonPointer": "/files/3060",
+      "paths": [
+        "packages/desktop/src/renderer/settings/ShortcutsSection.test.tsx"
+      ],
+      "hashFields": {
+        "sha256": "ba16076628e88e408a0b7dfcb9566b597e12949c20b89ecfcd421029f918db02"
+      },
+      "uniqueDirectPath": true,
+      "uniqueDirectHash": true,
+      "metadata": {
+        "lines": 67
+      },
+      "manifestNameHint": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+      "documentSha256": "12c53ba7d8a17673382d352a48a8ca3afc25a4913fcc96d63d22319e7a00b1eb",
+      "jsonPointer": "/files/3061",
+      "paths": [
+        "packages/desktop/src/renderer/settings/ShortcutsSection.tsx"
+      ],
+      "hashFields": {
+        "sha256": "ee9161604475561743cab550fe144c9f0bd8fa045fe18d1ef8664d5c851dc1a4"
+      },
+      "uniqueDirectPath": true,
+      "uniqueDirectHash": true,
+      "metadata": {
+        "lines": 110
+      },
+      "manifestNameHint": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round39/evidence/aggregate-review/checks.json",
+      "documentSha256": "a3047874d9017eba08b4c125d3596baff258da8d47f759bf65779b8083ec38ae",
+      "jsonPointer": "/groupChecks/0/separateHashOnlyRows/105",
+      "paths": [
+        "packages/desktop/src/renderer/settings/ShortcutsSection.test.tsx"
+      ],
+      "hashFields": {
+        "sha256": "ba16076628e88e408a0b7dfcb9566b597e12949c20b89ecfcd421029f918db02"
+      },
+      "uniqueDirectPath": true,
+      "uniqueDirectHash": true,
+      "metadata": {
+        "coverage": "hash-only-before-any-current-semantic-read"
+      },
+      "manifestNameHint": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round39/evidence/aggregate-review/checks.json",
+      "documentSha256": "a3047874d9017eba08b4c125d3596baff258da8d47f759bf65779b8083ec38ae",
+      "jsonPointer": "/groupChecks/0/separateHashOnlyRows/114",
+      "paths": [
+        "packages/desktop/src/renderer/settings/ShortcutsSection.tsx"
+      ],
+      "hashFields": {
+        "sha256": "ee9161604475561743cab550fe144c9f0bd8fa045fe18d1ef8664d5c851dc1a4"
+      },
+      "uniqueDirectPath": true,
+      "uniqueDirectHash": true,
+      "metadata": {
+        "coverage": "hash-only-before-any-current-semantic-read"
+      },
+      "manifestNameHint": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round39/evidence/mcp-rename-fields-frontier/initial-inventory-pins.json",
+      "documentSha256": "473a806b5c355b3ddd6209af125053df592d626d1cd70a7d8543e96111bde811",
+      "jsonPointer": "/files/124",
+      "paths": [
+        "packages/desktop/src/renderer/settings/ShortcutsSection.test.tsx"
+      ],
+      "hashFields": {
+        "sha256": "ba16076628e88e408a0b7dfcb9566b597e12949c20b89ecfcd421029f918db02"
+      },
+      "uniqueDirectPath": true,
+      "uniqueDirectHash": true,
+      "metadata": {
+        "totalLines": 67,
+        "coverage": "hash-only-before-any-current-semantic-read"
+      },
+      "manifestNameHint": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round39/evidence/mcp-rename-fields-frontier/initial-inventory-pins.json",
+      "documentSha256": "473a806b5c355b3ddd6209af125053df592d626d1cd70a7d8543e96111bde811",
+      "jsonPointer": "/files/134",
+      "paths": [
+        "packages/desktop/src/renderer/settings/ShortcutsSection.tsx"
+      ],
+      "hashFields": {
+        "sha256": "ee9161604475561743cab550fe144c9f0bd8fa045fe18d1ef8664d5c851dc1a4"
+      },
+      "uniqueDirectPath": true,
+      "uniqueDirectHash": true,
+      "metadata": {
+        "totalLines": 110,
+        "coverage": "hash-only-before-any-current-semantic-read"
+      },
+      "manifestNameHint": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round39/evidence/mcp-rename-fields-frontier/source-manifest.json",
+      "documentSha256": "453f2420da299d0134a6911db69424c865cfce8352d1b17cb203bc80d9f6e2ec",
+      "jsonPointer": "/hashOnlyFiles/105",
+      "paths": [
+        "packages/desktop/src/renderer/settings/ShortcutsSection.test.tsx"
+      ],
+      "hashFields": {
+        "sha256": "ba16076628e88e408a0b7dfcb9566b597e12949c20b89ecfcd421029f918db02"
+      },
+      "uniqueDirectPath": true,
+      "uniqueDirectHash": true,
+      "metadata": {
+        "totalLines": 67,
+        "coverage": "hash-only-before-any-current-semantic-read"
+      },
+      "manifestNameHint": true
+    },
+    {
+      "document": "docs/audit-2026-10-17-round39/evidence/mcp-rename-fields-frontier/source-manifest.json",
+      "documentSha256": "453f2420da299d0134a6911db69424c865cfce8352d1b17cb203bc80d9f6e2ec",
+      "jsonPointer": "/hashOnlyFiles/114",
+      "paths": [
+        "packages/desktop/src/renderer/settings/ShortcutsSection.tsx"
+      ],
+      "hashFields": {
+        "sha256": "ee9161604475561743cab550fe144c9f0bd8fa045fe18d1ef8664d5c851dc1a4"
+      },
+      "uniqueDirectPath": true,
+      "uniqueDirectHash": true,
+      "metadata": {
+        "totalLines": 110,
+        "coverage": "hash-only-before-any-current-semantic-read"
+      },
+      "manifestNameHint": true
+    },
+    {
+      "document": "docs/audit-2026-10-17-round39/evidence/mcp-rename-review/author-metadata-checks.json",
+      "documentSha256": "cd2e0bfe680df1633c509110a9210e57b8cbed0c269291cda0e09e6581233604",
+      "jsonPointer": "/sourceByteChecks/134",
+      "paths": [
+        "packages/desktop/src/renderer/settings/ShortcutsSection.test.tsx"
+      ],
+      "hashFields": {
+        "sha256": "ba16076628e88e408a0b7dfcb9566b597e12949c20b89ecfcd421029f918db02"
+      },
+      "uniqueDirectPath": true,
+      "uniqueDirectHash": true,
+      "metadata": {},
+      "manifestNameHint": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round39/evidence/mcp-rename-review/author-metadata-checks.json",
+      "documentSha256": "cd2e0bfe680df1633c509110a9210e57b8cbed0c269291cda0e09e6581233604",
+      "jsonPointer": "/sourceByteChecks/143",
+      "paths": [
+        "packages/desktop/src/renderer/settings/ShortcutsSection.tsx"
+      ],
+      "hashFields": {
+        "sha256": "ee9161604475561743cab550fe144c9f0bd8fa045fe18d1ef8664d5c851dc1a4"
+      },
+      "uniqueDirectPath": true,
+      "uniqueDirectHash": true,
+      "metadata": {},
+      "manifestNameHint": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round39/source-manifest.json",
+      "documentSha256": "70e845f14c9b8e63b0cf761940090ef6af9caa99bee2be0c21d9f06c92fd3383",
+      "jsonPointer": "/files/183",
+      "paths": [
+        "packages/desktop/src/renderer/settings/ShortcutsSection.test.tsx"
+      ],
+      "hashFields": {
+        "sha256": "ba16076628e88e408a0b7dfcb9566b597e12949c20b89ecfcd421029f918db02",
+        "currentSha256": "ba16076628e88e408a0b7dfcb9566b597e12949c20b89ecfcd421029f918db02",
+        "mainSha256": "ba16076628e88e408a0b7dfcb9566b597e12949c20b89ecfcd421029f918db02"
+      },
+      "uniqueDirectPath": true,
+      "uniqueDirectHash": true,
+      "metadata": {},
+      "manifestNameHint": true
+    },
+    {
+      "document": "docs/audit-2026-10-17-round39/source-manifest.json",
+      "documentSha256": "70e845f14c9b8e63b0cf761940090ef6af9caa99bee2be0c21d9f06c92fd3383",
+      "jsonPointer": "/files/184",
+      "paths": [
+        "packages/desktop/src/renderer/settings/ShortcutsSection.tsx"
+      ],
+      "hashFields": {
+        "sha256": "ee9161604475561743cab550fe144c9f0bd8fa045fe18d1ef8664d5c851dc1a4",
+        "currentSha256": "ee9161604475561743cab550fe144c9f0bd8fa045fe18d1ef8664d5c851dc1a4",
+        "mainSha256": "ee9161604475561743cab550fe144c9f0bd8fa045fe18d1ef8664d5c851dc1a4"
+      },
+      "uniqueDirectPath": true,
+      "uniqueDirectHash": true,
+      "metadata": {},
+      "manifestNameHint": true
+    },
+    {
+      "document": "docs/audit-2026-10-17-round39/source-manifest.json",
+      "documentSha256": "70e845f14c9b8e63b0cf761940090ef6af9caa99bee2be0c21d9f06c92fd3383",
+      "jsonPointer": "/hashOnlyChecks/107",
+      "paths": [
+        "packages/desktop/src/renderer/settings/ShortcutsSection.test.tsx"
+      ],
+      "hashFields": {
+        "sha256": "ba16076628e88e408a0b7dfcb9566b597e12949c20b89ecfcd421029f918db02"
+      },
+      "uniqueDirectPath": true,
+      "uniqueDirectHash": true,
+      "metadata": {
+        "coverage": "hash-only-before-any-current-semantic-read",
+        "note": "Original timing/ranges/null and same-read limitations retained; formalization adds no repeated semantic read."
+      },
+      "manifestNameHint": true
+    },
+    {
+      "document": "docs/audit-2026-10-17-round39/source-manifest.json",
+      "documentSha256": "70e845f14c9b8e63b0cf761940090ef6af9caa99bee2be0c21d9f06c92fd3383",
+      "jsonPointer": "/hashOnlyChecks/116",
+      "paths": [
+        "packages/desktop/src/renderer/settings/ShortcutsSection.tsx"
+      ],
+      "hashFields": {
+        "sha256": "ee9161604475561743cab550fe144c9f0bd8fa045fe18d1ef8664d5c851dc1a4"
+      },
+      "uniqueDirectPath": true,
+      "uniqueDirectHash": true,
+      "metadata": {
+        "coverage": "hash-only-before-any-current-semantic-read",
+        "note": "Original timing/ranges/null and same-read limitations retained; formalization adds no repeated semantic read."
+      },
+      "manifestNameHint": true
+    },
+    {
+      "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "documentSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f",
+      "jsonPointer": "/claims/12277",
+      "paths": [
+        "packages/desktop/src/renderer/settings/ShortcutsSection.test.tsx"
+      ],
+      "hashFields": {},
+      "uniqueDirectPath": true,
+      "uniqueDirectHash": false,
+      "metadata": {
+        "coverageKind": "explicit-nonsemantic-or-hash-only",
+        "scopeFields": {
+          "coverage": "hash-only-before-any-current-semantic-read"
+        },
+        "rangeFields": {},
+        "rangeBoundsValidForCurrent": false
+      },
+      "manifestNameHint": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "documentSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f",
+      "jsonPointer": "/claims/12278",
+      "paths": [
+        "packages/desktop/src/renderer/settings/ShortcutsSection.test.tsx"
+      ],
+      "hashFields": {},
+      "uniqueDirectPath": true,
+      "uniqueDirectHash": false,
+      "metadata": {
+        "coverageKind": "explicit-nonsemantic-or-hash-only",
+        "scopeFields": {
+          "coverage": "hash-only-before-any-current-semantic-read"
+        },
+        "rangeFields": {},
+        "rangeBoundsValidForCurrent": false
+      },
+      "manifestNameHint": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "documentSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f",
+      "jsonPointer": "/claims/12279",
+      "paths": [
+        "packages/desktop/src/renderer/settings/ShortcutsSection.test.tsx"
+      ],
+      "hashFields": {},
+      "uniqueDirectPath": true,
+      "uniqueDirectHash": false,
+      "metadata": {
+        "coverageKind": "incidental-path-or-pin-object",
+        "scopeFields": {},
+        "rangeFields": {},
+        "rangeBoundsValidForCurrent": false
+      },
+      "manifestNameHint": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "documentSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f",
+      "jsonPointer": "/claims/12280",
+      "paths": [
+        "packages/desktop/src/renderer/settings/ShortcutsSection.test.tsx"
+      ],
+      "hashFields": {},
+      "uniqueDirectPath": true,
+      "uniqueDirectHash": false,
+      "metadata": {
+        "coverageKind": "incidental-path-or-pin-object",
+        "scopeFields": {},
+        "rangeFields": {},
+        "rangeBoundsValidForCurrent": false
+      },
+      "manifestNameHint": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "documentSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f",
+      "jsonPointer": "/claims/12281",
+      "paths": [
+        "packages/desktop/src/renderer/settings/ShortcutsSection.test.tsx"
+      ],
+      "hashFields": {},
+      "uniqueDirectPath": true,
+      "uniqueDirectHash": false,
+      "metadata": {
+        "coverageKind": "incidental-path-or-pin-object",
+        "scopeFields": {},
+        "rangeFields": {},
+        "rangeBoundsValidForCurrent": false
+      },
+      "manifestNameHint": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "documentSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f",
+      "jsonPointer": "/claims/12282",
+      "paths": [
+        "packages/desktop/src/renderer/settings/ShortcutsSection.test.tsx"
+      ],
+      "hashFields": {},
+      "uniqueDirectPath": true,
+      "uniqueDirectHash": false,
+      "metadata": {
+        "coverageKind": "incidental-path-or-pin-object",
+        "scopeFields": {},
+        "rangeFields": {},
+        "rangeBoundsValidForCurrent": false
+      },
+      "manifestNameHint": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "documentSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f",
+      "jsonPointer": "/claims/12283",
+      "paths": [
+        "packages/desktop/src/renderer/settings/ShortcutsSection.tsx"
+      ],
+      "hashFields": {},
+      "uniqueDirectPath": true,
+      "uniqueDirectHash": false,
+      "metadata": {
+        "coverageKind": "explicit-nonsemantic-or-hash-only",
+        "scopeFields": {
+          "coverage": "hash-only-before-any-current-semantic-read"
+        },
+        "rangeFields": {},
+        "rangeBoundsValidForCurrent": false
+      },
+      "manifestNameHint": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "documentSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f",
+      "jsonPointer": "/claims/12284",
+      "paths": [
+        "packages/desktop/src/renderer/settings/ShortcutsSection.tsx"
+      ],
+      "hashFields": {},
+      "uniqueDirectPath": true,
+      "uniqueDirectHash": false,
+      "metadata": {
+        "coverageKind": "explicit-nonsemantic-or-hash-only",
+        "scopeFields": {
+          "coverage": "hash-only-before-any-current-semantic-read"
+        },
+        "rangeFields": {},
+        "rangeBoundsValidForCurrent": false
+      },
+      "manifestNameHint": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "documentSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f",
+      "jsonPointer": "/claims/12285",
+      "paths": [
+        "packages/desktop/src/renderer/settings/ShortcutsSection.tsx"
+      ],
+      "hashFields": {},
+      "uniqueDirectPath": true,
+      "uniqueDirectHash": false,
+      "metadata": {
+        "coverageKind": "incidental-path-or-pin-object",
+        "scopeFields": {},
+        "rangeFields": {},
+        "rangeBoundsValidForCurrent": false
+      },
+      "manifestNameHint": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "documentSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f",
+      "jsonPointer": "/claims/12286",
+      "paths": [
+        "packages/desktop/src/renderer/settings/ShortcutsSection.tsx"
+      ],
+      "hashFields": {},
+      "uniqueDirectPath": true,
+      "uniqueDirectHash": false,
+      "metadata": {
+        "coverageKind": "incidental-path-or-pin-object",
+        "scopeFields": {},
+        "rangeFields": {},
+        "rangeBoundsValidForCurrent": false
+      },
+      "manifestNameHint": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "documentSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f",
+      "jsonPointer": "/claims/12287",
+      "paths": [
+        "packages/desktop/src/renderer/settings/ShortcutsSection.tsx"
+      ],
+      "hashFields": {},
+      "uniqueDirectPath": true,
+      "uniqueDirectHash": false,
+      "metadata": {
+        "coverageKind": "incidental-path-or-pin-object",
+        "scopeFields": {},
+        "rangeFields": {},
+        "rangeBoundsValidForCurrent": false
+      },
+      "manifestNameHint": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-index.json",
+      "documentSha256": "78e65550fef49fec2bd688455b17edf6de8465486cd9651634b4cd483f5aacda",
+      "jsonPointer": "/files/3381",
+      "paths": [
+        "packages/desktop/src/renderer/settings/ShortcutsSection.test.tsx"
+      ],
+      "hashFields": {
+        "sha256": "ba16076628e88e408a0b7dfcb9566b597e12949c20b89ecfcd421029f918db02"
+      },
+      "uniqueDirectPath": true,
+      "uniqueDirectHash": true,
+      "metadata": {
+        "lines": 67,
+        "currentSelectedUnionLines": 0
+      },
+      "manifestNameHint": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-index.json",
+      "documentSha256": "78e65550fef49fec2bd688455b17edf6de8465486cd9651634b4cd483f5aacda",
+      "jsonPointer": "/files/3382",
+      "paths": [
+        "packages/desktop/src/renderer/settings/ShortcutsSection.tsx"
+      ],
+      "hashFields": {
+        "sha256": "ee9161604475561743cab550fe144c9f0bd8fa045fe18d1ef8664d5c851dc1a4"
+      },
+      "uniqueDirectPath": true,
+      "uniqueDirectHash": true,
+      "metadata": {
+        "lines": 110,
+        "currentSelectedUnionLines": 0
+      },
+      "manifestNameHint": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/package-inventory.json",
+      "documentSha256": "862732b8c0bdc13733ead08b43c47d0854c8c12b96ea68ee5427ecf6a740d28b",
+      "jsonPointer": "/files/3381",
+      "paths": [
+        "packages/desktop/src/renderer/settings/ShortcutsSection.test.tsx"
+      ],
+      "hashFields": {
+        "sha256": "ba16076628e88e408a0b7dfcb9566b597e12949c20b89ecfcd421029f918db02"
+      },
+      "uniqueDirectPath": true,
+      "uniqueDirectHash": true,
+      "metadata": {
+        "lines": 67
+      },
+      "manifestNameHint": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/package-inventory.json",
+      "documentSha256": "862732b8c0bdc13733ead08b43c47d0854c8c12b96ea68ee5427ecf6a740d28b",
+      "jsonPointer": "/files/3382",
+      "paths": [
+        "packages/desktop/src/renderer/settings/ShortcutsSection.tsx"
+      ],
+      "hashFields": {
+        "sha256": "ee9161604475561743cab550fe144c9f0bd8fa045fe18d1ef8664d5c851dc1a4"
+      },
+      "uniqueDirectPath": true,
+      "uniqueDirectHash": true,
+      "metadata": {
+        "lines": 110
+      },
+      "manifestNameHint": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round44/evidence/coverage-status/current-inventory.json",
+      "documentSha256": "d1735b9e71d40ff96ad99d122d6d7fd53f2b27e6dd643a31f280c4e5a33b07dc",
+      "jsonPointer": "/files/3382",
+      "paths": [
+        "packages/desktop/src/renderer/settings/ShortcutsSection.test.tsx"
+      ],
+      "hashFields": {
+        "sha256": "ba16076628e88e408a0b7dfcb9566b597e12949c20b89ecfcd421029f918db02"
+      },
+      "uniqueDirectPath": true,
+      "uniqueDirectHash": true,
+      "metadata": {
+        "lines": 67,
+        "coverageStatus": "semantic-coverage-not-confirmed-by-this-index"
+      },
+      "manifestNameHint": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round44/evidence/coverage-status/current-inventory.json",
+      "documentSha256": "d1735b9e71d40ff96ad99d122d6d7fd53f2b27e6dd643a31f280c4e5a33b07dc",
+      "jsonPointer": "/files/3383",
+      "paths": [
+        "packages/desktop/src/renderer/settings/ShortcutsSection.tsx"
+      ],
+      "hashFields": {
+        "sha256": "ee9161604475561743cab550fe144c9f0bd8fa045fe18d1ef8664d5c851dc1a4"
+      },
+      "uniqueDirectPath": true,
+      "uniqueDirectHash": true,
+      "metadata": {
+        "lines": 110,
+        "coverageStatus": "semantic-coverage-not-confirmed-by-this-index"
+      },
+      "manifestNameHint": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/candidate-initial-pins.json",
+      "documentSha256": "18336da07c03ac249f82ae712c21a1313e0f84760a925e40bd903edd43600b8f",
+      "jsonPointer": "/files/22",
+      "paths": [
+        "packages/desktop/src/renderer/settings/ShortcutsSection.tsx"
+      ],
+      "hashFields": {
+        "sha256": "ee9161604475561743cab550fe144c9f0bd8fa045fe18d1ef8664d5c851dc1a4"
+      },
+      "uniqueDirectPath": true,
+      "uniqueDirectHash": true,
+      "metadata": {
+        "lines": 110,
+        "coverage": "hash-only; no source body displayed or semantically read"
+      },
+      "manifestNameHint": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/candidates.json",
+      "documentSha256": "6fdc58be2ebe44cff414b5d853c242712f9d19596ec35b5848c2a45b679e6830",
+      "jsonPointer": "/files/10",
+      "paths": [
+        "packages/desktop/src/renderer/settings/ShortcutsSection.tsx"
+      ],
+      "hashFields": {
+        "sha256": "ee9161604475561743cab550fe144c9f0bd8fa045fe18d1ef8664d5c851dc1a4"
+      },
+      "uniqueDirectPath": true,
+      "uniqueDirectHash": true,
+      "metadata": {
+        "lines": 110,
+        "noCanonicalQualifiedRowProofOfUnread": false
+      },
+      "manifestNameHint": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/canonical-metadata-read.json",
+      "documentSha256": "2307d5fcbdc9132500a523f1f0842da9857a9da3193f52009bbeae91e6b1014b",
+      "jsonPointer": "/rows/18",
+      "paths": [
+        "packages/desktop/src/renderer/settings/ShortcutsSection.tsx"
+      ],
+      "hashFields": {
+        "documentSha256": "453f2420da299d0134a6911db69424c865cfce8352d1b17cb203bc80d9f6e2ec"
+      },
+      "uniqueDirectPath": true,
+      "uniqueDirectHash": true,
+      "metadata": {
+        "reviewedUTC": "2026-10-17T16:49:45.144566+00:00"
+      },
+      "manifestNameHint": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/canonical-metadata-read.json",
+      "documentSha256": "2307d5fcbdc9132500a523f1f0842da9857a9da3193f52009bbeae91e6b1014b",
+      "jsonPointer": "/rows/24",
+      "paths": [
+        "packages/desktop/src/renderer/settings/ShortcutsSection.tsx"
+      ],
+      "hashFields": {
+        "documentSha256": "70e845f14c9b8e63b0cf761940090ef6af9caa99bee2be0c21d9f06c92fd3383"
+      },
+      "uniqueDirectPath": true,
+      "uniqueDirectHash": true,
+      "metadata": {
+        "reviewedUTC": "2026-10-17T16:49:45.148526+00:00"
+      },
+      "manifestNameHint": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/canonical-metadata-read.json",
+      "documentSha256": "2307d5fcbdc9132500a523f1f0842da9857a9da3193f52009bbeae91e6b1014b",
+      "jsonPointer": "/rows/28",
+      "paths": [
+        "packages/desktop/src/renderer/settings/ShortcutsSection.tsx"
+      ],
+      "hashFields": {
+        "documentSha256": "70e845f14c9b8e63b0cf761940090ef6af9caa99bee2be0c21d9f06c92fd3383"
+      },
+      "uniqueDirectPath": true,
+      "uniqueDirectHash": true,
+      "metadata": {
+        "reviewedUTC": "2026-10-17T16:49:45.151173+00:00"
+      },
+      "manifestNameHint": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/ending-checks.json",
+      "documentSha256": "1a283bb05c4b6eb2b126acb93f89de58e9c2a742b863fc11c8a026e67359c54e",
+      "jsonPointer": "/products/22",
+      "paths": [
+        "packages/desktop/src/renderer/settings/ShortcutsSection.tsx"
+      ],
+      "hashFields": {
+        "sha256": "ee9161604475561743cab550fe144c9f0bd8fa045fe18d1ef8664d5c851dc1a4"
+      },
+      "uniqueDirectPath": true,
+      "uniqueDirectHash": true,
+      "metadata": {},
+      "manifestNameHint": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-claims.json",
+      "documentSha256": "b63dfcf1da736a2fec6f16835f7b0535711c18821de092c472fa637b0c37a9c6",
+      "jsonPointer": "/claims/55",
+      "paths": [
+        "packages/desktop/src/renderer/settings/ShortcutsSection.tsx"
+      ],
+      "hashFields": {
+        "documentSha256": "12c53ba7d8a17673382d352a48a8ca3afc25a4913fcc96d63d22319e7a00b1eb"
+      },
+      "uniqueDirectPath": true,
+      "uniqueDirectHash": true,
+      "metadata": {
+        "ranges": {
+          "lines": 110
+        }
+      },
+      "manifestNameHint": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-claims.json",
+      "documentSha256": "b63dfcf1da736a2fec6f16835f7b0535711c18821de092c472fa637b0c37a9c6",
+      "jsonPointer": "/claims/79",
+      "paths": [
+        "packages/desktop/src/renderer/settings/ShortcutsSection.tsx"
+      ],
+      "hashFields": {
+        "documentSha256": "a3047874d9017eba08b4c125d3596baff258da8d47f759bf65779b8083ec38ae"
+      },
+      "uniqueDirectPath": true,
+      "uniqueDirectHash": true,
+      "metadata": {
+        "ranges": {}
+      },
+      "manifestNameHint": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-claims.json",
+      "documentSha256": "b63dfcf1da736a2fec6f16835f7b0535711c18821de092c472fa637b0c37a9c6",
+      "jsonPointer": "/claims/84",
+      "paths": [
+        "packages/desktop/src/renderer/settings/ShortcutsSection.tsx"
+      ],
+      "hashFields": {
+        "documentSha256": "473a806b5c355b3ddd6209af125053df592d626d1cd70a7d8543e96111bde811"
+      },
+      "uniqueDirectPath": true,
+      "uniqueDirectHash": true,
+      "metadata": {
+        "ranges": {
+          "totalLines": 110
+        }
+      },
+      "manifestNameHint": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-claims.json",
+      "documentSha256": "b63dfcf1da736a2fec6f16835f7b0535711c18821de092c472fa637b0c37a9c6",
+      "jsonPointer": "/claims/89",
+      "paths": [
+        "packages/desktop/src/renderer/settings/ShortcutsSection.tsx"
+      ],
+      "hashFields": {
+        "documentSha256": "453f2420da299d0134a6911db69424c865cfce8352d1b17cb203bc80d9f6e2ec"
+      },
+      "uniqueDirectPath": true,
+      "uniqueDirectHash": true,
+      "metadata": {
+        "ranges": {
+          "totalLines": 110
+        }
+      },
+      "manifestNameHint": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-claims.json",
+      "documentSha256": "b63dfcf1da736a2fec6f16835f7b0535711c18821de092c472fa637b0c37a9c6",
+      "jsonPointer": "/claims/94",
+      "paths": [
+        "packages/desktop/src/renderer/settings/ShortcutsSection.tsx"
+      ],
+      "hashFields": {
+        "documentSha256": "cd2e0bfe680df1633c509110a9210e57b8cbed0c269291cda0e09e6581233604"
+      },
+      "uniqueDirectPath": true,
+      "uniqueDirectHash": true,
+      "metadata": {
+        "ranges": {}
+      },
+      "manifestNameHint": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-claims.json",
+      "documentSha256": "b63dfcf1da736a2fec6f16835f7b0535711c18821de092c472fa637b0c37a9c6",
+      "jsonPointer": "/claims/100",
+      "paths": [
+        "packages/desktop/src/renderer/settings/ShortcutsSection.tsx"
+      ],
+      "hashFields": {
+        "documentSha256": "70e845f14c9b8e63b0cf761940090ef6af9caa99bee2be0c21d9f06c92fd3383"
+      },
+      "uniqueDirectPath": true,
+      "uniqueDirectHash": true,
+      "metadata": {
+        "ranges": {}
+      },
+      "manifestNameHint": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-claims.json",
+      "documentSha256": "b63dfcf1da736a2fec6f16835f7b0535711c18821de092c472fa637b0c37a9c6",
+      "jsonPointer": "/claims/104",
+      "paths": [
+        "packages/desktop/src/renderer/settings/ShortcutsSection.tsx"
+      ],
+      "hashFields": {
+        "documentSha256": "70e845f14c9b8e63b0cf761940090ef6af9caa99bee2be0c21d9f06c92fd3383"
+      },
+      "uniqueDirectPath": true,
+      "uniqueDirectHash": true,
+      "metadata": {
+        "ranges": {}
+      },
+      "manifestNameHint": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-claims.json",
+      "documentSha256": "b63dfcf1da736a2fec6f16835f7b0535711c18821de092c472fa637b0c37a9c6",
+      "jsonPointer": "/claims/208",
+      "paths": [
+        "packages/desktop/src/renderer/settings/ShortcutsSection.tsx"
+      ],
+      "hashFields": {
+        "documentSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f"
+      },
+      "uniqueDirectPath": true,
+      "uniqueDirectHash": true,
+      "metadata": {
+        "ranges": {
+          "rangeFields": {},
+          "rangeBoundsValidForCurrent": false
+        }
+      },
+      "manifestNameHint": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-claims.json",
+      "documentSha256": "b63dfcf1da736a2fec6f16835f7b0535711c18821de092c472fa637b0c37a9c6",
+      "jsonPointer": "/claims/209",
+      "paths": [
+        "packages/desktop/src/renderer/settings/ShortcutsSection.tsx"
+      ],
+      "hashFields": {
+        "documentSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f"
+      },
+      "uniqueDirectPath": true,
+      "uniqueDirectHash": true,
+      "metadata": {
+        "ranges": {
+          "rangeFields": {},
+          "rangeBoundsValidForCurrent": false
+        }
+      },
+      "manifestNameHint": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-claims.json",
+      "documentSha256": "b63dfcf1da736a2fec6f16835f7b0535711c18821de092c472fa637b0c37a9c6",
+      "jsonPointer": "/claims/210",
+      "paths": [
+        "packages/desktop/src/renderer/settings/ShortcutsSection.tsx"
+      ],
+      "hashFields": {
+        "documentSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f"
+      },
+      "uniqueDirectPath": true,
+      "uniqueDirectHash": true,
+      "metadata": {
+        "ranges": {
+          "rangeFields": {},
+          "rangeBoundsValidForCurrent": false
+        }
+      },
+      "manifestNameHint": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-claims.json",
+      "documentSha256": "b63dfcf1da736a2fec6f16835f7b0535711c18821de092c472fa637b0c37a9c6",
+      "jsonPointer": "/claims/211",
+      "paths": [
+        "packages/desktop/src/renderer/settings/ShortcutsSection.tsx"
+      ],
+      "hashFields": {
+        "documentSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f"
+      },
+      "uniqueDirectPath": true,
+      "uniqueDirectHash": true,
+      "metadata": {
+        "ranges": {
+          "rangeFields": {},
+          "rangeBoundsValidForCurrent": false
+        }
+      },
+      "manifestNameHint": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-claims.json",
+      "documentSha256": "b63dfcf1da736a2fec6f16835f7b0535711c18821de092c472fa637b0c37a9c6",
+      "jsonPointer": "/claims/212",
+      "paths": [
+        "packages/desktop/src/renderer/settings/ShortcutsSection.tsx"
+      ],
+      "hashFields": {
+        "documentSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f"
+      },
+      "uniqueDirectPath": true,
+      "uniqueDirectHash": true,
+      "metadata": {
+        "ranges": {
+          "rangeFields": {},
+          "rangeBoundsValidForCurrent": false
+        }
+      },
+      "manifestNameHint": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-claims.json",
+      "documentSha256": "b63dfcf1da736a2fec6f16835f7b0535711c18821de092c472fa637b0c37a9c6",
+      "jsonPointer": "/claims/261",
+      "paths": [
+        "packages/desktop/src/renderer/settings/ShortcutsSection.tsx"
+      ],
+      "hashFields": {
+        "documentSha256": "78e65550fef49fec2bd688455b17edf6de8465486cd9651634b4cd483f5aacda"
+      },
+      "uniqueDirectPath": true,
+      "uniqueDirectHash": true,
+      "metadata": {
+        "ranges": {
+          "lines": 110
+        }
+      },
+      "manifestNameHint": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-claims.json",
+      "documentSha256": "b63dfcf1da736a2fec6f16835f7b0535711c18821de092c472fa637b0c37a9c6",
+      "jsonPointer": "/claims/291",
+      "paths": [
+        "packages/desktop/src/renderer/settings/ShortcutsSection.tsx"
+      ],
+      "hashFields": {
+        "documentSha256": "862732b8c0bdc13733ead08b43c47d0854c8c12b96ea68ee5427ecf6a740d28b"
+      },
+      "uniqueDirectPath": true,
+      "uniqueDirectHash": true,
+      "metadata": {
+        "ranges": {
+          "lines": 110
+        }
+      },
+      "manifestNameHint": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-claims.json",
+      "documentSha256": "b63dfcf1da736a2fec6f16835f7b0535711c18821de092c472fa637b0c37a9c6",
+      "jsonPointer": "/claims/321",
+      "paths": [
+        "packages/desktop/src/renderer/settings/ShortcutsSection.tsx"
+      ],
+      "hashFields": {
+        "documentSha256": "d1735b9e71d40ff96ad99d122d6d7fd53f2b27e6dd643a31f280c4e5a33b07dc"
+      },
+      "uniqueDirectPath": true,
+      "uniqueDirectHash": true,
+      "metadata": {
+        "ranges": {
+          "lines": 110
+        }
+      },
+      "manifestNameHint": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+      "documentSha256": "85af2a5f57c328d1c9e016385a9bcdce3999b0b9a8a67702869a6c8138e39316",
+      "jsonPointer": "/locators/61",
+      "paths": [
+        "packages/desktop/src/renderer/settings/ShortcutsSection.tsx"
+      ],
+      "hashFields": {},
+      "uniqueDirectPath": true,
+      "uniqueDirectHash": false,
+      "metadata": {},
+      "manifestNameHint": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+      "documentSha256": "85af2a5f57c328d1c9e016385a9bcdce3999b0b9a8a67702869a6c8138e39316",
+      "jsonPointer": "/locators/171",
+      "paths": [
+        "packages/desktop/src/renderer/settings/ShortcutsSection.tsx"
+      ],
+      "hashFields": {},
+      "uniqueDirectPath": true,
+      "uniqueDirectHash": false,
+      "metadata": {},
+      "manifestNameHint": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+      "documentSha256": "85af2a5f57c328d1c9e016385a9bcdce3999b0b9a8a67702869a6c8138e39316",
+      "jsonPointer": "/locators/172",
+      "paths": [
+        "packages/desktop/src/renderer/settings/ShortcutsSection.tsx"
+      ],
+      "hashFields": {},
+      "uniqueDirectPath": true,
+      "uniqueDirectHash": false,
+      "metadata": {},
+      "manifestNameHint": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+      "documentSha256": "85af2a5f57c328d1c9e016385a9bcdce3999b0b9a8a67702869a6c8138e39316",
+      "jsonPointer": "/locators/209",
+      "paths": [
+        "packages/desktop/src/renderer/settings/ShortcutsSection.tsx"
+      ],
+      "hashFields": {},
+      "uniqueDirectPath": true,
+      "uniqueDirectHash": false,
+      "metadata": {},
+      "manifestNameHint": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+      "documentSha256": "85af2a5f57c328d1c9e016385a9bcdce3999b0b9a8a67702869a6c8138e39316",
+      "jsonPointer": "/locators/210",
+      "paths": [
+        "packages/desktop/src/renderer/settings/ShortcutsSection.tsx"
+      ],
+      "hashFields": {},
+      "uniqueDirectPath": true,
+      "uniqueDirectHash": false,
+      "metadata": {},
+      "manifestNameHint": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+      "documentSha256": "85af2a5f57c328d1c9e016385a9bcdce3999b0b9a8a67702869a6c8138e39316",
+      "jsonPointer": "/locators/219",
+      "paths": [
+        "packages/desktop/src/renderer/settings/ShortcutsSection.tsx"
+      ],
+      "hashFields": {},
+      "uniqueDirectPath": true,
+      "uniqueDirectHash": false,
+      "metadata": {},
+      "manifestNameHint": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+      "documentSha256": "85af2a5f57c328d1c9e016385a9bcdce3999b0b9a8a67702869a6c8138e39316",
+      "jsonPointer": "/locators/220",
+      "paths": [
+        "packages/desktop/src/renderer/settings/ShortcutsSection.tsx"
+      ],
+      "hashFields": {},
+      "uniqueDirectPath": true,
+      "uniqueDirectHash": false,
+      "metadata": {},
+      "manifestNameHint": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+      "documentSha256": "85af2a5f57c328d1c9e016385a9bcdce3999b0b9a8a67702869a6c8138e39316",
+      "jsonPointer": "/locators/229",
+      "paths": [
+        "packages/desktop/src/renderer/settings/ShortcutsSection.tsx"
+      ],
+      "hashFields": {},
+      "uniqueDirectPath": true,
+      "uniqueDirectHash": false,
+      "metadata": {},
+      "manifestNameHint": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+      "documentSha256": "85af2a5f57c328d1c9e016385a9bcdce3999b0b9a8a67702869a6c8138e39316",
+      "jsonPointer": "/locators/230",
+      "paths": [
+        "packages/desktop/src/renderer/settings/ShortcutsSection.tsx"
+      ],
+      "hashFields": {},
+      "uniqueDirectPath": true,
+      "uniqueDirectHash": false,
+      "metadata": {},
+      "manifestNameHint": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+      "documentSha256": "85af2a5f57c328d1c9e016385a9bcdce3999b0b9a8a67702869a6c8138e39316",
+      "jsonPointer": "/locators/239",
+      "paths": [
+        "packages/desktop/src/renderer/settings/ShortcutsSection.tsx"
+      ],
+      "hashFields": {},
+      "uniqueDirectPath": true,
+      "uniqueDirectHash": false,
+      "metadata": {},
+      "manifestNameHint": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+      "documentSha256": "85af2a5f57c328d1c9e016385a9bcdce3999b0b9a8a67702869a6c8138e39316",
+      "jsonPointer": "/locators/240",
+      "paths": [
+        "packages/desktop/src/renderer/settings/ShortcutsSection.tsx"
+      ],
+      "hashFields": {},
+      "uniqueDirectPath": true,
+      "uniqueDirectHash": false,
+      "metadata": {},
+      "manifestNameHint": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+      "documentSha256": "85af2a5f57c328d1c9e016385a9bcdce3999b0b9a8a67702869a6c8138e39316",
+      "jsonPointer": "/locators/255",
+      "paths": [
+        "packages/desktop/src/renderer/settings/ShortcutsSection.tsx"
+      ],
+      "hashFields": {},
+      "uniqueDirectPath": true,
+      "uniqueDirectHash": false,
+      "metadata": {},
+      "manifestNameHint": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+      "documentSha256": "85af2a5f57c328d1c9e016385a9bcdce3999b0b9a8a67702869a6c8138e39316",
+      "jsonPointer": "/locators/256",
+      "paths": [
+        "packages/desktop/src/renderer/settings/ShortcutsSection.tsx"
+      ],
+      "hashFields": {},
+      "uniqueDirectPath": true,
+      "uniqueDirectHash": false,
+      "metadata": {},
+      "manifestNameHint": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+      "documentSha256": "85af2a5f57c328d1c9e016385a9bcdce3999b0b9a8a67702869a6c8138e39316",
+      "jsonPointer": "/locators/257",
+      "paths": [
+        "packages/desktop/src/renderer/settings/ShortcutsSection.tsx"
+      ],
+      "hashFields": {},
+      "uniqueDirectPath": true,
+      "uniqueDirectHash": false,
+      "metadata": {},
+      "manifestNameHint": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+      "documentSha256": "85af2a5f57c328d1c9e016385a9bcdce3999b0b9a8a67702869a6c8138e39316",
+      "jsonPointer": "/locators/258",
+      "paths": [
+        "packages/desktop/src/renderer/settings/ShortcutsSection.tsx"
+      ],
+      "hashFields": {},
+      "uniqueDirectPath": true,
+      "uniqueDirectHash": false,
+      "metadata": {},
+      "manifestNameHint": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+      "documentSha256": "85af2a5f57c328d1c9e016385a9bcdce3999b0b9a8a67702869a6c8138e39316",
+      "jsonPointer": "/locators/269",
+      "paths": [
+        "packages/desktop/src/renderer/settings/ShortcutsSection.tsx"
+      ],
+      "hashFields": {},
+      "uniqueDirectPath": true,
+      "uniqueDirectHash": false,
+      "metadata": {},
+      "manifestNameHint": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+      "documentSha256": "85af2a5f57c328d1c9e016385a9bcdce3999b0b9a8a67702869a6c8138e39316",
+      "jsonPointer": "/locators/270",
+      "paths": [
+        "packages/desktop/src/renderer/settings/ShortcutsSection.tsx"
+      ],
+      "hashFields": {},
+      "uniqueDirectPath": true,
+      "uniqueDirectHash": false,
+      "metadata": {},
+      "manifestNameHint": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+      "documentSha256": "85af2a5f57c328d1c9e016385a9bcdce3999b0b9a8a67702869a6c8138e39316",
+      "jsonPointer": "/locators/529",
+      "paths": [
+        "packages/desktop/src/renderer/settings/ShortcutsSection.tsx"
+      ],
+      "hashFields": {},
+      "uniqueDirectPath": true,
+      "uniqueDirectHash": false,
+      "metadata": {},
+      "manifestNameHint": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+      "documentSha256": "85af2a5f57c328d1c9e016385a9bcdce3999b0b9a8a67702869a6c8138e39316",
+      "jsonPointer": "/locators/530",
+      "paths": [
+        "packages/desktop/src/renderer/settings/ShortcutsSection.tsx"
+      ],
+      "hashFields": {},
+      "uniqueDirectPath": true,
+      "uniqueDirectHash": false,
+      "metadata": {},
+      "manifestNameHint": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+      "documentSha256": "85af2a5f57c328d1c9e016385a9bcdce3999b0b9a8a67702869a6c8138e39316",
+      "jsonPointer": "/locators/531",
+      "paths": [
+        "packages/desktop/src/renderer/settings/ShortcutsSection.tsx"
+      ],
+      "hashFields": {},
+      "uniqueDirectPath": true,
+      "uniqueDirectHash": false,
+      "metadata": {},
+      "manifestNameHint": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+      "documentSha256": "85af2a5f57c328d1c9e016385a9bcdce3999b0b9a8a67702869a6c8138e39316",
+      "jsonPointer": "/locators/532",
+      "paths": [
+        "packages/desktop/src/renderer/settings/ShortcutsSection.tsx"
+      ],
+      "hashFields": {},
+      "uniqueDirectPath": true,
+      "uniqueDirectHash": false,
+      "metadata": {},
+      "manifestNameHint": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+      "documentSha256": "85af2a5f57c328d1c9e016385a9bcdce3999b0b9a8a67702869a6c8138e39316",
+      "jsonPointer": "/locators/533",
+      "paths": [
+        "packages/desktop/src/renderer/settings/ShortcutsSection.tsx"
+      ],
+      "hashFields": {},
+      "uniqueDirectPath": true,
+      "uniqueDirectHash": false,
+      "metadata": {},
+      "manifestNameHint": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+      "documentSha256": "85af2a5f57c328d1c9e016385a9bcdce3999b0b9a8a67702869a6c8138e39316",
+      "jsonPointer": "/locators/534",
+      "paths": [
+        "packages/desktop/src/renderer/settings/ShortcutsSection.tsx"
+      ],
+      "hashFields": {},
+      "uniqueDirectPath": true,
+      "uniqueDirectHash": false,
+      "metadata": {},
+      "manifestNameHint": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+      "documentSha256": "85af2a5f57c328d1c9e016385a9bcdce3999b0b9a8a67702869a6c8138e39316",
+      "jsonPointer": "/locators/535",
+      "paths": [
+        "packages/desktop/src/renderer/settings/ShortcutsSection.tsx"
+      ],
+      "hashFields": {},
+      "uniqueDirectPath": true,
+      "uniqueDirectHash": false,
+      "metadata": {},
+      "manifestNameHint": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+      "documentSha256": "85af2a5f57c328d1c9e016385a9bcdce3999b0b9a8a67702869a6c8138e39316",
+      "jsonPointer": "/locators/536",
+      "paths": [
+        "packages/desktop/src/renderer/settings/ShortcutsSection.tsx"
+      ],
+      "hashFields": {},
+      "uniqueDirectPath": true,
+      "uniqueDirectHash": false,
+      "metadata": {},
+      "manifestNameHint": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+      "documentSha256": "85af2a5f57c328d1c9e016385a9bcdce3999b0b9a8a67702869a6c8138e39316",
+      "jsonPointer": "/locators/537",
+      "paths": [
+        "packages/desktop/src/renderer/settings/ShortcutsSection.tsx"
+      ],
+      "hashFields": {},
+      "uniqueDirectPath": true,
+      "uniqueDirectHash": false,
+      "metadata": {},
+      "manifestNameHint": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+      "documentSha256": "85af2a5f57c328d1c9e016385a9bcdce3999b0b9a8a67702869a6c8138e39316",
+      "jsonPointer": "/locators/538",
+      "paths": [
+        "packages/desktop/src/renderer/settings/ShortcutsSection.tsx"
+      ],
+      "hashFields": {},
+      "uniqueDirectPath": true,
+      "uniqueDirectHash": false,
+      "metadata": {},
+      "manifestNameHint": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+      "documentSha256": "85af2a5f57c328d1c9e016385a9bcdce3999b0b9a8a67702869a6c8138e39316",
+      "jsonPointer": "/locators/539",
+      "paths": [
+        "packages/desktop/src/renderer/settings/ShortcutsSection.tsx"
+      ],
+      "hashFields": {},
+      "uniqueDirectPath": true,
+      "uniqueDirectHash": false,
+      "metadata": {},
+      "manifestNameHint": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+      "documentSha256": "85af2a5f57c328d1c9e016385a9bcdce3999b0b9a8a67702869a6c8138e39316",
+      "jsonPointer": "/locators/540",
+      "paths": [
+        "packages/desktop/src/renderer/settings/ShortcutsSection.tsx"
+      ],
+      "hashFields": {},
+      "uniqueDirectPath": true,
+      "uniqueDirectHash": false,
+      "metadata": {},
+      "manifestNameHint": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+      "documentSha256": "85af2a5f57c328d1c9e016385a9bcdce3999b0b9a8a67702869a6c8138e39316",
+      "jsonPointer": "/locators/541",
+      "paths": [
+        "packages/desktop/src/renderer/settings/ShortcutsSection.tsx"
+      ],
+      "hashFields": {},
+      "uniqueDirectPath": true,
+      "uniqueDirectHash": false,
+      "metadata": {},
+      "manifestNameHint": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+      "documentSha256": "85af2a5f57c328d1c9e016385a9bcdce3999b0b9a8a67702869a6c8138e39316",
+      "jsonPointer": "/locators/542",
+      "paths": [
+        "packages/desktop/src/renderer/settings/ShortcutsSection.tsx"
+      ],
+      "hashFields": {},
+      "uniqueDirectPath": true,
+      "uniqueDirectHash": false,
+      "metadata": {},
+      "manifestNameHint": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+      "documentSha256": "85af2a5f57c328d1c9e016385a9bcdce3999b0b9a8a67702869a6c8138e39316",
+      "jsonPointer": "/locators/543",
+      "paths": [
+        "packages/desktop/src/renderer/settings/ShortcutsSection.tsx"
+      ],
+      "hashFields": {},
+      "uniqueDirectPath": true,
+      "uniqueDirectHash": false,
+      "metadata": {},
+      "manifestNameHint": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+      "documentSha256": "85af2a5f57c328d1c9e016385a9bcdce3999b0b9a8a67702869a6c8138e39316",
+      "jsonPointer": "/locators/544",
+      "paths": [
+        "packages/desktop/src/renderer/settings/ShortcutsSection.tsx"
+      ],
+      "hashFields": {},
+      "uniqueDirectPath": true,
+      "uniqueDirectHash": false,
+      "metadata": {},
+      "manifestNameHint": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+      "documentSha256": "85af2a5f57c328d1c9e016385a9bcdce3999b0b9a8a67702869a6c8138e39316",
+      "jsonPointer": "/locators/667",
+      "paths": [
+        "packages/desktop/src/renderer/settings/ShortcutsSection.tsx"
+      ],
+      "hashFields": {},
+      "uniqueDirectPath": true,
+      "uniqueDirectHash": false,
+      "metadata": {},
+      "manifestNameHint": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+      "documentSha256": "85af2a5f57c328d1c9e016385a9bcdce3999b0b9a8a67702869a6c8138e39316",
+      "jsonPointer": "/locators/668",
+      "paths": [
+        "packages/desktop/src/renderer/settings/ShortcutsSection.tsx"
+      ],
+      "hashFields": {},
+      "uniqueDirectPath": true,
+      "uniqueDirectHash": false,
+      "metadata": {},
+      "manifestNameHint": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+      "documentSha256": "85af2a5f57c328d1c9e016385a9bcdce3999b0b9a8a67702869a6c8138e39316",
+      "jsonPointer": "/locators/727",
+      "paths": [
+        "packages/desktop/src/renderer/settings/ShortcutsSection.tsx"
+      ],
+      "hashFields": {},
+      "uniqueDirectPath": true,
+      "uniqueDirectHash": false,
+      "metadata": {},
+      "manifestNameHint": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+      "documentSha256": "85af2a5f57c328d1c9e016385a9bcdce3999b0b9a8a67702869a6c8138e39316",
+      "jsonPointer": "/locators/728",
+      "paths": [
+        "packages/desktop/src/renderer/settings/ShortcutsSection.tsx"
+      ],
+      "hashFields": {},
+      "uniqueDirectPath": true,
+      "uniqueDirectHash": false,
+      "metadata": {},
+      "manifestNameHint": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+      "documentSha256": "85af2a5f57c328d1c9e016385a9bcdce3999b0b9a8a67702869a6c8138e39316",
+      "jsonPointer": "/locators/765",
+      "paths": [
+        "packages/desktop/src/renderer/settings/ShortcutsSection.tsx"
+      ],
+      "hashFields": {},
+      "uniqueDirectPath": true,
+      "uniqueDirectHash": false,
+      "metadata": {},
+      "manifestNameHint": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+      "documentSha256": "85af2a5f57c328d1c9e016385a9bcdce3999b0b9a8a67702869a6c8138e39316",
+      "jsonPointer": "/locators/817",
+      "paths": [
+        "packages/desktop/src/renderer/settings/ShortcutsSection.tsx"
+      ],
+      "hashFields": {},
+      "uniqueDirectPath": true,
+      "uniqueDirectHash": false,
+      "metadata": {},
+      "manifestNameHint": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/history-locators.json",
+      "documentSha256": "85af2a5f57c328d1c9e016385a9bcdce3999b0b9a8a67702869a6c8138e39316",
+      "jsonPointer": "/locators/818",
+      "paths": [
+        "packages/desktop/src/renderer/settings/ShortcutsSection.tsx"
+      ],
+      "hashFields": {},
+      "uniqueDirectPath": true,
+      "uniqueDirectHash": false,
+      "metadata": {},
+      "manifestNameHint": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round50/evidence/frontier-selection/source-manifest.json",
+      "documentSha256": "5343e12c9a27ab2fd6f616dc13ed3a6e0c8589fe4ae570fc21c892fc0c1303f9",
+      "jsonPointer": "/files/22",
+      "paths": [
+        "packages/desktop/src/renderer/settings/ShortcutsSection.tsx"
+      ],
+      "hashFields": {
+        "sha256": "ee9161604475561743cab550fe144c9f0bd8fa045fe18d1ef8664d5c851dc1a4",
+        "endingSha256": "ee9161604475561743cab550fe144c9f0bd8fa045fe18d1ef8664d5c851dc1a4"
+      },
+      "uniqueDirectPath": true,
+      "uniqueDirectHash": true,
+      "metadata": {
+        "lines": 110,
+        "coverage": "hash-only",
+        "selectedLineRanges": [],
+        "displayedLineRanges": [],
+        "initialPinIsSemanticReadProof": false
+      },
+      "manifestNameHint": true
+    },
+    {
+      "document": "docs/audit-2026-10-17-round50/evidence/packet-review/checks.json",
+      "documentSha256": "93065b4c156a054749aa3d32ed3b331f7d85c0d82466c1e716c3502e7b9e9560",
+      "jsonPointer": "/packets/3/manifestRangeChecks/22",
+      "paths": [
+        "packages/desktop/src/renderer/settings/ShortcutsSection.tsx"
+      ],
+      "hashFields": {
+        "sha256": "ee9161604475561743cab550fe144c9f0bd8fa045fe18d1ef8664d5c851dc1a4"
+      },
+      "uniqueDirectPath": true,
+      "uniqueDirectHash": true,
+      "metadata": {
+        "coverage": "hash-only",
+        "declaredFileLines": 110,
+        "selectedLineRanges": [],
+        "displayedLineRanges": [],
+        "navigationLineRanges": [],
+        "computedSemanticLines": 0,
+        "declaredSemanticLines": 0,
+        "computedBodyDisplayedLines": 0,
+        "declaredBodyDisplayedLines": null,
+        "computedDisplayIncludingNavigationLines": 0,
+        "declaredDisplayIncludingNavigationLines": 0,
+        "allRangesWithinDeclaredFileLength": true,
+        "fullOnlyIfAllDeclaredLinesSelected": true,
+        "purposeOrScope": null
+      },
+      "manifestNameHint": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round50/source-manifest.json",
+      "documentSha256": "62ee29069f3994a9c24c4a4d22c99dded52da412235c938a8306bc166dc94fdb",
+      "jsonPointer": "/files/56",
+      "paths": [
+        "packages/desktop/src/renderer/settings/ShortcutsSection.tsx"
+      ],
+      "hashFields": {
+        "sha256": "ee9161604475561743cab550fe144c9f0bd8fa045fe18d1ef8664d5c851dc1a4",
+        "currentSha256": "ee9161604475561743cab550fe144c9f0bd8fa045fe18d1ef8664d5c851dc1a4",
+        "mainSha256": "ee9161604475561743cab550fe144c9f0bd8fa045fe18d1ef8664d5c851dc1a4"
+      },
+      "uniqueDirectPath": true,
+      "uniqueDirectHash": true,
+      "metadata": {},
+      "manifestNameHint": true
+    },
+    {
+      "document": "docs/audit-2026-10-17-round50/source-manifest.json",
+      "documentSha256": "62ee29069f3994a9c24c4a4d22c99dded52da412235c938a8306bc166dc94fdb",
+      "jsonPointer": "/hashOnlyChecks/26",
+      "paths": [
+        "packages/desktop/src/renderer/settings/ShortcutsSection.tsx"
+      ],
+      "hashFields": {
+        "sha256": "ee9161604475561743cab550fe144c9f0bd8fa045fe18d1ef8664d5c851dc1a4"
+      },
+      "uniqueDirectPath": true,
+      "uniqueDirectHash": true,
+      "metadata": {
+        "coverage": "hash-only",
+        "note": "Original timing/ranges/null and same-read limitations retained; formalization adds no repeated semantic read."
+      },
+      "manifestNameHint": true
+    },
+    {
+      "document": "docs/review-2026-10-12/validation/desktop-renderer-results.json",
+      "documentSha256": "56d401b51a87edae7c87e0e90cf6784b8aeb37215abf20a3f79aa294f0007ac1",
+      "jsonPointer": "/230",
+      "paths": [
+        "packages/desktop/src/renderer/settings/ShortcutsSection.test.tsx"
+      ],
+      "hashFields": {},
+      "uniqueDirectPath": true,
+      "uniqueDirectHash": false,
+      "metadata": {},
+      "manifestNameHint": false
+    },
+    {
+      "document": "docs/review-2026-10-12/validation/original-baseline-evidence-round28/independent-existing-tests.receipt.json",
+      "documentSha256": "73ad4e09fdb09e15673e0c5e7a585f46d48e7756438c63635f853b7b289be9af",
+      "jsonPointer": "/groups/1/rawLogs/230",
+      "paths": [
+        "packages/desktop/src/renderer/settings/ShortcutsSection.test.tsx"
+      ],
+      "hashFields": {
+        "sha256": "43b820e5b57ba0efc7ef77360ac1fd56c00194b8e6f7c24e29ab0c78a9699394"
+      },
+      "uniqueDirectPath": true,
+      "uniqueDirectHash": true,
+      "metadata": {},
+      "manifestNameHint": false
+    },
+    {
+      "document": "docs/review-2026-10-12/validation/original-baseline-evidence-round28/manifest.json",
+      "documentSha256": "16f4dac9f9f13073662fcc299b72efd7add8ff28ab8868f3b9cb7d1a7c45d763",
+      "jsonPointer": "/logs/371",
+      "paths": [
+        "packages/desktop/src/renderer/settings/ShortcutsSection.test.tsx"
+      ],
+      "hashFields": {
+        "sha256": "43b820e5b57ba0efc7ef77360ac1fd56c00194b8e6f7c24e29ab0c78a9699394"
+      },
+      "uniqueDirectPath": true,
+      "uniqueDirectHash": true,
+      "metadata": {},
+      "manifestNameHint": true
+    }
+  ],
+  "association": "Only same-object unique direct sourcepath/sourceSHA; artifact hashes not source bindings; original qualifiers must be reviewed."
+}

@@ -1,0 +1,19 @@
+{
+  "command": [
+    "rg",
+    "-l",
+    "ContextRing",
+    "packages/desktop/src/renderer"
+  ],
+  "exitCode": 0,
+  "files": [
+    "packages/desktop/src/renderer/types.test.ts",
+    "packages/desktop/src/renderer/chat/anchored-popovers.browser.fixture.mjs",
+    "packages/desktop/src/renderer/chat/ContextRing.tsx",
+    "packages/desktop/src/renderer/types.ts",
+    "packages/desktop/src/renderer/ChatView.tsx",
+    "packages/desktop/src/renderer/messages/TurnUsageMessageView.tsx"
+  ],
+  "stderr": "",
+  "filenameOnly": true
+}

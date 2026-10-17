@@ -1,0 +1,20 @@
+{
+  "files": [
+    {
+      "path": "packages/desktop/src/renderer/MessageStream.tsx",
+      "bytes": 37921,
+      "sha256": "f74d19bddcdc48c0de2e63921ba598d733e2f1c3d58f68e7c8c0b32046ddbd4c",
+      "lines": 928,
+      "pinnedUTC": "2026-10-17T17:16:45.010473+00:00",
+      "timing": "Before current96 contentlocator/selected read; filename-only import inventory already seen"
+    },
+    {
+      "path": "packages/desktop/src/renderer/messages/AssistantMessageView.tsx",
+      "bytes": 3880,
+      "sha256": "b08bd86c993873f10902024d091628d99a0d60a42dce74a3938fa2287f8bfe86",
+      "lines": 98,
+      "pinnedUTC": "2026-10-17T17:16:45.012384+00:00",
+      "timing": "Before current96 contentlocator/selected read; filename-only import inventory already seen"
+    }
+  ]
+}

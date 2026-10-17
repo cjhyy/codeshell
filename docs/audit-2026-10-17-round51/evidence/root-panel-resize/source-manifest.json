@@ -1,0 +1,237 @@
+{
+  "rootReportedReadBaseline": "424ef9c8953eaaa295d24d63c49127aa8b3ea79e",
+  "files": [
+    {
+      "path": "packages/desktop/src/renderer/app/panelResize.ts",
+      "bytes": 4944,
+      "lines": 138,
+      "sha256": "5b675510d786e7ff066a37d640a82b81e7a424625b71356dbbf42c2231cea1eb",
+      "beforeCurrentBodyAndLineNavigation": true,
+      "firstEverReadClaim": null,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          1,
+          21
+        ],
+        [
+          29,
+          40
+        ],
+        [
+          78,
+          113
+        ],
+        [
+          117,
+          138
+        ]
+      ],
+      "displayedLineRanges": [
+        [
+          1,
+          138
+        ]
+      ],
+      "semanticLineCount": 91,
+      "bodyDisplayedLineCount": 138,
+      "endingSha256": "5b675510d786e7ff066a37d640a82b81e7a424625b71356dbbf42c2231cea1eb",
+      "endingBytes": 4944,
+      "endingUTC": "2026-10-17T17:21:46.757043+00:00",
+      "scope": "Ordinary finite width clamp, gesture state/commit/cancel callback source and real handle/props chain only. Guest/native mouse ownership, browser event/frame ordering, actual layout/storage effects and Host lifecycle are not certified. Whole138 source displayed, selected semantic ranges do not imply full module review."
+    },
+    {
+      "path": "packages/desktop/src/renderer/app/usePanelBuckets.ts",
+      "bytes": 40459,
+      "lines": 1033,
+      "sha256": "77cfff3fd385f1630540b5b19bc2bac4fbc21e2a593ff4cf4209c8bdea91de8f",
+      "beforeCurrentLineNavigationOrBody": true,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          734,
+          766
+        ],
+        [
+          1019,
+          1021
+        ]
+      ],
+      "displayedLineRanges": [
+        [
+          734,
+          766
+        ],
+        [
+          1016,
+          1024
+        ]
+      ],
+      "semanticLineCount": 36,
+      "bodyDisplayedLineCount": 42,
+      "endingSha256": "77cfff3fd385f1630540b5b19bc2bac4fbc21e2a593ff4cf4209c8bdea91de8f",
+      "endingBytes": 40459,
+      "endingUTC": "2026-10-17T17:21:46.757043+00:00",
+      "scope": "Ordinary finite width clamp, gesture state/commit/cancel callback source and real handle/props chain only. Guest/native mouse ownership, browser event/frame ordering, actual layout/storage effects and Host lifecycle are not certified. Whole138 source displayed, selected semantic ranges do not imply full module review."
+    },
+    {
+      "path": "packages/desktop/src/renderer/App.tsx",
+      "bytes": 122863,
+      "lines": 2924,
+      "sha256": "02ae12bfccf26878226720ad90282a6a11a1fdc3e05efd1ce54a09d256d5d715",
+      "beforeCurrentLineNavigationAndBody": true,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          1139,
+          1140
+        ],
+        [
+          1150,
+          1150
+        ],
+        [
+          2764,
+          2765
+        ]
+      ],
+      "displayedLineRanges": [
+        [
+          1127,
+          1145
+        ],
+        [
+          2753,
+          2769
+        ],
+        [
+          1150,
+          1150
+        ]
+      ],
+      "semanticLineCount": 5,
+      "bodyDisplayedLineCount": 37,
+      "endingSha256": "02ae12bfccf26878226720ad90282a6a11a1fdc3e05efd1ce54a09d256d5d715",
+      "endingBytes": 122863,
+      "endingUTC": "2026-10-17T17:21:46.757043+00:00",
+      "scope": "Ordinary finite width clamp, gesture state/commit/cancel callback source and real handle/props chain only. Guest/native mouse ownership, browser event/frame ordering, actual layout/storage effects and Host lifecycle are not certified. Whole138 source displayed, selected semantic ranges do not imply full module review."
+    },
+    {
+      "path": "packages/desktop/src/renderer/app/SessionPanelDock.tsx",
+      "bytes": 10859,
+      "lines": 242,
+      "sha256": "92858a55a71f223a307fd0def53445610b417cf93fa5839fb475dabb38666396",
+      "beforeCurrentLineNavigationAndBody": true,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          45,
+          46
+        ],
+        [
+          207,
+          208
+        ]
+      ],
+      "displayedLineRanges": [
+        [
+          38,
+          48
+        ],
+        [
+          190,
+          215
+        ]
+      ],
+      "semanticLineCount": 4,
+      "bodyDisplayedLineCount": 37,
+      "endingSha256": "92858a55a71f223a307fd0def53445610b417cf93fa5839fb475dabb38666396",
+      "endingBytes": 10859,
+      "endingUTC": "2026-10-17T17:21:46.757043+00:00",
+      "scope": "Ordinary finite width clamp, gesture state/commit/cancel callback source and real handle/props chain only. Guest/native mouse ownership, browser event/frame ordering, actual layout/storage effects and Host lifecycle are not certified. Whole138 source displayed, selected semantic ranges do not imply full module review."
+    },
+    {
+      "path": "packages/desktop/src/renderer/panels/PanelArea.tsx",
+      "bytes": 34235,
+      "lines": 928,
+      "sha256": "cae897bb3073a68df32282d2228123dfcbade14fc3bc3d5192f52e95b218af2a",
+      "beforeCurrentLineNavigationAndBody": true,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          540,
+          557
+        ],
+        [
+          573,
+          586
+        ]
+      ],
+      "displayedLineRanges": [
+        [
+          540,
+          589
+        ]
+      ],
+      "semanticLineCount": 32,
+      "bodyDisplayedLineCount": 50,
+      "endingSha256": "cae897bb3073a68df32282d2228123dfcbade14fc3bc3d5192f52e95b218af2a",
+      "endingBytes": 34235,
+      "endingUTC": "2026-10-17T17:21:46.757043+00:00",
+      "scope": "Ordinary finite width clamp, gesture state/commit/cancel callback source and real handle/props chain only. Guest/native mouse ownership, browser event/frame ordering, actual layout/storage effects and Host lifecycle are not certified. Whole138 source displayed, selected semantic ranges do not imply full module review."
+    }
+  ],
+  "hashOnlyFiles": [
+    {
+      "path": "packages/desktop/src/renderer/app/panelResize.test.ts",
+      "bytes": 4424,
+      "lines": 126,
+      "sha256": "49134fe3a0ac029610e72adce5bcbddc8bcb3066f5849a4026f6f9081ff674d4",
+      "beforeCurrentLineNavigationOrBody": true,
+      "coverage": "hash-only",
+      "selectedLineRanges": [],
+      "displayedLineRanges": [],
+      "semanticLineCount": 0,
+      "bodyDisplayedLineCount": 0,
+      "endingSha256": "49134fe3a0ac029610e72adce5bcbddc8bcb3066f5849a4026f6f9081ff674d4",
+      "endingBytes": 4424,
+      "endingUTC": "2026-10-17T17:21:46.757043+00:00",
+      "scope": "Ordinary finite width clamp, gesture state/commit/cancel callback source and real handle/props chain only. Guest/native mouse ownership, browser event/frame ordering, actual layout/storage effects and Host lifecycle are not certified. Whole138 source displayed, selected semantic ranges do not imply full module review."
+    }
+  ],
+  "instructionHashOnly": [
+    {
+      "path": "CODESHELL.md",
+      "bytes": 17639,
+      "lines": 217,
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "coverage": "hash-only this prep; prior instruction reading retained"
+    },
+    {
+      "path": "AGENTS.md",
+      "bytes": 206,
+      "lines": 5,
+      "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "coverage": "hash-only this prep; prior instruction reading retained"
+    }
+  ],
+  "counts": {
+    "selected": 5,
+    "full": 0,
+    "semanticLines": 168,
+    "bodyDisplayedLines": 304,
+    "testDeclarations": 0
+  },
+  "historyReading": {
+    "machineFiles": 4895,
+    "pathHits": 39,
+    "shaHits": 20,
+    "resizeCauseHits": 68,
+    "cap": 60,
+    "compactScopeRowsRead": 34,
+    "notAllRawObjectsOrCauseWindowsRead": true,
+    "sameShaOldFullEstablished": false
+  },
+  "productRuns": 0,
+  "globalCoverageUpdated": false
+}

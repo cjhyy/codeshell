@@ -1,0 +1,95 @@
+{
+  "expectedCount": 18,
+  "checks": [
+    {
+      "path": "evidence/context-ring/report.md",
+      "bytes": 4914,
+      "sha256": "62e237bb609f53dab51d2565a7f4021f6849d3622b59462e050ad0b72771d9f5"
+    },
+    {
+      "path": "evidence/context-ring/source-manifest.json",
+      "bytes": 13684,
+      "sha256": "6bab3e691f584b5a4649e28465ae075d0bc6b46594e041b1b9f9f54fa092f366"
+    },
+    {
+      "path": "evidence/context-ring/reviewer-receipt.json",
+      "bytes": 3393,
+      "sha256": "62ac51fb52090ef76a5505e6bedd8ef76aaa68b6e2748407fe8b3767917039dd"
+    },
+    {
+      "path": "evidence/context-boundary/report.md",
+      "bytes": 5931,
+      "sha256": "0320bbfa8d2c5f3b297cceba9356a6f6d81f12710c3332561d231e6303c77ee2"
+    },
+    {
+      "path": "evidence/context-boundary/source-manifest.json",
+      "bytes": 10818,
+      "sha256": "630c202f4da7a451d90dbb10e55c4b8fc1a356e59ffa5e8b51ab7af90bf11d6b"
+    },
+    {
+      "path": "evidence/context-boundary/reviewer-receipt.json",
+      "bytes": 3392,
+      "sha256": "294985e56f07116586e6bc82f6338f5bbe3715189521ed3c64a53685c37439a4"
+    },
+    {
+      "path": "evidence/time-full-gate/report.md",
+      "bytes": 4399,
+      "sha256": "af93ea7a3d782c541a2bbf3d3fbb01220b0aa231745951d339b867783fd35ae1"
+    },
+    {
+      "path": "evidence/time-full-gate/source-manifest.json",
+      "bytes": 6614,
+      "sha256": "db31a674354ce888e01caa09a1dbef81e3207b5f883650353b02d0408c11e5ce"
+    },
+    {
+      "path": "evidence/time-full-gate/artifact-receipt.json",
+      "bytes": 3331,
+      "sha256": "8d474bd446d486cab7559a3306097f4300ef5cb1a911f33c839c0774e859ccb5"
+    },
+    {
+      "path": "evidence/root-panel-resize/report.md",
+      "bytes": 2332,
+      "sha256": "1f39961bb48212a4d14ed8c2e8fb822e020dc9abdf6fd8d140221e23604c4f98"
+    },
+    {
+      "path": "evidence/root-panel-resize/source-manifest.json",
+      "bytes": 7838,
+      "sha256": "ca3ebe5de3787018e99addf517fa58bfd9e45a612708042428a69497c2ebb4dd"
+    },
+    {
+      "path": "evidence/root-panel-resize/reviewer-receipt.json",
+      "bytes": 4233,
+      "sha256": "fe6476c9895fa29a76879be61a93038d3bbcdc8c997d828576dce47e17f7f56c"
+    },
+    {
+      "path": "evidence/shortcuts-reference/report.md",
+      "bytes": 5500,
+      "sha256": "21edf19f1f6aab7d615de34e0431f1d5dfd74d851f8e0b24ff71212b67f5707c"
+    },
+    {
+      "path": "evidence/shortcuts-reference/source-manifest.json",
+      "bytes": 15181,
+      "sha256": "19270b89b4e8c296313626ce1405261cdaf295daeb541b042bd952f695b18dc6"
+    },
+    {
+      "path": "evidence/shortcuts-reference/artifact-receipt.json",
+      "bytes": 4864,
+      "sha256": "7484b8d50f8a9e3fab101be9b03346feb188cedd5ddb6138abc2294967618a9b"
+    },
+    {
+      "path": "evidence/time-gate-review/report.md",
+      "bytes": 3078,
+      "sha256": "957a3c52c2b23c0dc4c0f337c776aa83a0c9cf21c488a4a24439fb705c6d975e"
+    },
+    {
+      "path": "evidence/time-gate-review/source-manifest.json",
+      "bytes": 1776,
+      "sha256": "10d6ee72bd3d4c8d6e030b74f61aed8de7bd72cbd8e55fe4e95bf594aee85167"
+    },
+    {
+      "path": "evidence/time-gate-review/reviewer-receipt.json",
+      "bytes": 1237,
+      "sha256": "4153c88414ad2a9176f11f5157175acd1daa53bf40f1f65cef9367888b51b876"
+    }
+  ]
+}

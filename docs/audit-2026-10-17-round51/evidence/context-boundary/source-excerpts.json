@@ -1,0 +1,1247 @@
+[
+  {
+    "path": "packages/desktop/src/renderer/messages/ContextBoundaryView.tsx",
+    "sha256": "bff0c43715622ace107ab48493754d34304fb013120d013e6d52768a18e24699",
+    "captureTiming": "After actual source displays dcd3ac/c00c6e/94e804/d19d8b/5d5ced; only already displayed lines. Not a pre-read pin.",
+    "displayedLines": [
+      {
+        "line": 1,
+        "text": "import React, { memo } from \"react\";"
+      },
+      {
+        "line": 2,
+        "text": "import { Archive, ChevronDown, Forward, Link2 } from \"lucide-react\";"
+      },
+      {
+        "line": 3,
+        "text": "import type { ContextBoundaryMessage } from \"../types\";"
+      },
+      {
+        "line": 4,
+        "text": "import { compactBoundaryDetail } from \"../chat/compactFeedback\";"
+      },
+      {
+        "line": 5,
+        "text": "import { useT } from \"../i18n/I18nProvider\";"
+      },
+      {
+        "line": 6,
+        "text": ""
+      },
+      {
+        "line": 7,
+        "text": "function ContextBoundaryViewImpl({ message }: { message: ContextBoundaryMessage }) {"
+      },
+      {
+        "line": 8,
+        "text": "  const { t, lang } = useT();"
+      },
+      {
+        "line": 9,
+        "text": "  if (message.contextTransfer) {"
+      },
+      {
+        "line": 10,
+        "text": "    const transfer = message.contextTransfer;"
+      },
+      {
+        "line": 11,
+        "text": "    return ("
+      },
+      {
+        "line": 12,
+        "text": "      <details className=\"group/context-package mx-4 my-3 min-w-0 overflow-hidden rounded-2xl border border-border/70 bg-card/70 shadow-sm\">"
+      },
+      {
+        "line": 13,
+        "text": "        <summary className=\"flex cursor-pointer list-none items-start gap-3 rounded-2xl px-4 py-3.5 outline-none transition-colors hover:bg-muted/25 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring [&::-webkit-details-marker]:hidden\">"
+      },
+      {
+        "line": 14,
+        "text": "          <span className=\"flex size-9 shrink-0 items-center justify-center rounded-xl border border-primary/10 bg-primary/5 text-primary\">"
+      },
+      {
+        "line": 15,
+        "text": "            <Forward size={17} aria-hidden=\"true\" />"
+      },
+      {
+        "line": 16,
+        "text": "          </span>"
+      },
+      {
+        "line": 17,
+        "text": "          <span className=\"min-w-0 flex-1\">"
+      },
+      {
+        "line": 18,
+        "text": "            <span className=\"block text-sm font-medium text-foreground\">"
+      },
+      {
+        "line": 19,
+        "text": "              {t(\"chat.contextPackage.cardTitle\")}"
+      },
+      {
+        "line": 20,
+        "text": "            </span>"
+      },
+      {
+        "line": 21,
+        "text": "            <span className=\"mt-0.5 block text-xs leading-5 text-muted-foreground\">"
+      },
+      {
+        "line": 22,
+        "text": "              {t(\"chat.contextPackage.cardHint\")}"
+      },
+      {
+        "line": 23,
+        "text": "            </span>"
+      },
+      {
+        "line": 24,
+        "text": "            <span className=\"mt-2 inline-flex rounded-md bg-muted/60 px-2 py-1 text-[11px] leading-4 tabular-nums text-muted-foreground\">"
+      },
+      {
+        "line": 25,
+        "text": "              {t(\"chat.contextPackage.cardMeta\", {"
+      },
+      {
+        "line": 26,
+        "text": "                tokens: transfer.estimatedTokens,"
+      },
+      {
+        "line": 27,
+        "text": "              })}"
+      },
+      {
+        "line": 28,
+        "text": "            </span>"
+      },
+      {
+        "line": 29,
+        "text": "          </span>"
+      },
+      {
+        "line": 30,
+        "text": "          <ChevronDown"
+      },
+      {
+        "line": 31,
+        "text": "            size={15}"
+      },
+      {
+        "line": 32,
+        "text": "            aria-hidden=\"true\""
+      },
+      {
+        "line": 33,
+        "text": "            className=\"mt-1 shrink-0 text-muted-foreground transition-transform group-open/context-package:rotate-180 motion-reduce:transition-none\""
+      },
+      {
+        "line": 34,
+        "text": "          />"
+      },
+      {
+        "line": 35,
+        "text": "        </summary>"
+      },
+      {
+        "line": 36,
+        "text": "        <div className=\"border-t border-border/60 px-4 pb-4 pt-3\">"
+      },
+      {
+        "line": 37,
+        "text": "          <div className=\"mb-2 text-[11px] font-medium text-muted-foreground\">"
+      },
+      {
+        "line": 38,
+        "text": "            {t(\"chat.contextPackage.summaryLabel\")}"
+      },
+      {
+        "line": 39,
+        "text": "          </div>"
+      },
+      {
+        "line": 40,
+        "text": "          <div className=\"whitespace-pre-wrap break-words text-sm leading-6 text-foreground\">"
+      },
+      {
+        "line": 41,
+        "text": "            {transfer.summary}"
+      },
+      {
+        "line": 42,
+        "text": "          </div>"
+      },
+      {
+        "line": 43,
+        "text": "          <details className=\"group/context-source mt-4 rounded-xl border border-border/60 bg-muted/20\">"
+      },
+      {
+        "line": 44,
+        "text": "            <summary className=\"flex cursor-pointer list-none items-center gap-2 rounded-xl px-3 py-2.5 text-xs text-muted-foreground outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring [&::-webkit-details-marker]:hidden\">"
+      },
+      {
+        "line": 45,
+        "text": "              <Link2 size={13} aria-hidden=\"true\" className=\"shrink-0\" />"
+      },
+      {
+        "line": 46,
+        "text": "              <span className=\"min-w-0 flex-1\">{t(\"chat.contextPackage.sourceDetails\")}</span>"
+      },
+      {
+        "line": 47,
+        "text": "              <ChevronDown"
+      },
+      {
+        "line": 48,
+        "text": "                size={13}"
+      },
+      {
+        "line": 49,
+        "text": "                aria-hidden=\"true\""
+      },
+      {
+        "line": 50,
+        "text": "                className=\"shrink-0 transition-transform group-open/context-source:rotate-180 motion-reduce:transition-none\""
+      },
+      {
+        "line": 51,
+        "text": "              />"
+      },
+      {
+        "line": 52,
+        "text": "            </summary>"
+      },
+      {
+        "line": 53,
+        "text": "            <div className=\"border-t border-border/50 px-3 py-3\">"
+      },
+      {
+        "line": 54,
+        "text": "              <p className=\"m-0 mb-3 text-[11px] text-muted-foreground\">"
+      },
+      {
+        "line": 55,
+        "text": "                {t(\"chat.contextPackage.sourceEvents\", { count: transfer.sourceEventCount })}"
+      },
+      {
+        "line": 56,
+        "text": "              </p>"
+      },
+      {
+        "line": 57,
+        "text": "              <dl className=\"space-y-3\">"
+      },
+      {
+        "line": 58,
+        "text": "                <div>"
+      },
+      {
+        "line": 59,
+        "text": "                  <dt className=\"text-[11px] text-muted-foreground\">"
+      },
+      {
+        "line": 60,
+        "text": "                    {t(\"chat.contextPackage.sourceSession\")}"
+      },
+      {
+        "line": 61,
+        "text": "                  </dt>"
+      },
+      {
+        "line": 62,
+        "text": "                  <dd className=\"m-0 mt-1 break-all font-mono text-[11px] leading-5 text-foreground\">"
+      },
+      {
+        "line": 63,
+        "text": "                    {transfer.sourceSessionId}"
+      },
+      {
+        "line": 64,
+        "text": "                  </dd>"
+      },
+      {
+        "line": 65,
+        "text": "                </div>"
+      },
+      {
+        "line": 66,
+        "text": "                <div>"
+      },
+      {
+        "line": 67,
+        "text": "                  <dt className=\"text-[11px] text-muted-foreground\">"
+      },
+      {
+        "line": 68,
+        "text": "                    {t(\"chat.contextPackage.sourceRange\")}"
+      },
+      {
+        "line": 69,
+        "text": "                  </dt>"
+      },
+      {
+        "line": 70,
+        "text": "                  <dd className=\"m-0 mt-1 break-all font-mono text-[11px] leading-5 text-foreground\">"
+      },
+      {
+        "line": 71,
+        "text": "                    {transfer.fromEventId} → {transfer.toEventId}"
+      },
+      {
+        "line": 72,
+        "text": "                  </dd>"
+      },
+      {
+        "line": 73,
+        "text": "                </div>"
+      },
+      {
+        "line": 74,
+        "text": "              </dl>"
+      },
+      {
+        "line": 75,
+        "text": "            </div>"
+      },
+      {
+        "line": 76,
+        "text": "          </details>"
+      },
+      {
+        "line": 77,
+        "text": "        </div>"
+      },
+      {
+        "line": 78,
+        "text": "      </details>"
+      },
+      {
+        "line": 79,
+        "text": "    );"
+      },
+      {
+        "line": 80,
+        "text": "  }"
+      },
+      {
+        "line": 81,
+        "text": "  return ("
+      },
+      {
+        "line": 82,
+        "text": "    <div className=\"my-3 flex items-center gap-3 px-4 text-xs text-muted-foreground\">"
+      },
+      {
+        "line": 83,
+        "text": "      <div className=\"h-px min-w-6 flex-1 bg-border\" />"
+      },
+      {
+        "line": 84,
+        "text": "      <div className=\"inline-flex max-w-full items-center gap-2 rounded-md border border-border bg-muted/30 px-3 py-2 shadow-sm\">"
+      },
+      {
+        "line": 85,
+        "text": "        <span className=\"flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-background text-muted-foreground\">"
+      },
+      {
+        "line": 86,
+        "text": "          <Archive size={14} />"
+      },
+      {
+        "line": 87,
+        "text": "        </span>"
+      },
+      {
+        "line": 88,
+        "text": "        <span className=\"min-w-0\">"
+      },
+      {
+        "line": 89,
+        "text": "          <span className=\"block truncate text-sm font-medium text-foreground\">"
+      },
+      {
+        "line": 90,
+        "text": "            {t(\"chat.compact.boundaryTitle\")}"
+      },
+      {
+        "line": 91,
+        "text": "          </span>"
+      },
+      {
+        "line": 92,
+        "text": "          <span className=\"block truncate tabular-nums\">"
+      },
+      {
+        "line": 93,
+        "text": "            {compactBoundaryDetail(message, t, lang)}"
+      },
+      {
+        "line": 94,
+        "text": "          </span>"
+      },
+      {
+        "line": 95,
+        "text": "        </span>"
+      },
+      {
+        "line": 96,
+        "text": "      </div>"
+      },
+      {
+        "line": 97,
+        "text": "      <div className=\"h-px min-w-6 flex-1 bg-border\" />"
+      },
+      {
+        "line": 98,
+        "text": "    </div>"
+      },
+      {
+        "line": 99,
+        "text": "  );"
+      },
+      {
+        "line": 100,
+        "text": "}"
+      },
+      {
+        "line": 101,
+        "text": ""
+      },
+      {
+        "line": 102,
+        "text": "// Memoized — see Markdown / ToolCard for the rationale."
+      },
+      {
+        "line": 103,
+        "text": "export const ContextBoundaryView = memo(ContextBoundaryViewImpl);"
+      }
+    ]
+  },
+  {
+    "path": "packages/desktop/src/renderer/types.ts",
+    "sha256": "6d7b173656e7ebe22d5c9347b7097d2040793610135c1f797d76139aa6f69845",
+    "captureTiming": "After actual source displays dcd3ac/c00c6e/94e804/d19d8b/5d5ced; only already displayed lines. Not a pre-read pin.",
+    "displayedLines": [
+      {
+        "line": 149,
+        "text": "export interface ContextBoundaryMessage {"
+      },
+      {
+        "line": 150,
+        "text": "  kind: \"context_boundary\";"
+      },
+      {
+        "line": 151,
+        "text": "  id: string;"
+      },
+      {
+        "line": 152,
+        "text": "  strategy: \"micro\" | \"summary\" | \"window\" | \"snip\" | \"emergency\" | \"compacted\" | \"range\" | \"notes\";"
+      },
+      {
+        "line": 153,
+        "text": "  before: number;"
+      },
+      {
+        "line": 154,
+        "text": "  after: number;"
+      },
+      {
+        "line": 155,
+        "text": "  contextTransfer?: {"
+      },
+      {
+        "line": 156,
+        "text": "    summary: string;"
+      },
+      {
+        "line": 157,
+        "text": "    sourceSessionId: string;"
+      },
+      {
+        "line": 158,
+        "text": "    fromEventId: string;"
+      },
+      {
+        "line": 159,
+        "text": "    toEventId: string;"
+      },
+      {
+        "line": 160,
+        "text": "    sourceEventCount: number;"
+      },
+      {
+        "line": 161,
+        "text": "    estimatedTokens: number;"
+      },
+      {
+        "line": 162,
+        "text": "  };"
+      },
+      {
+        "line": 163,
+        "text": "}"
+      },
+      {
+        "line": 164,
+        "text": ""
+      },
+      {
+        "line": 165,
+        "text": "export interface SystemMessage {"
+      },
+      {
+        "line": 166,
+        "text": "  kind: \"system\";"
+      },
+      {
+        "line": 167,
+        "text": "  id: string;"
+      },
+      {
+        "line": 168,
+        "text": "  text: string;"
+      },
+      {
+        "line": 332,
+        "text": "  | ContextBoundaryMessage"
+      },
+      {
+        "line": 1752,
+        "text": "    case \"context_compact\": {"
+      },
+      {
+        "line": 1753,
+        "text": "      const contextTransfer = ("
+      },
+      {
+        "line": 1754,
+        "text": "        event as typeof event & {"
+      },
+      {
+        "line": 1755,
+        "text": "          contextTransfer?: ContextBoundaryMessage[\"contextTransfer\"];"
+      },
+      {
+        "line": 1756,
+        "text": "        }"
+      },
+      {
+        "line": 1757,
+        "text": "      ).contextTransfer;"
+      },
+      {
+        "line": 1758,
+        "text": "      return {"
+      },
+      {
+        "line": 1759,
+        "text": "        ...state,"
+      },
+      {
+        "line": 1760,
+        "text": "        messages: ["
+      },
+      {
+        "line": 1761,
+        "text": "          ...state.messages,"
+      },
+      {
+        "line": 1762,
+        "text": "          {"
+      },
+      {
+        "line": 1763,
+        "text": "            kind: \"context_boundary\","
+      },
+      {
+        "line": 1764,
+        "text": "            id: freshId(\"ctx\"),"
+      },
+      {
+        "line": 1765,
+        "text": "            strategy: event.strategy,"
+      },
+      {
+        "line": 1766,
+        "text": "            before: event.before,"
+      },
+      {
+        "line": 1767,
+        "text": "            after: event.after,"
+      },
+      {
+        "line": 1768,
+        "text": "            ...(contextTransfer ? { contextTransfer } : {}),"
+      },
+      {
+        "line": 1769,
+        "text": "          },"
+      },
+      {
+        "line": 1770,
+        "text": "        ],"
+      },
+      {
+        "line": 1771,
+        "text": "      };"
+      },
+      {
+        "line": 1772,
+        "text": "    }"
+      }
+    ]
+  },
+  {
+    "path": "packages/desktop/src/renderer/chat/compactFeedback.ts",
+    "sha256": "3a149cfd7df17d5d642a6f47d221e478e645c027898b7cf5be0542b8fc4a39e5",
+    "captureTiming": "After actual source displays dcd3ac/c00c6e/94e804/d19d8b/5d5ced; only already displayed lines. Not a pre-read pin.",
+    "displayedLines": [
+      {
+        "line": 1,
+        "text": "import type { TFunction } from \"../i18n/I18nProvider\";"
+      },
+      {
+        "line": 2,
+        "text": ""
+      },
+      {
+        "line": 3,
+        "text": "export interface CompactFeedbackInput {"
+      },
+      {
+        "line": 4,
+        "text": "  before: number;"
+      },
+      {
+        "line": 5,
+        "text": "  after: number;"
+      },
+      {
+        "line": 6,
+        "text": "  strategy: string;"
+      },
+      {
+        "line": 7,
+        "text": "}"
+      },
+      {
+        "line": 8,
+        "text": ""
+      },
+      {
+        "line": 9,
+        "text": "const STRATEGY_LABEL_KEYS = {"
+      },
+      {
+        "line": 10,
+        "text": "  compacted: \"chat.compact.strategy.compacted\","
+      },
+      {
+        "line": 11,
+        "text": "  summary: \"chat.compact.strategy.summary\","
+      },
+      {
+        "line": 12,
+        "text": "  notes: \"chat.compact.strategy.notes\","
+      },
+      {
+        "line": 13,
+        "text": "  snip: \"chat.compact.strategy.snip\","
+      },
+      {
+        "line": 14,
+        "text": "  window: \"chat.compact.strategy.window\","
+      },
+      {
+        "line": 15,
+        "text": "  micro: \"chat.compact.strategy.micro\","
+      },
+      {
+        "line": 16,
+        "text": "  emergency: \"chat.compact.strategy.emergency\","
+      },
+      {
+        "line": 17,
+        "text": "} as const;"
+      },
+      {
+        "line": 18,
+        "text": ""
+      },
+      {
+        "line": 19,
+        "text": "type KnownCompactStrategy = keyof typeof STRATEGY_LABEL_KEYS;"
+      },
+      {
+        "line": 20,
+        "text": ""
+      },
+      {
+        "line": 21,
+        "text": "function isKnownCompactStrategy(strategy: string): strategy is KnownCompactStrategy {"
+      },
+      {
+        "line": 22,
+        "text": "  return Object.prototype.hasOwnProperty.call(STRATEGY_LABEL_KEYS, strategy);"
+      },
+      {
+        "line": 23,
+        "text": "}"
+      },
+      {
+        "line": 24,
+        "text": ""
+      },
+      {
+        "line": 25,
+        "text": "export function compactStrategyLabel(strategy: string, t: TFunction): string {"
+      },
+      {
+        "line": 26,
+        "text": "  return isKnownCompactStrategy(strategy) ? t(STRATEGY_LABEL_KEYS[strategy]) : strategy;"
+      },
+      {
+        "line": 27,
+        "text": "}"
+      },
+      {
+        "line": 28,
+        "text": ""
+      },
+      {
+        "line": 29,
+        "text": "export function compactReductionPercent(before: number, after: number): number {"
+      },
+      {
+        "line": 30,
+        "text": "  if (!Number.isFinite(before) || before <= 0) return 0;"
+      },
+      {
+        "line": 31,
+        "text": "  const saved = Math.max(0, before - after);"
+      },
+      {
+        "line": 32,
+        "text": "  return Math.round((saved / before) * 100);"
+      },
+      {
+        "line": 33,
+        "text": "}"
+      },
+      {
+        "line": 35,
+        "text": "export function compactWasNoop(result: CompactFeedbackInput): boolean {"
+      },
+      {
+        "line": 36,
+        "text": "  return result.after >= result.before;"
+      },
+      {
+        "line": 39,
+        "text": "function safeTokenCount(tokens: number): number {"
+      },
+      {
+        "line": 40,
+        "text": "  return Number.isFinite(tokens) ? Math.max(0, Math.round(tokens)) : 0;"
+      },
+      {
+        "line": 41,
+        "text": "}"
+      },
+      {
+        "line": 42,
+        "text": ""
+      },
+      {
+        "line": 43,
+        "text": "export function compactPromptTokensWithBaseline("
+      },
+      {
+        "line": 50,
+        "text": "  // message-body estimate after manual compaction."
+      },
+      {
+        "line": 51,
+        "text": "  const baseline = Math.max(0, safeTokenCount(currentPromptTokens) - safeTokenCount(result.before));"
+      },
+      {
+        "line": 52,
+        "text": "  return safeTokenCount(result.after) + baseline;"
+      },
+      {
+        "line": 55,
+        "text": "function formatTokenCount(tokens: number, locale?: string): string {"
+      },
+      {
+        "line": 56,
+        "text": "  const safe = safeTokenCount(tokens);"
+      },
+      {
+        "line": 57,
+        "text": "  return new Intl.NumberFormat(locale).format(safe);"
+      },
+      {
+        "line": 58,
+        "text": "}"
+      },
+      {
+        "line": 59,
+        "text": ""
+      },
+      {
+        "line": 60,
+        "text": "function compactSuccessParams(result: CompactFeedbackInput, t: TFunction, locale?: string) {"
+      },
+      {
+        "line": 61,
+        "text": "  return {"
+      },
+      {
+        "line": 62,
+        "text": "    before: formatTokenCount(result.before, locale),"
+      },
+      {
+        "line": 63,
+        "text": "    after: formatTokenCount(result.after, locale),"
+      },
+      {
+        "line": 64,
+        "text": "    percent: compactReductionPercent(result.before, result.after),"
+      },
+      {
+        "line": 65,
+        "text": "    strategy: compactStrategyLabel(result.strategy, t),"
+      },
+      {
+        "line": 66,
+        "text": "  };"
+      },
+      {
+        "line": 67,
+        "text": "}"
+      },
+      {
+        "line": 69,
+        "text": "export function compactOutcomeMessage("
+      },
+      {
+        "line": 76,
+        "text": "      tokens: formatTokenCount(result.after, locale),"
+      },
+      {
+        "line": 82,
+        "text": "export function compactBoundaryDetail("
+      },
+      {
+        "line": 83,
+        "text": "  result: CompactFeedbackInput,"
+      },
+      {
+        "line": 84,
+        "text": "  t: TFunction,"
+      },
+      {
+        "line": 85,
+        "text": "  locale?: string,"
+      },
+      {
+        "line": 86,
+        "text": "): string {"
+      },
+      {
+        "line": 87,
+        "text": "  return t(\"chat.compact.boundaryDetail\", compactSuccessParams(result, t, locale));"
+      },
+      {
+        "line": 88,
+        "text": "}"
+      }
+    ]
+  },
+  {
+    "path": "packages/desktop/src/renderer/MessageStream.tsx",
+    "sha256": "f74d19bddcdc48c0de2e63921ba598d733e2f1c3d58f68e7c8c0b32046ddbd4c",
+    "captureTiming": "After actual source displays dcd3ac/c00c6e/94e804/d19d8b/5d5ced; only already displayed lines. Not a pre-read pin.",
+    "displayedLines": [
+      {
+        "line": 8,
+        "text": "import { ContextBoundaryView } from \"./messages/ContextBoundaryView\";"
+      },
+      {
+        "line": 592,
+        "text": "      case \"task_list\":"
+      },
+      {
+        "line": 593,
+        "text": "        return null;"
+      },
+      {
+        "line": 594,
+        "text": "      case \"context_boundary\":"
+      },
+      {
+        "line": 595,
+        "text": "        return <ContextBoundaryView key={m.id} message={m} />;"
+      },
+      {
+        "line": 596,
+        "text": "      case \"goal_progress\":"
+      },
+      {
+        "line": 597,
+        "text": "        return <GoalProgressView key={m.id} message={m} onExtend={onExtendGoal} />;"
+      }
+    ]
+  },
+  {
+    "path": "packages/desktop/src/renderer/messages/TurnProcessGroupCard.tsx",
+    "sha256": "d96ccf9fdd6d252cf6bb8e39a9fe74a3b55df401a92beadfe17f0816a4884128",
+    "captureTiming": "After actual source displays dcd3ac/c00c6e/94e804/d19d8b/5d5ced; only already displayed lines. Not a pre-read pin.",
+    "displayedLines": [
+      {
+        "line": 7,
+        "text": "import { ContextBoundaryView } from \"./ContextBoundaryView\";"
+      },
+      {
+        "line": 184,
+        "text": "    if (m.kind === \"agent_group\") {"
+      },
+      {
+        "line": 185,
+        "text": "      return <AgentGroupCard key={m.id} group={m} />;"
+      },
+      {
+        "line": 186,
+        "text": "    }"
+      },
+      {
+        "line": 187,
+        "text": "    if (m.kind === \"context_boundary\") {"
+      },
+      {
+        "line": 188,
+        "text": "      return <ContextBoundaryView key={m.id} message={m} />;"
+      },
+      {
+        "line": 189,
+        "text": "    }"
+      },
+      {
+        "line": 190,
+        "text": "    if (m.kind === \"goal_progress\") {"
+      },
+      {
+        "line": 191,
+        "text": "      return <GoalProgressView key={m.id} message={m} />;"
+      }
+    ]
+  },
+  {
+    "path": "packages/desktop/src/renderer/transcripts.ts",
+    "sha256": "7a6ad6f03a9e7135851eca6f7e67e45b073a739920d0523b17ffa33cd2e63bc8",
+    "captureTiming": "After actual source displays dcd3ac/c00c6e/94e804/d19d8b/5d5ced; only already displayed lines. Not a pre-read pin.",
+    "displayedLines": [
+      {
+        "line": 40,
+        "text": ">();"
+      },
+      {
+        "line": 41,
+        "text": "/** Legacy byte value for the no-project conversation bucket. */"
+      },
+      {
+        "line": 42,
+        "text": "export const NO_REPO_KEY = \"__no_repo__\";"
+      },
+      {
+        "line": 43,
+        "text": ""
+      },
+      {
+        "line": 44,
+        "text": "/** Fold persisted transcript stream events through the renderer's canonical reducer. */"
+      },
+      {
+        "line": 45,
+        "text": "export function applyTranscriptStreamEvent("
+      },
+      {
+        "line": 46,
+        "text": "  state: MessagesReducerState,"
+      },
+      {
+        "line": 47,
+        "text": "  event: RendererStreamEvent,"
+      },
+      {
+        "line": 48,
+        "text": "  clock: () => number | undefined = Date.now,"
+      },
+      {
+        "line": 49,
+        "text": "): MessagesReducerState {"
+      },
+      {
+        "line": 50,
+        "text": "  if (event.type !== \"context_transfer\") {"
+      },
+      {
+        "line": 51,
+        "text": "    if ("
+      },
+      {
+        "line": 52,
+        "text": "      event.outputCursor &&"
+      },
+      {
+        "line": 53,
+        "text": "      state.outputCursor &&"
+      },
+      {
+        "line": 54,
+        "text": "      compareOutputCursors(event.outputCursor, state.outputCursor) !== undefined &&"
+      },
+      {
+        "line": 55,
+        "text": "      compareOutputCursors(event.outputCursor, state.outputCursor)! <= 0"
+      },
+      {
+        "line": 56,
+        "text": "    )"
+      },
+      {
+        "line": 57,
+        "text": "      return state;"
+      },
+      {
+        "line": 58,
+        "text": "    const next = applyStreamEvent(state, event, clock);"
+      },
+      {
+        "line": 59,
+        "text": "    return event.outputCursor ? { ...next, outputCursor: event.outputCursor } : next;"
+      },
+      {
+        "line": 60,
+        "text": "  }"
+      },
+      {
+        "line": 61,
+        "text": "  return {"
+      },
+      {
+        "line": 62,
+        "text": "    ...state,"
+      },
+      {
+        "line": 63,
+        "text": "    messages: ["
+      },
+      {
+        "line": 64,
+        "text": "      ...state.messages,"
+      },
+      {
+        "line": 65,
+        "text": "      {"
+      },
+      {
+        "line": 66,
+        "text": "        kind: \"context_boundary\","
+      },
+      {
+        "line": 67,
+        "text": "        id: `context-transfer:${event.sourceSessionId}:${event.fromEventId}:${event.toEventId}`,"
+      },
+      {
+        "line": 68,
+        "text": "        strategy: \"summary\","
+      },
+      {
+        "line": 69,
+        "text": "        before: 0,"
+      },
+      {
+        "line": 70,
+        "text": "        after: 0,"
+      },
+      {
+        "line": 71,
+        "text": "        contextTransfer: {"
+      },
+      {
+        "line": 72,
+        "text": "          summary: event.summary,"
+      },
+      {
+        "line": 73,
+        "text": "          sourceSessionId: event.sourceSessionId,"
+      },
+      {
+        "line": 74,
+        "text": "          fromEventId: event.fromEventId,"
+      },
+      {
+        "line": 75,
+        "text": "          toEventId: event.toEventId,"
+      },
+      {
+        "line": 76,
+        "text": "          sourceEventCount: event.sourceEventCount,"
+      },
+      {
+        "line": 77,
+        "text": "          estimatedTokens: event.estimatedTokens,"
+      },
+      {
+        "line": 78,
+        "text": "        },"
+      },
+      {
+        "line": 79,
+        "text": "      },"
+      },
+      {
+        "line": 80,
+        "text": "    ],"
+      },
+      {
+        "line": 81,
+        "text": "  };"
+      },
+      {
+        "line": 82,
+        "text": "}"
+      },
+      {
+        "line": 83,
+        "text": ""
+      },
+      {
+        "line": 84,
+        "text": "/**"
+      },
+      {
+        "line": 85,
+        "text": " * Placeholder title a session wears until auto-titled from the first user"
+      },
+      {
+        "line": 86,
+        "text": " * prompt. Used BOTH as the stored default and as the \"still unnamed?\" test in"
+      }
+    ]
+  },
+  {
+    "path": "packages/desktop/src/renderer/chat/compactFeedback.test.ts",
+    "sha256": "cf8c432525d72eb8547b04baf07af4fcbba719245d4d807c2d8ae52c0e4c0b65",
+    "captureTiming": "After actual source displays dcd3ac/c00c6e/94e804/d19d8b/5d5ced; only already displayed lines. Not a pre-read pin.",
+    "displayedLines": [
+      {
+        "line": 18,
+        "text": "describe(\"compact feedback\", () => {"
+      },
+      {
+        "line": 19,
+        "text": "  test(\"formats the no-op outcome as a clear localized notice\", () => {"
+      },
+      {
+        "line": 31,
+        "text": "  test(\"formats success detail with before/after, saved percent, and strategy label\", () => {"
+      },
+      {
+        "line": 32,
+        "text": "    const result = { before: 128_000, after: 46_000, strategy: \"summary\" };"
+      },
+      {
+        "line": 33,
+        "text": ""
+      },
+      {
+        "line": 34,
+        "text": "    expect(compactWasNoop(result)).toBe(false);"
+      },
+      {
+        "line": 35,
+        "text": "    expect(compactReductionPercent(result.before, result.after)).toBe(64);"
+      },
+      {
+        "line": 36,
+        "text": "    expect(compactBoundaryDetail(result, t(\"zh\"), \"en-US\")).toBe("
+      },
+      {
+        "line": 37,
+        "text": "      \"128,000 → 46,000 tokens · 省 64% · 摘要\","
+      },
+      {
+        "line": 38,
+        "text": "    );"
+      },
+      {
+        "line": 39,
+        "text": "    expect(compactBoundaryDetail(result, t(\"en\"), \"en-US\")).toBe("
+      },
+      {
+        "line": 40,
+        "text": "      \"128,000 → 46,000 tokens · saved 64% · summary\","
+      },
+      {
+        "line": 41,
+        "text": "    );"
+      },
+      {
+        "line": 42,
+        "text": "  });"
+      },
+      {
+        "line": 43,
+        "text": ""
+      },
+      {
+        "line": 44,
+        "text": "  test(\"maps compact strategies to friendly labels\", () => {"
+      },
+      {
+        "line": 45,
+        "text": "    expect(compactStrategyLabel(\"snip\", t(\"zh\"))).toBe(\"裁剪\");"
+      },
+      {
+        "line": 46,
+        "text": "    expect(compactStrategyLabel(\"window\", t(\"en\"))).toBe(\"window\");"
+      },
+      {
+        "line": 47,
+        "text": "    expect(compactStrategyLabel(\"compacted\", t(\"en\"))).toBe(\"general compaction\");"
+      },
+      {
+        "line": 48,
+        "text": "    expect(compactStrategyLabel(\"notes\", t(\"zh\"))).toBe(\"笔记接续\");"
+      },
+      {
+        "line": 49,
+        "text": "    expect(compactStrategyLabel(\"notes\", t(\"en\"))).toBe(\"working notes\");"
+      },
+      {
+        "line": 50,
+        "text": "    expect(compactStrategyLabel(\"custom-tier\", t(\"en\"))).toBe(\"custom-tier\");"
+      },
+      {
+        "line": 51,
+        "text": "  });"
+      },
+      {
+        "line": 53,
+        "text": "  test(\"keeps the fixed prompt baseline when computing post-compact ring tokens\", () => {"
+      },
+      {
+        "line": 62,
+        "text": "  test(\"does not invent a negative baseline when compact estimate exceeds current prompt tokens\", () => {"
+      },
+      {
+        "line": 71,
+        "text": "  test(\"clamps invalid prompt token inputs before adding the baseline\", () => {"
+      }
+    ]
+  }
+]

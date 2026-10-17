@@ -1,0 +1,80 @@
+{
+  "atUTC": "2026-10-17T17:18:57.395717+00:00",
+  "files": [
+    {
+      "path": "packages/desktop/src/renderer/app/usePanelBuckets.ts",
+      "displayedLineRanges": [
+        [
+          734,
+          766
+        ],
+        [
+          1016,
+          1024
+        ]
+      ],
+      "excerpts": [
+        {
+          "start": 734,
+          "end": 766,
+          "text": "734:   const PANEL_MIN = 320;\n735:   const PANEL_MAX_FRAC = 0.7; // never let the dock eat more than 70% of the window\n736:   const [panelWidth, setPanelWidth] = useState<number>(() => {\n737:     const saved = Number(localStorage.getItem(\"codeshell.panelWidth\"));\n738:     return Number.isFinite(saved) && saved >= PANEL_MIN ? saved : 480;\n739:   });\n740:   const panelResizeCleanupRef = useRef<(() => void) | null>(null);\n741:   useEffect(\n742:     () => () => {\n743:       panelResizeCleanupRef.current?.();\n744:     },\n745:     [],\n746:   );\n747:   const beginPanelResize = (startX: number, startWidth: number, target: HTMLElement): void => {\n748:     panelResizeCleanupRef.current?.();\n749:     const cleanup = startPanelResize({\n750:       startX,\n751:       startWidth,\n752:       target,\n753:       minWidth: PANEL_MIN,\n754:       maxWidth: () => Math.max(PANEL_MIN, Math.floor(window.innerWidth * PANEL_MAX_FRAC)),\n755:       onCommit: (next) => {\n756:         setPanelWidth(next);\n757:         localStorage.setItem(\"codeshell.panelWidth\", String(next));\n758:       },\n759:       onFinish: () => {\n760:         if (panelResizeCleanupRef.current === cleanup) {\n761:           panelResizeCleanupRef.current = null;\n762:         }\n763:       },\n764:     });\n765:     panelResizeCleanupRef.current = cleanup;\n766:   };"
+        },
+        {
+          "start": 1016,
+          "end": 1024,
+          "text": "1016:     panelBuckets,\n1017:     togglePanel,\n1018:     openPanel,\n1019:     openSubagent,\n1020:     panelWidth,\n1021:     beginPanelResize,\n1022:     composerSeed,\n1023:     composerSeedNonce,\n1024:     onComposerSeedConsumed,"
+        }
+      ]
+    },
+    {
+      "path": "packages/desktop/src/renderer/app/SessionPanelDock.tsx",
+      "displayedLineRanges": [
+        [
+          38,
+          48
+        ],
+        [
+          190,
+          215
+        ]
+      ],
+      "excerpts": [
+        {
+          "start": 38,
+          "end": 48,
+          "text": "38:   projects: TrackedProject[];\n39:   updatePanelBucket: (\n40:     bucket: string,\n41:     updater: (state: PanelBucketState) => PanelBucketState,\n42:   ) => void;\n43:   onRevealConsumed: (bucket: string, nonce: number) => void;\n44:   onOpenCliSessionConsumed: (bucket: string, nonce: number) => void;\n45:   panelWidth: number;\n46:   beginPanelResize: (startX: number, startWidth: number, target: HTMLElement) => void;\n47:   onAttachImage: (path: string) => void;\n48:   anchorsByBucket: AnchorsByBucket;"
+        },
+        {
+          "start": 190,
+          "end": 215,
+          "text": "190:             open: false,\n191:             requestNonce: state.requestNonce + 1,\n192:             requestKind: null,\n193:             openUrl: undefined,\n194:             openCliSession: undefined,\n195:           }))\n196:         }\n197:         requestNonce={panelState.requestNonce}\n198:         requestKind={panelState.requestKind}\n199:         reviewFiles={panelState.reviewFiles}\n200:         reviewDiff={panelState.reviewDiff}\n201:         revealFile={panelState.revealFile}\n202:         onRevealConsumed={(nonce) => props.onRevealConsumed(panelBucket, nonce)}\n203:         openUrl={panelState.openUrl}\n204:         openCliSession={panelState.openCliSession}\n205:         subagentSelection={panelState.subagentSelection}\n206:         onOpenCliSessionConsumed={(nonce) => props.onOpenCliSessionConsumed(panelBucket, nonce)}\n207:         width={props.panelWidth}\n208:         onResizeStart={props.beginPanelResize}\n209:         onAttachImage={props.onAttachImage}\n210:         browserAnchors={anchorsIn(props.anchorsByBucket, panelBucket)}\n211:         onRemoveBrowserAnchor={isActivePanelBucket ? props.removeAnchor : undefined}\n212:         onUpdateBrowserAnchor={isActivePanelBucket ? props.updateAnchorComment : undefined}\n213:         engineSessionId={panelEngineSessionId}\n214:         busy={props.busyKeys.has(panelBucket)}\n215:         modelKey={props.modelOverrides[panelBucket] ?? props.defaultSessionModelKey}"
+        }
+      ]
+    },
+    {
+      "path": "packages/desktop/src/renderer/App.tsx",
+      "displayedLineRanges": [
+        [
+          1127,
+          1145
+        ],
+        [
+          2753,
+          2769
+        ]
+      ],
+      "excerpts": [
+        {
+          "start": 1127,
+          "end": 1145,
+          "text": "1127:     ensureQuickChatSession,\n1128:     cleanupQuickChatPanelSession,\n1129:     restartQuickChatSession,\n1130:     setQuickChatDraft,\n1131:     setQuickChatAttachmentState,\n1132:     setQuickChatPermission,\n1133:     setQuickChatModel,\n1134:     activePanelState,\n1135:     panelBuckets,\n1136:     togglePanel,\n1137:     openPanel,\n1138:     openSubagent,\n1139:     panelWidth,\n1140:     beginPanelResize,\n1141:     composerSeed,\n1142:     composerSeedNonce,\n1143:     onComposerSeedConsumed,\n1144:     startConversationalAutomation,\n1145:     anchors,"
+        },
+        {
+          "start": 2753,
+          "end": 2769,
+          "text": "2753:                     panelBuckets={panelBuckets}\n2754:                     panelByBucket={panelByBucket}\n2755:                     activeBucket={activeBucket}\n2756:                     isChatView={isChatView}\n2757:                     onRestorePanelFocus={() =>\n2758:                       panelToggleRef.current?.focus({ preventScroll: true })\n2759:                     }\n2760:                     projects={projects}\n2761:                     updatePanelBucket={updatePanelBucket}\n2762:                     onRevealConsumed={onRevealConsumed}\n2763:                     onOpenCliSessionConsumed={onOpenCliSessionConsumed}\n2764:                     panelWidth={panelWidth}\n2765:                     beginPanelResize={beginPanelResize}\n2766:                     onAttachImage={(path) => void attachImageByPath(path)}\n2767:                     anchorsByBucket={anchorsByBucket}\n2768:                     removeAnchor={removeAnchor}\n2769:                     updateAnchorComment={updateAnchorComment}"
+        }
+      ]
+    }
+  ]
+}

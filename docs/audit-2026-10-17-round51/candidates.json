@@ -1,0 +1,6 @@
+{
+  "baseline": "424ef9c8953eaaa295d24d63c49127aa8b3ea79e",
+  "count": 0,
+  "candidates": [],
+  "note": "Finite ordinary current-source scope only; unproven boundary/range/localization questions not promoted. Same-SHA historical target full is a source-reading exclusion, not runtime proof. All prior failed dynamic directions unchanged."
+}

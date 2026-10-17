@@ -1,0 +1,5 @@
+{
+  "exactArtifacts": [],
+  "productRuns": 0,
+  "scope": "Only frozen copied provenance. All other files must pass ordinary whitespace check; full check actual exit retained."
+}

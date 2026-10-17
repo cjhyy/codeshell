@@ -1,0 +1,46 @@
+{
+  "classification": {
+    "formal": 0,
+    "candidate": 0,
+    "related": 0
+  },
+  "finiteScope": "Ordinary readonly shortcut reference + current platform/data/label mapping source; no new failure established. Not all keyboard/menu/runtime correctness.",
+  "observations": [
+    "Readonly component has no onChange/reset/settings serialize API; absence is not a missing editable-feature claim.",
+    "AppisMac→SettingsPage→ShortcutsSectionprop controls Command/Ctrl display and Mac-only new-window row.",
+    "Main renderer key conditions expose K/P/F/B/1–9; settings-page mode uses separate Mod+F handler consistent with description.",
+    "Ordinary composer Enter/ShiftEnter and initiallyempty/up/down history conditions align with scoped hints; popup/IME and modified-key cases are conditional, not simulated.",
+    "AdvancedSections compatibility export and Chinese/English labels were read."
+  ],
+  "boundaries": [
+    "No native menu source/registration or new-window execution followed; Mac-only row condition is a source observation, not platform runtime validation.",
+    "No DOM focus/geometry, keyboard event, localStorage fixture, Reactrender, listener lifecycle or native behavior executed.",
+    "No arbitrary malformed keyboard/state fixture used.",
+    "Existing test/log records do not become current passes."
+  ],
+  "execution": {
+    "product": 0,
+    "helper": 0,
+    "fixture": 0,
+    "test": 0,
+    "React": 0,
+    "DOM": 0,
+    "productClock": 0,
+    "timer": 0,
+    "network": 0,
+    "native": 0,
+    "Git": 0,
+    "realSettingsOrUserDataReads": 0
+  },
+  "metadataFailedPinLocatorStages": 1,
+  "metadataObservedErrorMessages": 2,
+  "metadataOuterNonzeroToolCommands": 0,
+  "metadataNestedExitCodesSeparatelyCaptured": false,
+  "metadataTruncations": 1,
+  "firstPinLocatorDiagnostic": "first-locator-diagnostic.json",
+  "firstOutputTruncationDiagnostic": "first-output-truncation.json",
+  "firstAppNavigationShaRetainedNull": true,
+  "noProductRerun": true,
+  "metadataProseCountCorrections": 1,
+  "firstDisplayCountDiagnostic": "first-display-count-diagnostic.json"
+}
