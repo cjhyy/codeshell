@@ -259,7 +259,8 @@ test("bounded journal/case/first-error caps cannot silently become final pass", 
   assert.ok(statSync(join(evidence, "diagnostics.jsonl")).size <= 512 * 1024);
 });
 
-async function actualFinalTail(t, kind) {
+async function actualFinalTail(t, kind, driverSource = driver) {
+  driverSource = driverSource.replace(/\r\n?/g, "\n");
   let refuseFinalSnapshot = false;
   const { diagnostics, evidence, read } = fixture(t, {
     io: {
@@ -287,11 +288,11 @@ async function actualFinalTail(t, kind) {
   if (kind === "late-renderer") rendererErrors.push([new Error("late renderer error")]);
   if (kind === "late-observer") observerFailures.push("late custody failure");
   if (kind === "diagnostic-IO") diagnostics.phase("unknown phase");
-  const tail = driver.slice(
-    driver.indexOf("  report.rendererErrors = rendererErrors.flat()"),
-    driver.indexOf(
+  const tail = driverSource.slice(
+    driverSource.indexOf("  report.rendererErrors = rendererErrors.flat()"),
+    driverSource.indexOf(
       "\n}\nconsole.log(",
-      driver.indexOf("  report.rendererErrors = rendererErrors.flat()"),
+      driverSource.indexOf("  report.rendererErrors = rendererErrors.flat()"),
     ),
   );
   const run = vm.runInNewContext(`(async()=>{${tail}\n})`, {
@@ -359,6 +360,44 @@ test("original final report write rejection is latched and remains an uncaught d
   assert.equal(value.diagnostic.finalReportWritten, false);
   assert.equal(value.report.privateHomeRemoved, true);
   assert.equal(value.exists, false);
+});
+
+test("actual LF and CRLF driver sources execute identical success, late-failure and final-IO gates", async (t) => {
+  const lf = driver.replace(/\r\n?/g, "\n");
+  for (const source of [lf, lf.replace(/\n/g, "\r\n")]) {
+    for (const kind of [
+      "passed",
+      "late-renderer",
+      "late-observer",
+      "diagnostic-IO",
+      "final-diagnostic-IO",
+      "final-report-IO",
+    ]) {
+      const value = await actualFinalTail(t, kind, source);
+      const removed = ["passed", "final-diagnostic-IO", "final-report-IO"].includes(kind);
+      assert.equal(value.removed, removed, kind);
+      assert.equal(value.exists, !removed, kind);
+      assert.equal(value.report.privateHomeRemoved, removed, kind);
+      if (kind === "final-report-IO") {
+        assert.match(value.error.message, /final report write refused/);
+        assert.equal(value.diagnostic.diagnostics.firstError.message, "final report write refused");
+        assert.equal(value.diagnostic.finalReportWritten, false);
+      } else {
+        assert.equal(value.error, undefined, kind);
+        assert.equal(value.report.status, kind === "passed" ? "passed" : "failed", kind);
+        if (kind === "final-diagnostic-IO")
+          assert.ok(
+            value.report.failures.some(
+              (row) => row.message === "Review diagnostic recording failed/truncated",
+            ),
+          );
+        else {
+          assert.equal(value.diagnostic.finalReportWritten, true, kind);
+          assert.equal(value.diagnostic.acceptanceResult, value.report.status, kind);
+        }
+      }
+    }
+  }
 });
 
 test("original eleven-operation body, all assertions and budgets retain their frozen syntax", () => {
