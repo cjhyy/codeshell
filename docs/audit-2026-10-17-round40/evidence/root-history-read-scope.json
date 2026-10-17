@@ -1,0 +1,12 @@
+{
+  "actualReadContexts": {
+    "project-options": 0,
+    "utf8-case": 0,
+    "incremental-tail": 2,
+    "shortcut-hints": 0
+  },
+  "totalRead": 2,
+  "meaning": "All two bounded contexts in new72 delta, only old worktree names; not runtime/fix evidence and not allRoot3581 query contexts.",
+  "newRootProductSemanticReads": 0,
+  "productRuns": 0
+}

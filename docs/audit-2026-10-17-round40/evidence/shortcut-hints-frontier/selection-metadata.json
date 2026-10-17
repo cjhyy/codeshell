@@ -1,0 +1,252 @@
+{
+  "capturedUTC": "2026-10-17T13:51:44.538026+00:00",
+  "prepOnly": true,
+  "formalBaseline": null,
+  "selectionCandidatesCurrentPins": [
+    {
+      "path": "packages/core/src/utils/format.ts",
+      "bytes": 9304,
+      "lineCount": 300,
+      "sha256": "39d3fa4786f19681e53ec4a42cf9c5ee0bffc818d4c95c4bc151d3ea705c85b6",
+      "coverage": "metadata-selection-only-no-body-read"
+    },
+    {
+      "path": "packages/web/src/lib/format.ts",
+      "bytes": 5447,
+      "lineCount": 140,
+      "sha256": "c1c2d582d623ba99a738b7d43c483358e6826cae24010ef7994b5d4708310f33",
+      "coverage": "metadata-selection-only-no-body-read"
+    }
+  ],
+  "datedRound28SelectionInputs": {
+    "package-inventory.json": {
+      "path": "/tmp/codeshell-audit-round28-coverage-frontier/package-inventory.json",
+      "bytes": 841639,
+      "sha256": "12c53ba7d8a17673382d352a48a8ca3afc25a4913fcc96d63d22319e7a00b1eb",
+      "topLevelKeys": [
+        "readAtUTC",
+        "parentReportedBaseline",
+        "baselineNotIndependentlyGitVerified",
+        "command",
+        "commandExit",
+        "files",
+        "count",
+        "semanticSourceRead",
+        "productExecution",
+        "gitCommands"
+      ],
+      "matchedRows": [
+        {
+          "jsonPointer": "/files/1548",
+          "row": {
+            "path": "packages/core/src/utils/format.ts",
+            "bytes": 9304,
+            "lines": 300,
+            "sha256": "39d3fa4786f19681e53ec4a42cf9c5ee0bffc818d4c95c4bc151d3ea705c85b6"
+          }
+        },
+        {
+          "jsonPointer": "/files/4054",
+          "row": {
+            "path": "packages/web/src/lib/format.ts",
+            "bytes": 5447,
+            "lines": 140,
+            "sha256": "c1c2d582d623ba99a738b7d43c483358e6826cae24010ef7994b5d4708310f33"
+          }
+        }
+      ]
+    },
+    "coverage-index.json": {
+      "path": "/tmp/codeshell-audit-round28-coverage-frontier/coverage-index.json",
+      "bytes": 1891704,
+      "sha256": "6cfb5a8d1a6c08e6fb587e339fd78a3d4f023dc65b7ccc466f4eadbb68df7d45",
+      "topLevelKeys": [
+        "summary",
+        "files",
+        "inventoryReference",
+        "onlyPathsWithPriorManifestRows",
+        "unmatchedInventoryPathCount"
+      ],
+      "matchedRows": [
+        {
+          "jsonPointer": "/files/519",
+          "row": {
+            "path": "packages/core/src/utils/format.ts",
+            "bytes": 9304,
+            "lines": 300,
+            "sha256": "39d3fa4786f19681e53ec4a42cf9c5ee0bffc818d4c95c4bc151d3ea705c85b6",
+            "status": "current-sha-explicit-full-claim",
+            "currentFullClaimVariants": 1,
+            "currentSelectedClaimVariants": 0,
+            "currentSelectedUnionLines": 0,
+            "currentSelectedUnionRanges": [],
+            "priorVersionClaimVariants": 0,
+            "currentPinOnlyVariants": 2,
+            "claimVariants": 3,
+            "claims": [
+              {
+                "sourceSha256": "39d3fa4786f19681e53ec4a42cf9c5ee0bffc818d4c95c4bc151d3ea705c85b6",
+                "matchesCurrentFilesystem": true,
+                "coverageKind": "scope-unknown-pin-only",
+                "rawCoverageLabel": null,
+                "selectedLineRanges": [],
+                "validRangeBoundsForCurrentFile": true,
+                "manifests": [
+                  {
+                    "path": "docs/audit-2026-10-17-round14/evidence/utils-source-manifest.json",
+                    "jsonLocation": "$[\"sources\"][3]"
+                  },
+                  {
+                    "path": "docs/audit-2026-10-17-round14/source-manifest.json",
+                    "jsonLocation": "$[\"files\"][19]"
+                  },
+                  {
+                    "path": "docs/audit-2026-10-17-round14/source-manifest.json",
+                    "jsonLocation": "$[\"workerSourceChecks\"][49]"
+                  },
+                  {
+                    "path": "docs/audit-2026-10-17-round23/evidence/root-prep/source-manifest.json",
+                    "jsonLocation": "$[\"sources\"][2]"
+                  },
+                  {
+                    "path": "docs/audit-2026-10-17-round23/source-manifest.json",
+                    "jsonLocation": "$[\"files\"][54]"
+                  },
+                  {
+                    "path": "docs/audit-2026-10-17-round23/source-manifest.json",
+                    "jsonLocation": "$[\"priorPrepHashOnlyChecks\"][2]"
+                  },
+                  {
+                    "path": "docs/audit-2026-10-17-round25/source-manifest.json",
+                    "jsonLocation": "$[\"files\"][39]"
+                  },
+                  {
+                    "path": "docs/audit-2026-10-17-round25/source-manifest.json",
+                    "jsonLocation": "$[\"priorPrepHashOnlyChecks\"][8]"
+                  }
+                ]
+              },
+              {
+                "sourceSha256": "39d3fa4786f19681e53ec4a42cf9c5ee0bffc818d4c95c4bc151d3ea705c85b6",
+                "matchesCurrentFilesystem": true,
+                "coverageKind": "explicit-full",
+                "rawCoverageLabel": "full",
+                "selectedLineRanges": [
+                  [
+                    1,
+                    300
+                  ]
+                ],
+                "validRangeBoundsForCurrentFile": true,
+                "manifests": [
+                  {
+                    "path": "docs/audit-2026-10-17-round25/evidence/data-prep/source-manifest.json",
+                    "jsonLocation": "$[\"sources\"][8]"
+                  }
+                ]
+              },
+              {
+                "sourceSha256": "39d3fa4786f19681e53ec4a42cf9c5ee0bffc818d4c95c4bc151d3ea705c85b6",
+                "matchesCurrentFilesystem": true,
+                "coverageKind": "explicit-hash-or-inventory-only",
+                "rawCoverageLabel": "hash-only current recheck; prep semantic read scope remains in unchanged copied manifest",
+                "selectedLineRanges": [],
+                "validRangeBoundsForCurrentFile": true,
+                "manifests": [
+                  {
+                    "path": "docs/audit-2026-10-17-round25/evidence/output-source-manifest.json",
+                    "jsonLocation": "$[\"prepHashRechecks\"][8]"
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "jsonPointer": "/files/1031",
+          "row": {
+            "path": "packages/web/src/lib/format.ts",
+            "bytes": 5447,
+            "lines": 140,
+            "sha256": "c1c2d582d623ba99a738b7d43c483358e6826cae24010ef7994b5d4708310f33",
+            "status": "current-sha-pin-only-no-semantic-coverage",
+            "currentFullClaimVariants": 0,
+            "currentSelectedClaimVariants": 0,
+            "currentSelectedUnionLines": 0,
+            "currentSelectedUnionRanges": [],
+            "priorVersionClaimVariants": 1,
+            "currentPinOnlyVariants": 1,
+            "claimVariants": 2,
+            "claims": [
+              {
+                "sourceSha256": "4e0fd7d112630103c5847a561aac3d5aea4d17020eb4e222f1fa0921cb6e18e0",
+                "matchesCurrentFilesystem": false,
+                "coverageKind": "scope-unknown-pin-only",
+                "rawCoverageLabel": null,
+                "selectedLineRanges": [],
+                "validRangeBoundsForCurrentFile": null,
+                "manifests": [
+                  {
+                    "path": "docs/audit-2026-10-17/evidence/ui-source-manifest.json",
+                    "jsonLocation": "$[\"productionSources\"][4]"
+                  },
+                  {
+                    "path": "docs/audit-2026-10-17/source-manifest.json",
+                    "jsonLocation": "$[\"files\"][45]"
+                  },
+                  {
+                    "path": "docs/audit-2026-10-17-round5/evidence/root-web-source-manifest.json",
+                    "jsonLocation": "$[\"sources\"][5]"
+                  },
+                  {
+                    "path": "docs/audit-2026-10-17-round5/source-manifest.json",
+                    "jsonLocation": "$[\"files\"][88]"
+                  },
+                  {
+                    "path": "docs/audit-2026-10-17-round8/source-manifest.json",
+                    "jsonLocation": "$[\"files\"][97]"
+                  }
+                ]
+              },
+              {
+                "sourceSha256": "c1c2d582d623ba99a738b7d43c483358e6826cae24010ef7994b5d4708310f33",
+                "matchesCurrentFilesystem": true,
+                "coverageKind": "scope-unknown-pin-only",
+                "rawCoverageLabel": null,
+                "selectedLineRanges": [],
+                "validRangeBoundsForCurrentFile": true,
+                "manifests": [
+                  {
+                    "path": "docs/audit-2026-10-17-round14/evidence/web-source-manifest.json",
+                    "jsonLocation": "$[\"files\"][1]"
+                  },
+                  {
+                    "path": "docs/audit-2026-10-17-round14/source-manifest.json",
+                    "jsonLocation": "$[\"files\"][52]"
+                  },
+                  {
+                    "path": "docs/audit-2026-10-17-round14/source-manifest.json",
+                    "jsonLocation": "$[\"workerSourceChecks\"][1]"
+                  },
+                  {
+                    "path": "docs/audit-2026-10-17-round20/evidence/root-source-manifest.json",
+                    "jsonLocation": "$[\"files\"][10]"
+                  },
+                  {
+                    "path": "docs/audit-2026-10-17-round20/source-manifest.json",
+                    "jsonLocation": "$[\"files\"][40]"
+                  },
+                  {
+                    "path": "docs/audit-2026-10-17-round20/source-manifest.json",
+                    "jsonLocation": "$[\"workerSourceChecks\"][14]"
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    }
+  },
+  "limits": "No-row indicates absent structured coverage row only; not never-read. No leaf body read in this metadata inventory."
+}

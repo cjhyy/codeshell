@@ -1,0 +1,29 @@
+{
+  "capturedUTC": "2026-10-17T13:55:25.585912+00:00",
+  "files": [
+    {
+      "path": "packages/desktop/src/renderer/keyboardShortcutHints.test.ts",
+      "bytes": 827,
+      "lineCount": 18,
+      "sha256": "9b360ebfb7794bcc34811e46a6074ee5fc104e0d849e0abd27ea45377ca17271",
+      "pinBeforeSelectedBodyOrLocatorRead": true,
+      "initialSemanticReadSha256": "9b360ebfb7794bcc34811e46a6074ee5fc104e0d849e0abd27ea45377ca17271"
+    },
+    {
+      "path": "packages/desktop/src/renderer/Sidebar.tsx",
+      "bytes": 58805,
+      "lineCount": 1629,
+      "sha256": "f97da3b8ae4d8f4973acfa5afb30425e3755ec7fef58b462efde95c62c324d87",
+      "pinBeforeSelectedBodyOrLocatorRead": true,
+      "initialSemanticReadSha256": "f97da3b8ae4d8f4973acfa5afb30425e3755ec7fef58b462efde95c62c324d87"
+    },
+    {
+      "path": "packages/desktop/src/renderer/shell/CommandPalette.tsx",
+      "bytes": 6806,
+      "lineCount": 206,
+      "sha256": "ec0d73a75b3ff551570d227c36c503b3a343d9567ca692a272dd872e95ce5571",
+      "pinBeforeSelectedBodyOrLocatorRead": true,
+      "initialSemanticReadSha256": "ec0d73a75b3ff551570d227c36c503b3a343d9567ca692a272dd872e95ce5571"
+    }
+  ]
+}

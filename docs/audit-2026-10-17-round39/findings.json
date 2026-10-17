@@ -1,0 +1,36 @@
+{
+  "baseline": "42683054b1eea00d76e3ed18817766be3047c110",
+  "count": 1,
+  "findings": [
+    {
+      "id": "MCP-R39-01",
+      "severity": "P3",
+      "status": "confirmed-statically",
+      "title": "Renaming a settings-owned MCP server drops supported non-editor fields",
+      "location": {
+        "path": "packages/desktop/src/renderer/settings/McpSection.tsx",
+        "start": 429,
+        "end": 436
+      },
+      "trigger": "A supported hand-edited settings-owned server has connectTimeoutMs, connectRetries or inlineImages, and the user changes only its name to an unused valid name in the full editor.",
+      "expected": "Transfer existing supported, unedited options to the renamed configuration.",
+      "actual": "The new map key receives only editor-authored fields and the old key is deleted, so supported extra options disappear. Same-name saves retain them through recursive merge.",
+      "cause": "A partial edit patch is reused as the complete replacement record when changing the enclosing server key.",
+      "evidence": [
+        "mcp-rename.md",
+        "evidence/mcp-rename-fields-frontier/report.md",
+        "evidence/root-mcp-rename-frontier/review.md",
+        "evidence/aggregate-review/review.md"
+      ],
+      "counterevidence": [
+        "The editor field whitelist is intentional; the defect is incomplete record transfer across rename.",
+        "Same-name deepMerge preserves unedited fields and is outside this failure condition.",
+        "Plugin override locks server identity and is excluded.",
+        "Supported manual settings entry is documented in schema-export, with real schema/DTO consumers; arbitrary unknown fields are not assumed supported."
+      ],
+      "validation": "Static ordinary supported config producer, full edit/name/save and merge paths, plus independent counterevidence; zero function/helper/language fixture/test/form/config/MCP/process/network execution. No runtime connection or image result claimed.",
+      "remediation": "Transfer existing supported non-editor configuration when renaming, then apply the editable-field patch; keep tombstone and origin contracts and avoid persisting UI metadata.",
+      "classificationNote": "Completes the explicitly unclassified rename-extra-fields boundary from Round38. One P3 static issue; distinct from MCP-R38-01 args serialization, no duplicate item or absolute-first claim."
+    }
+  ]
+}

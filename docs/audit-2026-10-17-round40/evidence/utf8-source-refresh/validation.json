@@ -1,0 +1,23 @@
+{
+  "mode": "static source refresh of existing UTF8 candidate",
+  "productFunctionsHelpersDecodersBufferExamplesExecuted": 0,
+  "productImports": 0,
+  "testsExecuted": 0,
+  "newTestDeclarationSyntaxRead": 14,
+  "languageFixtures": 0,
+  "streamsOrActualOutputFileReadsWrites": 0,
+  "BashCLIProductSubprocessesNativeNetworkActions": 0,
+  "authPermissionIdentityExperiments": 0,
+  "productWrites": 0,
+  "repoWrites": 0,
+  "gitReadCommands": 7,
+  "gitWrites": 0,
+  "gitReadReceipt": "git-read-receipt.json",
+  "historyMetadataSessionId": 13786,
+  "historyMetadataExitCode": 0,
+  "runtimePassesExpectationsClaimed": 0,
+  "otherAgentPassesBorrowed": false,
+  "oldFailedDirectionsReopened": false,
+  "sourceFilesystemAndGitBlobChecksOnly": true,
+  "writesOnlyExactOwnedTmp": "/tmp/codeshell-audit-round41-utf8-source-refresh"
+}

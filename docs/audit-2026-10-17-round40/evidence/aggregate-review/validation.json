@@ -1,0 +1,22 @@
+{
+  "mode": "artifact receipt/JSON metadata only, own-author aggregate",
+  "productExecutions": 0,
+  "productImports": 0,
+  "productHelperLanguageFixtures": 0,
+  "testsExecuted": 0,
+  "newProductSemanticReadLines": 0,
+  "productSourceBytesRead": 0,
+  "sourceFilesystemHashChecks": 0,
+  "connectionsNativeNetworkAuthIdentityPermissionActions": 0,
+  "gitCommandsThisAggregate": 0,
+  "gitWrites": 0,
+  "repoWrites": 0,
+  "writesOnlyExactOwnedTmp": "/tmp/codeshell-audit-round40-aggregate-review",
+  "checksFiles": [],
+  "storedPriorUtf8AuthorGitReadFactsNotNewCommands": 7,
+  "independentInputReadOnlyAfterRootAndReviewerFreezeNotice": true,
+  "frozenInputArtifactRowsChecked": 49,
+  "frozenInputFilesIncludingReceiptsChecked": 52,
+  "originalAuthorDirectoriesModified": false,
+  "metadataFailureOrTruncationThisAggregate": false
+}

@@ -1,0 +1,391 @@
+{
+  "files": [
+    {
+      "path": "README.md",
+      "bytes": 2072,
+      "sha256": "f88bc3fab94dac385da968c97f2cbba0af1f9538ee9d329091f811bb64710db4"
+    },
+    {
+      "path": "candidates.json",
+      "bytes": 120,
+      "sha256": "1c498725e8db1231a106fcbd65a804b6e6e3cd923f6edefec53a619bb932c243"
+    },
+    {
+      "path": "coverage.json",
+      "bytes": 559,
+      "sha256": "49bb260693fe49e3af8a08cb6a286c99025bf13f3f893c84d3b0fa2954c826c3"
+    },
+    {
+      "path": "evidence/aggregate-review/checks.json",
+      "bytes": 134209,
+      "sha256": "a3047874d9017eba08b4c125d3596baff258da8d47f759bf65779b8083ec38ae"
+    },
+    {
+      "path": "evidence/aggregate-review/independent-frozen-artifact-pins.json",
+      "bytes": 6985,
+      "sha256": "18b024b17eba6cbcaf59e2124da0ca02ca87d9f64fff36efa694fa359448fd3a"
+    },
+    {
+      "path": "evidence/aggregate-review/initial-frozen-artifact-pins.json",
+      "bytes": 8654,
+      "sha256": "4f6c2fb348e85a1b875cfbd35fde87f3ce1c6d0eab7e82d11c27abb9189178e0"
+    },
+    {
+      "path": "evidence/aggregate-review/review.md",
+      "bytes": 4937,
+      "sha256": "1264da204a776b4788f292c311f15a01c0cc48778ffe8291df1d669a9e5abb2a"
+    },
+    {
+      "path": "evidence/aggregate-review/reviewer-receipt.json",
+      "bytes": 2108,
+      "sha256": "ec174542fb132edc93d2373ccc7263256e02e5e34715fb8d0b03a93cb11aa33b"
+    },
+    {
+      "path": "evidence/assemble-audit.py",
+      "bytes": 8179,
+      "sha256": "b26d40c3e06c8a750632739aae424f8eade305a978f61bb35d119306141fa087"
+    },
+    {
+      "path": "evidence/codeshell-audit-round39-mcp-rename-fields-frontier/report.md",
+      "bytes": 289,
+      "sha256": "d4a7af756cb69bbfc1a5e3fa7c88ffc56944159f615934a282a983b4aa1e1093"
+    },
+    {
+      "path": "evidence/freeze-checks.json",
+      "bytes": 2724,
+      "sha256": "64f551af6833f84895cf9f8978dc3a4efab440cd89f1188687d9dfb85990a6e1"
+    },
+    {
+      "path": "evidence/frozen-artifact-whitespace.json",
+      "bytes": 178,
+      "sha256": "d882062479ebed39ecdc6ca0925501428d1b311570ec2fc04981681db491960b"
+    },
+    {
+      "path": "evidence/history-new-frozen-delta.json",
+      "bytes": 17572,
+      "sha256": "796751cd3bf6bb1354dd498a639ca6074db946fdaa5f8c854e1fa98651912e7a"
+    },
+    {
+      "path": "evidence/history-post-refresh-checks.json",
+      "bytes": 515,
+      "sha256": "931d19b383c2f5d38932dd2d3e1f3df2534ae72174e1052c2e72207a6e9649e6"
+    },
+    {
+      "path": "evidence/incoming-main-paths.json",
+      "bytes": 678,
+      "sha256": "15440aad91ac4689363325b3c8af92429bd206558cc35d75ff9463e46c45a1b5"
+    },
+    {
+      "path": "evidence/integration-before.json",
+      "bytes": 1375,
+      "sha256": "6eac158899a961e9116f373e0c3d672ffe68d7c96fe195b8ed603b4c7e1daf09"
+    },
+    {
+      "path": "evidence/integration-plan.json",
+      "bytes": 4572,
+      "sha256": "21ce521fc804b82140d274125a72f0f8c3ff8bc4d5dbe80e11b3ef618acc45a4"
+    },
+    {
+      "path": "evidence/mcp-rename-fields-frontier/artifact-receipt.json",
+      "bytes": 3736,
+      "sha256": "8c81b860179c47d38c0963097b047dde694b043c164641d47ea442662d5fd663"
+    },
+    {
+      "path": "evidence/mcp-rename-fields-frontier/classification.json",
+      "bytes": 1514,
+      "sha256": "49df7f0aa54beec16350e1143b6a29cc5b8ae850c52fbb511b97ae0920b72f23"
+    },
+    {
+      "path": "evidence/mcp-rename-fields-frontier/field-reference-navigation.json",
+      "bytes": 15853,
+      "sha256": "5dfb6c6d9f8937e4c81a9d1c6ecf29d53c47feda4330c8b138e38bf2b35f6eb5"
+    },
+    {
+      "path": "evidence/mcp-rename-fields-frontier/final-source-check.json",
+      "bytes": 7714,
+      "sha256": "345f00f3d47a350f12add82386251b0a65267d3b0b314fc2cb51b5020aaef21b"
+    },
+    {
+      "path": "evidence/mcp-rename-fields-frontier/focused-history.json",
+      "bytes": 77390,
+      "sha256": "58eecb9cc815db10ec014641754b29ed75a585a574aed891b1277d895e2d44fa"
+    },
+    {
+      "path": "evidence/mcp-rename-fields-frontier/forwarding-initial-pins.json",
+      "bytes": 964,
+      "sha256": "8001d3505d9ec2a97a19d923d0ee6482949cdeb641e66a341133f56e1fb2391f"
+    },
+    {
+      "path": "evidence/mcp-rename-fields-frontier/history-decisions.json",
+      "bytes": 2326,
+      "sha256": "d9a457da255220700f7124149be5ed8302a9cc71bf7504aa770306b95f2e770a"
+    },
+    {
+      "path": "evidence/mcp-rename-fields-frontier/history-delta.json",
+      "bytes": 20234,
+      "sha256": "37640a7b22e7e99648d39d5c1fc16069790c444661fd6dd0f3d0dedf954c57bf"
+    },
+    {
+      "path": "evidence/mcp-rename-fields-frontier/history-method.py",
+      "bytes": 3473,
+      "sha256": "92a44ffa5610e3ae6a696decbc17cb55110b9f58b6be36524fd41b26df19479e"
+    },
+    {
+      "path": "evidence/mcp-rename-fields-frontier/history.json",
+      "bytes": 686708,
+      "sha256": "b6b576545df6a40893225cae752f9abb65a84144038999af1b937a9d02f431aa"
+    },
+    {
+      "path": "evidence/mcp-rename-fields-frontier/initial-inventory-pins.json",
+      "bytes": 71599,
+      "sha256": "473a806b5c355b3ddd6209af125053df592d626d1cd70a7d8543e96111bde811"
+    },
+    {
+      "path": "evidence/mcp-rename-fields-frontier/links-check.json",
+      "bytes": 7193,
+      "sha256": "4a5a2eceab03d51512e8b9699b46498893e9d588dbc1e5328f0e2832198c8148"
+    },
+    {
+      "path": "evidence/mcp-rename-fields-frontier/matching-history-objects.first.json",
+      "bytes": 5530631,
+      "sha256": "836a18153529bd59025fd9745df9813f1fc6bf7380c8afc87ea6828fca117e13"
+    },
+    {
+      "path": "evidence/mcp-rename-fields-frontier/matching-history-objects.json",
+      "bytes": 12437,
+      "sha256": "2f27bd134743799147ce20818c0217bfea03baaddde6fbf542d7f4764c009cea"
+    },
+    {
+      "path": "evidence/mcp-rename-fields-frontier/metadata-diagnostics.json",
+      "bytes": 1059,
+      "sha256": "c5bee2cf14ab62f7655880032f917d9582216ad3e905e2d2c8beb7ac5e34e644"
+    },
+    {
+      "path": "evidence/mcp-rename-fields-frontier/report.md",
+      "bytes": 9783,
+      "sha256": "ba19c8152289e1c987031e1e7b6f691ac0b70313f062461bbf6bc2475b0612ec"
+    },
+    {
+      "path": "evidence/mcp-rename-fields-frontier/scope.json",
+      "bytes": 796,
+      "sha256": "9914aeae8175e84cb84e57a76a1ea3905c04404177f175a915d8d8f9c70f438f"
+    },
+    {
+      "path": "evidence/mcp-rename-fields-frontier/source-manifest.json",
+      "bytes": 99596,
+      "sha256": "453f2420da299d0134a6911db69424c865cfce8352d1b17cb203bc80d9f6e2ec"
+    },
+    {
+      "path": "evidence/mcp-rename-fields-frontier/static-value-flow.json",
+      "bytes": 2265,
+      "sha256": "29352cdafa93614c5fcf9f95bdf42f568cf3ee4c05d8458a43665d7bd1760e06"
+    },
+    {
+      "path": "evidence/mcp-rename-fields-frontier/validation.json",
+      "bytes": 1147,
+      "sha256": "1bc6db729bd2e0786f2b1b8650f7fb9432666cb1efc68a9523471391e10c88f8"
+    },
+    {
+      "path": "evidence/mcp-rename-review/author-input-pins.json",
+      "bytes": 4529,
+      "sha256": "98e79c05a32bd3a40ae7829804252729fefee39d3208225036d637838f3194e5"
+    },
+    {
+      "path": "evidence/mcp-rename-review/author-metadata-checks.json",
+      "bytes": 59260,
+      "sha256": "cd2e0bfe680df1633c509110a9210e57b8cbed0c269291cda0e09e6581233604"
+    },
+    {
+      "path": "evidence/mcp-rename-review/author-receipt.json",
+      "bytes": 4036,
+      "sha256": "6ce5a7f5b430a197119f0d66bdc1e486b81392c16040a844b6ba41bc90d8cddc"
+    },
+    {
+      "path": "evidence/mcp-rename-review/decisions.json",
+      "bytes": 1867,
+      "sha256": "199a6968eb82e197c51874d16d7d65ad2b274dd5ad0047986097996da4f3df36"
+    },
+    {
+      "path": "evidence/mcp-rename-review/history-contexts.json",
+      "bytes": 259442,
+      "sha256": "33bb5b38f6cf7dddc93851a5b81f71d2bb04a040fb67fffc18bcac44fe507791"
+    },
+    {
+      "path": "evidence/mcp-rename-review/history-decisions.json",
+      "bytes": 13739,
+      "sha256": "3d31929ab8720d5abdb36e04ba96fdd1b2cb48909c0166ff0864e10c375f3b28"
+    },
+    {
+      "path": "evidence/mcp-rename-review/history-finish-check.json",
+      "bytes": 1206408,
+      "sha256": "ec1e2770c6028a2fe285b24c019532288f9deb2f4ed2cacd2180dd4df37cfdf0"
+    },
+    {
+      "path": "evidence/mcp-rename-review/history-initial-pins.json",
+      "bytes": 746134,
+      "sha256": "0b9d43c1935d779f86a9bcd130a349637e15eb8e63dace21a5731de943f619a4"
+    },
+    {
+      "path": "evidence/mcp-rename-review/history-inventory.raw.txt",
+      "bytes": 215775,
+      "sha256": "24f5652b0e8c9ae2d05c0ed400846de6c2e4eac8262971ea3b1cfd6895acdd5c"
+    },
+    {
+      "path": "evidence/mcp-rename-review/history.json",
+      "bytes": 746725,
+      "sha256": "455bdb9dd8e799707082c851b07d64549e2ec5855076969318fa30a5e4743758"
+    },
+    {
+      "path": "evidence/mcp-rename-review/initial-pins.json",
+      "bytes": 1919,
+      "sha256": "badb3425c80bbfc0b3e1002e2397837aa73d105ee8147454d0d32d18bc649a40"
+    },
+    {
+      "path": "evidence/mcp-rename-review/links-check.json",
+      "bytes": 2371,
+      "sha256": "6d7e19063c7801199bf3e3c2e324dcee5c276bad71ec00e7ab5fa97c97b9c03e"
+    },
+    {
+      "path": "evidence/mcp-rename-review/manual-entry-pins.json",
+      "bytes": 891,
+      "sha256": "ce00383179e2b68bc0b425dc887788445a73615bd7f1a627100287946340abde"
+    },
+    {
+      "path": "evidence/mcp-rename-review/metadata-diagnostics.json",
+      "bytes": 1466,
+      "sha256": "264c14a5e105650469950201ea2f27c5f5aeed8334f1347a887b0e80a1396730"
+    },
+    {
+      "path": "evidence/mcp-rename-review/producer-initial-pins.json",
+      "bytes": 1551,
+      "sha256": "a42e805ab0cb8b33eebc55307d69cf40e612891b3ed01d031f97cc40598bb4cf"
+    },
+    {
+      "path": "evidence/mcp-rename-review/review.md",
+      "bytes": 5579,
+      "sha256": "4e32834e0c4bdb7bf2de176761e7a969f85a553a9f18af36724b4de18c336aff"
+    },
+    {
+      "path": "evidence/mcp-rename-review/scan-history.py",
+      "bytes": 5589,
+      "sha256": "712b68e1a693445f5fd4d0e5334478019ef188e308891ab33d28acfda2881cd4"
+    },
+    {
+      "path": "evidence/mcp-rename-review/selected-history-navigation.json",
+      "bytes": 95195,
+      "sha256": "45a95dfe2f79958436cc4369edac214898a7bffae810541af030ccc6c7c33a62"
+    },
+    {
+      "path": "evidence/mcp-rename-review/source-manifest.json",
+      "bytes": 17362,
+      "sha256": "06615fd4b5b810d584a22f2414798e1ed88653dfd15794495c3cc450524b923f"
+    },
+    {
+      "path": "evidence/mcp-rename-review/validation.json",
+      "bytes": 1292,
+      "sha256": "a7b0dce55a558a920e9ac606d8ee67f8f93f3135a973896357f9de1fe3482276"
+    },
+    {
+      "path": "evidence/prep-copy-receipt.json",
+      "bytes": 13983,
+      "sha256": "c8ad85df822025f167cd3207b65f74aa00c637cd17126dcac2f03b8441a0e896"
+    },
+    {
+      "path": "evidence/review-aggregate.md",
+      "bytes": 3917,
+      "sha256": "fc667f9dd77455d59a98eedff13c8a22adf70de4c4d1cda371cfa854b8caea6c"
+    },
+    {
+      "path": "evidence/root-history-read-scope.json",
+      "bytes": 447,
+      "sha256": "286dc1dfddaea40c7c26c5257216b82b5279ede3c1bd2c0478a5f5678ad7adec"
+    },
+    {
+      "path": "evidence/root-history.json",
+      "bytes": 776464,
+      "sha256": "7f11cdae7d7fd74cc91fe2b6f2609d17883c5a1d56773e4e570087e019317d67"
+    },
+    {
+      "path": "evidence/root-history.py",
+      "bytes": 3442,
+      "sha256": "47dcb0bd00a6c703a83ddcda07e8706e6a1c6660ae834f230be86c53e9aed6a9"
+    },
+    {
+      "path": "evidence/root-mcp-rename-frontier/author-receipt.json",
+      "bytes": 646,
+      "sha256": "db11be52a36fc1103500a2b8f12b3af3a0e0d6d021ba597498e85e2b6a6950f8"
+    },
+    {
+      "path": "evidence/root-mcp-rename-frontier/initial-pins.json",
+      "bytes": 2177,
+      "sha256": "493ccdb43270dc0612e0b69798b36db494bdc1b0e09e5efbbcb84b262c56506d"
+    },
+    {
+      "path": "evidence/root-mcp-rename-frontier/review.md",
+      "bytes": 2718,
+      "sha256": "ea171c893192fbbf9f5ab4cb12ba539d34343db509626f36594c2ed1dc332e2b"
+    },
+    {
+      "path": "evidence/root-mcp-rename-frontier/source-excerpts.json",
+      "bytes": 6651,
+      "sha256": "100c7b57fc19375dafe8b097360688a77ef69591d9e6d9e90e8ad3489ba54d97"
+    },
+    {
+      "path": "evidence/root-mcp-rename-frontier/source-manifest.json",
+      "bytes": 3729,
+      "sha256": "b45a6fcd89c39ec6d17cea27070ebc7348dd04e7f49af9542b5bf300ed9b21e9"
+    },
+    {
+      "path": "evidence/root-metadata-notes.json",
+      "bytes": 1243,
+      "sha256": "8d2a17361493a69dcdfdbe737b421e76f36b0f4156cb29dbb48a6d939bd727d4"
+    },
+    {
+      "path": "evidence/root-receipt-checks.json",
+      "bytes": 23497,
+      "sha256": "bf11e366093e7903a1b1fba687b97fdc6d3a6147ac5e5f91a14de39d5209706f"
+    },
+    {
+      "path": "evidence/selected-incoming-intersections.json",
+      "bytes": 132,
+      "sha256": "06af3fa73ee1ce9bf673cdbb08e21121aa4022238b0081ea07467f9ecca5c0d7"
+    },
+    {
+      "path": "evidence/verify-audit.py",
+      "bytes": 3344,
+      "sha256": "8c1e6a396db6ffbd76c2767165274b5e01b74732a494ad2c526b867732c4e381"
+    },
+    {
+      "path": "evidence/worktrees-before.json",
+      "bytes": 7743,
+      "sha256": "a524c70ef3df170606d67630092f22b56ee821b0ddba9910fc23c963ec271b4b"
+    },
+    {
+      "path": "findings.json",
+      "bytes": 2408,
+      "sha256": "9d21d5577d8ba1494d156f6b4afe5d2cf36ea856e7fc559f47f97c0bdf271172"
+    },
+    {
+      "path": "mcp-rename.md",
+      "bytes": 2292,
+      "sha256": "b006c8a2415fb651b850ebf5ec209f03704d7f91ec9d9dc151d40a324b388dc7"
+    },
+    {
+      "path": "related.json",
+      "bytes": 92,
+      "sha256": "281082792503dab1ad80cca4f3d64b249d791ce2590cb1a924923bd275d2e27b"
+    },
+    {
+      "path": "source-manifest.json",
+      "bytes": 217074,
+      "sha256": "70e845f14c9b8e63b0cf761940090ef6af9caa99bee2be0c21d9f06c92fd3383"
+    },
+    {
+      "path": "validation.json",
+      "bytes": 347,
+      "sha256": "766c51427ff5076b9db12bcb460bec352b61cf711d667ea6084e46f624552f07"
+    }
+  ],
+  "selfExcluded": "evidence-index.json",
+  "productRuns": 0
+}

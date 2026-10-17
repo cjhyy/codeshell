@@ -1,0 +1,27 @@
+{
+  "role": "Independent static supported-field retention/counterevidence opinion; Root owns final classification",
+  "sameFindingId": "MCP-R39-01",
+  "supportedStaticP3Opinions": 1,
+  "suggestedSeverity": "P3",
+  "independentNewIssueIds": [],
+  "standaloneCandidates": 0,
+  "newRelated": 0,
+  "ordinaryCondition": "Existing valid user-scope user-added editable stdio server, supported non-form field values entered through documented hand-edit settings, new Name absent, change only Name and save.",
+  "affectedSupportedFields": [
+    "connectTimeoutMs",
+    "connectRetries",
+    "inlineImages"
+  ],
+  "sourceConclusion": "Full submit creates next from form state without initial extras. New key is built from authored whitelist, old key becomes null; deepMerge cannot inherit an old differently named record. Same-name recursive merge retains omitted fields.",
+  "counterevidence": [
+    "Whitelist is intentional authorship policy, so mere omission is not a bug and all saves are not affected.",
+    "Same-name merge retains extras under its existing key.",
+    "Plugin override has disabled Name and supplemental save path, outside the supported condition.",
+    "Unique-name validation prevents overwriting another current entry; this case uses absent new key.",
+    "Atomic rename intention preserves write grouping; it does not transfer omitted supported scalar settings. No inspected note or branch declares Name-only rename resets these fields.",
+    "Supported hand editing is explicitly documented by schema-export1–11, not inferred solely from schema or arbitrary malformed DTOs.",
+    "No generic JSON editor was established or required. Unknown extension fields, credentials/security policy/lifecycle/permissions and actual runtime effects are outside the conclusion."
+  ],
+  "dynamicValidation": false,
+  "globalCountDeduplicatedWithAuthor": true
+}

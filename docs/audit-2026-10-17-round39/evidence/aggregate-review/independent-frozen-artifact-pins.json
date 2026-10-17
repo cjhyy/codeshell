@@ -1,0 +1,145 @@
+{
+  "capturedUTC": "2026-10-17T13:44:14.640683+00:00",
+  "files": [
+    {
+      "path": "/tmp/codeshell-audit-round39-mcp-rename-review/author-input-pins.json",
+      "relativePath": "author-input-pins.json",
+      "bytes": 4529,
+      "sha256": "98e79c05a32bd3a40ae7829804252729fefee39d3208225036d637838f3194e5",
+      "freezeStatus": "Independent reviewer explicitly confirmed final freeze before this pin"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round39-mcp-rename-review/author-metadata-checks.json",
+      "relativePath": "author-metadata-checks.json",
+      "bytes": 59260,
+      "sha256": "cd2e0bfe680df1633c509110a9210e57b8cbed0c269291cda0e09e6581233604",
+      "freezeStatus": "Independent reviewer explicitly confirmed final freeze before this pin"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round39-mcp-rename-review/author-receipt.json",
+      "relativePath": "author-receipt.json",
+      "bytes": 4036,
+      "sha256": "6ce5a7f5b430a197119f0d66bdc1e486b81392c16040a844b6ba41bc90d8cddc",
+      "freezeStatus": "Independent reviewer explicitly confirmed final freeze before this pin"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round39-mcp-rename-review/decisions.json",
+      "relativePath": "decisions.json",
+      "bytes": 1867,
+      "sha256": "199a6968eb82e197c51874d16d7d65ad2b274dd5ad0047986097996da4f3df36",
+      "freezeStatus": "Independent reviewer explicitly confirmed final freeze before this pin"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round39-mcp-rename-review/history-contexts.json",
+      "relativePath": "history-contexts.json",
+      "bytes": 259442,
+      "sha256": "33bb5b38f6cf7dddc93851a5b81f71d2bb04a040fb67fffc18bcac44fe507791",
+      "freezeStatus": "Independent reviewer explicitly confirmed final freeze before this pin"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round39-mcp-rename-review/history-decisions.json",
+      "relativePath": "history-decisions.json",
+      "bytes": 13739,
+      "sha256": "3d31929ab8720d5abdb36e04ba96fdd1b2cb48909c0166ff0864e10c375f3b28",
+      "freezeStatus": "Independent reviewer explicitly confirmed final freeze before this pin"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round39-mcp-rename-review/history-finish-check.json",
+      "relativePath": "history-finish-check.json",
+      "bytes": 1206408,
+      "sha256": "ec1e2770c6028a2fe285b24c019532288f9deb2f4ed2cacd2180dd4df37cfdf0",
+      "freezeStatus": "Independent reviewer explicitly confirmed final freeze before this pin"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round39-mcp-rename-review/history-initial-pins.json",
+      "relativePath": "history-initial-pins.json",
+      "bytes": 746134,
+      "sha256": "0b9d43c1935d779f86a9bcd130a349637e15eb8e63dace21a5731de943f619a4",
+      "freezeStatus": "Independent reviewer explicitly confirmed final freeze before this pin"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round39-mcp-rename-review/history-inventory.raw.txt",
+      "relativePath": "history-inventory.raw.txt",
+      "bytes": 215775,
+      "sha256": "24f5652b0e8c9ae2d05c0ed400846de6c2e4eac8262971ea3b1cfd6895acdd5c",
+      "freezeStatus": "Independent reviewer explicitly confirmed final freeze before this pin"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round39-mcp-rename-review/history.json",
+      "relativePath": "history.json",
+      "bytes": 746725,
+      "sha256": "455bdb9dd8e799707082c851b07d64549e2ec5855076969318fa30a5e4743758",
+      "freezeStatus": "Independent reviewer explicitly confirmed final freeze before this pin"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round39-mcp-rename-review/initial-pins.json",
+      "relativePath": "initial-pins.json",
+      "bytes": 1919,
+      "sha256": "badb3425c80bbfc0b3e1002e2397837aa73d105ee8147454d0d32d18bc649a40",
+      "freezeStatus": "Independent reviewer explicitly confirmed final freeze before this pin"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round39-mcp-rename-review/links-check.json",
+      "relativePath": "links-check.json",
+      "bytes": 2371,
+      "sha256": "6d7e19063c7801199bf3e3c2e324dcee5c276bad71ec00e7ab5fa97c97b9c03e",
+      "freezeStatus": "Independent reviewer explicitly confirmed final freeze before this pin"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round39-mcp-rename-review/manual-entry-pins.json",
+      "relativePath": "manual-entry-pins.json",
+      "bytes": 891,
+      "sha256": "ce00383179e2b68bc0b425dc887788445a73615bd7f1a627100287946340abde",
+      "freezeStatus": "Independent reviewer explicitly confirmed final freeze before this pin"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round39-mcp-rename-review/metadata-diagnostics.json",
+      "relativePath": "metadata-diagnostics.json",
+      "bytes": 1466,
+      "sha256": "264c14a5e105650469950201ea2f27c5f5aeed8334f1347a887b0e80a1396730",
+      "freezeStatus": "Independent reviewer explicitly confirmed final freeze before this pin"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round39-mcp-rename-review/producer-initial-pins.json",
+      "relativePath": "producer-initial-pins.json",
+      "bytes": 1551,
+      "sha256": "a42e805ab0cb8b33eebc55307d69cf40e612891b3ed01d031f97cc40598bb4cf",
+      "freezeStatus": "Independent reviewer explicitly confirmed final freeze before this pin"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round39-mcp-rename-review/review.md",
+      "relativePath": "review.md",
+      "bytes": 5579,
+      "sha256": "4e32834e0c4bdb7bf2de176761e7a969f85a553a9f18af36724b4de18c336aff",
+      "freezeStatus": "Independent reviewer explicitly confirmed final freeze before this pin"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round39-mcp-rename-review/scan-history.py",
+      "relativePath": "scan-history.py",
+      "bytes": 5589,
+      "sha256": "712b68e1a693445f5fd4d0e5334478019ef188e308891ab33d28acfda2881cd4",
+      "freezeStatus": "Independent reviewer explicitly confirmed final freeze before this pin"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round39-mcp-rename-review/selected-history-navigation.json",
+      "relativePath": "selected-history-navigation.json",
+      "bytes": 95195,
+      "sha256": "45a95dfe2f79958436cc4369edac214898a7bffae810541af030ccc6c7c33a62",
+      "freezeStatus": "Independent reviewer explicitly confirmed final freeze before this pin"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round39-mcp-rename-review/source-manifest.json",
+      "relativePath": "source-manifest.json",
+      "bytes": 17362,
+      "sha256": "06615fd4b5b810d584a22f2414798e1ed88653dfd15794495c3cc450524b923f",
+      "freezeStatus": "Independent reviewer explicitly confirmed final freeze before this pin"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round39-mcp-rename-review/validation.json",
+      "relativePath": "validation.json",
+      "bytes": 1292,
+      "sha256": "a7b0dce55a558a920e9ac606d8ee67f8f93f3135a973896357f9de1fe3482276",
+      "freezeStatus": "Independent reviewer explicitly confirmed final freeze before this pin"
+    }
+  ]
+}

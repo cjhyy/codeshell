@@ -1,0 +1,25 @@
+{
+  "files": [
+    {
+      "path": "initial-pins.json",
+      "bytes": 2177,
+      "sha256": "493ccdb43270dc0612e0b69798b36db494bdc1b0e09e5efbbcb84b262c56506d"
+    },
+    {
+      "path": "review.md",
+      "bytes": 2718,
+      "sha256": "ea171c893192fbbf9f5ab4cb12ba539d34343db509626f36594c2ed1dc332e2b"
+    },
+    {
+      "path": "source-excerpts.json",
+      "bytes": 6651,
+      "sha256": "100c7b57fc19375dafe8b097360688a77ef69591d9e6d9e90e8ad3489ba54d97"
+    },
+    {
+      "path": "source-manifest.json",
+      "bytes": 3729,
+      "sha256": "b45a6fcd89c39ec6d17cea27070ebc7348dd04e7f49af9542b5bf300ed9b21e9"
+    }
+  ],
+  "productRuns": 0
+}

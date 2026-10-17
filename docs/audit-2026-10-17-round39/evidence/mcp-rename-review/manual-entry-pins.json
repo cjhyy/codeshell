@@ -1,0 +1,23 @@
+{
+  "capturedUTC": "2026-10-17T13:31:37.989932+00:00",
+  "files": [
+    {
+      "path": "packages/core/src/settings/schema-export.ts",
+      "bytes": 1738,
+      "lineCount": 40,
+      "sha256": "3432bf0e85a2a37cf7345ea2fb39c36b1c027f8192345aca3acdd52fef9db91a",
+      "pinBeforeNewSelectedRead": true,
+      "initialSemanticReadSha256": "3432bf0e85a2a37cf7345ea2fb39c36b1c027f8192345aca3acdd52fef9db91a",
+      "timingNote": "Root supplied navigation path only; pin before first content read in this review."
+    },
+    {
+      "path": "README.md",
+      "bytes": 18628,
+      "lineCount": 331,
+      "sha256": "67ba40502c2d37e4460bef5f1600c4ca2609c2bb3bb224f60bd526691c94e1b9",
+      "pinBeforeNewSelectedRead": true,
+      "initialSemanticReadSha256": null,
+      "timingNote": "README locator line201 printed before this dedicated pin; do not backfill initial semantic SHA."
+    }
+  ]
+}

@@ -1,0 +1,39 @@
+{
+  "kind": "aggregate review artifact links only",
+  "checkedAtUTC": "2026-10-17T13:53:07.966036+00:00",
+  "links": [
+    {
+      "artifact": "/tmp/codeshell-audit-round40-aggregate-review/checks.json",
+      "exists": true
+    },
+    {
+      "artifact": "/tmp/codeshell-audit-round40-data-frontier/report.md",
+      "exists": true
+    },
+    {
+      "artifact": "/tmp/codeshell-audit-round40-project-options-review/review.md",
+      "exists": true
+    },
+    {
+      "artifact": "/tmp/codeshell-audit-round41-utf8-source-refresh/report.md",
+      "exists": true
+    },
+    {
+      "artifact": "/tmp/codeshell-audit-round40-aggregate-review/candidate-source-updates.json",
+      "exists": true
+    },
+    {
+      "artifact": "/tmp/codeshell-audit-round40-aggregate-review/source-range-overlay.json",
+      "exists": true
+    },
+    {
+      "artifact": "/tmp/codeshell-audit-round40-aggregate-review/validation.json",
+      "exists": true
+    }
+  ],
+  "linkCount": 7,
+  "allValid": true,
+  "files": [],
+  "productSourceLinkOrHashChecksPerformed": false,
+  "newProductSemanticReadLines": 0
+}

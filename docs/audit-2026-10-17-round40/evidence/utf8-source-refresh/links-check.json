@@ -1,0 +1,103 @@
+{
+  "kind": "artifact metadata only",
+  "timeUTC": "2026-10-17T13:47:54.051415+00:00",
+  "reportLinks": [
+    {
+      "target": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17-round34/evidence/utf8-frontier/proposal.md",
+      "exists": true
+    },
+    {
+      "target": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17-round34/evidence/utf8-review/review.md",
+      "exists": true
+    },
+    {
+      "target": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/packages/core/src/runtime/background-shell.ts:57",
+      "exists": true,
+      "line": 57,
+      "withinDeclaredReadRange": true
+    },
+    {
+      "target": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/packages/core/src/runtime/background-shell.ts:509",
+      "exists": true,
+      "line": 509,
+      "withinDeclaredReadRange": true
+    },
+    {
+      "target": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/packages/core/src/runtime/background-shell.ts:358",
+      "exists": true,
+      "line": 358,
+      "withinDeclaredReadRange": true
+    },
+    {
+      "target": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/packages/core/src/runtime/ring-file.ts:96",
+      "exists": true,
+      "line": 96,
+      "withinDeclaredReadRange": true
+    },
+    {
+      "target": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/packages/core/src/runtime/utf8-cut.ts",
+      "exists": true
+    },
+    {
+      "target": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/packages/core/src/tool-system/builtin/background-shell-tools.ts:28",
+      "exists": true,
+      "line": 28,
+      "withinDeclaredReadRange": true
+    },
+    {
+      "target": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/packages/core/src/runtime/background-shell.utf8-frontier.test.ts",
+      "exists": true
+    },
+    {
+      "target": "/tmp/codeshell-audit-round41-utf8-source-refresh/source-manifest.json",
+      "exists": true
+    },
+    {
+      "target": "/tmp/codeshell-audit-round41-utf8-source-refresh/git-read-receipt.json",
+      "exists": true
+    },
+    {
+      "target": "/tmp/codeshell-audit-round41-utf8-source-refresh/history-delta.json",
+      "exists": true
+    },
+    {
+      "target": "/tmp/codeshell-audit-round41-utf8-source-refresh/validation.json",
+      "exists": true
+    }
+  ],
+  "linkCount": 13,
+  "allLinksValid": true,
+  "sourceRangeChecks": [
+    {
+      "path": "packages/core/src/runtime/background-shell.ts",
+      "uniqueDeclaredReadLines": 291,
+      "matches": true
+    },
+    {
+      "path": "packages/core/src/runtime/background-shell.utf8-frontier.test.ts",
+      "uniqueDeclaredReadLines": 334,
+      "matches": true
+    },
+    {
+      "path": "packages/core/src/runtime/ring-file.ts",
+      "uniqueDeclaredReadLines": 107,
+      "matches": true
+    },
+    {
+      "path": "packages/core/src/runtime/utf8-cut.ts",
+      "uniqueDeclaredReadLines": 21,
+      "matches": true
+    },
+    {
+      "path": "packages/core/src/tool-system/builtin/background-shell-tools.ts",
+      "uniqueDeclaredReadLines": 62,
+      "matches": true
+    }
+  ],
+  "sourceLines": 815,
+  "historicalReportReadLines": 28,
+  "gitReadReceiptCommandCount": 7,
+  "GitBlobBindings": 5,
+  "newProductSemanticReadLines": 0,
+  "productExecutions": 0
+}

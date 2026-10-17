@@ -1,0 +1,28 @@
+{
+  "files": [
+    {
+      "path": "packages/desktop/src/preload/index.ts",
+      "bytes": 86436,
+      "sha256": "05dbc9b534bdc68c30f255f53a96617e50fb0c445ce2fc1bde4be31e3f8a6901",
+      "totalLines": 1892,
+      "pinTimeUTC": "2026-10-17T13:26:35.325491+00:00",
+      "coverage": "hash-only-before-any-current-semantic-read"
+    },
+    {
+      "path": "packages/desktop/src/main/index.ts",
+      "bytes": 299337,
+      "sha256": "105b2b49a28e0a7ef10980ac5feaa3a07ff81e7197f5acbefd95feb2498224c0",
+      "totalLines": 7330,
+      "pinTimeUTC": "2026-10-17T13:26:35.325491+00:00",
+      "coverage": "hash-only-before-any-current-semantic-read"
+    },
+    {
+      "path": "packages/core/src/types.ts",
+      "bytes": 51788,
+      "sha256": "1cfe13fc9d18863adb721635d56b34ae627bb1fab0508675b034a4340b987bb5",
+      "totalLines": 1333,
+      "pinTimeUTC": "2026-10-17T13:26:35.325491+00:00",
+      "coverage": "hash-only-before-any-current-semantic-read"
+    }
+  ]
+}

@@ -1,0 +1,31 @@
+{
+  "diagnostics": [
+    {
+      "kind": "navigation output truncated",
+      "detail": "Initial rg source inventory303 paths was truncated; no whole inventory semantic reading claim."
+    },
+    {
+      "kind": "navigation output truncated",
+      "detail": "AdvancedSections broad locator278 lines was truncated; hash-only/navigation source row, no body audit claim."
+    },
+    {
+      "kind": "metadata schema misread",
+      "toolChunk": "3586bf",
+      "exitCode": 1,
+      "error": "TypeError: 'int' object is not subscriptable",
+      "detail": "Reviewer incorrectly indexed retained count as list while inspecting own history JSON. No file mutation/product call, corrected schema inspection next; original diagnostics retained here."
+    },
+    {
+      "kind": "metadata output truncated",
+      "toolChunk": "f3aa5b",
+      "exitCode": 0,
+      "detail": "Printing61 selected stored locator contexts exceeded output budget. Stored original selected-history-navigation.json kept; subsequent exact context-text dedup yielded7 unique texts, all printed/read completely. No full61-object semantic claim."
+    },
+    {
+      "kind": "ending history byte drift",
+      "detail": "Exactly one release TODO file changed from189803/c8cdef20… to199956/8c1b9ca1… after initial query. history-finish-check.json stores exact hashes. Initial3413 scan preserved; no semantic history rescan or Git performed."
+    }
+  ],
+  "productFailures": 0,
+  "productReruns": 0
+}

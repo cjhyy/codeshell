@@ -1,0 +1,18 @@
+{
+  "ownedOutput": "/tmp/codeshell-audit-round40-data-frontier",
+  "prepOnly": true,
+  "rootSuppliedContextShort": "42683054",
+  "formalBaseline": null,
+  "activeLeaf": "packages/desktop/src/renderer/automation/projectOptions.ts",
+  "excludedBeforeSourceRead": "packages/desktop/src/renderer/markdown/stripMarkdown.ts (known R2-05)",
+  "scope": "one active ordinary option-list/text DTO leaf + necessary selected consumer/tests",
+  "ordinaryContracts": [
+    "no-project sentinel select value maps to empty cwd",
+    "tracked input order, exact-path dedupe and displayName fallback",
+    "missing current path synthetic option with mounted-root label when present",
+    "same helper outputs feed current Select value and option list; resume-session label fallback uses same mapping"
+  ],
+  "prior39DirectoryUntouched": true,
+  "noProductExecution": true,
+  "noGit": true
+}

@@ -1,0 +1,21 @@
+{
+  "files": [
+    {
+      "path": "packages/desktop/src/renderer/automation/projectOptions.ts",
+      "bytes": 3885,
+      "sha256": "bc14777959c7ae4f4e9c21a06cfcff08dccc9ba15436858b66147f218e1d13e0",
+      "totalLines": 101,
+      "pinTimeUTC": "2026-10-17T13:36:33.501792+00:00",
+      "coverage": "hash-only before current prep semantic read"
+    },
+    {
+      "path": "packages/desktop/src/renderer/automation/projectOptions.test.ts",
+      "bytes": 4376,
+      "sha256": "78018b554992bf1437ec73b81e183f8a65ad43ff5aee04f1d08f57d5c54abcea",
+      "totalLines": 107,
+      "pinTimeUTC": "2026-10-17T13:36:33.501792+00:00",
+      "coverage": "hash-only before current prep semantic read"
+    }
+  ],
+  "replacesExcludedLeaf": "stripMarkdown.ts blocked by exact old R2-05 cause before any product semantic reading"
+}

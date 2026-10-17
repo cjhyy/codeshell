@@ -1,0 +1,42 @@
+{
+  "mode": "Pure static ordinary DTO/text review plus filesystem metadata checks",
+  "productExecutions": 0,
+  "helperSchemaParserExecutions": 0,
+  "productImports": 0,
+  "testsExecuted": 0,
+  "languageFixturesEvaluated": 0,
+  "ReactBrowserActions": 0,
+  "McpConnectionsOrCommands": 0,
+  "actualSettingsOrHomeAccess": 0,
+  "nativeNetworkCliModelPermissionExperiments": 0,
+  "gitCommands": 0,
+  "repoWrites": 0,
+  "writesOnlyExactOwnedTmp": "/tmp/codeshell-audit-round39-mcp-rename-review",
+  "productRuns": [],
+  "historicalPassesBorrowed": false,
+  "oldFailedDirectionsReopened": false,
+  "metadataHistoryScan": {
+    "sessionId": 33518,
+    "sameHandleExitCode": 0
+  },
+  "metadataDiagnostics": "metadata-diagnostics.json",
+  "ownSourceCheckCount": 12,
+  "ownSourceAllMatch": true,
+  "authorSourceByteChecks": 212,
+  "authorSourceByteChecksAreNewSemanticReading": false,
+  "authorReceiptRows": 19,
+  "authorTotalArtifactsIncludingReceipt": 20,
+  "authorReportFullyRead": true,
+  "authorLargeRawHistoryObjectsRead": false,
+  "sourceCoverageCounts": {
+    "totalPinnedFiles": 12,
+    "semanticFiles": 11,
+    "fullFiles": 3,
+    "selectedFiles": 8,
+    "hashOnlyFiles": 1,
+    "semanticLines": 561,
+    "productLines": 504,
+    "testDeclarationLines": 34,
+    "documentationLines": 23
+  }
+}

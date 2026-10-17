@@ -1,0 +1,49 @@
+{
+  "kind": "manual source reasoning only; no evaluated byte fixture",
+  "existingCandidateId": "UTF8-R34-C1",
+  "oldPremise": "A still-running logical valid UTF8 stream currently ends inside one character; at/below16KiB reader formerly decoded/consumed whole available tail before continuation arrived.",
+  "currentCounterevidence": [
+    {
+      "source": "background-shell57–85",
+      "claim": "Finds only a potentially valid incomplete UTF8 suffix; complete or impossible prefixes remain available for ordinary replacement/forward progress."
+    },
+    {
+      "source": "background-shell509–535",
+      "claim": "Starting/running use complete prefix length before decoding/capping; consumedBytes follows available complete prefix or safe positive raw cap cut; incomplete tail is not added to offset."
+    },
+    {
+      "source": "ring-file96–105/147–151; background358–372",
+      "claim": "Under ordinary retained/no-eviction condition, raw bytes stay in memory, future data concatenates, and same absolute cursor retrieves withheld prefix with continuation."
+    },
+    {
+      "source": "background519–531; utf8-cut1–21",
+      "claim": "Large complete-prefix pagination still uses existing actual16384cap safe cut, avoiding a new split at the cap."
+    },
+    {
+      "source": "background487–497/513–516",
+      "claim": "All snapshot does not advance incremental cursor; terminal/orphan EOF deliberately consumes available bytes rather than indefinitely buffering."
+    }
+  ],
+  "ordinaryPremiseLimits": [
+    "valid stream bytes begin at a character boundary and retained prefix has not been evicted",
+    "does not assert malformed Buffer inputs produce no replacement characters",
+    "does not assert full shell/host/lifecycle/cleaner correctness"
+  ],
+  "testDeclarationsOnly": {
+    "fileLines": 334,
+    "syntacticTestCalls": 14,
+    "parameterTablesMentioned": [
+      "five CJK/emoji split cases",
+      "three terminal status cases",
+      "valid Unicode range boundary loop"
+    ],
+    "runtimeObservations": []
+  },
+  "notClaimed": [
+    "observed current host data chunk/peek timing",
+    "executed file write/Buffer/readOutput/BashOutput",
+    "verified guard effectiveness",
+    "actual connection/process/network/native operation",
+    "runtime-confirmed repair or archival of old candidate"
+  ]
+}

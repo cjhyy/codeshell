@@ -1,0 +1,77 @@
+{
+  "checks": [
+    {
+      "path": "evidence/mcp-rename-fields-frontier/report.md",
+      "bytes": 9783,
+      "sha256": "ba19c8152289e1c987031e1e7b6f691ac0b70313f062461bbf6bc2475b0612ec",
+      "matchesWorkerFreezeMessage": true
+    },
+    {
+      "path": "evidence/mcp-rename-fields-frontier/source-manifest.json",
+      "bytes": 99596,
+      "sha256": "453f2420da299d0134a6911db69424c865cfce8352d1b17cb203bc80d9f6e2ec",
+      "matchesWorkerFreezeMessage": true
+    },
+    {
+      "path": "evidence/mcp-rename-fields-frontier/artifact-receipt.json",
+      "bytes": 3736,
+      "sha256": "8c81b860179c47d38c0963097b047dde694b043c164641d47ea442662d5fd663",
+      "matchesWorkerFreezeMessage": true
+    },
+    {
+      "path": "evidence/root-mcp-rename-frontier/review.md",
+      "bytes": 2718,
+      "sha256": "ea171c893192fbbf9f5ab4cb12ba539d34343db509626f36594c2ed1dc332e2b",
+      "matchesWorkerFreezeMessage": true
+    },
+    {
+      "path": "evidence/root-mcp-rename-frontier/source-manifest.json",
+      "bytes": 3729,
+      "sha256": "b45a6fcd89c39ec6d17cea27070ebc7348dd04e7f49af9542b5bf300ed9b21e9",
+      "matchesWorkerFreezeMessage": true
+    },
+    {
+      "path": "evidence/root-mcp-rename-frontier/author-receipt.json",
+      "bytes": 646,
+      "sha256": "db11be52a36fc1103500a2b8f12b3af3a0e0d6d021ba597498e85e2b6a6950f8",
+      "matchesWorkerFreezeMessage": true
+    },
+    {
+      "path": "evidence/mcp-rename-review/review.md",
+      "bytes": 5579,
+      "sha256": "4e32834e0c4bdb7bf2de176761e7a969f85a553a9f18af36724b4de18c336aff",
+      "matchesWorkerFreezeMessage": true
+    },
+    {
+      "path": "evidence/mcp-rename-review/source-manifest.json",
+      "bytes": 17362,
+      "sha256": "06615fd4b5b810d584a22f2414798e1ed88653dfd15794495c3cc450524b923f",
+      "matchesWorkerFreezeMessage": true
+    },
+    {
+      "path": "evidence/mcp-rename-review/author-receipt.json",
+      "bytes": 4036,
+      "sha256": "6ce5a7f5b430a197119f0d66bdc1e486b81392c16040a844b6ba41bc90d8cddc",
+      "matchesWorkerFreezeMessage": true
+    },
+    {
+      "path": "evidence/aggregate-review/review.md",
+      "bytes": 4937,
+      "sha256": "1264da204a776b4788f292c311f15a01c0cc48778ffe8291df1d669a9e5abb2a",
+      "matchesWorkerFreezeMessage": true
+    },
+    {
+      "path": "evidence/aggregate-review/checks.json",
+      "bytes": 134209,
+      "sha256": "a3047874d9017eba08b4c125d3596baff258da8d47f759bf65779b8083ec38ae",
+      "matchesWorkerFreezeMessage": true
+    },
+    {
+      "path": "evidence/aggregate-review/reviewer-receipt.json",
+      "bytes": 2108,
+      "sha256": "ec174542fb132edc93d2373ccc7263256e02e5e34715fb8d0b03a93cb11aa33b",
+      "matchesWorkerFreezeMessage": true
+    }
+  ],
+  "productRuns": 0
+}

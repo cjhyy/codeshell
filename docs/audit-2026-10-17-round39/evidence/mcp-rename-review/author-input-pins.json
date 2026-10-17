@@ -1,0 +1,106 @@
+{
+  "capturedUTC": "2026-10-17T13:37:21.996779+00:00",
+  "scope": "Frozen parent author artifacts pinned before report read. Raw large matching-history objects are byte-hash-only, not printed/read as semantic history. No product source read from author claims.",
+  "files": [
+    {
+      "path": "/tmp/codeshell-audit-round39-mcp-rename-fields-frontier/artifact-receipt.json",
+      "bytes": 3736,
+      "sha256": "8c81b860179c47d38c0963097b047dde694b043c164641d47ea442662d5fd663"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round39-mcp-rename-fields-frontier/classification.json",
+      "bytes": 1514,
+      "sha256": "49df7f0aa54beec16350e1143b6a29cc5b8ae850c52fbb511b97ae0920b72f23"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round39-mcp-rename-fields-frontier/field-reference-navigation.json",
+      "bytes": 15853,
+      "sha256": "5dfb6c6d9f8937e4c81a9d1c6ecf29d53c47feda4330c8b138e38bf2b35f6eb5"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round39-mcp-rename-fields-frontier/final-source-check.json",
+      "bytes": 7714,
+      "sha256": "345f00f3d47a350f12add82386251b0a65267d3b0b314fc2cb51b5020aaef21b"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round39-mcp-rename-fields-frontier/focused-history.json",
+      "bytes": 77390,
+      "sha256": "58eecb9cc815db10ec014641754b29ed75a585a574aed891b1277d895e2d44fa"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round39-mcp-rename-fields-frontier/forwarding-initial-pins.json",
+      "bytes": 964,
+      "sha256": "8001d3505d9ec2a97a19d923d0ee6482949cdeb641e66a341133f56e1fb2391f"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round39-mcp-rename-fields-frontier/history-decisions.json",
+      "bytes": 2326,
+      "sha256": "d9a457da255220700f7124149be5ed8302a9cc71bf7504aa770306b95f2e770a"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round39-mcp-rename-fields-frontier/history-delta.json",
+      "bytes": 20234,
+      "sha256": "37640a7b22e7e99648d39d5c1fc16069790c444661fd6dd0f3d0dedf954c57bf"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round39-mcp-rename-fields-frontier/history-method.py",
+      "bytes": 3473,
+      "sha256": "92a44ffa5610e3ae6a696decbc17cb55110b9f58b6be36524fd41b26df19479e"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round39-mcp-rename-fields-frontier/history.json",
+      "bytes": 686708,
+      "sha256": "b6b576545df6a40893225cae752f9abb65a84144038999af1b937a9d02f431aa"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round39-mcp-rename-fields-frontier/initial-inventory-pins.json",
+      "bytes": 71599,
+      "sha256": "473a806b5c355b3ddd6209af125053df592d626d1cd70a7d8543e96111bde811"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round39-mcp-rename-fields-frontier/links-check.json",
+      "bytes": 7193,
+      "sha256": "4a5a2eceab03d51512e8b9699b46498893e9d588dbc1e5328f0e2832198c8148"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round39-mcp-rename-fields-frontier/matching-history-objects.first.json",
+      "bytes": 5530631,
+      "sha256": "836a18153529bd59025fd9745df9813f1fc6bf7380c8afc87ea6828fca117e13"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round39-mcp-rename-fields-frontier/matching-history-objects.json",
+      "bytes": 12437,
+      "sha256": "2f27bd134743799147ce20818c0217bfea03baaddde6fbf542d7f4764c009cea"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round39-mcp-rename-fields-frontier/metadata-diagnostics.json",
+      "bytes": 1059,
+      "sha256": "c5bee2cf14ab62f7655880032f917d9582216ad3e905e2d2c8beb7ac5e34e644"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round39-mcp-rename-fields-frontier/report.md",
+      "bytes": 9783,
+      "sha256": "ba19c8152289e1c987031e1e7b6f691ac0b70313f062461bbf6bc2475b0612ec"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round39-mcp-rename-fields-frontier/scope.json",
+      "bytes": 796,
+      "sha256": "9914aeae8175e84cb84e57a76a1ea3905c04404177f175a915d8d8f9c70f438f"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round39-mcp-rename-fields-frontier/source-manifest.json",
+      "bytes": 99596,
+      "sha256": "453f2420da299d0134a6911db69424c865cfce8352d1b17cb203bc80d9f6e2ec"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round39-mcp-rename-fields-frontier/static-value-flow.json",
+      "bytes": 2265,
+      "sha256": "29352cdafa93614c5fcf9f95bdf42f568cf3ee4c05d8458a43665d7bd1760e06"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round39-mcp-rename-fields-frontier/validation.json",
+      "bytes": 1147,
+      "sha256": "1bc6db729bd2e0786f2b1b8650f7fb9432666cb1efc68a9523471391e10c88f8"
+    }
+  ]
+}

@@ -1,0 +1,195 @@
+{
+  "selection": "direct source file/path field only, excludes giant embedded audit log values",
+  "initialBroadObjectCount": 69,
+  "matchingObjectCount": 12,
+  "objects": [
+    {
+      "path": "docs/archive/review-2026-05-30/backlog.json",
+      "location": "$[90]",
+      "object": {
+        "file": "packages/desktop/src/renderer/settings/McpSection.tsx",
+        "line": "414",
+        "category": "correctness",
+        "severity": "medium",
+        "confidence": "high",
+        "title": "HTTP headers formatted as KEY=VALUE instead of Key: Value",
+        "detail": "Line 414 calls `envOrHeadersToText(initial?.headers)` which formats all key-value pairs as `KEY=VALUE` (line 646). However, HTTP headers should use `Key: Value` format as shown in the textarea placeholder at line 553. This causes headers to be displayed in the wrong format to the user, potentially confusing them or causing issues when they try to re-edit.",
+        "fix": "Modify `envOrHeadersToText` to accept a format parameter, or create a separate function for headers. Alternatively, in the editor, use different formatting for headers: split on `:` and rejoin with `:` during round-trip.",
+        "pkg": "desktop"
+      }
+    },
+    {
+      "path": "docs/archive/review-2026-05-30/backlog_confirmed.json",
+      "location": "$[69]",
+      "object": {
+        "pkg": "desktop",
+        "file": "packages/desktop/src/renderer/settings/McpSection.tsx",
+        "line": "414",
+        "category": "correctness",
+        "severity": "low",
+        "title": "HTTP headers formatted as KEY=VALUE instead of Key: Value",
+        "detail": "Line 414 calls `envOrHeadersToText(initial?.headers)` which formats all key-value pairs as `KEY=VALUE` (line 646). However, HTTP headers should use `Key: Value` format as shown in the textarea placeholder at line 553. This causes headers to be displayed in the wrong format to the user, potentially confusing them or causing issues when they try to re-edit.",
+        "fix": "Modify `envOrHeadersToText` to accept a format parameter, or create a separate function for headers. Alternatively, in the editor, use different formatting for headers: split on `:` and rejoin with `:` during round-trip.",
+        "verify_note": "This is a UX/display issue rather than a functional bug. The code works correctly because `parseKeyValueLines()` accepts both delimiters, allowing headers in either format to round-trip successfully. However, users editing headers see `Authorization=Bearer` instead of the suggested `Authorization: Bearer` format, which is confusing. Severity is low because: (1) functionality is not broken, (2) the parser accepts both formats, (3) users can manually reformat if needed, and (4) the workaround is trivial (accept either format).",
+        "verify_reason": "The `envOrHeadersToText()` function (line 643-648) formats both environment variables and headers as `KEY=VALUE` format. However, the headers textarea (line 547-556) has a label saying `Headers (Key: Value)` and a placeholder showing `Authorization: Bearer ...`, which suggests the `Key: Value` format. When a user edits existing headers, they see the incorrect `KEY=VALUE` format displayed, conflicting with the placeholder's suggestion. While the `parseKeyValueLines()` function (line 650-665) accepts both `=` and `:` delimiters so parsing doesn't fail, the UX is confusing because the initial display format contradicts the suggested format."
+      }
+    },
+    {
+      "path": "docs/archive/review-2026-05-30/backlog_ided.json",
+      "location": "$[90]",
+      "object": {
+        "file": "packages/desktop/src/renderer/settings/McpSection.tsx",
+        "line": "414",
+        "category": "correctness",
+        "severity": "medium",
+        "confidence": "high",
+        "title": "HTTP headers formatted as KEY=VALUE instead of Key: Value",
+        "detail": "Line 414 calls `envOrHeadersToText(initial?.headers)` which formats all key-value pairs as `KEY=VALUE` (line 646). However, HTTP headers should use `Key: Value` format as shown in the textarea placeholder at line 553. This causes headers to be displayed in the wrong format to the user, potentially confusing them or causing issues when they try to re-edit.",
+        "fix": "Modify `envOrHeadersToText` to accept a format parameter, or create a separate function for headers. Alternatively, in the editor, use different formatting for headers: split on `:` and rejoin with `:` during round-trip.",
+        "pkg": "desktop",
+        "_id": 90
+      }
+    },
+    {
+      "path": "docs/archive/review-2026-05-30/findings.json",
+      "location": "$[278]",
+      "object": {
+        "file": "packages/desktop/src/renderer/settings/McpSection.tsx",
+        "line": "414",
+        "category": "correctness",
+        "severity": "medium",
+        "confidence": "high",
+        "title": "HTTP headers formatted as KEY=VALUE instead of Key: Value",
+        "detail": "Line 414 calls `envOrHeadersToText(initial?.headers)` which formats all key-value pairs as `KEY=VALUE` (line 646). However, HTTP headers should use `Key: Value` format as shown in the textarea placeholder at line 553. This causes headers to be displayed in the wrong format to the user, potentially confusing them or causing issues when they try to re-edit.",
+        "fix": "Modify `envOrHeadersToText` to accept a format parameter, or create a separate function for headers. Alternatively, in the editor, use different formatting for headers: split on `:` and rejoin with `:` during round-trip."
+      }
+    },
+    {
+      "path": "docs/archive/review-2026-05-30/low_confirmed.json",
+      "location": "$[38]",
+      "object": {
+        "pkg": "desktop",
+        "file": "packages/desktop/src/renderer/settings/McpSection.tsx",
+        "line": "414",
+        "category": "correctness",
+        "severity": "low",
+        "title": "HTTP headers formatted as KEY=VALUE instead of Key: Value",
+        "detail": "Line 414 calls `envOrHeadersToText(initial?.headers)` which formats all key-value pairs as `KEY=VALUE` (line 646). However, HTTP headers should use `Key: Value` format as shown in the textarea placeholder at line 553. This causes headers to be displayed in the wrong format to the user, potentially confusing them or causing issues when they try to re-edit.",
+        "fix": "Modify `envOrHeadersToText` to accept a format parameter, or create a separate function for headers. Alternatively, in the editor, use different formatting for headers: split on `:` and rejoin with `:` during round-trip.",
+        "verify_note": "This is a UX/display issue rather than a functional bug. The code works correctly because `parseKeyValueLines()` accepts both delimiters, allowing headers in either format to round-trip successfully. However, users editing headers see `Authorization=Bearer` instead of the suggested `Authorization: Bearer` format, which is confusing. Severity is low because: (1) functionality is not broken, (2) the parser accepts both formats, (3) users can manually reformat if needed, and (4) the workaround is trivial (accept either format).",
+        "verify_reason": "The `envOrHeadersToText()` function (line 643-648) formats both environment variables and headers as `KEY=VALUE` format. However, the headers textarea (line 547-556) has a label saying `Headers (Key: Value)` and a placeholder showing `Authorization: Bearer ...`, which suggests the `Key: Value` format. When a user edits existing headers, they see the incorrect `KEY=VALUE` format displayed, conflicting with the placeholder's suggestion. While the `parseKeyValueLines()` function (line 650-665) accepts both `=` and `:` delimiters so parsing doesn't fail, the UX is confusing because the initial display format contradicts the suggested format."
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-ranking.json",
+      "location": "$[\"rankedCandidates\"][104]",
+      "object": {
+        "path": "packages/desktop/src/renderer/settings/mcpSettingsPatch.ts",
+        "bytes": 1991,
+        "lines": 62,
+        "sha256": "6364bb8818f5a8e883c240d971793205a3f1507b287346e8eb8ee2ba962ef3d1",
+        "coverageStatus": "no-matching-source-manifest-row",
+        "currentFullClaimVariants": 0,
+        "currentSelectedUnionLines": 0,
+        "priorVersionClaimVariants": 0,
+        "claimVariants": 0,
+        "runtimeImportLines": [],
+        "typeOnlyImportLineCount": 0,
+        "requiresRootSourceReadAndBoundaryReview": true
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+      "location": "$[\"files\"][3018]",
+      "object": {
+        "path": "packages/desktop/src/renderer/settings/McpSection.tsx",
+        "bytes": 74294,
+        "lines": 1893,
+        "sha256": "fb38b3514d3c3cab7d0899f6819bf617cbe958181fdc9a00ec5c29f7e735d014"
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+      "location": "$[\"files\"][3075]",
+      "object": {
+        "path": "packages/desktop/src/renderer/settings/mcpSettingsPatch.ts",
+        "bytes": 1991,
+        "lines": 62,
+        "sha256": "6364bb8818f5a8e883c240d971793205a3f1507b287346e8eb8ee2ba962ef3d1"
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round30/evidence/review-root-source-manifest.json",
+      "location": "$[\"files\"][5]",
+      "object": {
+        "path": "packages/desktop/src/renderer/settings/McpSection.tsx",
+        "bytes": 74294,
+        "lineCount": 1893,
+        "sha256": "fb38b3514d3c3cab7d0899f6819bf617cbe958181fdc9a00ec5c29f7e735d014",
+        "initialFilesystemSha256": "fb38b3514d3c3cab7d0899f6819bf617cbe958181fdc9a00ec5c29f7e735d014",
+        "initialPinTiming": "before independent reviewer local same-name helper disambiguation read",
+        "selectedLineRanges": [
+          [
+            1092,
+            1112
+          ]
+        ],
+        "coveredLineCount": 21,
+        "coverage": "selected",
+        "role": "same-name navigation disambiguation only, not an author prep scope expansion",
+        "finishSha256": "fb38b3514d3c3cab7d0899f6819bf617cbe958181fdc9a00ec5c29f7e735d014",
+        "matchesInitialPin": true
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round30/evidence/root-review-prep/source-manifest.json",
+      "location": "$[\"sources\"][5]",
+      "object": {
+        "path": "packages/desktop/src/renderer/settings/McpSection.tsx",
+        "bytes": 74294,
+        "lineCount": 1893,
+        "sha256": "fb38b3514d3c3cab7d0899f6819bf617cbe958181fdc9a00ec5c29f7e735d014",
+        "initialFilesystemSha256": "fb38b3514d3c3cab7d0899f6819bf617cbe958181fdc9a00ec5c29f7e735d014",
+        "initialPinTiming": "before independent reviewer local same-name helper disambiguation read",
+        "selectedLineRanges": [
+          [
+            1092,
+            1112
+          ]
+        ],
+        "coveredLineCount": 21,
+        "coverage": "selected",
+        "role": "same-name navigation disambiguation only, not an author prep scope expansion",
+        "finishSha256": "fb38b3514d3c3cab7d0899f6819bf617cbe958181fdc9a00ec5c29f7e735d014",
+        "matchesInitialPin": true
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round30/source-manifest.json",
+      "location": "$[\"files\"][18]",
+      "object": {
+        "path": "packages/desktop/src/renderer/settings/McpSection.tsx",
+        "bytes": 74294,
+        "sha256": "fb38b3514d3c3cab7d0899f6819bf617cbe958181fdc9a00ec5c29f7e735d014",
+        "currentBytes": 74294,
+        "currentSha256": "fb38b3514d3c3cab7d0899f6819bf617cbe958181fdc9a00ec5c29f7e735d014",
+        "mainBytes": 74294,
+        "mainSha256": "fb38b3514d3c3cab7d0899f6819bf617cbe958181fdc9a00ec5c29f7e735d014",
+        "currentWorkingTreeMatchesFrozenBlob": true,
+        "mainMatchesFrozenBlob": true
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round30/source-manifest.json",
+      "location": "$[\"workerSourceChecks\"][21]",
+      "object": {
+        "manifest": "review-root-source-manifest.json",
+        "path": "packages/desktop/src/renderer/settings/McpSection.tsx",
+        "sha256": "fb38b3514d3c3cab7d0899f6819bf617cbe958181fdc9a00ec5c29f7e735d014",
+        "coverage": "selected",
+        "rootBoundFrozenGitBlob": true,
+        "note": "Same prep semantic read reused, not a second formalization read; original timing/ranges authoritative."
+      }
+    }
+  ]
+}

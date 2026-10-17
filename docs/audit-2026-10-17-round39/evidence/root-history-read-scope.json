@@ -1,0 +1,11 @@
+{
+  "actualReadContexts": {
+    "fields": 14,
+    "rename-field": 8,
+    "field-rename": 3
+  },
+  "totalRead": 25,
+  "readScope": "All25 saved bounded contexts in new frozen38 delta; only those contexts, not full underlying reports or every3509 Root query hit.",
+  "boundary": "Follow-up and completion of an explicitly unclassified Round38 rename boundary. Not a second count of MCP-R38-01 and not an absolute-first claim.",
+  "productRuns": 0
+}

@@ -1,0 +1,455 @@
+{
+  "prepOnly": true,
+  "parentContextSupplied": "bbad45be04dacfecb29cba04ed51caf167fe4e53",
+  "formalBaseline": null,
+  "laterHeadContextSuppliedByRoot": "42683054b1eea00d76e3ed18817766be3047c110 (38 docs integrated; later main refresh is Root-owned)",
+  "gitBindingPerformed": false,
+  "finishedAtUTC": "2026-10-17T13:42:28.933437+00:00",
+  "files": [
+    {
+      "path": "packages/desktop/src/renderer/settings/McpSection.tsx",
+      "bytes": 74294,
+      "sha256": "fb38b3514d3c3cab7d0899f6819bf617cbe958181fdc9a00ec5c29f7e735d014",
+      "lineCount": 1893,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          68,
+          69
+        ],
+        [
+          245,
+          271
+        ],
+        [
+          418,
+          449
+        ],
+        [
+          699,
+          715
+        ],
+        [
+          877,
+          887
+        ],
+        [
+          1104,
+          1123
+        ],
+        [
+          1207,
+          1210
+        ],
+        [
+          1301,
+          1320
+        ],
+        [
+          1354,
+          1395
+        ],
+        [
+          1428,
+          1445
+        ],
+        [
+          1756,
+          1772
+        ]
+      ],
+      "coveredLineCount": 210,
+      "sourceKind": "product",
+      "initialPinArtifact": "initial-pins.json",
+      "initialPinUTC": "2026-10-17T13:28:49.336255+00:00",
+      "initialSemanticReadSha256": "fb38b3514d3c3cab7d0899f6819bf617cbe958181fdc9a00ec5c29f7e735d014",
+      "prepRow": {
+        "path": "packages/desktop/src/renderer/settings/McpSection.tsx",
+        "bytes": 74294,
+        "lineCount": 1893,
+        "sha256": "fb38b3514d3c3cab7d0899f6819bf617cbe958181fdc9a00ec5c29f7e735d014",
+        "pinBeforeNewSelectedRead": true,
+        "priorReadingNote": "Same source was read selectively during frozen Round38 args review; no old artifact changed, this pin precedes any new Round39 selected read."
+      },
+      "finishBytes": 74294,
+      "finishSha256": "fb38b3514d3c3cab7d0899f6819bf617cbe958181fdc9a00ec5c29f7e735d014",
+      "matchesInitialPin": true,
+      "role": "Ordinary settings list/loading and editable user server entry, initial state, nonempty unique Name admission, full submit whitelist, atomic new-key/old-null patch, disabled override Name, raw summary spreading. No trust/probe invocation or mechanism assessment.",
+      "firstEverReadClaim": false
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/mcpSettingsPatch.ts",
+      "bytes": 1991,
+      "sha256": "6364bb8818f5a8e883c240d971793205a3f1507b287346e8eb8ee2ba962ef3d1",
+      "lineCount": 62,
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          62
+        ]
+      ],
+      "coveredLineCount": 62,
+      "sourceKind": "product",
+      "initialPinArtifact": "initial-pins.json",
+      "initialPinUTC": "2026-10-17T13:28:49.336255+00:00",
+      "initialSemanticReadSha256": "6364bb8818f5a8e883c240d971793205a3f1507b287346e8eb8ee2ba962ef3d1",
+      "prepRow": {
+        "path": "packages/desktop/src/renderer/settings/mcpSettingsPatch.ts",
+        "bytes": 1991,
+        "lineCount": 62,
+        "sha256": "6364bb8818f5a8e883c240d971793205a3f1507b287346e8eb8ee2ba962ef3d1",
+        "pinBeforeNewSelectedRead": true,
+        "priorReadingNote": "Same source was read selectively during frozen Round38 args review; no old artifact changed, this pin precedes any new Round39 selected read."
+      },
+      "finishBytes": 1991,
+      "finishSha256": "6364bb8818f5a8e883c240d971793205a3f1507b287346e8eb8ee2ba962ef3d1",
+      "matchesInitialPin": true,
+      "role": "Authored form whitelist and field handling; omission alone is intentional, not a finding for same-name merge.",
+      "firstEverReadClaim": false
+    },
+    {
+      "path": "packages/desktop/src/main/settings-service.ts",
+      "bytes": 10247,
+      "sha256": "89303dcb539743adbdaff9445c58836608fc9bd50810dc00c1bda80e11c89455",
+      "lineCount": 275,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          35,
+          50
+        ],
+        [
+          151,
+          153
+        ],
+        [
+          156,
+          156
+        ],
+        [
+          181,
+          215
+        ],
+        [
+          224,
+          233
+        ]
+      ],
+      "coveredLineCount": 65,
+      "sourceKind": "product",
+      "initialPinArtifact": "initial-pins.json",
+      "initialPinUTC": "2026-10-17T13:28:49.336255+00:00",
+      "initialSemanticReadSha256": "89303dcb539743adbdaff9445c58836608fc9bd50810dc00c1bda80e11c89455",
+      "prepRow": {
+        "path": "packages/desktop/src/main/settings-service.ts",
+        "bytes": 10247,
+        "lineCount": 275,
+        "sha256": "89303dcb539743adbdaff9445c58836608fc9bd50810dc00c1bda80e11c89455",
+        "pinBeforeNewSelectedRead": true,
+        "priorReadingNote": "Same source was read selectively during frozen Round38 args review; no old artifact changed, this pin precedes any new Round39 selected read."
+      },
+      "finishBytes": 10247,
+      "finishSha256": "89303dcb539743adbdaff9445c58836608fc9bd50810dc00c1bda80e11c89455",
+      "matchesInitialPin": true,
+      "role": "JSON reader and plain-record sanitizer, patch/current deepMerge and write call site, null deletion and missing-key stripNulls. Lock/corruption/recovery mechanisms excluded even where adjacent lines were printed.",
+      "firstEverReadClaim": false
+    },
+    {
+      "path": "packages/desktop/src/renderer/settingsAuthority.ts",
+      "bytes": 765,
+      "sha256": "884071554713d9804d50b92dbd0f44d44941222762847f2accc65f12bc09fb1e",
+      "lineCount": 25,
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          25
+        ]
+      ],
+      "coveredLineCount": 25,
+      "sourceKind": "product",
+      "initialPinArtifact": "initial-pins.json",
+      "initialPinUTC": "2026-10-17T13:28:49.336255+00:00",
+      "initialSemanticReadSha256": "884071554713d9804d50b92dbd0f44d44941222762847f2accc65f12bc09fb1e",
+      "prepRow": {
+        "path": "packages/desktop/src/renderer/settingsAuthority.ts",
+        "bytes": 765,
+        "lineCount": 25,
+        "sha256": "884071554713d9804d50b92dbd0f44d44941222762847f2accc65f12bc09fb1e",
+        "pinBeforeNewSelectedRead": true,
+        "priorReadingNote": "Same source was read selectively during frozen Round38 args review; no old artifact changed, this pin precedes any new Round39 selected read."
+      },
+      "finishBytes": 765,
+      "finishSha256": "884071554713d9804d50b92dbd0f44d44941222762847f2accc65f12bc09fb1e",
+      "matchesInitialPin": true,
+      "role": "Ordinary user-scope DTO routing to getSettings/updateSettings only; project target permission/authority behavior not assessed.",
+      "firstEverReadClaim": false
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/AdvancedSections.tsx",
+      "bytes": 75319,
+      "sha256": "3a18e0123775066a6ba3178934ed1bac9e1bc9f48d74dee3842ec422204fa014",
+      "lineCount": 2032,
+      "coverage": "hash-only",
+      "selectedLineRanges": [],
+      "coveredLineCount": 0,
+      "sourceKind": "product",
+      "initialPinArtifact": "producer-initial-pins.json",
+      "initialPinUTC": "2026-10-17T13:29:57.967210+00:00",
+      "initialSemanticReadSha256": null,
+      "prepRow": {
+        "path": "packages/desktop/src/renderer/settings/AdvancedSections.tsx",
+        "bytes": 75319,
+        "lineCount": 2032,
+        "sha256": "3a18e0123775066a6ba3178934ed1bac9e1bc9f48d74dee3842ec422204fa014",
+        "pinBeforeNewSelectedRead": true
+      },
+      "finishBytes": 75319,
+      "finishSha256": "3a18e0123775066a6ba3178934ed1bac9e1bc9f48d74dee3842ec422204fa014",
+      "matchesInitialPin": true,
+      "role": "Navigation-only search plus byte pin; broad locator output truncated, no generic editor or full-body coverage claim.",
+      "firstEverReadClaim": false
+    },
+    {
+      "path": "packages/core/src/types.ts",
+      "bytes": 51788,
+      "sha256": "1cfe13fc9d18863adb721635d56b34ae627bb1fab0508675b034a4340b987bb5",
+      "lineCount": 1333,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          1150,
+          1178
+        ]
+      ],
+      "coveredLineCount": 29,
+      "sourceKind": "product",
+      "initialPinArtifact": "producer-initial-pins.json",
+      "initialPinUTC": "2026-10-17T13:29:57.967210+00:00",
+      "initialSemanticReadSha256": "1cfe13fc9d18863adb721635d56b34ae627bb1fab0508675b034a4340b987bb5",
+      "prepRow": {
+        "path": "packages/core/src/types.ts",
+        "bytes": 51788,
+        "lineCount": 1333,
+        "sha256": "1cfe13fc9d18863adb721635d56b34ae627bb1fab0508675b034a4340b987bb5",
+        "pinBeforeNewSelectedRead": true
+      },
+      "finishBytes": 51788,
+      "finishSha256": "1cfe13fc9d18863adb721635d56b34ae627bb1fab0508675b034a4340b987bb5",
+      "matchesInitialPin": true,
+      "role": "Supported configuration fields and documented ordinary defaults; neighboring tool policy comments do not represent a permission audit.",
+      "firstEverReadClaim": false
+    },
+    {
+      "path": "packages/core/src/settings/schema.ts",
+      "bytes": 29767,
+      "sha256": "2496b8aefd8ea32f7fc7ac23b26878475809be952a5fdbd8ac247cf0d40b3139",
+      "lineCount": 731,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          371,
+          400
+        ]
+      ],
+      "coveredLineCount": 30,
+      "sourceKind": "product",
+      "initialPinArtifact": "producer-initial-pins.json",
+      "initialPinUTC": "2026-10-17T13:29:57.967210+00:00",
+      "initialSemanticReadSha256": "2496b8aefd8ea32f7fc7ac23b26878475809be952a5fdbd8ac247cf0d40b3139",
+      "prepRow": {
+        "path": "packages/core/src/settings/schema.ts",
+        "bytes": 29767,
+        "lineCount": 731,
+        "sha256": "2496b8aefd8ea32f7fc7ac23b26878475809be952a5fdbd8ac247cf0d40b3139",
+        "pinBeforeNewSelectedRead": true
+      },
+      "finishBytes": 29767,
+      "finishSha256": "2496b8aefd8ea32f7fc7ac23b26878475809be952a5fdbd8ac247cf0d40b3139",
+      "matchesInitialPin": true,
+      "role": "Declared supported MCP configuration fields, not schema execution or sole producer proof.",
+      "firstEverReadClaim": false
+    },
+    {
+      "path": "packages/core/src/tool-system/mcp-connection-config.ts",
+      "bytes": 2457,
+      "sha256": "202b36f9698a031050cab0ff094c69e2d5ae27e782660b9261cd48deafbd24e5",
+      "lineCount": 53,
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          53
+        ]
+      ],
+      "coveredLineCount": 53,
+      "sourceKind": "product",
+      "initialPinArtifact": "producer-initial-pins.json",
+      "initialPinUTC": "2026-10-17T13:29:57.967210+00:00",
+      "initialSemanticReadSha256": "202b36f9698a031050cab0ff094c69e2d5ae27e782660b9261cd48deafbd24e5",
+      "prepRow": {
+        "path": "packages/core/src/tool-system/mcp-connection-config.ts",
+        "bytes": 2457,
+        "lineCount": 53,
+        "sha256": "202b36f9698a031050cab0ff094c69e2d5ae27e782660b9261cd48deafbd24e5",
+        "pinBeforeNewSelectedRead": true
+      },
+      "finishBytes": 2457,
+      "finishSha256": "202b36f9698a031050cab0ff094c69e2d5ae27e782660b9261cd48deafbd24e5",
+      "matchesInitialPin": true,
+      "role": "Scalar DTO snapshot copy and supported defaults only; connection identity hashing/auth correctness not assessed.",
+      "firstEverReadClaim": false
+    },
+    {
+      "path": "packages/core/src/tool-system/mcp-manager.ts",
+      "bytes": 74360,
+      "sha256": "c910e4c055069e16a8a33c6c3e68a724776f43adf271503f1dd8899a73ec7721",
+      "lineCount": 1923,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          1135,
+          1147
+        ],
+        [
+          1621,
+          1626
+        ]
+      ],
+      "coveredLineCount": 19,
+      "sourceKind": "product",
+      "initialPinArtifact": "producer-initial-pins.json",
+      "initialPinUTC": "2026-10-17T13:29:57.967210+00:00",
+      "initialSemanticReadSha256": "c910e4c055069e16a8a33c6c3e68a724776f43adf271503f1dd8899a73ec7721",
+      "prepRow": {
+        "path": "packages/core/src/tool-system/mcp-manager.ts",
+        "bytes": 74360,
+        "lineCount": 1923,
+        "sha256": "c910e4c055069e16a8a33c6c3e68a724776f43adf271503f1dd8899a73ec7721",
+        "pinBeforeNewSelectedRead": true
+      },
+      "finishBytes": 74360,
+      "finishSha256": "c910e4c055069e16a8a33c6c3e68a724776f43adf271503f1dd8899a73ec7721",
+      "matchesInitialPin": true,
+      "role": "Scalar timeout/retry fallback and inlineImages input forwarding only; no actual connection/model/image/lifecycle behavior observed.",
+      "firstEverReadClaim": false
+    },
+    {
+      "path": "packages/core/src/tool-system/mcp-connection-config.test.ts",
+      "bytes": 6682,
+      "sha256": "eb1fac9ef17b18e42b7e90e2bd009044c3902a75de64355557d36a3d0ee6a494",
+      "lineCount": 191,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          1,
+          17
+        ],
+        [
+          98,
+          109
+        ],
+        [
+          187,
+          191
+        ]
+      ],
+      "coveredLineCount": 34,
+      "sourceKind": "test",
+      "initialPinArtifact": "producer-initial-pins.json",
+      "initialPinUTC": "2026-10-17T13:29:57.967210+00:00",
+      "initialSemanticReadSha256": "eb1fac9ef17b18e42b7e90e2bd009044c3902a75de64355557d36a3d0ee6a494",
+      "prepRow": {
+        "path": "packages/core/src/tool-system/mcp-connection-config.test.ts",
+        "bytes": 6682,
+        "lineCount": 191,
+        "sha256": "eb1fac9ef17b18e42b7e90e2bd009044c3902a75de64355557d36a3d0ee6a494",
+        "pinBeforeNewSelectedRead": true
+      },
+      "finishBytes": 6682,
+      "finishSha256": "eb1fac9ef17b18e42b7e90e2bd009044c3902a75de64355557d36a3d0ee6a494",
+      "matchesInitialPin": true,
+      "role": "Existing factory and timeout/retry/inlineImages declaration text only; two case headers read, no run and no rename regression proof.",
+      "firstEverReadClaim": false
+    },
+    {
+      "path": "packages/core/src/settings/schema-export.ts",
+      "bytes": 1738,
+      "sha256": "3432bf0e85a2a37cf7345ea2fb39c36b1c027f8192345aca3acdd52fef9db91a",
+      "lineCount": 40,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          1,
+          11
+        ]
+      ],
+      "coveredLineCount": 11,
+      "sourceKind": "product",
+      "initialPinArtifact": "manual-entry-pins.json",
+      "initialPinUTC": "2026-10-17T13:31:37.989932+00:00",
+      "initialSemanticReadSha256": "3432bf0e85a2a37cf7345ea2fb39c36b1c027f8192345aca3acdd52fef9db91a",
+      "prepRow": {
+        "path": "packages/core/src/settings/schema-export.ts",
+        "bytes": 1738,
+        "lineCount": 40,
+        "sha256": "3432bf0e85a2a37cf7345ea2fb39c36b1c027f8192345aca3acdd52fef9db91a",
+        "pinBeforeNewSelectedRead": true,
+        "initialSemanticReadSha256": "3432bf0e85a2a37cf7345ea2fb39c36b1c027f8192345aca3acdd52fef9db91a",
+        "timingNote": "Root supplied navigation path only; pin before first content read in this review."
+      },
+      "finishBytes": 1738,
+      "finishSha256": "3432bf0e85a2a37cf7345ea2fb39c36b1c027f8192345aca3acdd52fef9db91a",
+      "matchesInitialPin": true,
+      "role": "Explicit product contract for hand editing user/project settings using exported JSON Schema autocomplete and validation.",
+      "firstEverReadClaim": false
+    },
+    {
+      "path": "README.md",
+      "bytes": 18628,
+      "sha256": "67ba40502c2d37e4460bef5f1600c4ca2609c2bb3bb224f60bd526691c94e1b9",
+      "lineCount": 331,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          193,
+          215
+        ]
+      ],
+      "coveredLineCount": 23,
+      "sourceKind": "documentation",
+      "initialPinArtifact": "manual-entry-pins.json",
+      "initialPinUTC": "2026-10-17T13:31:37.989932+00:00",
+      "initialSemanticReadSha256": null,
+      "prepRow": {
+        "path": "README.md",
+        "bytes": 18628,
+        "lineCount": 331,
+        "sha256": "67ba40502c2d37e4460bef5f1600c4ca2609c2bb3bb224f60bd526691c94e1b9",
+        "pinBeforeNewSelectedRead": true,
+        "initialSemanticReadSha256": null,
+        "timingNote": "README locator line201 printed before this dedicated pin; do not backfill initial semantic SHA."
+      },
+      "finishBytes": 18628,
+      "finishSha256": "67ba40502c2d37e4460bef5f1600c4ca2609c2bb3bb224f60bd526691c94e1b9",
+      "matchesInitialPin": true,
+      "role": "Generic settings-file documentation background; not evidence of these specific MCP fields or a generic editor. Locator preceded dedicated pin, initial semantic SHA remains null.",
+      "firstEverReadClaim": false
+    }
+  ],
+  "counts": {
+    "totalPinnedFiles": 12,
+    "semanticFiles": 11,
+    "fullFiles": 3,
+    "selectedFiles": 8,
+    "hashOnlyFiles": 1,
+    "semanticLines": 561,
+    "productLines": 504,
+    "testDeclarationLines": 34,
+    "documentationLines": 23
+  },
+  "allInitialFinishStable": true,
+  "rangeConvention": "Inclusive 1-based selected source ranges, counted once per file in this reviewer. Some same-SHA lines repeat frozen38 reading and author overlap, so do not add them as unique global source coverage. Incidental printed adjacent branches outside selected ranges are not assessed.",
+  "priorInstructions": "CODESHELL/AGENTS previously read; no new semantic instruction lines counted."
+}

@@ -1,0 +1,745 @@
+{
+  "readAtUTC": "2026-10-17T13:26:54.605386+00:00",
+  "basedOnInventoryCanonicalSha256": "1905d1ba4d14facbb18126b18b7defbd97a89a1e04a736482f17a61486795fad",
+  "pattern": "McpSection|mcpSettingsPatch",
+  "matchCount": 147,
+  "contextCap": null,
+  "hits": [
+    {
+      "path": "docs/architecture/11-feature-inventory.md",
+      "location": "143",
+      "excerpt": "| **MCP 服务器** | 增删改 MCP server，按插件归属展示，配置鉴权，探测连通性和工具列表 | `packages/desktop/src/renderer/settings/McpSection.tsx:137`，`packages/desktop/src/renderer/settings/McpSection.tsx:1083`，`packages/desktop/src/renderer/settings/SettingsPage.tsx:273` | 设置页选 MCP |"
+    },
+    {
+      "path": "docs/architecture/11-feature-inventory.md",
+      "location": "143",
+      "excerpt": " 服务器** | 增删改 MCP server，按插件归属展示，配置鉴权，探测连通性和工具列表 | `packages/desktop/src/renderer/settings/McpSection.tsx:137`，`packages/desktop/src/renderer/settings/McpSection.tsx:1083`，`packages/desktop/src/renderer/settings/SettingsPage.tsx:273` | 设置页选 MCP |"
+    },
+    {
+      "path": "docs/architecture/11-feature-inventory.md",
+      "location": "163",
+      "excerpt": "| **MCP tab** | Extensions 管理页内直接复用 McpSection 管理 MCP server | `packages/desktop/src/renderer/extensions/ManagePage.tsx:119`，`packages/desktop/src/renderer/extensions/ManagePage.tsx:169` | Extensions -> MCP |"
+    },
+    {
+      "path": "docs/archive/review-2026-05-30/backlog.json",
+      "location": "$[90][\"file\"]",
+      "excerpt": "packages/desktop/src/renderer/settings/McpSection.tsx"
+    },
+    {
+      "path": "docs/archive/review-2026-05-30/backlog_confirmed.json",
+      "location": "$[69][\"file\"]",
+      "excerpt": "packages/desktop/src/renderer/settings/McpSection.tsx"
+    },
+    {
+      "path": "docs/archive/review-2026-05-30/backlog_ided.json",
+      "location": "$[90][\"file\"]",
+      "excerpt": "packages/desktop/src/renderer/settings/McpSection.tsx"
+    },
+    {
+      "path": "docs/archive/review-2026-05-30/findings.json",
+      "location": "$[278][\"file\"]",
+      "excerpt": "packages/desktop/src/renderer/settings/McpSection.tsx"
+    },
+    {
+      "path": "docs/archive/review-2026-05-30/low_confirmed.json",
+      "location": "$[38][\"file\"]",
+      "excerpt": "packages/desktop/src/renderer/settings/McpSection.tsx"
+    },
+    {
+      "path": "docs/archive/review-2026-05-30/low_section.md",
+      "location": "46",
+      "excerpt": "| ⬜ | 正确性 | `desktop/renderer/settings/McpSection.tsx:414` | HTTP headers formatted as KEY=VALUE instead of Key: Value | Modify `envOrHeadersToText` to accept a format parameter, or create a separate f… |"
+    },
+    {
+      "path": "docs/audit-2026-10-16/inventory.json",
+      "location": "$[\"source_inventory\"][1698]",
+      "excerpt": "packages/desktop/src/renderer/settings/McpSection.lifecycle.fixture.tsx"
+    },
+    {
+      "path": "docs/audit-2026-10-16/inventory.json",
+      "location": "$[\"source_inventory\"][1699]",
+      "excerpt": "packages/desktop/src/renderer/settings/McpSection.tsx"
+    },
+    {
+      "path": "docs/audit-2026-10-16/inventory.json",
+      "location": "$[\"source_inventory\"][1733]",
+      "excerpt": "packages/desktop/src/renderer/settings/mcpSettingsPatch.ts"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round12/evidence/desktop-dedup.json",
+      "location": "$[\"hits\"][\"diff_parser\"][42][\"snippet\"]",
+      "excerpt": ".tsx\n      CheckpointList.tsx\n    settings/\n      SettingsView.tsx\n      ModelSection.tsx\n      ProviderSection.tsx\n      PermissionSection.tsx\n      McpSection."
+    },
+    {
+      "path": "docs/audit-2026-10-17-round15/evidence/docinput-prefix-dedup-context.json",
+      "location": "$[\"records\"][5][\"matches\"][0][\"match\"]",
+      "excerpt": "a try-catch block. Only clear UI state on success. Display error messages to the user on failure.\"}, {\"file\": \"packages/desktop/src/renderer/settings/McpSection.tsx\", \"line\": \"414\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"HTTP headers formatted as KEY=VALUE instead of Key: Value\", \"detail\": \"Line 414 calls `envOrHeadersToText(initial?.headers)` which formats all key-value pairs as `KEY=VALUE` (line 646). However, HTTP headers should use `Key: Value` format as shown in the textarea placeholder at line 553. This causes headers to be displayed in the wrong format to the user, potentially confusing them or causing issues when they try to re-edit.\", \"fix\": \"Modify `envOrHeadersToText` to accept a format parameter, or create a separate function for headers. Alternatively, in the editor, use different formatting fo"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round15/evidence/docinput-prefix-dedup-context.json",
+      "location": "$[\"records\"][5][\"matches\"][0][\"context\"]",
+      "excerpt": "a try-catch block. Only clear UI state on success. Display error messages to the user on failure.\"}, {\"file\": \"packages/desktop/src/renderer/settings/McpSection.tsx\", \"line\": \"414\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"HTTP headers formatted as KEY=VALUE instead of Key: Value\", \"detail\": \"Line 414 calls `envOrHeadersToText(initial?.headers)` which formats all key-value pairs as `KEY=VALUE` (line 646). However, HTTP headers should use `Key: Value` format as shown in the textarea placeholder at line 553. This causes headers to be displayed in the wrong format to the user, potentially confusing them or causing issues when they try to re-edit.\", \"fix\": \"Modify `envOrHeadersToText` to accept a format parameter, or create a separate function for headers. Alternatively, in the editor, use different formatting fo"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round15/evidence/docinput-prefix-dedup-context.json",
+      "location": "$[\"records\"][9][\"matches\"][0][\"match\"]",
+      "excerpt": "a try-catch block. Only clear UI state on success. Display error messages to the user on failure.\"}, {\"file\": \"packages/desktop/src/renderer/settings/McpSection.tsx\", \"line\": \"414\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"HTTP headers formatted as KEY=VALUE instead of Key: Value\", \"detail\": \"Line 414 calls `envOrHeadersToText(initial?.headers)` which formats all key-value pairs as `KEY=VALUE` (line 646). However, HTTP headers should use `Key: Value` format as shown in the textarea placeholder at line 553. This causes headers to be displayed in the wrong format to the user, potentially confusing them or causing issues when they try to re-edit.\", \"fix\": \"Modify `envOrHeadersToText` to accept a format parameter, or create a separate function for headers. Alternatively, in the editor, use different formatting fo"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round15/evidence/docinput-prefix-dedup-context.json",
+      "location": "$[\"records\"][9][\"matches\"][0][\"context\"]",
+      "excerpt": "a try-catch block. Only clear UI state on success. Display error messages to the user on failure.\"}, {\"file\": \"packages/desktop/src/renderer/settings/McpSection.tsx\", \"line\": \"414\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"HTTP headers formatted as KEY=VALUE instead of Key: Value\", \"detail\": \"Line 414 calls `envOrHeadersToText(initial?.headers)` which formats all key-value pairs as `KEY=VALUE` (line 646). However, HTTP headers should use `Key: Value` format as shown in the textarea placeholder at line 553. This causes headers to be displayed in the wrong format to the user, potentially confusing them or causing issues when they try to re-edit.\", \"fix\": \"Modify `envOrHeadersToText` to accept a format parameter, or create a separate function for headers. Alternatively, in the editor, use different formatting fo"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round15/evidence/docinput-prefix-dedup-context.json",
+      "location": "$[\"records\"][13][\"matches\"][0][\"match\"]",
+      "excerpt": "a try-catch block. Only clear UI state on success. Display error messages to the user on failure.\"}, {\"file\": \"packages/desktop/src/renderer/settings/McpSection.tsx\", \"line\": \"414\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"HTTP headers formatted as KEY=VALUE instead of Key: Value\", \"detail\": \"Line 414 calls `envOrHeadersToText(initial?.headers)` which formats all key-value pairs as `KEY=VALUE` (line 646). However, HTTP headers should use `Key: Value` format as shown in the textarea placeholder at line 553. This causes headers to be displayed in the wrong format to the user, potentially confusing them or causing issues when they try to re-edit.\", \"fix\": \"Modify `envOrHeadersToText` to accept a format parameter, or create a separate function for headers. Alternatively, in the editor, use different formatting fo"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round15/evidence/docinput-prefix-dedup-context.json",
+      "location": "$[\"records\"][13][\"matches\"][0][\"context\"]",
+      "excerpt": "a try-catch block. Only clear UI state on success. Display error messages to the user on failure.\"}, {\"file\": \"packages/desktop/src/renderer/settings/McpSection.tsx\", \"line\": \"414\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"HTTP headers formatted as KEY=VALUE instead of Key: Value\", \"detail\": \"Line 414 calls `envOrHeadersToText(initial?.headers)` which formats all key-value pairs as `KEY=VALUE` (line 646). However, HTTP headers should use `Key: Value` format as shown in the textarea placeholder at line 553. This causes headers to be displayed in the wrong format to the user, potentially confusing them or causing issues when they try to re-edit.\", \"fix\": \"Modify `envOrHeadersToText` to accept a format parameter, or create a separate function for headers. Alternatively, in the editor, use different formatting fo"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+      "location": "$[\"matches\"][\"user-display\"][77][\"excerpt\"]",
+      "excerpt": "a try-catch block. Only clear UI state on success. Display error messages to the user on failure.\"}, {\"file\": \"packages/desktop/src/renderer/settings/McpSection.tsx\", \"line\": \"414\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"HTTP headers formatted as KEY=VALUE instead of Key: Value\", \"detail\": \"Line 414 calls `envOrHeadersToText(initial?.headers)` which formats all key-value pairs as `KEY=VALUE` (line 646). However, HTTP headers should use `Key: Value` format as shown in the textarea placeholder at line 553. This causes headers to be displayed in the wrong format to the user, potentially confusing them or causing issues when they try to re-edit.\", \"fix\": \"Modify `envOrHeadersToText` to accept a format parameter, or create a separate function for headers. Alternatively, in the editor, use different formatting fo"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+      "location": "$[\"matches\"][\"user-display\"][78][\"excerpt\"]",
+      "excerpt": "a try-catch block. Only clear UI state on success. Display error messages to the user on failure.\"}, {\"file\": \"packages/desktop/src/renderer/settings/McpSection.tsx\", \"line\": \"414\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"HTTP headers formatted as KEY=VALUE instead of Key: Value\", \"detail\": \"Line 414 calls `envOrHeadersToText(initial?.headers)` which formats all key-value pairs as `KEY=VALUE` (line 646). However, HTTP headers should use `Key: Value` format as shown in the textarea placeholder at line 553. This causes headers to be displayed in the wrong format to the user, potentially confusing them or causing issues when they try to re-edit.\", \"fix\": \"Modify `envOrHeadersToText` to accept a format parameter, or create a separate function for headers. Alternatively, in the editor, use different formatting fo"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+      "location": "$[\"matches\"][\"user-display\"][79][\"excerpt\"]",
+      "excerpt": "a try-catch block. Only clear UI state on success. Display error messages to the user on failure.\"}, {\"file\": \"packages/desktop/src/renderer/settings/McpSection.tsx\", \"line\": \"414\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"HTTP headers formatted as KEY=VALUE instead of Key: Value\", \"detail\": \"Line 414 calls `envOrHeadersToText(initial?.headers)` which formats all key-value pairs as `KEY=VALUE` (line 646). However, HTTP headers should use `Key: Value` format as shown in the textarea placeholder at line 553. This causes headers to be displayed in the wrong format to the user, potentially confusing them or causing issues when they try to re-edit.\", \"fix\": \"Modify `envOrHeadersToText` to accept a format parameter, or create a separate function for headers. Alternatively, in the editor, use different formatting fo"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+      "location": "$[\"matches\"][\"user-display\"][80][\"excerpt\"]",
+      "excerpt": "a try-catch block. Only clear UI state on success. Display error messages to the user on failure.\"}, {\"file\": \"packages/desktop/src/renderer/settings/McpSection.tsx\", \"line\": \"414\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"HTTP headers formatted as KEY=VALUE instead of Key: Value\", \"detail\": \"Line 414 calls `envOrHeadersToText(initial?.headers)` which formats all key-value pairs as `KEY=VALUE` (line 646). However, HTTP headers should use `Key: Value` format as shown in the textarea placeholder at line 553. This causes headers to be displayed in the wrong format to the user, potentially confusing them or causing issues when they try to re-edit.\", \"fix\": \"Modify `envOrHeadersToText` to accept a format parameter, or create a separate function for headers. Alternatively, in the editor, use different formatting fo"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+      "location": "$[\"matches\"][\"user-display\"][81][\"excerpt\"]",
+      "excerpt": "a try-catch block. Only clear UI state on success. Display error messages to the user on failure.\"}, {\"file\": \"packages/desktop/src/renderer/settings/McpSection.tsx\", \"line\": \"414\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"HTTP headers formatted as KEY=VALUE instead of Key: Value\", \"detail\": \"Line 414 calls `envOrHeadersToText(initial?.headers)` which formats all key-value pairs as `KEY=VALUE` (line 646). However, HTTP headers should use `Key: Value` format as shown in the textarea placeholder at line 553. This causes headers to be displayed in the wrong format to the user, potentially confusing them or causing issues when they try to re-edit.\", \"fix\": \"Modify `envOrHeadersToText` to accept a format parameter, or create a separate function for headers. Alternatively, in the editor, use different formatting fo"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+      "location": "$[\"matches\"][\"user-display\"][82][\"excerpt\"]",
+      "excerpt": "a try-catch block. Only clear UI state on success. Display error messages to the user on failure.\"}, {\"file\": \"packages/desktop/src/renderer/settings/McpSection.tsx\", \"line\": \"414\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"HTTP headers formatted as KEY=VALUE instead of Key: Value\", \"detail\": \"Line 414 calls `envOrHeadersToText(initial?.headers)` which formats all key-value pairs as `KEY=VALUE` (line 646). However, HTTP headers should use `Key: Value` format as shown in the textarea placeholder at line 553. This causes headers to be displayed in the wrong format to the user, potentially confusing them or causing issues when they try to re-edit.\", \"fix\": \"Modify `envOrHeadersToText` to accept a format parameter, or create a separate function for headers. Alternatively, in the editor, use different formatting fo"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+      "location": "$[\"matches\"][\"user-display\"][147][\"excerpt\"]",
+      "excerpt": " Only clear UI state on success. Display error messages to the user on failure.\", \"pkg\": \"desktop\"}, {\"file\": \"packages/desktop/src/renderer/settings/McpSection.tsx\", \"line\": \"414\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"HTTP headers formatted as KEY=VALUE instead of Key: Value\", \"detail\": \"Line 414 calls `envOrHeadersToText(initial?.headers)` which formats all key-value pairs as `KEY=VALUE` (line 646). However, HTTP headers should use `Key: Value` format as shown in the textarea placeholder at line 553. This causes headers to be displayed in the wrong format to the user, potentially confusing them or causing issues when they try to re-edit.\", \"fix\": \"Modify `envOrHeadersToText` to accept a format parameter, or create a separate function for headers. Alternatively, in the editor, use different formatting fo"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+      "location": "$[\"matches\"][\"user-display\"][148][\"excerpt\"]",
+      "excerpt": " UI state on success. Display error messages to the user on failure.\", \"pkg\": \"desktop\", \"_id\": 89}, {\"file\": \"packages/desktop/src/renderer/settings/McpSection.tsx\", \"line\": \"414\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"HTTP headers formatted as KEY=VALUE instead of Key: Value\", \"detail\": \"Line 414 calls `envOrHeadersToText(initial?.headers)` which formats all key-value pairs as `KEY=VALUE` (line 646). However, HTTP headers should use `Key: Value` format as shown in the textarea placeholder at line 553. This causes headers to be displayed in the wrong format to the user, potentially confusing them or causing issues when they try to re-edit.\", \"fix\": \"Modify `envOrHeadersToText` to accept a format parameter, or create a separate function for headers. Alternatively, in the editor, use different formatting fo"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+      "location": "$[\"matches\"][\"user-display\"][149][\"excerpt\"]",
+      "excerpt": "a try-catch block. Only clear UI state on success. Display error messages to the user on failure.\"}, {\"file\": \"packages/desktop/src/renderer/settings/McpSection.tsx\", \"line\": \"414\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"HTTP headers formatted as KEY=VALUE instead of Key: Value\", \"detail\": \"Line 414 calls `envOrHeadersToText(initial?.headers)` which formats all key-value pairs as `KEY=VALUE` (line 646). However, HTTP headers should use `Key: Value` format as shown in the textarea placeholder at line 553. This causes headers to be displayed in the wrong format to the user, potentially confusing them or causing issues when they try to re-edit.\", \"fix\": \"Modify `envOrHeadersToText` to accept a format parameter, or create a separate function for headers. Alternatively, in the editor, use different formatting fo"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+      "location": "$[\"matches\"][\"user-display\"][150][\"excerpt\"]",
+      "excerpt": " Only clear UI state on success. Display error messages to the user on failure.\", \"pkg\": \"desktop\"}, {\"file\": \"packages/desktop/src/renderer/settings/McpSection.tsx\", \"line\": \"414\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"HTTP headers formatted as KEY=VALUE instead of Key: Value\", \"detail\": \"Line 414 calls `envOrHeadersToText(initial?.headers)` which formats all key-value pairs as `KEY=VALUE` (line 646). However, HTTP headers should use `Key: Value` format as shown in the textarea placeholder at line 553. This causes headers to be displayed in the wrong format to the user, potentially confusing them or causing issues when they try to re-edit.\", \"fix\": \"Modify `envOrHeadersToText` to accept a format parameter, or create a separate function for headers. Alternatively, in the editor, use different formatting fo"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+      "location": "$[\"matches\"][\"user-display\"][151][\"excerpt\"]",
+      "excerpt": "seEffect with cleanup that clears the timeout on unmount or dependency changes.\"}, {\"pkg\": \"desktop\", \"file\": \"packages/desktop/src/renderer/settings/McpSection.tsx\", \"line\": \"414\", \"category\": \"correctness\", \"severity\": \"low\", \"title\": \"HTTP headers formatted as KEY=VALUE instead of Key: Value\", \"detail\": \"Line 414 calls `envOrHeadersToText(initial?.headers)` which formats all key-value pairs as `KEY=VALUE` (line 646). However, HTTP headers should use `Key: Value` format as shown in the textarea placeholder at line 553. This causes headers to be displayed in the wrong format to the user, potentially confusing them or causing issues when they try to re-edit.\", \"fix\": \"Modify `envOrHeadersToText` to accept a format parameter, or create a separate function for headers. Alternatively, in the editor, use different formatting for headers: split on `:` a"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+      "location": "$[\"matches\"][\"user-display\"][152][\"excerpt\"]",
+      "excerpt": " UI state on success. Display error messages to the user on failure.\", \"pkg\": \"desktop\", \"_id\": 89}, {\"file\": \"packages/desktop/src/renderer/settings/McpSection.tsx\", \"line\": \"414\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"HTTP headers formatted as KEY=VALUE instead of Key: Value\", \"detail\": \"Line 414 calls `envOrHeadersToText(initial?.headers)` which formats all key-value pairs as `KEY=VALUE` (line 646). However, HTTP headers should use `Key: Value` format as shown in the textarea placeholder at line 553. This causes headers to be displayed in the wrong format to the user, potentially confusing them or causing issues when they try to re-edit.\", \"fix\": \"Modify `envOrHeadersToText` to accept a format parameter, or create a separate function for headers. Alternatively, in the editor, use different formatting fo"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+      "location": "$[\"matches\"][\"user-display\"][153][\"excerpt\"]",
+      "excerpt": "a try-catch block. Only clear UI state on success. Display error messages to the user on failure.\"}, {\"file\": \"packages/desktop/src/renderer/settings/McpSection.tsx\", \"line\": \"414\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"HTTP headers formatted as KEY=VALUE instead of Key: Value\", \"detail\": \"Line 414 calls `envOrHeadersToText(initial?.headers)` which formats all key-value pairs as `KEY=VALUE` (line 646). However, HTTP headers should use `Key: Value` format as shown in the textarea placeholder at line 553. This causes headers to be displayed in the wrong format to the user, potentially confusing them or causing issues when they try to re-edit.\", \"fix\": \"Modify `envOrHeadersToText` to accept a format parameter, or create a separate function for headers. Alternatively, in the editor, use different formatting fo"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+      "location": "$[\"matches\"][\"user-display\"][154][\"excerpt\"]",
+      "excerpt": " Only clear UI state on success. Display error messages to the user on failure.\", \"pkg\": \"desktop\"}, {\"file\": \"packages/desktop/src/renderer/settings/McpSection.tsx\", \"line\": \"414\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"HTTP headers formatted as KEY=VALUE instead of Key: Value\", \"detail\": \"Line 414 calls `envOrHeadersToText(initial?.headers)` which formats all key-value pairs as `KEY=VALUE` (line 646). However, HTTP headers should use `Key: Value` format as shown in the textarea placeholder at line 553. This causes headers to be displayed in the wrong format to the user, potentially confusing them or causing issues when they try to re-edit.\", \"fix\": \"Modify `envOrHeadersToText` to accept a format parameter, or create a separate function for headers. Alternatively, in the editor, use different formatting fo"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+      "location": "$[\"matches\"][\"user-display\"][155][\"excerpt\"]",
+      "excerpt": "seEffect with cleanup that clears the timeout on unmount or dependency changes.\"}, {\"pkg\": \"desktop\", \"file\": \"packages/desktop/src/renderer/settings/McpSection.tsx\", \"line\": \"414\", \"category\": \"correctness\", \"severity\": \"low\", \"title\": \"HTTP headers formatted as KEY=VALUE instead of Key: Value\", \"detail\": \"Line 414 calls `envOrHeadersToText(initial?.headers)` which formats all key-value pairs as `KEY=VALUE` (line 646). However, HTTP headers should use `Key: Value` format as shown in the textarea placeholder at line 553. This causes headers to be displayed in the wrong format to the user, potentially confusing them or causing issues when they try to re-edit.\", \"fix\": \"Modify `envOrHeadersToText` to accept a format parameter, or create a separate function for headers. Alternatively, in the editor, use different formatting for headers: split on `:` a"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+      "location": "$[\"matches\"][\"user-display\"][156][\"excerpt\"]",
+      "excerpt": " UI state on success. Display error messages to the user on failure.\", \"pkg\": \"desktop\", \"_id\": 89}, {\"file\": \"packages/desktop/src/renderer/settings/McpSection.tsx\", \"line\": \"414\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"HTTP headers formatted as KEY=VALUE instead of Key: Value\", \"detail\": \"Line 414 calls `envOrHeadersToText(initial?.headers)` which formats all key-value pairs as `KEY=VALUE` (line 646). However, HTTP headers should use `Key: Value` format as shown in the textarea placeholder at line 553. This causes headers to be displayed in the wrong format to the user, potentially confusing them or causing issues when they try to re-edit.\", \"fix\": \"Modify `envOrHeadersToText` to accept a format parameter, or create a separate function for headers. Alternatively, in the editor, use different formatting fo"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+      "location": "$[\"matches\"][\"user-display\"][157][\"excerpt\"]",
+      "excerpt": "a try-catch block. Only clear UI state on success. Display error messages to the user on failure.\"}, {\"file\": \"packages/desktop/src/renderer/settings/McpSection.tsx\", \"line\": \"414\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"HTTP headers formatted as KEY=VALUE instead of Key: Value\", \"detail\": \"Line 414 calls `envOrHeadersToText(initial?.headers)` which formats all key-value pairs as `KEY=VALUE` (line 646). However, HTTP headers should use `Key: Value` format as shown in the textarea placeholder at line 553. This causes headers to be displayed in the wrong format to the user, potentially confusing them or causing issues when they try to re-edit.\", \"fix\": \"Modify `envOrHeadersToText` to accept a format parameter, or create a separate function for headers. Alternatively, in the editor, use different formatting fo"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+      "location": "$[\"matches\"][\"user-display\"][158][\"excerpt\"]",
+      "excerpt": "seEffect with cleanup that clears the timeout on unmount or dependency changes.\"}, {\"pkg\": \"desktop\", \"file\": \"packages/desktop/src/renderer/settings/McpSection.tsx\", \"line\": \"414\", \"category\": \"correctness\", \"severity\": \"low\", \"title\": \"HTTP headers formatted as KEY=VALUE instead of Key: Value\", \"detail\": \"Line 414 calls `envOrHeadersToText(initial?.headers)` which formats all key-value pairs as `KEY=VALUE` (line 646). However, HTTP headers should use `Key: Value` format as shown in the textarea placeholder at line 553. This causes headers to be displayed in the wrong format to the user, potentially confusing them or causing issues when they try to re-edit.\", \"fix\": \"Modify `envOrHeadersToText` to accept a format parameter, or create a separate function for headers. Alternatively, in the editor, use different formatting for headers: split on `:` a"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-ranking.json",
+      "location": "$[\"rankedCandidates\"][104][\"path\"]",
+      "excerpt": "packages/desktop/src/renderer/settings/mcpSettingsPatch.ts"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+      "location": "$[\"files\"][3015][\"path\"]",
+      "excerpt": "packages/desktop/src/renderer/settings/McpSection.lifecycle.fixture.tsx"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+      "location": "$[\"files\"][3016][\"path\"]",
+      "excerpt": "packages/desktop/src/renderer/settings/McpSection.lifecycle.test.tsx"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+      "location": "$[\"files\"][3017][\"path\"]",
+      "excerpt": "packages/desktop/src/renderer/settings/McpSection.plugin.test.ts"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+      "location": "$[\"files\"][3018][\"path\"]",
+      "excerpt": "packages/desktop/src/renderer/settings/McpSection.tsx"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+      "location": "$[\"files\"][3074][\"path\"]",
+      "excerpt": "packages/desktop/src/renderer/settings/mcpSettingsPatch.test.ts"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+      "location": "$[\"files\"][3075][\"path\"]",
+      "excerpt": "packages/desktop/src/renderer/settings/mcpSettingsPatch.ts"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/dialog-dedup.json",
+      "location": "$[\"contexts\"][\"dialog-contract\"][42][\"context\"]",
+      "excerpt": "seEffect with cleanup that clears the timeout on unmount or dependency changes.\"}, {\"pkg\": \"desktop\", \"file\": \"packages/desktop/src/renderer/settings/McpSection.tsx\", \"line\": \"414\", \"category\": \"correctness\", \"severi"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/dialog-dedup.json",
+      "location": "$[\"contexts\"][\"dialog-contract\"][47][\"context\"]",
+      "excerpt": "seEffect with cleanup that clears the timeout on unmount or dependency changes.\"}, {\"pkg\": \"desktop\", \"file\": \"packages/desktop/src/renderer/settings/McpSection.tsx\", \"line\": \"414\", \"category\": \"correctness\", \"severi"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/dialog-dedup.json",
+      "location": "$[\"contexts\"][\"dialog-contract\"][51][\"context\"]",
+      "excerpt": "seEffect with cleanup that clears the timeout on unmount or dependency changes.\"}, {\"pkg\": \"desktop\", \"file\": \"packages/desktop/src/renderer/settings/McpSection.tsx\", \"line\": \"414\", \"category\": \"correctness\", \"severi"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/dialog-dedup.json",
+      "location": "$[\"contexts\"][\"dialog-contract\"][85][\"context\"]",
+      "excerpt": "seEffect with cleanup that clears the timeout on unmount or dependency changes.\"}, {\"pkg\": \"desktop\", \"file\": \"packages/desktop/src/renderer/settings/McpSection.tsx\", \"line\": \"414\", \"category\": \"correctness\", \"severi"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/dialog-dedup.json",
+      "location": "$[\"contexts\"][\"dialog-contract\"][92][\"context\"]",
+      "excerpt": "seEffect with cleanup that clears the timeout on unmount or dependency changes.\"}, {\"pkg\": \"desktop\", \"file\": \"packages/desktop/src/renderer/settings/McpSection.tsx\", \"line\": \"414\", \"category\": \"correctness\", \"severi"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/dialog-dedup.json",
+      "location": "$[\"contexts\"][\"dialog-contract\"][96][\"context\"]",
+      "excerpt": "seEffect with cleanup that clears the timeout on unmount or dependency changes.\"}, {\"pkg\": \"desktop\", \"file\": \"packages/desktop/src/renderer/settings/McpSection.tsx\", \"line\": \"414\", \"category\": \"correctness\", \"severi"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round30/evidence/review-root-source-manifest.json",
+      "location": "$[\"files\"][5][\"path\"]",
+      "excerpt": "packages/desktop/src/renderer/settings/McpSection.tsx"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round30/evidence/review-root.md",
+      "location": "5",
+      "excerpt": "rep/review.md) 冻结，之后仅做 formal 元数据核对，0 新增产品语义读取。Intl 94 全文、format 139–300、earlyInput 60–110、internal export 60–90，共 338 作者产品范围行；旧 R14 utils 全文 40 行。额外 McpSection 1092–1112 的 21 行只用于消歧同名本地 helper，不能变成 Core formatter options 的新消费者，也不是 MCP 权限/凭据覆盖。6 个 reviewer source pins 共 399 声明读取行（2 full / 4 selected），原始读前与 finish SHA 保留在 [复制的 reviewer source manifest](root-review-prep/source-manifest.json)，不重新计数为 formal 读取。"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round30/evidence/root-review-prep/review.md",
+      "location": "7",
+      "excerpt": "vigation。复读作者全部声明：Intl 1–94 全文、format 139–300、earlyInput 60–110、internal export 60–90，共 338 产品行，另旧 R14 utils 1–40 全文。为消歧 package 导航的同名函数，只额外读 Desktop McpSection 1092–1112 的 21 行（本地 helper 1092–1102，其后为相邻声明），不作为作者 coverage 或权限/凭据审查。总共 399 声明读取行、2 full / 4 selected；rg 单行 import 还显示 format:3 与 earlyInput:14，仅作接线导航，不加入语义覆盖。"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round30/evidence/root-review-prep/review.md",
+      "location": "14",
+      "excerpt": "- [package 导航原文](consumer-navigation.txt) 的 Core family 命中只在 format.ts 自身；Desktop McpSection 的同名 formatRelativeTime 是本地 iso-string helper，不能当作 Core Date/options API 的普通消费者。internal export 73–81 暴露 Intl helper，不等于 format options 有真实生产调用。名称搜索本身也不能证明整个仓库没有动态消费者；这里没有建立比旧 R14 更强的新普通 producer/consumer 合同，因此不新增 candidate。"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round30/evidence/root-review-prep/source-manifest.json",
+      "location": "$[\"sources\"][5][\"path\"]",
+      "excerpt": "packages/desktop/src/renderer/settings/McpSection.tsx"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round30/source-manifest.json",
+      "location": "$[\"files\"][18][\"path\"]",
+      "excerpt": "packages/desktop/src/renderer/settings/McpSection.tsx"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round30/source-manifest.json",
+      "location": "$[\"workerSourceChecks\"][21][\"path\"]",
+      "excerpt": "packages/desktop/src/renderer/settings/McpSection.tsx"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round33/evidence/plugin-input-review/history.json",
+      "location": "$[\"hits\"][\"source-normalization\"][68][\"context\"]",
+      "excerpt": "旧 `mcp`、`plugins-skills` 入口。\n\n---\n\n## Self-Review\n\n- **Spec 覆盖**：管理页分类 tab（Task 7）✓；插件开关+卸载（Task 1/2/3/6）✓；技能开关+点开 modal（Task 4/5）✓；MCP 完整并入（Task 7 挂 McpSection）✓"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round35/evidence/root-history.json",
+      "location": "$[\"hits\"][\"extensions-data\"][57][\"context\"]",
+      "excerpt": "入（Task 7 挂 McpSection）✓；市场两层（P2）✓；发现首页极简（P3）✓；体验缺口 spinner/空态/重试/确认（Task 5/6/9 内置）✓。\n- **占位符**：P1 各步均有完整代码/命令；P2/P3 为明确标注的概要（待 P1 后细化），非 P1 任务内的占位。\n- **类型一致**：`resolveUninstallTarget`（Task1）↔ PluginsTab 调用（Task6）一致；`UninstallablePlugin` 字段是 PluginSummary 的子集 ✓；`uninstallPlugin(pluginName, marketplaceName)` 三处（core/IPC/preload/调用）参数名顺序一致 ✓。\n- **已知执行期需对齐项**（计划已显式标注，避免猜测）：① skill/plugin 启用-禁用通道按 `PluginsAndSkillsSection.tsx` 现状照搬；② `Markdown` 组件导出名/prop 按现仓库实际；③ `McpSection` props 按其真实签名。\n\n### 执行期已查明的事实（供 Task 6/7/8 复用）\n\n- **Markdown 组件**：`packages/desktop/src/renderer/Markdown.tsx` 命名导出 `Markdown`，prop 是 **`text`**（不是 `content`）。用法：`<Markdown text={body} />`（参 `PluginsAndSkillsSection.tsx:546`）。\n- **启用/禁用机制**：用户 s"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round35/evidence/root-history.json",
+      "location": "$[\"hits\"][\"extensions-data\"][57][\"context\"]",
+      "excerpt": "/IPC/preload/调用）参数名顺序一致 ✓。\n- **已知执行期需对齐项**（计划已显式标注，避免猜测）：① skill/plugin 启用-禁用通道按 `PluginsAndSkillsSection.tsx` 现状照搬；② `Markdown` 组件导出名/prop 按现仓库实际；③ `McpSection` props 按其真实签名。\n\n### 执行期已查明的事实（供 Task 6/7/8 复用）\n\n- **Markdown 组件**：`packages/desktop/src/renderer/Markdown.tsx` 命名导出 `Markdown`，prop 是 **`text`**（不是 `content`）。用法：`<Markdown text={body} />`（参 `PluginsAndSkillsSection.tsx:546`）。\n- **启用/禁用机制**：用户 settings 里的 `disabledS"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round37/evidence/marketplace-local-frontier/history-corrected-contexts.json",
+      "location": "$[\"hits\"][\"helper\"][54][\"context\"]",
+      "excerpt": "旧 `mcp`、`plugins-skills` 入口。\n\n---\n\n## Self-Review\n\n- **Spec 覆盖**：管理页分类 tab（Task 7）✓；插件开关+卸载（Task 1/2/3/6）✓；技能开关+点开 modal（Task 4/5）✓；MCP 完整并入（Task 7 挂 McpSection）✓；市场两层（P2）✓；发现首页极简（P3）✓；体验缺口 spinner/空态/重试/确认（Task 5/6/9 内置）✓。\n- **占位符**：P1 各步均有完整代码/命令；P2/P3 为明确标注的概要（待 P1 后细化），非 P1 任务内的占位。\n- **类型一致**：`resolveUninstallTarget`（Task1）↔ PluginsTab 调用（Task6）一致；`UninstallablePlugin` 字段是 PluginSummary 的子集 ✓；`uninstallPlugin(pluginName, marketplaceName)` 三处（core/IPC/preload/调用）参数名顺序一致 ✓。\n- **已知执行期需对齐项**（计划已显式标注，避免猜测）：① skill/plugin 启用-禁用通道按 `PluginsAndSkillsSection.tsx` 现状照搬；② `Markdown` 组件导出名/prop 按现仓库实际；③ `McpSection` props 按其真实签名。\n\n### 执行期已查明的事实（供 Task 6/7/8 复用）\n\n- **Markdown 组件**：`packages/desktop/src/renderer/Markdown.tsx` 命名导出 `Markdown`，prop 是 **`text`**（不是 `content`）。用法：`<Markdown text={body} />`（参 `PluginsAndSkillsSection.tsx:546`）。\n- **启用/禁用机制**：用户 s"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round37/evidence/marketplace-local-frontier/history-corrected-contexts.json",
+      "location": "$[\"hits\"][\"helper\"][54][\"context\"]",
+      "excerpt": "/IPC/preload/调用）参数名顺序一致 ✓。\n- **已知执行期需对齐项**（计划已显式标注，避免猜测）：① skill/plugin 启用-禁用通道按 `PluginsAndSkillsSection.tsx` 现状照搬；② `Markdown` 组件导出名/prop 按现仓库实际；③ `McpSection` props 按其真实签名。\n\n### 执行期已查明的事实（供 Task 6/7/8 复用）\n\n- **Markdown 组件**：`packages/desktop/src/renderer/Markdown.tsx` 命名导出 `Markdown`，prop 是 **`text`**（不是 `content`）。用法：`<Markdown text={body} />`（参 `PluginsAndSkillsSection.tsx:546`）。\n- **启用/禁用机制**：用户 settings 里的 `disabledSkills` / `disabledPlugins` 数组，**按 skill name / 按 plugin？**。skill 用 **name** 作 key。读：`getSettings(\"user\").disabledSkills` → `new Set(...)`；写："
+    },
+    {
+      "path": "docs/audit-2026-10-17-round37/evidence/marketplace-local-frontier/history-peer/contexts.json",
+      "location": "$[\"hits\"][\"helper\"][54][\"context\"]",
+      "excerpt": "旧 `mcp`、`plugins-skills` 入口。\n\n---\n\n## Self-Review\n\n- **Spec 覆盖**：管理页分类 tab（Task 7）✓；插件开关+卸载（Task 1/2/3/6）✓；技能开关+点开 modal（Task 4/5）✓；MCP 完整并入（Task 7 挂 McpSection）✓；市场两层（P2）✓；发现首页极简（P3）✓；体验缺口 spinner/空态/重试/确认（Task 5/6/9 内置）✓。\n- **占位符**：P1 各步均有完整代码/命令；P2/P3 为明确标注的概要（待 P1 后细化），非 P1 任务内的占位。\n- **类型一致**：`resolveUninstallTarget`（Task1）↔ PluginsTab 调用（Task6）一致；`UninstallablePlugin` 字段是 PluginSummary 的子集 ✓；`uninstallPlugin(pluginName, marketplaceName)` 三处（core/IPC/preload/调用）参数名顺序一致 ✓。\n- **已知执行期需对齐项**（计划已显式标注，避免猜测）：① skill/plugin 启用-禁用通道按 `PluginsAndSkillsSection.tsx` 现状照搬；② `Markdown` 组件导出名/prop 按现仓库实际；③ `McpSection` props 按其真实签名。\n\n### 执行期已查明的事实（供 Task 6/7/8 复用）\n\n- **Markdown 组件**：`packages/desktop/src/renderer/Markdown.tsx` 命名导出 `Markdown`，prop 是 **`text`**（不是 `content`）。用法：`<Markdown text={body} />`（参 `PluginsAndSkillsSection.tsx:546`）。\n- **启用/禁用机制**：用户 s"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round37/evidence/marketplace-local-frontier/history-peer/contexts.json",
+      "location": "$[\"hits\"][\"helper\"][54][\"context\"]",
+      "excerpt": "/IPC/preload/调用）参数名顺序一致 ✓。\n- **已知执行期需对齐项**（计划已显式标注，避免猜测）：① skill/plugin 启用-禁用通道按 `PluginsAndSkillsSection.tsx` 现状照搬；② `Markdown` 组件导出名/prop 按现仓库实际；③ `McpSection` props 按其真实签名。\n\n### 执行期已查明的事实（供 Task 6/7/8 复用）\n\n- **Markdown 组件**：`packages/desktop/src/renderer/Markdown.tsx` 命名导出 `Markdown`，prop 是 **`text`**（不是 `content`）。用法：`<Markdown text={body} />`（参 `PluginsAndSkillsSection.tsx:546`）。\n- **启用/禁用机制**：用户 settings 里的 `disabledSkills` / `disabledPlugins` 数组，**按 skill name / 按 plugin？**。skill 用 **name** 作 key。读：`getSettings(\"user\").disabledSkills` → `new Set(...)`；写：`writeSettings(\"user\", { disabledSkills: [...next] })`。enabled = `!disabledSet.has(name)`。\n  - 因此 Task 7/8 父组件应这样接线：`isEnabled = (s) => !disabledSkill"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+      "location": "$[\"hits\"][\"logs\"][1][\"text\"]",
+      "excerpt": " Only clear UI state on success. Display error messages to the user on failure.\", \"pkg\": \"desktop\"}, {\"file\": \"packages/desktop/src/renderer/settings/McpSection.tsx\", \"line\": \"414\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"HTTP headers formatted as KEY=VALUE instead of Key: Value\", \"detail\": \"Line 414 calls `envOrHeadersToText(initial?.headers)` which formats all key-value pairs as `KEY=VALUE` (line 646). However, HTTP headers should use `Key: Value` format as shown in the textarea placeholder at line 553. This causes headers to be displayed in the wrong format to the user, potentially confusing them or causing issues when they try to re-edit.\", \"fix\": \"Modify `envOrHeadersToText` to accept a format parameter, or create a separate function for headers. Alternatively, in the editor, use different formatting fo"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+      "location": "$[\"hits\"][\"logs\"][2][\"text\"]",
+      "excerpt": " UI state on success. Display error messages to the user on failure.\", \"pkg\": \"desktop\", \"_id\": 89}, {\"file\": \"packages/desktop/src/renderer/settings/McpSection.tsx\", \"line\": \"414\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"HTTP headers formatted as KEY=VALUE instead of Key: Value\", \"detail\": \"Line 414 calls `envOrHeadersToText(initial?.headers)` which formats all key-value pairs as `KEY=VALUE` (line 646). However, HTTP headers should use `Key: Value` format as shown in the textarea placeholder at line 553. This causes headers to be displayed in the wrong format to the user, potentially confusing them or causing issues when they try to re-edit.\", \"fix\": \"Modify `envOrHeadersToText` to accept a format parameter, or create a separate function for headers. Alternatively, in the editor, use different formatting fo"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+      "location": "$[\"hits\"][\"logs\"][3][\"text\"]",
+      "excerpt": "a try-catch block. Only clear UI state on success. Display error messages to the user on failure.\"}, {\"file\": \"packages/desktop/src/renderer/settings/McpSection.tsx\", \"line\": \"414\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"HTTP headers formatted as KEY=VALUE instead of Key: Value\", \"detail\": \"Line 414 calls `envOrHeadersToText(initial?.headers)` which formats all key-value pairs as `KEY=VALUE` (line 646). However, HTTP headers should use `Key: Value` format as shown in the textarea placeholder at line 553. This causes headers to be displayed in the wrong format to the user, potentially confusing them or causing issues when they try to re-edit.\", \"fix\": \"Modify `envOrHeadersToText` to accept a format parameter, or create a separate function for headers. Alternatively, in the editor, use different formatting fo"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+      "location": "$[\"hits\"][\"settings-navigation\"][0][\"text\"]",
+      "excerpt": " Only clear UI state on success. Display error messages to the user on failure.\", \"pkg\": \"desktop\"}, {\"file\": \"packages/desktop/src/renderer/settings/McpSection.tsx\", \"line\": \"414\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"HTTP headers formatted as KEY=VALUE instead of Key: Value\", \"detail\": \"Line 414 calls `envOrHeadersToText(initial?.headers)` which formats all key-value pairs as `KEY=VALUE` (line 646). However, HTTP headers should use `Key: Value` format as shown in the textarea placeholder at line 553. This causes headers to be displayed in the wrong format to the user, potentially confusing them or causing issues when they try to re-edit.\", \"fix\": \"Modify `envOrHeadersToText` to accept a format parameter, or create a separate function for headers. Alternatively, in the editor, use different formatting fo"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+      "location": "$[\"hits\"][\"settings-navigation\"][1][\"text\"]",
+      "excerpt": "seEffect with cleanup that clears the timeout on unmount or dependency changes.\"}, {\"pkg\": \"desktop\", \"file\": \"packages/desktop/src/renderer/settings/McpSection.tsx\", \"line\": \"414\", \"category\": \"correctness\", \"severity\": \"low\", \"title\": \"HTTP headers formatted as KEY=VALUE instead of Key: Value\", \"detail\": \"Line 414 calls `envOrHeadersToText(initial?.headers)` which formats all key-value pairs as `KEY=VALUE` (line 646). However, HTTP headers should use `Key: Value` format as shown in the textarea placeholder at line 553. This causes headers to be displayed in the wrong format to the user, potentially confusing them or causing issues when they try to re-edit.\", \"fix\": \"Modify `envOrHeadersToText` to accept a format parameter, or create a separate function for headers. Alternatively, in the editor, use different formatting for headers: split on `:` a"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+      "location": "$[\"hits\"][\"settings-navigation\"][2][\"text\"]",
+      "excerpt": " UI state on success. Display error messages to the user on failure.\", \"pkg\": \"desktop\", \"_id\": 89}, {\"file\": \"packages/desktop/src/renderer/settings/McpSection.tsx\", \"line\": \"414\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"HTTP headers formatted as KEY=VALUE instead of Key: Value\", \"detail\": \"Line 414 calls `envOrHeadersToText(initial?.headers)` which formats all key-value pairs as `KEY=VALUE` (line 646). However, HTTP headers should use `Key: Value` format as shown in the textarea placeholder at line 553. This causes headers to be displayed in the wrong format to the user, potentially confusing them or causing issues when they try to re-edit.\", \"fix\": \"Modify `envOrHeadersToText` to accept a format parameter, or create a separate function for headers. Alternatively, in the editor, use different formatting fo"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+      "location": "$[\"hits\"][\"settings-navigation\"][3][\"text\"]",
+      "excerpt": "a try-catch block. Only clear UI state on success. Display error messages to the user on failure.\"}, {\"file\": \"packages/desktop/src/renderer/settings/McpSection.tsx\", \"line\": \"414\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"HTTP headers formatted as KEY=VALUE instead of Key: Value\", \"detail\": \"Line 414 calls `envOrHeadersToText(initial?.headers)` which formats all key-value pairs as `KEY=VALUE` (line 646). However, HTTP headers should use `Key: Value` format as shown in the textarea placeholder at line 553. This causes headers to be displayed in the wrong format to the user, potentially confusing them or causing issues when they try to re-edit.\", \"fix\": \"Modify `envOrHeadersToText` to accept a format parameter, or create a separate function for headers. Alternatively, in the editor, use different formatting fo"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+      "location": "$[\"hits\"][\"sidebar-projection\"][8][\"text\"]",
+      "excerpt": " Only clear UI state on success. Display error messages to the user on failure.\", \"pkg\": \"desktop\"}, {\"file\": \"packages/desktop/src/renderer/settings/McpSection.tsx\", \"line\": \"414\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"HTTP headers formatted as KEY=VALUE instead of Key: Value\", \"detail\": \"Line 414 calls `envOrHeadersToText(initial?.headers)` which formats all key-value pairs as `KEY=VALUE` (line 646). However, HTTP headers should use `Key: Value` format as shown in the textarea placeholder at line 553. This causes headers to be displayed in the wrong format to the user, potentially confusing them or causing issues when they try to re-edit.\", \"fix\": \"Modify `envOrHeadersToText` to accept a format parameter, or create a separate function for headers. Alternatively, in the editor, use different formatting fo"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+      "location": "$[\"hits\"][\"sidebar-projection\"][9][\"text\"]",
+      "excerpt": "seEffect with cleanup that clears the timeout on unmount or dependency changes.\"}, {\"pkg\": \"desktop\", \"file\": \"packages/desktop/src/renderer/settings/McpSection.tsx\", \"line\": \"414\", \"category\": \"correctness\", \"severity\": \"low\", \"title\": \"HTTP headers formatted as KEY=VALUE instead of Key: Value\", \"detail\": \"Line 414 calls `envOrHeadersToText(initial?.headers)` which formats all key-value pairs as `KEY=VALUE` (line 646). However, HTTP headers should use `Key: Value` format as shown in the textarea placeholder at line 553. This causes headers to be displayed in the wrong format to the user, potentially confusing them or causing issues when they try to re-edit.\", \"fix\": \"Modify `envOrHeadersToText` to accept a format parameter, or create a separate function for headers. Alternatively, in the editor, use different formatting for headers: split on `:` a"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+      "location": "$[\"hits\"][\"sidebar-projection\"][10][\"text\"]",
+      "excerpt": " UI state on success. Display error messages to the user on failure.\", \"pkg\": \"desktop\", \"_id\": 89}, {\"file\": \"packages/desktop/src/renderer/settings/McpSection.tsx\", \"line\": \"414\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"HTTP headers formatted as KEY=VALUE instead of Key: Value\", \"detail\": \"Line 414 calls `envOrHeadersToText(initial?.headers)` which formats all key-value pairs as `KEY=VALUE` (line 646). However, HTTP headers should use `Key: Value` format as shown in the textarea placeholder at line 553. This causes headers to be displayed in the wrong format to the user, potentially confusing them or causing issues when they try to re-edit.\", \"fix\": \"Modify `envOrHeadersToText` to accept a format parameter, or create a separate function for headers. Alternatively, in the editor, use different formatting fo"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+      "location": "$[\"hits\"][\"sidebar-projection\"][11][\"text\"]",
+      "excerpt": "a try-catch block. Only clear UI state on success. Display error messages to the user on failure.\"}, {\"file\": \"packages/desktop/src/renderer/settings/McpSection.tsx\", \"line\": \"414\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"HTTP headers formatted as KEY=VALUE instead of Key: Value\", \"detail\": \"Line 414 calls `envOrHeadersToText(initial?.headers)` which formats all key-value pairs as `KEY=VALUE` (line 646). However, HTTP headers should use `Key: Value` format as shown in the textarea placeholder at line 553. This causes headers to be displayed in the wrong format to the user, potentially confusing them or causing issues when they try to re-edit.\", \"fix\": \"Modify `envOrHeadersToText` to accept a format parameter, or create a separate function for headers. Alternatively, in the editor, use different formatting fo"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+      "location": "$[\"hits\"][\"sidebar-projection\"][12][\"text\"]",
+      "excerpt": "seEffect with cleanup that clears the timeout on unmount or dependency changes.\"}, {\"pkg\": \"desktop\", \"file\": \"packages/desktop/src/renderer/settings/McpSection.tsx\", \"line\": \"414\", \"category\": \"correctness\", \"severity\": \"low\", \"title\": \"HTTP headers formatted as KEY=VALUE instead of Key: Value\", \"detail\": \"Line 414 calls `envOrHeadersToText(initial?.headers)` which formats all key-value pairs as `KEY=VALUE` (line 646). However, HTTP headers should use `Key: Value` format as shown in the textarea placeholder at line 553. This causes headers to be displayed in the wrong format to the user, potentially confusing them or causing issues when they try to re-edit.\", \"fix\": \"Modify `envOrHeadersToText` to accept a format parameter, or create a separate function for headers. Alternatively, in the editor, use different formatting for headers: split on `:` a"
+    },
+    {
+      "path": "docs/nightly-2026-07-10/connector-capability-plan.md",
+      "location": "65",
+      "excerpt": "- `packages/desktop/src/renderer/settings/McpSection.tsx`"
+    },
+    {
+      "path": "docs/nightly-2026-07-10/connector-capability-plan.md",
+      "location": "317",
+      "excerpt": "- `packages/desktop/src/renderer/settings/McpSection.tsx:97-132,786-826,869-963,1188-1294`"
+    },
+    {
+      "path": "docs/nightly-2026-07-10/connector-capability-plan.md",
+      "location": "560",
+      "excerpt": "- `packages/desktop/src/renderer/settings/McpSection.tsx:786-826,936-963,1257-1294`"
+    },
+    {
+      "path": "docs/nightly-2026-07-10/goal.md",
+      "location": "31",
+      "excerpt": "  - 锚点：`packages/core/src/credentials/types.ts:6`、`types.ts:718`、`tool-system/mcp-manager.ts:99`、`desktop/.../settings/McpSection.tsx:960`"
+    },
+    {
+      "path": "docs/nightly-2026-07-10/large-feature-breakdown.md",
+      "location": "160",
+      "excerpt": "态，保留当前 OAuth catalog；增加 add/edit/test/disable，不实现 workspace 分配。 | DS-03、DS-05 | M | `packages/desktop/src/renderer/credentials/LinkTab.tsx:13`、`:41`；`McpSection.tsx:1188` | 否 |"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/desktop-renderer-results.json",
+      "location": "$[213][\"file\"]",
+      "excerpt": "packages/desktop/src/renderer/settings/McpSection.lifecycle.test.tsx"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/desktop-renderer-results.json",
+      "location": "$[213][\"log\"]",
+      "excerpt": "/tmp/codeshell-review-20261012/desktop-baseline/213-McpSection.lifecycle.test.tsx.log"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/desktop-renderer-results.json",
+      "location": "$[214][\"file\"]",
+      "excerpt": "packages/desktop/src/renderer/settings/McpSection.plugin.test.ts"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/desktop-renderer-results.json",
+      "location": "$[214][\"log\"]",
+      "excerpt": "/tmp/codeshell-review-20261012/desktop-baseline/214-McpSection.plugin.test.ts.log"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/desktop-renderer-results.json",
+      "location": "$[234][\"file\"]",
+      "excerpt": "packages/desktop/src/renderer/settings/mcpSettingsPatch.test.ts"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/desktop-renderer-results.json",
+      "location": "$[234][\"log\"]",
+      "excerpt": "/tmp/codeshell-review-20261012/desktop-baseline/234-mcpSettingsPatch.test.ts.log"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-baseline-evidence-round28/independent-existing-tests.receipt.json",
+      "location": "$[\"groups\"][1][\"rawLogs\"][213][\"file\"]",
+      "excerpt": "packages/desktop/src/renderer/settings/McpSection.lifecycle.test.tsx"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-baseline-evidence-round28/independent-existing-tests.receipt.json",
+      "location": "$[\"groups\"][1][\"rawLogs\"][213][\"log\"]",
+      "excerpt": "/tmp/codeshell-review-20261012/desktop-baseline/213-McpSection.lifecycle.test.tsx.log"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-baseline-evidence-round28/independent-existing-tests.receipt.json",
+      "location": "$[\"groups\"][1][\"rawLogs\"][213][\"resolvedLog\"]",
+      "excerpt": "/private/tmp/codeshell-review-20261012/desktop-baseline/213-McpSection.lifecycle.test.tsx.log"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-baseline-evidence-round28/independent-existing-tests.receipt.json",
+      "location": "$[\"groups\"][1][\"rawLogs\"][213][\"archiveMemberBasename\"]",
+      "excerpt": "213-McpSection.lifecycle.test.tsx.log"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-baseline-evidence-round28/independent-existing-tests.receipt.json",
+      "location": "$[\"groups\"][1][\"rawLogs\"][214][\"file\"]",
+      "excerpt": "packages/desktop/src/renderer/settings/McpSection.plugin.test.ts"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-baseline-evidence-round28/independent-existing-tests.receipt.json",
+      "location": "$[\"groups\"][1][\"rawLogs\"][214][\"log\"]",
+      "excerpt": "/tmp/codeshell-review-20261012/desktop-baseline/214-McpSection.plugin.test.ts.log"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-baseline-evidence-round28/independent-existing-tests.receipt.json",
+      "location": "$[\"groups\"][1][\"rawLogs\"][214][\"resolvedLog\"]",
+      "excerpt": "/private/tmp/codeshell-review-20261012/desktop-baseline/214-McpSection.plugin.test.ts.log"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-baseline-evidence-round28/independent-existing-tests.receipt.json",
+      "location": "$[\"groups\"][1][\"rawLogs\"][214][\"archiveMemberBasename\"]",
+      "excerpt": "214-McpSection.plugin.test.ts.log"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-baseline-evidence-round28/independent-existing-tests.receipt.json",
+      "location": "$[\"groups\"][1][\"rawLogs\"][234][\"file\"]",
+      "excerpt": "packages/desktop/src/renderer/settings/mcpSettingsPatch.test.ts"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-baseline-evidence-round28/independent-existing-tests.receipt.json",
+      "location": "$[\"groups\"][1][\"rawLogs\"][234][\"log\"]",
+      "excerpt": "/tmp/codeshell-review-20261012/desktop-baseline/234-mcpSettingsPatch.test.ts.log"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-baseline-evidence-round28/independent-existing-tests.receipt.json",
+      "location": "$[\"groups\"][1][\"rawLogs\"][234][\"resolvedLog\"]",
+      "excerpt": "/private/tmp/codeshell-review-20261012/desktop-baseline/234-mcpSettingsPatch.test.ts.log"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-baseline-evidence-round28/independent-existing-tests.receipt.json",
+      "location": "$[\"groups\"][1][\"rawLogs\"][234][\"archiveMemberBasename\"]",
+      "excerpt": "234-mcpSettingsPatch.test.ts.log"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-baseline-evidence-round28/manifest.json",
+      "location": "$[\"logs\"][354][\"file\"]",
+      "excerpt": "packages/desktop/src/renderer/settings/McpSection.lifecycle.test.tsx"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-baseline-evidence-round28/manifest.json",
+      "location": "$[\"logs\"][354][\"originalLog\"]",
+      "excerpt": "/tmp/codeshell-review-20261012/desktop-baseline/213-McpSection.lifecycle.test.tsx.log"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-baseline-evidence-round28/manifest.json",
+      "location": "$[\"logs\"][354][\"tarMember\"]",
+      "excerpt": "desktop-renderer/213-McpSection.lifecycle.test.tsx.log"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-baseline-evidence-round28/manifest.json",
+      "location": "$[\"logs\"][355][\"file\"]",
+      "excerpt": "packages/desktop/src/renderer/settings/McpSection.plugin.test.ts"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-baseline-evidence-round28/manifest.json",
+      "location": "$[\"logs\"][355][\"originalLog\"]",
+      "excerpt": "/tmp/codeshell-review-20261012/desktop-baseline/214-McpSection.plugin.test.ts.log"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-baseline-evidence-round28/manifest.json",
+      "location": "$[\"logs\"][355][\"tarMember\"]",
+      "excerpt": "desktop-renderer/214-McpSection.plugin.test.ts.log"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-baseline-evidence-round28/manifest.json",
+      "location": "$[\"logs\"][375][\"file\"]",
+      "excerpt": "packages/desktop/src/renderer/settings/mcpSettingsPatch.test.ts"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-baseline-evidence-round28/manifest.json",
+      "location": "$[\"logs\"][375][\"originalLog\"]",
+      "excerpt": "/tmp/codeshell-review-20261012/desktop-baseline/234-mcpSettingsPatch.test.ts.log"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-baseline-evidence-round28/manifest.json",
+      "location": "$[\"logs\"][375][\"tarMember\"]",
+      "excerpt": "desktop-renderer/234-mcpSettingsPatch.test.ts.log"
+    },
+    {
+      "path": "docs/superpowers/plans/2026-05-30-codex-style-extensions-ui.md",
+      "location": "7",
+      "excerpt": "Architecture:** 新建一个统一容器 `ExtensionsPage`，下分发现首页与管理页；管理页四个分类 tab（插件/技能/MCP/市场）。后端逻辑全在 `@cjhyy/code-shell-core` 已导出，desktop 只加薄 IPC 包装；MCP tab 直接复用现有 `McpSection`，skill 详情改点开弹出 modal。"
+    },
+    {
+      "path": "docs/superpowers/plans/2026-05-30-codex-style-extensions-ui.md",
+      "location": "22",
+      "excerpt": "- 现有面板：`PluginsAndSkillsSection.tsx`（三栏）、`McpSection.tsx`（MCP 增删改查+探测）、`SettingsPage.tsx:85-101`（导航模块，含 `mcp` 与 `plugins-skills` 两项）。"
+    },
+    {
+      "path": "docs/superpowers/plans/2026-05-30-codex-style-extensions-ui.md",
+      "location": "541",
+      "excerpt": "MCP tab 直接渲染现有 `McpSection`（`packages/desktop/src/renderer/settings/McpSection.tsx`）。**执行前先读 McpSection 的 props，按其实际签名传参。** 启用判定的 `isEnabled`/`onToggle` 从 `PluginsAndSkillsSection.tsx` 抽取现有逻辑传入（不新发明）。"
+    },
+    {
+      "path": "docs/superpowers/plans/2026-05-30-codex-style-extensions-ui.md",
+      "location": "541",
+      "excerpt": "MCP tab 直接渲染现有 `McpSection`（`packages/desktop/src/renderer/settings/McpSection.tsx`）。**执行前先读 McpSection 的 props，按其实际签名传参。** 启用判定的 `isEnabled`/`onToggle` 从 `PluginsAndSkillsSection.tsx` 抽取现有逻辑传入（不新发明）。"
+    },
+    {
+      "path": "docs/superpowers/plans/2026-05-30-codex-style-extensions-ui.md",
+      "location": "541",
+      "excerpt": "MCP tab 直接渲染现有 `McpSection`（`packages/desktop/src/renderer/settings/McpSection.tsx`）。**执行前先读 McpSection 的 props，按其实际签名传参。** 启用判定的 `isEnabled`/`onToggle` 从 `PluginsAndSkillsSection.tsx` 抽取现有逻辑传入（不新发明）。"
+    },
+    {
+      "path": "docs/superpowers/plans/2026-05-30-codex-style-extensions-ui.md",
+      "location": "547",
+      "excerpt": "import { McpSection } from \"../settings/McpSection\";"
+    },
+    {
+      "path": "docs/superpowers/plans/2026-05-30-codex-style-extensions-ui.md",
+      "location": "547",
+      "excerpt": "import { McpSection } from \"../settings/McpSection\";"
+    },
+    {
+      "path": "docs/superpowers/plans/2026-05-30-codex-style-extensions-ui.md",
+      "location": "605",
+      "excerpt": "      {tab === \"mcp\" && <McpSection /* 按 McpSection 实际 props 传 */ />}"
+    },
+    {
+      "path": "docs/superpowers/plans/2026-05-30-codex-style-extensions-ui.md",
+      "location": "605",
+      "excerpt": "      {tab === \"mcp\" && <McpSection /* 按 McpSection 实际 props 传 */ />}"
+    },
+    {
+      "path": "docs/superpowers/plans/2026-05-30-codex-style-extensions-ui.md",
+      "location": "614",
+      "excerpt": "Expected: 若 `McpSection` 需要 props，会报错 —— 按其真实签名补齐后再过。"
+    },
+    {
+      "path": "docs/superpowers/plans/2026-05-30-codex-style-extensions-ui.md",
+      "location": "655",
+      "excerpt": "Expected: 进入「扩展」页 → 三个 tab 可切换；插件 tab 显示已装插件且能卸载（marketplace 安装的）；技能 tab 点行弹出 SKILL.md；MCP tab 与原 McpSection 行为一致。"
+    },
+    {
+      "path": "docs/superpowers/plans/2026-05-30-codex-style-extensions-ui.md",
+      "location": "709",
+      "excerpt": "- **Spec 覆盖**：管理页分类 tab（Task 7）✓；插件开关+卸载（Task 1/2/3/6）✓；技能开关+点开 modal（Task 4/5）✓；MCP 完整并入（Task 7 挂 McpSection）✓；市场两层（P2）✓；发现首页极简（P3）✓；体验缺口 spinner/空态/重试/确认（Task 5/6/9 内置）✓。"
+    },
+    {
+      "path": "docs/superpowers/plans/2026-05-30-codex-style-extensions-ui.md",
+      "location": "712",
+      "excerpt": "- **已知执行期需对齐项**（计划已显式标注，避免猜测）：① skill/plugin 启用-禁用通道按 `PluginsAndSkillsSection.tsx` 现状照搬；② `Markdown` 组件导出名/prop 按现仓库实际；③ `McpSection` props 按其真实签名。"
+    },
+    {
+      "path": "docs/superpowers/plans/2026-06-16-credentials-module.md",
+      "location": "46",
+      "excerpt": "- Modify `packages/desktop/src/renderer/settings/McpSection.tsx` — 「使用凭证」下拉。"
+    },
+    {
+      "path": "docs/superpowers/plans/2026-06-16-credentials-module.md",
+      "location": "1112",
+      "excerpt": "- Modify: `packages/desktop/src/renderer/settings/McpSection.tsx`"
+    },
+    {
+      "path": "docs/superpowers/plans/2026-06-16-credentials-module.md",
+      "location": "1142",
+      "excerpt": "Add `credentialRef?: string` to the local MCP server type used in McpSection (mirror the core field)."
+    },
+    {
+      "path": "docs/superpowers/plans/2026-06-16-credentials-module.md",
+      "location": "1152",
+      "excerpt": "git add packages/desktop/src/renderer/settings/McpSection.tsx"
+    },
+    {
+      "path": "docs/superpowers/plans/2026-07-16-settings-center-ia.md",
+      "location": "183",
+      "excerpt": "抽查 `GeneralSection`/`McpSection`:确认 `scope === \"project\"` 时写入走 `saveProjectSetting`/项目 `.code-shell/settings.json`(grep `scope` 在各 section 内的分支)。若某 section 实际忽略 project scope,把该模块从 `scopes: [\"user\",\"project\"]` 名单移除并在 commit message 注明。"
+    },
+    {
+      "path": "docs/superpowers/specs/2026-05-24-electron-codex-ui-full-design.md",
+      "location": "169",
+      "excerpt": "      McpSection.tsx"
+    },
+    {
+      "path": "docs/superpowers/specs/2026-05-30-codex-style-plugin-skill-ui-design.md",
+      "location": "14",
+      "excerpt": "- Settings → 「MCP 服务器」：独立的 `McpSection`（增删改查 + 探测）"
+    },
+    {
+      "path": "docs/superpowers/specs/2026-05-30-codex-style-plugin-skill-ui-design.md",
+      "location": "22",
+      "excerpt": "- **MCP**：桌面端**已有完整 UI**（`McpSection.tsx` 增删改查+探测、`McpView.tsx` 列表），但与插件/skill 面板割裂。"
+    },
+    {
+      "path": "docs/superpowers/specs/2026-05-30-codex-style-plugin-skill-ui-design.md",
+      "location": "42",
+      "excerpt": "| MCP tab | **完整**并入：列表 + 开关 + 实时状态 + 添加/编辑/删除（整套复用 `McpSection`） |"
+    },
+    {
+      "path": "docs/superpowers/specs/2026-05-30-codex-style-plugin-skill-ui-design.md",
+      "location": "61",
+      "excerpt": "    ├── McpTab              复用 McpSection 既有逻辑（增删改查+探测）"
+    },
+    {
+      "path": "docs/superpowers/specs/2026-05-30-codex-style-plugin-skill-ui-design.md",
+      "location": "70",
+      "excerpt": "- `McpTab` 直接挂载现有 `McpSection`（或抽其核心 hook），不重写探测逻辑。"
+    },
+    {
+      "path": "docs/superpowers/specs/2026-05-30-codex-style-plugin-skill-ui-design.md",
+      "location": "131",
+      "excerpt": "- **P1 — 管理页骨架**：统一容器 + 分类 tab；接入插件/技能/MCP 三 tab（MCP 挂现有 McpSection）；skill 详情改 modal；补 `plugins:uninstall` IPC + 卸载 UI；加载/空/错态优化。"
+    },
+    {
+      "path": "docs/superpowers/specs/2026-06-18-mcp-oauth-and-figma-integration-design.md",
+      "location": "156",
+      "excerpt": "- 在 `McpSection.tsx` 的 HTTP 模式 advanced 里加一个 \"OAuth\" 鉴权选项（auth=oauth + 可选手填 client_id），让用户也能手动加任意 OAuth MCP，不止 Figma。"
+    },
+    {
+      "path": "docs/superpowers/specs/2026-06-22-plugin-mcp-env-override-design.md",
+      "location": "93",
+      "excerpt": "### McpSection / McpEditor(`packages/desktop/src/renderer/settings/McpSection.tsx`)"
+    },
+    {
+      "path": "docs/superpowers/specs/2026-06-22-plugin-mcp-env-override-design.md",
+      "location": "93",
+      "excerpt": "### McpSection / McpEditor(`packages/desktop/src/renderer/settings/McpSection.tsx`)"
+    },
+    {
+      "path": "docs/todo/2026-07-22-codex-tasks.md",
+      "location": "130",
+      "excerpt": "McpSection 等内联编辑器在 scope 切换时应给离开确认或按原 scope 提交(TODO 遗留④)。"
+    },
+    {
+      "path": "docs/todo/2026-09-11-overnight-todo-audit.md",
+      "location": "336",
+      "excerpt": "| [packages/desktop/src/renderer/settings/McpSection.tsx](../../packages/desktop/src/renderer/settings/McpSection.tsx)                                       | 88, 718                      | 已实现行为的编号/历史追溯标签             |"
+    },
+    {
+      "path": "docs/todo/2026-09-11-overnight-todo-audit.md",
+      "location": "336",
+      "excerpt": "| [packages/desktop/src/renderer/settings/McpSection.tsx](../../packages/desktop/src/renderer/settings/McpSection.tsx)                                       | 88, 718                      | 已实现行为的编号/历史追溯标签             |"
+    },
+    {
+      "path": "docs/todo/mcp-http-auth-oauth-link-tech-design.md",
+      "location": "74",
+      "excerpt": "- `packages/desktop/src/renderer/settings/McpSection.tsx`: MCP 设置 UI"
+    },
+    {
+      "path": "docs/todo/small-features-2026-07-10/mcp-http-oauth.md",
+      "location": "29",
+      "excerpt": "   `packages/desktop/src/renderer/settings/McpSection.tsx:781-825` 展示状态，在 `:1187-1296`"
+    },
+    {
+      "path": "docs/todo/small-features-2026-07-10/mcp-http-oauth.md",
+      "location": "37",
+      "excerpt": "   `packages/desktop/src/renderer/settings/McpSection.tsx:950-956`。"
+    },
+    {
+      "path": "docs/todo/small-features-2026-07-10/mcp-http-oauth.md",
+      "location": "56",
+      "excerpt": "7. 退出现在只是删除 user-scope credential：`LinkTab.tsx:48-51`、`McpSection.tsx:958-963`，"
+    },
+    {
+      "path": "docs/todo/small-features-2026-07-10/mcp-http-oauth.md",
+      "location": "311",
+      "excerpt": "#### `packages/desktop/src/renderer/settings/McpSection.tsx`"
+    },
+    {
+      "path": "docs/todo/small-features-2026-07-10/mcp-http-oauth.md",
+      "location": "331",
+      "excerpt": "落地 profile registry、`McpOAuthService.login/refresh/logout`、main/preload API 和安全写盘；接 LinkTab 与 McpSection。完成后用户可以登录、"
+    },
+    {
+      "path": "docs/todo/small-features-2026-07-10/mcp-http-oauth.md",
+      "location": "367",
+      "excerpt": "- `McpSection.plugin.test.ts` 及新增交互测试：登录成功自动选中返回的 credentialRef；未保存 server 的 name/url 校验；刷新/退出状态；"
+    },
+    {
+      "path": "docs/todo/small-features-2026-07-10/naming-consolidation.md",
+      "location": "380",
+      "excerpt": "- `packages/desktop/src/renderer/settings/{GeneralSection,ConversationSettingsSection,PermissionSection,McpSection,MemorySection,ModelCatalogPanel,TextConnectionsPanel,SearchConnectionsPanel,PluginsAndSkillsSection,AdvancedSections}.tsx`"
+    }
+  ],
+  "driftFromFirstInventory": []
+}

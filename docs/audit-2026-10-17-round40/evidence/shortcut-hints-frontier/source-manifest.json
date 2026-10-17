@@ -1,0 +1,289 @@
+{
+  "prepOnly": true,
+  "rootContextSupplied": "Root39 docs integration considered mutable at assignment; no Git-observed formal baseline. History includes frozen38, excludes39/40/41/42.",
+  "formalBaseline": null,
+  "gitBindingPerformed": false,
+  "finishedAtUTC": "2026-10-17T13:57:01.748174+00:00",
+  "files": [
+    {
+      "path": "packages/desktop/src/renderer/keyboardShortcutHints.ts",
+      "bytes": 337,
+      "sha256": "e15848ee4075aa6a13fb1d981c222881322109aff6d1f3bc03c1cffb4e34a22d",
+      "lineCount": 9,
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          9
+        ]
+      ],
+      "coveredLineCount": 9,
+      "sourceKind": "product",
+      "initialPinArtifact": "replacement-initial-pins.json",
+      "initialPinUTC": "2026-10-17T13:54:02.161382+00:00",
+      "initialSemanticReadSha256": "e15848ee4075aa6a13fb1d981c222881322109aff6d1f3bc03c1cffb4e34a22d",
+      "prepRow": {
+        "path": "packages/desktop/src/renderer/keyboardShortcutHints.ts",
+        "bytes": 337,
+        "lineCount": 9,
+        "sha256": "e15848ee4075aa6a13fb1d981c222881322109aff6d1f3bc03c1cffb4e34a22d",
+        "pinBeforeBodyRead": true,
+        "initialSemanticReadSha256": "e15848ee4075aa6a13fb1d981c222881322109aff6d1f3bc03c1cffb4e34a22d",
+        "datedCoverageRows": [
+          {
+            "path": "packages/desktop/src/renderer/keyboardShortcutHints.ts",
+            "bytes": 337,
+            "lines": 9,
+            "sha256": "e15848ee4075aa6a13fb1d981c222881322109aff6d1f3bc03c1cffb4e34a22d",
+            "status": "current-sha-pin-only-no-semantic-coverage",
+            "currentFullClaimVariants": 0,
+            "currentSelectedClaimVariants": 0,
+            "currentSelectedUnionLines": 0,
+            "currentSelectedUnionRanges": [],
+            "priorVersionClaimVariants": 0,
+            "currentPinOnlyVariants": 1,
+            "claimVariants": 1,
+            "claims": [
+              {
+                "sourceSha256": "e15848ee4075aa6a13fb1d981c222881322109aff6d1f3bc03c1cffb4e34a22d",
+                "matchesCurrentFilesystem": true,
+                "coverageKind": "scope-unknown-pin-only",
+                "rawCoverageLabel": null,
+                "selectedLineRanges": [],
+                "validRangeBoundsForCurrentFile": true,
+                "manifests": [
+                  {
+                    "path": "docs/audit-2026-10-17-round12/evidence/desktop-source-manifest.json",
+                    "jsonLocation": "$[\"files\"][6]"
+                  },
+                  {
+                    "path": "docs/audit-2026-10-17-round12/source-manifest.json",
+                    "jsonLocation": "$[\"files\"][29]"
+                  },
+                  {
+                    "path": "docs/audit-2026-10-17-round12/source-manifest.json",
+                    "jsonLocation": "$[\"workerSourceChecks\"][6]"
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "finishBytes": 337,
+      "finishSha256": "e15848ee4075aa6a13fb1d981c222881322109aff6d1f3bc03c1cffb4e34a22d",
+      "matchesInitialPin": true,
+      "firstEverReadClaim": false
+    },
+    {
+      "path": "packages/desktop/src/renderer/keyboardShortcutHints.test.ts",
+      "bytes": 827,
+      "sha256": "9b360ebfb7794bcc34811e46a6074ee5fc104e0d849e0abd27ea45377ca17271",
+      "lineCount": 18,
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          18
+        ]
+      ],
+      "coveredLineCount": 18,
+      "sourceKind": "test",
+      "initialPinArtifact": "consumer-initial-pins.json",
+      "initialPinUTC": "2026-10-17T13:55:25.585912+00:00",
+      "initialSemanticReadSha256": "9b360ebfb7794bcc34811e46a6074ee5fc104e0d849e0abd27ea45377ca17271",
+      "prepRow": {
+        "path": "packages/desktop/src/renderer/keyboardShortcutHints.test.ts",
+        "bytes": 827,
+        "lineCount": 18,
+        "sha256": "9b360ebfb7794bcc34811e46a6074ee5fc104e0d849e0abd27ea45377ca17271",
+        "pinBeforeSelectedBodyOrLocatorRead": true,
+        "initialSemanticReadSha256": "9b360ebfb7794bcc34811e46a6074ee5fc104e0d849e0abd27ea45377ca17271"
+      },
+      "finishBytes": 827,
+      "finishSha256": "9b360ebfb7794bcc34811e46a6074ee5fc104e0d849e0abd27ea45377ca17271",
+      "matchesInitialPin": true,
+      "firstEverReadClaim": false
+    },
+    {
+      "path": "packages/desktop/src/renderer/Sidebar.tsx",
+      "bytes": 58805,
+      "sha256": "f97da3b8ae4d8f4973acfa5afb30425e3755ec7fef58b462efde95c62c324d87",
+      "lineCount": 1629,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          1523,
+          1532
+        ]
+      ],
+      "coveredLineCount": 10,
+      "sourceKind": "product",
+      "initialPinArtifact": "consumer-initial-pins.json",
+      "initialPinUTC": "2026-10-17T13:55:25.585912+00:00",
+      "initialSemanticReadSha256": "f97da3b8ae4d8f4973acfa5afb30425e3755ec7fef58b462efde95c62c324d87",
+      "prepRow": {
+        "path": "packages/desktop/src/renderer/Sidebar.tsx",
+        "bytes": 58805,
+        "lineCount": 1629,
+        "sha256": "f97da3b8ae4d8f4973acfa5afb30425e3755ec7fef58b462efde95c62c324d87",
+        "pinBeforeSelectedBodyOrLocatorRead": true,
+        "initialSemanticReadSha256": "f97da3b8ae4d8f4973acfa5afb30425e3755ec7fef58b462efde95c62c324d87"
+      },
+      "finishBytes": 58805,
+      "finishSha256": "f97da3b8ae4d8f4973acfa5afb30425e3755ec7fef58b462efde95c62c324d87",
+      "matchesInitialPin": true,
+      "firstEverReadClaim": false
+    },
+    {
+      "path": "packages/desktop/src/renderer/shell/CommandPalette.tsx",
+      "bytes": 6806,
+      "sha256": "ec0d73a75b3ff551570d227c36c503b3a343d9567ca692a272dd872e95ce5571",
+      "lineCount": 206,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          117,
+          118
+        ],
+        [
+          164,
+          174
+        ],
+        [
+          178,
+          186
+        ]
+      ],
+      "coveredLineCount": 22,
+      "sourceKind": "product",
+      "initialPinArtifact": "consumer-initial-pins.json",
+      "initialPinUTC": "2026-10-17T13:55:25.585912+00:00",
+      "initialSemanticReadSha256": "ec0d73a75b3ff551570d227c36c503b3a343d9567ca692a272dd872e95ce5571",
+      "prepRow": {
+        "path": "packages/desktop/src/renderer/shell/CommandPalette.tsx",
+        "bytes": 6806,
+        "lineCount": 206,
+        "sha256": "ec0d73a75b3ff551570d227c36c503b3a343d9567ca692a272dd872e95ce5571",
+        "pinBeforeSelectedBodyOrLocatorRead": true,
+        "initialSemanticReadSha256": "ec0d73a75b3ff551570d227c36c503b3a343d9567ca692a272dd872e95ce5571"
+      },
+      "finishBytes": 6806,
+      "finishSha256": "ec0d73a75b3ff551570d227c36c503b3a343d9567ca692a272dd872e95ce5571",
+      "matchesInitialPin": true,
+      "firstEverReadClaim": false
+    }
+  ],
+  "hashOnlyFiles": [
+    {
+      "path": "packages/core/src/utils/format.ts",
+      "bytes": 9304,
+      "sha256": "39d3fa4786f19681e53ec4a42cf9c5ee0bffc818d4c95c4bc151d3ea705c85b6",
+      "lineCount": 300,
+      "coverage": "hash-only selection/exclusion metadata; zero body read",
+      "selectedLineRanges": [],
+      "coveredLineCount": 0,
+      "initialPinArtifact": "selection-metadata.json",
+      "initialPinUTC": "2026-10-17T13:51:44.538026+00:00",
+      "finishBytes": 9304,
+      "finishSha256": "39d3fa4786f19681e53ec4a42cf9c5ee0bffc818d4c95c4bc151d3ea705c85b6",
+      "matchesInitialPin": true,
+      "selectionRole": "Metadata ranking only, not an active or replacement semantic leaf"
+    },
+    {
+      "path": "packages/web/src/lib/format.ts",
+      "bytes": 5447,
+      "sha256": "c1c2d582d623ba99a738b7d43c483358e6826cae24010ef7994b5d4708310f33",
+      "lineCount": 140,
+      "coverage": "hash-only selection/exclusion metadata; zero body read",
+      "selectedLineRanges": [],
+      "coveredLineCount": 0,
+      "initialPinArtifact": "selection-metadata.json",
+      "initialPinUTC": "2026-10-17T13:51:44.538026+00:00",
+      "finishBytes": 5447,
+      "finishSha256": "c1c2d582d623ba99a738b7d43c483358e6826cae24010ef7994b5d4708310f33",
+      "matchesInitialPin": true,
+      "selectionRole": "Original candidate excluded before body on same-SHA full scope"
+    },
+    {
+      "path": "packages/core/src/utils/toolDisplay.ts",
+      "bytes": 6985,
+      "sha256": "41ba468c68cb9c564e1401d3c5cd310ab60a1e61600966c45166184871e6c000",
+      "lineCount": 209,
+      "coverage": "hash-only selection/exclusion metadata; zero body read",
+      "selectedLineRanges": [],
+      "coveredLineCount": 0,
+      "initialPinArtifact": "replacement-selection-metadata.json",
+      "initialPinUTC": "2026-10-17T13:53:32.853804+00:00",
+      "finishBytes": 6985,
+      "finishSha256": "41ba468c68cb9c564e1401d3c5cd310ab60a1e61600966c45166184871e6c000",
+      "matchesInitialPin": true,
+      "selectionRole": "Metadata ranking only, not an active or replacement semantic leaf"
+    },
+    {
+      "path": "packages/core/src/utils/json.ts",
+      "bytes": 2558,
+      "sha256": "afbd3affb109a4a2bbfc1e55cdb47a3f91aca03a7a987264a29928410243e129",
+      "lineCount": 84,
+      "coverage": "hash-only selection/exclusion metadata; zero body read",
+      "selectedLineRanges": [],
+      "coveredLineCount": 0,
+      "initialPinArtifact": "replacement-selection-metadata.json",
+      "initialPinUTC": "2026-10-17T13:53:32.853804+00:00",
+      "finishBytes": 2558,
+      "finishSha256": "afbd3affb109a4a2bbfc1e55cdb47a3f91aca03a7a987264a29928410243e129",
+      "matchesInitialPin": true,
+      "selectionRole": "Metadata ranking only, not an active or replacement semantic leaf"
+    },
+    {
+      "path": "packages/web/src/lib/userMessageDisplay.ts",
+      "bytes": 5926,
+      "sha256": "628fb9130fccc1022c1448ccba8ed21fe145cfeb072167ab57f76411473a0391",
+      "lineCount": 164,
+      "coverage": "hash-only selection/exclusion metadata; zero body read",
+      "selectedLineRanges": [],
+      "coveredLineCount": 0,
+      "initialPinArtifact": "replacement-selection-metadata.json",
+      "initialPinUTC": "2026-10-17T13:53:32.853804+00:00",
+      "finishBytes": 5926,
+      "finishSha256": "628fb9130fccc1022c1448ccba8ed21fe145cfeb072167ab57f76411473a0391",
+      "matchesInitialPin": true,
+      "selectionRole": "Metadata ranking only, not an active or replacement semantic leaf"
+    }
+  ],
+  "instructionCarryForward": [
+    {
+      "path": "CODESHELL.md",
+      "bytes": 17639,
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "priorKnownSha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "matchesPriorKnownPin": true,
+      "coverage": "hash-only current check; previously read instruction context carried forward, zero new semantic instruction lines",
+      "initialSemanticReadSha256": null
+    },
+    {
+      "path": "AGENTS.md",
+      "bytes": 206,
+      "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "priorKnownSha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "matchesPriorKnownPin": true,
+      "coverage": "hash-only current check; previously read instruction context carried forward, zero new semantic instruction lines",
+      "initialSemanticReadSha256": null
+    }
+  ],
+  "counts": {
+    "activeSemanticPins": 4,
+    "fullPins": 2,
+    "selectedPins": 2,
+    "productAndTestLines": 59,
+    "productLines": 41,
+    "testDeclarationLines": 18,
+    "metadataOnlyRankedOrExcludedProductPins": 5,
+    "totalProductBytePins": 9,
+    "carriedInstructionHashChecks": 2,
+    "newInstructionSemanticReadLines": 0
+  },
+  "allSemanticInitialFinishStable": true,
+  "all9ProductPinsStable": true,
+  "coverageLimits": "Inclusive1-based audited ranges. Sidebar1514–1522/1533–1537 and CommandPalette140–163/175–177/187–192 were printed adjacent source but actual actions, native menu/window behavior, time formatting and unrelated navigation entries not audited or invoked. Locator imports Sidebar58/CommandPalette10 are navigation only, not additional full-module claims. Do not add duplicated priorR12 or other author lines as globally new coverage."
+}

@@ -1,0 +1,97 @@
+{
+  "inventory": {
+    "discovered": 3581,
+    "included": 3509,
+    "excluded": 72,
+    "md": 1361,
+    "json": 2148,
+    "bytes": 129212024,
+    "jsonStringValues": 975542,
+    "jsonScalarValues": 1464542,
+    "jsonParseErrors": [],
+    "archiveBySubstring": 175,
+    "includesFrozenRound38": true
+  },
+  "method": {
+    "literalCasefoldedNeedles": {
+      "source_path": [
+        "packages/web/src/lib/format.ts"
+      ],
+      "source_filename": [
+        "lib/format.ts"
+      ],
+      "source_sha": [
+        "c1c2d582d623ba99a738b7d43c483358e6826cae24010ef7994b5d4708310f33"
+      ],
+      "format_contract": [
+        "web/src/lib/format",
+        "web format",
+        "formatduration"
+      ]
+    },
+    "capPerGroup": 160,
+    "notSemanticExhaustion": true,
+    "samePathShaRows": "Structured immediate-object metadata lookup; no product source execution."
+  },
+  "hitTotals": {
+    "source_path": 67,
+    "source_filename": 75,
+    "source_sha": 12,
+    "format_contract": 399
+  },
+  "retained": {
+    "source_path": 67,
+    "source_filename": 75,
+    "source_sha": 12,
+    "format_contract": 160
+  },
+  "exactLocatorUniqueContextTextsRead": 23,
+  "firstExactLocatorSamePathShaRowsRead": 9,
+  "broadFormatContract399WasCapped160": true,
+  "broadFormatContractAllRead": false,
+  "firstCandidateExclusion": {
+    "path": "packages/web/src/lib/format.ts",
+    "reason": "Same current-SHA prior manifest scope explicitly states Full static module, despite R28 structural classifier pin-only status. Also old project ownership causes remain excluded.",
+    "sourceEvidence": {
+      "path": "docs/audit-2026-10-17-round20/evidence/root-source-manifest.json",
+      "jsonPointer": "/files/10",
+      "row": {
+        "path": "packages/web/src/lib/format.ts",
+        "bytes": 5447,
+        "sha256": "c1c2d582d623ba99a738b7d43c483358e6826cae24010ef7994b5d4708310f33",
+        "scope": "Full static module; old project matching and i18n preflight directions not recovered, no import.",
+        "frozenBlobVerified": true,
+        "currentMatchesFrozen": true,
+        "lineCount": 140
+      }
+    },
+    "newBodyReadLines": 0,
+    "notClaimed": "No semantic review of current project identity/registry; prior old117line full source is a different version."
+  },
+  "metadataRankedCoreFormat": "Same current-SHA explicit-fullR25 ranges1–300 in dated coverage; not active and no new body read.",
+  "replacementLeaf": "packages/desktop/src/renderer/keyboardShortcutHints.ts",
+  "replacementGate": {
+    "completeOriginalInventoryFiles": 3509,
+    "hitTotals": {
+      "source_path": 5,
+      "source_filename": 18,
+      "source_sha": 7,
+      "ordinary_contract": 0
+    },
+    "retained": {
+      "source_path": 5,
+      "source_filename": 18,
+      "source_sha": 7,
+      "ordinary_contract": 0
+    },
+    "capPerGroup": 120,
+    "uniqueContextTextsRead": 6,
+    "samePathShaMetadataRowsRead": 5,
+    "changedFromOriginal": [],
+    "parseErrors": []
+  },
+  "replacementPriorState": "R12 source hash rows have no full/selected claim. PriorR12 report does describe existing tests covering platform labels; therefore known attention and tests, not never-read. No exact old bug cause found in bounded contexts. Historical23pass/39expect refers a different past shard including3files; not current validation or helper-only count.",
+  "archiveCountDefinition": "175 substring archiv paths; not a claimed exact directory archive count.",
+  "novelty": "Limited source negative, no new formal/candidate/related. Whole history string matching is not all documents semantically read. One initial candidate and one replacement; other metadata-ranked names never became active sources.",
+  "metadataOutputDiagnostic": "114003 first print included overlong locator arrays and truncated; preserved full history-selected-contexts.json, then c6f9a9 minimal-header23context texts printed/read completely. No product run or import retried."
+}

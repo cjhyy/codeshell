@@ -1,0 +1,19 @@
+{
+  "ownedOutput": "/tmp/codeshell-audit-round40-aggregate-review",
+  "role": "both source authors own-author metadata aggregation only",
+  "independentSourceReviewPerformedByThisAggregate": false,
+  "productSourceReadScope": [],
+  "checksFilesMustStayEmpty": true,
+  "newProductSemanticReadLines": 0,
+  "inputs": [
+    "frozen future40 projectOptions author",
+    "frozen future41 UTF8 source refresh author",
+    "now-frozen projectOptions independent reviewer"
+  ],
+  "proposedFormalRound": 40,
+  "originalPrepNumberingUnchanged": true,
+  "formalRound41PackageRequested": false,
+  "formalBaseline": null,
+  "futureFormalBranchHistoryCertified": false,
+  "RootOwnsFormalAssemblyAndCandidateStage": true
+}

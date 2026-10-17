@@ -1,0 +1,62 @@
+{
+  "checkedUTC": "2026-10-17T13:58:11.014537+00:00",
+  "method": "All inline Markdown file links in exact frontier dir, existence only, no product/formal verifier run",
+  "linkCount": 9,
+  "allExist": true,
+  "links": [
+    {
+      "source": "report.md",
+      "destination": "classification.json",
+      "resolvedPath": "/private/tmp/codeshell-audit-round42-data-frontier/classification.json",
+      "exists": true
+    },
+    {
+      "source": "report.md",
+      "destination": "source-manifest.json",
+      "resolvedPath": "/private/tmp/codeshell-audit-round42-data-frontier/source-manifest.json",
+      "exists": true
+    },
+    {
+      "source": "report.md",
+      "destination": "history.json",
+      "resolvedPath": "/private/tmp/codeshell-audit-round42-data-frontier/history.json",
+      "exists": true
+    },
+    {
+      "source": "report.md",
+      "destination": "history-selected-contexts.json",
+      "resolvedPath": "/private/tmp/codeshell-audit-round42-data-frontier/history-selected-contexts.json",
+      "exists": true
+    },
+    {
+      "source": "report.md",
+      "destination": "replacement-history.json",
+      "resolvedPath": "/private/tmp/codeshell-audit-round42-data-frontier/replacement-history.json",
+      "exists": true
+    },
+    {
+      "source": "report.md",
+      "destination": "history-decisions.json",
+      "resolvedPath": "/private/tmp/codeshell-audit-round42-data-frontier/history-decisions.json",
+      "exists": true
+    },
+    {
+      "source": "report.md",
+      "destination": "history-finish-check.json",
+      "resolvedPath": "/private/tmp/codeshell-audit-round42-data-frontier/history-finish-check.json",
+      "exists": true
+    },
+    {
+      "source": "report.md",
+      "destination": "validation.json",
+      "resolvedPath": "/private/tmp/codeshell-audit-round42-data-frontier/validation.json",
+      "exists": true
+    },
+    {
+      "source": "report.md",
+      "destination": "artifact-receipt.json",
+      "resolvedPath": "/private/tmp/codeshell-audit-round42-data-frontier/artifact-receipt.json",
+      "exists": true
+    }
+  ]
+}

@@ -1,0 +1,36 @@
+{
+  "fullDatedInventoryFiles": 3509,
+  "markdown": 1361,
+  "json": 2148,
+  "stringLeaves": 975542,
+  "scalarLeaves": 1464542,
+  "exactArchivePaths": 169,
+  "parseErrors": 0,
+  "includesFrozen38": true,
+  "excludedMutableFuture": [
+    "docs/audit-2026-10-17-round39/**",
+    "docs/audit-2026-10-17-round40/**"
+  ],
+  "initialQueriesForExcludedLeaf": {
+    "exact-leaf": 17,
+    "ordinary-contract": 54,
+    "old-failed": 0
+  },
+  "initialCap": null,
+  "excludedLeaf17ExactContextsRead": true,
+  "excludedLeaf54BroadContextsAllRead": false,
+  "excludedLeafDecision": "stripMarkdown same SHA and exact old R2-05 source/finding report; no product semantic read and no new counterexample or dynamic retry. Old manifest binds bytes but lacks full/selected coverage fields, not proof of full semantic read.",
+  "replacementQuery": "projectOptions|project.option|项目选项",
+  "replacementContextsRetained": 24,
+  "replacementContextCap": null,
+  "replacement24ContextsAnd1DirectObjectRead": true,
+  "replacementDriftFromDatedInventory": [],
+  "priorProjectOptionsCoverage": "Same-SHA Round28 package inventory only; naming-consolidation notes show prior semantic attention, test receipts record old runtime metadata. No explicit full semantic row found in this gate, no claim first-ever unread and no borrowed pass.",
+  "newCauseConclusion": "No new ordinary DTO contract issue established in bounded source read; no candidate or new-related record created.",
+  "currentSourceReadDoesNotBorrowOldRuntimeEvidence": true,
+  "datedDifference": {
+    "added": 96,
+    "removed": 0,
+    "sharedChanged": 0
+  }
+}

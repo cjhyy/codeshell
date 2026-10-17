@@ -1,0 +1,56 @@
+{
+  "inventory": {
+    "discovered": 3522,
+    "included": 3509,
+    "excluded": 13,
+    "md": 1361,
+    "json": 2148,
+    "bytes": 129212024,
+    "jsonStringValues": 975542,
+    "jsonScalarValues": 1464542,
+    "jsonParseErrors": [],
+    "archiveBySubstring": 175,
+    "includesFrozenRound38": true
+  },
+  "method": {
+    "literalCasefoldedNeedles": {
+      "source_path": [
+        "packages/desktop/src/renderer/automation/projectoptions.ts"
+      ],
+      "source_filename": [
+        "projectoptions.ts"
+      ],
+      "source_sha": [
+        "bc14777959c7ae4f4e9c21a06cfcff08dccc9ba15436858b66147f218e1d13e0"
+      ],
+      "project_options": [
+        "project options",
+        "projectoptions",
+        "项目选项"
+      ]
+    },
+    "capPerGroup": 160,
+    "notSemanticExhaustion": true,
+    "samePathShaRows": "Structured immediate-object metadata lookup; no product source execution."
+  },
+  "hitTotals": {
+    "source_path": 6,
+    "source_filename": 7,
+    "source_sha": 1,
+    "project_options": 24
+  },
+  "retained": {
+    "source_path": 6,
+    "source_filename": 7,
+    "source_sha": 1,
+    "project_options": 24
+  },
+  "selectedUniqueContextsFullyRead": 22,
+  "samePathShaMetadataRowsFullyRead": 1,
+  "samePathShaConclusion": "Only R28 package inventory hash/101line row; no explicit full semantic coverage claim. No-row does not mean never read. Naming-consolidation documents show prior attention.",
+  "historicalTestReceipts": "Navigation/reference metadata only. No archived runtime log opened or historical pass borrowed as current validation.",
+  "archiveCountDefinition": "175 substring archiv paths, distinct from parent169 exact archive/_archive-directory count.",
+  "novelty": "No ordinary new cause established in this finite review, so no new formal/candidate/related. All history bytes matched queries, not all historical documents semantically read.",
+  "stripMarkdown": "Known R2-05 exclusion is parent metadata, not reopened or reread by reviewer.",
+  "historyEpochs": "Parent original3509 unchanged. Per-file parent-to-review late differences stored in author-metadata-checks.json; reviewer ending differences separately stored."
+}
