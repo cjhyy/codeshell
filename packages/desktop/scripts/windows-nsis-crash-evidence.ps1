@@ -52,9 +52,12 @@ try {
   $raw = [Console]::In.ReadToEnd()
   if ($raw.Length -gt 4096) { Stop-Projection 'input-invalid' }
   $target = ConvertFrom-Json -InputObject $raw
-  if ((@($target.PSObject.Properties.Name | Sort-Object) -join ',') -cne 'birth,fileTime,observedAt,path,pid') { Stop-Projection 'input-invalid' }
-  $start = [DateTime]::ParseExact($target.birth, 'o', [Globalization.CultureInfo]::InvariantCulture, [Globalization.DateTimeStyles]::RoundtripKind)
-  $end = [DateTime]::ParseExact($target.observedAt, 'o', [Globalization.CultureInfo]::InvariantCulture, [Globalization.DateTimeStyles]::RoundtripKind)
+  if ((@($target.PSObject.Properties.Name | Sort-Object) -join ',') -cne 'fileTime,observedFileTime,path,pid') { Stop-Projection 'input-invalid' }
+  # Decimal strings stay strings on all supported PS7 versions. Passing ISO
+  # timestamps to ConvertFrom-Json would permit implicit DateTime conversion.
+  if ($target.fileTime -isnot [string] -or $target.observedFileTime -isnot [string] -or $target.fileTime -notmatch '^\d{1,19}$' -or $target.observedFileTime -notmatch '^\d{1,19}$') { Stop-Projection 'input-invalid' }
+  $start = [DateTime]::FromFileTimeUtc([long]::Parse($target.fileTime, [Globalization.CultureInfo]::InvariantCulture))
+  $end = [DateTime]::FromFileTimeUtc([long]::Parse($target.observedFileTime, [Globalization.CultureInfo]::InvariantCulture))
   $pidExpected = [uint32]$target.pid
   $birthExpected = [uint64]::Parse($target.fileTime, [Globalization.CultureInfo]::InvariantCulture)
   if ($pidExpected -eq 0 -or $start.Kind -ne [DateTimeKind]::Utc -or $end.Kind -ne [DateTimeKind]::Utc -or $start.ToFileTimeUtc() -ne $birthExpected -or $end -lt $start -or ($end - $start).TotalSeconds -gt 600 -or $target.path -notmatch '^[A-Za-z]:\\[^\r\n\x00]+$') { Stop-Projection 'input-invalid' }
