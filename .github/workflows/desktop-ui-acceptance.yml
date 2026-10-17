@@ -97,10 +97,10 @@ jobs:
           git fetch --no-tags --depth=1 origin "$reducer_ref"
           set +e
           node scripts/run-isolated-node-smoke.mjs packages/web/scripts/test-subagent-state-browser.mjs --evidence-dir "$ACCEPTANCE_ROOT/subagent-state-failure-retention" --reducer-ref "$reducer_ref" 2>&1 | tee "$ACCEPTANCE_ROOT/subagent-state-failure-retention.log"
-          retention_status=$?
+          retention_pipe_status=("${PIPESTATUS[@]}")
           set -e
-          if [[ "$retention_status" -ne 1 ]]; then
-            echo "Expected the fixed old-reducer UI failure to exit exactly 1; got $retention_status"
+          if [[ "${#retention_pipe_status[@]}" -ne 2 || "${retention_pipe_status[0]}" -ne 1 || "${retention_pipe_status[1]}" -ne 0 ]]; then
+            echo "Expected the fixed old-reducer UI failure Node=1 and tee=0; got ${retention_pipe_status[*]}"
             exit 1
           fi
           node scripts/run-isolated-node-smoke.mjs packages/web/scripts/verify-subagent-failure-home.mjs "$ACCEPTANCE_ROOT/subagent-state-failure-retention" "$GITHUB_SHA"
