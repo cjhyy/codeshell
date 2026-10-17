@@ -1,0 +1,19 @@
+{
+  "baseline": "ab258c3f534b19014b2ed85da3111649f166ab86",
+  "count": 0,
+  "observations": [],
+  "unclassifiedStaticFrontiers": [
+    {
+      "title": "Banner content padding formula yields four extra ASCII columns",
+      "source": "packages/tui/src/cli/output/terminal-ui.ts",
+      "lines": [
+        94,
+        125
+      ],
+      "classification": "unclassified frontier; not a finding/candidate/related issue",
+      "evidence": "static arithmetic only, no ordinary caller found in bounded literal navigation",
+      "severity": null
+    }
+  ],
+  "note": "One terminal banner arithmetic clue remains unclassified, outside all finding/candidate/related counts. Historical budget documentation contradiction and old diminishing concern not new issues."
+}

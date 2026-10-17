@@ -1,0 +1,19 @@
+bun test v1.3.11 (af24e281)
+
+docs/audit-2026-10-17-round22/evidence/budget-reactive-focused.test.ts:
+(pass) round22 actual reactive threshold ordinary controls > exact positive boundaries trigger and return the new bucket [0.70ms]
+(pass) round22 actual reactive threshold ordinary controls > a large ordinary chunk triggers once at its latest bucket
+(pass) round22 actual reactive threshold ordinary controls > a monotonic nondivisible sequence does not miss or duplicate crossed buckets [0.24ms]
+(pass) round22 actual reactive threshold ordinary controls > fresh owned counters independently report the same first crossing
+
+packages/core/src/engine/reactive-threshold.test.ts:
+(pass) crossedReactiveThreshold > fires the first time the accumulator passes 2000
+(pass) crossedReactiveThreshold > does not re-fire within the same 2000 bucket
+(pass) crossedReactiveThreshold > fires again when the next 2000 boundary is crossed
+(pass) crossedReactiveThreshold > never fires below the first boundary
+
+ 8 pass
+ 0 fail
+ 17 expect() calls
+Ran 8 tests across 2 files. [114.00ms]
+Completed Bun shard: 8 tests, 0 skipped; 0 failures.

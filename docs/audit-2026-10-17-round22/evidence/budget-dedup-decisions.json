@@ -1,0 +1,47 @@
+{
+  "base": "ab258c3f534b19014b2ed85da3111649f166ab86",
+  "formalCount": 0,
+  "candidateCount": 0,
+  "relatedCount": 0,
+  "decisions": [
+    {
+      "scope": "token-budget normal controls and diminishing branch",
+      "prior": [
+        "docs/audit-2026-10-17-round9/usage.md:18",
+        "docs/audit-2026-10-17-round9/evidence/root-usage-contracts.test.ts:53-67"
+      ],
+      "decision": "Prior two normal-policy controls and unclassified unreachable/difficult diminishing observation already cover this mechanism. No budget runtime test or new issue in round22."
+    },
+    {
+      "scope": "reactive threshold ordinary controls",
+      "prior": [
+        "docs/archive/core-complete-review.md:383-386",
+        "docs/archive/review-2026-07-09/06-turn-loop-state-machine.md:211"
+      ],
+      "decision": "Ordinary leaf boundary validation adds four focused cases to existing four; no product defect established. Actual consumer is static only, not an executed integration."
+    },
+    {
+      "scope": "jump across several reactive buckets",
+      "source": [
+        "packages/core/src/engine/reactive-threshold.ts:17-21",
+        "packages/core/src/engine/turn-loop.ts:2133-2143"
+      ],
+      "decision": "Single call reports latest bucket; consumer evaluates current pressure, not historical skipped levels. No ordinary contract demands multiple probes per one event; not a bug."
+    },
+    {
+      "scope": "documentation wording mismatch",
+      "references": [
+        "docs/core-deep-dive/v2-02-engine-turn-loop-deep-dive.md:218",
+        "docs/core-deep-dive/02-engine-turn-loop.md:88",
+        "docs/archive/core-complete-review.md:386",
+        "docs/archive/review-2026-07-09/06-turn-loop-state-machine.md:211"
+      ],
+      "decision": "Historical deep-dive wording claims possible immediate window compaction whereas actual consumer only warns; other existing review docs already state actual boundary. Retained as a documentation wording observation, not a newly ranked helper/runtime defect."
+    }
+  ],
+  "limitations": [
+    "Keyword matches are navigation, not semantic exhaustion.",
+    "Counts refer to the frozen read-time history; current batch excluded.",
+    "Previous failed dynamic directions remain skipped; old budget tests not rerun."
+  ]
+}

@@ -1,0 +1,21 @@
+bun test v1.3.11 (af24e281)
+
+docs/audit-2026-10-17-round22/evidence/root-friendly.test.ts:
+(pass) round22 actual friendly-error leaf, owned messages only > keeps an ordinary temporary rate limit actionable [1.86ms]
+(pass) round22 actual friendly-error leaf, owned messages only > recognizes a quota message without a status prefix [0.66ms]
+(pass) round22 actual friendly-error leaf, owned messages only > characterizes 429 taking precedence over explicit quota content [0.15ms]
+(pass) round22 actual friendly-error leaf, owned messages only > characterizes a status-prefixed credit message
+(pass) round22 actual friendly-error leaf, owned messages only > reads only the Error message rather than structured billing metadata [0.18ms]
+(pass) round22 actual friendly-error leaf, owned messages only > accepts the actual lightweight exception class used by the static wrapper [0.53ms]
+(pass) round22 actual friendly-error leaf, owned messages only > preserves a timeout's raw detail [0.02ms]
+(pass) round22 actual friendly-error leaf, owned messages only > maps a network connection error [0.01ms]
+(pass) round22 actual friendly-error leaf, owned messages only > maps a plain context-window error
+(pass) round22 actual friendly-error leaf, owned messages only > maps a temporary service error
+(pass) round22 actual friendly-error leaf, owned messages only > leaves unknown ordinary errors visible
+(pass) round22 actual friendly-error leaf, owned messages only > formats the actual message and suggestion with a newline arrow
+
+ 12 pass
+ 0 fail
+ 25 expect() calls
+Ran 12 tests across 1 file. [160.00ms]
+Completed Bun shard: 12 tests, 0 skipped; 0 failures.

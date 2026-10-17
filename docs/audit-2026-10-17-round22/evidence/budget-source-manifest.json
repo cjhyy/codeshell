@@ -1,0 +1,81 @@
+{
+  "base": "ab258c3f534b19014b2ed85da3111649f166ab86",
+  "files": [
+    {
+      "path": "packages/core/src/engine/token-budget.ts",
+      "coverage": "full",
+      "lineCount": 60,
+      "bytes": 1722,
+      "sha256": "f014815be3c3d40a441b93cdc7c9e6f257d1c7ca394202f24f471fb89965d104",
+      "frozenSha256": "f014815be3c3d40a441b93cdc7c9e6f257d1c7ca394202f24f471fb89965d104",
+      "matchesFrozen": true,
+      "note": "Static only; full helper and tracker definitions. Old round9 dynamic budget controls intentionally not rerun."
+    },
+    {
+      "path": "packages/core/src/engine/reactive-threshold.ts",
+      "coverage": "full",
+      "lineCount": 22,
+      "bytes": 787,
+      "sha256": "10eea56bde55e555a5b649b2aaa631ecc37e217b5f4b4d99b7c56a5c3da0c843",
+      "frozenSha256": "10eea56bde55e555a5b649b2aaa631ecc37e217b5f4b4d99b7c56a5c3da0c843",
+      "matchesFrozen": true,
+      "note": "Actual leaf imported by the existing and focused test; no runtime imports."
+    },
+    {
+      "path": "packages/core/src/engine/reactive-threshold.test.ts",
+      "coverage": "full",
+      "lineCount": 28,
+      "bytes": 1251,
+      "sha256": "9f39063ecb056feb3de5c6ee19bb7b99c0547722c75b3ba6adf33bbda253e20d",
+      "frozenSha256": "9f39063ecb056feb3de5c6ee19bb7b99c0547722c75b3ba6adf33bbda253e20d",
+      "matchesFrozen": true,
+      "note": "Existing four Bun tests, actual first guarded shard input."
+    },
+    {
+      "path": "packages/core/src/engine/turn-loop.ts",
+      "coverage": "selected",
+      "lineCount": 2412,
+      "bytes": 108774,
+      "sha256": "9ccbcd28cdb100d7d879994c3839d3b53c46af01589e0475d6f75f1d7e750413",
+      "frozenSha256": "9ccbcd28cdb100d7d879994c3839d3b53c46af01589e0475d6f75f1d7e750413",
+      "matchesFrozen": true,
+      "note": "Static only; createBudgetTracker and ordinary budget/reactive call sites. No TurnLoop import or execution.",
+      "selectedLineRanges": [
+        [
+          42,
+          48
+        ],
+        [
+          865,
+          940
+        ],
+        [
+          1840,
+          1930
+        ],
+        [
+          2080,
+          2185
+        ]
+      ]
+    },
+    {
+      "path": "packages/core/src/engine/model-facade.ts",
+      "coverage": "selected",
+      "lineCount": 310,
+      "bytes": 10149,
+      "sha256": "f55170bc5df179bb204bb143fa42af073a4b5d0b14443451a10de25fcd272fcb",
+      "frozenSha256": "f55170bc5df179bb204bb143fa42af073a4b5d0b14443451a10de25fcd272fcb",
+      "matchesFrozen": true,
+      "note": "Static reference navigation only to getOutputTokens optional contract; no facade import or accounting execution.",
+      "selectedLineRanges": [
+        [
+          266,
+          273
+        ]
+      ]
+    }
+  ],
+  "productChanges": false,
+  "gitWrites": false
+}

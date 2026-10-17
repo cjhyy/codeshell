@@ -1,0 +1,50 @@
+{
+  "base": "ab258c3f534b19014b2ed85da3111649f166ab86",
+  "runs": [
+    {
+      "id": "title-session-leaf",
+      "kind": "focused",
+      "argv": [
+        "node",
+        "scripts/run-bun-test-shard.mjs",
+        "--timeout",
+        "30000",
+        "docs/audit-2026-10-17-round22/evidence/title-session-leaf.test.ts"
+      ],
+      "exitCode": 0,
+      "raw": "docs/audit-2026-10-17-round22/evidence/title-session-leaf.raw.log",
+      "exit": "docs/audit-2026-10-17-round22/evidence/title-session-leaf.exit.json",
+      "sha256": "bf460abb7c6763bfe68091dd2c555116c1ed32658a430ccb340c7c29b9b76557",
+      "pass": 12,
+      "fail": 0,
+      "skipped": 0,
+      "expect": 34,
+      "firstAttempt": true,
+      "retries": 0,
+      "actualProductModule": "packages/core/src/engine/session-title.ts",
+      "runtimeMocks": [],
+      "ownedDoubles": [
+        "createMessage callbacks, including synchronous error and string rejection",
+        "synchronous usage collectors, including throwing boundary control",
+        "two manually resolved Promises, without timer/Engine concurrency"
+      ]
+    }
+  ],
+  "totals": {
+    "cleanRuns": 1,
+    "failedRuns": 0,
+    "pass": 12,
+    "fail": 0,
+    "skipped": 0,
+    "expect": 34,
+    "existingTests": 0,
+    "focusedTests": 12
+  },
+  "unexecuted": [
+    "existing engine.session-title.test.ts (all five leaf and three Engine tests)",
+    "Engine/TurnLoop/provider/SDK/model/network/rename/store/native/renderer/IPC",
+    "UTF-16 surrogate slice and model output format violation experiments",
+    "build/typecheck/lint/full suite"
+  ],
+  "scope": "Actual type-only leaf import; no runtime module mocks. Existing suite and cross-layer links static only."
+}

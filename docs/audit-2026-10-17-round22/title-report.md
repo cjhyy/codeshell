@@ -1,0 +1,15 @@
+# Session title 叶子审查
+
+冻结点 `ab258c3f534b19014b2ed85da3111649f166ab86`。本方向新增正式问题 0、候选 0、关联问题 0。首次守卫执行 1 个 owned focused 文件，12 pass / 0 fail / 0 skipped / 34 expect；没有产品修改。通过的是当前叶子行为与控制，未证明模型、Engine 或桌面端完整链正常。
+
+实际执行的是 [buildSessionTitle](../../packages/core/src/engine/session-title.ts#L28)。模块只有两个 type-only import，fixture 使用绝对真实源码路径和 owned `createMessage` 回调，无 runtime dependency mock。没有运行 [既有混合套件](../../packages/core/src/engine/engine.session-title.test.ts#L5)：该文件导入 Engine、注册 provider，并包含持久化场景；其中 5 个旧叶子测试和 3 个 Engine 测试都不算本轮执行。
+
+[focused fixture](evidence/title-session-leaf.test.ts) 验证两个 ASCII 输入各自截断至 2000、标题请求的 tools/maxTokens/requestVisible/usagePurpose/reasoning 配置、空字段仍传给回调、嵌套中日韩/单引号清理、quote-only/缺失 text 回退、usage 缺失/零值/无 collector 情况、同步回调错误与字符串 Promise 拒绝、同步 collector 错误、两个独立 deferred 调用逆序完成时返回值及 collector 隔离。后两种错误为 owned 人工注入边界控制，没有把非正常 callback 当普通 provider 失败。两个 deferred Promise 只覆盖叶子自身，没有执行 Engine 并发、异步重命名或持久化。
+
+静态普通调用链在 [run-finalize](../../packages/core/src/engine/run-finalize.ts#L294)：首条 user message、有 onStream、有 result.text 时启动异步标题；完成后读取最新持久 state 的 title-only 更新，再发送 session_title。没有把历史的“旧 run 整份 state 回写”猜测重报：旧 [goal persistence 设计](../refactor/_archive/goal-persistence-redesign-codex.md#L97) 已描述该风险；当前调用点只传 `{ title }`，且既有 Engine 测试静态包含 delayed title 与后续 state 更新的控制。本轮没有执行该持久链，也不宣称该历史问题已动态修复。
+
+手动重命名的反证来自当前 [Sidebar handler](../../packages/desktop/src/renderer/app/useSessionNavigation.ts#L259) 与 [metadata helper](../../packages/desktop/src/renderer/transcripts.ts#L1018)：manual=true 设置 titleManual。接收自动标题的 [useHostSubscriptions](../../packages/desktop/src/renderer/app/useHostSubscriptions.ts#L366) 在更新前检查此 flag。历史页 [commitEdit](../../packages/desktop/src/renderer/sessions/SessionsView.tsx#L254) 等待 Main 的 title override 写入，随后 [history sync](../../packages/desktop/src/renderer/app/useSessionHistorySync.ts#L46) 把成功名称及 manual flag 回填 loaded aliases；[Main handler](../../packages/desktop/src/main/activity-history-ipc.ts#L29) 写另一套 [override store](../../packages/server/src/session-titles-store.ts#L138)。这条接线只做 selected 静态阅读，不导入或运行 renderer、IPC、registry、磁盘或 native。旧 [sidebar 命名观察](../review-2026-10-12/sidebar-title-observation-round27.md#L9) 已明确自动标题 guard 与双来源边界，因此不能只因 Core 后台写 title 就断言会覆盖手工名。
+
+去重扫描 [全历史清单](evidence/title-dedup.json) 包括 docs/bugs 的 MD 与递归 JSON 标量，排除本批，含 archive/_archive。读取时共 2232 文件（1202 MD、1030 JSON）、309994 字符串叶与 436035 全标量叶、0 JSON parse error。exact 137 次、mechanism 339 次匹配，各仅保留前 100 条 context；计数不等于语义穷尽，mechanism 的 title/race 在旧 JSON 记录 title 字段与通用 race 文本中产生噪声。[去重决定](evidence/title-dedup-decisions.json) 记录有界补读及排除：UTF-16 slice 旧机制、旧自动标题/usage/summary 讨论、模型输出格式愿望、已有 Sidebar 双来源观察均不算新增。没有运行 surrogate 边界、假定模型违背 prompt、真实模型或旧失败方向。
+
+[首次 raw](evidence/title-session-leaf.raw.log) 与 [exit receipt](evidence/title-session-leaf.exit.json) 在阅读前落盘，守卫命令见 [validation](evidence/title-validation.json)。没有失败修复/重跑，没有普通 Bun、build/typecheck/lint 或完整 suite 宣称。源码 frozen/current 校验见 [manifest](evidence/title-source-manifest.json)，交付文件与 hash 见 [author receipt](evidence/title-author-receipt.json)。

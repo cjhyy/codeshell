@@ -1,0 +1,132 @@
+{
+  "baseline": "ab258c3f534b19014b2ed85da3111649f166ab86",
+  "files": [
+    {
+      "path": "packages/core/src/engine/friendly-error.ts",
+      "bytes": 3822,
+      "sha256": "8402c302df04f4a18c84a76f9d8e60278b96191a44e6504809d068cecfbd06f8",
+      "scope": "Full static and actual friendlyError/formatFriendlyError leaf on owned non-auth/custody/transcript messages only.",
+      "lineCount": 96,
+      "frozenBlobVerified": true,
+      "currentMatchesFrozen": true
+    },
+    {
+      "path": "packages/core/src/engine/friendly-error.test.ts",
+      "bytes": 2610,
+      "sha256": "31aaf1881db3b79d958f7fa1ddf0b3fd9334048d93c188f0b87fdbca1ee2384e",
+      "scope": "Full existing9 tests static only; mixed custody/transcript/auth cases excluded from execution.",
+      "lineCount": 65,
+      "frozenBlobVerified": true,
+      "currentMatchesFrozen": true
+    },
+    {
+      "path": "packages/core/src/exceptions.ts",
+      "bytes": 5082,
+      "sha256": "973763181351f3e718328dbb737673421f7578da37efdbce4e6a57cf21c81e92",
+      "scope": "Full static hierarchy; actual LLMRateLimitError constructor only, no permission/sandbox/session exception experiment.",
+      "lineCount": 160,
+      "frozenBlobVerified": true,
+      "currentMatchesFrozen": true
+    },
+    {
+      "path": "packages/core/src/llm/providers/openai.ts",
+      "bytes": 64200,
+      "sha256": "e45ff0572580ec70bbdba4f2bc95aa32f07c741e1b275e4000fa8b0cf2d25c81",
+      "scope": "Selected1-145,705-735,945-968,1325-1475 static and handleApiError references only. No provider/SDK import, request/projection/watchdog/runtime.",
+      "lineCount": 1524,
+      "frozenBlobVerified": true,
+      "currentMatchesFrozen": true
+    },
+    {
+      "path": "packages/core/src/llm/client-base.ts",
+      "bytes": 18650,
+      "sha256": "619599cd6755a8391704f3247cd8ae250d8d36899e7411fdb0b811e813417d33",
+      "scope": "Selected1-105,237-350 static and withRetry/class refs only; no runtime import/deadline/retry/custody/usage call.",
+      "lineCount": 468,
+      "frozenBlobVerified": true,
+      "currentMatchesFrozen": true
+    },
+    {
+      "path": "packages/core/src/llm/client-error.test.ts",
+      "bytes": 2557,
+      "sha256": "8777bafe0c8b80d53fae17824beb0793bdb2d84485ca7290fea0ff2ed3119117",
+      "scope": "Full static existing test source, not executed or recovered.",
+      "lineCount": 62,
+      "frozenBlobVerified": true,
+      "currentMatchesFrozen": true
+    },
+    {
+      "path": "packages/core/src/llm/retry.ts",
+      "bytes": 623,
+      "sha256": "ec8a87628e338c96070b7ba5f8af729c823ac5559b5ad2a1e8334d2c7382164a",
+      "scope": "Full static source only; no watchdog import/runtime.",
+      "lineCount": 18,
+      "frozenBlobVerified": true,
+      "currentMatchesFrozen": true
+    },
+    {
+      "path": "packages/core/src/engine/turn-loop.ts",
+      "bytes": 108774,
+      "sha256": "9ccbcd28cdb100d7d879994c3839d3b53c46af01589e0475d6f75f1d7e750413",
+      "scope": "Selected1120-1205 actual error emission/catches static only; no TurnLoop/ModelFacade/provider execution.",
+      "lineCount": 2412,
+      "frozenBlobVerified": true,
+      "currentMatchesFrozen": true
+    },
+    {
+      "path": "packages/core/package.json",
+      "bytes": 3452,
+      "sha256": "9568730f854ae323815a47c0db7d788983fabf10071ccd5657ebc346c7bb358b",
+      "scope": "Full static dependency/export metadata; failed resolver export navigation noted separately, no SDK runtime.",
+      "lineCount": 110,
+      "frozenBlobVerified": true,
+      "currentMatchesFrozen": true
+    },
+    {
+      "path": "packages/core/src/engine/token-budget.ts",
+      "bytes": 1722,
+      "sha256": "f014815be3c3d40a441b93cdc7c9e6f257d1c7ca394202f24f471fb89965d104",
+      "scope": "Full static read only by Root; worker owns historical dedup, not executed this batch.",
+      "lineCount": 60,
+      "frozenBlobVerified": true,
+      "currentMatchesFrozen": true
+    },
+    {
+      "path": "packages/core/src/engine/reactive-threshold.ts",
+      "bytes": 787,
+      "sha256": "10eea56bde55e555a5b649b2aaa631ecc37e217b5f4b4d99b7c56a5c3da0c843",
+      "scope": "Full initial static source by Root; separate worker owns runtime scope.",
+      "lineCount": 22,
+      "frozenBlobVerified": true,
+      "currentMatchesFrozen": true
+    },
+    {
+      "path": "packages/core/src/engine/session-title.ts",
+      "bytes": 1798,
+      "sha256": "17e09e979f6fde6335ffc846b1aaaf278a92eafbc94c92430125a05064d1d3c3",
+      "scope": "Full initial static source by Root; separate worker owns fake callback runtime scope.",
+      "lineCount": 54,
+      "frozenBlobVerified": true,
+      "currentMatchesFrozen": true
+    },
+    {
+      "path": "packages/core/src/engine/prompt-cache-diagnostics.ts",
+      "bytes": 9316,
+      "sha256": "5fdef8bfe040fb7ae3fa5edd3820abdf6c54e1398532df9a79707925733a6a9e",
+      "scope": "Selected1-230 exploratory static only; no fingerprints/identity/redaction/recorder experiment or comprehensive audit.",
+      "lineCount": 269,
+      "frozenBlobVerified": true,
+      "currentMatchesFrozen": true
+    },
+    {
+      "path": "packages/core/src/engine/model-trace-scope.ts",
+      "bytes": 2282,
+      "sha256": "5a48c834d33580746eb5bc8d53bf148fcda4e1f27ed90e98daafae72103cf48c",
+      "scope": "Full exploratory static only; excluded runtime authority/privacy/trace/storage paths.",
+      "lineCount": 70,
+      "frozenBlobVerified": true,
+      "currentMatchesFrozen": true
+    }
+  ],
+  "note": "Hash pins and static read bounds are not whole-file/transitive/runtime coverage. Exploratory modules explicitly excluded."
+}

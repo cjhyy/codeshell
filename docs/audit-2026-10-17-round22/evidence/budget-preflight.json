@@ -1,0 +1,20 @@
+{
+  "base": "ab258c3f534b19014b2ed85da3111649f166ab86",
+  "head": "ab258c3f534b19014b2ed85da3111649f166ab86",
+  "sourcesMatchFrozen": true,
+  "actualLeafRuntimeImports": [],
+  "existingTestRuntimeImports": [
+    "bun:test",
+    "./reactive-threshold.js"
+  ],
+  "focusedTestRuntimeImports": [
+    "bun:test",
+    "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/packages/core/src/engine/reactive-threshold.ts"
+  ],
+  "focusedTestExists": true,
+  "existingTestExists": true,
+  "productNetworkOrEngineImports": false,
+  "fixtureBytes": 1883,
+  "fixtureSha256": "0e518b9a93a17941b49f52757402cbb47a3bd92e1124dd92d919abd638dbbe6d",
+  "tokenBudgetDynamicSkipped": "Prior round9 already ran ordinary finite/unlimited and 90% nudge then stop controls; diminishing static observation already documented. No new budget bug or rerun claimed."
+}

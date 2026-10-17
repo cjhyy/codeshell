@@ -1,0 +1,25 @@
+{
+  "argv": [
+    "rg",
+    "-n",
+    "terminal-ui|renderMarkdown|highlightCode|createSpinner|printBanner|formatToolStart|formatToolResult|renderTaskList",
+    "packages",
+    "scripts",
+    "tests",
+    "--glob",
+    "*.ts",
+    "--glob",
+    "*.tsx",
+    "--glob",
+    "*.js",
+    "--glob",
+    "*.mjs",
+    "--glob",
+    "*.json"
+  ],
+  "cwd": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell",
+  "exitCode": 0,
+  "stdout": "tests/harness-evals-report.test.ts:2:import { renderMarkdownReport, summarizeResults } from \"../evals/harness/report.mjs\";\ntests/harness-evals-report.test.ts:156:describe(\"renderMarkdownReport\", () => {\ntests/harness-evals-report.test.ts:158:    const markdown = renderMarkdownReport({\ntests/harness-evals-report.test.ts:201:    const markdown = renderMarkdownReport({\ntests/harness-evals-report.test.ts:211:    const markdown = renderMarkdownReport({\ntests/harness-evals-report.test.ts:242:    const markdown = renderMarkdownReport({\ntests/harness-evals-report.test.ts:255:    const markdown = renderMarkdownReport({ run: { trialsPerCase: 3 }, results: [result()] });\ntests/harness-evals-report.test.ts:261:    const markdown = renderMarkdownReport({\ntests/harness-evals-report.test.ts:284:    const markdown = renderMarkdownReport({\ntests/harness-evals-report.test.ts:297:    expect(renderMarkdownReport({ results: [], cases: [{ id: \"todo\" }] })).toContain(\ntests/harness-evals-report.test.ts:300:    const markdown = renderMarkdownReport({\npackages/tui/src/cli/output/terminal-ui.ts:28:export function renderMarkdown(text: string): string {\npackages/tui/src/cli/output/terminal-ui.ts:40:export function highlightCode(code: string, lang?: string): string {\npackages/tui/src/cli/output/terminal-ui.ts:63:export function createSpinner(text: string): SpinnerHandle {\npackages/tui/src/cli/output/terminal-ui.ts:93:export function printBanner(lines: { label: string; value: string }[]): void {\npackages/tui/src/cli/output/terminal-ui.ts:131:export function formatToolStart(toolName: string, args: Record<string, unknown>): string {\npackages/tui/src/cli/output/terminal-ui.ts:139:export function formatToolResult(\npackages/tui/src/cli/output/terminal-ui.ts:193:export function renderTaskList(tasks: TaskDisplayInfo[]): string {\npackages/tui/src/ui/components/MessageContent.test.ts:3:  __renderMarkdownForTest,\npackages/tui/src/ui/components/MessageContent.test.ts:79:    const wide = stripAnsi(__renderMarkdownForTest(text, 80)).trim();\npackages/tui/src/ui/components/MessageContent.test.ts:80:    const narrow = stripAnsi(__renderMarkdownForTest(text, 24)).trim();\npackages/tui/src/ui/components/MessageContent.tsx:119:function renderMarkdown(text: string, width: number): string {\npackages/tui/src/ui/components/MessageContent.tsx:136:export function __renderMarkdownForTest(text: string, width: number): string {\npackages/tui/src/ui/components/MessageContent.tsx:138:  return cachedRender(text, markdownWidth, renderMarkdown);\npackages/tui/src/ui/components/MessageContent.tsx:320:        ? cachedRender(remaining, markdownWidth, renderMarkdown)\npackages/tui/src/ui/components/MessageContent.tsx:334:        ? cachedRender(tableResult.before, markdownWidth, renderMarkdown)\npackages/tui/src/ui/components/MessageContent.tsx:495:    return <Ansi>{cachedRender(unstableText, markdownWidth, renderMarkdown)}</Ansi>;\npackages/desktop/src/renderer/Markdown.authority.test.tsx:47:async function renderMarkdown(element: React.ReactElement): Promise<void> {\npackages/desktop/src/renderer/Markdown.authority.test.tsx:110:      await renderMarkdown(\npackages/desktop/src/renderer/Markdown.authority.test.tsx:151:      await renderMarkdown(<Markdown text={`[report](/outside-project/${result}.md)`} />);\npackages/desktop/src/renderer/Markdown.authority.test.tsx:168:    await renderMarkdown(\npackages/desktop/src/renderer/Markdown.authority.test.tsx:184:    await renderMarkdown(<Markdown text=\"[unavailable](/outside-project/no-bridge.md)\" />);\npackages/desktop/src/renderer/Markdown.authority.test.tsx:207:      await renderMarkdown(<Markdown text=\"![Neighbour](diagram.png)\" cwd=\"/outside-project\" />);\npackages/desktop/src/renderer/Markdown.authority.test.tsx:245:    await renderMarkdown(\npackages/desktop/src/renderer/Markdown.authority.test.tsx:298:      await renderMarkdown(\npackages/desktop/src/renderer/Markdown.authority.test.tsx:325:    await renderMarkdown(\n",
+  "stderr": "",
+  "interpretation": "Literal exported-name navigation only; shared names can refer to unrelated functions. A missing literal consumer does not exclude generated/external consumers."
+}

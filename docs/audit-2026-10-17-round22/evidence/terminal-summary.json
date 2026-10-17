@@ -1,0 +1,59 @@
+{
+  "frozenHead": "ab258c3f534b19014b2ed85da3111649f166ab86",
+  "report": "terminal-frontier.md",
+  "counts": {
+    "findings": 0,
+    "candidates": 0,
+    "related": 0,
+    "unclassifiedStaticLeads": 1
+  },
+  "findings": [],
+  "candidates": [],
+  "related": [],
+  "unclassifiedStaticLeads": [
+    {
+      "title": "Banner content padding formula yields four extra ASCII columns",
+      "source": "packages/tui/src/cli/output/terminal-ui.ts",
+      "lines": [
+        94,
+        125
+      ],
+      "classification": "unclassified frontier; not a finding/candidate/related issue",
+      "evidence": "static arithmetic only, no ordinary caller found in bounded literal navigation",
+      "severity": null
+    }
+  ],
+  "productRuntimeAttempts": 0,
+  "testsRun": 0,
+  "guardedShards": 0,
+  "productImports": 0,
+  "constructors": 0,
+  "productOutputCapture": 0,
+  "productTimers": 0,
+  "gitWrites": 0,
+  "sourceManifest": "evidence/terminal-sources.json",
+  "sourcePinCount": 5,
+  "fullReadSourceCount": 2,
+  "selectedReadSourceCount": 1,
+  "hashOnlySourceCount": 2,
+  "selectedSourceBytesChanged": false,
+  "history": "evidence/terminal-history.json",
+  "historyTotals": {
+    "files": 2232,
+    "markdown": 1202,
+    "json": 1030,
+    "stringLeaves": 309994,
+    "scalarLeaves": 436035
+  },
+  "historyParseErrors": 0,
+  "metadataReceipts": [
+    "evidence/terminal-collector-exit.json",
+    "evidence/terminal-banner-collector-exit.json"
+  ],
+  "decision": "Exclude terminal-ui dynamic validation under present constraints; next work should choose another frontier. No source extraction, dependency replacement or fake consumer validation.",
+  "limitations": [
+    "No semantic exhaustion claim.",
+    "No runtime consumer or banner output proven.",
+    "No old failed direction recovered."
+  ]
+}

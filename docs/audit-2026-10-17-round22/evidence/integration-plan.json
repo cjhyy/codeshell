@@ -1,0 +1,112 @@
+{
+  "baseline": "ab258c3f534b19014b2ed85da3111649f166ab86",
+  "branch": "codex/audit/engine-budget-title-errors-round22-20261017",
+  "originMain": "02d5d9a9ecbbb206d5f3d8a1d367e7081d937101",
+  "refreshedMain": "7e5570210d7e9336cbe9d6a90ed375832e7e3329",
+  "initialPrimary": {
+    "primary": "/Users/admin/Documents/个人学习/代码学习/codeshell",
+    "head": "ab258c3f534b19014b2ed85da3111649f166ab86",
+    "statusHex": "204420627567732f323032362d30372d31332d7265706f2d61756469742e6d64003f3f202e6d696d692d646f776e6c6f61642d636c692f003f3f20646f63732f746f646f2f62726f777365722d70616e656c2d72756e74696d652d64657369676e2e6d6400",
+    "trackedDiffSha256": "4def82d2f0f0000e81ab72e47ed603a7382f0ca0c175e8e4d45e9acc761e6e5a",
+    "stagedDiffSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "untracked": [
+      {
+        "path": ".mimi-download-cli/environment/latest-d07213e0d4b9d574ec9ea08364e9bc3883c422ec7ed5ef4c301f3502ce040e12.json",
+        "bytes": 221,
+        "sha256": "c9fa6015887c3448c839e1831ec71b221b89af75e0269e72da33d774cece9c09"
+      },
+      {
+        "path": ".mimi-download-cli/environment/local-bb6c832be2e44853bd591d95200d9eab998ebb3181493e1841130003d3058b57.json",
+        "bytes": 291,
+        "sha256": "95eff61371f7226b2202df2d41ffc064a3615ff711e62b3de4edb1586d66b692"
+      },
+      {
+        "path": ".mimi-download-cli/queue.json",
+        "bytes": 77,
+        "sha256": "bd7edace82310ca48d793db42f99ce850b9aa88ccbe9a40cbe856738f20e9062"
+      },
+      {
+        "path": "docs/todo/browser-panel-runtime-design.md",
+        "bytes": 24859,
+        "sha256": "98a50347dad126c48a57b1c3e91dbe2bd2c362f9cf4b9962f95b60fbcbea455a"
+      }
+    ]
+  },
+  "primaryBefore": {
+    "primary": "/Users/admin/Documents/个人学习/代码学习/codeshell",
+    "head": "7e5570210d7e9336cbe9d6a90ed375832e7e3329",
+    "statusHex": "204420627567732f323032362d30372d31332d7265706f2d61756469742e6d64003f3f202e6d696d692d646f776e6c6f61642d636c692f003f3f20646f63732f746f646f2f62726f777365722d70616e656c2d72756e74696d652d64657369676e2e6d6400",
+    "trackedDiffSha256": "4def82d2f0f0000e81ab72e47ed603a7382f0ca0c175e8e4d45e9acc761e6e5a",
+    "stagedDiffSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "untracked": [
+      {
+        "path": ".mimi-download-cli/environment/latest-d07213e0d4b9d574ec9ea08364e9bc3883c422ec7ed5ef4c301f3502ce040e12.json",
+        "bytes": 221,
+        "sha256": "c9fa6015887c3448c839e1831ec71b221b89af75e0269e72da33d774cece9c09"
+      },
+      {
+        "path": ".mimi-download-cli/environment/local-bb6c832be2e44853bd591d95200d9eab998ebb3181493e1841130003d3058b57.json",
+        "bytes": 291,
+        "sha256": "95eff61371f7226b2202df2d41ffc064a3615ff711e62b3de4edb1586d66b692"
+      },
+      {
+        "path": ".mimi-download-cli/queue.json",
+        "bytes": 77,
+        "sha256": "bd7edace82310ca48d793db42f99ce850b9aa88ccbe9a40cbe856738f20e9062"
+      },
+      {
+        "path": "docs/todo/browser-panel-runtime-design.md",
+        "bytes": 24859,
+        "sha256": "98a50347dad126c48a57b1c3e91dbe2bd2c362f9cf4b9962f95b60fbcbea455a"
+      }
+    ]
+  },
+  "primaryUnchangedSinceInitial": false,
+  "externalMainCommits": [
+    "7e5570210 docs: record reviewed browser and installer acceptance gates",
+    "5688f0bcc test(desktop): accept production Windows installer lifecycle",
+    "8343027c4 test(desktop): exercise owned Windows NSIS install lifecycle",
+    "331c49d24 docs(audit): preserve parallel review round 21",
+    "50e1c71b1 test(ci): compose browser and Windows installer acceptance gates",
+    "b3c7165ba test(ci): cover browser custody and Windows installer lifecycle",
+    "8f2859fac test(web): prove Auth browser lifecycle and retain failure HOME",
+    "af3ce6ce1 test(desktop): require complete NSIS custody and UI receipts",
+    "efcba5a6b test(web): verify ServiceWorker browser exit and retention",
+    "e6029e6eb test(web): bind ServiceWorker operations to early browser custody",
+    "f5ef83518 test(web): keep custody diagnostics nonthrowing on hostile failures",
+    "2c6819621 test(desktop): record packaged watchdog signal requests",
+    "7eb088257 docs(audit): preserve parallel review rounds 19 and 20",
+    "971c4c576 test(web): gate retained HOME after expected browser failure",
+    "b34c16cd0 test(web): distinguish expected failure from log errors",
+    "2468f78b2 test(desktop): define confined Windows NSIS acceptance contracts",
+    "b2e73de73 test(web): preserve explicit headful browser selection",
+    "2d4cdd8dc test(web): pin the original ServiceWorker headless browser selection",
+    "8ac98d13c docs: record real browser failure retention and next acceptance gaps",
+    "268fe2885 test(web): share early browser process custody and retention gates",
+    "fb04bc8d0 test(web): verify owned HOME retention after actual UI failures",
+    "6f8108744 fix(test): retain Web browser HOME after UI assertion failures"
+  ],
+  "externalMainPaths": [
+    ".github/workflows/desktop-ui-acceptance.yml",
+    "docs/todo/release-real-operations-2026-10-16.md",
+    "packages/desktop/scripts/packaged-pet-fixture.mjs",
+    "packages/desktop/scripts/packaged-signal-diagnostics.mjs",
+    "packages/desktop/scripts/packaged-signal-diagnostics.test.mjs",
+    "packages/desktop/scripts/smoke-windows-nsis-install.mjs",
+    "packages/desktop/scripts/smoke-windows-nsis-install.test.mjs",
+    "packages/desktop/scripts/windows-nsis-acceptance.mjs",
+    "packages/desktop/scripts/windows-nsis-acceptance.test.mjs",
+    "packages/desktop/scripts/windows-nsis-observe.ps1",
+    "packages/web/scripts/browser-operation-custody.mjs",
+    "packages/web/scripts/browser-operation-custody.test.mjs",
+    "packages/web/scripts/service-worker-browser-executable.mjs",
+    "packages/web/scripts/service-worker-browser-executable.test.mjs",
+    "packages/web/scripts/test-auth-boundary-browser.lifecycle.test.mjs",
+    "packages/web/scripts/test-auth-boundary-browser.mjs",
+    "packages/web/scripts/test-service-worker-browser.mjs",
+    "packages/web/scripts/test-service-worker-browser.test.mjs",
+    "packages/web/scripts/test-subagent-state-browser.mjs",
+    "packages/web/scripts/verify-subagent-failure-home.mjs"
+  ],
+  "scope": "Owned docs only; no product retests; final staging/primary receipt external."
+}

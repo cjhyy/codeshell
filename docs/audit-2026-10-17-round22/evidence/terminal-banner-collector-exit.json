@@ -1,0 +1,12 @@
+{
+  "argv": [
+    "python3",
+    "docs/audit-2026-10-17-round22/evidence/terminal-banner-scan.py"
+  ],
+  "cwd": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell",
+  "exitCode": 0,
+  "raw": "evidence/terminal-banner-collector.txt",
+  "sha256": "6469f6b6b8cb3420eaf6ef2c70b08ed72cf4b2820e657b573ed3cdf4346d9028",
+  "bytes": 450,
+  "productRuntimeAttempts": 0
+}

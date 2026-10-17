@@ -1,0 +1,59 @@
+{
+  "commands": [
+    {
+      "argv": [
+        "git",
+        "rev-parse",
+        "HEAD"
+      ],
+      "exitCode": 0,
+      "stdout": "ab258c3f534b19014b2ed85da3111649f166ab86\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "status",
+        "--short"
+      ],
+      "exitCode": 0,
+      "stdout": "?? docs/audit-2026-10-17-round22/\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "rg",
+        "--files",
+        "packages/tui/src/cli/output"
+      ],
+      "exitCode": 0,
+      "stdout": "packages/tui/src/cli/output/renderer.ts\npackages/tui/src/cli/output/terminal-ui.ts\npackages/tui/src/cli/output/renderer.test.ts\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "rg",
+        "-n",
+        "terminal-ui|formatToolStart|formatToolResult|renderTaskList|printBanner",
+        "packages",
+        "scripts",
+        "tests",
+        "--glob",
+        "*.ts",
+        "--glob",
+        "*.tsx",
+        "--glob",
+        "*.js",
+        "--glob",
+        "*.mjs",
+        "--glob",
+        "*.json"
+      ],
+      "exitCode": 0,
+      "stdout": "packages/tui/src/cli/output/terminal-ui.ts:93:export function printBanner(lines: { label: string; value: string }[]): void {\npackages/tui/src/cli/output/terminal-ui.ts:131:export function formatToolStart(toolName: string, args: Record<string, unknown>): string {\npackages/tui/src/cli/output/terminal-ui.ts:139:export function formatToolResult(\npackages/tui/src/cli/output/terminal-ui.ts:193:export function renderTaskList(tasks: TaskDisplayInfo[]): string {\n",
+      "stderr": ""
+    }
+  ],
+  "runtimeAttempts": 0,
+  "purpose": "Read-only metadata and literal source navigation"
+}

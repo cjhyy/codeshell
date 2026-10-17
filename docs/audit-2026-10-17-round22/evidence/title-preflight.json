@@ -1,0 +1,17 @@
+{
+  "base": "ab258c3f534b19014b2ed85da3111649f166ab86",
+  "actualImport": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/packages/core/src/engine/session-title.ts",
+  "frozenSha256": "17e09e979f6fde6335ffc846b1aaaf278a92eafbc94c92430125a05064d1d3c3",
+  "currentSha256": "17e09e979f6fde6335ffc846b1aaaf278a92eafbc94c92430125a05064d1d3c3",
+  "matchesFrozen": true,
+  "runtimeImports": 0,
+  "typeOnlyImports": [
+    "../llm/client-base.js",
+    "../types.js"
+  ],
+  "fixture": "docs/audit-2026-10-17-round22/evidence/title-session-leaf.test.ts",
+  "fixtureSha256": "daf65659c08321992a335e2507318534943d0ac3e2ca6b95eab59cd3cee1a3bb",
+  "attemptsBeforeFirstRun": 0,
+  "excludedExistingSuite": "packages/core/src/engine/engine.session-title.test.ts imports Engine, registerProvider and state/native dependencies; static only",
+  "scope": "Actual leaf with owned createMessage callbacks and collectors; no Engine, SDK, provider, model, network, storage, rename, native or timer execution."
+}

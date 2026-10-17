@@ -1,0 +1,97 @@
+{
+  "prepBaseline": "615e4e4dd3a61b1ad132ab4f3683985a0d582386",
+  "actualHeadAtCompletion": "ab258c3f534b19014b2ed85da3111649f166ab86",
+  "sources": [
+    {
+      "path": "packages/tui/src/cli/output/terminal-ui.ts",
+      "readScope": "full static source only",
+      "selectedRanges": [
+        [
+          1,
+          235
+        ]
+      ],
+      "lineCount": 235,
+      "bytes": 7091,
+      "frozenSha256": "f274a3b1dd282503cc6aa7ae745b76069631d062c0b7edf7965c9e5b96e308ec",
+      "currentSha256": "f274a3b1dd282503cc6aa7ae745b76069631d062c0b7edf7965c9e5b96e308ec",
+      "matchesFrozen": true
+    },
+    {
+      "path": "packages/tui/src/cli/output/renderer.ts",
+      "readScope": "full static source only; no class constructor/import/stdout",
+      "selectedRanges": [
+        [
+          1,
+          163
+        ]
+      ],
+      "lineCount": 163,
+      "bytes": 5744,
+      "frozenSha256": "2ed6d93112ae5ab123fc2b93964b04bc37ec21b3e286ceec93ddab68c1bb22d7",
+      "currentSha256": "2ed6d93112ae5ab123fc2b93964b04bc37ec21b3e286ceec93ddab68c1bb22d7",
+      "matchesFrozen": true
+    },
+    {
+      "path": "packages/tui/src/cli/commands/run.ts",
+      "readScope": "selected ordinary renderer wiring, no runtime",
+      "selectedRanges": [
+        [
+          225,
+          280
+        ]
+      ],
+      "lineCount": 314,
+      "bytes": 13137,
+      "frozenSha256": "85307d96346050e7dace213847cdc4f480cbac8e14c50fe489d9aec07f57aa9c",
+      "currentSha256": "85307d96346050e7dace213847cdc4f480cbac8e14c50fe489d9aec07f57aa9c",
+      "matchesFrozen": true
+    },
+    {
+      "path": "packages/core/src/protocol/types.ts",
+      "readScope": "selected type origin/envelope only",
+      "selectedRanges": [
+        [
+          1,
+          26
+        ],
+        [
+          575,
+          593
+        ]
+      ],
+      "lineCount": 730,
+      "bytes": 26529,
+      "frozenSha256": "01ed12b45ec6ac61688ab57659dfea9aff45f303ca064ef088f328bd48634b1f",
+      "currentSha256": "01ed12b45ec6ac61688ab57659dfea9aff45f303ca064ef088f328bd48634b1f",
+      "matchesFrozen": true
+    },
+    {
+      "path": "packages/core/src/types.ts",
+      "readScope": "selected StreamEvent metadata/text/tool/agent shape only",
+      "selectedRanges": [
+        [
+          659,
+          678
+        ],
+        [
+          724,
+          752
+        ],
+        [
+          811,
+          844
+        ]
+      ],
+      "lineCount": 1306,
+      "bytes": 50794,
+      "frozenSha256": "a60cb4b3d6177af79e875f6bfffa7788b930964daf123d034008e2925737a4db",
+      "currentSha256": "a60cb4b3d6177af79e875f6bfffa7788b930964daf123d034008e2925737a4db",
+      "matchesFrozen": true
+    }
+  ],
+  "limitations": [
+    "Source hashes prove selected bytes, not full runtime or all large file branch coverage.",
+    "No imports/constructors/TTY/stdout/timers/process/product tests or Git mutations. Read-only git rev-parse/show only."
+  ]
+}

@@ -1,0 +1,246 @@
+{
+  "base": "ab258c3f534b19014b2ed85da3111649f166ab86",
+  "sources": [
+    {
+      "path": "packages/core/src/engine/session-title.ts",
+      "frozenSha256": "17e09e979f6fde6335ffc846b1aaaf278a92eafbc94c92430125a05064d1d3c3",
+      "currentSha256": "17e09e979f6fde6335ffc846b1aaaf278a92eafbc94c92430125a05064d1d3c3",
+      "matchesFrozen": true,
+      "coverage": "full",
+      "ranges": [
+        [
+          1,
+          54
+        ]
+      ],
+      "lineCount": 54,
+      "note": "actual leaf executed; two type-only imports"
+    },
+    {
+      "path": "packages/core/src/engine/engine.session-title.test.ts",
+      "frozenSha256": "13306b588f2a7c34a15ca5e78280fef8f61c049d1979d26daeecd3122ba4baa4",
+      "currentSha256": "13306b588f2a7c34a15ca5e78280fef8f61c049d1979d26daeecd3122ba4baa4",
+      "matchesFrozen": true,
+      "coverage": "full",
+      "ranges": [
+        [
+          1,
+          351
+        ]
+      ],
+      "lineCount": 351,
+      "note": "static only; five existing leaf and three coupled Engine tests unexecuted"
+    },
+    {
+      "path": "packages/core/src/engine/run-finalize.ts",
+      "frozenSha256": "c60c45ef7392d360be5f59e75465a7f03b9a5d0fa6ea5849c4d05ff2c546f335",
+      "currentSha256": "c60c45ef7392d360be5f59e75465a7f03b9a5d0fa6ea5849c4d05ff2c546f335",
+      "matchesFrozen": true,
+      "coverage": "selected",
+      "ranges": [
+        [
+          290,
+          329
+        ]
+      ],
+      "lineCount": 480,
+      "note": "ordinary producer and title-only callback static; no Engine execution"
+    },
+    {
+      "path": "packages/desktop/src/renderer/app/useHostSubscriptions.ts",
+      "frozenSha256": "8b20a7a96f7d89ae000f3ebde79aeae3bba506683940dae6c8e2150444a0eddc",
+      "currentSha256": "8b20a7a96f7d89ae000f3ebde79aeae3bba506683940dae6c8e2150444a0eddc",
+      "matchesFrozen": true,
+      "coverage": "selected",
+      "ranges": [
+        [
+          366,
+          387
+        ]
+      ],
+      "lineCount": 1175,
+      "note": "manual flag counterevidence; no renderer execution"
+    },
+    {
+      "path": "packages/desktop/src/renderer/transcripts.ts",
+      "frozenSha256": "7a6ad6f03a9e7135851eca6f7e67e45b073a739920d0523b17ffa33cd2e63bc8",
+      "currentSha256": "7a6ad6f03a9e7135851eca6f7e67e45b073a739920d0523b17ffa33cd2e63bc8",
+      "matchesFrozen": true,
+      "coverage": "selected",
+      "ranges": [
+        [
+          1018,
+          1044
+        ]
+      ],
+      "lineCount": 1146,
+      "note": "manual title persistence helper static only"
+    },
+    {
+      "path": "packages/desktop/src/renderer/app/useSessionNavigation.ts",
+      "frozenSha256": "d7cb0591b17da4142b507bc524eed98edbcb94d3a51948c5a72ccaafd5a05bda",
+      "currentSha256": "d7cb0591b17da4142b507bc524eed98edbcb94d3a51948c5a72ccaafd5a05bda",
+      "matchesFrozen": true,
+      "coverage": "selected",
+      "ranges": [
+        [
+          259,
+          266
+        ]
+      ],
+      "lineCount": 490,
+      "note": "Sidebar manual true static only"
+    },
+    {
+      "path": "packages/desktop/src/renderer/app/useSessionHistorySync.ts",
+      "frozenSha256": "46208d004433ecee2993c7db0a5ac60492f7d09f9ee1ce1aa3628f9016a65b31",
+      "currentSha256": "46208d004433ecee2993c7db0a5ac60492f7d09f9ee1ce1aa3628f9016a65b31",
+      "matchesFrozen": true,
+      "coverage": "selected",
+      "ranges": [
+        [
+          1,
+          67
+        ]
+      ],
+      "lineCount": 127,
+      "note": "history rename alias/manual propagation static only"
+    },
+    {
+      "path": "packages/desktop/src/renderer/sessions/SessionsView.tsx",
+      "frozenSha256": "d99bd76d03fb2cf15d44a3faf4a80577f50cefbf1a7ad85dcb7fdfc949bfbf66",
+      "currentSha256": "d99bd76d03fb2cf15d44a3faf4a80577f50cefbf1a7ad85dcb7fdfc949bfbf66",
+      "matchesFrozen": true,
+      "coverage": "selected",
+      "ranges": [
+        [
+          237,
+          272
+        ]
+      ],
+      "lineCount": 829,
+      "note": "rename commit ordering static only"
+    },
+    {
+      "path": "packages/desktop/src/main/activity-history-ipc.ts",
+      "frozenSha256": "227d2a55d5194ff30233b3c0fa08e31ea9212a1228327b07a2bfc4ca453f0060",
+      "currentSha256": "227d2a55d5194ff30233b3c0fa08e31ea9212a1228327b07a2bfc4ca453f0060",
+      "matchesFrozen": true,
+      "coverage": "full",
+      "ranges": [
+        [
+          1,
+          59
+        ]
+      ],
+      "lineCount": 59,
+      "note": "Main rename override route static only; no native/IPC"
+    },
+    {
+      "path": "packages/server/src/session-titles-store.ts",
+      "frozenSha256": "3cb24ac45af55b69eac3bdb8e369d24ad647a7ae7b35fc89186535d786446ba0",
+      "currentSha256": "3cb24ac45af55b69eac3bdb8e369d24ad647a7ae7b35fc89186535d786446ba0",
+      "matchesFrozen": true,
+      "coverage": "selected",
+      "ranges": [
+        [
+          120,
+          189
+        ]
+      ],
+      "lineCount": 189,
+      "note": "separate override store static only; no filesystem/lock execution"
+    },
+    {
+      "path": "docs/superpowers/specs/2026-06-01-llm-session-title-design.md",
+      "frozenSha256": "3a76932b98d95a754e34ca5b8f2577c742d5408447982b8c7e9d4173963203e4",
+      "currentSha256": "3a76932b98d95a754e34ca5b8f2577c742d5408447982b8c7e9d4173963203e4",
+      "matchesFrozen": true,
+      "coverage": "full",
+      "ranges": [
+        [
+          1,
+          88
+        ]
+      ],
+      "lineCount": 88,
+      "note": "historical title and non-overwrite design; not current universal naming contract"
+    },
+    {
+      "path": "docs/review-2026-10-12/sidebar-title-observation-round27.md",
+      "frozenSha256": "a8066e62f720eb5f74ec3a776fdb98652ad2fb686302efb259b059a76315bb74",
+      "currentSha256": "a8066e62f720eb5f74ec3a776fdb98652ad2fb686302efb259b059a76315bb74",
+      "matchesFrozen": true,
+      "coverage": "full",
+      "ranges": [
+        [
+          1,
+          15
+        ]
+      ],
+      "lineCount": 15,
+      "note": "old dual-source observation and manual guard dedup"
+    },
+    {
+      "path": "docs/refactor/_archive/goal-persistence-redesign-codex.md",
+      "frozenSha256": "e1eb91ef8c4ca701639b71dd6e73b91705ba4b51c536b65ffb305fee1feaf020",
+      "currentSha256": "e1eb91ef8c4ca701639b71dd6e73b91705ba4b51c536b65ffb305fee1feaf020",
+      "matchesFrozen": true,
+      "coverage": "selected",
+      "ranges": [
+        [
+          88,
+          109
+        ]
+      ],
+      "lineCount": 621,
+      "note": "old detached whole-state writer dedup; not current dynamic claim"
+    },
+    {
+      "path": "docs/archive/core-complete-review.md",
+      "frozenSha256": "26814d36da014eb89b7952d251f442842aaa9a2e3ef7277050100e5f8bab9cc9",
+      "currentSha256": "26814d36da014eb89b7952d251f442842aaa9a2e3ef7277050100e5f8bab9cc9",
+      "matchesFrozen": true,
+      "coverage": "selected",
+      "ranges": [
+        [
+          369,
+          386
+        ]
+      ],
+      "lineCount": 3326,
+      "note": "old general title inventory dedup"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round12/desktop.md",
+      "frozenSha256": "a4b98b24a2ccf15744dc1bb4ab5422c61fa814eb5729068d850a27c0850be18f",
+      "currentSha256": "a4b98b24a2ccf15744dc1bb4ab5422c61fa814eb5729068d850a27c0850be18f",
+      "matchesFrozen": true,
+      "coverage": "selected",
+      "ranges": [
+        [
+          7,
+          15
+        ]
+      ],
+      "lineCount": 50,
+      "note": "old UTF-16 mechanism exclusion; no reproduction"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round19/related.json",
+      "frozenSha256": "8d0815f7deff0866a1a1fcf34565983df387096c62e576656ce504d7d6c5826d",
+      "currentSha256": "8d0815f7deff0866a1a1fcf34565983df387096c62e576656ce504d7d6c5826d",
+      "matchesFrozen": true,
+      "coverage": "full",
+      "ranges": [
+        [
+          1,
+          30
+        ]
+      ],
+      "lineCount": 30,
+      "note": "old UTF-16 related context exclusion"
+    }
+  ],
+  "note": "Hash proves bytes, not full semantic coverage. Coverage full/selected is explicit. Existing mixed suite source-only; current flags describe author receipt time."
+}

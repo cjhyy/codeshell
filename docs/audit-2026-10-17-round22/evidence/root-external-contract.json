@@ -1,0 +1,21 @@
+{
+  "kind": "Manually transcribed bounded primary web-source facts, not a verbatim page or saved web response",
+  "checkedDate": "2026-10-17",
+  "url": "https://developers.openai.com/api/docs/guides/error-codes",
+  "title": "Error codes | OpenAI API",
+  "observedWebLineRanges": [
+    "987-1013",
+    "1066-1070"
+  ],
+  "facts": [
+    "HTTP429 also covers an exhausted prepaid balance and organization/project spend or usage limits.",
+    "Billing causes should be distinguished using error.code; error.type may still be insufficient_quota.",
+    "Billing, spend and quota conditions require correcting the relevant balance or limit; retry alone does not restore access."
+  ],
+  "inference": "The local OpenAI-compatible provider cannot make that distinction after unconditionally replacing every SDK APIError429 with a generic LLMRateLimitError.",
+  "limits": [
+    "No account, HTTP API, SDK error instance, client, request, auth or billing action executed.",
+    "Contract supports OpenAI documented cases; no universal contract asserted for all compatible endpoints.",
+    "Search returned additional third-party results; they were not relied upon."
+  ]
+}

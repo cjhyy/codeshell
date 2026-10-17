@@ -1,0 +1,108 @@
+{
+  "base": "ab258c3f534b19014b2ed85da3111649f166ab86",
+  "report": "docs/audit-2026-10-17-round22/budget.md",
+  "formalCount": 0,
+  "candidateCount": 0,
+  "relatedCount": 0,
+  "files": [
+    {
+      "path": "docs/audit-2026-10-17-round22/budget.md",
+      "bytes": 4061,
+      "sha256": "2924a978857291b4c1ae76d3b5caa45e26cec6f1e7a4f01a11d121e1d67b8629"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round22/evidence/budget-candidates.json",
+      "bytes": 3,
+      "sha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round22/evidence/budget-dedup-decisions.json",
+      "bytes": 2280,
+      "sha256": "88e59b8a966ca434427985ef38fa64d90c693095c1a61be2c4de6945671ddfaf"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round22/evidence/budget-dedup.json",
+      "bytes": 645932,
+      "sha256": "7f49f39854634870164ebd12d69b07dbaa8f3a66b3320cbfd07232e55dd50839"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round22/evidence/budget-dedup.py",
+      "bytes": 3108,
+      "sha256": "a72eae344bc9a9183d4817b49d16f7c21d9b8385b1457176e4af4c087edaa5b9"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round22/evidence/budget-findings.json",
+      "bytes": 3,
+      "sha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round22/evidence/budget-first.exit.json",
+      "bytes": 622,
+      "sha256": "83ce7b800448efd534a35e86feac6810f929fb0b625f2a27db86fb7d14e36054"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round22/evidence/budget-first.raw.log",
+      "bytes": 1124,
+      "sha256": "98864a76576bdc9ccac2e45e6e0ea93d8f5fe5d3bd4d18d59c05ad432620baec"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round22/evidence/budget-history-selected.json",
+      "bytes": 60334,
+      "sha256": "7e31a17ab7543a5be817bce78c7be786a7472b4c9aa3f9318c95467f1b66a86f"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round22/evidence/budget-metadata-check.json",
+      "bytes": 3259,
+      "sha256": "4c59eae27422f9e25282f0afe3493a2790cad1dff194e8fefcc2fa926247b886"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round22/evidence/budget-metadata-notes.json",
+      "bytes": 706,
+      "sha256": "dd3dbe7732e713fef7b69f93a0090b4732e670fe5b14f74be2e6c026ae653012"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round22/evidence/budget-preflight.json",
+      "bytes": 845,
+      "sha256": "165b287504b5b291c7cb42925a86f211daa2ec8d30b85b05f7aea862af7971a6"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round22/evidence/budget-reactive-focused.test.ts",
+      "bytes": 1883,
+      "sha256": "0e518b9a93a17941b49f52757402cbb47a3bd92e1124dd92d919abd638dbbe6d"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round22/evidence/budget-receipt.py",
+      "bytes": 2657,
+      "sha256": "6e277ff2a5c19d3abca066e224e7854257d9cb24388cfd4799dff26e33581cac"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round22/evidence/budget-related.json",
+      "bytes": 3,
+      "sha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round22/evidence/budget-run-first.py",
+      "bytes": 1114,
+      "sha256": "df4457ee150520aac068bdcdb76c434b605892caf6ed45b1a2809b224c129bfb"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round22/evidence/budget-source-manifest.json",
+      "bytes": 2742,
+      "sha256": "54b71d5544c4cf1333197e34a2a768885e0bb4db120d4effc45559f563341334"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round22/evidence/budget-validation.json",
+      "bytes": 3030,
+      "sha256": "2f88b0c40034932669c94acc7e79641e8b49fd1d7c822753a0f83714aabde4e5"
+    }
+  ],
+  "productChanges": false,
+  "gitWrites": false,
+  "receiptExcludesItself": true,
+  "rawLogs": [
+    "docs/audit-2026-10-17-round22/evidence/budget-first.raw.log"
+  ],
+  "sourceChecks": 5,
+  "guardedRuns": 1,
+  "productReruns": 0
+}
