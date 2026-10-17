@@ -59,20 +59,26 @@ export function parseUnifiedDiff(diff: string): DiffFile[] {
 
     if (!cur) continue;
 
-    if (line.startsWith("--- ")) {
-      const p = line.slice(4).trim();
+    if (!curHunk && line.startsWith("--- ")) {
+      const p = gitPath(line.slice(4));
       cur.oldPath = p === "/dev/null" ? null : stripPrefix(p);
       if (cur.oldPath === null) cur.status = "added";
       continue;
     }
-    if (line.startsWith("+++ ")) {
-      const p = line.slice(4).trim();
+    if (!curHunk && line.startsWith("+++ ")) {
+      const p = gitPath(line.slice(4));
       cur.newPath = p === "/dev/null" ? null : stripPrefix(p);
       if (cur.newPath === null) cur.status = "deleted";
       continue;
     }
     if (line.startsWith("rename from ")) {
       cur.status = "renamed";
+      cur.oldPath = gitPath(line.slice("rename from ".length));
+      continue;
+    }
+    if (line.startsWith("rename to ")) {
+      cur.status = "renamed";
+      cur.newPath = gitPath(line.slice("rename to ".length));
       continue;
     }
     if (line.startsWith("new file mode")) {
@@ -102,22 +108,23 @@ export function parseUnifiedDiff(diff: string): DiffFile[] {
 
     if (!curHunk) continue;
 
-    if (line.startsWith("+") && !line.startsWith("+++")) {
+    if (line.startsWith("+")) {
       curHunk.lines.push({
         kind: "add",
         text: line.slice(1),
         oldLine: null,
         newLine: newLineNo++,
       });
-    } else if (line.startsWith("-") && !line.startsWith("---")) {
+    } else if (line.startsWith("-")) {
       curHunk.lines.push({
         kind: "del",
         text: line.slice(1),
         oldLine: oldLineNo++,
         newLine: null,
       });
-    } else if (line.startsWith(" ") || line === "") {
-      // Context line (or blank line within hunk).
+    } else if (line.startsWith(" ")) {
+      // Even an empty context line has a space prefix. The final split empty
+      // string is not part of the hunk and must not advance either line number.
       curHunk.lines.push({
         kind: "ctx",
         text: line.slice(1),
@@ -137,6 +144,48 @@ export function parseUnifiedDiff(diff: string): DiffFile[] {
 
   if (cur) files.push(cur);
   return files;
+}
+
+/** Git quotes path bytes with C escapes; octal escapes encode UTF-8 bytes. */
+function gitPath(raw: string): string {
+  // Unquoted ---/+++ paths may carry a tab-delimited timestamp. Never trim
+  // actual leading/trailing filename spaces or split a decoded literal tab.
+  if (!raw.startsWith('"')) return raw.split("\t", 1)[0];
+  const bytes: number[] = [];
+  const encoder = new TextEncoder();
+  const escapes: Record<string, number> = {
+    a: 7,
+    b: 8,
+    t: 9,
+    n: 10,
+    v: 11,
+    f: 12,
+    r: 13,
+    '"': 34,
+    "\\": 92,
+  };
+  for (let index = 1; index < raw.length; index++) {
+    const char = raw[index];
+    if (char === '"') return new TextDecoder().decode(new Uint8Array(bytes));
+    if (char === "\\") {
+      const octal = /^[0-7]{1,3}/.exec(raw.slice(index + 1));
+      if (octal) {
+        bytes.push(parseInt(octal[0], 8));
+        index += octal[0].length;
+        continue;
+      }
+      const escaped = escapes[raw[index + 1]];
+      if (escaped !== undefined) {
+        bytes.push(escaped);
+        index++;
+        continue;
+      }
+    }
+    const point = String.fromCodePoint(raw.codePointAt(index)!);
+    bytes.push(...encoder.encode(point));
+    index += point.length - 1;
+  }
+  return raw; // An incomplete quoted header has no trustworthy decoded path.
 }
 
 /** Strip a/ or b/ prefix from git diff paths. */
