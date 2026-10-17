@@ -2400,8 +2400,8 @@ Recorded parent chronology has no conflict; it is not an exhaustive OS process a
 Windows independently passes original 83/12 and separate new drafts three/one,
 then real installed and replacement UI 13+13 with two normal Main exits and removed
 private UI HOMEs. NSIS reaches install, replacement and both UI phases. Its original
-48-record journal is complete: normal uninstaller `0/null` is sequence 46, first
-error sequence 47 and controller-final sequence 48. All six build/install/UI/
+48-record journal is complete: uninstall process-exit `0/null` is sequence 45,
+process-final sequence 46, firstError sequence 47 and controllerFinal sequence 48. All six build/install/UI/
 replace/UI/uninstall process roots have normal `0/null`, empty signal ledgers and
 cleaned birth custody; the outer controller nevertheless exits 1. The first error
 is `Error: Preexisting owned destination refused` in uninstall, at
