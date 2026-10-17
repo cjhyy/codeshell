@@ -2,7 +2,26 @@ import { afterEach, beforeEach, expect, test } from "bun:test";
 import { mkdir, mkdtemp, rm, symlink, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
-import { readPackagedUiBuildReceipt } from "./run-packaged-ui-acceptance.mjs";
+import {
+  parsePackagedUiAcceptanceArguments,
+  readPackagedUiBuildReceipt,
+} from "./run-packaged-ui-acceptance.mjs";
+
+test("packaged entry defaults to UI and accepts only the reviewed updater alternative", () => {
+  const base = ["--build-receipt", "/owned/receipt.json", "--evidence-dir", "/owned/evidence"];
+  expect(parsePackagedUiAcceptanceArguments(base).fixture).toBe("ui");
+  expect(parsePackagedUiAcceptanceArguments([...base, "--fixture", "updater"]).fixture).toBe(
+    "updater",
+  );
+  for (const args of [
+    [...base, "--fixture", "../../arbitrary-script"],
+    [...base, "--fixture", "updater", "--fixture", "ui"],
+    [...base, "--script", "updater"],
+    [...base, "--fixture"],
+    ["--fixture", "updater"],
+  ])
+    expect(() => parsePackagedUiAcceptanceArguments(args)).toThrow();
+});
 
 const sourceHead = "a".repeat(40);
 let root;

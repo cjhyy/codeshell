@@ -24,6 +24,7 @@ snapshotElectronTestProcesses({
   },
 });
 const environment = command.options.env;
+const legacy = win32.join(environment.SystemRoot, "System32/WindowsPowerShell/v1.0/powershell.exe");
 const ownedEnvironment = {
   ...environment,
   HOME: home,
@@ -38,10 +39,10 @@ const pwsh = win32.join(
   "Program Files/PowerShell/7/pwsh.exe",
 );
 const candidates = [
-  { name: "windows-powershell-original-minimal", executable: command.executable, env: environment },
+  { name: "windows-powershell-original-minimal", executable: legacy, env: environment },
   {
     name: "windows-powershell-owned-profile",
-    executable: command.executable,
+    executable: legacy,
     env: ownedEnvironment,
   },
   { name: "powershell7-original-minimal", executable: pwsh, env: environment },

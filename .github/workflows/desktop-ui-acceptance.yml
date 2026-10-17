@@ -259,6 +259,16 @@ jobs:
             node packages/desktop/scripts/run-packaged-ui-acceptance.mjs --build-receipt "$ACCEPTANCE_ROOT/package/build-receipt.json" --evidence-dir "$ACCEPTANCE_ROOT/ui" 2>&1 | tee "$ACCEPTANCE_ROOT/packaged-ui.log"
           fi
 
+      - name: actual packaged update checks and recovery
+        timeout-minutes: 8
+        run: |
+          set -euo pipefail
+          if [[ "$RUNNER_OS" == Linux ]]; then
+            xvfb-run -a node packages/desktop/scripts/run-packaged-ui-acceptance.mjs --build-receipt "$ACCEPTANCE_ROOT/package/build-receipt.json" --evidence-dir "$ACCEPTANCE_ROOT/updater" --fixture updater 2>&1 | tee "$ACCEPTANCE_ROOT/updater.log"
+          else
+            node packages/desktop/scripts/run-packaged-ui-acceptance.mjs --build-receipt "$ACCEPTANCE_ROOT/package/build-receipt.json" --evidence-dir "$ACCEPTANCE_ROOT/updater" --fixture updater 2>&1 | tee "$ACCEPTANCE_ROOT/updater.log"
+          fi
+
       # Explicit evidence only: never upload private HOME, Keychain references,
       # application archives, credentials, or caches.
       - name: retain native UI acceptance evidence
@@ -292,5 +302,10 @@ jobs:
             ${{ env.ACCEPTANCE_ROOT }}/ui/receipt.json
             ${{ env.ACCEPTANCE_ROOT }}/ui/operations.json
             ${{ env.ACCEPTANCE_ROOT }}/ui/launcher-receipt.json
+            ${{ env.ACCEPTANCE_ROOT }}/updater.log
+            ${{ env.ACCEPTANCE_ROOT }}/updater/*.png
+            ${{ env.ACCEPTANCE_ROOT }}/updater/receipt.json
+            ${{ env.ACCEPTANCE_ROOT }}/updater/operations.json
+            ${{ env.ACCEPTANCE_ROOT }}/updater/launcher-receipt.json
           if-no-files-found: error
           retention-days: 7

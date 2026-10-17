@@ -58,25 +58,39 @@ export async function readPackagedUiBuildReceipt(
   return { ...receipt, output, appRoot };
 }
 
-export async function runPackagedUiAcceptance(args) {
+export function parsePackagedUiAcceptanceArguments(args) {
   const options = new Map();
   for (let index = 0; index < args.length; index += 2) {
     const flag = args[index];
     const value = args[index + 1];
     assert.ok(
-      ["--build-receipt", "--evidence-dir"].includes(flag) && value && !options.has(flag),
-      "Expected --build-receipt <file> and --evidence-dir <new-directory>",
+      ["--build-receipt", "--evidence-dir", "--fixture"].includes(flag) &&
+        value &&
+        !options.has(flag),
+      "Expected --build-receipt <file>, --evidence-dir <new-directory>, [--fixture ui|updater]",
     );
-    options.set(flag, resolve(value));
+    options.set(flag, flag === "--fixture" ? value : resolve(value));
   }
-  assert.equal(options.size, 2, "Build receipt and new evidence directory are required");
+  for (const key of ["--build-receipt", "--evidence-dir"])
+    assert.ok(options.has(key), "Build receipt and new evidence directory are required");
+  const fixture = options.get("--fixture") ?? "ui";
+  assert.ok(["ui", "updater"].includes(fixture), "Only reviewed packaged fixtures are allowed");
+  return {
+    buildReceipt: options.get("--build-receipt"),
+    evidence: options.get("--evidence-dir"),
+    fixture,
+  };
+}
+
+export async function runPackagedUiAcceptance(args) {
+  const options = parsePackagedUiAcceptanceArguments(args);
   const repository = resolve(dirname(fileURLToPath(import.meta.url)), "../../..");
   const sourceHead = execFileSync("git", ["rev-parse", "HEAD"], {
     cwd: repository,
     encoding: "utf8",
     timeout: 5_000,
   }).trim();
-  const receipt = await readPackagedUiBuildReceipt(options.get("--build-receipt"), { sourceHead });
+  const receipt = await readPackagedUiBuildReceipt(options.buildReceipt, { sourceHead });
   const integrity = await capturePackagedAppIntegrity(receipt.appRoot);
   assert.equal(
     integrity.asarSHA256,
@@ -88,7 +102,7 @@ export async function runPackagedUiAcceptance(args) {
     receipt.managedNodeManifestSha256,
     "Managed runtime differs from build receipt",
   );
-  const evidence = options.get("--evidence-dir");
+  const evidence = options.evidence;
   await mkdir(dirname(evidence), { recursive: true, mode: 0o700 });
   const evidenceParent = await realpath(dirname(evidence));
   assert.ok(
@@ -111,7 +125,10 @@ export async function runPackagedUiAcceptance(args) {
   const childArgs = [
     join(repository, "scripts/run-isolated-node-smoke.mjs"),
     ...(process.platform === "linux" ? ["--private-keyring"] : []),
-    join(repository, "packages/desktop/scripts/e2e-ui-packaged.mjs"),
+    join(
+      repository,
+      `packages/desktop/scripts/e2e-${options.fixture === "updater" ? "updater" : "ui"}-packaged.mjs`,
+    ),
     "--packaged-app",
     receipt.appRoot,
     "--evidence-dir",
@@ -173,6 +190,7 @@ export async function runPackagedUiAcceptance(args) {
     observerFailures.length === 0;
   const report = {
     status: passed ? "passed" : "failed",
+    fixture: options.fixture,
     sourceHead,
     platform: process.platform,
     arch: process.arch,
@@ -189,7 +207,9 @@ export async function runPackagedUiAcceptance(args) {
     notarization: false,
     developerIdentity: false,
     boundary:
-      "Actual native runner; unpacked application UI, no installer/update or full Pet claim",
+      options.fixture === "updater"
+        ? "Actual native runner; packaged updater manifest UI, no asset download, installation or full Pet claim"
+        : "Actual native runner; unpacked application UI, no installer/update or full Pet claim",
   };
   await writeFile(join(evidence, "launcher-receipt.json"), JSON.stringify(report, null, 2), {
     flag: "wx",
