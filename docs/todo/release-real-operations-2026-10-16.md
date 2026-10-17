@@ -95,6 +95,7 @@ main, tags and publication remain outside that authorization. The branch is
 | [39012279115](https://github.com/cjhyy/codeshell/actions/runs/39012279115), source `badc2262a`                     | All four jobs complete successfully for the first time. Web passes 31 behavior checks; Linux runs the actual AppImage Main and all ten updater manifest GETs; macOS completes updater and DMG install/replacement. The new complete-path PNG/history/collapse cases pass in all three native panel steps, adding two to the prior 18. Independent receipts from all three native jobs are checked. Linux screenshots still show Chinese glyph boxes, so Chinese visual acceptance remains open despite the green job.                                                                                                                                                                                                                                                                                               |
 | [39013381607](https://github.com/cjhyy/codeshell/actions/runs/39013381607), source `3466cad1e`                     | Web's nine image unit regressions and 31 browser behavior checks pass. Linux completes all eight native suites and actual AppImage update checks; before/after font metadata plus five actual screenshots confirm Chinese glyphs in those samples. macOS completes native suites, updater and DMG again. Windows passes startup seven and Review eight with four normal Main exits, then fails the panel driver before its final report is written; the outer driver code is 1, not an observed Main exit. Later suites are skipped. Original panel error/stack, Main exit, custody and HOME outcome are unknown. Overall matrix is failed.                                                                                                                                                                         |
 | [39015578143](https://github.com/cjhyy/codeshell/actions/runs/39015578143), source `ed07a8db9`                     | All four jobs and independent artifact audits pass. Each native platform verifies 83 behavior checks and 12 actual Main launches, including Review 11 and Panel 20. New mode-only/binary titles and the actual mode-only Files preview pass; bounded Panel diagnostics agree with the original report and normal Main/controller exits. AppImage updater and both DMG UI copies pass again. Web passes nine image unit regressions plus 31 browser behaviors. Earlier unknown failures remain unresolved historical evidence.                                                                                                                                                                                                                                                                                       |
+| [39016494715](https://github.com/cjhyy/codeshell/actions/runs/39016494715), source `67e09d1f6`                     | All four jobs and independent artifact audits pass again. Each native platform verifies 83 real UI operations/12 Main launches and separately 11 Write-card React tests/38 assertions with no failures or skips. Current package integrity, Panel diagnostics, AppImage sandbox/update checks and both DMG UI copies pass. Web verifies nine image regressions, 31 browser behaviors and 88 recorded source hashes. No new blocker is found in this acceptance; earlier unknown failures remain separately preserved.                                                                                                                                                                                                                                                                                               |
 
 The CI12 Windows failure is frozen at
 `ci-39013381607-windows-20261017/verified-summary.json` (SHA256
@@ -205,8 +206,46 @@ operations. `f4cf3b625` repairs the workflow path guard's TS-before-TSX prefix
 match, which had falsely checked a nonexistent `.test.ts` name for the new
 `.test.tsx` file. The actual path guard now verifies 24 paths, and workflow syntax
 verifies two jobs, 34 Bash blocks and five inline Node blocks. All three commits
-passed independent review. These changes follow CI13 and await the next remote
-matrix; CI13 success applies only to `ed07a8db9`.
+passed independent review. CI14 now verifies these changes on the exact
+`67e09d1f6` source: each desktop platform retains an actual 11-test/38-assertion
+passing log with zero skips/failures. Those React tests are separate from the
+83 actual native UI operations and do not claim a real Write-tool execution.
+CI13 success continues to apply only to `ed07a8db9`.
+
+CI14's independently frozen results are:
+
+- Windows `ci-39016494715-windows-20261017/verified-summary.json`, SHA256
+  `d8136d63f0fad7d51d58f5a9ab88b6d6816d66c18ddddac37c3123c4dd3616e2`;
+  Write unit summary `7361161374bf5571fc4d0f02184e82d1ec2f58b2d2e3084dbed1f9d8770e61bc`.
+- macOS `ci-39016494715-mac/receipt-audit.json`, SHA256
+  `df6269cde36b3301e168e11acfabc9b47a981de76058e5ed744788f42a445bc3`.
+- Linux `ci-39016494715-linux-independent-audit.json`, SHA256
+  `db74678baa1a882e11c0ae8c67a839de5117ca9623d129c206b901574e417c7d`.
+- Web `ci-39016494715-web-independent-audit.json`, SHA256
+  `57b0f52fadf550e3f60e72887d904b1287464b81c36297ff4dde62eb155bbdd7`.
+
+All three native audits independently verify the current source/package identity,
+83 operations/12 distinct Main processes, normal exits, observed-birth custody
+cleaned with zero remaining/no query failure, and all eight scope HOMEs removed.
+Review 11, Panel 20, preferences across three Main launches and updater ten GETs
+pass. Panel's four diagnostic files agree with each original report and distinguish
+normal controller/Main exits; firstError is null and recording/truncation flags
+are false. These passing success paths do not diagnose the old unknown failures.
+Mac additionally verifies both DMG copies' 13/13 UI checks and detached mounts.
+Linux rechecks actual AppImage/runtime identities, first-JS probes, sandbox helper
+identity/full modes, source/cache inventories and the same 75 exact extraction
+normalizations. Windows verifies runner integrity receipts; its raw ASAR and
+executable are not uploaded or independently rehashed locally, and native
+signature remains `not_verified`.
+
+Web's nine image unit regressions/45 assertions remain separate from 31 browser
+behavior checks. All 88 recorded source hashes and 25 PNGs verify; Root directly
+viewed the new narrow annotation and reauthenticated Workbench images, plus the
+Linux 390px dark Settings and Review screenshots. The Linux Review capture
+retains a dropdown exit-animation remnant; actual titles, paths and preview bytes
+are independently verified through DOM/Main receipts. SW/Auth lifecycle receipt
+limits remain as previously recorded. No local native launch, provider request,
+real account operation, tag or publication was added for these two matrices.
 
 Windows CI11's frozen summary is
 `ci-39012279115-windows-20261017/verified-summary.json` (SHA256
