@@ -1,0 +1,11 @@
+{
+  "command": [
+    "rg",
+    "-l",
+    "externalRuntimeModels|externalModels|external-runtimes:list-models",
+    "packages/desktop/src"
+  ],
+  "exitCode": 0,
+  "stdout": "packages/desktop/src/renderer/App.tsx\npackages/desktop/src/renderer/AppQuickChat.test.tsx\n",
+  "stderr": ""
+}

@@ -1,0 +1,11 @@
+{
+  "command": [
+    "rg",
+    "-n",
+    "ExternalRuntimeModelService|externalRuntimeModels",
+    "packages/desktop/src/main/index.ts"
+  ],
+  "exitCode": 0,
+  "stdout": "164:import { ExternalRuntimeModelService } from \"./external-runtime-model-service.js\";\n6099:const externalRuntimeModelService = new ExternalRuntimeModelService({\n",
+  "stderr": ""
+}

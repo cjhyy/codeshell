@@ -1,0 +1,14 @@
+{
+  "baseline": "00c046367769349c1f5413e74c993b2c19ce8337",
+  "main": "85216160aeca0c6f0a22866fd007b13c223a0500",
+  "paths": [
+    ".github/workflows/desktop-ui-acceptance.yml",
+    "docs/todo/release-real-operations-2026-10-16.md",
+    "packages/desktop/scripts/e2e-ui-packaged.mjs",
+    "packages/desktop/scripts/packaged-pet-fixture.mjs",
+    "packages/desktop/scripts/windows-packaged-main-crash-evidence.mjs",
+    "packages/desktop/scripts/windows-packaged-main-crash-evidence.test.mjs",
+    "scripts/bun-test-completion.mjs"
+  ],
+  "productRuns": 0
+}

@@ -1,0 +1,5 @@
+Traceback (most recent call last):
+  File "/tmp/codeshell-audit-20261018-round55-finalize.py", line 56, in <module>
+    assert set(headers)=={(name,line) for name,lines in allowed.items() for line in lines}
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError

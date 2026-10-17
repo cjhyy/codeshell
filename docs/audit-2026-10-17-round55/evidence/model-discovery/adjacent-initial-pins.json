@@ -1,0 +1,26 @@
+[
+  {
+    "path": "packages/desktop/src/main/external-runtime-model-service.ts",
+    "bytes": 3570,
+    "lines": 94,
+    "sha256": "fb19c731974164e7ec21f12be97c4caa68137a1a43fc959e522f92d21d6b422d",
+    "pinAt": "2026-10-17T18:27:18.806695+00:00",
+    "coverage": "hash-only before body/navigation"
+  },
+  {
+    "path": "packages/coding/src/external-runtimes/codex/model-discovery.test.ts",
+    "bytes": 8357,
+    "lines": 207,
+    "sha256": "9089b7bf758ae3d7085c985ba971a981548963b0e5b527a7b60cac33744d6115",
+    "pinAt": "2026-10-17T18:27:18.807572+00:00",
+    "coverage": "hash-only before body/navigation"
+  },
+  {
+    "path": "packages/coding/src/external-runtimes/index.ts",
+    "bytes": 3131,
+    "lines": 69,
+    "sha256": "5f3ad6676c64f497f5e2fc163f3498698dbf59f0045a9c31f1f194abc3cd1dfa",
+    "pinAt": "2026-10-17T18:27:18.808416+00:00",
+    "coverage": "hash-only before body/navigation"
+  }
+]

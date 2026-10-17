@@ -1,0 +1,33 @@
+{
+  "files": [
+    {
+      "path": "packages/core/src/llm/providers/openai.ts",
+      "bytes": 64200,
+      "lines": 1524,
+      "sha256": "e45ff0572580ec70bbdba4f2bc95aa32f07c741e1b275e4000fa8b0cf2d25c81",
+      "beforeBodyOrLineNavigation": true
+    },
+    {
+      "path": "packages/core/src/llm/providers/anthropic.ts",
+      "bytes": 22737,
+      "lines": 593,
+      "sha256": "0816e99de6261b41892ac4ecf3fbde76c7f2f94c12490752e412d27fa02079f3",
+      "beforeBodyOrLineNavigation": true
+    },
+    {
+      "path": "packages/core/src/types.ts",
+      "bytes": 51788,
+      "lines": 1333,
+      "sha256": "1cfe13fc9d18863adb721635d56b34ae627bb1fab0508675b034a4340b987bb5",
+      "beforeBodyOrLineNavigation": true
+    },
+    {
+      "path": "packages/core/src/llm/strip-vision.test.ts",
+      "bytes": 5228,
+      "lines": 135,
+      "sha256": "52b0ddbc2bc1d72a26becbba638832957a1c10824a8c7c8a6b0a6525d649fc7a",
+      "beforeBodyOrLineNavigation": true
+    }
+  ],
+  "productExecution": 0
+}

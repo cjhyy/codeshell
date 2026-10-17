@@ -1,0 +1,38 @@
+[
+  {
+    "query": "ExternalRuntimeModelService",
+    "command": [
+      "rg",
+      "-l",
+      "ExternalRuntimeModelService",
+      "packages/desktop/src"
+    ],
+    "exitCode": 0,
+    "stdout": "packages/desktop/src/main/external-runtime-model-service.test.ts\npackages/desktop/src/main/external-runtime-model-service.ts\npackages/desktop/src/main/index.ts\n",
+    "stderr": ""
+  },
+  {
+    "query": "externalRuntimeModelEntries",
+    "command": [
+      "rg",
+      "-l",
+      "externalRuntimeModelEntries",
+      "packages/desktop/src"
+    ],
+    "exitCode": 0,
+    "stdout": "packages/desktop/src/shared/external-runtime-models.ts\npackages/desktop/src/shared/external-runtime-models.test.ts\npackages/desktop/src/main/external-runtime-model-service.ts\npackages/desktop/src/main/external-runtime-model-service.test.ts\npackages/desktop/src/renderer/AppCodexSession.test.tsx\npackages/desktop/src/main/external-runtime-reachable.test.ts\npackages/desktop/src/renderer/AppQuickChat.test.tsx\n",
+    "stderr": ""
+  },
+  {
+    "query": "listExternalRuntimeModels",
+    "command": [
+      "rg",
+      "-l",
+      "listExternalRuntimeModels",
+      "packages/desktop/src"
+    ],
+    "exitCode": 1,
+    "stdout": "",
+    "stderr": ""
+  }
+]

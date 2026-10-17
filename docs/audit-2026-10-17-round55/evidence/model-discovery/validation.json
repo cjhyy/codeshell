@@ -1,0 +1,42 @@
+{
+  "GitCalls": 0,
+  "productImports": 0,
+  "productHelperCalls": 0,
+  "fixturesExecuted": 0,
+  "testsExecuted": 0,
+  "ReactDOM": 0,
+  "clockTimerExperiments": 0,
+  "nativeProcesses": 0,
+  "SDKModelAccountConnections": 0,
+  "networkCalls": 0,
+  "realUserConfigCacheRead": 0,
+  "permanentFailedDirectionsReopened": 0,
+  "ownAuditMetadataPythonOnly": true,
+  "fatalMetadataErrors": 0,
+  "toolTruncations": 0,
+  "intentionalBoundedRawPresenter": 1,
+  "navigationNoMatchExit1": 1,
+  "sourceCounts": {
+    "selectedProductFiles": 7,
+    "selectedTestDeclarationFiles": 1,
+    "fullProductFiles": 0,
+    "navigationOnlyFiles": 1,
+    "productSemanticLines": 291,
+    "testDeclarationLines": 31,
+    "allSemanticDeclarationLines": 322,
+    "displayedSourceBodyLines": 606,
+    "navigationLinesBeyondBody": 9,
+    "displayedSourceLinesIncludingNavigation": 615,
+    "testRuns": 0
+  },
+  "endingSourcePins": 11,
+  "endingSourceAllMatch": true,
+  "endingMatchedHistoryAllMatch": true,
+  "endingSharedInputSame": true,
+  "sourcePriorOverlapNotSubtractedAsUnique": "No uniqueness or overall coverage update asserted.",
+  "executionCountersReferTo": "product runtime and experiments; own stdlib audit metadata processing and rg navigation are disclosed separately",
+  "auditMetadataTools": [
+    "Python standard library",
+    "rg filename/line navigation"
+  ]
+}

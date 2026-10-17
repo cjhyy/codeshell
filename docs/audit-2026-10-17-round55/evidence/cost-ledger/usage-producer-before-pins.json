@@ -1,0 +1,28 @@
+{
+  "files": [
+    {
+      "path": "packages/core/src/llm/providers/anthropic.ts",
+      "bytes": 22737,
+      "lines": 593,
+      "sha256": "0816e99de6261b41892ac4ecf3fbde76c7f2f94c12490752e412d27fa02079f3",
+      "pinnedBeforeBodyUTC": "2026-10-17T18:30:26.979400+00:00",
+      "purpose": "Only ordinary unified TokenUsage cache/input counters; no provider/client/network/auth execution or certification"
+    },
+    {
+      "path": "packages/core/src/llm/providers/openai.ts",
+      "bytes": 64200,
+      "lines": 1524,
+      "sha256": "e45ff0572580ec70bbdba4f2bc95aa32f07c741e1b275e4000fa8b0cf2d25c81",
+      "pinnedBeforeBodyUTC": "2026-10-17T18:30:26.981763+00:00",
+      "purpose": "Only ordinary unified TokenUsage cache/input counters; no provider/client/network/auth execution or certification"
+    },
+    {
+      "path": "packages/core/src/llm/providers/anthropic-usage.test.ts",
+      "bytes": 1989,
+      "lines": 73,
+      "sha256": "8047033b84165eba5acf21ff117bbe2030e5c80bf1f15442496c041abc740ffe",
+      "pinnedBeforeBodyUTC": "2026-10-17T18:30:26.982715+00:00",
+      "purpose": "Only ordinary unified TokenUsage cache/input counters; no provider/client/network/auth execution or certification"
+    }
+  ]
+}

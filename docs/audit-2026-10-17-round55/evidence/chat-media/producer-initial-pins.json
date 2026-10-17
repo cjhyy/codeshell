@@ -1,0 +1,26 @@
+{
+  "capturedUTC": "2026-10-17T18:28:12.207294+00:00",
+  "files": [
+    {
+      "path": "packages/chat/src/gateway.ts",
+      "bytes": 12984,
+      "lines": 347,
+      "sha256": "d73ad84b43ef1b2e705323cb3ed63c5102fbb0d31f51dc5ffc10fc45862a1b13",
+      "beforeBodyOrLineNavigation": true
+    },
+    {
+      "path": "packages/chat/src/lifecycle.ts",
+      "bytes": 824,
+      "lines": 28,
+      "sha256": "cdf93e75be321a483b0b9d8339cbefe87b9e211549dfdda58f348ef1ab010d46",
+      "beforeBodyOrLineNavigation": true
+    },
+    {
+      "path": "packages/chat/src/telegram.test.ts",
+      "bytes": 9700,
+      "lines": 304,
+      "sha256": "5da19870067e2e5c7db973f248e86e6713d1903c38b014625b26408b3b156145",
+      "beforeBodyOrLineNavigation": true
+    }
+  ]
+}

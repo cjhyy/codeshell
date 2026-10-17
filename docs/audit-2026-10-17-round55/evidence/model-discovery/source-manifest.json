@@ -1,0 +1,424 @@
+{
+  "prep": 122,
+  "root": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell",
+  "rootReportedProductBaseline": "00c046367769349c1f5413e74c993b2c19ce8337",
+  "GitVerification": "not independently performed; 0 Git calls",
+  "files": [
+    {
+      "path": "packages/coding/src/external-runtimes/codex/model-discovery.ts",
+      "bytes": 3492,
+      "lines": 99,
+      "sha256": "08691432cb3fec0592aeb4a9e87f872df64459909948898c47a0ec70c44fa3bc",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          4,
+          8
+        ],
+        [
+          10,
+          24
+        ],
+        [
+          56,
+          62
+        ],
+        [
+          65,
+          95
+        ]
+      ],
+      "displayedLineRanges": [
+        [
+          1,
+          99
+        ]
+      ],
+      "navigationLineRanges": [],
+      "kind": "product",
+      "scope": "Normal model DTO, visible filter, duplicate first-server-entry policy, pagination shape and valid-empty distinction. SDK/process handshake, environment, deadlines, cleanup and external account behavior shown incidentally but excluded.",
+      "semanticLineCount": 58,
+      "displayedBodyLineCount": 99,
+      "initialPinAt": "2026-10-17T18:26:22.346893+00:00",
+      "initialSemanticReadSha256": "08691432cb3fec0592aeb4a9e87f872df64459909948898c47a0ec70c44fa3bc",
+      "endingSha256": "08691432cb3fec0592aeb4a9e87f872df64459909948898c47a0ec70c44fa3bc",
+      "endingMatchesInitial": true
+    },
+    {
+      "path": "packages/desktop/src/main/external-runtime-model-service.ts",
+      "bytes": 3570,
+      "lines": 94,
+      "sha256": "fb19c731974164e7ec21f12be97c4caa68137a1a43fc959e522f92d21d6b422d",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          14,
+          25
+        ],
+        [
+          27,
+          38
+        ],
+        [
+          40,
+          50
+        ],
+        [
+          54,
+          58
+        ],
+        [
+          62,
+          66
+        ],
+        [
+          71,
+          85
+        ],
+        [
+          90,
+          93
+        ]
+      ],
+      "displayedLineRanges": [
+        [
+          1,
+          94
+        ]
+      ],
+      "navigationLineRanges": [],
+      "kind": "product",
+      "scope": "Actual discovery consumer: installed-runtime path DTO gate, feature-off empty, bundled fallback seed, valid response mapping, default-first ordering, preserve last list on failure. Binary discovery, homedir/account/config access, actual clock expiry and native process mechanism excluded.",
+      "semanticLineCount": 64,
+      "displayedBodyLineCount": 94,
+      "initialPinAt": "2026-10-17T18:27:18.806695+00:00",
+      "initialSemanticReadSha256": "fb19c731974164e7ec21f12be97c4caa68137a1a43fc959e522f92d21d6b422d",
+      "endingSha256": "fb19c731974164e7ec21f12be97c4caa68137a1a43fc959e522f92d21d6b422d",
+      "endingMatchesInitial": true
+    },
+    {
+      "path": "packages/desktop/src/shared/external-runtime-models.ts",
+      "bytes": 6254,
+      "lines": 160,
+      "sha256": "727e006d443d74a7c763dfa76d438986600459e6f849b80c7c4a6e3d04aaa880",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          1,
+          23
+        ],
+        [
+          25,
+          42
+        ],
+        [
+          51,
+          55
+        ],
+        [
+          90,
+          93
+        ],
+        [
+          100,
+          160
+        ]
+      ],
+      "displayedLineRanges": [
+        [
+          1,
+          160
+        ]
+      ],
+      "navigationLineRanges": [],
+      "kind": "product",
+      "scope": "Product one-dropdown contract, fallback context metadata, key constructor, model-entry types, bundled fallback and availability DTO projection. Legacy-key normalization/routing parser displayed but not adjudicated; fallback token constant does not prove external real model window.",
+      "semanticLineCount": 111,
+      "displayedBodyLineCount": 160,
+      "initialPinAt": "2026-10-17T18:27:49.977033+00:00",
+      "initialSemanticReadSha256": "727e006d443d74a7c763dfa76d438986600459e6f849b80c7c4a6e3d04aaa880",
+      "endingSha256": "727e006d443d74a7c763dfa76d438986600459e6f849b80c7c4a6e3d04aaa880",
+      "endingMatchesInitial": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/app/useExternalRuntimeModels.ts",
+      "bytes": 2782,
+      "lines": 72,
+      "sha256": "66f10e3f160bfb62a2e990cfa635f61936410e36fb727632e1c53ff9fd79ba04",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          2,
+          18
+        ],
+        [
+          22,
+          41
+        ],
+        [
+          69,
+          72
+        ]
+      ],
+      "displayedLineRanges": [
+        [
+          1,
+          72
+        ]
+      ],
+      "navigationLineRanges": [],
+      "kind": "product",
+      "scope": "Real ordinary list bridge request, settings generation/cancelled-result guard and returned model array. DOM/focus/timer/poll schedule and authority origin of opaque enabled boolean excluded; no React/timer execution.",
+      "semanticLineCount": 41,
+      "displayedBodyLineCount": 72,
+      "initialPinAt": "2026-10-17T18:28:44.366878+00:00",
+      "initialSemanticReadSha256": "66f10e3f160bfb62a2e990cfa635f61936410e36fb727632e1c53ff9fd79ba04",
+      "endingSha256": "66f10e3f160bfb62a2e990cfa635f61936410e36fb727632e1c53ff9fd79ba04",
+      "endingMatchesInitial": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/App.tsx",
+      "bytes": 122863,
+      "lines": 2924,
+      "sha256": "02ae12bfccf26878226720ad90282a6a11a1fdc3e05efd1ce54a09d256d5d715",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          353,
+          356
+        ],
+        [
+          368,
+          371
+        ]
+      ],
+      "displayedLineRanges": [
+        [
+          346,
+          373
+        ]
+      ],
+      "navigationLineRanges": [],
+      "kind": "product",
+      "scope": "Actual hook result merged into modelOptions; configurationAvailable is an opaque caller boolean, origin/authority mechanisms not reviewed.",
+      "semanticLineCount": 8,
+      "displayedBodyLineCount": 28,
+      "initialPinAt": "2026-10-17T18:28:24.746395+00:00",
+      "initialSemanticReadSha256": "02ae12bfccf26878226720ad90282a6a11a1fdc3e05efd1ce54a09d256d5d715",
+      "endingSha256": "02ae12bfccf26878226720ad90282a6a11a1fdc3e05efd1ce54a09d256d5d715",
+      "endingMatchesInitial": true
+    },
+    {
+      "path": "packages/desktop/src/main/index.ts",
+      "bytes": 299337,
+      "lines": 7330,
+      "sha256": "105b2b49a28e0a7ef10980ac5feaa3a07ff81e7197f5acbefd95feb2498224c0",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          6099,
+          6102
+        ]
+      ],
+      "displayedLineRanges": [
+        [
+          6097,
+          6110
+        ]
+      ],
+      "navigationLineRanges": [
+        [
+          164,
+          164
+        ],
+        [
+          6099,
+          6099
+        ],
+        [
+          6102,
+          6102
+        ]
+      ],
+      "kind": "product",
+      "scope": "Actual service construction and externalRuntime:models IPC list handler only; adjacent sender/window/ownership commentary not semantic scope.",
+      "semanticLineCount": 4,
+      "displayedBodyLineCount": 14,
+      "initialPinAt": "2026-10-17T18:28:13.901198+00:00",
+      "initialSemanticReadSha256": "105b2b49a28e0a7ef10980ac5feaa3a07ff81e7197f5acbefd95feb2498224c0",
+      "endingSha256": "105b2b49a28e0a7ef10980ac5feaa3a07ff81e7197f5acbefd95feb2498224c0",
+      "endingMatchesInitial": true
+    },
+    {
+      "path": "packages/desktop/src/preload/index.ts",
+      "bytes": 86436,
+      "lines": 1892,
+      "sha256": "05dbc9b534bdc68c30f255f53a96617e50fb0c445ce2fc1bde4be31e3f8a6901",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          1600,
+          1602
+        ],
+        [
+          1605,
+          1606
+        ]
+      ],
+      "displayedLineRanges": [
+        [
+          1600,
+          1608
+        ]
+      ],
+      "navigationLineRanges": [
+        [
+          1606,
+          1606
+        ]
+      ],
+      "kind": "product",
+      "scope": "Ordinary model dropdown DTO bridge to matching IPC channel; adjacent available/start mechanisms excluded.",
+      "semanticLineCount": 5,
+      "displayedBodyLineCount": 9,
+      "initialPinAt": "2026-10-17T18:28:57.016638+00:00",
+      "initialSemanticReadSha256": "05dbc9b534bdc68c30f255f53a96617e50fb0c445ce2fc1bde4be31e3f8a6901",
+      "endingSha256": "05dbc9b534bdc68c30f255f53a96617e50fb0c445ce2fc1bde4be31e3f8a6901",
+      "endingMatchesInitial": true
+    },
+    {
+      "path": "packages/coding/src/external-runtimes/codex/model-discovery.test.ts",
+      "bytes": 8357,
+      "lines": 207,
+      "sha256": "9089b7bf758ae3d7085c985ba971a981548963b0e5b527a7b60cac33744d6115",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          66,
+          91
+        ],
+        [
+          106,
+          110
+        ]
+      ],
+      "displayedLineRanges": [
+        [
+          1,
+          130
+        ]
+      ],
+      "navigationLineRanges": [
+        [
+          38,
+          38
+        ],
+        [
+          53,
+          53
+        ],
+        [
+          66,
+          66
+        ],
+        [
+          67,
+          67
+        ],
+        [
+          93,
+          93
+        ],
+        [
+          106,
+          106
+        ],
+        [
+          128,
+          128
+        ],
+        [
+          137,
+          137
+        ],
+        [
+          144,
+          144
+        ],
+        [
+          158,
+          158
+        ],
+        [
+          172,
+          172
+        ],
+        [
+          181,
+          181
+        ],
+        [
+          189,
+          189
+        ]
+      ],
+      "kind": "test-declarations",
+      "scope": "Existing declarations for normal pagination/hidden/dedup/default flag and valid empty list; no tests, fake server, process, SDK import, malformed-input or timeout fixtures executed. Native/timeout/cleanup helper code incidentally displayed, not verified.",
+      "semanticLineCount": 31,
+      "displayedBodyLineCount": 130,
+      "initialPinAt": "2026-10-17T18:27:18.807572+00:00",
+      "initialSemanticReadSha256": "9089b7bf758ae3d7085c985ba971a981548963b0e5b527a7b60cac33744d6115",
+      "endingSha256": "9089b7bf758ae3d7085c985ba971a981548963b0e5b527a7b60cac33744d6115",
+      "endingMatchesInitial": true
+    }
+  ],
+  "navigationOnlyFiles": [
+    {
+      "path": "packages/coding/src/external-runtimes/index.ts",
+      "bytes": 3131,
+      "lines": 69,
+      "sha256": "5f3ad6676c64f497f5e2fc163f3498698dbf59f0045a9c31f1f194abc3cd1dfa",
+      "pinAt": "2026-10-17T18:27:18.808416+00:00",
+      "coverage": "navigation-matches-only",
+      "selectedLineRanges": [],
+      "navigationLineRanges": [
+        [
+          38,
+          39
+        ]
+      ],
+      "semanticLineCount": 0,
+      "scope": "exact export lines only; no barrel import/execution, no full review"
+    }
+  ],
+  "instructionHashOnlyFiles": [
+    {
+      "path": "CODESHELL.md",
+      "bytes": 17639,
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "coverage": "hash-only same as instructions actually read in prior prep116",
+      "newInstructionReadLines": 0
+    },
+    {
+      "path": "AGENTS.md",
+      "bytes": 206,
+      "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "coverage": "hash-only same as instructions actually read in prior prep116",
+      "newInstructionReadLines": 0
+    }
+  ],
+  "totals": {
+    "selectedProductFiles": 7,
+    "selectedTestDeclarationFiles": 1,
+    "fullProductFiles": 0,
+    "navigationOnlyFiles": 1,
+    "productSemanticLines": 291,
+    "testDeclarationLines": 31,
+    "allSemanticDeclarationLines": 322,
+    "displayedSourceBodyLines": 606,
+    "navigationLinesBeyondBody": 9,
+    "displayedSourceLinesIncludingNavigation": 615,
+    "testRuns": 0
+  },
+  "overlap": "Original coding-tui-chat.md and source-report207–212 explicitly describe earlier source-directed model-discovery review; no canonical same-SHA entire-source semantic full established from current inventory rows. Current selected review is not first-ever/global unique coverage."
+}

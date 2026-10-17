@@ -1,0 +1,3947 @@
+{
+  "files": [
+    {
+      "path": "packages/core/src/llm/model-pool.ts",
+      "sha256": "a49da3b3018aaaf92e80e488a4e9d338eb9f2b0f107919f9d521156a6c4137d3",
+      "captureTiming": "After actual source display; initial pin predates display.",
+      "blocks": [
+        {
+          "start": 1,
+          "end": 325,
+          "lines": [
+            {
+              "line": 1,
+              "text": "/**"
+            },
+            {
+              "line": 2,
+              "text": " * ModelPool — runtime model registry."
+            },
+            {
+              "line": 3,
+              "text": " *"
+            },
+            {
+              "line": 4,
+              "text": " * Holds all available models loaded from settings. Provides:"
+            },
+            {
+              "line": 5,
+              "text": " *   - `get(key?)` — retrieve a model config by key, or the active one"
+            },
+            {
+              "line": 6,
+              "text": " *   - `switch(key)` — change the active model"
+            },
+            {
+              "line": 7,
+              "text": " *   - `list()` — list all available models"
+            },
+            {
+              "line": 8,
+              "text": " *   - `register(entry)` — add a model at runtime"
+            },
+            {
+              "line": 9,
+              "text": " *"
+            },
+            {
+              "line": 10,
+              "text": " * Consumers:"
+            },
+            {
+              "line": 11,
+              "text": " *   - Engine/TurnLoop: `pool.get()` for the active model"
+            },
+            {
+              "line": 12,
+              "text": " *   - Product capabilities: `pool.get(\"sonnet\")` to resolve a model by key"
+            },
+            {
+              "line": 13,
+              "text": " *   - /model command: `pool.switch(\"haiku\")` for hot-swap"
+            },
+            {
+              "line": 14,
+              "text": " */"
+            },
+            {
+              "line": 15,
+              "text": ""
+            },
+            {
+              "line": 16,
+              "text": "import type { LLMConfig } from \"../types.js\";"
+            },
+            {
+              "line": 17,
+              "text": "import { readCache } from \"./model-cache.js\";"
+            },
+            {
+              "line": 18,
+              "text": "import { findOpenRouterModel } from \"../data/openrouter-models.js\";"
+            },
+            {
+              "line": 19,
+              "text": ""
+            },
+            {
+              "line": 20,
+              "text": "/**"
+            },
+            {
+              "line": 21,
+              "text": " * Last-resort context window when neither the provider's cached"
+            },
+            {
+              "line": 22,
+              "text": " * model list nor the OpenRouter snapshot knows the size. Picked"
+            },
+            {
+              "line": 23,
+              "text": " * to match the most common chat-model default in 2024–2026; better"
+            },
+            {
+              "line": 24,
+              "text": " * to truncate than to send a request the model will reject."
+            },
+            {
+              "line": 25,
+              "text": " */"
+            },
+            {
+              "line": 26,
+              "text": "const FALLBACK_CONTEXT_WINDOW = 200_000;"
+            },
+            {
+              "line": 27,
+              "text": ""
+            },
+            {
+              "line": 28,
+              "text": "/**"
+            },
+            {
+              "line": 29,
+              "text": " * Provider kind → OpenRouter vendor prefix. Mirrors the table in"
+            },
+            {
+              "line": 30,
+              "text": " * model-fetcher.ts so a missing context window on a direct-provider"
+            },
+            {
+              "line": 31,
+              "text": " * entry (e.g. OpenAI's `gpt-5.5`) can be patched from the bundled"
+            },
+            {
+              "line": 32,
+              "text": " * OpenRouter snapshot (`openai/gpt-5.5`). Kinds outside this map"
+            },
+            {
+              "line": 33,
+              "text": " * (groq/ollama/openrouter/custom) skip the snapshot lookup — the"
+            },
+            {
+              "line": 34,
+              "text": " * openrouter kind is handled separately since its ids already carry"
+            },
+            {
+              "line": 35,
+              "text": " * the vendor prefix."
+            },
+            {
+              "line": 36,
+              "text": " */"
+            },
+            {
+              "line": 37,
+              "text": "const OPENROUTER_VENDOR_BY_KIND: Record<string, string> = {"
+            },
+            {
+              "line": 38,
+              "text": "  openai: \"openai\","
+            },
+            {
+              "line": 39,
+              "text": "  anthropic: \"anthropic\","
+            },
+            {
+              "line": 40,
+              "text": "  deepseek: \"deepseek\","
+            },
+            {
+              "line": 41,
+              "text": "  google: \"google\","
+            },
+            {
+              "line": 42,
+              "text": "  zai: \"z-ai\","
+            },
+            {
+              "line": 43,
+              "text": "  xai: \"x-ai\","
+            },
+            {
+              "line": 44,
+              "text": "  mistral: \"mistralai\","
+            },
+            {
+              "line": 45,
+              "text": "};"
+            },
+            {
+              "line": 46,
+              "text": ""
+            },
+            {
+              "line": 47,
+              "text": "// ─── Types ──────────────────────────────────────────────────────"
+            },
+            {
+              "line": 48,
+              "text": ""
+            },
+            {
+              "line": 49,
+              "text": "export interface ModelEntry {"
+            },
+            {
+              "line": 50,
+              "text": "  /** Short alias: \"claude\", \"sonnet\", \"haiku\", \"gpt\", \"deepseek\" */"
+            },
+            {
+              "line": 51,
+              "text": "  key: string;"
+            },
+            {
+              "line": 52,
+              "text": "  /** Human-readable label. Auto-generated from model path if not provided. */"
+            },
+            {
+              "line": 53,
+              "text": "  label?: string;"
+            },
+            {
+              "line": 54,
+              "text": "  provider: string;"
+            },
+            {
+              "line": 55,
+              "text": "  /** Full model path: \"anthropic/claude-opus-4-6\" */"
+            },
+            {
+              "line": 56,
+              "text": "  model: string;"
+            },
+            {
+              "line": 57,
+              "text": "  /** Explicit capability of this connection's selected model, from its catalog preset. */"
+            },
+            {
+              "line": 58,
+              "text": "  supportsVision?: boolean;"
+            },
+            {
+              "line": 59,
+              "text": "  /**"
+            },
+            {
+              "line": 60,
+              "text": "   * Catalog/provider kind used by capability rules. This can differ from"
+            },
+            {
+              "line": 61,
+              "text": "   * `provider`, which only selects the client protocol family."
+            },
+            {
+              "line": 62,
+              "text": "   */"
+            },
+            {
+              "line": 63,
+              "text": "  providerKind?: string;"
+            },
+            {
+              "line": 64,
+              "text": "  baseUrl?: string;"
+            },
+            {
+              "line": 65,
+              "text": "  apiKey?: string;"
+            },
+            {
+              "line": 66,
+              "text": "  /** Whether the catalog template requires a key (default true; false = local/"
+            },
+            {
+              "line": 67,
+              "text": "   *  no-auth provider). Used by resolveLLMConfigForTag to reject a key-needing"
+            },
+            {
+              "line": 68,
+              "text": "   *  connection that has no resolved key with a clear error rather than a 401. */"
+            },
+            {
+              "line": 69,
+              "text": "  needsKey?: boolean;"
+            },
+            {
+              "line": 70,
+              "text": "  maxOutputTokens?: number;"
+            },
+            {
+              "line": 71,
+              "text": "  /** Per-model context window size. Falls back to config.maxContextTokens → 200_000. */"
+            },
+            {
+              "line": 72,
+              "text": "  maxContextTokens?: number;"
+            },
+            {
+              "line": 73,
+              "text": "  /** Optional reference into ProviderCatalog. When set, baseUrl/apiKey"
+            },
+            {
+              "line": 74,
+              "text": "   *  come from the catalog unless the entry overrides them. */"
+            },
+            {
+              "line": 75,
+              "text": "  providerKey?: string;"
+            },
+            {
+              "line": 76,
+              "text": "  /** Per-model external token command; overrides provider-level (TODO 7.2). */"
+            },
+            {
+              "line": 77,
+              "text": "  authCommand?: string;"
+            },
+            {
+              "line": 78,
+              "text": "  /** Per-model extra HTTP headers; merged over provider-level (TODO 7.2). */"
+            },
+            {
+              "line": 79,
+              "text": "  httpHeaders?: Record<string, string>;"
+            },
+            {
+              "line": 80,
+              "text": "  /** OpenAI `service_tier` request param (TODO 7.2). */"
+            },
+            {
+              "line": 81,
+              "text": "  serviceTier?: string;"
+            },
+            {
+              "line": 82,
+              "text": "  /** OpenAI reasoning `summary` control (TODO 7.2). */"
+            },
+            {
+              "line": 83,
+              "text": "  reasoningSummary?: string;"
+            },
+            {
+              "line": 84,
+              "text": "  /**"
+            },
+            {
+              "line": 85,
+              "text": "   * Per-model reasoning override. Wins over the provider-level setting"
+            },
+            {
+              "line": 86,
+              "text": "   * (ProviderCatalog entry's `reasoning`). Useful when models in the same"
+            },
+            {
+              "line": 87,
+              "text": "   * provider need different defaults — e.g. one model off but another on."
+            },
+            {
+              "line": 88,
+              "text": "   */"
+            },
+            {
+              "line": 89,
+              "text": "  reasoning?: import(\"./reasoning-setting.js\").ReasoningSetting;"
+            },
+            {
+              "line": 90,
+              "text": "  /** Catalog-driven extra request-body fields (wire-mapped paramValues). */"
+            },
+            {
+              "line": 91,
+              "text": "  extraBody?: Record<string, unknown>;"
+            },
+            {
+              "line": 92,
+              "text": "}"
+            },
+            {
+              "line": 93,
+              "text": ""
+            },
+            {
+              "line": 94,
+              "text": "// ─── Built-in context windows ────────────────────────────────────"
+            },
+            {
+              "line": 95,
+              "text": "// Known max input tokens for well-known model names. Used as a fallback"
+            },
+            {
+              "line": 96,
+              "text": "// when a settings entry doesn't specify maxContextTokens, so users don't"
+            },
+            {
+              "line": 97,
+              "text": "// have to hand-fill it for common models."
+            },
+            {
+              "line": 98,
+              "text": "//"
+            },
+            {
+              "line": 99,
+              "text": "// Patterns are matched against the full `model` string (case-insensitive)."
+            },
+            {
+              "line": 100,
+              "text": "// First match wins — order from most specific to most generic."
+            },
+            {
+              "line": 101,
+              "text": "const BUILTIN_CONTEXT_WINDOWS: Array<[RegExp, number]> = ["
+            },
+            {
+              "line": 102,
+              "text": "  // DeepSeek V4 family — 1M context (api-docs.deepseek.com)"
+            },
+            {
+              "line": 103,
+              "text": "  [/^deepseek-v4(?:-|$)/i, 1_000_000],"
+            },
+            {
+              "line": 104,
+              "text": "  [/(?:^|\\/)deepseek-v4(?:-|$)/i, 1_000_000],"
+            },
+            {
+              "line": 105,
+              "text": "];"
+            },
+            {
+              "line": 106,
+              "text": ""
+            },
+            {
+              "line": 107,
+              "text": "function lookupBuiltinContextWindow(model: string): number | undefined {"
+            },
+            {
+              "line": 108,
+              "text": "  for (const [re, tokens] of BUILTIN_CONTEXT_WINDOWS) {"
+            },
+            {
+              "line": 109,
+              "text": "    if (re.test(model)) return tokens;"
+            },
+            {
+              "line": 110,
+              "text": "  }"
+            },
+            {
+              "line": 111,
+              "text": "  return undefined;"
+            },
+            {
+              "line": 112,
+              "text": "}"
+            },
+            {
+              "line": 113,
+              "text": ""
+            },
+            {
+              "line": 114,
+              "text": "// ─── ModelPool ───────────────────────────────────────────────────"
+            },
+            {
+              "line": 115,
+              "text": ""
+            },
+            {
+              "line": 116,
+              "text": "export class ModelPool {"
+            },
+            {
+              "line": 117,
+              "text": "  private models = new Map<string, ModelEntry>();"
+            },
+            {
+              "line": 118,
+              "text": "  private activeKey: string | undefined;"
+            },
+            {
+              "line": 119,
+              "text": "  private providerCatalog: import(\"./provider-catalog.js\").ProviderCatalog | undefined;"
+            },
+            {
+              "line": 120,
+              "text": "  private cacheDir: string | undefined;"
+            },
+            {
+              "line": 121,
+              "text": ""
+            },
+            {
+              "line": 122,
+              "text": "  setProviderCatalog(cat: import(\"./provider-catalog.js\").ProviderCatalog): void {"
+            },
+            {
+              "line": 123,
+              "text": "    this.providerCatalog = cat;"
+            },
+            {
+              "line": 124,
+              "text": "  }"
+            },
+            {
+              "line": 125,
+              "text": ""
+            },
+            {
+              "line": 126,
+              "text": "  setCacheDir(dir: string): void {"
+            },
+            {
+              "line": 127,
+              "text": "    this.cacheDir = dir;"
+            },
+            {
+              "line": 128,
+              "text": "  }"
+            },
+            {
+              "line": 129,
+              "text": ""
+            },
+            {
+              "line": 130,
+              "text": "  /**"
+            },
+            {
+              "line": 131,
+              "text": "   * For each entry that lacks an explicit maxContextTokens but has a"
+            },
+            {
+              "line": 132,
+              "text": "   * providerKey, fill it in. Lookup order:"
+            },
+            {
+              "line": 133,
+              "text": "   *   1. The provider's cached /v1/models response (most authoritative —"
+            },
+            {
+              "line": 134,
+              "text": "   *      it's what the vendor itself returned at last sync)."
+            },
+            {
+              "line": 135,
+              "text": "   *   2. The bundled OpenRouter snapshot, keyed by `<vendor>/<id>` — covers"
+            },
+            {
+              "line": 136,
+              "text": "   *      the common case where a direct-provider model (e.g. `gpt-5.5`)"
+            },
+            {
+              "line": 137,
+              "text": "   *      is also published on OpenRouter with full metadata."
+            },
+            {
+              "line": 138,
+              "text": "   *   3. A final 200k floor so unknown models still get *some* context"
+            },
+            {
+              "line": 139,
+              "text": "   *      window rather than tripping max-token math downstream."
+            },
+            {
+              "line": 140,
+              "text": "   *"
+            },
+            {
+              "line": 141,
+              "text": "   * Entries with an explicit maxContextTokens (set by the user in settings"
+            },
+            {
+              "line": 142,
+              "text": "   * or by a prior code path) are left alone — we never overwrite what the"
+            },
+            {
+              "line": 143,
+              "text": "   * user typed in."
+            },
+            {
+              "line": 144,
+              "text": "   */"
+            },
+            {
+              "line": 145,
+              "text": "  reloadCachedContextWindows(): void {"
+            },
+            {
+              "line": 146,
+              "text": "    for (const [key, entry] of this.models) {"
+            },
+            {
+              "line": 147,
+              "text": "      if (entry.maxContextTokens != null) continue;"
+            },
+            {
+              "line": 148,
+              "text": "      const resolved = this.resolveContextWindow(entry);"
+            },
+            {
+              "line": 149,
+              "text": "      if (resolved != null) {"
+            },
+            {
+              "line": 150,
+              "text": "        this.models.set(key, { ...entry, maxContextTokens: resolved });"
+            },
+            {
+              "line": 151,
+              "text": "      }"
+            },
+            {
+              "line": 152,
+              "text": "    }"
+            },
+            {
+              "line": 153,
+              "text": "  }"
+            },
+            {
+              "line": 154,
+              "text": ""
+            },
+            {
+              "line": 155,
+              "text": "  private resolveContextWindow(entry: ModelEntry): number | undefined {"
+            },
+            {
+              "line": 156,
+              "text": "    // 1. Per-provider /v1/models cache."
+            },
+            {
+              "line": 157,
+              "text": "    if (this.cacheDir && entry.providerKey) {"
+            },
+            {
+              "line": 158,
+              "text": "      const file = readCache(this.cacheDir, entry.providerKey);"
+            },
+            {
+              "line": 159,
+              "text": "      const match = file?.models.find((m) => m.id === entry.model);"
+            },
+            {
+              "line": 160,
+              "text": "      if (match?.contextLength) return match.contextLength;"
+            },
+            {
+              "line": 161,
+              "text": "    }"
+            },
+            {
+              "line": 162,
+              "text": "    // 2. OpenRouter snapshot — translate the entry's provider kind to the"
+            },
+            {
+              "line": 163,
+              "text": "    //    snapshot's `<vendor>/<id>` form."
+            },
+            {
+              "line": 164,
+              "text": "    const kind = entry.providerKey ? this.providerCatalog?.get(entry.providerKey)?.kind : undefined;"
+            },
+            {
+              "line": 165,
+              "text": "    if (kind === \"openrouter\") {"
+            },
+            {
+              "line": 166,
+              "text": "      const hit = findOpenRouterModel(entry.model);"
+            },
+            {
+              "line": 167,
+              "text": "      if (hit?.contextLength) return hit.contextLength;"
+            },
+            {
+              "line": 168,
+              "text": "    } else if (kind) {"
+            },
+            {
+              "line": 169,
+              "text": "      const vendor = OPENROUTER_VENDOR_BY_KIND[kind];"
+            },
+            {
+              "line": 170,
+              "text": "      if (vendor) {"
+            },
+            {
+              "line": 171,
+              "text": "        const hit = findOpenRouterModel(`${vendor}/${entry.model}`);"
+            },
+            {
+              "line": 172,
+              "text": "        if (hit?.contextLength) return hit.contextLength;"
+            },
+            {
+              "line": 173,
+              "text": "      }"
+            },
+            {
+              "line": 174,
+              "text": "    }"
+            },
+            {
+              "line": 175,
+              "text": "    // 3. Final floor — better than leaving it undefined and reading"
+            },
+            {
+              "line": 176,
+              "text": "    //    config.maxContextTokens (which may itself be unset)."
+            },
+            {
+              "line": 177,
+              "text": "    return FALLBACK_CONTEXT_WINDOW;"
+            },
+            {
+              "line": 178,
+              "text": "  }"
+            },
+            {
+              "line": 179,
+              "text": ""
+            },
+            {
+              "line": 180,
+              "text": "  /**"
+            },
+            {
+              "line": 181,
+              "text": "   * Build a pool from an array of model entries."
+            },
+            {
+              "line": 182,
+              "text": "   * The first entry (or the one matching `defaultKey`) becomes active."
+            },
+            {
+              "line": 183,
+              "text": "   */"
+            },
+            {
+              "line": 184,
+              "text": "  constructor(entries?: ModelEntry[], defaultKey?: string) {"
+            },
+            {
+              "line": 185,
+              "text": "    if (entries) {"
+            },
+            {
+              "line": 186,
+              "text": "      for (const e of entries) {"
+            },
+            {
+              "line": 187,
+              "text": "        this.models.set(e.key, this.withBuiltinDefaults(e));"
+            },
+            {
+              "line": 188,
+              "text": "      }"
+            },
+            {
+              "line": 189,
+              "text": "    }"
+            },
+            {
+              "line": 190,
+              "text": "    if (defaultKey && this.models.has(defaultKey)) {"
+            },
+            {
+              "line": 191,
+              "text": "      this.activeKey = defaultKey;"
+            },
+            {
+              "line": 192,
+              "text": "    } else if (entries?.length) {"
+            },
+            {
+              "line": 193,
+              "text": "      this.activeKey = entries[0]!.key;"
+            },
+            {
+              "line": 194,
+              "text": "    }"
+            },
+            {
+              "line": 195,
+              "text": "  }"
+            },
+            {
+              "line": 196,
+              "text": ""
+            },
+            {
+              "line": 197,
+              "text": "  /** Clear all registered models and active selection. */"
+            },
+            {
+              "line": 198,
+              "text": "  clear(): void {"
+            },
+            {
+              "line": 199,
+              "text": "    this.models.clear();"
+            },
+            {
+              "line": 200,
+              "text": "    this.activeKey = undefined;"
+            },
+            {
+              "line": 201,
+              "text": "  }"
+            },
+            {
+              "line": 202,
+              "text": ""
+            },
+            {
+              "line": 203,
+              "text": "  /** Register a model at runtime. */"
+            },
+            {
+              "line": 204,
+              "text": "  register(entry: ModelEntry): void {"
+            },
+            {
+              "line": 205,
+              "text": "    this.models.set(entry.key, this.withBuiltinDefaults(entry));"
+            },
+            {
+              "line": 206,
+              "text": "    if (!this.activeKey) {"
+            },
+            {
+              "line": 207,
+              "text": "      this.activeKey = entry.key;"
+            },
+            {
+              "line": 208,
+              "text": "    }"
+            },
+            {
+              "line": 209,
+              "text": "  }"
+            },
+            {
+              "line": 210,
+              "text": ""
+            },
+            {
+              "line": 211,
+              "text": "  /** Fill in known defaults (e.g. context window for DeepSeek V4) when the entry doesn't specify them. */"
+            },
+            {
+              "line": 212,
+              "text": "  private withBuiltinDefaults(entry: ModelEntry): ModelEntry {"
+            },
+            {
+              "line": 213,
+              "text": "    if (entry.maxContextTokens != null) return entry;"
+            },
+            {
+              "line": 214,
+              "text": "    const builtin = lookupBuiltinContextWindow(entry.model);"
+            },
+            {
+              "line": 215,
+              "text": "    if (builtin == null) return entry;"
+            },
+            {
+              "line": 216,
+              "text": "    return { ...entry, maxContextTokens: builtin };"
+            },
+            {
+              "line": 217,
+              "text": "  }"
+            },
+            {
+              "line": 218,
+              "text": ""
+            },
+            {
+              "line": 219,
+              "text": "  /** Switch the active model. Throws if key not found. */"
+            },
+            {
+              "line": 220,
+              "text": "  switch(key: string): ModelEntry {"
+            },
+            {
+              "line": 221,
+              "text": "    const entry = this.models.get(key);"
+            },
+            {
+              "line": 222,
+              "text": "    if (!entry) {"
+            },
+            {
+              "line": 223,
+              "text": "      const available = [...this.models.keys()].join(\", \");"
+            },
+            {
+              "line": 224,
+              "text": "      throw new Error(`Model \"${key}\" not found. Available: ${available}`);"
+            },
+            {
+              "line": 225,
+              "text": "    }"
+            },
+            {
+              "line": 226,
+              "text": "    this.activeKey = key;"
+            },
+            {
+              "line": 227,
+              "text": "    return entry;"
+            },
+            {
+              "line": 228,
+              "text": "  }"
+            },
+            {
+              "line": 229,
+              "text": ""
+            },
+            {
+              "line": 230,
+              "text": "  /** Get a model by key. No key = active model. Returns undefined if not found. */"
+            },
+            {
+              "line": 231,
+              "text": "  get(key?: string): ModelEntry | undefined {"
+            },
+            {
+              "line": 232,
+              "text": "    if (key) return this.models.get(key);"
+            },
+            {
+              "line": 233,
+              "text": "    if (this.activeKey) return this.models.get(this.activeKey);"
+            },
+            {
+              "line": 234,
+              "text": "    return undefined;"
+            },
+            {
+              "line": 235,
+              "text": "  }"
+            },
+            {
+              "line": 236,
+              "text": ""
+            },
+            {
+              "line": 237,
+              "text": "  /** Get the active model key. */"
+            },
+            {
+              "line": 238,
+              "text": "  getActiveKey(): string | undefined {"
+            },
+            {
+              "line": 239,
+              "text": "    return this.activeKey;"
+            },
+            {
+              "line": 240,
+              "text": "  }"
+            },
+            {
+              "line": 241,
+              "text": ""
+            },
+            {
+              "line": 242,
+              "text": "  /** List all registered models. */"
+            },
+            {
+              "line": 243,
+              "text": "  list(): ModelEntry[] {"
+            },
+            {
+              "line": 244,
+              "text": "    return [...this.models.values()];"
+            },
+            {
+              "line": 245,
+              "text": "  }"
+            },
+            {
+              "line": 246,
+              "text": ""
+            },
+            {
+              "line": 247,
+              "text": "  /** Number of registered models. */"
+            },
+            {
+              "line": 248,
+              "text": "  get size(): number {"
+            },
+            {
+              "line": 249,
+              "text": "    return this.models.size;"
+            },
+            {
+              "line": 250,
+              "text": "  }"
+            },
+            {
+              "line": 251,
+              "text": ""
+            },
+            {
+              "line": 252,
+              "text": "  /** Check if a key exists. */"
+            },
+            {
+              "line": 253,
+              "text": "  has(key: string): boolean {"
+            },
+            {
+              "line": 254,
+              "text": "    return this.models.has(key);"
+            },
+            {
+              "line": 255,
+              "text": "  }"
+            },
+            {
+              "line": 256,
+              "text": ""
+            },
+            {
+              "line": 257,
+              "text": "  /**"
+            },
+            {
+              "line": 258,
+              "text": "   * Build an LLMConfig (pure model identity) for the given entry. Cross-model"
+            },
+            {
+              "line": 259,
+              "text": "   * runtime knobs (temperature/timeout/retryMaxAttempts/imageDetail) are NOT"
+            },
+            {
+              "line": 260,
+              "text": "   * part of LLMConfig — they live on the Engine as ClientDefaults and are"
+            },
+            {
+              "line": 261,
+              "text": "   * threaded into the LLMClient independently. That separation lets hot-"
+            },
+            {
+              "line": 262,
+              "text": "   * switching the model replace this object wholesale without touching the"
+            },
+            {
+              "line": 263,
+              "text": "   * user's runtime preferences (and without leaking the old model's settings"
+            },
+            {
+              "line": 264,
+              "text": "   * onto a model that doesn't share them — e.g. 384k-output deepseek bleeding"
+            },
+            {
+              "line": 265,
+              "text": "   * into 128k-cap gpt-5.5)."
+            },
+            {
+              "line": 266,
+              "text": "   */"
+            },
+            {
+              "line": 267,
+              "text": "  toLLMConfig(entry: ModelEntry): LLMConfig {"
+            },
+            {
+              "line": 268,
+              "text": "    const fromCat ="
+            },
+            {
+              "line": 269,
+              "text": "      entry.providerKey && this.providerCatalog"
+            },
+            {
+              "line": 270,
+              "text": "        ? this.providerCatalog.get(entry.providerKey)"
+            },
+            {
+              "line": 271,
+              "text": "        : undefined;"
+            },
+            {
+              "line": 272,
+              "text": "    // Map provider-kind → client-factory name. client-factory only registers"
+            },
+            {
+              "line": 273,
+              "text": "    // \"anthropic\" and \"openai\" (everything else is anthropic- or openai-"
+            },
+            {
+              "line": 274,
+              "text": "    // compatible), so kinds outside that pair must collapse to one of them."
+            },
+            {
+              "line": 275,
+              "text": "    const kindToClientProvider = (kind: string | undefined): string => {"
+            },
+            {
+              "line": 276,
+              "text": "      if (!kind) return \"openai\";"
+            },
+            {
+              "line": 277,
+              "text": "      if (kind === \"anthropic\") return \"anthropic\";"
+            },
+            {
+              "line": 278,
+              "text": "      return \"openai\";"
+            },
+            {
+              "line": 279,
+              "text": "    };"
+            },
+            {
+              "line": 280,
+              "text": "    const providerKind = entry.providerKind ?? fromCat?.kind;"
+            },
+            {
+              "line": 281,
+              "text": "    return {"
+            },
+            {
+              "line": 282,
+              "text": "      provider: entry.provider || kindToClientProvider(fromCat?.kind) || \"openai\","
+            },
+            {
+              "line": 283,
+              "text": "      model: entry.model,"
+            },
+            {
+              "line": 284,
+              "text": "      modelKey: entry.key,"
+            },
+            {
+              "line": 285,
+              "text": "      ...(entry.supportsVision !== undefined ? { supportsVision: entry.supportsVision } : {}),"
+            },
+            {
+              "line": 286,
+              "text": "      apiKey: entry.apiKey ?? fromCat?.apiKey,"
+            },
+            {
+              "line": 287,
+              "text": "      baseUrl: entry.baseUrl ?? fromCat?.baseUrl,"
+            },
+            {
+              "line": 288,
+              "text": "      // No invented default: undefined lets each client apply its own fallback"
+            },
+            {
+              "line": 289,
+              "text": "      // (OpenAI omits the token field entirely; Anthropic uses its own constant)"
+            },
+            {
+              "line": 290,
+              "text": "      // instead of fabricating 8192, which silently truncates long outputs and"
+            },
+            {
+              "line": 291,
+              "text": "      // masks the real per-model cap."
+            },
+            {
+              "line": 292,
+              "text": "      maxTokens: entry.maxOutputTokens,"
+            },
+            {
+              "line": 293,
+              "text": "      ...(entry.maxContextTokens !== undefined ? { maxContextTokens: entry.maxContextTokens } : {}),"
+            },
+            {
+              "line": 294,
+              "text": "      // reasoning: entry overrides catalog. No base fallback — see class doc."
+            },
+            {
+              "line": 295,
+              "text": "      ...((entry.reasoning ?? fromCat?.reasoning)"
+            },
+            {
+              "line": 296,
+              "text": "        ? { reasoning: entry.reasoning ?? fromCat?.reasoning }"
+            },
+            {
+              "line": 297,
+              "text": "        : {}),"
+            },
+            {
+              "line": 298,
+              "text": "      // Auth command: entry overrides catalog. (TODO 7.2)"
+            },
+            {
+              "line": 299,
+              "text": "      ...((entry.authCommand ?? fromCat?.authCommand)"
+            },
+            {
+              "line": 300,
+              "text": "        ? { authCommand: entry.authCommand ?? fromCat?.authCommand }"
+            },
+            {
+              "line": 301,
+              "text": "        : {}),"
+            },
+            {
+              "line": 302,
+              "text": "      // HTTP headers: merge catalog (base) then entry (override). (TODO 7.2)"
+            },
+            {
+              "line": 303,
+              "text": "      ...(fromCat?.httpHeaders || entry.httpHeaders"
+            },
+            {
+              "line": 304,
+              "text": "        ? { httpHeaders: { ...fromCat?.httpHeaders, ...entry.httpHeaders } }"
+            },
+            {
+              "line": 305,
+              "text": "        : {}),"
+            },
+            {
+              "line": 306,
+              "text": "      ...(entry.serviceTier ? { serviceTier: entry.serviceTier } : {}),"
+            },
+            {
+              "line": 307,
+              "text": "      ...(entry.reasoningSummary ? { reasoningSummary: entry.reasoningSummary } : {}),"
+            },
+            {
+              "line": 308,
+              "text": "      // Carry the catalog kind through so the capability layer can pick"
+            },
+            {
+              "line": 309,
+              "text": "      // per-(kind, model) request-shape rules."
+            },
+            {
+              "line": 310,
+              "text": "      ...(providerKind ? { providerKind } : {}),"
+            },
+            {
+              "line": 311,
+              "text": "      ...(entry.extraBody && Object.keys(entry.extraBody).length > 0"
+            },
+            {
+              "line": 312,
+              "text": "        ? { extraBody: entry.extraBody }"
+            },
+            {
+              "line": 313,
+              "text": "        : {}),"
+            },
+            {
+              "line": 314,
+              "text": "    };"
+            },
+            {
+              "line": 315,
+              "text": "  }"
+            },
+            {
+              "line": 316,
+              "text": ""
+            },
+            {
+              "line": 317,
+              "text": "  /**"
+            },
+            {
+              "line": 318,
+              "text": "   * Build an LLMConfig for the active model (or a specific key)."
+            },
+            {
+              "line": 319,
+              "text": "   */"
+            },
+            {
+              "line": 320,
+              "text": "  resolveLLMConfig(key?: string): LLMConfig | undefined {"
+            },
+            {
+              "line": 321,
+              "text": "    const entry = this.get(key);"
+            },
+            {
+              "line": 322,
+              "text": "    if (!entry) return undefined;"
+            },
+            {
+              "line": 323,
+              "text": "    return this.toLLMConfig(entry);"
+            },
+            {
+              "line": 324,
+              "text": "  }"
+            },
+            {
+              "line": 325,
+              "text": "}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "path": "packages/core/src/engine/model-connections-pool.ts",
+      "sha256": "e5ee2a984a6d2f57eac155140873facca04d296d495af55f5f7f4edee52ce467",
+      "captureTiming": "After actual source display; initial pin predates display.",
+      "blocks": [
+        {
+          "start": 1,
+          "end": 80,
+          "lines": [
+            {
+              "line": 1,
+              "text": "/**"
+            },
+            {
+              "line": 2,
+              "text": " * Bridge settings.modelConnections[] (the unified instance store) into"
+            },
+            {
+              "line": 3,
+              "text": " * ModelPool entries, so the engine sends requests using the new catalog-driven"
+            },
+            {
+              "line": 4,
+              "text": " * model selection. Pure: instances + catalog → ModelEntry[]. apiKeyRef is"
+            },
+            {
+              "line": 5,
+              "text": " * dereferenced via resolveInstance; protocol/baseUrl/token limits come from the"
+            },
+            {
+              "line": 6,
+              "text": " * resolved catalog entry + preset."
+            },
+            {
+              "line": 7,
+              "text": " * See docs/superpowers/specs/2026-06-15-unified-model-catalog-design.md §6."
+            },
+            {
+              "line": 8,
+              "text": " */"
+            },
+            {
+              "line": 9,
+              "text": "import { resolveInstance, type ModelInstance, type Credential } from \"../model-catalog/resolve.js\";"
+            },
+            {
+              "line": 10,
+              "text": "import { applyParams } from \"../model-catalog/params.js\";"
+            },
+            {
+              "line": 11,
+              "text": "import type { CatalogEntry } from \"../model-catalog/index.js\";"
+            },
+            {
+              "line": 12,
+              "text": "import type { ModelEntry } from \"../llm/model-pool.js\";"
+            },
+            {
+              "line": 13,
+              "text": "import type { ReasoningSetting } from \"../llm/reasoning-setting.js\";"
+            },
+            {
+              "line": 14,
+              "text": ""
+            },
+            {
+              "line": 15,
+              "text": "export type { ModelInstance, Credential } from \"../model-catalog/resolve.js\";"
+            },
+            {
+              "line": 16,
+              "text": ""
+            },
+            {
+              "line": 17,
+              "text": "/** Map a catalog entry's protocol to the ModelPool `provider` (LLM client). */"
+            },
+            {
+              "line": 18,
+              "text": "function clientProvider(entry: CatalogEntry): string {"
+            },
+            {
+              "line": 19,
+              "text": "  return entry.protocol === \"anthropic-style\" ? \"anthropic\" : \"openai\";"
+            },
+            {
+              "line": 20,
+              "text": "}"
+            },
+            {
+              "line": 21,
+              "text": ""
+            },
+            {
+              "line": 22,
+              "text": "/**"
+            },
+            {
+              "line": 23,
+              "text": " * Map a connection's `paramValues.reasoning` to the engine's ReasoningSetting,"
+            },
+            {
+              "line": 24,
+              "text": " * so the new param store flows through the existing reasoning request pipeline"
+            },
+            {
+              "line": 25,
+              "text": " * (no new request-layer plumbing). enum→effort, number→budget, boolean→on/off."
+            },
+            {
+              "line": 26,
+              "text": " */"
+            },
+            {
+              "line": 27,
+              "text": "function reasoningFromParamValues("
+            },
+            {
+              "line": 28,
+              "text": "  paramValues: Record<string, unknown> | undefined,"
+            },
+            {
+              "line": 29,
+              "text": "): ReasoningSetting | undefined {"
+            },
+            {
+              "line": 30,
+              "text": "  const v = paramValues?.reasoning;"
+            },
+            {
+              "line": 31,
+              "text": "  if (typeof v === \"string\") {"
+            },
+            {
+              "line": 32,
+              "text": "    return { mode: \"effort\", effort: v as Extract<ReasoningSetting, { mode: \"effort\" }>[\"effort\"] };"
+            },
+            {
+              "line": 33,
+              "text": "  }"
+            },
+            {
+              "line": 34,
+              "text": "  if (typeof v === \"number\") return { mode: \"budget\", budgetTokens: v };"
+            },
+            {
+              "line": 35,
+              "text": "  if (typeof v === \"boolean\") return v ? { mode: \"on\" } : { mode: \"off\" };"
+            },
+            {
+              "line": 36,
+              "text": "  return undefined;"
+            },
+            {
+              "line": 37,
+              "text": "}"
+            },
+            {
+              "line": 38,
+              "text": ""
+            },
+            {
+              "line": 39,
+              "text": "/**"
+            },
+            {
+              "line": 40,
+              "text": " * Convert text model connections into ModelPool register entries. Non-text"
+            },
+            {
+              "line": 41,
+              "text": " * instances and ones whose catalogId doesn't resolve are skipped."
+            },
+            {
+              "line": 42,
+              "text": " */"
+            },
+            {
+              "line": 43,
+              "text": "export function modelEntriesFromConnections("
+            },
+            {
+              "line": 44,
+              "text": "  connections: ModelInstance[],"
+            },
+            {
+              "line": 45,
+              "text": "  credentials: Credential[],"
+            },
+            {
+              "line": 46,
+              "text": "  catalog: CatalogEntry[],"
+            },
+            {
+              "line": 47,
+              "text": "): ModelEntry[] {"
+            },
+            {
+              "line": 48,
+              "text": "  const out: ModelEntry[] = [];"
+            },
+            {
+              "line": 49,
+              "text": "  for (const inst of connections) {"
+            },
+            {
+              "line": 50,
+              "text": "    if (inst.tag !== \"text\") continue;"
+            },
+            {
+              "line": 51,
+              "text": "    const resolved = resolveInstance(inst, credentials, catalog);"
+            },
+            {
+              "line": 52,
+              "text": "    if (!resolved) continue;"
+            },
+            {
+              "line": 53,
+              "text": "    const { entry, preset } = resolved;"
+            },
+            {
+              "line": 54,
+              "text": "    const reasoning = reasoningFromParamValues(inst.paramValues);"
+            },
+            {
+              "line": 55,
+              "text": "    // Generic param passthrough: map the connection's paramValues to request-body"
+            },
+            {
+              "line": 56,
+              "text": "    // fields via each ParamSpec's wire.field. Exclude `reasoning` — it rides the"
+            },
+            {
+              "line": 57,
+              "text": "    // dedicated entry.reasoning path (per-model dynamic translation in the client);"
+            },
+            {
+              "line": 58,
+              "text": "    // emitting it here too would double-send it."
+            },
+            {
+              "line": 59,
+              "text": "    const passthroughParams = (preset?.params ?? []).filter((p) => p.name !== \"reasoning\");"
+            },
+            {
+              "line": 60,
+              "text": "    const extraBody = applyParams(inst.paramValues ?? {}, passthroughParams);"
+            },
+            {
+              "line": 61,
+              "text": "    const e: ModelEntry = {"
+            },
+            {
+              "line": 62,
+              "text": "      key: inst.id,"
+            },
+            {
+              "line": 63,
+              "text": "      provider: clientProvider(entry),"
+            },
+            {
+              "line": 64,
+              "text": "      providerKind: entry.adapterKind,"
+            },
+            {
+              "line": 65,
+              "text": "      model: resolved.model,"
+            },
+            {
+              "line": 66,
+              "text": "      ...(preset?.supportsVision !== undefined ? { supportsVision: preset.supportsVision } : {}),"
+            },
+            {
+              "line": 67,
+              "text": "      baseUrl: resolved.baseUrl,"
+            },
+            {
+              "line": 68,
+              "text": "      needsKey: resolved.needsKey,"
+            },
+            {
+              "line": 69,
+              "text": "      ...(resolved.apiKey !== undefined ? { apiKey: resolved.apiKey } : {}),"
+            },
+            {
+              "line": 70,
+              "text": "      ...(preset?.maxContextTokens !== undefined"
+            },
+            {
+              "line": 71,
+              "text": "        ? { maxContextTokens: preset.maxContextTokens }"
+            },
+            {
+              "line": 72,
+              "text": "        : {}),"
+            },
+            {
+              "line": 73,
+              "text": "      ...(preset?.maxOutputTokens !== undefined ? { maxOutputTokens: preset.maxOutputTokens } : {}),"
+            },
+            {
+              "line": 74,
+              "text": "      ...(reasoning !== undefined ? { reasoning } : {}),"
+            },
+            {
+              "line": 75,
+              "text": "      ...(Object.keys(extraBody).length > 0 ? { extraBody } : {}),"
+            },
+            {
+              "line": 76,
+              "text": "    };"
+            },
+            {
+              "line": 77,
+              "text": "    out.push(e);"
+            },
+            {
+              "line": 78,
+              "text": "  }"
+            },
+            {
+              "line": 79,
+              "text": "  return out;"
+            },
+            {
+              "line": 80,
+              "text": "}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "path": "packages/core/src/llm/provider-catalog.ts",
+      "sha256": "ec80becdb369165c233e38f60bd242aee86170232d8209b20dd9422a6499c642",
+      "captureTiming": "After actual source display; initial pin predates display.",
+      "blocks": [
+        {
+          "start": 1,
+          "end": 75,
+          "lines": [
+            {
+              "line": 1,
+              "text": "/**"
+            },
+            {
+              "line": 2,
+              "text": " * In-memory catalog of provider credentials. Mirrors settings.providers[]"
+            },
+            {
+              "line": 3,
+              "text": " * but offers a small API for add/update/remove that validates uniqueness"
+            },
+            {
+              "line": 4,
+              "text": " * and (for remove) refuses to delete a provider still referenced by a"
+            },
+            {
+              "line": 5,
+              "text": " * model entry. The caller persists changes back to settings."
+            },
+            {
+              "line": 6,
+              "text": " */"
+            },
+            {
+              "line": 7,
+              "text": ""
+            },
+            {
+              "line": 8,
+              "text": "import type { ProviderKindName } from \"./provider-kinds.js\";"
+            },
+            {
+              "line": 9,
+              "text": ""
+            },
+            {
+              "line": 10,
+              "text": "export interface ProviderConfig {"
+            },
+            {
+              "line": 11,
+              "text": "  key: string;"
+            },
+            {
+              "line": 12,
+              "text": "  label?: string;"
+            },
+            {
+              "line": 13,
+              "text": "  kind: ProviderKindName;"
+            },
+            {
+              "line": 14,
+              "text": "  baseUrl: string;"
+            },
+            {
+              "line": 15,
+              "text": "  apiKey?: string;"
+            },
+            {
+              "line": 16,
+              "text": "  /** Shell command yielding an auth token (TODO 7.2). See LLMConfig.authCommand. */"
+            },
+            {
+              "line": 17,
+              "text": "  authCommand?: string;"
+            },
+            {
+              "line": 18,
+              "text": "  /** Extra HTTP headers for this provider (TODO 7.2). See LLMConfig.httpHeaders. */"
+            },
+            {
+              "line": 19,
+              "text": "  httpHeaders?: Record<string, string>;"
+            },
+            {
+              "line": 20,
+              "text": "  protocol?: \"openai-compat\" | \"anthropic-style\";"
+            },
+            {
+              "line": 21,
+              "text": "  modelsPath?: string;"
+            },
+            {
+              "line": 22,
+              "text": "  /** Default reasoning/thinking setting for this provider. See LLMConfig. */"
+            },
+            {
+              "line": 23,
+              "text": "  reasoning?: import(\"./reasoning-setting.js\").ReasoningSetting;"
+            },
+            {
+              "line": 24,
+              "text": "}"
+            },
+            {
+              "line": 25,
+              "text": ""
+            },
+            {
+              "line": 26,
+              "text": "export class ProviderCatalog {"
+            },
+            {
+              "line": 27,
+              "text": "  private byKey = new Map<string, ProviderConfig>();"
+            },
+            {
+              "line": 28,
+              "text": ""
+            },
+            {
+              "line": 29,
+              "text": "  constructor(entries?: ProviderConfig[]) {"
+            },
+            {
+              "line": 30,
+              "text": "    for (const e of entries ?? []) this.byKey.set(e.key, e);"
+            },
+            {
+              "line": 31,
+              "text": "  }"
+            },
+            {
+              "line": 32,
+              "text": ""
+            },
+            {
+              "line": 33,
+              "text": "  list(): ProviderConfig[] {"
+            },
+            {
+              "line": 34,
+              "text": "    return [...this.byKey.values()];"
+            },
+            {
+              "line": 35,
+              "text": "  }"
+            },
+            {
+              "line": 36,
+              "text": ""
+            },
+            {
+              "line": 37,
+              "text": "  get(key: string): ProviderConfig | undefined {"
+            },
+            {
+              "line": 38,
+              "text": "    return this.byKey.get(key);"
+            },
+            {
+              "line": 39,
+              "text": "  }"
+            },
+            {
+              "line": 40,
+              "text": ""
+            },
+            {
+              "line": 41,
+              "text": "  has(key: string): boolean {"
+            },
+            {
+              "line": 42,
+              "text": "    return this.byKey.has(key);"
+            },
+            {
+              "line": 43,
+              "text": "  }"
+            },
+            {
+              "line": 44,
+              "text": ""
+            },
+            {
+              "line": 45,
+              "text": "  add(entry: ProviderConfig): void {"
+            },
+            {
+              "line": 46,
+              "text": "    if (this.byKey.has(entry.key)) {"
+            },
+            {
+              "line": 47,
+              "text": "      throw new Error(`duplicate provider key: ${entry.key}`);"
+            },
+            {
+              "line": 48,
+              "text": "    }"
+            },
+            {
+              "line": 49,
+              "text": "    this.byKey.set(entry.key, entry);"
+            },
+            {
+              "line": 50,
+              "text": "  }"
+            },
+            {
+              "line": 51,
+              "text": ""
+            },
+            {
+              "line": 52,
+              "text": "  update(key: string, patch: Partial<ProviderConfig>): void {"
+            },
+            {
+              "line": 53,
+              "text": "    const cur = this.byKey.get(key);"
+            },
+            {
+              "line": 54,
+              "text": "    if (!cur) throw new Error(`no such provider: ${key}`);"
+            },
+            {
+              "line": 55,
+              "text": "    this.byKey.set(key, { ...cur, ...patch, key: cur.key });"
+            },
+            {
+              "line": 56,
+              "text": "  }"
+            },
+            {
+              "line": 57,
+              "text": ""
+            },
+            {
+              "line": 58,
+              "text": "  remove(key: string, opts: { referencedBy: string[] }): void {"
+            },
+            {
+              "line": 59,
+              "text": "    if (opts.referencedBy.length) {"
+            },
+            {
+              "line": 60,
+              "text": "      throw new Error("
+            },
+            {
+              "line": 61,
+              "text": "        `provider ${key} still referenced by models: ${opts.referencedBy.join(\", \")}`,"
+            },
+            {
+              "line": 62,
+              "text": "      );"
+            },
+            {
+              "line": 63,
+              "text": "    }"
+            },
+            {
+              "line": 64,
+              "text": "    this.byKey.delete(key);"
+            },
+            {
+              "line": 65,
+              "text": "  }"
+            },
+            {
+              "line": 66,
+              "text": ""
+            },
+            {
+              "line": 67,
+              "text": "  /** Compute an unused key for a new provider, given a desired base. */"
+            },
+            {
+              "line": 68,
+              "text": "  deriveKey(base: string): string {"
+            },
+            {
+              "line": 69,
+              "text": "    if (!this.byKey.has(base)) return base;"
+            },
+            {
+              "line": 70,
+              "text": "    for (let i = 2; ; i++) {"
+            },
+            {
+              "line": 71,
+              "text": "      const candidate = `${base}-${i}`;"
+            },
+            {
+              "line": 72,
+              "text": "      if (!this.byKey.has(candidate)) return candidate;"
+            },
+            {
+              "line": 73,
+              "text": "    }"
+            },
+            {
+              "line": 74,
+              "text": "  }"
+            },
+            {
+              "line": 75,
+              "text": "}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "path": "packages/core/src/engine/resolve-llm-config.ts",
+      "sha256": "864b45aa4a8e41398d5191a974be7b9fb172137147109b1d2d0b05ae3335da8f",
+      "captureTiming": "After actual source display; initial pin predates display.",
+      "blocks": [
+        {
+          "start": 1,
+          "end": 74,
+          "lines": [
+            {
+              "line": 1,
+              "text": "/**"
+            },
+            {
+              "line": 2,
+              "text": " * resolveLLMConfigForTag — 单一入口:settings + tag + 可选偏好实例 id → LLMConfig。"
+            },
+            {
+              "line": 3,
+              "text": " * 所有非-engine 的 seed 场景(agent-server bootstrap / automation / dream / TUI"
+            },
+            {
+              "line": 4,
+              "text": " * 命令)都调它,避免各自手搓 { provider: settings.model.provider, ... }。"
+            },
+            {
+              "line": 5,
+              "text": " *"
+            },
+            {
+              "line": 6,
+              "text": " * 复用 modelEntriesFromConnections + 临时 ModelPool.toLLMConfig,与 engine 内部"
+            },
+            {
+              "line": 7,
+              "text": " * 长生命周期 pool 共享同一批零件,不逻辑分叉。"
+            },
+            {
+              "line": 8,
+              "text": " *"
+            },
+            {
+              "line": 9,
+              "text": " * 选择优先级:preferredId(命中才用)→ defaults[tag] → 首个可用连接。"
+            },
+            {
+              "line": 10,
+              "text": " * 返回 null = 该 tag 下没有任何可用连接,调用方据此抛明确错误。"
+            },
+            {
+              "line": 11,
+              "text": " *"
+            },
+            {
+              "line": 12,
+              "text": " * 本次只处理 text;image/video 已有独立 resolver(resolveImageProvider 等)。"
+            },
+            {
+              "line": 13,
+              "text": " */"
+            },
+            {
+              "line": 14,
+              "text": "import type { LLMConfig } from \"../types.js\";"
+            },
+            {
+              "line": 15,
+              "text": "import type { ValidatedSettings } from \"../settings/schema.js\";"
+            },
+            {
+              "line": 16,
+              "text": "import { getMergedCatalog } from \"../model-catalog/index.js\";"
+            },
+            {
+              "line": 17,
+              "text": "import { modelEntriesFromConnections } from \"./model-connections-pool.js\";"
+            },
+            {
+              "line": 18,
+              "text": "import { ModelPool } from \"../llm/model-pool.js\";"
+            },
+            {
+              "line": 19,
+              "text": ""
+            },
+            {
+              "line": 20,
+              "text": "export function resolveLLMConfigForTag("
+            },
+            {
+              "line": 21,
+              "text": "  settings: ValidatedSettings,"
+            },
+            {
+              "line": 22,
+              "text": "  tag: \"text\","
+            },
+            {
+              "line": 23,
+              "text": "  preferredInstanceId?: string,"
+            },
+            {
+              "line": 24,
+              "text": "): LLMConfig | null {"
+            },
+            {
+              "line": 25,
+              "text": "  const connections = (settings as { modelConnections?: unknown[] }).modelConnections;"
+            },
+            {
+              "line": 26,
+              "text": "  if (!Array.isArray(connections) || connections.length === 0) return null;"
+            },
+            {
+              "line": 27,
+              "text": "  const credentials = (settings as { credentials?: unknown[] }).credentials;"
+            },
+            {
+              "line": 28,
+              "text": "  const catalog = getMergedCatalog();"
+            },
+            {
+              "line": 29,
+              "text": ""
+            },
+            {
+              "line": 30,
+              "text": "  const entries = modelEntriesFromConnections("
+            },
+            {
+              "line": 31,
+              "text": "    connections as never[],"
+            },
+            {
+              "line": 32,
+              "text": "    (Array.isArray(credentials) ? credentials : []) as never[],"
+            },
+            {
+              "line": 33,
+              "text": "    catalog,"
+            },
+            {
+              "line": 34,
+              "text": "  );"
+            },
+            {
+              "line": 35,
+              "text": "  if (entries.length === 0) return null;"
+            },
+            {
+              "line": 36,
+              "text": ""
+            },
+            {
+              "line": 37,
+              "text": "  // entry.key === connection.id(见 modelEntriesFromConnections)。"
+            },
+            {
+              "line": 38,
+              "text": "  const defaultId = (settings as { defaults?: { text?: string } }).defaults?.text;"
+            },
+            {
+              "line": 39,
+              "text": "  const pick ="
+            },
+            {
+              "line": 40,
+              "text": "    (preferredInstanceId && entries.find((e) => e.key === preferredInstanceId)) ||"
+            },
+            {
+              "line": 41,
+              "text": "    (defaultId && entries.find((e) => e.key === defaultId)) ||"
+            },
+            {
+              "line": 42,
+              "text": "    entries[0];"
+            },
+            {
+              "line": 43,
+              "text": "  if (!pick) return null;"
+            },
+            {
+              "line": 44,
+              "text": "  // 用户显式选了 default/preferred 但它解析不到(连接的 catalogId 被删 →"
+            },
+            {
+              "line": 45,
+              "text": "  // modelEntriesFromConnections 静默过滤掉)→ 这里 find 落空、悄悄回退到 entries[0]"
+            },
+            {
+              "line": 46,
+              "text": "  // 是「换了个模型还不告诉你」。不改回退行为(有可用连接就用),但出一条 warn 让"
+            },
+            {
+              "line": 47,
+              "text": "  // 静默替换可见(否则用户以为还在用选的那个)。"
+            },
+            {
+              "line": 48,
+              "text": "  const wanted = preferredInstanceId ?? defaultId;"
+            },
+            {
+              "line": 49,
+              "text": "  if (wanted && pick.key !== wanted) {"
+            },
+            {
+              "line": 50,
+              "text": "    console.warn("
+            },
+            {
+              "line": 51,
+              "text": "      `[resolveLLMConfigForTag] 偏好/默认连接 \"${wanted}\" 解析不到(catalogId 可能已删)— 回退到 \"${pick.key}\"。`,"
+            },
+            {
+              "line": 52,
+              "text": "    );"
+            },
+            {
+              "line": 53,
+              "text": "  }"
+            },
+            {
+              "line": 54,
+              "text": ""
+            },
+            {
+              "line": 55,
+              "text": "  // The picked connection's catalog template needs a key but none resolved"
+            },
+            {
+              "line": 56,
+              "text": "  // (credentialId missing/points at a deleted credential). Returning null here"
+            },
+            {
+              "line": 57,
+              "text": "  // routes to the caller's existing clean \"没有可用的文本模型连接 … 请在「连接」"
+            },
+            {
+              "line": 58,
+              "text": "  // 页添加并填写凭证\" message + exit, instead of silently building a config with"
+            },
+            {
+              "line": 59,
+              "text": "  // apiKey:undefined that only fails later as a cryptic provider 401. In"
+            },
+            {
+              "line": 60,
+              "text": "  // CONTRACT: this fn's null already means \"no USABLE connection for this tag\"."
+            },
+            {
+              "line": 61,
+              "text": "  // resolveInstance's no-crash (apiKey:undefined) behavior is untouched — this"
+            },
+            {
+              "line": 62,
+              "text": "  // gate is one layer up where usability is decided."
+            },
+            {
+              "line": 63,
+              "text": "  if (pick.needsKey !== false && !pick.apiKey) {"
+            },
+            {
+              "line": 64,
+              "text": "    console.warn("
+            },
+            {
+              "line": 65,
+              "text": "      `[resolveLLMConfigForTag] 连接 \"${pick.key}\" 需要密钥但未解析到凭证(credentialId 缺失或指向已删凭证)— 视为该 tag 无可用连接。`,"
+            },
+            {
+              "line": 66,
+              "text": "    );"
+            },
+            {
+              "line": 67,
+              "text": "    return null;"
+            },
+            {
+              "line": 68,
+              "text": "  }"
+            },
+            {
+              "line": 69,
+              "text": ""
+            },
+            {
+              "line": 70,
+              "text": "  // 临时 pool 复用 toLLMConfig 的全部映射逻辑(reasoning/headers/providerKind 等)。"
+            },
+            {
+              "line": 71,
+              "text": "  const pool = new ModelPool([]);"
+            },
+            {
+              "line": 72,
+              "text": "  pool.register(pick);"
+            },
+            {
+              "line": 73,
+              "text": "  return pool.toLLMConfig(pick);"
+            },
+            {
+              "line": 74,
+              "text": "}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "path": "packages/core/src/llm/reasoning-setting.ts",
+      "sha256": "a00d2dee0e430bafb8b89a50a0a71f54cff8a6ab6766221d1dcccad3d551b11f",
+      "captureTiming": "After actual source display; initial pin predates display.",
+      "blocks": [
+        {
+          "start": 1,
+          "end": 46,
+          "lines": [
+            {
+              "line": 1,
+              "text": "/**"
+            },
+            {
+              "line": 2,
+              "text": " * ReasoningSetting — the rich, normalized reasoning/thinking config that"
+            },
+            {
+              "line": 3,
+              "text": " * replaces the old binary `thinking: \"enabled\"|\"disabled\"`."
+            },
+            {
+              "line": 4,
+              "text": " *"
+            },
+            {
+              "line": 5,
+              "text": " *  - off    : no thinking (openai-effort → disabledEffort; deepseek → type:disabled; openrouter → exclude)"
+            },
+            {
+              "line": 6,
+              "text": " *  - on     : binary \"thinking on\" for deepseek-thinking / zai (no effort levels)"
+            },
+            {
+              "line": 7,
+              "text": " *  - effort : openai-effort / openrouter — pick a level"
+            },
+            {
+              "line": 8,
+              "text": " *  - budget : anthropic-budget — explicit thinking token budget"
+            },
+            {
+              "line": 9,
+              "text": " *"
+            },
+            {
+              "line": 10,
+              "text": " * `normalizeReasoning` accepts the legacy \"enabled\"/\"disabled\" strings so any"
+            },
+            {
+              "line": 11,
+              "text": " * lingering caller/config still works (mapped to on/off)."
+            },
+            {
+              "line": 12,
+              "text": " */"
+            },
+            {
+              "line": 13,
+              "text": "import { z } from \"zod\";"
+            },
+            {
+              "line": 14,
+              "text": "import type { ReasoningEffort } from \"./capabilities/types.js\";"
+            },
+            {
+              "line": 15,
+              "text": ""
+            },
+            {
+              "line": 16,
+              "text": "// Recommended effort levels — used to render UI dropdowns and as capability"
+            },
+            {
+              "line": 17,
+              "text": "// hints. NOT a hard schema constraint: effort is a free-form, catalog-driven"
+            },
+            {
+              "line": 18,
+              "text": "// param (a model's real ladder is declared by its catalog ParamSpec, and models"
+            },
+            {
+              "line": 19,
+              "text": "// gain/rename levels over time — e.g. gpt-5.5 added \"xhigh\", some models accept"
+            },
+            {
+              "line": 20,
+              "text": "// \"max\"). The settings schema validates the *shape* (mode/field names), not the"
+            },
+            {
+              "line": 21,
+              "text": "// *value*; pinning effort to a closed enum here made one unknown level"
+            },
+            {
+              "line": 22,
+              "text": "// (a connection's paramValues.reasoning flowing through the legacy models[]"
+            },
+            {
+              "line": 23,
+              "text": "// bridge) throw in validateSettings and take the whole app down on boot."
+            },
+            {
+              "line": 24,
+              "text": "export const REASONING_EFFORTS = [\"minimal\", \"low\", \"medium\", \"high\", \"xhigh\"] as const;"
+            },
+            {
+              "line": 25,
+              "text": ""
+            },
+            {
+              "line": 26,
+              "text": "export const ReasoningSettingSchema = z.discriminatedUnion(\"mode\", ["
+            },
+            {
+              "line": 27,
+              "text": "  z.object({ mode: z.literal(\"off\") }),"
+            },
+            {
+              "line": 28,
+              "text": "  z.object({ mode: z.literal(\"on\") }),"
+            },
+            {
+              "line": 29,
+              "text": "  z.object({ mode: z.literal(\"effort\"), effort: z.string().min(1) }),"
+            },
+            {
+              "line": 30,
+              "text": "  z.object({ mode: z.literal(\"budget\"), budgetTokens: z.number().int().positive() }),"
+            },
+            {
+              "line": 31,
+              "text": "]);"
+            },
+            {
+              "line": 32,
+              "text": ""
+            },
+            {
+              "line": 33,
+              "text": "export type ReasoningSetting = z.infer<typeof ReasoningSettingSchema>;"
+            },
+            {
+              "line": 34,
+              "text": ""
+            },
+            {
+              "line": 35,
+              "text": "/** Coerce legacy \"enabled\"/\"disabled\" or an object into a ReasoningSetting. */"
+            },
+            {
+              "line": 36,
+              "text": "export function normalizeReasoning("
+            },
+            {
+              "line": 37,
+              "text": "  raw: ReasoningSetting | \"enabled\" | \"disabled\" | undefined,"
+            },
+            {
+              "line": 38,
+              "text": "): ReasoningSetting | undefined {"
+            },
+            {
+              "line": 39,
+              "text": "  if (raw == null) return undefined;"
+            },
+            {
+              "line": 40,
+              "text": "  if (raw === \"enabled\") return { mode: \"on\" };"
+            },
+            {
+              "line": 41,
+              "text": "  if (raw === \"disabled\") return { mode: \"off\" };"
+            },
+            {
+              "line": 42,
+              "text": "  return raw;"
+            },
+            {
+              "line": 43,
+              "text": "}"
+            },
+            {
+              "line": 44,
+              "text": ""
+            },
+            {
+              "line": 45,
+              "text": "/** Effort to send when a model wants \"thinking on\" but the user picked no level. */"
+            },
+            {
+              "line": 46,
+              "text": "export const DEFAULT_EFFORT: ReasoningEffort = \"medium\";"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "path": "packages/core/src/engine/runtime.ts",
+      "sha256": "9f04d688231ba7603e402f8b032ba94a24c82ec4705bdb59abc81460e1ad64ce",
+      "captureTiming": "After actual source display; initial pin predates display.",
+      "blocks": [
+        {
+          "start": 72,
+          "end": 108,
+          "lines": [
+            {
+              "line": 72,
+              "text": "  ownEngine(close: () => Promise<void>): Dispose {"
+            },
+            {
+              "line": 73,
+              "text": "    if (this.closing || this.lifetime.disposed) throw new Error(\"EngineRuntime has been closed\");"
+            },
+            {
+              "line": 74,
+              "text": "    this.engines.add(close);"
+            },
+            {
+              "line": 75,
+              "text": "    return onceDispose(() => {"
+            },
+            {
+              "line": 76,
+              "text": "      this.engines.delete(close);"
+            },
+            {
+              "line": 77,
+              "text": "    });"
+            },
+            {
+              "line": 78,
+              "text": "  }"
+            },
+            {
+              "line": 79,
+              "text": ""
+            },
+            {
+              "line": 80,
+              "text": "  reloadModelsFromSettings(): void {"
+            },
+            {
+              "line": 81,
+              "text": "    const settings = this.settings.load();"
+            },
+            {
+              "line": 82,
+              "text": "    const connections = (settings as { modelConnections?: unknown[] }).modelConnections ?? [];"
+            },
+            {
+              "line": 83,
+              "text": "    const credentials = (settings as { credentials?: unknown[] }).credentials ?? [];"
+            },
+            {
+              "line": 84,
+              "text": "    const catalog = getMergedCatalog();"
+            },
+            {
+              "line": 85,
+              "text": "    const entries = modelEntriesFromConnections("
+            },
+            {
+              "line": 86,
+              "text": "      connections as never[],"
+            },
+            {
+              "line": 87,
+              "text": "      credentials as never[],"
+            },
+            {
+              "line": 88,
+              "text": "      catalog,"
+            },
+            {
+              "line": 89,
+              "text": "    );"
+            },
+            {
+              "line": 90,
+              "text": "    this.modelPool.clear();"
+            },
+            {
+              "line": 91,
+              "text": "    if (entries.length === 0) return;"
+            },
+            {
+              "line": 92,
+              "text": "    for (const entry of entries) this.modelPool.register(entry);"
+            },
+            {
+              "line": 93,
+              "text": "    if (entries.length > 0) {"
+            },
+            {
+              "line": 94,
+              "text": "      const defaultText = (settings as { defaults?: { text?: string } }).defaults?.text;"
+            },
+            {
+              "line": 95,
+              "text": "      const key ="
+            },
+            {
+              "line": 96,
+              "text": "        defaultText && entries.some((e) => e.key === defaultText) ? defaultText : entries[0].key;"
+            },
+            {
+              "line": 97,
+              "text": "      this.modelPool.switch(key);"
+            },
+            {
+              "line": 98,
+              "text": "      this.modelPool.setCacheDir(defaultCacheDir());"
+            },
+            {
+              "line": 99,
+              "text": "      this.modelPool.reloadCachedContextWindows();"
+            },
+            {
+              "line": 100,
+              "text": "    }"
+            },
+            {
+              "line": 101,
+              "text": "  }"
+            },
+            {
+              "line": 102,
+              "text": ""
+            },
+            {
+              "line": 103,
+              "text": "  /**"
+            },
+            {
+              "line": 104,
+              "text": "   * Lazily resolve and cache a sandbox backend for `(mode, cwd)`."
+            },
+            {
+              "line": 105,
+              "text": "   *"
+            },
+            {
+              "line": 106,
+              "text": "   * Explicit modes (`seatbelt`, `bwrap`) propagate the underlying"
+            },
+            {
+              "line": 107,
+              "text": "   * `resolveSandboxBackend` throw — there is no silent downgrade. Only"
+            },
+            {
+              "line": 108,
+              "text": "   * `auto` may degrade to `off` (handled inside the resolver itself)."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "path": "packages/core/src/engine/engine.ts",
+      "sha256": "cdbfc7a777e3e304b6d365988daf6a45ff24b7cd5b62f634e3b11908c701e2e0",
+      "captureTiming": "After actual source display; initial pin predates display.",
+      "blocks": [
+        {
+          "start": 904,
+          "end": 957,
+          "lines": [
+            {
+              "line": 904,
+              "text": "      // Unified model catalog (统一模型接入方案 §6): register text"
+            },
+            {
+              "line": 905,
+              "text": "      // connections from settings.modelConnections[] into the pool — the"
+            },
+            {
+              "line": 906,
+              "text": "      // catalog-driven instance store is the sole source of model selection."
+            },
+            {
+              "line": 907,
+              "text": "      // A connection's instance id becomes its pool key. See"
+            },
+            {
+              "line": 908,
+              "text": "      // docs/superpowers/specs/2026-06-15-unified-model-catalog-design.md."
+            },
+            {
+              "line": 909,
+              "text": "      const connections = (settings as { modelConnections?: unknown[] }).modelConnections;"
+            },
+            {
+              "line": 910,
+              "text": "      if (Array.isArray(connections) && connections.length) {"
+            },
+            {
+              "line": 911,
+              "text": "        const catalog = getMergedCatalog();"
+            },
+            {
+              "line": 912,
+              "text": "        const credentials = (settings as { credentials?: unknown[] }).credentials;"
+            },
+            {
+              "line": 913,
+              "text": "        for (const entry of modelEntriesFromConnections("
+            },
+            {
+              "line": 914,
+              "text": "          connections as never[],"
+            },
+            {
+              "line": 915,
+              "text": "          (Array.isArray(credentials) ? credentials : []) as never[],"
+            },
+            {
+              "line": 916,
+              "text": "          catalog,"
+            },
+            {
+              "line": 917,
+              "text": "        )) {"
+            },
+            {
+              "line": 918,
+              "text": "          this.modelPool.register(entry);"
+            },
+            {
+              "line": 919,
+              "text": "        }"
+            },
+            {
+              "line": 920,
+              "text": "      }"
+            },
+            {
+              "line": 921,
+              "text": "      const hasConnections = Array.isArray(connections) && connections.length > 0;"
+            },
+            {
+              "line": 922,
+              "text": ""
+            },
+            {
+              "line": 923,
+              "text": "      if (hasConnections) {"
+            },
+            {
+              "line": 924,
+              "text": "        this.modelPool.setCacheDir(defaultCacheDir());"
+            },
+            {
+              "line": 925,
+              "text": "        this.modelPool.reloadCachedContextWindows();"
+            },
+            {
+              "line": 926,
+              "text": "        // Resolve the active entry from settings.defaults.text, then switch the"
+            },
+            {
+              "line": 927,
+              "text": "        // pool and write the resolved entry's credentials into config.llm, so the"
+            },
+            {
+              "line": 928,
+              "text": "        // first run() uses the right endpoint instead of whatever env-derived"
+            },
+            {
+              "line": 929,
+              "text": "        // fallback repl.ts seeded earlier."
+            },
+            {
+              "line": 930,
+              "text": "        // Sub-agents skip this resync: their llm is chosen by the parent's"
+            },
+            {
+              "line": 931,
+              "text": "        // resolveChildLlm (per-role model routing). defaults.text is the *user's*"
+            },
+            {
+              "line": 932,
+              "text": "        // current UI model selection and must not clobber a child's routed model —"
+            },
+            {
+              "line": 933,
+              "text": "        // without this guard a role's `model: flash` is silently overridden back"
+            },
+            {
+              "line": 934,
+              "text": "        // to whatever the user has active in the foreground."
+            },
+            {
+              "line": 935,
+              "text": "        if (this.config.isSubAgent !== true) {"
+            },
+            {
+              "line": 936,
+              "text": "          const defaultText = (settings as { defaults?: { text?: string } }).defaults?.text;"
+            },
+            {
+              "line": 937,
+              "text": "          // 统一 catalog only:defaults.text 命中则用;否则回退首个已注册连接,"
+            },
+            {
+              "line": 938,
+              "text": "          // 避免选未配置模型时静默沿用空种子(旧 bug:抛误导性 OPENAI_API_KEY missing)。"
+            },
+            {
+              "line": 939,
+              "text": "          let matchKey: string | undefined;"
+            },
+            {
+              "line": 940,
+              "text": "          if (defaultText && this.modelPool.list().some((e) => e.key === defaultText)) {"
+            },
+            {
+              "line": 941,
+              "text": "            matchKey = defaultText;"
+            },
+            {
+              "line": 942,
+              "text": "          } else {"
+            },
+            {
+              "line": 943,
+              "text": "            matchKey = this.modelPool.list()[0]?.key;"
+            },
+            {
+              "line": 944,
+              "text": "          }"
+            },
+            {
+              "line": 945,
+              "text": "          if (matchKey) {"
+            },
+            {
+              "line": 946,
+              "text": "            const entry = this.modelPool.switch(matchKey);"
+            },
+            {
+              "line": 947,
+              "text": "            this.config = {"
+            },
+            {
+              "line": 948,
+              "text": "              ...this.config,"
+            },
+            {
+              "line": 949,
+              "text": "              llm: this.modelPool.toLLMConfig(entry),"
+            },
+            {
+              "line": 950,
+              "text": "            };"
+            },
+            {
+              "line": 951,
+              "text": "          }"
+            },
+            {
+              "line": 952,
+              "text": "        }"
+            },
+            {
+              "line": 953,
+              "text": "      } else if (this.config.llm.apiKey) {"
+            },
+            {
+              "line": 954,
+              "text": "        // Auto-populate pool from the configured API key when no"
+            },
+            {
+              "line": 955,
+              "text": "        // modelConnections[] are configured. This lets users who only have an"
+            },
+            {
+              "line": 956,
+              "text": "        // env/seed API key still use /model to switch between the provider's"
+            },
+            {
+              "line": 957,
+              "text": "        // available models."
+            }
+          ]
+        },
+        {
+          "start": 1024,
+          "end": 1061,
+          "lines": [
+            {
+              "line": 1024,
+              "text": "      this.boundModelKey = this.pendingLlm.modelKey;"
+            },
+            {
+              "line": 1025,
+              "text": "      this.pendingLlm = undefined;"
+            },
+            {
+              "line": 1026,
+              "text": "    }"
+            },
+            {
+              "line": 1027,
+              "text": "    const key = this.boundModelKey;"
+            },
+            {
+              "line": 1028,
+              "text": "    if (!key) return; // Explicit SDK configs have no catalog/connection binding."
+            },
+            {
+              "line": 1029,
+              "text": "    const llm = this.modelPool.resolveLLMConfig(key);"
+            },
+            {
+              "line": 1030,
+              "text": "    if (!llm) throw new ConfigError(`Selected model connection \"${key}\" is no longer configured`);"
+            },
+            {
+              "line": 1031,
+              "text": "    this.config = { ...this.config, llm };"
+            },
+            {
+              "line": 1032,
+              "text": "  }"
+            },
+            {
+              "line": 1033,
+              "text": ""
+            },
+            {
+              "line": 1034,
+              "text": "  /**"
+            },
+            {
+              "line": 1035,
+              "text": "   * Auto-populate the model pool when no modelConnections[] are configured but"
+            },
+            {
+              "line": 1036,
+              "text": "   * the user has configured an API key. Detects the provider from the"
+            },
+            {
+              "line": 1037,
+              "text": "   * key prefix / baseUrl and registers all its known models."
+            },
+            {
+              "line": 1038,
+              "text": "   */"
+            },
+            {
+              "line": 1039,
+              "text": "  private autoPopulatePool(apiKey: string, baseUrl?: string): void {"
+            },
+            {
+              "line": 1040,
+              "text": "    const provider = detectProviderFromApiKey(apiKey, baseUrl);"
+            },
+            {
+              "line": 1041,
+              "text": "    if (!provider) return;"
+            },
+            {
+              "line": 1042,
+              "text": "    const entries = buildModelPool(provider, apiKey);"
+            },
+            {
+              "line": 1043,
+              "text": "    for (const e of entries) {"
+            },
+            {
+              "line": 1044,
+              "text": "      this.modelPool.register(e);"
+            },
+            {
+              "line": 1045,
+              "text": "    }"
+            },
+            {
+              "line": 1046,
+              "text": "    // Activate the first registered model as the zero-config default."
+            },
+            {
+              "line": 1047,
+              "text": "    // Users override via the onboarding wizard or `/model`."
+            },
+            {
+              "line": 1048,
+              "text": "    const defaultEntry = entries[0];"
+            },
+            {
+              "line": 1049,
+              "text": "    if (defaultEntry) {"
+            },
+            {
+              "line": 1050,
+              "text": "      const entry = this.modelPool.switch(defaultEntry.key);"
+            },
+            {
+              "line": 1051,
+              "text": "      this.config = {"
+            },
+            {
+              "line": 1052,
+              "text": "        ...this.config,"
+            },
+            {
+              "line": 1053,
+              "text": "        llm: this.modelPool.toLLMConfig(entry),"
+            },
+            {
+              "line": 1054,
+              "text": "      };"
+            },
+            {
+              "line": 1055,
+              "text": "    }"
+            },
+            {
+              "line": 1056,
+              "text": "  }"
+            },
+            {
+              "line": 1057,
+              "text": ""
+            },
+            {
+              "line": 1058,
+              "text": "  /**"
+            },
+            {
+              "line": 1059,
+              "text": "   * Register a custom tool (from product adapter) into the tool registry."
+            },
+            {
+              "line": 1060,
+              "text": "   * Must be called before run()."
+            },
+            {
+              "line": 1061,
+              "text": "   */"
+            }
+          ]
+        },
+        {
+          "start": 1426,
+          "end": 1447,
+          "lines": [
+            {
+              "line": 1426,
+              "text": "  /** Restore a cold Engine's configured model from persisted source state without resetting usage. */"
+            },
+            {
+              "line": 1427,
+              "text": "  restoreSessionModel(sessionId: string): void {"
+            },
+            {
+              "line": 1428,
+              "text": "    const state = this.sessionManager.resume(sessionId).state;"
+            },
+            {
+              "line": 1429,
+              "text": "    if (this.config.llm.model === state.model && this.config.llm.provider === state.provider)"
+            },
+            {
+              "line": 1430,
+              "text": "      return;"
+            },
+            {
+              "line": 1431,
+              "text": "    const entry ="
+            },
+            {
+              "line": 1432,
+              "text": "      this.modelPool"
+            },
+            {
+              "line": 1433,
+              "text": "        .list()"
+            },
+            {
+              "line": 1434,
+              "text": "        .find("
+            },
+            {
+              "line": 1435,
+              "text": "          (candidate) => candidate.model === state.model && candidate.provider === state.provider,"
+            },
+            {
+              "line": 1436,
+              "text": "        ) ?? this.modelPool.list().find((candidate) => candidate.model === state.model);"
+            },
+            {
+              "line": 1437,
+              "text": "    if (!entry) {"
+            },
+            {
+              "line": 1438,
+              "text": "      throw new Error(`Persisted source model is no longer configured: ${state.model}`);"
+            },
+            {
+              "line": 1439,
+              "text": "    }"
+            },
+            {
+              "line": 1440,
+              "text": "    this.config = { ...this.config, llm: this.modelPool.toLLMConfig(entry) };"
+            },
+            {
+              "line": 1441,
+              "text": "    this.boundModelKey = entry.key;"
+            },
+            {
+              "line": 1442,
+              "text": "  }"
+            },
+            {
+              "line": 1443,
+              "text": ""
+            },
+            {
+              "line": 1444,
+              "text": "  /**"
+            },
+            {
+              "line": 1445,
+              "text": "   * Run a task from start to finish. Rejects immediately when this Engine"
+            },
+            {
+              "line": 1446,
+              "text": "   * instance already has a run in progress; hosts that want queueing own that"
+            },
+            {
+              "line": 1447,
+              "text": "   * policy (for example ChatSession's FIFO queue)."
+            }
+          ]
+        },
+        {
+          "start": 3638,
+          "end": 3679,
+          "lines": [
+            {
+              "line": 3638,
+              "text": "   * next process startup defaults to the same model — without this, switches"
+            },
+            {
+              "line": 3639,
+              "text": "   * only live in memory and every restart reverts to the previously persisted"
+            },
+            {
+              "line": 3640,
+              "text": "   * defaults.text."
+            },
+            {
+              "line": 3641,
+              "text": "   */"
+            },
+            {
+              "line": 3642,
+              "text": "  switchModel(key: string, opts?: { persist?: boolean }): ModelEntry {"
+            },
+            {
+              "line": 3643,
+              "text": "    const perSession = opts?.persist === false;"
+            },
+            {
+              "line": 3644,
+              "text": "    const entry = perSession ? this.modelPool.get(key) : this.modelPool.switch(key);"
+            },
+            {
+              "line": 3645,
+              "text": "    if (!entry) {"
+            },
+            {
+              "line": 3646,
+              "text": "      const available = this.modelPool"
+            },
+            {
+              "line": 3647,
+              "text": "        .list()"
+            },
+            {
+              "line": 3648,
+              "text": "        .map((candidate) => candidate.key)"
+            },
+            {
+              "line": 3649,
+              "text": "        .join(\", \");"
+            },
+            {
+              "line": 3650,
+              "text": "      throw new Error(`Model \"${key}\" not found. Available: ${available}`);"
+            },
+            {
+              "line": 3651,
+              "text": "    }"
+            },
+            {
+              "line": 3652,
+              "text": "    // LLMConfig is pure model identity now — rotate it wholesale. Cross-model"
+            },
+            {
+              "line": 3653,
+              "text": "    // runtime knobs (temperature/timeout/retryMaxAttempts/imageDetail) live on"
+            },
+            {
+              "line": 3654,
+              "text": "    // this.config.clientDefaults and survive the switch untouched."
+            },
+            {
+              "line": 3655,
+              "text": "    const nextLlm = this.modelPool.toLLMConfig(entry);"
+            },
+            {
+              "line": 3656,
+              "text": "    if (this.runInProgress) this.pendingLlm = nextLlm;"
+            },
+            {
+              "line": 3657,
+              "text": "    else {"
+            },
+            {
+              "line": 3658,
+              "text": "      this.pendingLlm = undefined;"
+            },
+            {
+              "line": 3659,
+              "text": "      this.boundModelKey = entry.key;"
+            },
+            {
+              "line": 3660,
+              "text": "      this.config = { ...this.config, llm: nextLlm };"
+            },
+            {
+              "line": 3661,
+              "text": "    }"
+            },
+            {
+              "line": 3662,
+              "text": "    // persist: false is the per-session path (ChatSession) — switching one"
+            },
+            {
+              "line": 3663,
+              "text": "    // session's model must not rewrite settings.defaults.text, the boot"
+            },
+            {
+              "line": 3664,
+              "text": "    // default every future session inherits."
+            },
+            {
+              "line": 3665,
+              "text": "    if (!perSession) persistActiveModel(entry);"
+            },
+            {
+              "line": 3666,
+              "text": "    return entry;"
+            },
+            {
+              "line": 3667,
+              "text": "  }"
+            },
+            {
+              "line": 3668,
+              "text": ""
+            },
+            {
+              "line": 3669,
+              "text": "  /**"
+            },
+            {
+              "line": 3670,
+              "text": "   * Zero the legacy/model-scoped token/cache usage window on disk. The"
+            },
+            {
+              "line": 3671,
+              "text": "   * whole-session cumulative counters are intentionally left alone."
+            },
+            {
+              "line": 3672,
+              "text": "   */"
+            },
+            {
+              "line": 3673,
+              "text": "  resetSessionUsage(sessionId: string): void {"
+            },
+            {
+              "line": 3674,
+              "text": "    const zero: TokenUsage = { promptTokens: 0, completionTokens: 0, totalTokens: 0 };"
+            },
+            {
+              "line": 3675,
+              "text": "    // If the session is mid-run right now, update its live state so the next"
+            },
+            {
+              "line": 3676,
+              "text": "    // turn-boundary write doesn't re-fold a stale baseline."
+            },
+            {
+              "line": 3677,
+              "text": "    if (this.activeRunSession?.state.sessionId === sessionId) {"
+            },
+            {
+              "line": 3678,
+              "text": "      this.activeRunSession.state.tokenUsage = { ...zero };"
+            },
+            {
+              "line": 3679,
+              "text": "    }"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "path": "packages/core/src/llm/model-pool.test.ts",
+      "sha256": "19b494027ea63d1ca55ea489951e984f305f6d65128d537f868c37ee2ea953a7",
+      "captureTiming": "After actual source display; initial pin predates display.",
+      "blocks": [
+        {
+          "start": 1,
+          "end": 43,
+          "lines": [
+            {
+              "line": 1,
+              "text": "import { describe, it, expect } from \"bun:test\";"
+            },
+            {
+              "line": 2,
+              "text": "import { ModelPool } from \"./model-pool.js\";"
+            },
+            {
+              "line": 3,
+              "text": ""
+            },
+            {
+              "line": 4,
+              "text": "describe(\"ModelPool.toLLMConfig maxTokens\", () => {"
+            },
+            {
+              "line": 5,
+              "text": "  it(\"leaves maxTokens undefined when the entry has no maxOutputTokens\", () => {"
+            },
+            {
+              "line": 6,
+              "text": "    const pool = new ModelPool();"
+            },
+            {
+              "line": 7,
+              "text": "    const cfg = pool.toLLMConfig({"
+            },
+            {
+              "line": 8,
+              "text": "      key: \"gpt-5.5\","
+            },
+            {
+              "line": 9,
+              "text": "      provider: \"openai\","
+            },
+            {
+              "line": 10,
+              "text": "      model: \"gpt-5.5\","
+            },
+            {
+              "line": 11,
+              "text": "      // no maxOutputTokens — must NOT invent 8192"
+            },
+            {
+              "line": 12,
+              "text": "    });"
+            },
+            {
+              "line": 13,
+              "text": "    expect(cfg.maxTokens).toBeUndefined();"
+            },
+            {
+              "line": 14,
+              "text": "  });"
+            },
+            {
+              "line": 15,
+              "text": ""
+            },
+            {
+              "line": 16,
+              "text": "  it(\"carries maxOutputTokens through unchanged when present\", () => {"
+            },
+            {
+              "line": 17,
+              "text": "    const pool = new ModelPool();"
+            },
+            {
+              "line": 18,
+              "text": "    const cfg = pool.toLLMConfig({"
+            },
+            {
+              "line": 19,
+              "text": "      key: \"deepseek\","
+            },
+            {
+              "line": 20,
+              "text": "      provider: \"openai\","
+            },
+            {
+              "line": 21,
+              "text": "      model: \"deepseek-chat\","
+            },
+            {
+              "line": 22,
+              "text": "      maxOutputTokens: 128000,"
+            },
+            {
+              "line": 23,
+              "text": "    });"
+            },
+            {
+              "line": 24,
+              "text": "    expect(cfg.maxTokens).toBe(128000);"
+            },
+            {
+              "line": 25,
+              "text": "  });"
+            },
+            {
+              "line": 26,
+              "text": "});"
+            },
+            {
+              "line": 27,
+              "text": ""
+            },
+            {
+              "line": 28,
+              "text": "describe(\"ModelPool.toLLMConfig extraBody passthrough\", () => {"
+            },
+            {
+              "line": 29,
+              "text": "  it(\"carries entry.extraBody into LLMConfig\", () => {"
+            },
+            {
+              "line": 30,
+              "text": "    const pool = new ModelPool([]);"
+            },
+            {
+              "line": 31,
+              "text": "    const entry = { key: \"k\", provider: \"openai\", model: \"m\", apiKey: \"x\", baseUrl: \"u\", extraBody: { temperature: 0.7, top_p: 0.9 } };"
+            },
+            {
+              "line": 32,
+              "text": "    pool.register(entry as never);"
+            },
+            {
+              "line": 33,
+              "text": "    const cfg = pool.toLLMConfig(entry as never);"
+            },
+            {
+              "line": 34,
+              "text": "    expect(cfg.extraBody).toEqual({ temperature: 0.7, top_p: 0.9 });"
+            },
+            {
+              "line": 35,
+              "text": "  });"
+            },
+            {
+              "line": 36,
+              "text": "  it(\"omits extraBody when entry has none\", () => {"
+            },
+            {
+              "line": 37,
+              "text": "    const pool = new ModelPool([]);"
+            },
+            {
+              "line": 38,
+              "text": "    const entry = { key: \"k2\", provider: \"openai\", model: \"m\", apiKey: \"x\", baseUrl: \"u\" };"
+            },
+            {
+              "line": 39,
+              "text": "    pool.register(entry as never);"
+            },
+            {
+              "line": 40,
+              "text": "    const cfg = pool.toLLMConfig(entry as never);"
+            },
+            {
+              "line": 41,
+              "text": "    expect(cfg.extraBody).toBeUndefined();"
+            },
+            {
+              "line": 42,
+              "text": "  });"
+            },
+            {
+              "line": 43,
+              "text": "});"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "path": "packages/core/src/engine/model-connections-pool.test.ts",
+      "sha256": "89f6432dbf5a32dccc996d4f5b7344d6e8dcc24b2ea4d6527482faa606e2fa87",
+      "captureTiming": "After actual source display; initial pin predates display.",
+      "blocks": [
+        {
+          "start": 160,
+          "end": 229,
+          "lines": [
+            {
+              "line": 160,
+              "text": "  test(\"carries token limits from the matched preset\", () => {"
+            },
+            {
+              "line": 161,
+              "text": "    const insts: ModelInstance[] = ["
+            },
+            {
+              "line": 162,
+              "text": "      { id: \"g\", catalogId: \"openai\", tag: \"text\", model: \"gpt-5.5\", credentialId: \"openai-acct\" },"
+            },
+            {
+              "line": 163,
+              "text": "    ];"
+            },
+            {
+              "line": 164,
+              "text": "    const e = modelEntriesFromConnections(insts, CREDS, CATALOG)[0]!;"
+            },
+            {
+              "line": 165,
+              "text": "    expect(e.maxContextTokens).toBe(400000);"
+            },
+            {
+              "line": 166,
+              "text": "    expect(e.maxOutputTokens).toBe(128000);"
+            },
+            {
+              "line": 167,
+              "text": "  });"
+            },
+            {
+              "line": 168,
+              "text": ""
+            },
+            {
+              "line": 169,
+              "text": "  test(\"paramValues.reasoning enum → ModelEntry.reasoning effort\", () => {"
+            },
+            {
+              "line": 170,
+              "text": "    const insts: ModelInstance[] = ["
+            },
+            {
+              "line": 171,
+              "text": "      {"
+            },
+            {
+              "line": 172,
+              "text": "        id: \"g\","
+            },
+            {
+              "line": 173,
+              "text": "        catalogId: \"openai\","
+            },
+            {
+              "line": 174,
+              "text": "        tag: \"text\","
+            },
+            {
+              "line": 175,
+              "text": "        model: \"gpt-5.5\","
+            },
+            {
+              "line": 176,
+              "text": "        credentialId: \"openai-acct\","
+            },
+            {
+              "line": 177,
+              "text": "        paramValues: { reasoning: \"high\" },"
+            },
+            {
+              "line": 178,
+              "text": "      },"
+            },
+            {
+              "line": 179,
+              "text": "    ];"
+            },
+            {
+              "line": 180,
+              "text": "    const e = modelEntriesFromConnections(insts, CREDS, CATALOG)[0]!;"
+            },
+            {
+              "line": 181,
+              "text": "    expect(e.reasoning).toEqual({ mode: \"effort\", effort: \"high\" });"
+            },
+            {
+              "line": 182,
+              "text": "  });"
+            },
+            {
+              "line": 183,
+              "text": ""
+            },
+            {
+              "line": 184,
+              "text": "  test(\"paramValues.reasoning number → ModelEntry.reasoning budget\", () => {"
+            },
+            {
+              "line": 185,
+              "text": "    const insts: ModelInstance[] = ["
+            },
+            {
+              "line": 186,
+              "text": "      {"
+            },
+            {
+              "line": 187,
+              "text": "        id: \"c\","
+            },
+            {
+              "line": 188,
+              "text": "        catalogId: \"anthropic\","
+            },
+            {
+              "line": 189,
+              "text": "        tag: \"text\","
+            },
+            {
+              "line": 190,
+              "text": "        model: \"claude-opus-4-7\","
+            },
+            {
+              "line": 191,
+              "text": "        credentialId: \"anth-acct\","
+            },
+            {
+              "line": 192,
+              "text": "        paramValues: { reasoning: 8192 },"
+            },
+            {
+              "line": 193,
+              "text": "      },"
+            },
+            {
+              "line": 194,
+              "text": "    ];"
+            },
+            {
+              "line": 195,
+              "text": "    const e = modelEntriesFromConnections(insts, CREDS, CATALOG)[0]!;"
+            },
+            {
+              "line": 196,
+              "text": "    expect(e.reasoning).toEqual({ mode: \"budget\", budgetTokens: 8192 });"
+            },
+            {
+              "line": 197,
+              "text": "  });"
+            },
+            {
+              "line": 198,
+              "text": ""
+            },
+            {
+              "line": 199,
+              "text": "  test(\"paramValues.reasoning boolean → ModelEntry.reasoning on/off\", () => {"
+            },
+            {
+              "line": 200,
+              "text": "    const on: ModelInstance[] = ["
+            },
+            {
+              "line": 201,
+              "text": "      {"
+            },
+            {
+              "line": 202,
+              "text": "        id: \"d\","
+            },
+            {
+              "line": 203,
+              "text": "        catalogId: \"openai\","
+            },
+            {
+              "line": 204,
+              "text": "        tag: \"text\","
+            },
+            {
+              "line": 205,
+              "text": "        model: \"gpt-4o\","
+            },
+            {
+              "line": 206,
+              "text": "        credentialId: \"openai-acct\","
+            },
+            {
+              "line": 207,
+              "text": "        paramValues: { reasoning: true },"
+            },
+            {
+              "line": 208,
+              "text": "      },"
+            },
+            {
+              "line": 209,
+              "text": "    ];"
+            },
+            {
+              "line": 210,
+              "text": "    expect(modelEntriesFromConnections(on, CREDS, CATALOG)[0]!.reasoning).toEqual({ mode: \"on\" });"
+            },
+            {
+              "line": 211,
+              "text": "    const off: ModelInstance[] = ["
+            },
+            {
+              "line": 212,
+              "text": "      {"
+            },
+            {
+              "line": 213,
+              "text": "        id: \"d\","
+            },
+            {
+              "line": 214,
+              "text": "        catalogId: \"openai\","
+            },
+            {
+              "line": 215,
+              "text": "        tag: \"text\","
+            },
+            {
+              "line": 216,
+              "text": "        model: \"gpt-4o\","
+            },
+            {
+              "line": 217,
+              "text": "        credentialId: \"openai-acct\","
+            },
+            {
+              "line": 218,
+              "text": "        paramValues: { reasoning: false },"
+            },
+            {
+              "line": 219,
+              "text": "      },"
+            },
+            {
+              "line": 220,
+              "text": "    ];"
+            },
+            {
+              "line": 221,
+              "text": "    expect(modelEntriesFromConnections(off, CREDS, CATALOG)[0]!.reasoning).toEqual({ mode: \"off\" });"
+            },
+            {
+              "line": 222,
+              "text": "  });"
+            },
+            {
+              "line": 223,
+              "text": ""
+            },
+            {
+              "line": 224,
+              "text": "  test(\"no paramValues → no reasoning on the entry\", () => {"
+            },
+            {
+              "line": 225,
+              "text": "    const insts: ModelInstance[] = ["
+            },
+            {
+              "line": 226,
+              "text": "      { id: \"g\", catalogId: \"openai\", tag: \"text\", model: \"gpt-4o\", credentialId: \"openai-acct\" },"
+            },
+            {
+              "line": 227,
+              "text": "    ];"
+            },
+            {
+              "line": 228,
+              "text": "    expect(modelEntriesFromConnections(insts, CREDS, CATALOG)[0]!.reasoning).toBeUndefined();"
+            },
+            {
+              "line": 229,
+              "text": "  });"
+            }
+          ]
+        },
+        {
+          "start": 297,
+          "end": 321,
+          "lines": [
+            {
+              "line": 297,
+              "text": "describe(\"modelEntriesFromConnections flows non-reasoning params to extraBody\", () => {"
+            },
+            {
+              "line": 298,
+              "text": "  it(\"maps paramValues to extraBody via wire.field; reasoning stays separate\", () => {"
+            },
+            {
+              "line": 299,
+              "text": "    const conns = ["
+            },
+            {
+              "line": 300,
+              "text": "      {"
+            },
+            {
+              "line": 301,
+              "text": "        id: \"z\","
+            },
+            {
+              "line": 302,
+              "text": "        catalogId: \"zhipu-p1\","
+            },
+            {
+              "line": 303,
+              "text": "        tag: \"text\","
+            },
+            {
+              "line": 304,
+              "text": "        model: \"glm-5.2\","
+            },
+            {
+              "line": 305,
+              "text": "        credentialId: \"z-key\","
+            },
+            {
+              "line": 306,
+              "text": "        paramValues: { reasoning: \"high\", thinking_type: \"enabled\", temperature: 1, top_p: 0.95 },"
+            },
+            {
+              "line": 307,
+              "text": "      },"
+            },
+            {
+              "line": 308,
+              "text": "    ] as never;"
+            },
+            {
+              "line": 309,
+              "text": "    const [e] = modelEntriesFromConnections(conns, credsP1, catalogP1);"
+            },
+            {
+              "line": 310,
+              "text": "    expect(e.reasoning).toEqual({ mode: \"effort\", effort: \"high\" });"
+            },
+            {
+              "line": 311,
+              "text": "    expect(e.extraBody).toEqual({ thinking: { type: \"enabled\" }, temperature: 1, top_p: 0.95 });"
+            },
+            {
+              "line": 312,
+              "text": "    expect((e.extraBody as any)?.reasoning_effort).toBeUndefined();"
+            },
+            {
+              "line": 313,
+              "text": "  });"
+            },
+            {
+              "line": 314,
+              "text": "  it(\"no params → no extraBody\", () => {"
+            },
+            {
+              "line": 315,
+              "text": "    const conns = ["
+            },
+            {
+              "line": 316,
+              "text": "      { id: \"z2\", catalogId: \"zhipu-p1\", tag: \"text\", model: \"glm-5.2\", credentialId: \"z-key\" },"
+            },
+            {
+              "line": 317,
+              "text": "    ] as never;"
+            },
+            {
+              "line": 318,
+              "text": "    const [e] = modelEntriesFromConnections(conns, credsP1, catalogP1);"
+            },
+            {
+              "line": 319,
+              "text": "    expect(e.extraBody).toBeUndefined();"
+            },
+            {
+              "line": 320,
+              "text": "  });"
+            },
+            {
+              "line": 321,
+              "text": "});"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "path": "packages/core/src/engine/resolve-llm-config.test.ts",
+      "sha256": "892f5c259e4553d8508220bef233459f81f1d8106567c2e85bc5ee311de59f28",
+      "captureTiming": "After actual source display; initial pin predates display.",
+      "blocks": [
+        {
+          "start": 50,
+          "end": 65,
+          "lines": [
+            {
+              "line": 50,
+              "text": "  it(\"falls back to first usable text connection when defaults.text unset\", () => {"
+            },
+            {
+              "line": 51,
+              "text": "    const s = settingsWith({ defaults: {} });"
+            },
+            {
+              "line": 52,
+              "text": "    const cfg = resolveLLMConfigForTag(s, \"text\");"
+            },
+            {
+              "line": 53,
+              "text": "    expect(cfg!.apiKey).toBe(\"sk-test\");"
+            },
+            {
+              "line": 54,
+              "text": "  });"
+            },
+            {
+              "line": 55,
+              "text": ""
+            },
+            {
+              "line": 56,
+              "text": "  it(\"returns null when no text connection exists\", () => {"
+            },
+            {
+              "line": 57,
+              "text": "    const s = settingsWith({ modelConnections: [], defaults: {} });"
+            },
+            {
+              "line": 58,
+              "text": "    expect(resolveLLMConfigForTag(s, \"text\")).toBeNull();"
+            },
+            {
+              "line": 59,
+              "text": "  });"
+            },
+            {
+              "line": 60,
+              "text": ""
+            },
+            {
+              "line": 61,
+              "text": "  it(\"preferredId that does not resolve falls back to defaults.text\", () => {"
+            },
+            {
+              "line": 62,
+              "text": "    const cfg = resolveLLMConfigForTag(settingsWith(), \"text\", \"nonexistent\");"
+            },
+            {
+              "line": 63,
+              "text": "    expect(cfg!.model).toBe(\"deepseek-v4-flash\");"
+            },
+            {
+              "line": 64,
+              "text": "  });"
+            },
+            {
+              "line": 65,
+              "text": "});"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "productExecution": 0
+}

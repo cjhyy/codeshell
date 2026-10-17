@@ -1,0 +1,14 @@
+{
+  "command": [
+    "rg",
+    "-n",
+    "model-discovery|discoverCodexModels",
+    "packages/coding/src/external-runtimes/index.ts"
+  ],
+  "exitCode": 0,
+  "stdout": "38:export { discoverCodexModels } from \"./codex/model-discovery.js\";\n39:export type { CodexDiscoveredModel } from \"./codex/model-discovery.js\";\n",
+  "stderr": "",
+  "pinReference": "adjacent-initial-pins.json",
+  "readAt": "2026-10-17T18:29:56.509892+00:00",
+  "scope": "export navigation only; no barrel import or execution"
+}

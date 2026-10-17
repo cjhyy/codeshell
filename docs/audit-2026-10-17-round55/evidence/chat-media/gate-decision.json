@@ -1,0 +1,181 @@
+{
+  "createdUTC": "2026-10-17T18:30:44.178877+00:00",
+  "canonicalRows": [
+    {
+      "document": "docs/audit-2026-10-17-round11/evidence/chat-source-manifest.json",
+      "jsonPointer": "/files/6",
+      "row": {
+        "path": "packages/chat/src/media.ts",
+        "frozenSha256": "9cd43efac474d03615408fd8ab094c3136ef1972d399b72fc30c362487dabe14",
+        "currentSha256": "9cd43efac474d03615408fd8ab094c3136ef1972d399b72fc30c362487dabe14",
+        "currentMatchesFrozen": true,
+        "scope": "full source read; no download/upload/security execution"
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round20/evidence/root-source-manifest.json",
+      "jsonPointer": "/files/0",
+      "row": {
+        "path": "packages/chat/src/media.ts",
+        "bytes": 9244,
+        "sha256": "9cd43efac474d03615408fd8ab094c3136ef1972d399b72fc30c362487dabe14",
+        "scope": "Full mixed source static read; only mediaKind actual runtime calls. Type imports+node:net builtin; other exports not called.",
+        "frozenBlobVerified": true,
+        "currentMatchesFrozen": true,
+        "lineCount": 272
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round23/evidence/root-source-manifest.json",
+      "jsonPointer": "/files/7",
+      "row": {
+        "path": "packages/chat/src/media.ts",
+        "bytes": 9244,
+        "sha256": "9cd43efac474d03615408fd8ab094c3136ef1972d399b72fc30c362487dabe14",
+        "scope": "Full exploratory static only; round20 mediaKind controls known, no download/network/attachment/security/queue experiment.",
+        "lineCount": 272,
+        "frozenBlobVerified": true,
+        "currentMatchesFrozen": true
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round30/evidence/data-prep/source-manifest.json",
+      "jsonPointer": "/files/11",
+      "row": {
+        "path": "packages/chat/src/media.ts",
+        "kind": "hash-only",
+        "selectedRanges": [],
+        "semanticLines": 0,
+        "bytes": 9244,
+        "lines": 272,
+        "initialFilesystemSha256": "9cd43efac474d03615408fd8ab094c3136ef1972d399b72fc30c362487dabe14",
+        "initialCaptureUtc": "2026-10-17T11:43:05.903688+00:00",
+        "initialSemanticReadSha256": null,
+        "captureTiming": "Before semantic source/test consumer read; rg filename/import/function locator only",
+        "semanticReadUtc": null,
+        "semanticReadTimingNote": "Never semantically read in this prep.",
+        "frozenFilesystemSha256": "9cd43efac474d03615408fd8ab094c3136ef1972d399b72fc30c362487dabe14",
+        "frozenReadUtc": "2026-10-17T11:46:36.098427+00:00",
+        "unchangedSinceInitialFilesystemPin": true,
+        "gitBlobCompared": false,
+        "purpose": "Pinned from an initial consumer locator but not semantically read or included in this prep semantic line coverage."
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round30/evidence/data-source-manifest.json",
+      "jsonPointer": "/hashOnlyFiles/0",
+      "row": {
+        "path": "packages/chat/src/media.ts",
+        "sha256": "9cd43efac474d03615408fd8ab094c3136ef1972d399b72fc30c362487dabe14",
+        "bytes": 9244,
+        "lines": 272,
+        "coverage": "hash-only",
+        "selectedRanges": [],
+        "semanticLines": 0,
+        "firstFilesystemSha256": "9cd43efac474d03615408fd8ab094c3136ef1972d399b72fc30c362487dabe14",
+        "initialSemanticReadSha256": null,
+        "semanticReadReusedFromPrep": false,
+        "newSemanticReadForFormalRound": false,
+        "formalFilesystemPinUtc": "2026-10-17T11:51:19.733022+00:00",
+        "gitBlobComparedByAuthor": false,
+        "prepSourceRow": {
+          "path": "packages/chat/src/media.ts",
+          "kind": "hash-only",
+          "selectedRanges": [],
+          "semanticLines": 0,
+          "bytes": 9244,
+          "lines": 272,
+          "initialFilesystemSha256": "9cd43efac474d03615408fd8ab094c3136ef1972d399b72fc30c362487dabe14",
+          "initialCaptureUtc": "2026-10-17T11:43:05.903688+00:00",
+          "initialSemanticReadSha256": null,
+          "captureTiming": "Before semantic source/test consumer read; rg filename/import/function locator only",
+          "semanticReadUtc": null,
+          "semanticReadTimingNote": "Never semantically read in this prep.",
+          "frozenFilesystemSha256": "9cd43efac474d03615408fd8ab094c3136ef1972d399b72fc30c362487dabe14",
+          "frozenReadUtc": "2026-10-17T11:46:36.098427+00:00",
+          "unchangedSinceInitialFilesystemPin": true,
+          "gitBlobCompared": false,
+          "purpose": "Pinned from an initial consumer locator but not semantically read or included in this prep semantic line coverage."
+        }
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round30/evidence/data-source-manifest.json",
+      "jsonPointer": "/hashOnlyFiles/0/prepSourceRow",
+      "row": {
+        "path": "packages/chat/src/media.ts",
+        "kind": "hash-only",
+        "selectedRanges": [],
+        "semanticLines": 0,
+        "bytes": 9244,
+        "lines": 272,
+        "initialFilesystemSha256": "9cd43efac474d03615408fd8ab094c3136ef1972d399b72fc30c362487dabe14",
+        "initialCaptureUtc": "2026-10-17T11:43:05.903688+00:00",
+        "initialSemanticReadSha256": null,
+        "captureTiming": "Before semantic source/test consumer read; rg filename/import/function locator only",
+        "semanticReadUtc": null,
+        "semanticReadTimingNote": "Never semantically read in this prep.",
+        "frozenFilesystemSha256": "9cd43efac474d03615408fd8ab094c3136ef1972d399b72fc30c362487dabe14",
+        "frozenReadUtc": "2026-10-17T11:46:36.098427+00:00",
+        "unchangedSinceInitialFilesystemPin": true,
+        "gitBlobCompared": false,
+        "purpose": "Pinned from an initial consumer locator but not semantically read or included in this prep semantic line coverage."
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round43/evidence/dataset-frontier/source-manifest.json",
+      "jsonPointer": "/hashOnlyFiles/19",
+      "row": {
+        "path": "packages/chat/src/media.ts",
+        "bytes": 9244,
+        "sha256": "9cd43efac474d03615408fd8ab094c3136ef1972d399b72fc30c362487dabe14",
+        "firstSha256": "9cd43efac474d03615408fd8ab094c3136ef1972d399b72fc30c362487dabe14",
+        "matchesFirstPin": true,
+        "firstPinArtifact": "data-selection-pins.json",
+        "coverage": "hash-only; no product body semantic reading",
+        "firstPinCapturedAtUTC": "2026-10-17T14:34:49.891698+00:00"
+      }
+    }
+  ],
+  "canonicalMetadataReadScope": {
+    "containers": [
+      "docs/audit-2026-10-17-round11/evidence/chat-source-manifest.json",
+      "docs/audit-2026-10-17-round20/evidence/root-source-manifest.json",
+      "docs/audit-2026-10-17-round23/evidence/root-source-manifest.json",
+      "docs/audit-2026-10-17-round30/evidence/data-prep/source-manifest.json",
+      "docs/audit-2026-10-17-round30/evidence/data-source-manifest.json",
+      "docs/audit-2026-10-17-round43/evidence/dataset-frontier/source-manifest.json"
+    ],
+    "recursiveValueCounts": {
+      "objects": 156,
+      "arrays": 115,
+      "valueScalars": 1511,
+      "strings": 800
+    },
+    "actualPrintCapCharsPerRow": 1500,
+    "rowsLongerThanPrintCap": [],
+    "notWholeCorpusScan": true
+  },
+  "originalFullDecision": "R11 files6 scope full source read; R20 files0 Full mixed source static and media-kind.md13 explicitly entire mixed module static read; R23 files7 Full exploratory and frontier-selection5 actual file read. Same current SHA, runtime exclusions retained. R30/R43 later hash-only records do not erase prior full.",
+  "directionChange": "Initial body-before-old-full exclusion preserved; Root then explicitly authorized same-SHA selected review of a concrete combined body+attachment question. No new unique coverage claimed and no arbitrary fallback selected.",
+  "actualCanonicalMarkdownRead": "Matching lines of R20 media-kind.md3/8/11/13/17/21, R23 frontier5/13, old chat-data5/17/19/21/23/25/30/40, plus entire small R11 chat-candidates.json as displayed. Not whole MD reports.",
+  "oldCauses": "CHD02 safeAttachmentName UTF16 boundary remains existing; filename/MIME conflict without contract and concurrent same-object tracker suspicion explicitly excluded by old canonical metadata. Mattermost grammar/Discord failure/platform quotas not reopened. No candidate depends on external platform facts.",
+  "targetedExactHistory": {
+    "hitFiles": 46,
+    "note": "Targeted exact raw-text path/SHA filename search only; metadata hit files hashed, not full corpus parsed. Raw-text search does not assert exhaustive escaped JSON-value detection. Root shared batch will own broader corpus/cause gate.",
+    "initialFilterPendingRetained": true,
+    "endingScopeClarification": "Root shared batch includes54 and excludesformal55+; all direct-hit paths checked separately. Initial raw hit record not rewritten."
+  },
+  "sharedBatch": {
+    "sourceBatchPath": "/tmp/codeshell-audit-round125-agent-registry/history-batch.json",
+    "sourceBatchSha256": "2c09e39e6c332c5f04395af3c02d637bc3dabec28a7045c9817aa7e98ae88b27",
+    "historyFiles": 5433,
+    "jsonValueScalarsVisited": 3997418,
+    "errors": [],
+    "excludedFormalAtOrAbove": 55,
+    "totalMediaMatches": 353,
+    "retainedHits": 100,
+    "capPerTarget": 100,
+    "readerRole": "Root machine scan projection only, not own full scan or semantic reading of all353 matches or100 saved values. Actual contexts read are original canonical scopes listed above."
+  }
+}

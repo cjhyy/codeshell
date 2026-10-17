@@ -1,0 +1,41 @@
+[
+  {
+    "path": "packages/desktop/src/main/external-runtime-model-service.ts",
+    "bytes": 3570,
+    "sha256": "fb19c731974164e7ec21f12be97c4caa68137a1a43fc959e522f92d21d6b422d",
+    "displayRanges": [
+      [
+        1,
+        94
+      ]
+    ],
+    "initialPinReference": "adjacent-initial-pins.json",
+    "displayAt": "2026-10-17T18:27:37.627959+00:00"
+  },
+  {
+    "path": "packages/coding/src/external-runtimes/codex/model-discovery.test.ts",
+    "bytes": 8357,
+    "sha256": "9089b7bf758ae3d7085c985ba971a981548963b0e5b527a7b60cac33744d6115",
+    "displayRanges": [
+      [
+        1,
+        130
+      ]
+    ],
+    "initialPinReference": "adjacent-initial-pins.json",
+    "displayAt": "2026-10-17T18:27:37.629665+00:00"
+  },
+  {
+    "testDeclarationNavigation": {
+      "command": [
+        "rg",
+        "-n",
+        "test\\(|it\\(|describe\\(",
+        "packages/coding/src/external-runtimes/codex/model-discovery.test.ts"
+      ],
+      "exitCode": 0,
+      "stdout": "38:  process.exit(0);\n53:        .split(\"\\n\")\n66:describe(\"discoverCodexModels\", () => {\n67:  test(\"handshakes, follows pagination, filters hidden models and deduplicates in server order\", async () => {\n93:  test(\"preserves the requested cwd and environment while adding loopback proxy bypass\", async () => {\n106:  test(\"returns a valid empty catalog without substituting a fallback\", async () => {\n128:  test(\"closes the server after a model/list error\", async () => {\n137:  test(\"rejects repeated pagination cursors and closes the server\", async () => {\n144:  test(\"bounds pagination even when every cursor is different\", async () => {\n158:  test(\"uses one deadline across initialization and listing, then closes the server\", async () => {\n172:  test(\"times out initialization without sending model/list and closes the server\", async () => {\n181:  test(\"rejects promptly when the Codex executable does not exist\", async () => {\n189:  test(\"timeout cleanup kills a server that ignores EOF and SIGTERM before rejecting\", async () => {\n",
+      "stderr": ""
+    }
+  }
+]

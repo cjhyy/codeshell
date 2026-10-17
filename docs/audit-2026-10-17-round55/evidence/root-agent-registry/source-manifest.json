@@ -1,0 +1,62 @@
+{
+  "files": [],
+  "hashOnlyFiles": [
+    {
+      "path": "packages/core/src/agent/agent-definition-registry.ts",
+      "bytes": 4696,
+      "sha256": "89968b313f8da865dadc6fe6bb85dc61182fd5ff4795aebd22c9505c4e10f072",
+      "coverage": "hash-only-old-full-gate",
+      "lines": 124
+    },
+    {
+      "path": "packages/core/src/agent/agent-definition.ts",
+      "bytes": 6078,
+      "sha256": "69c6006acd4ebac512b59e25536f4f2b892e60475a13fa0971728911e0f95013",
+      "coverage": "hash-only-old-full-gate",
+      "lines": 147
+    }
+  ],
+  "historicalReportReads": [
+    {
+      "path": "docs/audit-2026-10-17-round6/evidence/skills-source-manifest.json",
+      "bytes": 9769,
+      "sha256": "9bdf32fd9a5ccc35e0defc082fb53ab44367376125a95496afc97d5810a26d79",
+      "coverage": "selected-historical-metadata",
+      "firstSemanticReadSha256": null,
+      "note": "Hash captured after metadata display; no invented pre-read pin."
+    },
+    {
+      "path": "docs/audit-2026-10-17-round6/skills-agents.md",
+      "bytes": 9203,
+      "sha256": "efff8f799481911e0b3c3b8ac3c0a4686411f55336f97abeb4d64b2c8dd22ec4",
+      "coverage": "selected-historical-metadata",
+      "firstSemanticReadSha256": null,
+      "note": "Hash captured after metadata display; no invented pre-read pin."
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/agent-definition-gate/report.md",
+      "bytes": 4285,
+      "sha256": "7ade2f8a1f75cfa5cf4f1f315763610aab4a6b5485428606eae3fcd222f860bd",
+      "coverage": "selected-historical-metadata",
+      "firstSemanticReadSha256": null,
+      "note": "Hash captured after metadata display; no invented pre-read pin."
+    }
+  ],
+  "gateDecisions": [
+    {
+      "path": "packages/core/src/agent/agent-definition-registry.ts",
+      "sha256": "89968b313f8da865dadc6fe6bb85dc61182fd5ff4795aebd22c9505c4e10f072",
+      "disposition": "old-full-excluded-before-product-body"
+    },
+    {
+      "path": "packages/core/src/agent/agent-definition.ts",
+      "sha256": "69c6006acd4ebac512b59e25536f4f2b892e60475a13fa0971728911e0f95013",
+      "disposition": "old-full-excluded-before-product-body"
+    }
+  ],
+  "totals": {
+    "currentProductSemanticLines": 0,
+    "currentProductBodyDisplayedLines": 0
+  },
+  "scope": "Metadata gate only, prior same-SHA full limited static record not certification of all runtime/security behavior. Shared batch for122–125 is navigation only."
+}

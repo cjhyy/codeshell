@@ -1,0 +1,39 @@
+[
+  {
+    "document": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+    "pointer": "/files/176",
+    "bytes": 841639,
+    "sha256": "12c53ba7d8a17673382d352a48a8ca3afc25a4913fcc96d63d22319e7a00b1eb",
+    "readAt": "2026-10-17T18:27:18.783908+00:00",
+    "value": {
+      "path": "packages/coding/src/external-runtimes/codex/model-discovery.ts",
+      "bytes": 3492,
+      "lines": 99,
+      "sha256": "08691432cb3fec0592aeb4a9e87f872df64459909948898c47a0ec70c44fa3bc"
+    }
+  },
+  {
+    "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-index.json",
+    "pointer": "/files/485",
+    "bytes": 2055917,
+    "sha256": "78e65550fef49fec2bd688455b17edf6de8465486cd9651634b4cd483f5aacda",
+    "readAt": "2026-10-17T18:27:18.793702+00:00",
+    "value": {
+      "path": "packages/coding/src/external-runtimes/codex/model-discovery.ts",
+      "bytes": 3492,
+      "sha256": "08691432cb3fec0592aeb4a9e87f872df64459909948898c47a0ec70c44fa3bc",
+      "lines": 99,
+      "status": "historical-object-no-current-explicit-semantic-coverage",
+      "currentExplicitFullClaimIds": [],
+      "currentExplicitSelectedClaimIds": [],
+      "currentSelectedUnionLines": 0,
+      "claimIds": [
+        "C000908",
+        "C000909"
+      ],
+      "claimKindCounts": {
+        "incidental-path-or-pin-object": 2
+      }
+    }
+  }
+]

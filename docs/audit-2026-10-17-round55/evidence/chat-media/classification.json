@@ -1,0 +1,29 @@
+{
+  "formal": [],
+  "candidates": [],
+  "newRelated": [],
+  "counts": {
+    "formal": 0,
+    "candidate": 0,
+    "newRelated": 0
+  },
+  "decision": "Finite source counterevidence to body+attachment loss/order hypothesis on normal Mimi gateway→Telegram path. No observed frames/requests or end-to-end/runtime proof.",
+  "counterevidence": [
+    {
+      "contract": "OutgoingMessage.text and optional attachments",
+      "producer": "gateway245–260/263–265 keeps complete split text list and attaches supported materialized media to last outgoing; source invalid-file catch intentionally keeps text.",
+      "dispatcher": "gateway200–202 awaits in order, chat-gateway111 directly adapter.send(target,outgoing).",
+      "helper": "media198–222 returns original checked attachment array;250–272 runs first unfinished steps sequentially.",
+      "consumer": "Telegram150–190 puts text/button step before attachment-map steps, retaining attachment array order, name/MIME/bytes.",
+      "limits": "No claim platform text quotas, actual API acceptance, caption grammar, failures/ack races, materializer custody, or unsupported media correctness."
+    }
+  ],
+  "otherBoundaries": [
+    "No claim direct inputs with both Telegram text and caption are normal platform messages",
+    "No complete all-adapter source review from test declarations",
+    "No mediaKind filename/MIME precedence bug without contract",
+    "No CHD02 duplicate/new ID",
+    "No actual file or credential/account/network access",
+    "Old dynamic failures stay skipped"
+  ]
+}

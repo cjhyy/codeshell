@@ -1,0 +1,8 @@
+{
+  "path": "packages/desktop/src/renderer/app/useExternalRuntimeModels.ts",
+  "bytes": 2782,
+  "lines": 72,
+  "sha256": "66f10e3f160bfb62a2e990cfa635f61936410e36fb727632e1c53ff9fd79ba04",
+  "pinAt": "2026-10-17T18:28:44.366878+00:00",
+  "coverage": "hash-only before body"
+}

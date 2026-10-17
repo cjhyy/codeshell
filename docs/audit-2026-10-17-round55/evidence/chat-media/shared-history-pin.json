@@ -1,0 +1,7 @@
+{
+  "path": "/tmp/codeshell-audit-round125-agent-registry/history-batch.json",
+  "bytes": 1299889,
+  "sha256": "2c09e39e6c332c5f04395af3c02d637bc3dabec28a7045c9817aa7e98ae88b27",
+  "capturedUTC": "2026-10-17T18:28:12.214505+00:00",
+  "rootProvidedScope": "5433 MD/JSON inclarchives/nas54excludeformal55+, recursiveJSONvalues,0parse; projection not independent full-corpus rerun."
+}

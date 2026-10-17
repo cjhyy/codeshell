@@ -1,0 +1,11 @@
+{
+  "toolChunk": "e1defc",
+  "exitCode": 1,
+  "stage": "Own shared-batch schema metadata presenter parse",
+  "error": "SyntaxError: invalid syntax at type(v[0]).__name__if v else None",
+  "cause": "Missing whitespace before Python if in own metadata-only inline script",
+  "scriptPreservedAs": "shared-batch-schema.first.py",
+  "executionBoundary": "Python compilation stopped before any script statement or shared batch read; no product function or author method execution",
+  "rawToolOutput": "  File \"<stdin>\", line 7\n    elif isinstance(v,list):print(k,'length',len(v),'firstType',type(v[0]).__name__if v else None)\n                                                                                      ^\nSyntaxError: invalid syntax\n",
+  "rawToolOutputKind": "Tool-visible diagnostic text transcribed; no separately redirected original stderr byte file"
+}

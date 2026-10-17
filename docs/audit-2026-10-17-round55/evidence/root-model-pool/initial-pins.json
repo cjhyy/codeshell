@@ -1,0 +1,13 @@
+{
+  "atUTC": "2026-10-17T18:28:48.032923+00:00",
+  "files": [
+    {
+      "path": "packages/core/src/llm/model-pool.ts",
+      "bytes": 13195,
+      "lines": 325,
+      "sha256": "a49da3b3018aaaf92e80e488a4e9d338eb9f2b0f107919f9d521156a6c4137d3",
+      "beforeBodyOrLineNavigation": true
+    }
+  ],
+  "productRuns": 0
+}

@@ -1,0 +1,29 @@
+{
+  "createdAt": "2026-10-17T18:39:14.143864+00:00",
+  "metadataCommandFailures": 2,
+  "firstSyntaxError": "metadata-first-diagnostic.json",
+  "staticLocatorError": {
+    "toolChunk": "9cff6c",
+    "exitCode": 2,
+    "command": "rg -l cacheCreationTokens packages/core/src/providers",
+    "error": "Source directory does not exist; corrected by later rg --files canonical inventory to llm/providers, no product/provider execution",
+    "originalByteRawCaptured": false,
+    "originalToolVisibleOutput": "rg: packages/core/src/providers: IO error for operation on packages/core/src/providers: No such file or directory (os error 2)"
+  },
+  "normalNoMatchQueries": [
+    {
+      "toolChunk": "2c0700",
+      "exitCode": 1,
+      "scope": "OldR9 filename-only *cost*/*ledger* search no hits"
+    },
+    {
+      "toolChunk": "1709f1",
+      "exitCode": 1,
+      "scope": "Pinned cost-ledger/index.ts symbol search no matches; no body read"
+    }
+  ],
+  "metadataOutputTruncations": 0,
+  "productFailures": 0,
+  "productRetries": 0,
+  "oldFailedDynamicDirectionsRestored": false
+}

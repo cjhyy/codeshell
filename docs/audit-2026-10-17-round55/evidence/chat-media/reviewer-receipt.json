@@ -1,0 +1,106 @@
+{
+  "frozenUTC": "2026-10-17T18:31:42.024681+00:00",
+  "root": "/tmp/codeshell-audit-round123-chat-media",
+  "selfExcluded": true,
+  "files": [
+    {
+      "path": "canonical-gate-rows.json",
+      "bytes": 7239,
+      "sha256": "b25189f4268cd3071332ae36076777a61cc9c0be8a4c1bf807a4f5955aa033d6"
+    },
+    {
+      "path": "classification.json",
+      "bytes": 1554,
+      "sha256": "9e8df27f1ce03d301ec7d79d1569045ad2b06160eacac39a65715fd615470d24"
+    },
+    {
+      "path": "diagnostics.json",
+      "bytes": 785,
+      "sha256": "573d0f3c109b3c751f054b0eb336abeb9cc7c741c9875ef2d2a6266587326479"
+    },
+    {
+      "path": "dispatcher-initial-pin.json",
+      "bytes": 304,
+      "sha256": "c3e6fda106e945fed810d3298ac430133e5b2fd3750e8dd85fc9b4ba7ea05056"
+    },
+    {
+      "path": "ending-checks.json",
+      "bytes": 14465,
+      "sha256": "17946e7c46d2066a8a30cdbee405c1da17328e5726eefc7ff35fb0ca43cf0c08"
+    },
+    {
+      "path": "finalize-metadata.py",
+      "bytes": 14192,
+      "sha256": "3bbacc7c375539c2bac16c6b094fa53dbe5da669b91cf189ca15df3569f6b019"
+    },
+    {
+      "path": "freeze-checks.json",
+      "bytes": 4962,
+      "sha256": "2affdb0c7788cb944841ce57e717b0ff90d7ad8daa9fea7bf1d14404ef376c14"
+    },
+    {
+      "path": "gate-decision.json",
+      "bytes": 9499,
+      "sha256": "e7ca1fa5408537c4dd7f665a336b1dfae21aeba4b762b1190018a84546e3b210"
+    },
+    {
+      "path": "initial-pins.json",
+      "bytes": 974,
+      "sha256": "d8ae20a819ed86550a57b838f7ad1cb8cc6551e788c7506ac9a604c6c90f06c3"
+    },
+    {
+      "path": "old-cause-canonical.json",
+      "bytes": 1844,
+      "sha256": "725d7831395873c2e3abb0b10259ea4bba78fb140df0a9032e1e9e6849f8af00"
+    },
+    {
+      "path": "producer-initial-pins.json",
+      "bytes": 755,
+      "sha256": "2f4159abc456764c1a695ffbdc5f5f9a35bc7072282e2e03d7eaa94a34336e83"
+    },
+    {
+      "path": "report.md",
+      "bytes": 6299,
+      "sha256": "426f1790b82d7eacaba280ca95061ba3f566e585079a66c5cf18c13701bf135f"
+    },
+    {
+      "path": "shared-history-media.json",
+      "bytes": 39303,
+      "sha256": "b2467e3b7156981f951329612de556600b5bd09f2a7d3661ebd778f57c459eee"
+    },
+    {
+      "path": "shared-history-pin.json",
+      "bytes": 382,
+      "sha256": "ab46b49e0ad124ccdf9849d1d6383d8075720e83b059c54ae15619568c59ff7a"
+    },
+    {
+      "path": "source-excerpts.json",
+      "bytes": 46411,
+      "sha256": "80402d9bed6b388a3ab6769d6fb7a928247dca762a98fde6d3b9e3bacbb064b1"
+    },
+    {
+      "path": "source-manifest.json",
+      "bytes": 18254,
+      "sha256": "9523ee4854119105fa255d8b0e668382677e83c50b19f54ab1daaf39762466c8"
+    },
+    {
+      "path": "support-initial-pins.json",
+      "bytes": 762,
+      "sha256": "1a6e5732e9c44f64d6f13a4159c54bd65a404ec8cd37b2abb6ac086fcb3837c2"
+    },
+    {
+      "path": "targeted-history-hits.json",
+      "bytes": 10085,
+      "sha256": "310b25f762231f74b057162604c84c5ce063e3ca4f25ba88ba33a2dec4643c3e"
+    },
+    {
+      "path": "validation.json",
+      "bytes": 1607,
+      "sha256": "80e2a4ac722d07819b76f4fef269775fa2ab2953f789d12cba51a4a20a0e0997"
+    }
+  ],
+  "fileCountExcludingReceipt": 19,
+  "role": "Directed ordinary static source review of combined body+attachment hypothesis, old full overlap disclosed, shared history projection only",
+  "productRunCount": 0,
+  "GitOperationCount": 0
+}

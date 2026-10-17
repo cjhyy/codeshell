@@ -1,0 +1,26 @@
+{
+  "files": [
+    {
+      "path": "packages/core/src/llm/model-pool.test.ts",
+      "bytes": 1558,
+      "lines": 43,
+      "sha256": "19b494027ea63d1ca55ea489951e984f305f6d65128d537f868c37ee2ea953a7",
+      "beforeBodyOrLineNavigation": true
+    },
+    {
+      "path": "packages/core/src/engine/model-connections-pool.test.ts",
+      "bytes": 11429,
+      "lines": 321,
+      "sha256": "89f6432dbf5a32dccc996d4f5b7344d6e8dcc24b2ea4d6527482faa606e2fa87",
+      "beforeBodyOrLineNavigation": true
+    },
+    {
+      "path": "packages/core/src/engine/resolve-llm-config.test.ts",
+      "bytes": 2668,
+      "lines": 65,
+      "sha256": "892f5c259e4553d8508220bef233459f81f1d8106567c2e85bc5ee311de59f28",
+      "beforeBodyOrLineNavigation": true
+    }
+  ],
+  "execution": 0
+}

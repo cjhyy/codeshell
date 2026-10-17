@@ -1,0 +1,102 @@
+{
+  "createdAt": "2026-10-17T18:24:39.061503+00:00",
+  "frozen": true,
+  "scope": "Exact packet files excluding self-receipt; publishable frozen45 exact-current-SHA carry only;46..53 deferred",
+  "files": [
+    {
+      "path": "base-reconstruction.json",
+      "bytes": 3248,
+      "sha256": "40b8303562ce122b4b93df773acd4802f9bbc3fcfc5a6748881dcea4998b13e1"
+    },
+    {
+      "path": "checks.json",
+      "bytes": 18171,
+      "sha256": "a331c0530ceabeed3721c860f3050b39bc7e9c772952c30496e98527262b3a32"
+    },
+    {
+      "path": "current-source-inventory.json",
+      "bytes": 1723612,
+      "sha256": "5f02cde507ce90bc9db4746b693feee572eba1e951b9c8dd65612e4425a614a6"
+    },
+    {
+      "path": "finalize.py",
+      "bytes": 12166,
+      "sha256": "681c2e346b05b6f4c787a15ecd90b0e5c8d3f8e0997d2a8821e312b389859f8d"
+    },
+    {
+      "path": "frozen45-provenance.json",
+      "bytes": 451831,
+      "sha256": "9b41fe068cee2d2204ce303eb07145cd2754ab7b76c67a4c585ba93624a815d4"
+    },
+    {
+      "path": "increment-claims.first.json",
+      "bytes": 462069,
+      "sha256": "523cffc05ebf6e4d69a067efcd938d74c8d31bc19662e9a977baece7e3240222"
+    },
+    {
+      "path": "increment-claims.json",
+      "bytes": 231,
+      "sha256": "4d1f8b553c10543320a2aebdb52066d843ed299e74a57cb731ee90008d7d49b9"
+    },
+    {
+      "path": "increment-manifest-inventory.json",
+      "bytes": 34474,
+      "sha256": "413c71e3544814cd6d4cd38d2eed35a337ba339d41cae7c5dbb09e0e9088aee9"
+    },
+    {
+      "path": "increment-summary.first.json",
+      "bytes": 1133,
+      "sha256": "7b3ab64dcc1d8c956f8a4e283e692d23bfa0c01d6e9f557324c1f41950396f90"
+    },
+    {
+      "path": "increment-summary.json",
+      "bytes": 768,
+      "sha256": "8308c985ad27b6de800dbf6a72a4fbe954030937f020f5f8390fa40540ae6be3"
+    },
+    {
+      "path": "increment.first.py",
+      "bytes": 9276,
+      "sha256": "6d92eed1c2b6a95f4390d67d192b87f5d61b1545a11615b3f309e738bbd0e5dd"
+    },
+    {
+      "path": "inventory.py",
+      "bytes": 5083,
+      "sha256": "6ac4590eef391c8873bb5e5f46888e332b993b1e63c112cf7247f6223714ba49"
+    },
+    {
+      "path": "metadata-diagnostics.json",
+      "bytes": 1675,
+      "sha256": "b875963bd49651974dff37060b6df5fb8f9199f2a8bf1b21af055bb0db307b8e"
+    },
+    {
+      "path": "reconstruction-input-pins.json",
+      "bytes": 2089,
+      "sha256": "7c1e62c0a5aabb5644a91571a8a188aa30ce48a02e871a185b7a9d254e1d945a"
+    },
+    {
+      "path": "report-links.json",
+      "bytes": 989,
+      "sha256": "9744b74970426a2c5dcbba8c6850686792e1879f01878d57cd0c6756b592fdda"
+    },
+    {
+      "path": "report.md",
+      "bytes": 3440,
+      "sha256": "5b47d857c1da576ee6321b1e4b8898e9245646f70f7af91654edff5969319002"
+    },
+    {
+      "path": "source-manifest.json",
+      "bytes": 873,
+      "sha256": "dd76abf57188ee228be2a42fdb7d23553d833beb46c4081bf18ec8b68af48579"
+    },
+    {
+      "path": "unified-current-index.first.json",
+      "bytes": 1941044,
+      "sha256": "2e1693238ea4140dcb6f1bc8a4416fe356e1b559d901a7bf2c5bc492192c4c08"
+    },
+    {
+      "path": "unified-current-index.json",
+      "bytes": 1941121,
+      "sha256": "5adcd53bfca820e03282db45815c370bcc529c3606aa4c8f860126d14e646ee2"
+    }
+  ]
+}

@@ -1,0 +1,38 @@
+{
+  "createdAt": "2026-10-17T18:28:59.906909+00:00",
+  "document": "docs/audit-2026-10-17-round9/evidence/root-source-manifest.json",
+  "bytes": 10736,
+  "sha256": "59aa8bb179daa09591c111268dc7997b419759dcc78fc3e76c2b00c2be9e435d",
+  "rows": [
+    {
+      "pointer": "/files/14",
+      "row": {
+        "path": "packages/core/src/cost-ledger/summary.ts",
+        "bytes": 2891,
+        "sha256": "4ef61d2b0803899574adbaaa98e33f3fde2ae4da0250f452d6f72997936b07d6",
+        "worktreeMatchesFrozen": true,
+        "coverage": "Selected implementation/excerpt read; fixture imports only where referenced. No whole-file coverage claim for index/turn-loop/runtime/run-finalize/run-manager-usage."
+      }
+    },
+    {
+      "pointer": "/files/15",
+      "row": {
+        "path": "packages/core/src/cost-ledger/pricing.ts",
+        "bytes": 1919,
+        "sha256": "7584eb97d07fda14171917d093d16201521ba77ce7ce61cab0d08390da7e3640",
+        "worktreeMatchesFrozen": true,
+        "coverage": "Selected implementation/excerpt read; fixture imports only where referenced. No whole-file coverage claim for index/turn-loop/runtime/run-finalize/run-manager-usage."
+      }
+    },
+    {
+      "pointer": "/files/16",
+      "row": {
+        "path": "packages/core/src/cost-ledger/context.ts",
+        "bytes": 5823,
+        "sha256": "91ab442184ca82d512c2722c64205c27470db2a6c29bde1fe2883f24d96c99ee",
+        "worktreeMatchesFrozen": true,
+        "coverage": "Selected implementation/excerpt read; fixture imports only where referenced. No whole-file coverage claim for index/turn-loop/runtime/run-finalize/run-manager-usage."
+      }
+    }
+  ]
+}
