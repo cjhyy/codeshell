@@ -1,0 +1,23 @@
+{
+  "firstNonzero": {
+    "toolChunk": "391a99",
+    "exitCode": 1,
+    "commands": [
+      "rg -l adapter.send\\( packages/chat/src",
+      "rg --files packages/chat/src -g *pipeline* -g *middleware*"
+    ],
+    "meaning": "First search successfully listed real sender filenames; second filename-only glob search had no matches, leading combined cell exit1. No product command or missing-file assertion; no substitute runtime retry."
+  },
+  "truncations": [],
+  "manualMetadataCaps": {
+    "canonicalRowPrintMaxChars": 1500,
+    "capExceedingRows": [],
+    "oldCausePrintMaxChars": 5500,
+    "oldCauseActualChars": 1154,
+    "sharedHitsCap": 100,
+    "sharedTotalMediaMatches": 353
+  },
+  "productFailures": [],
+  "lateSourcePins": [],
+  "originalToolTranscriptAuthoritative": true
+}

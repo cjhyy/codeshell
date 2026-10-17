@@ -1,0 +1,25 @@
+{
+  "createdAt": "2026-10-17T18:24:39.035184+00:00",
+  "files": [],
+  "hashOnlySourceInventory": "current-source-inventory.json",
+  "hashOnlySourceCount": 4643,
+  "sourceBodyDecodedOrExecuted": false,
+  "semanticSourceLines": 0,
+  "metadataInputs": "checks.json /metadataInputChecks",
+  "methodRead": {
+    "path": "docs/audit-2026-10-17-round47/evidence/coverage-adapter/method.py",
+    "lines": [
+      [
+        1,
+        298
+      ]
+    ],
+    "sha256": "b4fc38e937b1d2dd1523c5fdf5f00e6cfdbcc71897ae744520b055711b6d274c",
+    "executed": false
+  },
+  "reconstructionInputPins": "reconstruction-input-pins.json",
+  "rangesAndPurposeReferences": "frozen45-provenance.json",
+  "globalCoverageChanged": false,
+  "preciseUnreadOrCurrentUnfixedClaim": false,
+  "scope": "User status metadata refresh, not independent whole-repository source review or behavior validation"
+}

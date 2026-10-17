@@ -1,0 +1,57 @@
+{
+  "createdAt": "2026-10-17T18:27:10.552352+00:00",
+  "scope": "Initial known canonical cost metadata only; Root shared history match pending; no current product body read",
+  "documents": [
+    {
+      "document": "docs/audit-2026-10-17-round49/evidence/root-summary-review/source-manifest.json",
+      "bytes": 8690,
+      "sha256": "4cf0957b27ba4364cf150137f127fc32ed7033bc2ce4d6d8b8f2beefc78224e4",
+      "rows": [
+        {
+          "pointer": "/files/0",
+          "row": {
+            "path": "packages/core/src/cost-ledger/summary.ts",
+            "bytes": 2891,
+            "sha256": "4ef61d2b0803899574adbaaa98e33f3fde2ae4da0250f452d6f72997936b07d6",
+            "lines": 81,
+            "coverage": "full",
+            "selectedLineRanges": [
+              [
+                1,
+                81
+              ]
+            ],
+            "semanticLines": 81,
+            "displayedLineCount": 81,
+            "initialPinArtifact": "selection-initial-pins.json",
+            "initialCurrentVerificationSha256": "4ef61d2b0803899574adbaaa98e33f3fde2ae4da0250f452d6f72997936b07d6",
+            "firstEverSemanticReadPin": null,
+            "scope": "Full ordinary in-memory summary module source; not ledger/provider/store execution or billing validation."
+          }
+        }
+      ],
+      "topLimits": {
+        "limitations": [
+          "OldR9 selected/excerpt prior reading retained, not a first-ever/unread source claim.",
+          "Source/hash/metadata navigation is not additional unique semantic coverage or billing/lifecycle validation."
+        ]
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round49/evidence/cost-review/source-manifest.json",
+      "bytes": 13784,
+      "sha256": "0bde34ff267296749553f2fcbdb4cbeb79d8bc4e7e9b07ca5b3f6bd5611a09ec",
+      "rows": [],
+      "topLimits": {
+        "oldFullAllowedScope": "This is a specific hypothesis selected recheck; prior whole-source labels do not imply absence of this bug, nor do these reads claim first-ever coverage."
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round48/evidence/cost-context-frontier/source-manifest.json",
+      "bytes": 17666,
+      "sha256": "59a04a819e8567e05b34e316964453d345af9046fe7d7a06763095b2a2331d66",
+      "rows": [],
+      "topLimits": {}
+    }
+  ]
+}

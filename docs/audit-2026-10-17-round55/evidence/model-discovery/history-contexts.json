@@ -1,0 +1,778 @@
+{
+  "path": [
+    {
+      "path": "docs/audit-2026-10-16/inventory.json",
+      "pointer": "/source_inventory/119",
+      "offset": 0,
+      "length": 62,
+      "text": "packages/coding/src/external-runtimes/codex/model-discovery.ts",
+      "bounded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/inventory.json",
+      "pointer": "/paths/112",
+      "offset": 0,
+      "length": 62,
+      "text": "packages/coding/src/external-runtimes/codex/model-discovery.ts",
+      "bounded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+      "pointer": "/files/176/path",
+      "offset": 0,
+      "length": 62,
+      "text": "packages/coding/src/external-runtimes/codex/model-discovery.ts",
+      "bounded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/907/path",
+      "offset": 0,
+      "length": 62,
+      "text": "packages/coding/src/external-runtimes/codex/model-discovery.ts",
+      "bounded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/907/directSourcePathsInObject/0",
+      "offset": 0,
+      "length": 62,
+      "text": "packages/coding/src/external-runtimes/codex/model-discovery.ts",
+      "bounded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/908/path",
+      "offset": 0,
+      "length": 62,
+      "text": "packages/coding/src/external-runtimes/codex/model-discovery.ts",
+      "bounded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/908/directSourcePathsInObject/0",
+      "offset": 0,
+      "length": 62,
+      "text": "packages/coding/src/external-runtimes/codex/model-discovery.ts",
+      "bounded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-index.json",
+      "pointer": "/files/485/path",
+      "offset": 0,
+      "length": 62,
+      "text": "packages/coding/src/external-runtimes/codex/model-discovery.ts",
+      "bounded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/package-inventory.json",
+      "pointer": "/files/485/path",
+      "offset": 0,
+      "length": 62,
+      "text": "packages/coding/src/external-runtimes/codex/model-discovery.ts",
+      "bounded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-status/comparison.json",
+      "pointer": "/unknownPaths/471",
+      "offset": 0,
+      "length": 62,
+      "text": "packages/coding/src/external-runtimes/codex/model-discovery.ts",
+      "bounded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-status/current-inventory.json",
+      "pointer": "/files/485/path",
+      "offset": 0,
+      "length": 62,
+      "text": "packages/coding/src/external-runtimes/codex/model-discovery.ts",
+      "bounded": true
+    }
+  ],
+  "sha256": [
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+      "pointer": "/files/176/sha256",
+      "offset": 0,
+      "length": 64,
+      "text": "08691432cb3fec0592aeb4a9e87f872df64459909948898c47a0ec70c44fa3bc",
+      "bounded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/908/sourceHashFields/sha256",
+      "offset": 0,
+      "length": 64,
+      "text": "08691432cb3fec0592aeb4a9e87f872df64459909948898c47a0ec70c44fa3bc",
+      "bounded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-index.json",
+      "pointer": "/files/485/sha256",
+      "offset": 0,
+      "length": 64,
+      "text": "08691432cb3fec0592aeb4a9e87f872df64459909948898c47a0ec70c44fa3bc",
+      "bounded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/package-inventory.json",
+      "pointer": "/files/485/sha256",
+      "offset": 0,
+      "length": 64,
+      "text": "08691432cb3fec0592aeb4a9e87f872df64459909948898c47a0ec70c44fa3bc",
+      "bounded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-status/current-inventory.json",
+      "pointer": "/files/485/sha256",
+      "offset": 0,
+      "length": 64,
+      "text": "08691432cb3fec0592aeb4a9e87f872df64459909948898c47a0ec70c44fa3bc",
+      "bounded": true
+    }
+  ],
+  "filename": [
+    {
+      "path": "docs/audit-2026-10-16/inventory.json",
+      "pointer": "/source_inventory/119",
+      "offset": 44,
+      "length": 62,
+      "text": "packages/coding/src/external-runtimes/codex/model-discovery.ts",
+      "bounded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round12/evidence/patch-dedup-initial-selected.json",
+      "pointer": "/hits/122/excerpt",
+      "offset": 184,
+      "length": 873,
+      "text": "**coding — source-directed and native/directed fixtures:** `src/lsp/{client,manager,servers,root-path}.ts`, `src/tools/lsp.ts`; `src/external-runtimes/codex/{runtime,app-server-client,model-discovery}.ts`; `src/external-runtimes/claude-code/runtime.ts`; `src/external-runtimes/{session-factory,index}.ts`; `src/external-runtimes/shared/{spawn-env,session-context-store}.ts`; `src/tools/{notebook-edit,brief,check-quota,drive-agent}.ts`; `src/quota/{index,credentials,types}.ts`; `src/cc-orchestrator/{agent-adapter,external-agent-driver,external-agent-bindings,external-agent-session-store,session-discovery,codex-session-discovery,cc-capability}.ts`; `src/external-agents/{config,types}.ts`; `src/capability-runtime.ts`; `src/index{,.capability,.git,.orchestration}.ts`; `src/tools/a",
+      "bounded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round12/evidence/patch-dedup-initial-selected.json",
+      "pointer": "/hits/150/excerpt",
+      "offset": 184,
+      "length": 873,
+      "text": "**coding — source-directed and native/directed fixtures:** `src/lsp/{client,manager,servers,root-path}.ts`, `src/tools/lsp.ts`; `src/external-runtimes/codex/{runtime,app-server-client,model-discovery}.ts`; `src/external-runtimes/claude-code/runtime.ts`; `src/external-runtimes/{session-factory,index}.ts`; `src/external-runtimes/shared/{spawn-env,session-context-store}.ts`; `src/tools/{notebook-edit,brief,check-quota,drive-agent}.ts`; `src/quota/{index,credentials,types}.ts`; `src/cc-orchestrator/{agent-adapter,external-agent-driver,external-agent-bindings,external-agent-session-store,session-discovery,codex-session-discovery,cc-capability}.ts`; `src/external-agents/{config,types}.ts`; `src/capability-runtime.ts`; `src/index{,.capability,.git,.orchestration}.ts`; `src/tools/a",
+      "bounded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round12/evidence/patch-dedup-initial-selected.json",
+      "pointer": "/hits/155/excerpt",
+      "offset": 184,
+      "length": 873,
+      "text": "**coding — source-directed and native/directed fixtures:** `src/lsp/{client,manager,servers,root-path}.ts`, `src/tools/lsp.ts`; `src/external-runtimes/codex/{runtime,app-server-client,model-discovery}.ts`; `src/external-runtimes/claude-code/runtime.ts`; `src/external-runtimes/{session-factory,index}.ts`; `src/external-runtimes/shared/{spawn-env,session-context-store}.ts`; `src/tools/{notebook-edit,brief,check-quota,drive-agent}.ts`; `src/quota/{index,credentials,types}.ts`; `src/cc-orchestrator/{agent-adapter,external-agent-driver,external-agent-bindings,external-agent-session-store,session-discovery,codex-session-discovery,cc-capability}.ts`; `src/external-agents/{config,types}.ts`; `src/capability-runtime.ts`; `src/index{,.capability,.git,.orchestration}.ts`; `src/tools/a",
+      "bounded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round12/evidence/patch-dedup.json",
+      "pointer": "/hits/82/excerpt",
+      "offset": 184,
+      "length": 873,
+      "text": "**coding — source-directed and native/directed fixtures:** `src/lsp/{client,manager,servers,root-path}.ts`, `src/tools/lsp.ts`; `src/external-runtimes/codex/{runtime,app-server-client,model-discovery}.ts`; `src/external-runtimes/claude-code/runtime.ts`; `src/external-runtimes/{session-factory,index}.ts`; `src/external-runtimes/shared/{spawn-env,session-context-store}.ts`; `src/tools/{notebook-edit,brief,check-quota,drive-agent}.ts`; `src/quota/{index,credentials,types}.ts`; `src/cc-orchestrator/{agent-adapter,external-agent-driver,external-agent-bindings,external-agent-session-store,session-discovery,codex-session-discovery,cc-capability}.ts`; `src/external-agents/{config,types}.ts`; `src/capability-runtime.ts`; `src/index{,.capability,.git,.orchestration}.ts`; `src/tools/a",
+      "bounded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round12/evidence/patch-dedup.json",
+      "pointer": "/hits/154/excerpt",
+      "offset": 184,
+      "length": 873,
+      "text": "**coding — source-directed and native/directed fixtures:** `src/lsp/{client,manager,servers,root-path}.ts`, `src/tools/lsp.ts`; `src/external-runtimes/codex/{runtime,app-server-client,model-discovery}.ts`; `src/external-runtimes/claude-code/runtime.ts`; `src/external-runtimes/{session-factory,index}.ts`; `src/external-runtimes/shared/{spawn-env,session-context-store}.ts`; `src/tools/{notebook-edit,brief,check-quota,drive-agent}.ts`; `src/quota/{index,credentials,types}.ts`; `src/cc-orchestrator/{agent-adapter,external-agent-driver,external-agent-bindings,external-agent-session-store,session-discovery,codex-session-discovery,cc-capability}.ts`; `src/external-agents/{config,types}.ts`; `src/capability-runtime.ts`; `src/index{,.capability,.git,.orchestration}.ts`; `src/tools/a",
+      "bounded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round12/evidence/patch-dedup.json",
+      "pointer": "/hits/257/excerpt",
+      "offset": 184,
+      "length": 873,
+      "text": "**coding — source-directed and native/directed fixtures:** `src/lsp/{client,manager,servers,root-path}.ts`, `src/tools/lsp.ts`; `src/external-runtimes/codex/{runtime,app-server-client,model-discovery}.ts`; `src/external-runtimes/claude-code/runtime.ts`; `src/external-runtimes/{session-factory,index}.ts`; `src/external-runtimes/shared/{spawn-env,session-context-store}.ts`; `src/tools/{notebook-edit,brief,check-quota,drive-agent}.ts`; `src/quota/{index,credentials,types}.ts`; `src/cc-orchestrator/{agent-adapter,external-agent-driver,external-agent-bindings,external-agent-session-store,session-discovery,codex-session-discovery,cc-capability}.ts`; `src/external-agents/{config,types}.ts`; `src/capability-runtime.ts`; `src/index{,.capability,.git,.orchestration}.ts`; `src/tools/a",
+      "bounded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/inventory.json",
+      "pointer": "/paths/112",
+      "offset": 44,
+      "length": 62,
+      "text": "packages/coding/src/external-runtimes/codex/model-discovery.ts",
+      "bounded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/inventory.json",
+      "pointer": "/paths/115",
+      "offset": 44,
+      "length": 67,
+      "text": "packages/coding/src/external-runtimes/codex/model-discovery.test.ts",
+      "bounded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+      "pointer": "/files/175/path",
+      "offset": 44,
+      "length": 67,
+      "text": "packages/coding/src/external-runtimes/codex/model-discovery.test.ts",
+      "bounded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+      "pointer": "/files/176/path",
+      "offset": 44,
+      "length": 62,
+      "text": "packages/coding/src/external-runtimes/codex/model-discovery.ts",
+      "bounded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round4/evidence/coding-dedup.json",
+      "pointer": "/selected_markdown_hits/10/hits/13/text",
+      "offset": 184,
+      "length": 873,
+      "text": "**coding — source-directed and native/directed fixtures:** `src/lsp/{client,manager,servers,root-path}.ts`, `src/tools/lsp.ts`; `src/external-runtimes/codex/{runtime,app-server-client,model-discovery}.ts`; `src/external-runtimes/claude-code/runtime.ts`; `src/external-runtimes/{session-factory,index}.ts`; `src/external-runtimes/shared/{spawn-env,session-context-store}.ts`; `src/tools/{notebook-edit,brief,check-quota,drive-agent}.ts`; `src/quota/{index,credentials,types}.ts`; `src/cc-orchestrator/{agent-adapter,external-agent-driver,external-agent-bindings,external-agent-session-store,session-discovery,codex-session-discovery,cc-capability}.ts`; `src/external-agents/{config,types}.ts`; `src/capability-runtime.ts`; `src/index{,.capability,.git,.orchestration}.ts`; `src/tools/a",
+      "bounded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/905/path",
+      "offset": 44,
+      "length": 67,
+      "text": "packages/coding/src/external-runtimes/codex/model-discovery.test.ts",
+      "bounded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/905/directSourcePathsInObject/0",
+      "offset": 44,
+      "length": 67,
+      "text": "packages/coding/src/external-runtimes/codex/model-discovery.test.ts",
+      "bounded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/906/path",
+      "offset": 44,
+      "length": 67,
+      "text": "packages/coding/src/external-runtimes/codex/model-discovery.test.ts",
+      "bounded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/906/directSourcePathsInObject/0",
+      "offset": 44,
+      "length": 67,
+      "text": "packages/coding/src/external-runtimes/codex/model-discovery.test.ts",
+      "bounded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/907/path",
+      "offset": 44,
+      "length": 62,
+      "text": "packages/coding/src/external-runtimes/codex/model-discovery.ts",
+      "bounded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/907/directSourcePathsInObject/0",
+      "offset": 44,
+      "length": 62,
+      "text": "packages/coding/src/external-runtimes/codex/model-discovery.ts",
+      "bounded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/908/path",
+      "offset": 44,
+      "length": 62,
+      "text": "packages/coding/src/external-runtimes/codex/model-discovery.ts",
+      "bounded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/908/directSourcePathsInObject/0",
+      "offset": 44,
+      "length": 62,
+      "text": "packages/coding/src/external-runtimes/codex/model-discovery.ts",
+      "bounded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-index.json",
+      "pointer": "/files/484/path",
+      "offset": 44,
+      "length": 67,
+      "text": "packages/coding/src/external-runtimes/codex/model-discovery.test.ts",
+      "bounded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-index.json",
+      "pointer": "/files/485/path",
+      "offset": 44,
+      "length": 62,
+      "text": "packages/coding/src/external-runtimes/codex/model-discovery.ts",
+      "bounded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/package-inventory.json",
+      "pointer": "/files/484/path",
+      "offset": 44,
+      "length": 67,
+      "text": "packages/coding/src/external-runtimes/codex/model-discovery.test.ts",
+      "bounded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/package-inventory.json",
+      "pointer": "/files/485/path",
+      "offset": 44,
+      "length": 62,
+      "text": "packages/coding/src/external-runtimes/codex/model-discovery.ts",
+      "bounded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-status/comparison.json",
+      "pointer": "/unknownPaths/470",
+      "offset": 44,
+      "length": 67,
+      "text": "packages/coding/src/external-runtimes/codex/model-discovery.test.ts",
+      "bounded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-status/comparison.json",
+      "pointer": "/unknownPaths/471",
+      "offset": 44,
+      "length": 62,
+      "text": "packages/coding/src/external-runtimes/codex/model-discovery.ts",
+      "bounded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-status/current-inventory.json",
+      "pointer": "/files/484/path",
+      "offset": 44,
+      "length": 67,
+      "text": "packages/coding/src/external-runtimes/codex/model-discovery.test.ts",
+      "bounded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-status/current-inventory.json",
+      "pointer": "/files/485/path",
+      "offset": 44,
+      "length": 62,
+      "text": "packages/coding/src/external-runtimes/codex/model-discovery.ts",
+      "bounded": true
+    },
+    {
+      "path": "docs/review-remaining-2026-10-12/coding-tui-chat.md",
+      "pointer": "",
+      "offset": 24697,
+      "length": 31899,
+      "text": " every existing test was executed.\n\n**coding — source-directed and native/directed fixtures:** `src/lsp/{client,manager,servers,root-path}.ts`, `src/tools/lsp.ts`; `src/external-runtimes/codex/{runtime,app-server-client,model-discovery}.ts`; `src/external-runtimes/claude-code/runtime.ts`; `src/external-runtimes/{session-factory,index}.ts`; `src/external-runtimes/shared/{spawn-env,session-context-store}.ts`; `src/tools/{notebook-edit,brief,check-quota,drive-agent}.ts`; `src/quota/{index,credentials,types}.ts`; `src/cc-orchestrator/{agent-adapter,external-agent-driver,external-agent-bindings,external-agent-session-store,session-discovery,codex-session-discovery,cc-capability}.ts`; `src/external-agents/{config,types}.ts`; `src/capability-runtime.ts`; `src/index{,.capability,.git,.orchestration}.ts`; `src/tools/a",
+      "bounded": true
+    },
+    {
+      "path": "docs/review-remaining-2026-10-12/validation/source-reports/codeshell-remaining-cli-chat-report.md",
+      "pointer": "",
+      "offset": 22762,
+      "length": 29964,
+      "text": " every existing test was executed.\n\n**coding — source-directed and native/directed fixtures:** `src/lsp/{client,manager,servers,root-path}.ts`, `src/tools/lsp.ts`; `src/external-runtimes/codex/{runtime,app-server-client,model-discovery}.ts`; `src/external-runtimes/claude-code/runtime.ts`; `src/external-runtimes/{session-factory,index}.ts`; `src/external-runtimes/shared/{spawn-env,session-context-store}.ts`; `src/tools/{notebook-edit,brief,check-quota,drive-agent}.ts`; `src/quota/{index,credentials,types}.ts`; `src/cc-orchestrator/{agent-adapter,external-agent-driver,external-agent-bindings,external-agent-session-store,session-discovery,codex-session-discovery,cc-capability}.ts`; `src/external-agents/{config,types}.ts`; `src/capability-runtime.ts`; `src/index{,.capability,.git,.orchestration}.ts`; `src/tools/a",
+      "bounded": true
+    }
+  ],
+  "oldcause": [
+    {
+      "path": "docs/archive/architecture/18-core-vs-cc-vs-codex.md",
+      "pointer": "",
+      "offset": 4025,
+      "length": 13490,
+      "text": "n | ContextManager 按 token 比率自动触发 |\n| 渲染/loop 解耦 | 经 protocol 层 onStream 事件解耦（见 2.2） | query 状态机解耦 | **最彻底**：submit/event 异步模型，TUI 不同步调 core |\n\n**codeshell 粗糙点**（来自源码）：\n- `maxContextTokens` 默认硬编码 200k（engine.ts:272）——CC/Codex 倾向从模型动态取（Codex 默认 272K 可配到 1M）。\n- max_tokens continuation 硬编码 3x retry（turn-loop.ts:348），不可配。\n- abort 在回合内只检查一次（turn-loop.ts:385），长工具执行中的中止靠工具自觉。\n- post_compact hook 用“漏斗”（`consumePendingCompactInfo`，turn-loop.ts:76）绕开 ContextManager→HookRegistry 的循环依赖——是 workaround，不是干净边界。\n\n### 2.2 Protocol（网关层）—— codeshell 与 Codex 的共同选择\n\n| 维度 | codeshell | Claude Code | Codex |\n|---|---|---|---|\n| 形态 | `AgentServer`/`AgentClient` JSON-RPC 2.0（protocol/types.ts:25-51） | 内部 query/状态机 | `codex-protocol` Op/EventMsg |\n| 为何强制走网关 | ADR（[doc 14](14-engine-call-paths.md)）：TaskManager 流订阅、status 通知、in-process 重",
+      "bounded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round15/evidence/migration-dedup.json",
+      "pointer": "/hits/migration/17/text",
+      "offset": 111,
+      "length": 544,
+      "text": "静态覆盖：settings manager、schema、personalization、migrate-config、schema-export、feature-flags、recovery 的文件内容；migrate-models 的完整纯转换；Engine update/read/config-population 与 disk defaults、PromptComposer personalization、protocol config_set 与 legacy model handlers、TUI config caller；ModelPool / ProviderCatalog 和 Desktop model-meta 的相关段。既有 tests 仅选择性阅读，没有运行整个 settings、Core 或仓库测试套件。[源码 SHA-256 清单](/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17-round4/evidence/settings-source-manifest.json) 记录 17 个文件，不能将清单理解为每个大文件都逐行审阅。",
+      "bounded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+      "pointer": "/matches/prompt/116/excerpt",
+      "offset": 93,
+      "length": 526,
+      "text": "ger、schema、personalization、migrate-config、schema-export、feature-flags、recovery 的文件内容；migrate-models 的完整纯转换；Engine update/read/config-population 与 disk defaults、PromptComposer personalization、protocol config_set 与 legacy model handlers、TUI config caller；ModelPool / ProviderCatalog 和 Desktop model-meta 的相关段。既有 tests 仅选择性阅读，没有运行整个 settings、Core 或仓库测试套件。[源码 SHA-256 清单](/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17-round4/evidence/settings-source-manifest.json) 记录 17 个文件，不能将清单理解为每个大文件都逐行审阅。",
+      "bounded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+      "pointer": "/matches/user-display/147/excerpt",
+      "offset": 5121,
+      "length": 111073,
+      "text": "that consistently\", \"pkg\": \"core\"}, {\"file\": \"packages/core/src/arena/providers/docs.ts\", \"line\": \"55\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Relevant documents excluded due to discovery order\", \"detail\": \"The condition `if (isRelevant || found.size <= 5)` includes a document if it's relevant OR if fewer than 5 docs have been found. Once 5 irrelevant docs are added, highly relevant docs found later in iteration will be skipped. This causes relevant documents to be excluded based on discovery order rather than relevance.\", \"fix\": \"Change to include documents in two sequential phases: first collect all relevant docs, then fall back to first N docs if no relevant matches found. Or change line 55 to `if (isRelevant || (found.size < 5 && artifacts.length < 5))` to limit b",
+      "bounded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+      "pointer": "/matches/user-display/148/excerpt",
+      "offset": 5191,
+      "length": 112643,
+      "text": "stently\", \"pkg\": \"core\", \"_id\": 6}, {\"file\": \"packages/core/src/arena/providers/docs.ts\", \"line\": \"55\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Relevant documents excluded due to discovery order\", \"detail\": \"The condition `if (isRelevant || found.size <= 5)` includes a document if it's relevant OR if fewer than 5 docs have been found. Once 5 irrelevant docs are added, highly relevant docs found later in iteration will be skipped. This causes relevant documents to be excluded based on discovery order rather than relevance.\", \"fix\": \"Change to include documents in two sequential phases: first collect all relevant docs, then fall back to first N docs if no relevant matches found. Or change line 55 to `if (isRelevant || (found.size < 5 && artifacts.length < 5))` to limit b",
+      "bounded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+      "pointer": "/matches/user-display/149/excerpt",
+      "offset": 3417,
+      "length": 220729,
+      "text": "ore/src/arena/iterate/phases/argue.ts\", \"line\": \"126-202\", \"category\": \"correctness\", \"severity\": \"high\", \"confidence\": \"high\", \"title\": \"Uninitialized finalText passed to parser on max-token failure\", \"detail\": \"When a model reaches maxToolRounds without producing text (line 183: !finalText && toolRounds >= maxToolRounds), a fallback message is added and another request is made. However, if that request also returns no text, finalText remains empty string (initialized line 126). This empty string is passed to parseCritiquesResponse (line 202), which will parse an empty string and return zero critiques rather than surfacing the failure. This silently loses critic feedback.\", \"fix\": \"Check if finalText is still empty after the fallback attempt and either: (a) log an error and return empty array explicitly, or ",
+      "bounded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+      "pointer": "/matches/user-display/150/excerpt",
+      "offset": 5121,
+      "length": 111073,
+      "text": "that consistently\", \"pkg\": \"core\"}, {\"file\": \"packages/core/src/arena/providers/docs.ts\", \"line\": \"55\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Relevant documents excluded due to discovery order\", \"detail\": \"The condition `if (isRelevant || found.size <= 5)` includes a document if it's relevant OR if fewer than 5 docs have been found. Once 5 irrelevant docs are added, highly relevant docs found later in iteration will be skipped. This causes relevant documents to be excluded based on discovery order rather than relevance.\", \"fix\": \"Change to include documents in two sequential phases: first collect all relevant docs, then fall back to first N docs if no relevant matches found. Or change line 55 to `if (isRelevant || (found.size < 5 && artifacts.length < 5))` to limit b",
+      "bounded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+      "pointer": "/matches/user-display/151/excerpt",
+      "offset": 851,
+      "length": 138898,
+      "text": " `unknown`. If a non-Error value is thrown (e.g., a string, plain object, or null), accessing `.message` returns `undefined`, resulting in \\\"Arena error: undefined\\\". The codebase demonstrates awareness of this issue at model-fetcher.ts:126 using the safer pattern `(err as Error).message || String(err)`. While Error objects are the norm, JavaScript allows throwing any value, and edge cases exist in async code where non-Error rejections can occur.\"}, {\"pkg\": \"core\", \"file\": \"packages/core/src/tool-system/builtin/lsp.ts\", \"line\": \"103\", \"category\": \"correctness\", \"severity\": \"medium\", \"title\": \"Hardcoded 2-second timeout for LSP diagnostics is a race condition\", \"detail\": \"The getDiagnostics action waits exactly 2 seconds with `await new Promise((r) => setTimeout(r, 2000))` for diagnostic results after sending ",
+      "bounded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+      "pointer": "/matches/user-display/152/excerpt",
+      "offset": 5191,
+      "length": 112643,
+      "text": "stently\", \"pkg\": \"core\", \"_id\": 6}, {\"file\": \"packages/core/src/arena/providers/docs.ts\", \"line\": \"55\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Relevant documents excluded due to discovery order\", \"detail\": \"The condition `if (isRelevant || found.size <= 5)` includes a document if it's relevant OR if fewer than 5 docs have been found. Once 5 irrelevant docs are added, highly relevant docs found later in iteration will be skipped. This causes relevant documents to be excluded based on discovery order rather than relevance.\", \"fix\": \"Change to include documents in two sequential phases: first collect all relevant docs, then fall back to first N docs if no relevant matches found. Or change line 55 to `if (isRelevant || (found.size < 5 && artifacts.length < 5))` to limit b",
+      "bounded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+      "pointer": "/matches/user-display/153/excerpt",
+      "offset": 3417,
+      "length": 220729,
+      "text": "ore/src/arena/iterate/phases/argue.ts\", \"line\": \"126-202\", \"category\": \"correctness\", \"severity\": \"high\", \"confidence\": \"high\", \"title\": \"Uninitialized finalText passed to parser on max-token failure\", \"detail\": \"When a model reaches maxToolRounds without producing text (line 183: !finalText && toolRounds >= maxToolRounds), a fallback message is added and another request is made. However, if that request also returns no text, finalText remains empty string (initialized line 126). This empty string is passed to parseCritiquesResponse (line 202), which will parse an empty string and return zero critiques rather than surfacing the failure. This silently loses critic feedback.\", \"fix\": \"Check if finalText is still empty after the fallback attempt and either: (a) log an error and return empty array explicitly, or ",
+      "bounded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+      "pointer": "/matches/user-display/154/excerpt",
+      "offset": 5121,
+      "length": 111073,
+      "text": "that consistently\", \"pkg\": \"core\"}, {\"file\": \"packages/core/src/arena/providers/docs.ts\", \"line\": \"55\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Relevant documents excluded due to discovery order\", \"detail\": \"The condition `if (isRelevant || found.size <= 5)` includes a document if it's relevant OR if fewer than 5 docs have been found. Once 5 irrelevant docs are added, highly relevant docs found later in iteration will be skipped. This causes relevant documents to be excluded based on discovery order rather than relevance.\", \"fix\": \"Change to include documents in two sequential phases: first collect all relevant docs, then fall back to first N docs if no relevant matches found. Or change line 55 to `if (isRelevant || (found.size < 5 && artifacts.length < 5))` to limit b",
+      "bounded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+      "pointer": "/matches/user-display/155/excerpt",
+      "offset": 851,
+      "length": 138898,
+      "text": " `unknown`. If a non-Error value is thrown (e.g., a string, plain object, or null), accessing `.message` returns `undefined`, resulting in \\\"Arena error: undefined\\\". The codebase demonstrates awareness of this issue at model-fetcher.ts:126 using the safer pattern `(err as Error).message || String(err)`. While Error objects are the norm, JavaScript allows throwing any value, and edge cases exist in async code where non-Error rejections can occur.\"}, {\"pkg\": \"core\", \"file\": \"packages/core/src/tool-system/builtin/lsp.ts\", \"line\": \"103\", \"category\": \"correctness\", \"severity\": \"medium\", \"title\": \"Hardcoded 2-second timeout for LSP diagnostics is a race condition\", \"detail\": \"The getDiagnostics action waits exactly 2 seconds with `await new Promise((r) => setTimeout(r, 2000))` for diagnostic results after sending ",
+      "bounded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+      "pointer": "/matches/user-display/156/excerpt",
+      "offset": 5191,
+      "length": 112643,
+      "text": "stently\", \"pkg\": \"core\", \"_id\": 6}, {\"file\": \"packages/core/src/arena/providers/docs.ts\", \"line\": \"55\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Relevant documents excluded due to discovery order\", \"detail\": \"The condition `if (isRelevant || found.size <= 5)` includes a document if it's relevant OR if fewer than 5 docs have been found. Once 5 irrelevant docs are added, highly relevant docs found later in iteration will be skipped. This causes relevant documents to be excluded based on discovery order rather than relevance.\", \"fix\": \"Change to include documents in two sequential phases: first collect all relevant docs, then fall back to first N docs if no relevant matches found. Or change line 55 to `if (isRelevant || (found.size < 5 && artifacts.length < 5))` to limit b",
+      "bounded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+      "pointer": "/matches/user-display/157/excerpt",
+      "offset": 3417,
+      "length": 220729,
+      "text": "ore/src/arena/iterate/phases/argue.ts\", \"line\": \"126-202\", \"category\": \"correctness\", \"severity\": \"high\", \"confidence\": \"high\", \"title\": \"Uninitialized finalText passed to parser on max-token failure\", \"detail\": \"When a model reaches maxToolRounds without producing text (line 183: !finalText && toolRounds >= maxToolRounds), a fallback message is added and another request is made. However, if that request also returns no text, finalText remains empty string (initialized line 126). This empty string is passed to parseCritiquesResponse (line 202), which will parse an empty string and return zero critiques rather than surfacing the failure. This silently loses critic feedback.\", \"fix\": \"Check if finalText is still empty after the fallback attempt and either: (a) log an error and return empty array explicitly, or ",
+      "bounded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+      "pointer": "/matches/user-display/158/excerpt",
+      "offset": 15171,
+      "length": 95287,
+      "text": "mporary file orphaned on disk. The fix would be to add unlinkSync(tmp) in the catch block after the fallback write, or use a try-finally to ensure cleanup.\"}, {\"pkg\": \"core\", \"file\": \"packages/core/src/plugins/installer/codex/convertMcp.ts\", \"line\": \"32\", \"category\": \"correctness\", \"severity\": \"low\", \"title\": \"Unsafe type cast of unparsed JSON without validation\", \"detail\": \"Line 32 casts `parsed` to `Record<string, unknown>` without checking that it is actually a plain object. If the referenced JSON file contains a non-object value (array, string, number, boolean, null), the function would incorrectly treat it as a server map. For example, a JSON file containing `[\\\"server1\\\", \\\"server2\\\"]` or `\\\"invalid\\\"` would pass through without error. The condition at line 29 only returns early if the object HAS the 'm",
+      "bounded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round34/evidence/renderer-status-frontier/history.json",
+      "pointer": "/hits/old-failed/55/excerpt",
+      "offset": 31,
+      "length": 367,
+      "text": "| Settings 当前/后台默认模型失败恢复 | `useModelConnections.setDefaultInstance:348` 等待 persist 成功才 setDefault；`setAux:197` 同样先写后改。读取有 scope/generation，pending/加载 fieldset 门禁；既有 Electron 日志 13–14 明确失败保留/回退、重试及字段保留 | 既有 [model-settings-e2e.log](/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/docs/review-2026-10-12/validation/model-settings-e2e.log)，本轮未重跑 |",
+      "bounded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round34/evidence/renderer-status-frontier/history.json",
+      "pointer": "/hits/old-failed/75/excerpt",
+      "offset": 31,
+      "length": 367,
+      "text": "| Settings 当前/后台默认模型失败恢复 | `useModelConnections.setDefaultInstance:348` 等待 persist 成功才 setDefault；`setAux:197` 同样先写后改。读取有 scope/generation，pending/加载 fieldset 门禁；既有 Electron 日志 13–14 明确失败保留/回退、重试及字段保留 | 既有 [model-settings-e2e.log](/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/docs/review-2026-10-12/validation/model-settings-e2e.log)，本轮未重跑 |",
+      "bounded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round38/evidence/mcp-patch-frontier/history.json",
+      "pointer": "/hits/targets/45/excerpt",
+      "offset": 2770,
+      "length": 38163,
+      "text": "ynamically using the preview and sizeKb values\", \"pkg\": \"core\"}, {\"file\": \"packages/core/src/cron/scheduler.ts\", \"line\": \"131-136\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Silent default fallback masks invalid schedule configuration\", \"detail\": \"parseSchedule returns a hardcoded 10-minute interval (line 136) for any schedule string that doesn't match the expected formats or a valid millisecond number. This silently masks misconfiguration (e.g., typos like '5mn' instead of '5m') without logging or raising an error, making it hard to debug incorrect scheduling.\", \"fix\": \"Throw an Error or log a warning when schedule parsing falls back to the default, or validate the schedule string format strictly and reject invalid inputs.\", \"pkg\": \"core\"}, {\"file\": \"packages/core/src/d",
+      "bounded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round38/evidence/mcp-patch-frontier/history.json",
+      "pointer": "/hits/targets/47/excerpt",
+      "offset": 2803,
+      "length": 38669,
+      "text": "using the preview and sizeKb values\", \"pkg\": \"core\", \"_id\": 14}, {\"file\": \"packages/core/src/cron/scheduler.ts\", \"line\": \"131-136\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Silent default fallback masks invalid schedule configuration\", \"detail\": \"parseSchedule returns a hardcoded 10-minute interval (line 136) for any schedule string that doesn't match the expected formats or a valid millisecond number. This silently masks misconfiguration (e.g., typos like '5mn' instead of '5m') without logging or raising an error, making it hard to debug incorrect scheduling.\", \"fix\": \"Throw an Error or log a warning when schedule parsing falls back to the default, or validate the schedule string format strictly and reject invalid inputs.\", \"pkg\": \"core\", \"_id\": 15}, {\"file\": \"packages",
+      "bounded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round38/evidence/mcp-patch-frontier/history.json",
+      "pointer": "/hits/targets/49/excerpt",
+      "offset": 6928,
+      "length": 116543,
+      "text": " \"168\", \"category\": \"simplify\", \"severity\": \"low\", \"confidence\": \"high\", \"title\": \"Redundant lookupPricing() calls in record() method\", \"detail\": \"Line 168 calls `lookupPricing()` twice on similar inputs: `lookupPricing(model).known && lookupPricing(canonical).known`. Since `getCanonicalName()` strips provider prefix and date suffix, both calls will check overlapping MODEL_PRICING entries. This is inefficient \\u2014 the result of one lookup should be reused.\", \"fix\": \"Call `lookupPricing()` once with the canonical name, store the result, and check its `known` field: `const pricing = lookupPricing(canonical); if (!pricing.known) { this._hasUnknownModel = true; }`\"}, {\"file\": \"packages/core/src/cron/scheduler.ts\", \"line\": \"100-110\", \"category\": \"correctness\", \"severity\": \"high\", \"confidence\": \"high\", \"title\": \"",
+      "bounded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round38/evidence/mcp-patch-frontier/history.json",
+      "pointer": "/hits/targets/51/excerpt",
+      "offset": 2770,
+      "length": 38163,
+      "text": "ynamically using the preview and sizeKb values\", \"pkg\": \"core\"}, {\"file\": \"packages/core/src/cron/scheduler.ts\", \"line\": \"131-136\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Silent default fallback masks invalid schedule configuration\", \"detail\": \"parseSchedule returns a hardcoded 10-minute interval (line 136) for any schedule string that doesn't match the expected formats or a valid millisecond number. This silently masks misconfiguration (e.g., typos like '5mn' instead of '5m') without logging or raising an error, making it hard to debug incorrect scheduling.\", \"fix\": \"Throw an Error or log a warning when schedule parsing falls back to the default, or validate the schedule string format strictly and reject invalid inputs.\", \"pkg\": \"core\"}, {\"file\": \"packages/core/src/d",
+      "bounded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round38/evidence/mcp-patch-frontier/history.json",
+      "pointer": "/hits/targets/54/excerpt",
+      "offset": 2803,
+      "length": 38669,
+      "text": "using the preview and sizeKb values\", \"pkg\": \"core\", \"_id\": 14}, {\"file\": \"packages/core/src/cron/scheduler.ts\", \"line\": \"131-136\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Silent default fallback masks invalid schedule configuration\", \"detail\": \"parseSchedule returns a hardcoded 10-minute interval (line 136) for any schedule string that doesn't match the expected formats or a valid millisecond number. This silently masks misconfiguration (e.g., typos like '5mn' instead of '5m') without logging or raising an error, making it hard to debug incorrect scheduling.\", \"fix\": \"Throw an Error or log a warning when schedule parsing falls back to the default, or validate the schedule string format strictly and reject invalid inputs.\", \"pkg\": \"core\", \"_id\": 15}, {\"file\": \"packages",
+      "bounded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round38/evidence/mcp-patch-frontier/history.json",
+      "pointer": "/hits/targets/56/excerpt",
+      "offset": 6928,
+      "length": 116543,
+      "text": " \"168\", \"category\": \"simplify\", \"severity\": \"low\", \"confidence\": \"high\", \"title\": \"Redundant lookupPricing() calls in record() method\", \"detail\": \"Line 168 calls `lookupPricing()` twice on similar inputs: `lookupPricing(model).known && lookupPricing(canonical).known`. Since `getCanonicalName()` strips provider prefix and date suffix, both calls will check overlapping MODEL_PRICING entries. This is inefficient \\u2014 the result of one lookup should be reused.\", \"fix\": \"Call `lookupPricing()` once with the canonical name, store the result, and check its `known` field: `const pricing = lookupPricing(canonical); if (!pricing.known) { this._hasUnknownModel = true; }`\"}, {\"file\": \"packages/core/src/cron/scheduler.ts\", \"line\": \"100-110\", \"category\": \"correctness\", \"severity\": \"high\", \"confidence\": \"high\", \"title\": \"",
+      "bounded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round38/evidence/mcp-patch-frontier/history.json",
+      "pointer": "/hits/targets/58/excerpt",
+      "offset": 2770,
+      "length": 38163,
+      "text": "ynamically using the preview and sizeKb values\", \"pkg\": \"core\"}, {\"file\": \"packages/core/src/cron/scheduler.ts\", \"line\": \"131-136\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Silent default fallback masks invalid schedule configuration\", \"detail\": \"parseSchedule returns a hardcoded 10-minute interval (line 136) for any schedule string that doesn't match the expected formats or a valid millisecond number. This silently masks misconfiguration (e.g., typos like '5mn' instead of '5m') without logging or raising an error, making it hard to debug incorrect scheduling.\", \"fix\": \"Throw an Error or log a warning when schedule parsing falls back to the default, or validate the schedule string format strictly and reject invalid inputs.\", \"pkg\": \"core\"}, {\"file\": \"packages/core/src/d",
+      "bounded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round38/evidence/mcp-patch-frontier/history.json",
+      "pointer": "/hits/targets/61/excerpt",
+      "offset": 2803,
+      "length": 38669,
+      "text": "using the preview and sizeKb values\", \"pkg\": \"core\", \"_id\": 14}, {\"file\": \"packages/core/src/cron/scheduler.ts\", \"line\": \"131-136\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Silent default fallback masks invalid schedule configuration\", \"detail\": \"parseSchedule returns a hardcoded 10-minute interval (line 136) for any schedule string that doesn't match the expected formats or a valid millisecond number. This silently masks misconfiguration (e.g., typos like '5mn' instead of '5m') without logging or raising an error, making it hard to debug incorrect scheduling.\", \"fix\": \"Throw an Error or log a warning when schedule parsing falls back to the default, or validate the schedule string format strictly and reject invalid inputs.\", \"pkg\": \"core\", \"_id\": 15}, {\"file\": \"packages",
+      "bounded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round38/evidence/mcp-patch-frontier/history.json",
+      "pointer": "/hits/targets/63/excerpt",
+      "offset": 6928,
+      "length": 116543,
+      "text": " \"168\", \"category\": \"simplify\", \"severity\": \"low\", \"confidence\": \"high\", \"title\": \"Redundant lookupPricing() calls in record() method\", \"detail\": \"Line 168 calls `lookupPricing()` twice on similar inputs: `lookupPricing(model).known && lookupPricing(canonical).known`. Since `getCanonicalName()` strips provider prefix and date suffix, both calls will check overlapping MODEL_PRICING entries. This is inefficient \\u2014 the result of one lookup should be reused.\", \"fix\": \"Call `lookupPricing()` once with the canonical name, store the result, and check its `known` field: `const pricing = lookupPricing(canonical); if (!pricing.known) { this._hasUnknownModel = true; }`\"}, {\"file\": \"packages/core/src/cron/scheduler.ts\", \"line\": \"100-110\", \"category\": \"correctness\", \"severity\": \"high\", \"confidence\": \"high\", \"title\": \"",
+      "bounded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round38/evidence/mcp-patch-frontier/history.json",
+      "pointer": "/hits/targets/91/excerpt",
+      "offset": 2770,
+      "length": 38163,
+      "text": "ynamically using the preview and sizeKb values\", \"pkg\": \"core\"}, {\"file\": \"packages/core/src/cron/scheduler.ts\", \"line\": \"131-136\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Silent default fallback masks invalid schedule configuration\", \"detail\": \"parseSchedule returns a hardcoded 10-minute interval (line 136) for any schedule string that doesn't match the expected formats or a valid millisecond number. This silently masks misconfiguration (e.g., typos like '5mn' instead of '5m') without logging or raising an error, making it hard to debug incorrect scheduling.\", \"fix\": \"Throw an Error or log a warning when schedule parsing falls back to the default, or validate the schedule string format strictly and reject invalid inputs.\", \"pkg\": \"core\"}, {\"file\": \"packages/core/src/d",
+      "bounded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round38/evidence/mcp-patch-frontier/history.json",
+      "pointer": "/hits/targets/93/excerpt",
+      "offset": 2803,
+      "length": 38669,
+      "text": "using the preview and sizeKb values\", \"pkg\": \"core\", \"_id\": 14}, {\"file\": \"packages/core/src/cron/scheduler.ts\", \"line\": \"131-136\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Silent default fallback masks invalid schedule configuration\", \"detail\": \"parseSchedule returns a hardcoded 10-minute interval (line 136) for any schedule string that doesn't match the expected formats or a valid millisecond number. This silently masks misconfiguration (e.g., typos like '5mn' instead of '5m') without logging or raising an error, making it hard to debug incorrect scheduling.\", \"fix\": \"Throw an Error or log a warning when schedule parsing falls back to the default, or validate the schedule string format strictly and reject invalid inputs.\", \"pkg\": \"core\", \"_id\": 15}, {\"file\": \"packages",
+      "bounded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round38/evidence/mcp-patch-frontier/history.json",
+      "pointer": "/hits/targets/95/excerpt",
+      "offset": 6928,
+      "length": 116543,
+      "text": " \"168\", \"category\": \"simplify\", \"severity\": \"low\", \"confidence\": \"high\", \"title\": \"Redundant lookupPricing() calls in record() method\", \"detail\": \"Line 168 calls `lookupPricing()` twice on similar inputs: `lookupPricing(model).known && lookupPricing(canonical).known`. Since `getCanonicalName()` strips provider prefix and date suffix, both calls will check overlapping MODEL_PRICING entries. This is inefficient \\u2014 the result of one lookup should be reused.\", \"fix\": \"Call `lookupPricing()` once with the canonical name, store the result, and check its `known` field: `const pricing = lookupPricing(canonical); if (!pricing.known) { this._hasUnknownModel = true; }`\"}, {\"file\": \"packages/core/src/cron/scheduler.ts\", \"line\": \"100-110\", \"category\": \"correctness\", \"severity\": \"high\", \"confidence\": \"high\", \"title\": \"",
+      "bounded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round38/evidence/mcp-patch-frontier/history.json",
+      "pointer": "/hits/targets/97/excerpt",
+      "offset": 2770,
+      "length": 38163,
+      "text": "ynamically using the preview and sizeKb values\", \"pkg\": \"core\"}, {\"file\": \"packages/core/src/cron/scheduler.ts\", \"line\": \"131-136\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Silent default fallback masks invalid schedule configuration\", \"detail\": \"parseSchedule returns a hardcoded 10-minute interval (line 136) for any schedule string that doesn't match the expected formats or a valid millisecond number. This silently masks misconfiguration (e.g., typos like '5mn' instead of '5m') without logging or raising an error, making it hard to debug incorrect scheduling.\", \"fix\": \"Throw an Error or log a warning when schedule parsing falls back to the default, or validate the schedule string format strictly and reject invalid inputs.\", \"pkg\": \"core\"}, {\"file\": \"packages/core/src/d",
+      "bounded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round39/evidence/mcp-rename-fields-frontier/matching-history-objects.first.json",
+      "pointer": "/objects/15/object/excerpt",
+      "offset": 5121,
+      "length": 111073,
+      "text": "that consistently\", \"pkg\": \"core\"}, {\"file\": \"packages/core/src/arena/providers/docs.ts\", \"line\": \"55\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Relevant documents excluded due to discovery order\", \"detail\": \"The condition `if (isRelevant || found.size <= 5)` includes a document if it's relevant OR if fewer than 5 docs have been found. Once 5 irrelevant docs are added, highly relevant docs found later in iteration will be skipped. This causes relevant documents to be excluded based on discovery order rather than relevance.\", \"fix\": \"Change to include documents in two sequential phases: first collect all relevant docs, then fall back to first N docs if no relevant matches found. Or change line 55 to `if (isRelevant || (found.size < 5 && artifacts.length < 5))` to limit b",
+      "bounded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round39/evidence/mcp-rename-fields-frontier/matching-history-objects.first.json",
+      "pointer": "/objects/16/object/excerpt",
+      "offset": 5191,
+      "length": 112643,
+      "text": "stently\", \"pkg\": \"core\", \"_id\": 6}, {\"file\": \"packages/core/src/arena/providers/docs.ts\", \"line\": \"55\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Relevant documents excluded due to discovery order\", \"detail\": \"The condition `if (isRelevant || found.size <= 5)` includes a document if it's relevant OR if fewer than 5 docs have been found. Once 5 irrelevant docs are added, highly relevant docs found later in iteration will be skipped. This causes relevant documents to be excluded based on discovery order rather than relevance.\", \"fix\": \"Change to include documents in two sequential phases: first collect all relevant docs, then fall back to first N docs if no relevant matches found. Or change line 55 to `if (isRelevant || (found.size < 5 && artifacts.length < 5))` to limit b",
+      "bounded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round39/evidence/mcp-rename-fields-frontier/matching-history-objects.first.json",
+      "pointer": "/objects/17/object/excerpt",
+      "offset": 3417,
+      "length": 220729,
+      "text": "ore/src/arena/iterate/phases/argue.ts\", \"line\": \"126-202\", \"category\": \"correctness\", \"severity\": \"high\", \"confidence\": \"high\", \"title\": \"Uninitialized finalText passed to parser on max-token failure\", \"detail\": \"When a model reaches maxToolRounds without producing text (line 183: !finalText && toolRounds >= maxToolRounds), a fallback message is added and another request is made. However, if that request also returns no text, finalText remains empty string (initialized line 126). This empty string is passed to parseCritiquesResponse (line 202), which will parse an empty string and return zero critiques rather than surfacing the failure. This silently loses critic feedback.\", \"fix\": \"Check if finalText is still empty after the fallback attempt and either: (a) log an error and return empty array explicitly, or ",
+      "bounded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round39/evidence/mcp-rename-fields-frontier/matching-history-objects.first.json",
+      "pointer": "/objects/18/object/excerpt",
+      "offset": 5121,
+      "length": 111073,
+      "text": "that consistently\", \"pkg\": \"core\"}, {\"file\": \"packages/core/src/arena/providers/docs.ts\", \"line\": \"55\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Relevant documents excluded due to discovery order\", \"detail\": \"The condition `if (isRelevant || found.size <= 5)` includes a document if it's relevant OR if fewer than 5 docs have been found. Once 5 irrelevant docs are added, highly relevant docs found later in iteration will be skipped. This causes relevant documents to be excluded based on discovery order rather than relevance.\", \"fix\": \"Change to include documents in two sequential phases: first collect all relevant docs, then fall back to first N docs if no relevant matches found. Or change line 55 to `if (isRelevant || (found.size < 5 && artifacts.length < 5))` to limit b",
+      "bounded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round39/evidence/mcp-rename-fields-frontier/matching-history-objects.first.json",
+      "pointer": "/objects/19/object/excerpt",
+      "offset": 851,
+      "length": 138898,
+      "text": " `unknown`. If a non-Error value is thrown (e.g., a string, plain object, or null), accessing `.message` returns `undefined`, resulting in \\\"Arena error: undefined\\\". The codebase demonstrates awareness of this issue at model-fetcher.ts:126 using the safer pattern `(err as Error).message || String(err)`. While Error objects are the norm, JavaScript allows throwing any value, and edge cases exist in async code where non-Error rejections can occur.\"}, {\"pkg\": \"core\", \"file\": \"packages/core/src/tool-system/builtin/lsp.ts\", \"line\": \"103\", \"category\": \"correctness\", \"severity\": \"medium\", \"title\": \"Hardcoded 2-second timeout for LSP diagnostics is a race condition\", \"detail\": \"The getDiagnostics action waits exactly 2 seconds with `await new Promise((r) => setTimeout(r, 2000))` for diagnostic results after sending ",
+      "bounded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round39/evidence/mcp-rename-fields-frontier/matching-history-objects.first.json",
+      "pointer": "/objects/20/object/excerpt",
+      "offset": 5191,
+      "length": 112643,
+      "text": "stently\", \"pkg\": \"core\", \"_id\": 6}, {\"file\": \"packages/core/src/arena/providers/docs.ts\", \"line\": \"55\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Relevant documents excluded due to discovery order\", \"detail\": \"The condition `if (isRelevant || found.size <= 5)` includes a document if it's relevant OR if fewer than 5 docs have been found. Once 5 irrelevant docs are added, highly relevant docs found later in iteration will be skipped. This causes relevant documents to be excluded based on discovery order rather than relevance.\", \"fix\": \"Change to include documents in two sequential phases: first collect all relevant docs, then fall back to first N docs if no relevant matches found. Or change line 55 to `if (isRelevant || (found.size < 5 && artifacts.length < 5))` to limit b",
+      "bounded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round39/evidence/mcp-rename-fields-frontier/matching-history-objects.first.json",
+      "pointer": "/objects/21/object/excerpt",
+      "offset": 3417,
+      "length": 220729,
+      "text": "ore/src/arena/iterate/phases/argue.ts\", \"line\": \"126-202\", \"category\": \"correctness\", \"severity\": \"high\", \"confidence\": \"high\", \"title\": \"Uninitialized finalText passed to parser on max-token failure\", \"detail\": \"When a model reaches maxToolRounds without producing text (line 183: !finalText && toolRounds >= maxToolRounds), a fallback message is added and another request is made. However, if that request also returns no text, finalText remains empty string (initialized line 126). This empty string is passed to parseCritiquesResponse (line 202), which will parse an empty string and return zero critiques rather than surfacing the failure. This silently loses critic feedback.\", \"fix\": \"Check if finalText is still empty after the fallback attempt and either: (a) log an error and return empty array explicitly, or ",
+      "bounded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round39/evidence/mcp-rename-fields-frontier/matching-history-objects.first.json",
+      "pointer": "/objects/22/object/excerpt",
+      "offset": 5121,
+      "length": 111073,
+      "text": "that consistently\", \"pkg\": \"core\"}, {\"file\": \"packages/core/src/arena/providers/docs.ts\", \"line\": \"55\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Relevant documents excluded due to discovery order\", \"detail\": \"The condition `if (isRelevant || found.size <= 5)` includes a document if it's relevant OR if fewer than 5 docs have been found. Once 5 irrelevant docs are added, highly relevant docs found later in iteration will be skipped. This causes relevant documents to be excluded based on discovery order rather than relevance.\", \"fix\": \"Change to include documents in two sequential phases: first collect all relevant docs, then fall back to first N docs if no relevant matches found. Or change line 55 to `if (isRelevant || (found.size < 5 && artifacts.length < 5))` to limit b",
+      "bounded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round39/evidence/mcp-rename-fields-frontier/matching-history-objects.first.json",
+      "pointer": "/objects/23/object/excerpt",
+      "offset": 851,
+      "length": 138898,
+      "text": " `unknown`. If a non-Error value is thrown (e.g., a string, plain object, or null), accessing `.message` returns `undefined`, resulting in \\\"Arena error: undefined\\\". The codebase demonstrates awareness of this issue at model-fetcher.ts:126 using the safer pattern `(err as Error).message || String(err)`. While Error objects are the norm, JavaScript allows throwing any value, and edge cases exist in async code where non-Error rejections can occur.\"}, {\"pkg\": \"core\", \"file\": \"packages/core/src/tool-system/builtin/lsp.ts\", \"line\": \"103\", \"category\": \"correctness\", \"severity\": \"medium\", \"title\": \"Hardcoded 2-second timeout for LSP diagnostics is a race condition\", \"detail\": \"The getDiagnostics action waits exactly 2 seconds with `await new Promise((r) => setTimeout(r, 2000))` for diagnostic results after sending ",
+      "bounded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round39/evidence/mcp-rename-fields-frontier/matching-history-objects.first.json",
+      "pointer": "/objects/24/object/excerpt",
+      "offset": 5191,
+      "length": 112643,
+      "text": "stently\", \"pkg\": \"core\", \"_id\": 6}, {\"file\": \"packages/core/src/arena/providers/docs.ts\", \"line\": \"55\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Relevant documents excluded due to discovery order\", \"detail\": \"The condition `if (isRelevant || found.size <= 5)` includes a document if it's relevant OR if fewer than 5 docs have been found. Once 5 irrelevant docs are added, highly relevant docs found later in iteration will be skipped. This causes relevant documents to be excluded based on discovery order rather than relevance.\", \"fix\": \"Change to include documents in two sequential phases: first collect all relevant docs, then fall back to first N docs if no relevant matches found. Or change line 55 to `if (isRelevant || (found.size < 5 && artifacts.length < 5))` to limit b",
+      "bounded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round39/evidence/mcp-rename-fields-frontier/matching-history-objects.first.json",
+      "pointer": "/objects/25/object/excerpt",
+      "offset": 3417,
+      "length": 220729,
+      "text": "ore/src/arena/iterate/phases/argue.ts\", \"line\": \"126-202\", \"category\": \"correctness\", \"severity\": \"high\", \"confidence\": \"high\", \"title\": \"Uninitialized finalText passed to parser on max-token failure\", \"detail\": \"When a model reaches maxToolRounds without producing text (line 183: !finalText && toolRounds >= maxToolRounds), a fallback message is added and another request is made. However, if that request also returns no text, finalText remains empty string (initialized line 126). This empty string is passed to parseCritiquesResponse (line 202), which will parse an empty string and return zero critiques rather than surfacing the failure. This silently loses critic feedback.\", \"fix\": \"Check if finalText is still empty after the fallback attempt and either: (a) log an error and return empty array explicitly, or ",
+      "bounded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round39/evidence/mcp-rename-fields-frontier/matching-history-objects.first.json",
+      "pointer": "/objects/26/object/excerpt",
+      "offset": 15171,
+      "length": 95287,
+      "text": "mporary file orphaned on disk. The fix would be to add unlinkSync(tmp) in the catch block after the fallback write, or use a try-finally to ensure cleanup.\"}, {\"pkg\": \"core\", \"file\": \"packages/core/src/plugins/installer/codex/convertMcp.ts\", \"line\": \"32\", \"category\": \"correctness\", \"severity\": \"low\", \"title\": \"Unsafe type cast of unparsed JSON without validation\", \"detail\": \"Line 32 casts `parsed` to `Record<string, unknown>` without checking that it is actually a plain object. If the referenced JSON file contains a non-object value (array, string, number, boolean, null), the function would incorrectly treat it as a server map. For example, a JSON file containing `[\\\"server1\\\", \\\"server2\\\"]` or `\\\"invalid\\\"` would pass through without error. The condition at line 29 only returns early if the object HAS the 'm",
+      "bounded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round39/evidence/mcp-rename-fields-frontier/matching-history-objects.first.json",
+      "pointer": "/objects/48/object/text",
+      "offset": 5406,
+      "length": 112304,
+      "text": "that consistently\", \"pkg\": \"core\"}, {\"file\": \"packages/core/src/arena/providers/docs.ts\", \"line\": \"55\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Relevant documents excluded due to discovery order\", \"detail\": \"The condition `if (isRelevant || found.size <= 5)` includes a document if it's relevant OR if fewer than 5 docs have been found. Once 5 irrelevant docs are added, highly relevant docs found later in iteration will be skipped. This causes relevant documents to be excluded based on discovery order rather than relevance.\", \"fix\": \"Change to include documents in two sequential phases: first collect all relevant docs, then fall back to first N docs if no relevant matches found. Or change line 55 to `if (isRelevant || (found.size < 5 && artifacts.length < 5))` to limit b",
+      "bounded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round39/evidence/mcp-rename-fields-frontier/matching-history-objects.first.json",
+      "pointer": "/objects/49/object/text",
+      "offset": 5476,
+      "length": 113910,
+      "text": "stently\", \"pkg\": \"core\", \"_id\": 6}, {\"file\": \"packages/core/src/arena/providers/docs.ts\", \"line\": \"55\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Relevant documents excluded due to discovery order\", \"detail\": \"The condition `if (isRelevant || found.size <= 5)` includes a document if it's relevant OR if fewer than 5 docs have been found. Once 5 irrelevant docs are added, highly relevant docs found later in iteration will be skipped. This causes relevant documents to be excluded based on discovery order rather than relevance.\", \"fix\": \"Change to include documents in two sequential phases: first collect all relevant docs, then fall back to first N docs if no relevant matches found. Or change line 55 to `if (isRelevant || (found.size < 5 && artifacts.length < 5))` to limit b",
+      "bounded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round39/evidence/mcp-rename-fields-frontier/matching-history-objects.first.json",
+      "pointer": "/objects/50/object/text",
+      "offset": 3702,
+      "length": 222261,
+      "text": "ore/src/arena/iterate/phases/argue.ts\", \"line\": \"126-202\", \"category\": \"correctness\", \"severity\": \"high\", \"confidence\": \"high\", \"title\": \"Uninitialized finalText passed to parser on max-token failure\", \"detail\": \"When a model reaches maxToolRounds without producing text (line 183: !finalText && toolRounds >= maxToolRounds), a fallback message is added and another request is made. However, if that request also returns no text, finalText remains empty string (initialized line 126). This empty string is passed to parseCritiquesResponse (line 202), which will parse an empty string and return zero critiques rather than surfacing the failure. This silently loses critic feedback.\", \"fix\": \"Check if finalText is still empty after the fallback attempt and either: (a) log an error and return empty array explicitly, or ",
+      "bounded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round39/evidence/mcp-rename-fields-frontier/matching-history-objects.first.json",
+      "pointer": "/objects/51/object/text",
+      "offset": 5406,
+      "length": 112304,
+      "text": "that consistently\", \"pkg\": \"core\"}, {\"file\": \"packages/core/src/arena/providers/docs.ts\", \"line\": \"55\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Relevant documents excluded due to discovery order\", \"detail\": \"The condition `if (isRelevant || found.size <= 5)` includes a document if it's relevant OR if fewer than 5 docs have been found. Once 5 irrelevant docs are added, highly relevant docs found later in iteration will be skipped. This causes relevant documents to be excluded based on discovery order rather than relevance.\", \"fix\": \"Change to include documents in two sequential phases: first collect all relevant docs, then fall back to first N docs if no relevant matches found. Or change line 55 to `if (isRelevant || (found.size < 5 && artifacts.length < 5))` to limit b",
+      "bounded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round39/evidence/mcp-rename-fields-frontier/matching-history-objects.first.json",
+      "pointer": "/objects/52/object/text",
+      "offset": 7319,
+      "length": 169230,
+      "text": "lved.startsWith(REPO_ROOT + path.sep)`.\"}, {\"pkg\": \"core\", \"file\": \"packages/core/src/arena/providers/docs.ts\", \"line\": \"55\", \"category\": \"correctness\", \"severity\": \"medium\", \"title\": \"Relevant documents excluded due to discovery order\", \"detail\": \"The condition `if (isRelevant || found.size <= 5)` includes a document if it's relevant OR if fewer than 5 docs have been found. Once 5 irrelevant docs are added, highly relevant docs found later in iteration will be skipped. This causes relevant documents to be excluded based on discovery order rather than relevance.\", \"fix\": \"Change to include documents in two sequential phases: first collect all relevant docs, then fall back to first N docs if no relevant matches found. Or change line 55 to `if (isRelevant || (found.size < 5 && artifacts.length < 5))` to limit b",
+      "bounded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round39/evidence/mcp-rename-fields-frontier/matching-history-objects.first.json",
+      "pointer": "/objects/53/object/text",
+      "offset": 5476,
+      "length": 113910,
+      "text": "stently\", \"pkg\": \"core\", \"_id\": 6}, {\"file\": \"packages/core/src/arena/providers/docs.ts\", \"line\": \"55\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Relevant documents excluded due to discovery order\", \"detail\": \"The condition `if (isRelevant || found.size <= 5)` includes a document if it's relevant OR if fewer than 5 docs have been found. Once 5 irrelevant docs are added, highly relevant docs found later in iteration will be skipped. This causes relevant documents to be excluded based on discovery order rather than relevance.\", \"fix\": \"Change to include documents in two sequential phases: first collect all relevant docs, then fall back to first N docs if no relevant matches found. Or change line 55 to `if (isRelevant || (found.size < 5 && artifacts.length < 5))` to limit b",
+      "bounded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round39/evidence/mcp-rename-fields-frontier/matching-history-objects.first.json",
+      "pointer": "/objects/54/object/text",
+      "offset": 3702,
+      "length": 222261,
+      "text": "ore/src/arena/iterate/phases/argue.ts\", \"line\": \"126-202\", \"category\": \"correctness\", \"severity\": \"high\", \"confidence\": \"high\", \"title\": \"Uninitialized finalText passed to parser on max-token failure\", \"detail\": \"When a model reaches maxToolRounds without producing text (line 183: !finalText && toolRounds >= maxToolRounds), a fallback message is added and another request is made. However, if that request also returns no text, finalText remains empty string (initialized line 126). This empty string is passed to parseCritiquesResponse (line 202), which will parse an empty string and return zero critiques rather than surfacing the failure. This silently loses critic feedback.\", \"fix\": \"Check if finalText is still empty after the fallback attempt and either: (a) log an error and return empty array explicitly, or ",
+      "bounded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round39/evidence/mcp-rename-fields-frontier/matching-history-objects.first.json",
+      "pointer": "/objects/55/object/text",
+      "offset": 5406,
+      "length": 112304,
+      "text": "that consistently\", \"pkg\": \"core\"}, {\"file\": \"packages/core/src/arena/providers/docs.ts\", \"line\": \"55\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"Relevant documents excluded due to discovery order\", \"detail\": \"The condition `if (isRelevant || found.size <= 5)` includes a document if it's relevant OR if fewer than 5 docs have been found. Once 5 irrelevant docs are added, highly relevant docs found later in iteration will be skipped. This causes relevant documents to be excluded based on discovery order rather than relevance.\", \"fix\": \"Change to include documents in two sequential phases: first collect all relevant docs, then fall back to first N docs if no relevant matches found. Or change line 55 to `if (isRelevant || (found.size < 5 && artifacts.length < 5))` to limit b",
+      "bounded": true
+    }
+  ]
+}

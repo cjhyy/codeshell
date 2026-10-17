@@ -1,0 +1,13 @@
+{
+  "path": "packages/desktop/src/renderer/App.tsx",
+  "bytes": 122863,
+  "sha256": "02ae12bfccf26878226720ad90282a6a11a1fdc3e05efd1ce54a09d256d5d715",
+  "displayRanges": [
+    [
+      346,
+      373
+    ]
+  ],
+  "pinReference": "entry-initial-pins.json",
+  "displayAt": "2026-10-17T18:28:38.055844+00:00"
+}

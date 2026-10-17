@@ -1,0 +1,214 @@
+[
+  {
+    "path": "packages/coding/src/external-runtimes/codex/model-discovery.ts",
+    "sourceSha256": "08691432cb3fec0592aeb4a9e87f872df64459909948898c47a0ec70c44fa3bc",
+    "note": "Selected text captured after actual display for evidence only; not a second semantic read or a before-read full snapshot.",
+    "ranges": [
+      {
+        "from": 4,
+        "to": 8,
+        "text": "export interface CodexDiscoveredModel {\n  model: string;\n  displayName: string;\n  isDefault: boolean;\n}\n",
+        "textSha256": "6d933ea3d33bfcc87ef35d6f4d250722b6e8a4742a812f519cfd94714534faab"
+      },
+      {
+        "from": 10,
+        "to": 24,
+        "text": "const DEFAULT_TIMEOUT_MS = 8_000;\nconst MAX_PAGES = 100;\n\nfunction isRecord(value: unknown): value is Record<string, unknown> {\n  return typeof value === \"object\" && value !== null && !Array.isArray(value);\n}\n\nfunction nonemptyString(value: unknown): value is string {\n  return typeof value === \"string\" && value.trim().length > 0;\n}\n\n/**\n * Read the installed Codex CLI's available models without starting a thread or\n * turn. The deadline covers initialization and every page together. Callers own\n * caching and fallback policy; a valid empty catalog is distinct from failure.\n",
+        "textSha256": "bf7af322bcac8816127dbcb08974f6aae59201f5b8ab45bbef6795c0fdf7685b"
+      },
+      {
+        "from": 56,
+        "to": 62,
+        "text": "    const models = new Map<string, CodexDiscoveredModel>();\n    const cursors = new Set<string>();\n    let cursor: string | undefined;\n    for (let page = 0; page < MAX_PAGES; page++) {\n      const result = await client.request(\n        \"model/list\",\n        { includeHidden: false, limit: 100, ...(cursor ? { cursor } : {}) },\n",
+        "textSha256": "5af4681e202bd4c40d9aaf99cb3c81f2e29633d126ec805c0d4a4a0ac9992bbf"
+      },
+      {
+        "from": 65,
+        "to": 95,
+        "text": "      if (!isRecord(result) || !Array.isArray(result.data)) {\n        throw new Error(\"Invalid Codex model/list response\");\n      }\n      for (const entry of result.data) {\n        if (\n          !isRecord(entry) ||\n          !nonemptyString(entry.model) ||\n          !nonemptyString(entry.displayName) ||\n          (entry.isDefault !== undefined && typeof entry.isDefault !== \"boolean\") ||\n          (entry.hidden !== undefined && typeof entry.hidden !== \"boolean\")\n        ) {\n          throw new Error(\"Invalid Codex model/list entry\");\n        }\n        if (entry.hidden === true || models.has(entry.model)) continue;\n        models.set(entry.model, {\n          model: entry.model,\n          displayName: entry.displayName,\n          isDefault: entry.isDefault === true,\n        });\n      }\n\n      if (result.nextCursor === null || result.nextCursor === undefined) {\n        return [...models.values()];\n      }\n      if (!nonemptyString(result.nextCursor) || cursors.has(result.nextCursor)) {\n        throw new Error(\"Invalid Codex model/list pagination cursor\");\n      }\n      cursor = result.nextCursor;\n      cursors.add(cursor);\n    }\n    throw new Error(\"Codex model/list exceeded the pagination limit\");\n",
+        "textSha256": "80f60d91da51796aab52892d1240ff1bcb0c24843046edbeca863237fd53dbdf"
+      }
+    ]
+  },
+  {
+    "path": "packages/desktop/src/main/external-runtime-model-service.ts",
+    "sourceSha256": "fb19c731974164e7ec21f12be97c4caa68137a1a43fc959e522f92d21d6b422d",
+    "note": "Selected text captured after actual display for evidence only; not a second semantic read or a before-read full snapshot.",
+    "ranges": [
+      {
+        "from": 14,
+        "to": 25,
+        "text": "interface ModelCache {\n  entries: ExternalRuntimeModelEntry[];\n  expiresAt: number;\n  pending?: Promise<ExternalRuntimeModelEntry[]>;\n}\n\ninterface ExternalRuntimeModelServiceOptions {\n  isEnabled: () => boolean;\n  probe?: typeof probeExternalRuntimes;\n  discoverCodex?: typeof discoverCodexModels;\n  now?: () => number;\n}\n",
+        "textSha256": "9075abc83acb1459d7ea464264d7fd428ddf1eceb59f32c925518e1c4ad8296e"
+      },
+      {
+        "from": 27,
+        "to": 38,
+        "text": "/** One shared catalog cache across windows; discovery never opens an agent turn. */\nexport class ExternalRuntimeModelService {\n  private readonly cache = new Map<string, ModelCache>();\n\n  constructor(private readonly options: ExternalRuntimeModelServiceOptions) {}\n\n  async list(): Promise<ExternalRuntimeModelEntry[]> {\n    if (!this.options.isEnabled()) {\n      this.cache.clear();\n      return [];\n    }\n\n",
+        "textSha256": "60ab7cae1616d1d6bd89dc4b1baaa6bab457a7de945798be0108e2f50b5e0a5e"
+      },
+      {
+        "from": 40,
+        "to": 50,
+        "text": "    const available = probed.filter((runtime) => runtime.path !== null);\n    const codex = available.find((runtime) => runtime.kind === \"codex\");\n    const otherEntries = externalRuntimeModelEntries(\n      available.filter((runtime) => runtime.kind !== \"codex\").map((runtime) => runtime.kind),\n    );\n    if (!codex?.path) return otherEntries;\n\n    const codexEntries = await this.codexEntries(codex.path);\n    // The feature can be disabled while a discovery request is in flight.\n    return this.options.isEnabled() ? [...codexEntries, ...otherEntries] : [];\n  }\n",
+        "textSha256": "eb13d7066aa21b6e5ceb5825eee3fa48569d69307ee1e72307633bb2dd7b2ade"
+      },
+      {
+        "from": 54,
+        "to": 58,
+        "text": "    let cached = this.cache.get(command);\n    if (!cached) {\n      cached = { entries: externalRuntimeModelEntries([\"codex\"]), expiresAt: 0 };\n      this.cache.set(command, cached);\n    }\n",
+        "textSha256": "d88cfa380e0e8aeba3faab6b4b2d6d8defe96be4492df5e0b711ecf5f8b9725c"
+      },
+      {
+        "from": 62,
+        "to": 66,
+        "text": "    const entry = cached;\n    entry.pending = Promise.resolve().then(async () => {\n      try {\n        const models = await (this.options.discoverCodex ?? discoverCodexModels)({\n          command,\n",
+        "textSha256": "232b73cf4302a61d2a0ea5cda487b01234ecba110ecd6a31bfd9070724c8c614"
+      },
+      {
+        "from": 71,
+        "to": 85,
+        "text": "        entry.entries = [...models]\n          .sort((a, b) => Number(b.isDefault) - Number(a.isDefault))\n          .map(({ model, displayName }) => ({\n            key: externalRuntimeModelKey(\"codex\", model),\n            label: `Codex · ${displayName}`,\n            provider: \"codex\",\n            kind: \"codex\",\n            maxContextTokens: EXTERNAL_RUNTIME_FALLBACK_CONTEXT_TOKENS,\n          }));\n      } catch (error) {\n        // Keep the last successful response, or the bundled fallback on first\n        // launch. Cache failures too so focus events cannot spawn a retry loop.\n        dlog(\"external-runtime\", \"models.discovery_failed\", {\n          error: error instanceof Error ? error.name : \"unknown\",\n        });\n",
+        "textSha256": "309a90e8ce0241cad76c8f7c2e3b8bf877125bb00107ab2f5952781eda11925f"
+      },
+      {
+        "from": 90,
+        "to": 93,
+        "text": "      return entry.entries;\n    });\n    return entry.pending;\n  }\n",
+        "textSha256": "83b809b7eb9dfaa4e44fd7c944d1adf816864152a0f1604d92834ba7272a7a70"
+      }
+    ]
+  },
+  {
+    "path": "packages/desktop/src/shared/external-runtime-models.ts",
+    "sourceSha256": "727e006d443d74a7c763dfa76d438986600459e6f849b80c7c4a6e3d04aaa880",
+    "note": "Selected text captured after actual display for evidence only; not a second semantic read or a before-read full snapshot.",
+    "ranges": [
+      {
+        "from": 1,
+        "to": 23,
+        "text": "/**\n * External Agent Runtimes as model choices.\n *\n * The product requirement is that picking Codex feels exactly like picking any\n * other model — one dropdown, no separate \"backend\" concept. A user should not\n * have to know that one entry drives an in-process Engine and another spawns\n * `codex app-server`.\n *\n * So the runtime is encoded INTO the model key, the way the cindy reference\n * implementation does it (`codex/gpt-6-astra`):\n *\n *     codex/gpt-6-astra        → CodexRuntime,      model gpt-6-astra\n *     claude-code/sonnet       → ClaudeCodeRuntime, model sonnet\n *     <anything without \"/\">   → native Engine, unchanged\n *\n * Making the key itself carry the routing information is what keeps the UI\n * untouched: `ModelPill` renders these like any other option, `onModelChange`\n * persists them like any other key, and only the send path has to branch.\n *\n * This module is the single source of truth for that encoding and is imported\n * by BOTH the renderer (to build options) and main (to route a send). Parsing\n * it in two places would be the obvious way to let the two drift apart.\n */\n",
+        "textSha256": "12e22b2913ccb6e9a00f69eef2bea49a0d8f243f1e4dbde27c70ec6ee2c6b9c9"
+      },
+      {
+        "from": 25,
+        "to": 42,
+        "text": "/** Runtime kinds that can back a model entry. Mirrors ExternalRuntimeKind. */\nexport type ExternalRuntimeModelKind = \"codex\" | \"claude-code\";\n\n/** The `provider` value carried on a ModelOption for these entries. */\nexport const EXTERNAL_RUNTIME_PROVIDERS: Readonly<Record<ExternalRuntimeModelKind, string>> =\n  Object.freeze({\n    codex: \"codex\",\n    \"claude-code\": \"claude-code\",\n  });\n\nconst PREFIXES: readonly ExternalRuntimeModelKind[] = [\"codex\", \"claude-code\"];\n\n/**\n * Runtime model lists do not always include context-window metadata. Keep\n * the context ring useful until a runtime/model reports a real window; an\n * explicit per-model value below always wins over this fallback.\n */\nexport const EXTERNAL_RUNTIME_FALLBACK_CONTEXT_TOKENS = 1_000_000;\n",
+        "textSha256": "7c7116ea1173a41f359d4f9b5a9d8f1b0913f2cc8ddab8d41ca43d7f7cf15d8c"
+      },
+      {
+        "from": 51,
+        "to": 55,
+        "text": "export interface ParsedExternalRuntimeModel {\n  kind: ExternalRuntimeModelKind;\n  /** The runtime-specific model id, or undefined to let the runtime decide. */\n  model?: string;\n}\n",
+        "textSha256": "aee690cfd2ab2f55f11d3fb5c5471ecb5bf4d38f9a40e76a3cb30d59b6b72c08"
+      },
+      {
+        "from": 90,
+        "to": 93,
+        "text": "/** Build the model key for a runtime + model id. Inverse of the parser. */\nexport function externalRuntimeModelKey(kind: ExternalRuntimeModelKind, model: string): string {\n  return `${kind}/${model}`;\n}\n",
+        "textSha256": "e21f1bae4532a66cdefe584092bf51cd45c9bba07d93a7065c63fd1e109f410c"
+      },
+      {
+        "from": 100,
+        "to": 160,
+        "text": "/**\n * Bundled model choices for runtimes without discovery, or when discovery fails.\n *\n * Desktop prefers Codex's `model/list` response, so new models do not require\n * an app release. These entries keep the picker usable with older CLIs or when\n * discovery is unavailable. Claude Code currently uses the bundled aliases.\n */\nexport const EXTERNAL_RUNTIME_MODELS: Readonly<\n  Record<\n    ExternalRuntimeModelKind,\n    readonly { model: string; label: string; maxContextTokens?: number }[]\n  >\n> = Object.freeze({\n  codex: Object.freeze([\n    { model: \"gpt-6-astra\", label: \"Codex · GPT-6 Astra\" },\n    { model: \"gpt-5.6-sol\", label: \"Codex · GPT-5.6 Sol\" },\n    { model: \"gpt-5.6-terra\", label: \"Codex · GPT-5.6 Terra\" },\n    { model: \"gpt-5.6-luna\", label: \"Codex · GPT-5.6 Luna\" },\n  ]),\n  \"claude-code\": Object.freeze([\n    { model: \"opus\", label: \"Claude Code · Opus\" },\n    { model: \"sonnet\", label: \"Claude Code · Sonnet\" },\n    { model: \"haiku\", label: \"Claude Code · Haiku\" },\n  ]),\n});\n\nexport interface ExternalRuntimeModelEntry {\n  key: string;\n  label: string;\n  provider: string;\n  kind: ExternalRuntimeModelKind;\n  maxContextTokens: number;\n}\n\n/**\n * Flatten the catalog into pickable entries for the runtimes that are actually\n * installed.\n *\n * `available` gates the list because an entry the machine cannot run is worse\n * than no entry: the user picks it, sends a message, and gets a spawn failure.\n * Detection lives in main (it needs PATH resolution); the renderer only renders\n * what it is told is available.\n */\nexport function externalRuntimeModelEntries(\n  available: readonly ExternalRuntimeModelKind[],\n): ExternalRuntimeModelEntry[] {\n  const entries: ExternalRuntimeModelEntry[] = [];\n  for (const kind of PREFIXES) {\n    if (!available.includes(kind)) continue;\n    for (const { model, label, maxContextTokens } of EXTERNAL_RUNTIME_MODELS[kind]) {\n      entries.push({\n        key: externalRuntimeModelKey(kind, model),\n        label,\n        provider: EXTERNAL_RUNTIME_PROVIDERS[kind],\n        kind,\n        maxContextTokens: maxContextTokens ?? EXTERNAL_RUNTIME_FALLBACK_CONTEXT_TOKENS,\n      });\n    }\n  }\n  return entries;\n}\n",
+        "textSha256": "8198312b4cdd6ba8d6e806d853a7a8d3aa886b527f6fb0773f308dcc7408a8f2"
+      }
+    ]
+  },
+  {
+    "path": "packages/desktop/src/renderer/app/useExternalRuntimeModels.ts",
+    "sourceSha256": "66f10e3f160bfb62a2e990cfa635f61936410e36fb727632e1c53ff9fd79ba04",
+    "note": "Selected text captured after actual display for evidence only; not a second semantic read or a before-read full snapshot.",
+    "ranges": [
+      {
+        "from": 2,
+        "to": 18,
+        "text": "import type { ExternalRuntimeModelEntry } from \"../../shared/external-runtime-models\";\n\nconst REFRESH_INTERVAL_MS = 5 * 60 * 1_000;\n\n/** Keep runtime choices current without delaying configured/native model loading. */\nexport function useExternalRuntimeModels(\n  enabled: boolean,\n  settingsRevision: number,\n): ExternalRuntimeModelEntry[] {\n  const [models, setModels] = useState<ExternalRuntimeModelEntry[]>([]);\n  const inFlight = useRef<Promise<ExternalRuntimeModelEntry[]> | null>(null);\n\n  useEffect(() => {\n    if (!enabled) {\n      setModels([]);\n      return;\n    }\n",
+        "textSha256": "316e59ed6813746d1fa50ace673bc36c6b7e4cccfc2128ce5e116ed18428f010"
+      },
+      {
+        "from": 22,
+        "to": 41,
+        "text": "    const refresh = (): Promise<void> => {\n      if (cancelled) return Promise.resolve();\n      if (refreshing) return refreshing;\n      refreshing = (async () => {\n        try {\n          // A settings change can invalidate a request while IPC is still running.\n          // Wait for it before issuing the new query, and never apply its old result.\n          if (inFlight.current) await inFlight.current.catch(() => undefined);\n          if (cancelled) return;\n          const request = window.codeshell.externalRuntime.models();\n          inFlight.current = request;\n          try {\n            const entries = await request;\n            if (!cancelled) setModels(entries);\n          } finally {\n            if (inFlight.current === request) inFlight.current = null;\n          }\n        } catch {\n          // Preserve the last usable list if the bridge is temporarily unavailable.\n        }\n",
+        "textSha256": "e443381c4f59a362d9066080073d752ead451ace5e82a343bc8a96e274e38ae4"
+      },
+      {
+        "from": 69,
+        "to": 72,
+        "text": "  }, [enabled, settingsRevision]);\n\n  return enabled ? models : [];\n}\n",
+        "textSha256": "761ab3619052038bf13d63ac1878aa9b46bd202e403689ec9d7226e082796ad7"
+      }
+    ]
+  },
+  {
+    "path": "packages/desktop/src/renderer/App.tsx",
+    "sourceSha256": "02ae12bfccf26878226720ad90282a6a11a1fdc3e05efd1ce54a09d256d5d715",
+    "note": "Selected text captured after actual display for evidence only; not a second semantic read or a before-read full snapshot.",
+    "ranges": [
+      {
+        "from": 353,
+        "to": 356,
+        "text": "  const externalRuntimeModels = useExternalRuntimeModels(\n    sessionUiAuthority.configurationAvailable,\n    settingsRevision,\n  );\n",
+        "textSha256": "c605bc78a301b98cf07fd68fad1c627d92691fd1d717a475d1696e43fc28314c"
+      },
+      {
+        "from": 368,
+        "to": 371,
+        "text": "  const modelOptions = useMemo<ModelOption[]>(\n    () => [...configuredModelOptions, ...externalRuntimeModels],\n    [configuredModelOptions, externalRuntimeModels],\n  );\n",
+        "textSha256": "f45b05a4cf4fdcfad63d9024380be161225654100c370baad4087b7a379c0c53"
+      }
+    ]
+  },
+  {
+    "path": "packages/desktop/src/main/index.ts",
+    "sourceSha256": "105b2b49a28e0a7ef10980ac5feaa3a07ff81e7197f5acbefd95feb2498224c0",
+    "note": "Selected text captured after actual display for evidence only; not a second semantic read or a before-read full snapshot.",
+    "ranges": [
+      {
+        "from": 6099,
+        "to": 6102,
+        "text": "const externalRuntimeModelService = new ExternalRuntimeModelService({\n  isEnabled: () => externalRuntimeService?.isEnabled() ?? false,\n});\nipcMain.handle(\"externalRuntime:models\", () => externalRuntimeModelService.list());\n",
+        "textSha256": "6d69085ce0f82fb29be7e31ab0c2acb30e7512b2f2921a8ab887ede76124a4f7"
+      }
+    ]
+  },
+  {
+    "path": "packages/desktop/src/preload/index.ts",
+    "sourceSha256": "05dbc9b534bdc68c30f255f53a96617e50fb0c445ce2fc1bde4be31e3f8a6901",
+    "note": "Selected text captured after actual display for evidence only; not a second semantic read or a before-read full snapshot.",
+    "ranges": [
+      {
+        "from": 1600,
+        "to": 1602,
+        "text": "  // Picked from the ordinary model dropdown as `codex/gpt-5.6-sol` etc. The\n  // renderer never learns there is a separate backend beyond routing a send.\n  externalRuntime: {\n",
+        "textSha256": "2655ac3c9ccd154ccd440870bf53fd328a345f4928b84cad0ef286530d48f4c4"
+      },
+      {
+        "from": 1605,
+        "to": 1606,
+        "text": "    models: (): Promise<ExternalRuntimeModelEntry[]> =>\n      ipcRenderer.invoke(\"externalRuntime:models\"),\n",
+        "textSha256": "b38c26042827146f937ea89d035822d82fc03fad8e2f13a376a0bdee6f87bac6"
+      }
+    ]
+  },
+  {
+    "path": "packages/coding/src/external-runtimes/codex/model-discovery.test.ts",
+    "sourceSha256": "9089b7bf758ae3d7085c985ba971a981548963b0e5b527a7b60cac33744d6115",
+    "note": "Selected text captured after actual display for evidence only; not a second semantic read or a before-read full snapshot.",
+    "ranges": [
+      {
+        "from": 66,
+        "to": 91,
+        "text": "describe(\"discoverCodexModels\", () => {\n  test(\"handshakes, follows pagination, filters hidden models and deduplicates in server order\", async () => {\n    const first = { model: \"gpt-6-astra\", displayName: \"GPT-6-Astra\", isDefault: true };\n    const second = { model: \"gpt-5.6-sol\", displayName: \"GPT-5.6-Sol\", isDefault: false };\n    const server = fakeServer(`\n      if (m.method === \"initialize\") send({ id: m.id, result: {} });\n      if (m.method === \"model/list\") send({ id: m.id, result: m.params.cursor\n        ? { data: [${JSON.stringify(first)}, ${JSON.stringify(second)}], nextCursor: null }\n        : { data: [${JSON.stringify(first)}, {\n          model: \"hidden-model\", displayName: \"Hidden\", isDefault: false, hidden: true,\n        }], nextCursor: \"page-2\" }\n      });\n    `);\n\n    expect(await discoverCodexModels(server.options)).toEqual([first, second]);\n    const requests = server.requests();\n    expect(requests.map((request) => request.method)).toEqual([\n      \"initialize\",\n      \"initialized\",\n      \"model/list\",\n      \"model/list\",\n    ]);\n    expect(requests[2].params).toEqual({ includeHidden: false, limit: 100 });\n    expect(requests[3].params).toEqual({ includeHidden: false, limit: 100, cursor: \"page-2\" });\n    expect(server.closed()).toBe(true);\n  });\n",
+        "textSha256": "24f20163b56dfeb714b4d55347f8cf1c0bdda30052603bab3a813c611882f5f7"
+      },
+      {
+        "from": 106,
+        "to": 110,
+        "text": "  test(\"returns a valid empty catalog without substituting a fallback\", async () => {\n    const server = respondWith({ data: [], nextCursor: null });\n    expect(await discoverCodexModels(server.options)).toEqual([]);\n    expect(server.closed()).toBe(true);\n  });\n",
+        "textSha256": "ab736da9ee785505333c7cdaab288a90f764ec0afeb615975587c0fe7baef1aa"
+      }
+    ]
+  }
+]

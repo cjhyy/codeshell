@@ -1,0 +1,117 @@
+{
+  "createdAt": "2026-10-17T18:39:14.205978+00:00",
+  "frozen": true,
+  "scope": "Exact packet files excluding this self-receipt; shared root batch referenced/projected only, no author method or product execution",
+  "files": [
+    {
+      "path": "base-client-before-pin.json",
+      "bytes": 379,
+      "sha256": "8d7391a344e12b08392d6c59f6aa0f80a991a548ce4f04afe5b72f6c312d6f94"
+    },
+    {
+      "path": "canonical-locator-metadata.json",
+      "bytes": 2301,
+      "sha256": "9d545a2b2bfe332af4016a6492316eabd83f0c0a849d9c5004ec5926787907c8"
+    },
+    {
+      "path": "checks.json",
+      "bytes": 1433,
+      "sha256": "22f7b232c3aea4172b584b0eca41d8c5b5b5a618570351cfda9463edb853be3b"
+    },
+    {
+      "path": "classification.json",
+      "bytes": 855,
+      "sha256": "167debcde7b3ab14eaf751c7d5bffe2a50cc1cb62f9ea0b8c7bf1261585d0645"
+    },
+    {
+      "path": "consumer-before-pin.json",
+      "bytes": 227,
+      "sha256": "cd346a4b540c073552b040e770b434a0a690cd957e65c70b74360dbad8d27e5d"
+    },
+    {
+      "path": "contract-before-pins.json",
+      "bytes": 1572,
+      "sha256": "c37cde4580412e3bb334760c46147e79a05eb56374b18ddf347104da736c1f1c"
+    },
+    {
+      "path": "diagnostics.json",
+      "bytes": 1076,
+      "sha256": "7054439739efa9d0dc204f190ca43175700ccaabda6635b7be3f7aee68c84e1d"
+    },
+    {
+      "path": "ending-checks.json",
+      "bytes": 5345,
+      "sha256": "d7a91d7da4fc1ce9b8472246ab60e724de0560e7c99eeef1e92d86d084274935"
+    },
+    {
+      "path": "finalize.py",
+      "bytes": 14905,
+      "sha256": "60ad459993db772b3dfef817f0d09bde1f1330f14a7e45f573b989f1f1e1842c"
+    },
+    {
+      "path": "history-projection.json",
+      "bytes": 67781,
+      "sha256": "da4389328f34e1889c96217ef9612718375e93052342d5f35e2f5978f975a659"
+    },
+    {
+      "path": "initial-pins.json",
+      "bytes": 1143,
+      "sha256": "e628f61aed3216a223906870bddbfbf7c6af112dff55695eafcd38c0e27265a0"
+    },
+    {
+      "path": "metadata-first-diagnostic.json",
+      "bytes": 865,
+      "sha256": "0a43986fdd947809a99b00e26ce5900e026cd912514e1962d5b4c9684064038a"
+    },
+    {
+      "path": "project-history.py",
+      "bytes": 899,
+      "sha256": "a03834da1665115f0e38653ff6ec5ac3fb5c6ec2c49eb151a0daf0eb669250c1"
+    },
+    {
+      "path": "r9-canonical-metadata.json",
+      "bytes": 1635,
+      "sha256": "14dee22dd4b9b8d7f5c29cf63a9a9d70f8e75962c639964ac83c8d8ccd9d53e0"
+    },
+    {
+      "path": "report.md",
+      "bytes": 3239,
+      "sha256": "818ae014c5e824ab568c1093e5e9d07ba5acd70dd7c7fe7279df639942e1a91a"
+    },
+    {
+      "path": "selected-prior-reports.json",
+      "bytes": 578,
+      "sha256": "e81d0e4328a18e069538bf6a656100a114bc082b65439d5ea7df889623b90b30"
+    },
+    {
+      "path": "settlement-before-pin.json",
+      "bytes": 348,
+      "sha256": "7157a5ccf99af8d3697bf2c3e8f7087b5ffbdac4957406cbcd1712dc80f8dd03"
+    },
+    {
+      "path": "shared-batch-schema.first.py",
+      "bytes": 898,
+      "sha256": "6762b0ba61dc785d4c1e148ba4694e1ebbd1395ac888104b32e170a7eeee7a8e"
+    },
+    {
+      "path": "shared-history-reference.json",
+      "bytes": 420,
+      "sha256": "2e49ca7bf78e357a4b654ccb1b0919cc12e7699f51bd2ca7a7c3c110b6e00cc5"
+    },
+    {
+      "path": "source-manifest.json",
+      "bytes": 21840,
+      "sha256": "e188d74953f308210255c00c17aadb407a9b214674dc7876234df5e689006cbf"
+    },
+    {
+      "path": "usage-producer-before-pins.json",
+      "bytes": 1224,
+      "sha256": "cc29777a556f78ee5652914ebfcf14b68e9a78c3845e93d853b6a936a7cf17f3"
+    },
+    {
+      "path": "validation.json",
+      "bytes": 594,
+      "sha256": "3f8bc823aa07c4f99f7f2d0ae8ed5f7f45d9d309354740e80e56dbf1f3edf189"
+    }
+  ]
+}

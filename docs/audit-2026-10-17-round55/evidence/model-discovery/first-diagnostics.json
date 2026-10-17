@@ -1,0 +1,26 @@
+{
+  "fatalMetadataErrors": 0,
+  "toolTruncationsObserved": 0,
+  "intentionalBoundedPresenter": {
+    "toolChunk": "533724",
+    "input": "Root shared history target hit array",
+    "maxCharacters": 4500,
+    "effect": "Only prefix of raw16 hits printed there; original shared input remained intact, all16 exact compact metadata locators later printed in560acb and projected to shared-history-projection.json. Not whole semantic historical read."
+  },
+  "navigationNoMatches": [
+    {
+      "artifact": "projection-consumer-inventory.json",
+      "query": "listExternalRuntimeModels",
+      "exitCode": 1,
+      "stdout": "",
+      "effect": "Filename navigation no-match, not product failure; actual IPC name was located through the real service instance."
+    }
+  ],
+  "firstFilenameInventory": {
+    "toolChunk": "43cfe8",
+    "outerExitCode": 0,
+    "individualRgExitCaptured": false,
+    "scope": "actual filename inventory and metadata pins only"
+  },
+  "representation": "No fabricated complete raw stdout or invented individual exit values."
+}

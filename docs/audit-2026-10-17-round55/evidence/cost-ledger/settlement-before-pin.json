@@ -1,0 +1,8 @@
+{
+  "path": "packages/core/src/cost-ledger/store.ts",
+  "bytes": 17975,
+  "lines": 498,
+  "sha256": "1a3d88c4796d772cf5ad1244660d9b9b5abc9f71d83e8579a043aa37c2c91150",
+  "pinnedBeforeBodyUTC": "2026-10-17T18:30:11.655007+00:00",
+  "purpose": "Only ordinary settlement/pricing/TokenUsage normalization data boundary; IO/locks/custody not audited"
+}

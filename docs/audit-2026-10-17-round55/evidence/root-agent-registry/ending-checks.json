@@ -1,0 +1,19 @@
+{
+  "atUTC": "2026-10-17T18:30:54.159038+00:00",
+  "pins": [
+    {
+      "path": "packages/core/src/agent/agent-definition-registry.ts",
+      "sha256": "89968b313f8da865dadc6fe6bb85dc61182fd5ff4795aebd22c9505c4e10f072",
+      "same": true
+    },
+    {
+      "path": "packages/core/src/agent/agent-definition.ts",
+      "sha256": "69c6006acd4ebac512b59e25536f4f2b892e60475a13fa0971728911e0f95013",
+      "same": true
+    }
+  ],
+  "historyFiles": 5433,
+  "changed": [],
+  "missing": [],
+  "productRuns": 0
+}

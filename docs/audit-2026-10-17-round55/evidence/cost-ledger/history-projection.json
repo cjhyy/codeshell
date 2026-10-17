@@ -1,0 +1,1642 @@
+{
+  "createdAt": "2026-10-17T18:28:45.820421+00:00",
+  "sourceReference": "shared-history-reference.json",
+  "sharedBatchSha256": "2c09e39e6c332c5f04395af3c02d637bc3dabec28a7045c9817aa7e98ae88b27",
+  "historyFiles": 5433,
+  "jsonValueScalarsVisited": 3997418,
+  "excludedFormalAtOrAbove": 55,
+  "capPerTarget": 100,
+  "errors": [],
+  "queries": {
+    "packages/core/src/cost-ledger/pricing.ts": [
+      "packages/core/src/cost-ledger/pricing.ts",
+      "7584eb97d07fda14171917d093d16201521ba77ce7ce61cab0d08390da7e3640"
+    ],
+    "packages/core/src/cost-ledger/summary.ts": [
+      "packages/core/src/cost-ledger/summary.ts",
+      "4ef61d2b0803899574adbaaa98e33f3fde2ae4da0250f452d6f72997936b07d6"
+    ]
+  },
+  "counts": {
+    "packages/core/src/cost-ledger/pricing.ts": 79,
+    "packages/core/src/cost-ledger/summary.ts": 145
+  },
+  "hits": {
+    "packages/core/src/cost-ledger/pricing.ts": [
+      {
+        "document": "docs/audit-2026-10-16/inventory.json",
+        "location": "/source_inventory/205",
+        "matched": [
+          "packages/core/src/cost-ledger/pricing.ts"
+        ],
+        "value": "packages/core/src/cost-ledger/pricing.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round25/evidence/data-prep/inventory.json",
+        "location": "/files/790",
+        "matched": [
+          "packages/core/src/cost-ledger/pricing.ts"
+        ],
+        "value": "packages/core/src/cost-ledger/pricing.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+        "location": "/files/178/path",
+        "matched": [
+          "packages/core/src/cost-ledger/pricing.ts"
+        ],
+        "value": "packages/core/src/cost-ledger/pricing.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+        "location": "/files/178/sha256",
+        "matched": [
+          "7584eb97d07fda14171917d093d16201521ba77ce7ce61cab0d08390da7e3640"
+        ],
+        "value": "7584eb97d07fda14171917d093d16201521ba77ce7ce61cab0d08390da7e3640",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+        "location": "/files/178/claims/0/sourceSha256",
+        "matched": [
+          "7584eb97d07fda14171917d093d16201521ba77ce7ce61cab0d08390da7e3640"
+        ],
+        "value": "7584eb97d07fda14171917d093d16201521ba77ce7ce61cab0d08390da7e3640",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+        "location": "/files/178/claims/1/sourceSha256",
+        "matched": [
+          "7584eb97d07fda14171917d093d16201521ba77ce7ce61cab0d08390da7e3640"
+        ],
+        "value": "7584eb97d07fda14171917d093d16201521ba77ce7ce61cab0d08390da7e3640",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+        "location": "/files/364/path",
+        "matched": [
+          "packages/core/src/cost-ledger/pricing.ts"
+        ],
+        "value": "packages/core/src/cost-ledger/pricing.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+        "location": "/files/364/sha256",
+        "matched": [
+          "7584eb97d07fda14171917d093d16201521ba77ce7ce61cab0d08390da7e3640"
+        ],
+        "value": "7584eb97d07fda14171917d093d16201521ba77ce7ce61cab0d08390da7e3640",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "location": "/claims/1621/path",
+        "matched": [
+          "packages/core/src/cost-ledger/pricing.ts"
+        ],
+        "value": "packages/core/src/cost-ledger/pricing.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "location": "/claims/1621/directSourcePathsInObject/0",
+        "matched": [
+          "packages/core/src/cost-ledger/pricing.ts"
+        ],
+        "value": "packages/core/src/cost-ledger/pricing.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "location": "/claims/1622/path",
+        "matched": [
+          "packages/core/src/cost-ledger/pricing.ts"
+        ],
+        "value": "packages/core/src/cost-ledger/pricing.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "location": "/claims/1622/sourceHashFields/sha256",
+        "matched": [
+          "7584eb97d07fda14171917d093d16201521ba77ce7ce61cab0d08390da7e3640"
+        ],
+        "value": "7584eb97d07fda14171917d093d16201521ba77ce7ce61cab0d08390da7e3640",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "location": "/claims/1622/directSourcePathsInObject/0",
+        "matched": [
+          "packages/core/src/cost-ledger/pricing.ts"
+        ],
+        "value": "packages/core/src/cost-ledger/pricing.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "location": "/claims/1623/path",
+        "matched": [
+          "packages/core/src/cost-ledger/pricing.ts"
+        ],
+        "value": "packages/core/src/cost-ledger/pricing.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "location": "/claims/1623/directSourcePathsInObject/0",
+        "matched": [
+          "packages/core/src/cost-ledger/pricing.ts"
+        ],
+        "value": "packages/core/src/cost-ledger/pricing.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "location": "/claims/1624/path",
+        "matched": [
+          "packages/core/src/cost-ledger/pricing.ts"
+        ],
+        "value": "packages/core/src/cost-ledger/pricing.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "location": "/claims/1624/directSourcePathsInObject/0",
+        "matched": [
+          "packages/core/src/cost-ledger/pricing.ts"
+        ],
+        "value": "packages/core/src/cost-ledger/pricing.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "location": "/claims/1625/path",
+        "matched": [
+          "packages/core/src/cost-ledger/pricing.ts"
+        ],
+        "value": "packages/core/src/cost-ledger/pricing.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "location": "/claims/1625/directSourcePathsInObject/0",
+        "matched": [
+          "packages/core/src/cost-ledger/pricing.ts"
+        ],
+        "value": "packages/core/src/cost-ledger/pricing.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "location": "/claims/1626/path",
+        "matched": [
+          "packages/core/src/cost-ledger/pricing.ts"
+        ],
+        "value": "packages/core/src/cost-ledger/pricing.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "location": "/claims/1626/directSourcePathsInObject/0",
+        "matched": [
+          "packages/core/src/cost-ledger/pricing.ts"
+        ],
+        "value": "packages/core/src/cost-ledger/pricing.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "location": "/claims/1627/path",
+        "matched": [
+          "packages/core/src/cost-ledger/pricing.ts"
+        ],
+        "value": "packages/core/src/cost-ledger/pricing.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "location": "/claims/1627/sourceHashFields/sha256",
+        "matched": [
+          "7584eb97d07fda14171917d093d16201521ba77ce7ce61cab0d08390da7e3640"
+        ],
+        "value": "7584eb97d07fda14171917d093d16201521ba77ce7ce61cab0d08390da7e3640",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "location": "/claims/1627/directSourcePathsInObject/0",
+        "matched": [
+          "packages/core/src/cost-ledger/pricing.ts"
+        ],
+        "value": "packages/core/src/cost-ledger/pricing.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "location": "/claims/1631/directSourcePathsInObject/0",
+        "matched": [
+          "packages/core/src/cost-ledger/pricing.ts"
+        ],
+        "value": "packages/core/src/cost-ledger/pricing.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "location": "/claims/1781/directSourcePathsInObject/0",
+        "matched": [
+          "packages/core/src/cost-ledger/pricing.ts"
+        ],
+        "value": "packages/core/src/cost-ledger/pricing.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "location": "/claims/1787/directSourcePathsInObject/0",
+        "matched": [
+          "packages/core/src/cost-ledger/pricing.ts"
+        ],
+        "value": "packages/core/src/cost-ledger/pricing.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "location": "/claims/3210/directSourcePathsInObject/0",
+        "matched": [
+          "packages/core/src/cost-ledger/pricing.ts"
+        ],
+        "value": "packages/core/src/cost-ledger/pricing.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-index.json",
+        "location": "/files/674/path",
+        "matched": [
+          "packages/core/src/cost-ledger/pricing.ts"
+        ],
+        "value": "packages/core/src/cost-ledger/pricing.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-index.json",
+        "location": "/files/674/sha256",
+        "matched": [
+          "7584eb97d07fda14171917d093d16201521ba77ce7ce61cab0d08390da7e3640"
+        ],
+        "value": "7584eb97d07fda14171917d093d16201521ba77ce7ce61cab0d08390da7e3640",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/package-inventory.json",
+        "location": "/files/674/path",
+        "matched": [
+          "packages/core/src/cost-ledger/pricing.ts"
+        ],
+        "value": "packages/core/src/cost-ledger/pricing.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/package-inventory.json",
+        "location": "/files/674/sha256",
+        "matched": [
+          "7584eb97d07fda14171917d093d16201521ba77ce7ce61cab0d08390da7e3640"
+        ],
+        "value": "7584eb97d07fda14171917d093d16201521ba77ce7ce61cab0d08390da7e3640",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-status/comparison.json",
+        "location": "/unknownPaths/625",
+        "matched": [
+          "packages/core/src/cost-ledger/pricing.ts"
+        ],
+        "value": "packages/core/src/cost-ledger/pricing.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-status/current-inventory.json",
+        "location": "/files/674/path",
+        "matched": [
+          "packages/core/src/cost-ledger/pricing.ts"
+        ],
+        "value": "packages/core/src/cost-ledger/pricing.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-status/current-inventory.json",
+        "location": "/files/674/sha256",
+        "matched": [
+          "7584eb97d07fda14171917d093d16201521ba77ce7ce61cab0d08390da7e3640"
+        ],
+        "value": "7584eb97d07fda14171917d093d16201521ba77ce7ce61cab0d08390da7e3640",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round48/evidence/cost-context-frontier/history-contexts.json",
+        "location": "/hits/display_contract/2/context",
+        "matched": [
+          "packages/core/src/cost-ledger/pricing.ts"
+        ],
+        "value": "packages/core/src/cost-ledger/pricing.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round48/evidence/cost-context-frontier/history-contexts.json",
+        "location": "/hits/display_contract/136/context",
+        "matched": [
+          "packages/core/src/cost-ledger/pricing.ts"
+        ],
+        "value": "packages/core/src/cost-ledger/pricing.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round49/evidence/cost-review/history-contexts.json",
+        "location": "/oldCause/43/context",
+        "matched": [
+          "packages/core/src/cost-ledger/pricing.ts"
+        ],
+        "value": "packages/core/src/cost-ledger/pricing.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round9/evidence/root-source-manifest.json",
+        "location": "/files/15/path",
+        "matched": [
+          "packages/core/src/cost-ledger/pricing.ts"
+        ],
+        "value": "packages/core/src/cost-ledger/pricing.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round9/evidence/root-source-manifest.json",
+        "location": "/files/15/sha256",
+        "matched": [
+          "7584eb97d07fda14171917d093d16201521ba77ce7ce61cab0d08390da7e3640"
+        ],
+        "value": "7584eb97d07fda14171917d093d16201521ba77ce7ce61cab0d08390da7e3640",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round9/evidence/tools-preflight.json",
+        "location": "/relativeImports/91/resolved",
+        "matched": [
+          "packages/core/src/cost-ledger/pricing.ts"
+        ],
+        "value": "packages/core/src/cost-ledger/pricing.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round9/evidence/tools-preflight.json",
+        "location": "/relativeImports/93/from",
+        "matched": [
+          "packages/core/src/cost-ledger/pricing.ts"
+        ],
+        "value": "packages/core/src/cost-ledger/pricing.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round9/evidence/tools-preflight.json",
+        "location": "/relativeImports/94/from",
+        "matched": [
+          "packages/core/src/cost-ledger/pricing.ts"
+        ],
+        "value": "packages/core/src/cost-ledger/pricing.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round9/evidence/tools-preflight.json",
+        "location": "/relativeImports/541/resolved",
+        "matched": [
+          "packages/core/src/cost-ledger/pricing.ts"
+        ],
+        "value": "packages/core/src/cost-ledger/pricing.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round9/evidence/tools-preflight.regex-draft.json",
+        "location": "/relativeImports/201/resolved",
+        "matched": [
+          "packages/core/src/cost-ledger/pricing.ts"
+        ],
+        "value": "packages/core/src/cost-ledger/pricing.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round9/evidence/tools-preflight.regex-draft.json",
+        "location": "/relativeImports/203/from",
+        "matched": [
+          "packages/core/src/cost-ledger/pricing.ts"
+        ],
+        "value": "packages/core/src/cost-ledger/pricing.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round9/evidence/tools-preflight.regex-draft.json",
+        "location": "/relativeImports/204/from",
+        "matched": [
+          "packages/core/src/cost-ledger/pricing.ts"
+        ],
+        "value": "packages/core/src/cost-ledger/pricing.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round9/evidence/tools-preflight.regex-draft.json",
+        "location": "/relativeImports/620/resolved",
+        "matched": [
+          "packages/core/src/cost-ledger/pricing.ts"
+        ],
+        "value": "packages/core/src/cost-ledger/pricing.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round9/source-manifest.json",
+        "location": "/files/11/path",
+        "matched": [
+          "packages/core/src/cost-ledger/pricing.ts"
+        ],
+        "value": "packages/core/src/cost-ledger/pricing.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round9/source-manifest.json",
+        "location": "/files/11/sha256",
+        "matched": [
+          "7584eb97d07fda14171917d093d16201521ba77ce7ce61cab0d08390da7e3640"
+        ],
+        "value": "7584eb97d07fda14171917d093d16201521ba77ce7ce61cab0d08390da7e3640",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+        "location": "/observations/0/preStop/loadedWorkspaceModules/39",
+        "matched": [
+          "packages/core/src/cost-ledger/pricing.ts"
+        ],
+        "value": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/cost-ledger/pricing.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+        "location": "/observations/0/postStop/loadedWorkspaceModules/39",
+        "matched": [
+          "packages/core/src/cost-ledger/pricing.ts"
+        ],
+        "value": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/cost-ledger/pricing.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+        "location": "/observations/0/afterEnable/loadedWorkspaceModules/39",
+        "matched": [
+          "packages/core/src/cost-ledger/pricing.ts"
+        ],
+        "value": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/cost-ledger/pricing.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+        "location": "/observations/1/directSettled/loadedWorkspaceModules/39",
+        "matched": [
+          "packages/core/src/cost-ledger/pricing.ts"
+        ],
+        "value": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/cost-ledger/pricing.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+        "location": "/observations/2/normal/loadedWorkspaceModules/39",
+        "matched": [
+          "packages/core/src/cost-ledger/pricing.ts"
+        ],
+        "value": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/cost-ledger/pricing.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+        "location": "/observations/2/afterIdleStop/loadedWorkspaceModules/39",
+        "matched": [
+          "packages/core/src/cost-ledger/pricing.ts"
+        ],
+        "value": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/cost-ledger/pricing.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+        "location": "/final/loadedWorkspaceModules/39",
+        "matched": [
+          "packages/core/src/cost-ledger/pricing.ts"
+        ],
+        "value": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/cost-ledger/pricing.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+        "location": "/observations/0/preStop/loadedWorkspaceModules/39",
+        "matched": [
+          "packages/core/src/cost-ledger/pricing.ts"
+        ],
+        "value": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/cost-ledger/pricing.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+        "location": "/observations/0/postStop/loadedWorkspaceModules/39",
+        "matched": [
+          "packages/core/src/cost-ledger/pricing.ts"
+        ],
+        "value": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/cost-ledger/pricing.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+        "location": "/observations/0/afterEnable/loadedWorkspaceModules/39",
+        "matched": [
+          "packages/core/src/cost-ledger/pricing.ts"
+        ],
+        "value": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/cost-ledger/pricing.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+        "location": "/observations/1/directSettled/loadedWorkspaceModules/39",
+        "matched": [
+          "packages/core/src/cost-ledger/pricing.ts"
+        ],
+        "value": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/cost-ledger/pricing.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+        "location": "/observations/2/normal/loadedWorkspaceModules/39",
+        "matched": [
+          "packages/core/src/cost-ledger/pricing.ts"
+        ],
+        "value": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/cost-ledger/pricing.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+        "location": "/observations/2/afterIdleStop/loadedWorkspaceModules/39",
+        "matched": [
+          "packages/core/src/cost-ledger/pricing.ts"
+        ],
+        "value": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/cost-ledger/pricing.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+        "location": "/final/loadedWorkspaceModules/39",
+        "matched": [
+          "packages/core/src/cost-ledger/pricing.ts"
+        ],
+        "value": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/cost-ledger/pricing.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/review-2026-10-12/validation/original-browser-stop-round22/fifth-native-failed/native-failure-observations.json",
+        "location": "/snapshot/loadedWorkspaceModules/39",
+        "matched": [
+          "packages/core/src/cost-ledger/pricing.ts"
+        ],
+        "value": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/cost-ledger/pricing.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+        "location": "/observations/0/preStop/loadedWorkspaceModules/39",
+        "matched": [
+          "packages/core/src/cost-ledger/pricing.ts"
+        ],
+        "value": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/cost-ledger/pricing.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+        "location": "/observations/0/postStop/loadedWorkspaceModules/39",
+        "matched": [
+          "packages/core/src/cost-ledger/pricing.ts"
+        ],
+        "value": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/cost-ledger/pricing.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+        "location": "/observations/0/afterEnable/loadedWorkspaceModules/39",
+        "matched": [
+          "packages/core/src/cost-ledger/pricing.ts"
+        ],
+        "value": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/cost-ledger/pricing.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+        "location": "/observations/1/directSettled/loadedWorkspaceModules/39",
+        "matched": [
+          "packages/core/src/cost-ledger/pricing.ts"
+        ],
+        "value": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/cost-ledger/pricing.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+        "location": "/observations/2/normal/loadedWorkspaceModules/39",
+        "matched": [
+          "packages/core/src/cost-ledger/pricing.ts"
+        ],
+        "value": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/cost-ledger/pricing.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+        "location": "/observations/2/afterIdleStop/loadedWorkspaceModules/39",
+        "matched": [
+          "packages/core/src/cost-ledger/pricing.ts"
+        ],
+        "value": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/cost-ledger/pricing.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+        "location": "/final/loadedWorkspaceModules/39",
+        "matched": [
+          "packages/core/src/cost-ledger/pricing.ts"
+        ],
+        "value": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/cost-ledger/pricing.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/review-2026-10-12/validation/original-browser-stop-round22/fourth-native-failed/native-failure-observations.json",
+        "location": "/snapshot/loadedWorkspaceModules/39",
+        "matched": [
+          "packages/core/src/cost-ledger/pricing.ts"
+        ],
+        "value": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/cost-ledger/pricing.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/review-2026-10-12/validation/original-browser-stop-round22/sixth-native-failed/native-failure-observations.json",
+        "location": "/observations/0/preStop/loadedWorkspaceModules/39",
+        "matched": [
+          "packages/core/src/cost-ledger/pricing.ts"
+        ],
+        "value": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/cost-ledger/pricing.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/review-2026-10-12/validation/original-browser-stop-round22/sixth-native-failed/native-failure-observations.json",
+        "location": "/observations/0/postStop/loadedWorkspaceModules/39",
+        "matched": [
+          "packages/core/src/cost-ledger/pricing.ts"
+        ],
+        "value": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/cost-ledger/pricing.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/review-2026-10-12/validation/original-browser-stop-round22/sixth-native-failed/native-failure-observations.json",
+        "location": "/observations/0/afterEnable/loadedWorkspaceModules/39",
+        "matched": [
+          "packages/core/src/cost-ledger/pricing.ts"
+        ],
+        "value": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/cost-ledger/pricing.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/review-2026-10-12/validation/original-browser-stop-round22/sixth-native-failed/native-failure-observations.json",
+        "location": "/observations/1/directSettled/loadedWorkspaceModules/39",
+        "matched": [
+          "packages/core/src/cost-ledger/pricing.ts"
+        ],
+        "value": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/cost-ledger/pricing.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/review-2026-10-12/validation/original-browser-stop-round22/sixth-native-failed/native-failure-observations.json",
+        "location": "/snapshot/loadedWorkspaceModules/39",
+        "matched": [
+          "packages/core/src/cost-ledger/pricing.ts"
+        ],
+        "value": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/cost-ledger/pricing.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/review-2026-10-12/validation/original-browser-stop-round22/third-native-failed/native-failure-observations.json",
+        "location": "/snapshot/loadedWorkspaceModules/39",
+        "matched": [
+          "packages/core/src/cost-ledger/pricing.ts"
+        ],
+        "value": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/cost-ledger/pricing.ts",
+        "truncatedValue": false
+      }
+    ],
+    "packages/core/src/cost-ledger/summary.ts": [
+      {
+        "document": "docs/audit-2026-10-16/inventory.json",
+        "location": "/source_inventory/207",
+        "matched": [
+          "packages/core/src/cost-ledger/summary.ts"
+        ],
+        "value": "packages/core/src/cost-ledger/summary.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round25/evidence/data-prep/inventory.json",
+        "location": "/files/788",
+        "matched": [
+          "packages/core/src/cost-ledger/summary.ts"
+        ],
+        "value": "packages/core/src/cost-ledger/summary.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+        "location": "/files/180/path",
+        "matched": [
+          "packages/core/src/cost-ledger/summary.ts"
+        ],
+        "value": "packages/core/src/cost-ledger/summary.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+        "location": "/files/180/sha256",
+        "matched": [
+          "4ef61d2b0803899574adbaaa98e33f3fde2ae4da0250f452d6f72997936b07d6"
+        ],
+        "value": "4ef61d2b0803899574adbaaa98e33f3fde2ae4da0250f452d6f72997936b07d6",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+        "location": "/files/180/claims/0/sourceSha256",
+        "matched": [
+          "4ef61d2b0803899574adbaaa98e33f3fde2ae4da0250f452d6f72997936b07d6"
+        ],
+        "value": "4ef61d2b0803899574adbaaa98e33f3fde2ae4da0250f452d6f72997936b07d6",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+        "location": "/files/180/claims/1/sourceSha256",
+        "matched": [
+          "4ef61d2b0803899574adbaaa98e33f3fde2ae4da0250f452d6f72997936b07d6"
+        ],
+        "value": "4ef61d2b0803899574adbaaa98e33f3fde2ae4da0250f452d6f72997936b07d6",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-ranking.json",
+        "location": "/rankedCandidates/227/path",
+        "matched": [
+          "packages/core/src/cost-ledger/summary.ts"
+        ],
+        "value": "packages/core/src/cost-ledger/summary.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-ranking.json",
+        "location": "/rankedCandidates/227/sha256",
+        "matched": [
+          "4ef61d2b0803899574adbaaa98e33f3fde2ae4da0250f452d6f72997936b07d6"
+        ],
+        "value": "4ef61d2b0803899574adbaaa98e33f3fde2ae4da0250f452d6f72997936b07d6",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+        "location": "/files/366/path",
+        "matched": [
+          "packages/core/src/cost-ledger/summary.ts"
+        ],
+        "value": "packages/core/src/cost-ledger/summary.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+        "location": "/files/366/sha256",
+        "matched": [
+          "4ef61d2b0803899574adbaaa98e33f3fde2ae4da0250f452d6f72997936b07d6"
+        ],
+        "value": "4ef61d2b0803899574adbaaa98e33f3fde2ae4da0250f452d6f72997936b07d6",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "location": "/claims/1632/directSourcePathsInObject/1",
+        "matched": [
+          "packages/core/src/cost-ledger/summary.ts"
+        ],
+        "value": "packages/core/src/cost-ledger/summary.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "location": "/claims/1634/path",
+        "matched": [
+          "packages/core/src/cost-ledger/summary.ts"
+        ],
+        "value": "packages/core/src/cost-ledger/summary.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "location": "/claims/1634/directSourcePathsInObject/0",
+        "matched": [
+          "packages/core/src/cost-ledger/summary.ts"
+        ],
+        "value": "packages/core/src/cost-ledger/summary.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "location": "/claims/1635/path",
+        "matched": [
+          "packages/core/src/cost-ledger/summary.ts"
+        ],
+        "value": "packages/core/src/cost-ledger/summary.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "location": "/claims/1635/sourceHashFields/sha256",
+        "matched": [
+          "4ef61d2b0803899574adbaaa98e33f3fde2ae4da0250f452d6f72997936b07d6"
+        ],
+        "value": "4ef61d2b0803899574adbaaa98e33f3fde2ae4da0250f452d6f72997936b07d6",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "location": "/claims/1635/directSourcePathsInObject/0",
+        "matched": [
+          "packages/core/src/cost-ledger/summary.ts"
+        ],
+        "value": "packages/core/src/cost-ledger/summary.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "location": "/claims/1636/path",
+        "matched": [
+          "packages/core/src/cost-ledger/summary.ts"
+        ],
+        "value": "packages/core/src/cost-ledger/summary.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "location": "/claims/1636/directSourcePathsInObject/1",
+        "matched": [
+          "packages/core/src/cost-ledger/summary.ts"
+        ],
+        "value": "packages/core/src/cost-ledger/summary.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "location": "/claims/1637/path",
+        "matched": [
+          "packages/core/src/cost-ledger/summary.ts"
+        ],
+        "value": "packages/core/src/cost-ledger/summary.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "location": "/claims/1637/sourceHashFields/sha256",
+        "matched": [
+          "4ef61d2b0803899574adbaaa98e33f3fde2ae4da0250f452d6f72997936b07d6"
+        ],
+        "value": "4ef61d2b0803899574adbaaa98e33f3fde2ae4da0250f452d6f72997936b07d6",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "location": "/claims/1637/directSourcePathsInObject/0",
+        "matched": [
+          "packages/core/src/cost-ledger/summary.ts"
+        ],
+        "value": "packages/core/src/cost-ledger/summary.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-index.json",
+        "location": "/files/676/path",
+        "matched": [
+          "packages/core/src/cost-ledger/summary.ts"
+        ],
+        "value": "packages/core/src/cost-ledger/summary.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-index.json",
+        "location": "/files/676/sha256",
+        "matched": [
+          "4ef61d2b0803899574adbaaa98e33f3fde2ae4da0250f452d6f72997936b07d6"
+        ],
+        "value": "4ef61d2b0803899574adbaaa98e33f3fde2ae4da0250f452d6f72997936b07d6",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/package-inventory.json",
+        "location": "/files/676/path",
+        "matched": [
+          "packages/core/src/cost-ledger/summary.ts"
+        ],
+        "value": "packages/core/src/cost-ledger/summary.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/package-inventory.json",
+        "location": "/files/676/sha256",
+        "matched": [
+          "4ef61d2b0803899574adbaaa98e33f3fde2ae4da0250f452d6f72997936b07d6"
+        ],
+        "value": "4ef61d2b0803899574adbaaa98e33f3fde2ae4da0250f452d6f72997936b07d6",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-status/comparison.json",
+        "location": "/unknownPaths/627",
+        "matched": [
+          "packages/core/src/cost-ledger/summary.ts"
+        ],
+        "value": "packages/core/src/cost-ledger/summary.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-status/current-inventory.json",
+        "location": "/files/676/path",
+        "matched": [
+          "packages/core/src/cost-ledger/summary.ts"
+        ],
+        "value": "packages/core/src/cost-ledger/summary.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-status/current-inventory.json",
+        "location": "/files/676/sha256",
+        "matched": [
+          "4ef61d2b0803899574adbaaa98e33f3fde2ae4da0250f452d6f72997936b07d6"
+        ],
+        "value": "4ef61d2b0803899574adbaaa98e33f3fde2ae4da0250f452d6f72997936b07d6",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round48/evidence/cost-context-frontier/history-contexts.json",
+        "location": "/hits/display_contract/4/context",
+        "matched": [
+          "packages/core/src/cost-ledger/summary.ts"
+        ],
+        "value": "packages/core/src/cost-ledger/summary.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round48/evidence/cost-context-frontier/history-contexts.json",
+        "location": "/hits/display_contract/134/context",
+        "matched": [
+          "packages/core/src/cost-ledger/summary.ts"
+        ],
+        "value": "packages/core/src/cost-ledger/summary.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round49/evidence/cost-review/history-contexts.json",
+        "location": "/oldCause/45/context",
+        "matched": [
+          "packages/core/src/cost-ledger/summary.ts"
+        ],
+        "value": "packages/core/src/cost-ledger/summary.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round49/evidence/packet-review/checks.json",
+        "location": "/packetChecks/3/sourceRowMetadata/0/path",
+        "matched": [
+          "packages/core/src/cost-ledger/summary.ts"
+        ],
+        "value": "packages/core/src/cost-ledger/summary.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round49/evidence/packet-review/checks.json",
+        "location": "/packetChecks/3/sourceRowMetadata/0/capturedSha256",
+        "matched": [
+          "4ef61d2b0803899574adbaaa98e33f3fde2ae4da0250f452d6f72997936b07d6"
+        ],
+        "value": "4ef61d2b0803899574adbaaa98e33f3fde2ae4da0250f452d6f72997936b07d6",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round49/evidence/root-summary-review/coverage-rows.json",
+        "location": "/4/row/path",
+        "matched": [
+          "packages/core/src/cost-ledger/summary.ts"
+        ],
+        "value": "packages/core/src/cost-ledger/summary.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round49/evidence/root-summary-review/coverage-rows.json",
+        "location": "/4/row/sha256",
+        "matched": [
+          "4ef61d2b0803899574adbaaa98e33f3fde2ae4da0250f452d6f72997936b07d6"
+        ],
+        "value": "4ef61d2b0803899574adbaaa98e33f3fde2ae4da0250f452d6f72997936b07d6",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round49/evidence/root-summary-review/coverage-rows.json",
+        "location": "/4/row/claims/0/sourceSha256",
+        "matched": [
+          "4ef61d2b0803899574adbaaa98e33f3fde2ae4da0250f452d6f72997936b07d6"
+        ],
+        "value": "4ef61d2b0803899574adbaaa98e33f3fde2ae4da0250f452d6f72997936b07d6",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round49/evidence/root-summary-review/coverage-rows.json",
+        "location": "/4/row/claims/1/sourceSha256",
+        "matched": [
+          "4ef61d2b0803899574adbaaa98e33f3fde2ae4da0250f452d6f72997936b07d6"
+        ],
+        "value": "4ef61d2b0803899574adbaaa98e33f3fde2ae4da0250f452d6f72997936b07d6",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round49/evidence/root-summary-review/coverage-rows.json",
+        "location": "/5/row/path",
+        "matched": [
+          "packages/core/src/cost-ledger/summary.ts"
+        ],
+        "value": "packages/core/src/cost-ledger/summary.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round49/evidence/root-summary-review/coverage-rows.json",
+        "location": "/5/row/sha256",
+        "matched": [
+          "4ef61d2b0803899574adbaaa98e33f3fde2ae4da0250f452d6f72997936b07d6"
+        ],
+        "value": "4ef61d2b0803899574adbaaa98e33f3fde2ae4da0250f452d6f72997936b07d6",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round49/evidence/root-summary-review/coverage-rows.json",
+        "location": "/7/row/path",
+        "matched": [
+          "packages/core/src/cost-ledger/summary.ts"
+        ],
+        "value": "packages/core/src/cost-ledger/summary.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round49/evidence/root-summary-review/coverage-rows.json",
+        "location": "/7/row/sha256",
+        "matched": [
+          "4ef61d2b0803899574adbaaa98e33f3fde2ae4da0250f452d6f72997936b07d6"
+        ],
+        "value": "4ef61d2b0803899574adbaaa98e33f3fde2ae4da0250f452d6f72997936b07d6",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round49/evidence/root-summary-review/coverage-rows.json",
+        "location": "/33/row/path",
+        "matched": [
+          "packages/core/src/cost-ledger/summary.ts"
+        ],
+        "value": "packages/core/src/cost-ledger/summary.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round49/evidence/root-summary-review/coverage-rows.json",
+        "location": "/33/row/directSourcePathsInObject/0",
+        "matched": [
+          "packages/core/src/cost-ledger/summary.ts"
+        ],
+        "value": "packages/core/src/cost-ledger/summary.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round49/evidence/root-summary-review/coverage-rows.json",
+        "location": "/34/row/path",
+        "matched": [
+          "packages/core/src/cost-ledger/summary.ts"
+        ],
+        "value": "packages/core/src/cost-ledger/summary.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round49/evidence/root-summary-review/coverage-rows.json",
+        "location": "/34/row/sourceHashFields/sha256",
+        "matched": [
+          "4ef61d2b0803899574adbaaa98e33f3fde2ae4da0250f452d6f72997936b07d6"
+        ],
+        "value": "4ef61d2b0803899574adbaaa98e33f3fde2ae4da0250f452d6f72997936b07d6",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round49/evidence/root-summary-review/coverage-rows.json",
+        "location": "/34/row/directSourcePathsInObject/0",
+        "matched": [
+          "packages/core/src/cost-ledger/summary.ts"
+        ],
+        "value": "packages/core/src/cost-ledger/summary.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round49/evidence/root-summary-review/coverage-rows.json",
+        "location": "/35/row/path",
+        "matched": [
+          "packages/core/src/cost-ledger/summary.ts"
+        ],
+        "value": "packages/core/src/cost-ledger/summary.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round49/evidence/root-summary-review/coverage-rows.json",
+        "location": "/35/row/directSourcePathsInObject/1",
+        "matched": [
+          "packages/core/src/cost-ledger/summary.ts"
+        ],
+        "value": "packages/core/src/cost-ledger/summary.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round49/evidence/root-summary-review/coverage-rows.json",
+        "location": "/36/row/path",
+        "matched": [
+          "packages/core/src/cost-ledger/summary.ts"
+        ],
+        "value": "packages/core/src/cost-ledger/summary.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round49/evidence/root-summary-review/coverage-rows.json",
+        "location": "/36/row/sourceHashFields/sha256",
+        "matched": [
+          "4ef61d2b0803899574adbaaa98e33f3fde2ae4da0250f452d6f72997936b07d6"
+        ],
+        "value": "4ef61d2b0803899574adbaaa98e33f3fde2ae4da0250f452d6f72997936b07d6",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round49/evidence/root-summary-review/coverage-rows.json",
+        "location": "/36/row/directSourcePathsInObject/0",
+        "matched": [
+          "packages/core/src/cost-ledger/summary.ts"
+        ],
+        "value": "packages/core/src/cost-ledger/summary.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round49/evidence/root-summary-review/coverage-rows.json",
+        "location": "/45/row/path",
+        "matched": [
+          "packages/core/src/cost-ledger/summary.ts"
+        ],
+        "value": "packages/core/src/cost-ledger/summary.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round49/evidence/root-summary-review/coverage-rows.json",
+        "location": "/45/row/sha256",
+        "matched": [
+          "4ef61d2b0803899574adbaaa98e33f3fde2ae4da0250f452d6f72997936b07d6"
+        ],
+        "value": "4ef61d2b0803899574adbaaa98e33f3fde2ae4da0250f452d6f72997936b07d6",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round49/evidence/root-summary-review/coverage-rows.json",
+        "location": "/49/row/path",
+        "matched": [
+          "packages/core/src/cost-ledger/summary.ts"
+        ],
+        "value": "packages/core/src/cost-ledger/summary.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round49/evidence/root-summary-review/coverage-rows.json",
+        "location": "/49/row/sha256",
+        "matched": [
+          "4ef61d2b0803899574adbaaa98e33f3fde2ae4da0250f452d6f72997936b07d6"
+        ],
+        "value": "4ef61d2b0803899574adbaaa98e33f3fde2ae4da0250f452d6f72997936b07d6",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round49/evidence/root-summary-review/coverage-rows.json",
+        "location": "/53/row/path",
+        "matched": [
+          "packages/core/src/cost-ledger/summary.ts"
+        ],
+        "value": "packages/core/src/cost-ledger/summary.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round49/evidence/root-summary-review/coverage-rows.json",
+        "location": "/53/row/sha256",
+        "matched": [
+          "4ef61d2b0803899574adbaaa98e33f3fde2ae4da0250f452d6f72997936b07d6"
+        ],
+        "value": "4ef61d2b0803899574adbaaa98e33f3fde2ae4da0250f452d6f72997936b07d6",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round49/evidence/root-summary-review/coverage-rows.json",
+        "location": "/56/row/path",
+        "matched": [
+          "packages/core/src/cost-ledger/summary.ts"
+        ],
+        "value": "packages/core/src/cost-ledger/summary.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round49/evidence/root-summary-review/coverage-rows.json",
+        "location": "/56/row/sha256",
+        "matched": [
+          "4ef61d2b0803899574adbaaa98e33f3fde2ae4da0250f452d6f72997936b07d6"
+        ],
+        "value": "4ef61d2b0803899574adbaaa98e33f3fde2ae4da0250f452d6f72997936b07d6",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round49/evidence/root-summary-review/coverage-rows.json",
+        "location": "/57/row/path",
+        "matched": [
+          "packages/core/src/cost-ledger/summary.ts"
+        ],
+        "value": "packages/core/src/cost-ledger/summary.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round49/evidence/root-summary-review/coverage-rows.json",
+        "location": "/57/row/sha256",
+        "matched": [
+          "4ef61d2b0803899574adbaaa98e33f3fde2ae4da0250f452d6f72997936b07d6"
+        ],
+        "value": "4ef61d2b0803899574adbaaa98e33f3fde2ae4da0250f452d6f72997936b07d6",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round49/evidence/root-summary-review/history.json",
+        "location": "/patterns/0-sha",
+        "matched": [
+          "4ef61d2b0803899574adbaaa98e33f3fde2ae4da0250f452d6f72997936b07d6"
+        ],
+        "value": "4ef61d2b0803899574adbaaa98e33f3fde2ae4da0250f452d6f72997936b07d6",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round49/evidence/root-summary-review/history.json",
+        "location": "/hits/0-path/17/context",
+        "matched": [
+          "packages/core/src/cost-ledger/summary.ts"
+        ],
+        "value": "packages/core/src/cost-ledger/summary.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round49/evidence/root-summary-review/history.json",
+        "location": "/hits/0-sha/0/context",
+        "matched": [
+          "4ef61d2b0803899574adbaaa98e33f3fde2ae4da0250f452d6f72997936b07d6"
+        ],
+        "value": "4ef61d2b0803899574adbaaa98e33f3fde2ae4da0250f452d6f72997936b07d6",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round49/evidence/root-summary-review/history.json",
+        "location": "/hits/0-sha/1/context",
+        "matched": [
+          "4ef61d2b0803899574adbaaa98e33f3fde2ae4da0250f452d6f72997936b07d6"
+        ],
+        "value": "4ef61d2b0803899574adbaaa98e33f3fde2ae4da0250f452d6f72997936b07d6",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round49/evidence/root-summary-review/history.json",
+        "location": "/hits/0-sha/2/context",
+        "matched": [
+          "4ef61d2b0803899574adbaaa98e33f3fde2ae4da0250f452d6f72997936b07d6"
+        ],
+        "value": "4ef61d2b0803899574adbaaa98e33f3fde2ae4da0250f452d6f72997936b07d6",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round49/evidence/root-summary-review/history.json",
+        "location": "/hits/0-sha/3/context",
+        "matched": [
+          "4ef61d2b0803899574adbaaa98e33f3fde2ae4da0250f452d6f72997936b07d6"
+        ],
+        "value": "4ef61d2b0803899574adbaaa98e33f3fde2ae4da0250f452d6f72997936b07d6",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round49/evidence/root-summary-review/history.json",
+        "location": "/hits/0-sha/4/context",
+        "matched": [
+          "4ef61d2b0803899574adbaaa98e33f3fde2ae4da0250f452d6f72997936b07d6"
+        ],
+        "value": "4ef61d2b0803899574adbaaa98e33f3fde2ae4da0250f452d6f72997936b07d6",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round49/evidence/root-summary-review/history.json",
+        "location": "/hits/0-sha/5/context",
+        "matched": [
+          "4ef61d2b0803899574adbaaa98e33f3fde2ae4da0250f452d6f72997936b07d6"
+        ],
+        "value": "4ef61d2b0803899574adbaaa98e33f3fde2ae4da0250f452d6f72997936b07d6",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round49/evidence/root-summary-review/history.json",
+        "location": "/hits/0-sha/6/context",
+        "matched": [
+          "4ef61d2b0803899574adbaaa98e33f3fde2ae4da0250f452d6f72997936b07d6"
+        ],
+        "value": "4ef61d2b0803899574adbaaa98e33f3fde2ae4da0250f452d6f72997936b07d6",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round49/evidence/root-summary-review/history.json",
+        "location": "/hits/0-sha/7/context",
+        "matched": [
+          "4ef61d2b0803899574adbaaa98e33f3fde2ae4da0250f452d6f72997936b07d6"
+        ],
+        "value": "4ef61d2b0803899574adbaaa98e33f3fde2ae4da0250f452d6f72997936b07d6",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round49/evidence/root-summary-review/history.json",
+        "location": "/hits/0-sha/8/context",
+        "matched": [
+          "4ef61d2b0803899574adbaaa98e33f3fde2ae4da0250f452d6f72997936b07d6"
+        ],
+        "value": "4ef61d2b0803899574adbaaa98e33f3fde2ae4da0250f452d6f72997936b07d6",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round49/evidence/root-summary-review/history.json",
+        "location": "/hits/0-sha/9/context",
+        "matched": [
+          "4ef61d2b0803899574adbaaa98e33f3fde2ae4da0250f452d6f72997936b07d6"
+        ],
+        "value": "4ef61d2b0803899574adbaaa98e33f3fde2ae4da0250f452d6f72997936b07d6",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round49/evidence/root-summary-review/history.json",
+        "location": "/hits/0-sha/10/context",
+        "matched": [
+          "4ef61d2b0803899574adbaaa98e33f3fde2ae4da0250f452d6f72997936b07d6"
+        ],
+        "value": "4ef61d2b0803899574adbaaa98e33f3fde2ae4da0250f452d6f72997936b07d6",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round49/evidence/root-summary-review/history.json",
+        "location": "/hits/0-sha/11/context",
+        "matched": [
+          "4ef61d2b0803899574adbaaa98e33f3fde2ae4da0250f452d6f72997936b07d6"
+        ],
+        "value": "4ef61d2b0803899574adbaaa98e33f3fde2ae4da0250f452d6f72997936b07d6",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round49/evidence/root-summary-review/history.json",
+        "location": "/hits/summary-contract/0/context",
+        "matched": [
+          "packages/core/src/cost-ledger/summary.ts"
+        ],
+        "value": "packages/core/src/cost-ledger/summary.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round49/evidence/root-summary-review/history.json",
+        "location": "/hits/summary-contract/15/context",
+        "matched": [
+          "packages/core/src/cost-ledger/summary.ts"
+        ],
+        "value": "packages/core/src/cost-ledger/summary.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round49/evidence/root-summary-review/history.json",
+        "location": "/hits/summary-contract/16/context",
+        "matched": [
+          "packages/core/src/cost-ledger/summary.ts"
+        ],
+        "value": "packages/core/src/cost-ledger/summary.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round49/evidence/root-summary-review/history.json",
+        "location": "/hits/summary-contract/17/context",
+        "matched": [
+          "packages/core/src/cost-ledger/summary.ts"
+        ],
+        "value": "packages/core/src/cost-ledger/summary.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round49/evidence/root-summary-review/history.json",
+        "location": "/hits/summary-contract/18/context",
+        "matched": [
+          "packages/core/src/cost-ledger/summary.ts"
+        ],
+        "value": "packages/core/src/cost-ledger/summary.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round49/evidence/root-summary-review/history.json",
+        "location": "/hits/summary-contract/26/context",
+        "matched": [
+          "packages/core/src/cost-ledger/summary.ts"
+        ],
+        "value": "packages/core/src/cost-ledger/summary.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round49/evidence/root-summary-review/history.json",
+        "location": "/hits/summary-contract/27/context",
+        "matched": [
+          "packages/core/src/cost-ledger/summary.ts"
+        ],
+        "value": "packages/core/src/cost-ledger/summary.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round49/evidence/root-summary-review/history.json",
+        "location": "/hits/summary-contract/28/context",
+        "matched": [
+          "packages/core/src/cost-ledger/summary.ts"
+        ],
+        "value": "packages/core/src/cost-ledger/summary.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round49/evidence/root-summary-review/history.json",
+        "location": "/hits/summary-contract/29/context",
+        "matched": [
+          "packages/core/src/cost-ledger/summary.ts"
+        ],
+        "value": "packages/core/src/cost-ledger/summary.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round49/evidence/root-summary-review/history.json",
+        "location": "/hits/summary-contract/30/context",
+        "matched": [
+          "packages/core/src/cost-ledger/summary.ts"
+        ],
+        "value": "packages/core/src/cost-ledger/summary.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round49/evidence/root-summary-review/history.json",
+        "location": "/hits/summary-contract/31/context",
+        "matched": [
+          "packages/core/src/cost-ledger/summary.ts"
+        ],
+        "value": "packages/core/src/cost-ledger/summary.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round49/evidence/root-summary-review/history.json",
+        "location": "/hits/summary-contract/32/context",
+        "matched": [
+          "packages/core/src/cost-ledger/summary.ts"
+        ],
+        "value": "packages/core/src/cost-ledger/summary.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round49/evidence/root-summary-review/history.json",
+        "location": "/hits/summary-contract/33/context",
+        "matched": [
+          "packages/core/src/cost-ledger/summary.ts"
+        ],
+        "value": "packages/core/src/cost-ledger/summary.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round49/evidence/root-summary-review/history.json",
+        "location": "/hits/summary-contract/34/context",
+        "matched": [
+          "packages/core/src/cost-ledger/summary.ts"
+        ],
+        "value": "packages/core/src/cost-ledger/summary.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round49/evidence/root-summary-review/history.json",
+        "location": "/hits/summary-contract/41/context",
+        "matched": [
+          "packages/core/src/cost-ledger/summary.ts"
+        ],
+        "value": "packages/core/src/cost-ledger/summary.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round49/evidence/root-summary-review/history.json",
+        "location": "/hits/summary-contract/43/context",
+        "matched": [
+          "packages/core/src/cost-ledger/summary.ts"
+        ],
+        "value": "packages/core/src/cost-ledger/summary.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round49/evidence/root-summary-review/history.json",
+        "location": "/hits/summary-contract/45/context",
+        "matched": [
+          "packages/core/src/cost-ledger/summary.ts"
+        ],
+        "value": "packages/core/src/cost-ledger/summary.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round49/evidence/root-summary-review/history.json",
+        "location": "/hits/summary-contract/47/context",
+        "matched": [
+          "packages/core/src/cost-ledger/summary.ts"
+        ],
+        "value": "packages/core/src/cost-ledger/summary.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round49/evidence/root-summary-review/history.json",
+        "location": "/hits/summary-contract/49/context",
+        "matched": [
+          "packages/core/src/cost-ledger/summary.ts"
+        ],
+        "value": "packages/core/src/cost-ledger/summary.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round49/evidence/root-summary-review/history.json",
+        "location": "/hits/summary-contract/52/context",
+        "matched": [
+          "packages/core/src/cost-ledger/summary.ts"
+        ],
+        "value": "packages/core/src/cost-ledger/summary.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round49/evidence/root-summary-review/selection-decisions.json",
+        "location": "/decisions/0/path",
+        "matched": [
+          "packages/core/src/cost-ledger/summary.ts"
+        ],
+        "value": "packages/core/src/cost-ledger/summary.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round49/evidence/root-summary-review/selection-initial-pins.json",
+        "location": "/files/0/path",
+        "matched": [
+          "packages/core/src/cost-ledger/summary.ts"
+        ],
+        "value": "packages/core/src/cost-ledger/summary.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round49/evidence/root-summary-review/selection-initial-pins.json",
+        "location": "/files/0/sha256",
+        "matched": [
+          "4ef61d2b0803899574adbaaa98e33f3fde2ae4da0250f452d6f72997936b07d6"
+        ],
+        "value": "4ef61d2b0803899574adbaaa98e33f3fde2ae4da0250f452d6f72997936b07d6",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round49/evidence/root-summary-review/source-manifest.json",
+        "location": "/files/0/path",
+        "matched": [
+          "packages/core/src/cost-ledger/summary.ts"
+        ],
+        "value": "packages/core/src/cost-ledger/summary.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round49/evidence/root-summary-review/source-manifest.json",
+        "location": "/files/0/sha256",
+        "matched": [
+          "4ef61d2b0803899574adbaaa98e33f3fde2ae4da0250f452d6f72997936b07d6"
+        ],
+        "value": "4ef61d2b0803899574adbaaa98e33f3fde2ae4da0250f452d6f72997936b07d6",
+        "truncatedValue": false
+      }
+    ]
+  },
+  "limitation": "Shared machine path/SHA navigation only, all traversed scalar values not semantically read; JSON keys excluded, archives included; exact shown values capped; source byte hashing not product semantic reading."
+}

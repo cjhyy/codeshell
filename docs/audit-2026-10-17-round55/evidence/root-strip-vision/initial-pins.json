@@ -1,0 +1,13 @@
+{
+  "atUTC": "2026-10-17T18:37:19.421914+00:00",
+  "files": [
+    {
+      "path": "packages/core/src/llm/strip-vision.ts",
+      "bytes": 4054,
+      "lines": 107,
+      "sha256": "d4c2b0f230941c255daefc838f893c8c10137d32595e0ccf6e1d5a7b74ed50c0",
+      "beforeBodyOrLineNavigation": true
+    }
+  ],
+  "productRuns": 0
+}

@@ -1,0 +1,34 @@
+{
+  "atUTC": "2026-10-17T18:38:38.685317+00:00",
+  "sourcePins": [
+    {
+      "path": "packages/core/src/llm/strip-vision.ts",
+      "sha256": "d4c2b0f230941c255daefc838f893c8c10137d32595e0ccf6e1d5a7b74ed50c0",
+      "same": true
+    },
+    {
+      "path": "packages/core/src/llm/providers/openai.ts",
+      "sha256": "e45ff0572580ec70bbdba4f2bc95aa32f07c741e1b275e4000fa8b0cf2d25c81",
+      "same": true
+    },
+    {
+      "path": "packages/core/src/llm/providers/anthropic.ts",
+      "sha256": "0816e99de6261b41892ac4ecf3fbde76c7f2f94c12490752e412d27fa02079f3",
+      "same": true
+    },
+    {
+      "path": "packages/core/src/types.ts",
+      "sha256": "1cfe13fc9d18863adb721635d56b34ae627bb1fab0508675b034a4340b987bb5",
+      "same": true
+    },
+    {
+      "path": "packages/core/src/llm/strip-vision.test.ts",
+      "sha256": "52b0ddbc2bc1d72a26becbba638832957a1c10824a8c7c8a6b0a6525d649fc7a",
+      "same": true
+    }
+  ],
+  "historyFiles": 5433,
+  "changed": [],
+  "missing": [],
+  "productRuns": 0
+}

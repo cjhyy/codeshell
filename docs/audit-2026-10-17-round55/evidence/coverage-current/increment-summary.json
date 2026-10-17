@@ -1,0 +1,12 @@
+{
+  "createdAt": "2026-10-17T18:24:37.678167+00:00",
+  "status": "DEFERRED_UNPARSED",
+  "scope": "Frozen46..53 canonical source-manifest-named JSON only;54 excluded even after docs-only integration",
+  "manifestDocuments": 64,
+  "sourceRowsDiscovered": 511,
+  "sourceRowsSemanticallyClassified": 0,
+  "publishableIncrementCounts": null,
+  "publishableMerged46to53Counts": null,
+  "reason": "Own metadata source-hash field adapter defect; first outputs preserved and withdrawn. Absence of recognized increments is NOT absence of later reading. Deferred rows are not semantically rejected.",
+  "followup": "Any later incremental adaptation must be a separate task with canonical per-row purpose/range/SHA review; not needed for current reliable carry-forward status."
+}

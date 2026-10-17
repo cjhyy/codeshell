@@ -1,0 +1,30 @@
+{
+  "capturedUTC": "2026-10-17T18:26:24.011812+00:00",
+  "files": [
+    {
+      "path": "AGENTS.md",
+      "bytes": 206,
+      "lines": 5,
+      "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "beforeBodyOrLineNavigation": true
+    },
+    {
+      "path": "CODESHELL.md",
+      "bytes": 17639,
+      "lines": 217,
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "beforeBodyOrLineNavigation": true
+    },
+    {
+      "path": "packages/chat/src/media.ts",
+      "bytes": 9244,
+      "lines": 272,
+      "sha256": "9cd43efac474d03615408fd8ab094c3136ef1972d399b72fc30c362487dabe14",
+      "beforeBodyOrLineNavigation": true
+    }
+  ],
+  "rootReportedBaselineOnly": "00c046367769349c1f5413e74c993b2c19ce8337",
+  "ownGitOperations": 0,
+  "targetBodyReadAtPin": false,
+  "instructionStatus": "Prior AGENTS5/CODESHELL217 actual reading carried under unchanged SHA; no new semantic instruction reading."
+}

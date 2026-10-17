@@ -1,0 +1,365 @@
+{
+  "checkedUTC": "2026-10-17T18:30:44.247614+00:00",
+  "sourceAndInstructionChecks": [
+    {
+      "path": "AGENTS.md",
+      "bytes": 206,
+      "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "initialSha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "matchesInitial": true
+    },
+    {
+      "path": "CODESHELL.md",
+      "bytes": 17639,
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "initialSha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "matchesInitial": true
+    },
+    {
+      "path": "packages/chat/src/media.ts",
+      "bytes": 9244,
+      "sha256": "9cd43efac474d03615408fd8ab094c3136ef1972d399b72fc30c362487dabe14",
+      "initialSha256": "9cd43efac474d03615408fd8ab094c3136ef1972d399b72fc30c362487dabe14",
+      "matchesInitial": true
+    },
+    {
+      "path": "packages/chat/src/channel.ts",
+      "bytes": 7027,
+      "sha256": "645c32c69b3a8d76de60b85783a765f96133b93a5c183100bfef20794380e0ce",
+      "initialSha256": "645c32c69b3a8d76de60b85783a765f96133b93a5c183100bfef20794380e0ce",
+      "matchesInitial": true
+    },
+    {
+      "path": "packages/chat/src/telegram.ts",
+      "bytes": 12790,
+      "sha256": "093491c212ceb29855f1588cc9b436315a7f05fe39c323614ad803eeef1cbc9e",
+      "initialSha256": "093491c212ceb29855f1588cc9b436315a7f05fe39c323614ad803eeef1cbc9e",
+      "matchesInitial": true
+    },
+    {
+      "path": "packages/chat/src/platform-media.test.ts",
+      "bytes": 5802,
+      "sha256": "b7da4a3fa5a122b61cb05eb501eee4f50da6fab0d8b799dab53062305c6eba61",
+      "initialSha256": "b7da4a3fa5a122b61cb05eb501eee4f50da6fab0d8b799dab53062305c6eba61",
+      "matchesInitial": true
+    },
+    {
+      "path": "packages/chat/src/gateway.ts",
+      "bytes": 12984,
+      "sha256": "d73ad84b43ef1b2e705323cb3ed63c5102fbb0d31f51dc5ffc10fc45862a1b13",
+      "initialSha256": "d73ad84b43ef1b2e705323cb3ed63c5102fbb0d31f51dc5ffc10fc45862a1b13",
+      "matchesInitial": true
+    },
+    {
+      "path": "packages/chat/src/lifecycle.ts",
+      "bytes": 824,
+      "sha256": "cdf93e75be321a483b0b9d8339cbefe87b9e211549dfdda58f348ef1ab010d46",
+      "initialSha256": "cdf93e75be321a483b0b9d8339cbefe87b9e211549dfdda58f348ef1ab010d46",
+      "matchesInitial": true
+    },
+    {
+      "path": "packages/chat/src/telegram.test.ts",
+      "bytes": 9700,
+      "sha256": "5da19870067e2e5c7db973f248e86e6713d1903c38b014625b26408b3b156145",
+      "initialSha256": "5da19870067e2e5c7db973f248e86e6713d1903c38b014625b26408b3b156145",
+      "matchesInitial": true
+    },
+    {
+      "path": "packages/chat/src/chat-gateway.ts",
+      "bytes": 10429,
+      "sha256": "7032acecac774cc3c6bea6bb1b5f3b90ddf93c7234a8bded97112483300c311d",
+      "initialSha256": "7032acecac774cc3c6bea6bb1b5f3b90ddf93c7234a8bded97112483300c311d",
+      "matchesInitial": true
+    }
+  ],
+  "allPinsMatch": true,
+  "targetedHistoricalMetadataFiles": [
+    {
+      "path": "docs/audit-2026-10-16/inventory.json",
+      "bytes": 159179,
+      "sha256": "91118ed73a7f6ff44c10dc248759a5371b81eb29f2cc64a75ae81e991fdac8b7",
+      "matchesTargetedHitTime": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round11/evidence/chat-all-history-dedup.json",
+      "bytes": 352030,
+      "sha256": "5526576cf6318dbed766f2cc5a847588c73e7f0ce907de432abd69e4c2eb0bc3",
+      "matchesTargetedHitTime": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round11/evidence/chat-dedup.json",
+      "bytes": 299984,
+      "sha256": "e2456e9b5fd81f512cc5f1d7af8be3330fc37f7547923bc7bf8b7c9bdafb14e7",
+      "matchesTargetedHitTime": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round11/evidence/chat-source-manifest.json",
+      "bytes": 8813,
+      "sha256": "186bb098e3d80c7936072948b00cd254bb72d71fc21e4ee1ad143bf607a98e7d",
+      "matchesTargetedHitTime": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round11/source-manifest.json",
+      "bytes": 18940,
+      "sha256": "1bb01c7a5f35bba6aa40ab3634b80b6cfdc40972c0c99f87c6f26da1b2972290",
+      "matchesTargetedHitTime": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+      "bytes": 581386,
+      "sha256": "992264bbca5ad300e451630e7402d173e41564dfe0a705e163b82fa733d3424d",
+      "matchesTargetedHitTime": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round20/evidence/root-dedup.json",
+      "bytes": 458085,
+      "sha256": "b3f57a6cb0da02aeca6c8477e5569043a2620efaac4dd216d3a02ac28948b3fb",
+      "matchesTargetedHitTime": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round20/evidence/root-mediakind-preflight.json",
+      "bytes": 708,
+      "sha256": "09057a3301623542b7cec133e96098320d61d8d733d623f8d4d8ad8a8dfd5fa0",
+      "matchesTargetedHitTime": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round20/evidence/root-source-manifest.json",
+      "bytes": 6963,
+      "sha256": "e53e896358df27051e2af18973043c67efd19e6c634b66ff37c5573b8882180d",
+      "matchesTargetedHitTime": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round20/media-kind.md",
+      "bytes": 3937,
+      "sha256": "5aa527bbe965f50f1c682701083a3fb672df011b9422503b2cf65da02b1f1225",
+      "matchesTargetedHitTime": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round20/source-manifest.json",
+      "bytes": 29546,
+      "sha256": "fd8cb1af1e2caccf3f7ccd98ac69c21d7d886eebbfdfc612b42f4c79962390b9",
+      "matchesTargetedHitTime": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round23/evidence/root-source-manifest.json",
+      "bytes": 12586,
+      "sha256": "25cde34c621c86dbe1f4b7f1ff40934e09fd47a864b6f4d3b59c24c36c443dae",
+      "matchesTargetedHitTime": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round23/source-manifest.json",
+      "bytes": 53660,
+      "sha256": "49764d4ed6b9323c89abf038ff8785cfecbfd774d72a2c23cf2c86b339b71452",
+      "matchesTargetedHitTime": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+      "bytes": 1891704,
+      "sha256": "6cfb5a8d1a6c08e6fb587e339fd78a3d4f023dc65b7ccc466f4eadbb68df7d45",
+      "matchesTargetedHitTime": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+      "bytes": 841639,
+      "sha256": "12c53ba7d8a17673382d352a48a8ca3afc25a4913fcc96d63d22319e7a00b1eb",
+      "matchesTargetedHitTime": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round30/evidence/data-hash-checks.json",
+      "bytes": 5067,
+      "sha256": "4132815076c1d0d185e2e4de4ecfd08786f4a598d9193001d1fdc50abf7ca5f4",
+      "matchesTargetedHitTime": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round30/evidence/data-history.json",
+      "bytes": 693607,
+      "sha256": "c5ff4e0243673e8dea346a9a7f8b1a87457d0a6e3146cdc1616382bce082a559",
+      "matchesTargetedHitTime": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round30/evidence/data-prep/consumer-initial-pins.json",
+      "bytes": 1909,
+      "sha256": "e7a584fa1b25ecc4515820e8984eb77f447dca5897a2758589861996c78f8fca",
+      "matchesTargetedHitTime": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round30/evidence/data-prep/finish-hash-checks.json",
+      "bytes": 4513,
+      "sha256": "9860105a171318e73c18c09696d09f438b78447061cd9ac566605cc1001210dd",
+      "matchesTargetedHitTime": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round30/evidence/data-prep/history.json",
+      "bytes": 676650,
+      "sha256": "6e2f928dfa1881d44399422812dc1740d0d6b836c728983b23724f22db6c7b75",
+      "matchesTargetedHitTime": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round30/evidence/data-prep/source-manifest.json",
+      "bytes": 15380,
+      "sha256": "878bd3eb593e90e28d747b87aa65aeae47e2187f4785c4425261d41bb1e9aa71",
+      "matchesTargetedHitTime": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round30/evidence/data-review-prep/consumer-initial-pins.json",
+      "bytes": 4404,
+      "sha256": "a4d113aa69c6d17574a450b519b423cfa86c16da617d6e67b2f413ad7aefac94",
+      "matchesTargetedHitTime": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round30/evidence/data-review-prep/source-manifest.json",
+      "bytes": 25436,
+      "sha256": "62f59cb23554ce1908971014d5bea65ac2cadc37078c950539faafafd1936419",
+      "matchesTargetedHitTime": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round30/evidence/data-source-manifest.json",
+      "bytes": 25255,
+      "sha256": "3ce8c13b04a1c4fb20cadd50a8ac98c2e43ed71962da55072fd21ff03e54cbf0",
+      "matchesTargetedHitTime": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round30/evidence/review-data-source-manifest.json",
+      "bytes": 44512,
+      "sha256": "c593d0a0a674f55de428cf6a788e2ad6b07cd5c900d450b22f4749241418881c",
+      "matchesTargetedHitTime": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round30/source-manifest.json",
+      "bytes": 23949,
+      "sha256": "073928ea01c96b52295b6c39dc892e8e59c7c66be4af96ad3e509270cf746d21",
+      "matchesTargetedHitTime": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round32/evidence/taskparse-history.json",
+      "bytes": 817287,
+      "sha256": "5eea48937df9632c3ee627ec52c8cf637ead09a9884e1316312d7ab511cb8687",
+      "matchesTargetedHitTime": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round32/evidence/taskparse-prep/history.json",
+      "bytes": 803921,
+      "sha256": "15a542501ad75d76f98a95da6f4eb9efa3e2aa647cb9d33e588221c656915e91",
+      "matchesTargetedHitTime": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round43/evidence/dataset-frontier/author-metadata-checks.json",
+      "bytes": 10375,
+      "sha256": "639aab6d7bea71f41498920a285475b2b8557a59757e71dde23a69b0127238d4",
+      "matchesTargetedHitTime": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round43/evidence/dataset-frontier/data-selection-history.json",
+      "bytes": 231771,
+      "sha256": "27cd461eb89814739256f8af38f01c80142baedc7eb1daea2242463dddab5320",
+      "matchesTargetedHitTime": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round43/evidence/dataset-frontier/data-selection-pins.json",
+      "bytes": 1556,
+      "sha256": "06e8451dcf83005909c605a263b778ff2965afc75df1d8946408153a8a00f35e",
+      "matchesTargetedHitTime": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round43/evidence/dataset-frontier/finish-hash-checks.json",
+      "bytes": 12188,
+      "sha256": "d73fed66003f251a7ca6402b477dbc59731337bd4b5067b773747de608494387",
+      "matchesTargetedHitTime": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round43/evidence/dataset-frontier/history-decisions.json",
+      "bytes": 5138,
+      "sha256": "aa2c117f0fe883d8661e76d09abfd4648df49d3ca42ca90c0394f278ff473387",
+      "matchesTargetedHitTime": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round43/evidence/dataset-frontier/source-manifest.json",
+      "bytes": 20671,
+      "sha256": "776b69bece8ea58b3894faa6fef71d2248e77ecd55ad8ef95aa6ee90e89f6dda",
+      "matchesTargetedHitTime": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round43/source-manifest.json",
+      "bytes": 49049,
+      "sha256": "1e5dfd10b41c98165abc3a941ff356808bd877d95a6ea8033b573f733fd55e2d",
+      "matchesTargetedHitTime": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "bytes": 12061422,
+      "sha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f",
+      "matchesTargetedHitTime": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-index.json",
+      "bytes": 2055917,
+      "sha256": "78e65550fef49fec2bd688455b17edf6de8465486cd9651634b4cd483f5aacda",
+      "matchesTargetedHitTime": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/package-inventory.json",
+      "bytes": 958678,
+      "sha256": "862732b8c0bdc13733ead08b43c47d0854c8c12b96ea68ee5427ecf6a740d28b",
+      "matchesTargetedHitTime": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-status/comparison.json",
+      "bytes": 280965,
+      "sha256": "20f6b65c43a2153861a0926d6793a4200982a610ad6b3497d263b5bfda546f38",
+      "matchesTargetedHitTime": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-status/current-inventory.json",
+      "bytes": 1643022,
+      "sha256": "d1735b9e71d40ff96ad99d122d6d7fd53f2b27e6dd643a31f280c4e5a33b07dc",
+      "matchesTargetedHitTime": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round5/evidence/chat-dedup.json",
+      "bytes": 186736,
+      "sha256": "008b69210b4ff3091aa512d9514f5aa91cf5a795bf09dc7ebd866071648693a5",
+      "matchesTargetedHitTime": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round54/evidence/chat-lifecycle-gate/fallback-history-gate.json",
+      "bytes": 134674,
+      "sha256": "76a7a94534d335d3dc29acf5c644d83602b618410c25b2ec0efc817b60fe630c",
+      "matchesTargetedHitTime": true
+    },
+    {
+      "path": "docs/audit-2026-10-17/chat-data.md",
+      "bytes": 8500,
+      "sha256": "1c9fcfb4606c4c3721f9e3d22459cff65604a0b24995a362f05108445207f773",
+      "matchesTargetedHitTime": true
+    },
+    {
+      "path": "docs/audit-2026-10-17/evidence/chat-receipts.json",
+      "bytes": 2817,
+      "sha256": "88881889bd31b88bcb56644c649fca8f0283abec13749ed0ceea5bb92f546473",
+      "matchesTargetedHitTime": true
+    },
+    {
+      "path": "docs/audit-2026-10-17/findings.json",
+      "bytes": 15790,
+      "sha256": "7e197f4b8b12f058ceeefbb8c73e0fbb292da844823b9a33fd9e19bcafabdb0d",
+      "matchesTargetedHitTime": true
+    },
+    {
+      "path": "docs/audit-2026-10-17/source-manifest.json",
+      "bytes": 10112,
+      "sha256": "27f492ee3e4314ea5b808155d5fab860882c4b717750e39ae60d1cfa3cd5aae1",
+      "matchesTargetedHitTime": true
+    }
+  ],
+  "allTargetedHitFilesMatch": true,
+  "futureFormal55PlusPathsInInitialTargetedHitList": [],
+  "sharedBatch": {
+    "path": "/tmp/codeshell-audit-round125-agent-registry/history-batch.json",
+    "bytes": 1299889,
+    "sha256": "2c09e39e6c332c5f04395af3c02d637bc3dabec28a7045c9817aa7e98ae88b27",
+    "matchesProjectedBatch": true,
+    "scope": "Only frozen batch byte check, not independent re-inventory or current validation of all5433 member bytes."
+  },
+  "ownGitOperations": 0,
+  "endingHashesAreNewSemanticReads": false
+}

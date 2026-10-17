@@ -1,0 +1,183 @@
+{
+  "checkedUTC": "2026-10-17T18:31:41.995723+00:00",
+  "role": "Own-author metadata finalization, not additional independent source review",
+  "files": [],
+  "sourceRangeChecks": [
+    {
+      "path": "packages/chat/src/media.ts",
+      "semanticCountMatches": true,
+      "displayUnionCountMatches": true,
+      "semanticWithinDisplay": true,
+      "rangesWithinCurrentLineCount": true,
+      "beforeBodyOrNav": true
+    },
+    {
+      "path": "packages/chat/src/channel.ts",
+      "semanticCountMatches": true,
+      "displayUnionCountMatches": true,
+      "semanticWithinDisplay": true,
+      "rangesWithinCurrentLineCount": true,
+      "beforeBodyOrNav": true
+    },
+    {
+      "path": "packages/chat/src/telegram.ts",
+      "semanticCountMatches": true,
+      "displayUnionCountMatches": true,
+      "semanticWithinDisplay": true,
+      "rangesWithinCurrentLineCount": true,
+      "beforeBodyOrNav": true
+    },
+    {
+      "path": "packages/chat/src/gateway.ts",
+      "semanticCountMatches": true,
+      "displayUnionCountMatches": true,
+      "semanticWithinDisplay": true,
+      "rangesWithinCurrentLineCount": true,
+      "beforeBodyOrNav": true
+    },
+    {
+      "path": "packages/chat/src/chat-gateway.ts",
+      "semanticCountMatches": true,
+      "displayUnionCountMatches": true,
+      "semanticWithinDisplay": true,
+      "rangesWithinCurrentLineCount": true,
+      "beforeBodyOrNav": true
+    },
+    {
+      "path": "packages/chat/src/telegram.test.ts",
+      "semanticCountMatches": true,
+      "displayUnionCountMatches": true,
+      "semanticWithinDisplay": true,
+      "rangesWithinCurrentLineCount": true,
+      "beforeBodyOrNav": true
+    },
+    {
+      "path": "packages/chat/src/platform-media.test.ts",
+      "semanticCountMatches": true,
+      "displayUnionCountMatches": true,
+      "semanticWithinDisplay": true,
+      "rangesWithinCurrentLineCount": true,
+      "beforeBodyOrNav": true
+    }
+  ],
+  "links": [
+    {
+      "label": "分类",
+      "target": "classification.json",
+      "existsOrPendingSelf": true,
+      "withinExactOutput": true
+    },
+    {
+      "label": "初始pin",
+      "target": "initial-pins.json",
+      "existsOrPendingSelf": true,
+      "withinExactOutput": true
+    },
+    {
+      "label": "46份命中文档",
+      "target": "targeted-history-hits.json",
+      "existsOrPendingSelf": true,
+      "withinExactOutput": true
+    },
+    {
+      "label": "七个原row",
+      "target": "canonical-gate-rows.json",
+      "existsOrPendingSelf": true,
+      "withinExactOutput": true
+    },
+    {
+      "label": "gate decision",
+      "target": "gate-decision.json",
+      "existsOrPendingSelf": true,
+      "withinExactOutput": true
+    },
+    {
+      "label": "R11候选/排除原件",
+      "target": "old-cause-canonical.json",
+      "existsOrPendingSelf": true,
+      "withinExactOutput": true
+    },
+    {
+      "label": "pin其冻结字节",
+      "target": "shared-history-pin.json",
+      "existsOrPendingSelf": true,
+      "withinExactOutput": true
+    },
+    {
+      "label": "投影media命中",
+      "target": "shared-history-media.json",
+      "existsOrPendingSelf": true,
+      "withinExactOutput": true
+    },
+    {
+      "label": "Source manifest",
+      "target": "source-manifest.json",
+      "existsOrPendingSelf": true,
+      "withinExactOutput": true
+    },
+    {
+      "label": "support pins",
+      "target": "support-initial-pins.json",
+      "existsOrPendingSelf": true,
+      "withinExactOutput": true
+    },
+    {
+      "label": "producer pins",
+      "target": "producer-initial-pins.json",
+      "existsOrPendingSelf": true,
+      "withinExactOutput": true
+    },
+    {
+      "label": "dispatcher pin",
+      "target": "dispatcher-initial-pin.json",
+      "existsOrPendingSelf": true,
+      "withinExactOutput": true
+    },
+    {
+      "label": "摘录",
+      "target": "source-excerpts.json",
+      "existsOrPendingSelf": true,
+      "withinExactOutput": true
+    },
+    {
+      "label": "navigation诊断",
+      "target": "diagnostics.json",
+      "existsOrPendingSelf": true,
+      "withinExactOutput": true
+    },
+    {
+      "label": "validation",
+      "target": "validation.json",
+      "existsOrPendingSelf": true,
+      "withinExactOutput": true
+    },
+    {
+      "label": "结束检查",
+      "target": "ending-checks.json",
+      "existsOrPendingSelf": true,
+      "withinExactOutput": true
+    },
+    {
+      "label": "整理脚本",
+      "target": "finalize-metadata.py",
+      "existsOrPendingSelf": true,
+      "withinExactOutput": true
+    },
+    {
+      "label": "最后metadata检查",
+      "target": "freeze-checks.json",
+      "existsOrPendingSelf": true,
+      "withinExactOutput": true
+    },
+    {
+      "label": "self-excluded receipt",
+      "target": "reviewer-receipt.json",
+      "existsOrPendingSelf": true,
+      "withinExactOutput": true
+    }
+  ],
+  "linkCount": 19,
+  "allLinksValid": true,
+  "productRuns": 0,
+  "GitOperations": 0
+}

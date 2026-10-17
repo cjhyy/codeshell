@@ -1,0 +1,45 @@
+{
+  "actualBoundedOldcauseWindows": [
+    {
+      "query": "oldcause",
+      "index": 0,
+      "path": "docs/archive/architecture/18-core-vs-cc-vs-codex.md",
+      "pointer": "",
+      "offset": 4025,
+      "length": 13490,
+      "text": "n | ContextManager 按 token 比率自动触发 |\n| 渲染/loop 解耦 | 经 protocol 层 onStream 事件解耦（见 2.2） | query 状态机解耦 | **最彻底**：submit/event 异步模型，TUI 不同步调 core |\n\n**codeshell 粗糙点**（来自源码）：\n- `maxContextTokens` 默认硬编码 200k（engine.ts:272）——CC/Codex 倾向从模型动态取（Codex 默认 272K 可配到 1M）。\n- max_tokens continuation 硬编码 3x retry（turn-loop.ts:348），不可配。\n- abort 在回合内只检查一次（turn-loop.ts:385），长工具执行中的中止靠工具自觉。\n- post_compact hook 用“漏斗”（`consumePendingCompactInfo`，turn-loop.ts:76）绕开 ContextManager→HookRegistry 的循环依赖——是 workaround，不是干净边界。\n\n### 2.2 Protocol（网关层）—— codeshell 与 Codex 的共同选择\n\n| 维度 | codeshell | Claude Code | Codex |\n|---|---|---|---|\n| 形态 | `AgentServer`/`AgentClient` JSON-RPC 2.0（protocol/types.ts:25-51） | 内部 query/状态机 | `codex-protocol` Op/EventMsg |\n| 为何强制走网关 | ADR（[doc 14](14-engine-call-paths.md)）：TaskManager 流订阅、status 通知、in-process 重",
+      "bounded": true
+    },
+    {
+      "query": "oldcause",
+      "index": 1,
+      "path": "docs/audit-2026-10-17-round15/evidence/migration-dedup.json",
+      "pointer": "/hits/migration/17/text",
+      "offset": 111,
+      "length": 544,
+      "text": "静态覆盖：settings manager、schema、personalization、migrate-config、schema-export、feature-flags、recovery 的文件内容；migrate-models 的完整纯转换；Engine update/read/config-population 与 disk defaults、PromptComposer personalization、protocol config_set 与 legacy model handlers、TUI config caller；ModelPool / ProviderCatalog 和 Desktop model-meta 的相关段。既有 tests 仅选择性阅读，没有运行整个 settings、Core 或仓库测试套件。[源码 SHA-256 清单](/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17-round4/evidence/settings-source-manifest.json) 记录 17 个文件，不能将清单理解为每个大文件都逐行审阅。",
+      "bounded": true
+    },
+    {
+      "query": "oldcause",
+      "index": 15,
+      "path": "docs/audit-2026-10-17-round34/evidence/renderer-status-frontier/history.json",
+      "pointer": "/hits/old-failed/55/excerpt",
+      "offset": 31,
+      "length": 367,
+      "text": "| Settings 当前/后台默认模型失败恢复 | `useModelConnections.setDefaultInstance:348` 等待 persist 成功才 setDefault；`setAux:197` 同样先写后改。读取有 scope/generation，pending/加载 fieldset 门禁；既有 Electron 日志 13–14 明确失败保留/回退、重试及字段保留 | 既有 [model-settings-e2e.log](/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/docs/review-2026-10-12/validation/model-settings-e2e.log)，本轮未重跑 |",
+      "bounded": true
+    },
+    {
+      "query": "oldcause",
+      "index": 16,
+      "path": "docs/audit-2026-10-17-round34/evidence/renderer-status-frontier/history.json",
+      "pointer": "/hits/old-failed/75/excerpt",
+      "offset": 31,
+      "length": 367,
+      "text": "| Settings 当前/后台默认模型失败恢复 | `useModelConnections.setDefaultInstance:348` 等待 persist 成功才 setDefault；`setAux:197` 同样先写后改。读取有 scope/generation，pending/加载 fieldset 门禁；既有 Electron 日志 13–14 明确失败保留/回退、重试及字段保留 | 既有 [model-settings-e2e.log](/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/docs/review-2026-10-12/validation/model-settings-e2e.log)，本轮未重跑 |",
+      "bounded": true
+    }
+  ],
+  "counts": "4 actual bounded windows; 25 compact oldcause locators are not whole windows; both original-report selected ranges in prior-report-selected.json separate. No semantic exhaustion."
+}

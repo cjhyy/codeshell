@@ -1,0 +1,8 @@
+{
+  "path": "packages/core/src/llm/client-base.ts",
+  "bytes": 18650,
+  "lines": 468,
+  "sha256": "619599cd6755a8391704f3247cd8ae250d8d36899e7411fdb0b811e813417d33",
+  "pinnedBeforeBodyUTC": "2026-10-17T18:32:10.598546+00:00",
+  "purpose": "Only recordUsage ordinary reported/null usage projection to recordOwnedUsage; no client creation/provider/auth/network lifecycle audit"
+}

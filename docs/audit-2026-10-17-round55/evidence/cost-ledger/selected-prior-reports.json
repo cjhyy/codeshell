@@ -1,0 +1,19 @@
+{
+  "createdAt": "2026-10-17T18:29:16.728929+00:00",
+  "files": [
+    {
+      "path": "docs/audit-2026-10-17-round9/usage.md",
+      "bytes": 4645,
+      "sha256": "bbf83d716fbf1c0b5c72cc89130bf2d389a9d1110faa8525d30a92975f93280e",
+      "lines": 25,
+      "coverage": "full historical metadata read"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/cost-review/report.md",
+      "bytes": 4981,
+      "sha256": "21e7b094cc1aece39a37b3dc06927824ae97a8e57902583fffebab5a2fc01225",
+      "lines": 24,
+      "coverage": "full historical metadata read"
+    }
+  ]
+}

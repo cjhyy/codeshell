@@ -1,0 +1,164 @@
+{
+  "input": {
+    "path": "/tmp/codeshell-audit-round125-agent-registry/history-batch.json",
+    "bytes": 1299889,
+    "sha256": "2c09e39e6c332c5f04395af3c02d637bc3dabec28a7045c9817aa7e98ae88b27",
+    "snapshotAt": "2026-10-17T18:27:12.141595+00:00"
+  },
+  "excludedFormalAtOrAbove": 55,
+  "sharedInventoryMembers": 5433,
+  "sharedScalarMachineVisits": 3997418,
+  "query": [
+    "packages/coding/src/external-runtimes/codex/model-discovery.ts",
+    "08691432cb3fec0592aeb4a9e87f872df64459909948898c47a0ec70c44fa3bc"
+  ],
+  "count": 16,
+  "cap": 100,
+  "hits": [
+    {
+      "document": "docs/audit-2026-10-16/inventory.json",
+      "location": "/source_inventory/119",
+      "matched": [
+        "packages/coding/src/external-runtimes/codex/model-discovery.ts"
+      ],
+      "value": "packages/coding/src/external-runtimes/codex/model-discovery.ts",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/inventory.json",
+      "location": "/paths/112",
+      "matched": [
+        "packages/coding/src/external-runtimes/codex/model-discovery.ts"
+      ],
+      "value": "packages/coding/src/external-runtimes/codex/model-discovery.ts",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+      "location": "/files/176/path",
+      "matched": [
+        "packages/coding/src/external-runtimes/codex/model-discovery.ts"
+      ],
+      "value": "packages/coding/src/external-runtimes/codex/model-discovery.ts",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+      "location": "/files/176/sha256",
+      "matched": [
+        "08691432cb3fec0592aeb4a9e87f872df64459909948898c47a0ec70c44fa3bc"
+      ],
+      "value": "08691432cb3fec0592aeb4a9e87f872df64459909948898c47a0ec70c44fa3bc",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "location": "/claims/907/path",
+      "matched": [
+        "packages/coding/src/external-runtimes/codex/model-discovery.ts"
+      ],
+      "value": "packages/coding/src/external-runtimes/codex/model-discovery.ts",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "location": "/claims/907/directSourcePathsInObject/0",
+      "matched": [
+        "packages/coding/src/external-runtimes/codex/model-discovery.ts"
+      ],
+      "value": "packages/coding/src/external-runtimes/codex/model-discovery.ts",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "location": "/claims/908/path",
+      "matched": [
+        "packages/coding/src/external-runtimes/codex/model-discovery.ts"
+      ],
+      "value": "packages/coding/src/external-runtimes/codex/model-discovery.ts",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "location": "/claims/908/sourceHashFields/sha256",
+      "matched": [
+        "08691432cb3fec0592aeb4a9e87f872df64459909948898c47a0ec70c44fa3bc"
+      ],
+      "value": "08691432cb3fec0592aeb4a9e87f872df64459909948898c47a0ec70c44fa3bc",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "location": "/claims/908/directSourcePathsInObject/0",
+      "matched": [
+        "packages/coding/src/external-runtimes/codex/model-discovery.ts"
+      ],
+      "value": "packages/coding/src/external-runtimes/codex/model-discovery.ts",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-index.json",
+      "location": "/files/485/path",
+      "matched": [
+        "packages/coding/src/external-runtimes/codex/model-discovery.ts"
+      ],
+      "value": "packages/coding/src/external-runtimes/codex/model-discovery.ts",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-index.json",
+      "location": "/files/485/sha256",
+      "matched": [
+        "08691432cb3fec0592aeb4a9e87f872df64459909948898c47a0ec70c44fa3bc"
+      ],
+      "value": "08691432cb3fec0592aeb4a9e87f872df64459909948898c47a0ec70c44fa3bc",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/package-inventory.json",
+      "location": "/files/485/path",
+      "matched": [
+        "packages/coding/src/external-runtimes/codex/model-discovery.ts"
+      ],
+      "value": "packages/coding/src/external-runtimes/codex/model-discovery.ts",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/package-inventory.json",
+      "location": "/files/485/sha256",
+      "matched": [
+        "08691432cb3fec0592aeb4a9e87f872df64459909948898c47a0ec70c44fa3bc"
+      ],
+      "value": "08691432cb3fec0592aeb4a9e87f872df64459909948898c47a0ec70c44fa3bc",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round44/evidence/coverage-status/comparison.json",
+      "location": "/unknownPaths/471",
+      "matched": [
+        "packages/coding/src/external-runtimes/codex/model-discovery.ts"
+      ],
+      "value": "packages/coding/src/external-runtimes/codex/model-discovery.ts",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round44/evidence/coverage-status/current-inventory.json",
+      "location": "/files/485/path",
+      "matched": [
+        "packages/coding/src/external-runtimes/codex/model-discovery.ts"
+      ],
+      "value": "packages/coding/src/external-runtimes/codex/model-discovery.ts",
+      "truncatedValue": false
+    },
+    {
+      "document": "docs/audit-2026-10-17-round44/evidence/coverage-status/current-inventory.json",
+      "location": "/files/485/sha256",
+      "matched": [
+        "08691432cb3fec0592aeb4a9e87f872df64459909948898c47a0ec70c44fa3bc"
+      ],
+      "value": "08691432cb3fec0592aeb4a9e87f872df64459909948898c47a0ec70c44fa3bc",
+      "truncatedValue": false
+    }
+  ],
+  "note": "Root machine navigation, exact target projection only. Other targets not semantically reviewed; shared input unchanged check later."
+}

@@ -1,0 +1,12 @@
+{
+  "path": "packages/desktop/src/shared/external-runtime-models.ts",
+  "sha256": "727e006d443d74a7c763dfa76d438986600459e6f849b80c7c4a6e3d04aaa880",
+  "displayRanges": [
+    [
+      1,
+      160
+    ]
+  ],
+  "pinReference": "projection-initial-pin.json",
+  "displayAt": "2026-10-17T18:27:50.455715+00:00"
+}

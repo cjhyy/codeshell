@@ -1,0 +1,12 @@
+{
+  "capturedUTC": "2026-10-17T18:28:35.859111+00:00",
+  "files": [
+    {
+      "path": "packages/chat/src/chat-gateway.ts",
+      "bytes": 10429,
+      "lines": 301,
+      "sha256": "7032acecac774cc3c6bea6bb1b5f3b90ddf93c7234a8bded97112483300c311d",
+      "beforeBodyOrLineNavigation": true
+    }
+  ]
+}

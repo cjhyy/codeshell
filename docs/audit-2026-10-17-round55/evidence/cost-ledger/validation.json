@@ -1,0 +1,15 @@
+{
+  "createdAt": "2026-10-17T18:39:14.144886+00:00",
+  "productExecutions": 0,
+  "helperExecutions": 0,
+  "importExecutions": 0,
+  "testExecutions": 0,
+  "fixtureExecutions": 0,
+  "timerNetworkNativeModelAccountBillingGitExecutions": 0,
+  "authorSharedBatchMethodExecuted": false,
+  "historyMethod": "Root-provided frozen shared batch projected; no duplicate global scalar scan by reviewer",
+  "guardedTestPlan": "No new normal-input defect supported, so no new runtime/guarded plan proposed.",
+  "productSemanticLineCount": 208,
+  "testDeclarationLineCount": 24,
+  "displayedLineCount": 442
+}

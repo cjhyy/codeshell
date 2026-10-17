@@ -1,0 +1,50 @@
+{
+  "createdAt": "2026-10-17T18:24:39.036132+00:00",
+  "links": [
+    {
+      "target": "#method",
+      "exists": true
+    },
+    {
+      "target": "current-source-inventory.json",
+      "exists": true,
+      "insidePacket": true
+    },
+    {
+      "target": "base-reconstruction.json",
+      "exists": true,
+      "insidePacket": true
+    },
+    {
+      "target": "frozen45-provenance.json",
+      "exists": true,
+      "insidePacket": true
+    },
+    {
+      "target": "metadata-diagnostics.json",
+      "exists": true,
+      "insidePacket": true
+    },
+    {
+      "target": "increment-summary.json",
+      "exists": true,
+      "insidePacket": true
+    },
+    {
+      "target": "checks.json",
+      "exists": true,
+      "insidePacket": true
+    },
+    {
+      "target": "unified-current-index.json",
+      "exists": true,
+      "insidePacket": true
+    },
+    {
+      "target": "source-manifest.json",
+      "exists": true,
+      "insidePacket": true
+    }
+  ],
+  "allValid": true
+}

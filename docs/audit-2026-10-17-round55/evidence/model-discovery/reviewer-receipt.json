@@ -1,0 +1,273 @@
+{
+  "exactDirectory": "/tmp/codeshell-audit-round122-model-discovery",
+  "frozenAt": "2026-10-17T18:31:38.705451+00:00",
+  "selfExcluded": "reviewer-receipt.json",
+  "artifactCountExcludingReceipt": 36,
+  "totalFileCountIncludingReceipt": 37,
+  "files": [
+    {
+      "path": "actual-entry-navigation.json",
+      "bytes": 741,
+      "sha256": "9d2a6418ac2f76419dcc30497e65d1988bd2f54791b5ff1b2821f4700dcb4e3a"
+    },
+    {
+      "path": "adjacent-initial-pins.json",
+      "bytes": 905,
+      "sha256": "2aabd66510f22bb2bd7beee147e6dd8a8b2b9011ed122eb06454f2db3a75d756"
+    },
+    {
+      "path": "app-model-display.json",
+      "bytes": 308,
+      "sha256": "e67c08740142739bf6575e0386ad46bb6ee9a553284290c585b19cec4fb882c5"
+    },
+    {
+      "path": "barrel-navigation.json",
+      "bytes": 502,
+      "sha256": "16352b3d9a0bc5bd963c1c736513a96f7b09fd740c928ec51b97673a38440cd6"
+    },
+    {
+      "path": "bridge-display.json",
+      "bytes": 361,
+      "sha256": "c7fbe7cd055b971c1ce2649712a9e47502ab8813e0089f9027eb563236161b10"
+    },
+    {
+      "path": "bridge-pins-navigation.json",
+      "bytes": 864,
+      "sha256": "4ef1207bf3c7c20fde254a9e5e97240c3a89db78aedbe87aa04c13c4d14aa804"
+    },
+    {
+      "path": "canonical-gate-read.json",
+      "bytes": 1369,
+      "sha256": "6b8ea7ffb1fd7912fb12b9bbe44ac0e340f0d7d2593389fdfbd2bf7324d63571"
+    },
+    {
+      "path": "classification.json",
+      "bytes": 1532,
+      "sha256": "d6e2e7ed077ca10275b884ac4fa0b38e01c2288c1094c7ddac4d7c75c8d1770d"
+    },
+    {
+      "path": "consumer-test-display.json",
+      "bytes": 2090,
+      "sha256": "4a2416d2ab738674816fd3386de54fe33cbe76e4f6ff92e76bca5ca369c8e47f"
+    },
+    {
+      "path": "ending-checks.json",
+      "bytes": 19575,
+      "sha256": "bdc6ea7c766d675b175b933ea33f5d45526308ba925fed32573c5d6bbe796cc5"
+    },
+    {
+      "path": "entry-initial-pins.json",
+      "bytes": 575,
+      "sha256": "89e4668cd4613e17fe889c777f643b0eedcf83429106cc79b4ad02d70d1f0f09"
+    },
+    {
+      "path": "finalize-metadata.py",
+      "bytes": 12163,
+      "sha256": "226f21edb5b0831106bedae1fac05b038a2e29d376cafee58f49868120583149"
+    },
+    {
+      "path": "first-diagnostics.json",
+      "bytes": 1051,
+      "sha256": "cee03f0434100a818d79bc4a63dee69db08d97c0adf84b21d158c35849a46d96"
+    },
+    {
+      "path": "gate-decision.json",
+      "bytes": 1387,
+      "sha256": "0b0b39e42e3b09f2754de545b7ab498c5626207191b383f07f8611f50eb502b7"
+    },
+    {
+      "path": "history-contexts.json",
+      "bytes": 74341,
+      "sha256": "15ef3c94127caa00662881d75f0840f643f3cb7cec5928f94f9b6fea19cb8590"
+    },
+    {
+      "path": "history-gate.json",
+      "bytes": 11155,
+      "sha256": "30846a09076e650dc285c2cf4904a624c91134d3b1aa9a4f017be577042bc8e3"
+    },
+    {
+      "path": "history-locator.json",
+      "bytes": 6887,
+      "sha256": "1d8feecf8db472eb3d470e72676a3a3e5c8e4e805e45ab8cd94f2307f42a7c8c"
+    },
+    {
+      "path": "history-objects.json",
+      "bytes": 2647,
+      "sha256": "5254147d8cec093c46aab4451ed6922e6536ec74ad1d01f5eea8931f1118983d"
+    },
+    {
+      "path": "history-selected-contexts.json",
+      "bytes": 4195,
+      "sha256": "b3006cd8bad4e22aabbcee0be99a8d0558c7095852c6237371b444bb6eda44d3"
+    },
+    {
+      "path": "hook-display.json",
+      "bytes": 257,
+      "sha256": "9b570932cc14fef6875aab5148a95df673ddc970bf643b472177a62f33c85d53"
+    },
+    {
+      "path": "hook-initial-pin.json",
+      "bytes": 276,
+      "sha256": "8892ce0270a6c9e2e11006ff2466c4e367ac3f9c03fca1142890f98573dcbe94"
+    },
+    {
+      "path": "initial-pins.json",
+      "bytes": 1215,
+      "sha256": "48bd77e2fefb3ffcf07332c47a9b4604d2ac72589bab8de66123698374feccf9"
+    },
+    {
+      "path": "main-entry-navigation.json",
+      "bytes": 356,
+      "sha256": "be717f0cf790ef0f51501ebdf93dd4c25587ed60c8997e754a4473d32c42fa05"
+    },
+    {
+      "path": "main-instance-display.json",
+      "bytes": 237,
+      "sha256": "13fe288e1f2df6a0d2f1055fcbbc71c160cc6b6e38a2504ac41dade9522ef886"
+    },
+    {
+      "path": "primary-display.json",
+      "bytes": 449,
+      "sha256": "bc5ae0dc59a5ee7bc555c1a3205bf14696ed0a5ba5d694984790ca1aa58c985d"
+    },
+    {
+      "path": "prior-report-selected.json",
+      "bytes": 5459,
+      "sha256": "5e0f68469bbfbb419f86e88bb456f94c0dbe605ace538d2dc4d8e280c4d00017"
+    },
+    {
+      "path": "projection-consumer-inventory.json",
+      "bytes": 1240,
+      "sha256": "d2b6647a64326ae885dd55d09123000d7aa4d6f40d35bf357785a94085ddfbec"
+    },
+    {
+      "path": "projection-display.json",
+      "bytes": 308,
+      "sha256": "2c65c0326e1557b8b74f273e56aa79dc24ad44e4d7697699fba8a097f38d56aa"
+    },
+    {
+      "path": "projection-initial-pin.json",
+      "bytes": 281,
+      "sha256": "7fe37430a82612e815504391da42ae1a4676ca8ece116f189bd4c4a81ac77aef"
+    },
+    {
+      "path": "report.md",
+      "bytes": 5929,
+      "sha256": "6b4449d6761a6b401271ec2006a84bdfa03cf452f6f70773300cbe2fb394ef00"
+    },
+    {
+      "path": "runtime-consumer-filenames.json",
+      "bytes": 285,
+      "sha256": "58571f6bb6868df92f3aea20e04f9d861e093fa77fec523973295b3d47b1c1da"
+    },
+    {
+      "path": "shared-history-input-pin.json",
+      "bytes": 321,
+      "sha256": "15bab188fb3b856183a4aaa55c69f7ec8c415a2599800fc4419407b2986d4aaa"
+    },
+    {
+      "path": "shared-history-projection.json",
+      "bytes": 6536,
+      "sha256": "9c6a0dee8a506779055b4c5c3fe09b4aa17556755faa95f5a77fd8ec8fb7ed36"
+    },
+    {
+      "path": "source-excerpts.json",
+      "bytes": 20336,
+      "sha256": "0df220ec69363a8a88efd92dbe6f496f9efa3979089836c772d806b29d41cc4a"
+    },
+    {
+      "path": "source-manifest.json",
+      "bytes": 12221,
+      "sha256": "682d302585b61fdc3c9e91229622ccbdc5ee111a62e1c4043b7415078c04ac33"
+    },
+    {
+      "path": "validation.json",
+      "bytes": 1350,
+      "sha256": "deba709cc07d59a20223b19492146c6a05b5750513c39933a8636d419acfbb1c"
+    }
+  ],
+  "reportLinks": [
+    {
+      "label": "正文前初始 pin",
+      "target": "initial-pins.json",
+      "exists": true
+    },
+    {
+      "label": "精确定位",
+      "target": "history-locator.json",
+      "exists": true
+    },
+    {
+      "label": "递归值扫描",
+      "target": "history-gate.json",
+      "exists": true
+    },
+    {
+      "label": "两份 canonical 原对象",
+      "target": "canonical-gate-read.json",
+      "exists": true
+    },
+    {
+      "label": "原报告选段",
+      "target": "prior-report-selected.json",
+      "exists": true
+    },
+    {
+      "label": "投影本目标16个path/SHA命中",
+      "target": "shared-history-projection.json",
+      "exists": true
+    },
+    {
+      "label": "pin",
+      "target": "shared-history-input-pin.json",
+      "exists": true
+    },
+    {
+      "label": "范围清单",
+      "target": "source-manifest.json",
+      "exists": true
+    },
+    {
+      "label": "选段文本",
+      "target": "source-excerpts.json",
+      "exists": true
+    },
+    {
+      "label": "4个bounded窗口",
+      "target": "history-selected-contexts.json",
+      "exists": true
+    },
+    {
+      "label": "首次诊断",
+      "target": "first-diagnostics.json",
+      "exists": true
+    },
+    {
+      "label": "结束复核",
+      "target": "ending-checks.json",
+      "exists": true
+    },
+    {
+      "label": "分类原件",
+      "target": "classification.json",
+      "exists": true
+    },
+    {
+      "label": "验证口径",
+      "target": "validation.json",
+      "exists": true
+    },
+    {
+      "label": "元数据整理脚本",
+      "target": "finalize-metadata.py",
+      "exists": true
+    },
+    {
+      "label": "冻结收据",
+      "target": "reviewer-receipt.json",
+      "exists": true
+    }
+  ],
+  "productExecution": 0,
+  "GitCalls": 0
+}

@@ -1,0 +1,135 @@
+{
+  "at": "2026-10-17T18:26:46.319759+00:00",
+  "scope": "bounded matching MD/JSON files only, not complete history inventory or semantic exhaustion",
+  "provisionalFrozenFormalThrough": 54,
+  "rootBatchHistoryPending": true,
+  "queries": {
+    "path": {
+      "command": [
+        "rg",
+        "-l",
+        "-F",
+        "packages/coding/src/external-runtimes/codex/model-discovery.ts",
+        "docs",
+        "bugs"
+      ],
+      "exitCode": 0,
+      "stderr": "",
+      "files": [
+        "docs/audit-2026-10-16/inventory.json",
+        "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-index.json",
+        "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "docs/audit-2026-10-17-round44/evidence/coverage-frontier/package-inventory.json",
+        "docs/audit-2026-10-17-round44/evidence/coverage-status/current-inventory.json",
+        "docs/audit-2026-10-17-round44/evidence/coverage-status/comparison.json",
+        "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+        "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/inventory.json"
+      ],
+      "count": 8
+    },
+    "sha256": {
+      "command": [
+        "rg",
+        "-l",
+        "-F",
+        "08691432cb3fec0592aeb4a9e87f872df64459909948898c47a0ec70c44fa3bc",
+        "docs",
+        "bugs"
+      ],
+      "exitCode": 0,
+      "stderr": "",
+      "files": [
+        "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+        "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-index.json",
+        "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "docs/audit-2026-10-17-round44/evidence/coverage-frontier/package-inventory.json",
+        "docs/audit-2026-10-17-round44/evidence/coverage-status/current-inventory.json"
+      ],
+      "count": 5
+    },
+    "filename": {
+      "command": [
+        "rg",
+        "-l",
+        "-F",
+        "model-discovery",
+        "docs",
+        "bugs"
+      ],
+      "exitCode": 0,
+      "stderr": "",
+      "files": [
+        "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+        "docs/audit-2026-10-17-round4/evidence/coding-dedup.json",
+        "docs/audit-2026-10-16/inventory.json",
+        "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-index.json",
+        "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "docs/audit-2026-10-17-round44/evidence/coverage-frontier/package-inventory.json",
+        "docs/audit-2026-10-17-round44/evidence/coverage-status/current-inventory.json",
+        "docs/audit-2026-10-17-round44/evidence/coverage-status/comparison.json",
+        "docs/audit-2026-10-17-round12/evidence/patch-dedup-initial-selected.json",
+        "docs/audit-2026-10-17-round12/evidence/patch-dedup.json",
+        "docs/review-remaining-2026-10-12/validation/source-reports/codeshell-remaining-cli-chat-report.md",
+        "docs/review-remaining-2026-10-12/coding-tui-chat.md",
+        "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/inventory.json"
+      ],
+      "count": 13
+    },
+    "oldcause": {
+      "command": [
+        "rg",
+        "-l",
+        "-i",
+        "codex.*(?:default.*model|model.*default|model.*list|模型.*默认|默认.*模型|discover.*model)|(?:default.*model|model.*default|discover.*model).*codex",
+        "docs",
+        "bugs"
+      ],
+      "exitCode": 0,
+      "stderr": "",
+      "files": [
+        "docs/archive/review-2026-05-30/backlog.json",
+        "docs/archive/review-2026-05-30/confirmed.json",
+        "docs/archive/review-2026-05-30/findings.json",
+        "docs/archive/review-2026-05-30/backlog_confirmed.json",
+        "docs/archive/review-2026-05-30/backlog_ided.json",
+        "docs/archive/review-2026-05-30/low_confirmed.json",
+        "docs/audit-2026-10-17-round4/settings.md",
+        "docs/archive/architecture/18-core-vs-cc-vs-codex.md",
+        "docs/audit-2026-10-17-round53/evidence/glob-summary-review/history-gate.json",
+        "docs/refactor/_archive/view-image-vs-codex-review.md",
+        "docs/audit-2026-10-17-round53/evidence/glob-summary-review/focused-history-gate.json",
+        "docs/audit-2026-10-17-round50/evidence/trace-query-review/history-contexts.json",
+        "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-index.json",
+        "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+        "docs/audit-2026-10-17-round22/evidence/terminal-commands.json",
+        "docs/audit-2026-10-17-round38/evidence/geometry-frontier/history-contexts.json",
+        "docs/audit-2026-10-17-round38/evidence/mcp-patch-frontier/history.json",
+        "docs/audit-2026-10-17-round53/evidence/trace-history/history-contexts.json",
+        "docs/audit-2026-10-17-round50/evidence/composer-suggestions/history-contexts.json",
+        "docs/audit-2026-10-17-round39/evidence/root-mcp-rename-frontier/source-excerpts.json",
+        "docs/audit-2026-10-17-round39/evidence/mcp-rename-fields-frontier/matching-history-objects.first.json",
+        "docs/audit-2026-10-17-round43/evidence/dataset-frontier/active-history.json",
+        "docs/audit-2026-10-17-round39/evidence/mcp-rename-fields-frontier/report.md",
+        "docs/audit-2026-10-17-round43/evidence/draft-frontier/cause-history.json",
+        "docs/audit-2026-10-17-round42/evidence/root-transcript-review/history.json",
+        "docs/audit-2026-10-17-round15/evidence/migration-dedup.json",
+        "docs/audit-2026-10-17-round42/evidence/root-history.json",
+        "docs/audit-2026-10-17-round49/evidence/agent-definition-gate/history-contexts.json",
+        "docs/audit-2026-10-17-round42/evidence/transcript-review/history-selected-contexts.json",
+        "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/selected-source.json",
+        "docs/audit-2026-10-17-round42/evidence/transcript-review/history-contexts.json",
+        "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "docs/audit-2026-10-17-round37/evidence/history-supplement/query-results.json",
+        "docs/audit-2026-10-17-round34/evidence/renderer-status-frontier/history.json",
+        "docs/audit-2026-10-17-round49/evidence/root-summary-review/history.json",
+        "docs/review-2026-10-12/model-switch-round18.md",
+        "docs/review-2026-10-12/validation/original-model-native-round20/first-launch-harness-failed.cleanup.json",
+        "docs/review-2026-10-12/validation/original-model-switch-round18/report.md",
+        "docs/audit-2026-10-17-round24/evidence/browser-scenes-dedup-navigation.json",
+        "docs/audit-2026-10-17-round23/evidence/room-data-dedup-navigation.json"
+      ],
+      "count": 41
+    }
+  }
+}

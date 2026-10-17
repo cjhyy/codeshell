@@ -1,0 +1,35 @@
+{
+  "createdAt": "2026-10-17T18:26:54.559384+00:00",
+  "rootReportedBaseline": "00c046367769349c1f5413e74c993b2c19ce8337",
+  "gitCertified": false,
+  "files": [
+    {
+      "path": "CODESHELL.md",
+      "bytes": 17639,
+      "lines": 217,
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "pinnedBeforeBodyUTC": "2026-10-17T18:26:54.558006+00:00"
+    },
+    {
+      "path": "AGENTS.md",
+      "bytes": 206,
+      "lines": 5,
+      "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "pinnedBeforeBodyUTC": "2026-10-17T18:26:54.558865+00:00"
+    },
+    {
+      "path": "packages/core/src/cost-ledger/pricing.ts",
+      "bytes": 1919,
+      "lines": 48,
+      "sha256": "7584eb97d07fda14171917d093d16201521ba77ce7ce61cab0d08390da7e3640",
+      "pinnedBeforeBodyUTC": "2026-10-17T18:26:54.559115+00:00"
+    },
+    {
+      "path": "packages/core/src/cost-ledger/summary.ts",
+      "bytes": 2891,
+      "lines": 81,
+      "sha256": "4ef61d2b0803899574adbaaa98e33f3fde2ae4da0250f452d6f72997936b07d6",
+      "pinnedBeforeBodyUTC": "2026-10-17T18:26:54.559375+00:00"
+    }
+  ]
+}

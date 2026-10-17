@@ -1,0 +1,38 @@
+{
+  "createdAt": "2026-10-17T18:24:37.647627+00:00",
+  "firstAttemptToolChunk": "39a223",
+  "firstAttemptExitCode": 0,
+  "firstAttemptObserved": "acceptedClaims0 of511; NOT a valid no-increment result",
+  "firstFiles": [
+    {
+      "originalName": "increment.py",
+      "preservedAs": "increment.first.py",
+      "bytes": 9276,
+      "sha256": "6d92eed1c2b6a95f4390d67d192b87f5d61b1545a11615b3f309e738bbd0e5dd"
+    },
+    {
+      "originalName": "increment-summary.json",
+      "preservedAs": "increment-summary.first.json",
+      "bytes": 1133,
+      "sha256": "7b3ab64dcc1d8c956f8a4e283e692d23bfa0c01d6e9f557324c1f41950396f90"
+    },
+    {
+      "originalName": "increment-claims.json",
+      "preservedAs": "increment-claims.first.json",
+      "bytes": 462069,
+      "sha256": "523cffc05ebf6e4d69a067efcd938d74c8d31bc19662e9a977baece7e3240222"
+    },
+    {
+      "originalName": "unified-current-index.json",
+      "preservedAs": "unified-current-index.first.json",
+      "bytes": 1941044,
+      "sha256": "2e1693238ea4140dcb6f1bc8a4416fe356e1b559d901a7bf2c5bc492192c4c08"
+    }
+  ],
+  "diagnosis": "Own metadata field normalizer removed digits from field names (sha256->sha), but source-hash allowlist retained sha256; source bindings were not recognized. This is reviewer metadata logic, not product or author-manifest rejection.",
+  "disposition": "DEFERRED_UNPARSED. No retry or schema expansion this task; all511 incremental rows not semantically classified. Only reconstructed45 current exact-SHA carry-forward is publishable.",
+  "productOrAuthorMethodFailure": false,
+  "productExecutions": 0,
+  "oldMethodExecutions": 0,
+  "metadataPresentationTruncations": 0
+}

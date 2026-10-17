@@ -1,0 +1,8 @@
+{
+  "createdAt": "2026-10-17T18:28:34.497475+00:00",
+  "source": "/tmp/codeshell-audit-round125-agent-registry/history-batch.json",
+  "bytes": 1299889,
+  "sha256": "2c09e39e6c332c5f04395af3c02d637bc3dabec28a7045c9817aa7e98ae88b27",
+  "rootReportedFrozen": true,
+  "rootReportedCohort": "5433 MD/JSON; frozen54 included,55+excluded; recursiveJSONvalues+archives;0parseerrors; Root method not executed by this reviewer"
+}

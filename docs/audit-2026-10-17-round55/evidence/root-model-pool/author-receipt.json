@@ -1,0 +1,86 @@
+{
+  "frozen": true,
+  "files": [
+    {
+      "path": "canonical-metadata.json",
+      "bytes": 1332,
+      "sha256": "03fada8ca94e96058515663f9796735c23be3098f4a35db939db1f34fd91c809"
+    },
+    {
+      "path": "classification.json",
+      "bytes": 1554,
+      "sha256": "bbff86ac5d8a964e449952e47b05cb737374a621f046437b19efb3da1bc4922c"
+    },
+    {
+      "path": "consumer-initial-pins.json",
+      "bytes": 1469,
+      "sha256": "1639b3d0849700ff605060f70949bab14c51087497846c2251ef3ae5d0401d35"
+    },
+    {
+      "path": "ending-checks.json",
+      "bytes": 1919,
+      "sha256": "6de7b286a584975f34effe8eccba68c708ab97cb1db4cb93b5e49379d39c6747"
+    },
+    {
+      "path": "freeze-metadata.py",
+      "bytes": 9812,
+      "sha256": "f2fb36dbd422ba6f0b9644f555277896bda8e22c7719de54df606fc024274cd0"
+    },
+    {
+      "path": "history-batch.json",
+      "bytes": 1171400,
+      "sha256": "6aa8f813567773edb1573feb7cb400a4defc9aa34de6c0231a378d7344da19e6"
+    },
+    {
+      "path": "history-batch.py",
+      "bytes": 2147,
+      "sha256": "457b760c9608a8d4a9a44dd88514958be15b01e58e15571cb319b8a670c144d5"
+    },
+    {
+      "path": "history-first-exit.json",
+      "bytes": 16,
+      "sha256": "982b9e9bfb10ffe83cad665807abcfd3fa97b37822db5ab7831157a499548a9e"
+    },
+    {
+      "path": "history-first.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "history-first.stdout",
+      "bytes": 93,
+      "sha256": "4791158226b92abf9470120a12adda23364a2f6638db3a2713b542a284facfba"
+    },
+    {
+      "path": "initial-pins.json",
+      "bytes": 320,
+      "sha256": "d61cbf698fc0b4ac5f718c38ab5b4ceaaecb85a8f5312a93414c46c59d3ea767"
+    },
+    {
+      "path": "report.md",
+      "bytes": 3048,
+      "sha256": "7ed14f73d178d0b2de6553f7c2245595286aa7d7f72114963f1e6e76f8bd459a"
+    },
+    {
+      "path": "source-excerpts.json",
+      "bytes": 119369,
+      "sha256": "99813f763a44d83f60d45609f77ecded3980dc1c1bb3ccd570baa1a109379e3e"
+    },
+    {
+      "path": "source-manifest.json",
+      "bytes": 11156,
+      "sha256": "f4cd5a8b1daaeb2fbc13cd61e93ee899591051b63a49b21ab7e0d60457673dcb"
+    },
+    {
+      "path": "test-initial-pins.json",
+      "bytes": 774,
+      "sha256": "06db6f4c1a26dd2552ea0d1ec3b797ebeef251e80ab0073bc17a649ab149258f"
+    },
+    {
+      "path": "validation.json",
+      "bytes": 320,
+      "sha256": "2c425a4f9e7097b3bfc17e67f779246fb74dd494d42369d9467b9de28d1e5cfe"
+    }
+  ],
+  "scope": "Exact finite Root126 source static and metadata package, self excluded. Product execution0."
+}

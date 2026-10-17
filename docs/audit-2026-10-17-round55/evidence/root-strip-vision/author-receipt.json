@@ -1,0 +1,76 @@
+{
+  "frozen": true,
+  "files": [
+    {
+      "path": "classification.json",
+      "bytes": 1044,
+      "sha256": "6ee8db00d4170c5e48d3c18f51ec9af8fb80a005cfe6ad8c1ed4759c2d784ae5"
+    },
+    {
+      "path": "consumer-initial-pins.json",
+      "bytes": 991,
+      "sha256": "800716ef7fe25f8c7b45ec33c3e1414e8c41c94b498b7e45093b9ac0f949faf9"
+    },
+    {
+      "path": "ending-checks.json",
+      "bytes": 1010,
+      "sha256": "ae0eed97dc056e28db2bae86a6222ba6628614b32f401d20e033512d12a85f85"
+    },
+    {
+      "path": "freeze-metadata.py",
+      "bytes": 6461,
+      "sha256": "6fddf0985c3caab03f3a55208e32b6369e5dc43399d62f111c19be8d2d60526b"
+    },
+    {
+      "path": "history-batch.json",
+      "bytes": 1118363,
+      "sha256": "0b39b0b2e7c09c93bb4507ad09dc5f676329b3570a5a87331433f83b8a803015"
+    },
+    {
+      "path": "history-batch.py",
+      "bytes": 2151,
+      "sha256": "190d6a6fdc572546b71aa4a5435793a6c7a3224a92d2ef9993b586563623ca22"
+    },
+    {
+      "path": "history-first-exit.json",
+      "bytes": 16,
+      "sha256": "982b9e9bfb10ffe83cad665807abcfd3fa97b37822db5ab7831157a499548a9e"
+    },
+    {
+      "path": "history-first.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "history-first.stdout",
+      "bytes": 94,
+      "sha256": "938284ca0b25566d7ea52bede4aa4c08589e10d12ae96b3a4a0a2bece6f8b573"
+    },
+    {
+      "path": "initial-pins.json",
+      "bytes": 321,
+      "sha256": "5537593462f86ef06eb15e6252f3ecf0cb53c801ded18299e69794c26dc0e0e0"
+    },
+    {
+      "path": "report.md",
+      "bytes": 2061,
+      "sha256": "028ce84a8e410d62bdb5040e74ad72d7a712a4573f919fb5e5228e7a6408e718"
+    },
+    {
+      "path": "source-excerpts.json",
+      "bytes": 35027,
+      "sha256": "1987bc1df6c3853209d2424dae7da0e2d84b55ed75ad64255c468ef1f67138d4"
+    },
+    {
+      "path": "source-manifest.json",
+      "bytes": 4859,
+      "sha256": "4b53f61f509216af8c553d53efadf03df52fb2fdc1ee3a2e204acdb83c8b723d"
+    },
+    {
+      "path": "validation.json",
+      "bytes": 246,
+      "sha256": "6db6da0d56d24d0689938456f420c1aaf9e8d98398dadd1b449171900879b24d"
+    }
+  ],
+  "scope": "Self-excluded exact finite static evidence, product execution0."
+}

@@ -1,0 +1,34 @@
+{
+  "root": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell",
+  "parentReportedProductBaseline": "00c046367769349c1f5413e74c993b2c19ce8337",
+  "independentGitVerification": false,
+  "files": [
+    {
+      "path": "CODESHELL.md",
+      "bytes": 17639,
+      "lines": 217,
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "pinAt": "2026-10-17T18:26:22.344602+00:00",
+      "coverage": "hash-only before source navigation/body",
+      "initialSemanticReadSha256": null
+    },
+    {
+      "path": "AGENTS.md",
+      "bytes": 206,
+      "lines": 5,
+      "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "pinAt": "2026-10-17T18:26:22.346367+00:00",
+      "coverage": "hash-only before source navigation/body",
+      "initialSemanticReadSha256": null
+    },
+    {
+      "path": "packages/coding/src/external-runtimes/codex/model-discovery.ts",
+      "bytes": 3492,
+      "lines": 99,
+      "sha256": "08691432cb3fec0592aeb4a9e87f872df64459909948898c47a0ec70c44fa3bc",
+      "pinAt": "2026-10-17T18:26:22.346893+00:00",
+      "coverage": "hash-only before source navigation/body",
+      "initialSemanticReadSha256": null
+    }
+  ]
+}
