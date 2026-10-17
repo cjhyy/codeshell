@@ -56,6 +56,12 @@ jobs:
         run: |
           set -euo pipefail
           node scripts/run-bun-test-shard.mjs --timeout 30000 packages/web/src/lib/mobileAttachments.alias-limit.test.ts packages/web/src/lib/mobileAttachments.test.ts 2>&1 | tee "$ACCEPTANCE_ROOT/image-attachments.log"
+      - name: browser lifecycle failure and ownership contracts
+        timeout-minutes: 2
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/run-isolated-node-smoke.mjs --test packages/web/scripts/browser-operation-custody.test.mjs packages/web/scripts/service-worker-browser-executable.test.mjs packages/web/scripts/test-auth-boundary-browser.lifecycle.test.mjs packages/web/scripts/test-service-worker-browser.test.mjs 2>&1 | tee "$ACCEPTANCE_ROOT/browser-lifecycle-contracts.log"
       - name: install Chromium and system browser dependencies
         timeout-minutes: 5
         run: node packages/desktop/node_modules/playwright/cli.js install --with-deps chromium
@@ -111,12 +117,19 @@ jobs:
           name: web-ui-acceptance
           path: |
             ${{ env.ACCEPTANCE_ROOT }}/image-attachments.log
+            ${{ env.ACCEPTANCE_ROOT }}/browser-lifecycle-contracts.log
             ${{ env.ACCEPTANCE_ROOT }}/service-worker.log
             ${{ env.ACCEPTANCE_ROOT }}/service-worker/*.png
             ${{ env.ACCEPTANCE_ROOT }}/service-worker/report.json
+            ${{ env.ACCEPTANCE_ROOT }}/service-worker/browser-custody.json
+            ${{ env.ACCEPTANCE_ROOT }}/service-worker/browser.stdout.log
+            ${{ env.ACCEPTANCE_ROOT }}/service-worker/browser.stderr.log
             ${{ env.ACCEPTANCE_ROOT }}/authentication.log
             ${{ env.ACCEPTANCE_ROOT }}/authentication/*.png
             ${{ env.ACCEPTANCE_ROOT }}/authentication/report.json
+            ${{ env.ACCEPTANCE_ROOT }}/authentication/browser-custody.json
+            ${{ env.ACCEPTANCE_ROOT }}/authentication/browser-stdout.log
+            ${{ env.ACCEPTANCE_ROOT }}/authentication/browser-stderr.log
             ${{ env.ACCEPTANCE_ROOT }}/subagent-state.log
             ${{ env.ACCEPTANCE_ROOT }}/subagent-state/receipt.json
             ${{ env.ACCEPTANCE_ROOT }}/subagent-state/*.png
@@ -138,18 +151,21 @@ jobs:
     if: github.event_name != 'workflow_dispatch' || inputs.suite != 'web'
     name: native UI (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 45
+    timeout-minutes: ${{ matrix.timeout }}
     strategy:
       fail-fast: false
       matrix:
         include:
           - os: ubuntu-latest
             artifact: linux
+            timeout: 45
           - os: macos-latest
             artifact: mac
+            timeout: 45
           # Match release.yml's supported node-gyp / Visual Studio compiler.
           - os: windows-2022
             artifact: windows
+            timeout: 65
     defaults:
       run:
         shell: bash
@@ -217,6 +233,13 @@ jobs:
       - name: install locked native dependencies
         timeout-minutes: 15
         run: bun install --frozen-lockfile
+
+      - name: Windows installer ownership and failure contracts
+        if: runner.os == 'Windows'
+        timeout-minutes: 2
+        run: |
+          set -euo pipefail
+          node scripts/run-isolated-node-smoke.mjs --test packages/desktop/scripts/windows-nsis-acceptance.test.mjs packages/desktop/scripts/packaged-signal-diagnostics.test.mjs packages/desktop/scripts/smoke-windows-nsis-install.test.mjs 2>&1 | tee "$ACCEPTANCE_ROOT/windows-nsis-contracts.log"
 
       - name: verify local package authority and output ownership
         run: node scripts/run-isolated-node-smoke.mjs --test packages/desktop/scripts/smoke-local-package.test.mjs
@@ -400,6 +423,13 @@ jobs:
           set -euo pipefail
           node scripts/run-isolated-node-smoke.mjs packages/desktop/scripts/smoke-macos-dmg-install.mjs --build-receipt "$ACCEPTANCE_ROOT/package/build-receipt.json" --output "$ACCEPTANCE_ROOT/dmg" 2>&1 | tee "$ACCEPTANCE_ROOT/dmg.log"
 
+      - name: production Windows NSIS installation, replacement and uninstall
+        if: runner.os == 'Windows'
+        timeout-minutes: 40
+        run: |
+          set -euo pipefail
+          node packages/desktop/scripts/smoke-windows-nsis-install.mjs --build-receipt "$ACCEPTANCE_ROOT/package/build-receipt.json" --evidence-dir "$ACCEPTANCE_ROOT/windows-nsis" 2>&1 | tee "$ACCEPTANCE_ROOT/windows-nsis.log"
+
       # Explicit evidence only: never upload private HOME, Keychain references,
       # application archives, credentials, or caches.
       - name: retain native UI acceptance evidence
@@ -496,5 +526,55 @@ jobs:
             ${{ env.ACCEPTANCE_ROOT }}/dmg/installed-ui/receipt.json
             ${{ env.ACCEPTANCE_ROOT }}/dmg/reinstalled-ui/*.png
             ${{ env.ACCEPTANCE_ROOT }}/dmg/reinstalled-ui/receipt.json
+            ${{ env.ACCEPTANCE_ROOT }}/windows-nsis-contracts.log
+            ${{ env.ACCEPTANCE_ROOT }}/windows-nsis.log
+            ${{ env.ACCEPTANCE_ROOT }}/windows-nsis/receipt.json
+            ${{ env.ACCEPTANCE_ROOT }}/windows-nsis/journal.jsonl
+            ${{ env.ACCEPTANCE_ROOT }}/windows-nsis/baseline-inventory.json
+            ${{ env.ACCEPTANCE_ROOT }}/windows-nsis/payload-inventory.json
+            ${{ env.ACCEPTANCE_ROOT }}/windows-nsis/first-inventory.json
+            ${{ env.ACCEPTANCE_ROOT }}/windows-nsis/replacement-inventory.json
+            ${{ env.ACCEPTANCE_ROOT }}/windows-nsis/preflight.json
+            ${{ env.ACCEPTANCE_ROOT }}/windows-nsis/install-before.json
+            ${{ env.ACCEPTANCE_ROOT }}/windows-nsis/first-registration.json
+            ${{ env.ACCEPTANCE_ROOT }}/windows-nsis/marker-before.json
+            ${{ env.ACCEPTANCE_ROOT }}/windows-nsis/replace-before.json
+            ${{ env.ACCEPTANCE_ROOT }}/windows-nsis/replacement-registration.json
+            ${{ env.ACCEPTANCE_ROOT }}/windows-nsis/uninstall-before.json
+            ${{ env.ACCEPTANCE_ROOT }}/windows-nsis/uninstalled.json
+            ${{ env.ACCEPTANCE_ROOT }}/windows-nsis/cache-before-cleanup.json
+            ${{ env.ACCEPTANCE_ROOT }}/windows-nsis/final-os-state.json
+            ${{ env.ACCEPTANCE_ROOT }}/windows-nsis/nsis-build.stdout.log
+            ${{ env.ACCEPTANCE_ROOT }}/windows-nsis/nsis-build.stderr.log
+            ${{ env.ACCEPTANCE_ROOT }}/windows-nsis/install.stdout.log
+            ${{ env.ACCEPTANCE_ROOT }}/windows-nsis/install.stderr.log
+            ${{ env.ACCEPTANCE_ROOT }}/windows-nsis/replace.stdout.log
+            ${{ env.ACCEPTANCE_ROOT }}/windows-nsis/replace.stderr.log
+            ${{ env.ACCEPTANCE_ROOT }}/windows-nsis/uninstall.stdout.log
+            ${{ env.ACCEPTANCE_ROOT }}/windows-nsis/uninstall.stderr.log
+            ${{ env.ACCEPTANCE_ROOT }}/windows-nsis/ui-first.stdout.log
+            ${{ env.ACCEPTANCE_ROOT }}/windows-nsis/ui-first.stderr.log
+            ${{ env.ACCEPTANCE_ROOT }}/windows-nsis/ui-replaced.stdout.log
+            ${{ env.ACCEPTANCE_ROOT }}/windows-nsis/ui-replaced.stderr.log
+            ${{ env.ACCEPTANCE_ROOT }}/windows-nsis/ui-first/receipt.json
+            ${{ env.ACCEPTANCE_ROOT }}/windows-nsis/ui-first/failure.png
+            ${{ env.ACCEPTANCE_ROOT }}/windows-nsis/ui-first/failure-body.txt
+            ${{ env.ACCEPTANCE_ROOT }}/windows-nsis/ui-first/settings-1280-light.png
+            ${{ env.ACCEPTANCE_ROOT }}/windows-nsis/ui-first/settings-1280-dark.png
+            ${{ env.ACCEPTANCE_ROOT }}/windows-nsis/ui-first/settings-768-light.png
+            ${{ env.ACCEPTANCE_ROOT }}/windows-nsis/ui-first/settings-768-dark.png
+            ${{ env.ACCEPTANCE_ROOT }}/windows-nsis/ui-first/settings-390-light.png
+            ${{ env.ACCEPTANCE_ROOT }}/windows-nsis/ui-first/settings-390-dark.png
+            ${{ env.ACCEPTANCE_ROOT }}/windows-nsis/ui-first/settings-reload-390-dark.png
+            ${{ env.ACCEPTANCE_ROOT }}/windows-nsis/ui-replaced/receipt.json
+            ${{ env.ACCEPTANCE_ROOT }}/windows-nsis/ui-replaced/failure.png
+            ${{ env.ACCEPTANCE_ROOT }}/windows-nsis/ui-replaced/failure-body.txt
+            ${{ env.ACCEPTANCE_ROOT }}/windows-nsis/ui-replaced/settings-1280-light.png
+            ${{ env.ACCEPTANCE_ROOT }}/windows-nsis/ui-replaced/settings-1280-dark.png
+            ${{ env.ACCEPTANCE_ROOT }}/windows-nsis/ui-replaced/settings-768-light.png
+            ${{ env.ACCEPTANCE_ROOT }}/windows-nsis/ui-replaced/settings-768-dark.png
+            ${{ env.ACCEPTANCE_ROOT }}/windows-nsis/ui-replaced/settings-390-light.png
+            ${{ env.ACCEPTANCE_ROOT }}/windows-nsis/ui-replaced/settings-390-dark.png
+            ${{ env.ACCEPTANCE_ROOT }}/windows-nsis/ui-replaced/settings-reload-390-dark.png
           if-no-files-found: error
           retention-days: 7
