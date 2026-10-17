@@ -136,16 +136,10 @@ function replay(snippet: Snippet, edit: FileSnippetEdit): boolean {
       snippet.newText.slice(index + edit.oldText.length);
     return true;
   }
-  // A later edit can supply more surrounding text. Reconstruct its before-side
-  // only when the whole known after-fragment occurs exactly once in that text.
-  const outerIndex = snippet.fullContent ? -1 : uniqueIndex(edit.oldText, snippet.newText);
-  if (outerIndex < 0) return false;
-  snippet.oldText =
-    edit.oldText.slice(0, outerIndex) +
-    snippet.oldText +
-    edit.oldText.slice(outerIndex + snippet.newText.length);
-  snippet.newText = edit.newText;
-  return true;
+  // A larger later old-snippet may enclose a different occurrence of this
+  // after-fragment elsewhere in the file. Payload containment cannot establish
+  // that location, so preserve the edits as independent previews.
+  return false;
 }
 
 /**
