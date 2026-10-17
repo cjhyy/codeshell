@@ -4,9 +4,67 @@ import { mock } from "bun:test";
 import React, { act } from "react";
 import { createRoot } from "react-dom/client";
 import { ensureMiniDom, flushMicrotasks } from "../test-utils/renderHook";
+import { syncBuiltinESMExports } from "node:module";
+import http from "node:http";
+import https from "node:https";
+import net from "node:net";
+import tls from "node:tls";
+import children from "node:child_process";
 
 ensureMiniDom();
 const scenario = process.argv[2];
+const argsScenario = scenario.startsWith("args-");
+const denied: string[] = [];
+let guardProbes = 0;
+if (argsScenario) {
+  const deny = (kind: string): never => {
+    denied.push(kind);
+    throw new Error(`Owned MCP args fixture denied ${kind}`);
+  };
+  for (const [object, keys, kind] of [
+    [globalThis, ["fetch"], "fetch"],
+    [http, ["get", "request"], "http"],
+    [https, ["get", "request"], "https"],
+    [net, ["connect", "createConnection"], "socket"],
+    [tls, ["connect"], "tls"],
+    [
+      children,
+      ["spawn", "spawnSync", "exec", "execSync", "execFile", "execFileSync", "fork"],
+      "process",
+    ],
+    [Bun, ["spawn", "spawnSync"], "bun-process"],
+    [process, ["kill"], "signal"],
+  ] as const) {
+    for (const key of keys) (object as any)[key] = () => deny(kind);
+  }
+  syncBuiltinESMExports();
+  for (const probe of [
+    () => fetch("https://example.invalid/denied"),
+    () => http.request("http://127.0.0.1:9/denied"),
+    () => https.get("https://example.invalid/denied"),
+    () => net.connect(9, "127.0.0.1"),
+    () => tls.connect(443, "example.invalid"),
+    () => children.spawn("owned-denied-executable", []),
+    () => Bun.spawn(["owned-denied-executable"]),
+    () => process.kill(0, 0),
+  ])
+    assert.throws(probe, /Owned MCP args fixture denied /);
+  guardProbes = denied.length;
+  denied.length = 0;
+}
+const importedArgs = [
+  "--label",
+  "a b",
+  "",
+  "  ",
+  'a"b',
+  "c'd",
+  "C:\\Program Files\\MCP",
+  "中文 空格",
+];
+const argsServers: Record<string, Record<string, unknown>> = scenario === "args-imported"
+  ? { "server-a": { command: "fixture-tool", args: [...importedArgs] } }
+  : {};
 const writes: unknown[][] = [];
 const unhandled: string[] = [];
 process.on("unhandledRejection", (reason) => unhandled.push(String(reason)));
@@ -53,11 +111,29 @@ mock.module("../settingsAuthority", () => ({
   readScopedSettings: async (_scope: string, path: string) => {
     if (scenario === "stale-load" && path.endsWith("project-a")) return pendingRead.promise;
     return {
-      mcpServers: hasServers ? server(path.endsWith("project-a") ? "server-a" : "server-b") : {},
+      mcpServers: argsScenario
+        ? argsServers
+        : hasServers
+          ? server(path.endsWith("project-a") ? "server-a" : "server-b")
+          : {},
     };
   },
   updateScopedSettings: async (...args: unknown[]) => {
     writes.push(args);
+    if (argsScenario) {
+      // Owned in-memory settings sink; the component still authors the real patch.
+      for (const [name, patch] of Object.entries((args[1] as any).mcpServers ?? {})) {
+        if (patch === null) delete argsServers[name];
+        else {
+          const next = { ...argsServers[name] };
+          for (const [key, value] of Object.entries(patch as object)) {
+            if (value === null) delete next[key];
+            else next[key] = Array.isArray(value) ? [...value] : value;
+          }
+          argsServers[name] = next;
+        }
+      }
+    }
     if (writesFail) throw new Error("fixture settings write failed");
     if (["save-lock", "stale-save"].includes(scenario)) await pendingWrite.promise;
   },
@@ -137,7 +213,45 @@ async function fillDraft() {
 }
 try {
   await render();
-  if (scenario === "credentials-error") {
+  if (argsScenario) {
+    const setField = async (placeholder: string, value: string) =>
+      update(() =>
+        props(find((n) => n.tagName === "INPUT" && props(n).placeholder === placeholder)).onChange({
+          target: { value },
+        }),
+      );
+    const name = scenario === "args-imported" ? "server-a" : "project-a-private-server";
+    const expected =
+      scenario === "args-imported" ? importedArgs : ["--label", "a b", "--name", "中文 空格"];
+    if (scenario !== "args-imported") {
+      await fillDraft();
+      await setField("-y @playwright/mcp@latest", "--label \"a b\" --name '中文 空格'");
+      await click("settingsX.mcp.add");
+      assert.deepEqual(
+        argsServers[name].args,
+        expected,
+        "The actual create form parses quoted arguments",
+      );
+    }
+    await click("settingsX.mcp.edit");
+    if (scenario === "args-other-field") await setField("npx", "fixture-other-tool");
+    if (scenario === "args-edit")
+      await setField("-y @playwright/mcp@latest", '--changed "new value"');
+    if (scenario === "args-clear") await setField("-y @playwright/mcp@latest", "");
+    await click("settingsX.mcp.save");
+    assert.deepEqual(
+      argsServers[name].args,
+      scenario === "args-edit"
+        ? ["--changed", "new value"]
+        : scenario === "args-clear"
+          ? undefined
+          : expected,
+      "Reopening and saving must preserve existing argument boundaries unless Args is edited",
+    );
+    assert.equal(writes.length, scenario === "args-imported" ? 1 : 2);
+    if (scenario === "args-other-field")
+      assert.equal(argsServers[name].command, "fixture-other-tool");
+  } else if (scenario === "credentials-error") {
     await click("settingsX.mcp.addServer");
     assert.ok(textOf(container).includes("fixture credentials unavailable"));
     assert.ok(nodes(container).some((n) => props(n).role === "alert"));
@@ -270,6 +384,14 @@ try {
   } else throw new Error(`Unknown scenario: ${scenario}`);
   await new Promise((resolve) => setTimeout(resolve, 20));
   assert.deepEqual(unhandled, [], "Async failures must be handled in the UI");
+  if (argsScenario) {
+    assert.equal(guardProbes, 8);
+    assert.deepEqual(denied, []);
+    console.log(
+      "OWNED_MCP_ARGS_GUARD " +
+        JSON.stringify({ probes: guardProbes, actualAttempts: denied.length }),
+    );
+  }
 } finally {
   await update(() => root.unmount());
   document.body.removeChild(container);
