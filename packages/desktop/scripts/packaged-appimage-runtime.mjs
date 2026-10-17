@@ -47,15 +47,92 @@ export function assertAppImageMainIdentity(root, main, rows, expected) {
 
 export function assertAppImagePayload(source, extracted) {
   const entries = new Map(extracted.map((entry) => [entry[0], entry]));
+  const sourceSandbox = source.find((entry) => entry[0] === "chrome-sandbox");
+  const changes = [];
+  for (const entry of [...source, ...extracted]) {
+    if (!["file", "directory"].includes(entry[1])) continue;
+    const mode = entry[2];
+    assert.ok(Number.isSafeInteger(mode) && mode >= 0 && mode <= 0o7777);
+    assert.equal(mode & 0o3022, 0, `Unapproved writable/SGID/sticky payload mode: ${entry[0]}`);
+    assert.ok(
+      !(mode & 0o4000) ||
+        (entry[0] === "chrome-sandbox" &&
+          entry[1] === "file" &&
+          mode === 0o4755 &&
+          sourceSandbox?.[2] === 0o4755),
+      `Unapproved setuid payload mode: ${entry[0]}`,
+    );
+  }
   for (const entry of source) {
-    // SquashFS extraction may normalize directory access modes. File bytes,
-    // permissions and all symlink targets must retain the original payload.
     const actual = entries.get(entry[0]);
     assert.ok(actual, `AppImage payload missing ${entry[0]}`);
-    if (entry[1] === "directory") assert.equal(actual[1], "directory");
-    else assert.deepEqual(actual, entry, `AppImage payload changed ${entry[0]}`);
+    assert.equal(actual[1], entry[1], `AppImage payload type changed ${entry[0]}`);
+    if (entry[1] === "link") {
+      assert.deepEqual(actual, entry, `AppImage symlink changed ${entry[0]}`);
+      continue;
+    }
+    if (entry[1] === "file") {
+      assert.deepEqual(
+        actual.slice(3),
+        entry.slice(3),
+        `AppImage payload bytes changed ${entry[0]}`,
+      );
+    }
+    if (actual[2] === entry[2]) continue;
+    // app-builder/pkg/fs/{copier,file}.go describes this copy normalization.
+    // With installed app-builder-bin 5.0.0-alpha.10, CI observed only the
+    // public LICENSE 0600->0644 difference; do not generalize file changes.
+    // The copier normalizes directories to 0755. Its copied
+    // files gain read bits and lose SUID/SGID. Keep only the observed public
+    // managed-Node LICENSE conversion plus stripping the approved sandbox's
+    // SUID; other file-mode changes still require a separately reviewed case.
+    const directory = entry[1] === "directory" && entry[2] === 0o700 && actual[2] === 0o755;
+    const license =
+      entry[0] === "resources/runtimes/node/LICENSE" &&
+      entry[1] === "file" &&
+      entry[2] === 0o600 &&
+      actual[2] === 0o644;
+    const sandbox =
+      entry[0] === "chrome-sandbox" &&
+      entry[1] === "file" &&
+      entry[2] === 0o4755 &&
+      actual[2] === 0o755;
+    assert.ok(directory || license || sandbox, `AppImage payload mode changed ${entry[0]}`);
+    changes.push({
+      path: entry[0],
+      type: entry[1],
+      sourceMode: entry[2],
+      extractedMode: actual[2],
+      rule: directory
+        ? "builder directory 0700 to 0755"
+        : license
+          ? "public managed Node LICENSE 0600 to 0644"
+          : "builder removes sandbox setuid; owned sandbox configured separately",
+    });
   }
+  return changes;
 }
+
+/** The generic app inventory intentionally stores ordinary 0777 modes.
+ * Payload validation also needs SUID/SGID/sticky bits, before any sudo step.
+ * Supplying previously byte-verified records rereads only current metadata. */
+export async function inventoryAppImagePayload(root, records) {
+  records ??= await inventoryAppTree(root);
+  return Promise.all(
+    records.map(async (entry) => {
+      if (!["file", "directory"].includes(entry[1])) return [...entry];
+      const info = await lstat(join(root, entry[0]));
+      assert.ok(
+        !info.isSymbolicLink() && (entry[1] === "file" ? info.isFile() : info.isDirectory()),
+        `Payload type changed while reading permissions: ${entry[0]}`,
+      );
+      const record = [...entry];
+      record[2] = info.mode & 0o7777;
+      return record;
+    }),
+  );
+}
+const payloadPermissions = (records) => records.map((record) => record.slice(0, 3));
 
 async function readReceipt(file) {
   assert.equal(await realpath(file), resolve(file), "AppImage receipt cannot traverse links");
@@ -183,7 +260,8 @@ export async function preparePackagedAppImageRuntime({
   assert.equal(sourceBefore.asarSHA256, receipt.appAsarSha256);
   assert.equal(sourceBefore.managedNodeManifestSHA256, receipt.managedNodeManifestSha256);
   assert.equal(sourceBefore.appTreeSHA256, receipt.sourceAppTreeSha256);
-  const sourceInventory = await inventoryAppTree(sourceApp);
+  const sourceInventory = await inventoryAppImagePayload(sourceApp);
+  const sourcePermissions = payloadPermissions(sourceInventory);
   const root = join(fixtureRoot, "appimage-runtime");
   await mkdir(root, { mode: 0o700 });
   const temporary = join(root, "tmp");
@@ -196,6 +274,8 @@ export async function preparePackagedAppImageRuntime({
     imageBefore,
     sourceHead,
     sourceBefore,
+    payloadPermissionsVersion: 1,
+    sourcePayloadPermissionsSHA256: sha256(JSON.stringify(sourcePermissions)),
     failures: [],
   };
   const put = () =>
@@ -241,7 +321,13 @@ export async function preparePackagedAppImageRuntime({
     const extractedIntegrity = await capturePackagedAppIntegrity(extracted);
     assert.equal(extractedIntegrity.asarSHA256, receipt.appAsarSha256);
     assert.equal(extractedIntegrity.managedNodeManifestSHA256, receipt.managedNodeManifestSha256);
-    assertAppImagePayload(sourceInventory, await inventoryAppTree(extracted));
+    const extractedInventory = await inventoryAppImagePayload(extracted);
+    report.payloadModeNormalizations = assertAppImagePayload(sourceInventory, extractedInventory);
+    await writeFile(
+      join(evidence, "appimage-source-payload-permissions-before.json"),
+      JSON.stringify(sourcePermissions),
+      { mode: 0o600, flag: "wx" },
+    );
     const appRoot = join(temporary, `appimage_extracted_${imageBefore.runtimeCacheMD5}`);
     await rename(extracted, appRoot);
     await chmod(appRoot, 0o700);
@@ -250,6 +336,14 @@ export async function preparePackagedAppImageRuntime({
     const executable = await realpath(layout.executable);
     assert.equal(executable, layout.executable);
     report.cacheBefore = await capturePackagedAppIntegrity(appRoot);
+    const cacheInventory = await inventoryAppImagePayload(appRoot, extractedInventory);
+    const cachePermissions = payloadPermissions(cacheInventory);
+    report.cachePayloadPermissionsSHA256 = sha256(JSON.stringify(cachePermissions));
+    await writeFile(
+      join(evidence, "appimage-cache-payload-permissions-before.json"),
+      JSON.stringify(cachePermissions),
+      { mode: 0o600, flag: "wx" },
+    );
     await writeFile(
       join(evidence, "appimage-cache-inventory-before.json"),
       JSON.stringify(await inventoryAppTree(appRoot)),
@@ -294,6 +388,22 @@ export async function preparePackagedAppImageRuntime({
             assert.equal(report.sourceAfter.appTreeSHA256, sourceBefore.appTreeSHA256);
           },
           async () => {
+            const permissions = payloadPermissions(
+              await inventoryAppImagePayload(sourceApp, sourceInventory),
+            );
+            report.sourcePayloadPermissionsAfterSHA256 = sha256(JSON.stringify(permissions));
+            await writeFile(
+              join(evidence, "appimage-source-payload-permissions-after.json"),
+              JSON.stringify(permissions),
+              { mode: 0o600, flag: "wx" },
+            );
+            assert.equal(
+              report.sourcePayloadPermissionsAfterSHA256,
+              report.sourcePayloadPermissionsSHA256,
+              "Source package full permissions changed",
+            );
+          },
+          async () => {
             report.cacheAfter = await capturePackagedAppIntegrity(appRoot);
             await writeFile(
               join(evidence, "appimage-cache-inventory-after.json"),
@@ -301,6 +411,22 @@ export async function preparePackagedAppImageRuntime({
               { mode: 0o600, flag: "wx" },
             );
             assert.equal(report.cacheAfter.appTreeSHA256, report.cacheBefore.appTreeSHA256);
+          },
+          async () => {
+            const permissions = payloadPermissions(
+              await inventoryAppImagePayload(appRoot, cacheInventory),
+            );
+            report.cachePayloadPermissionsAfterSHA256 = sha256(JSON.stringify(permissions));
+            await writeFile(
+              join(evidence, "appimage-cache-payload-permissions-after.json"),
+              JSON.stringify(permissions),
+              { mode: 0o600, flag: "wx" },
+            );
+            assert.equal(
+              report.cachePayloadPermissionsAfterSHA256,
+              report.cachePayloadPermissionsSHA256,
+              "Runtime cache full permissions changed",
+            );
           },
           async () => {
             report.sandboxAfterRuntime = await sandboxIdentity(report.sandbox.file);
