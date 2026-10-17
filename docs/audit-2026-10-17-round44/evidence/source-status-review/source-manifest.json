@@ -1,0 +1,535 @@
+{
+  "createdUTC": "2026-10-17T15:01:20.972438+00:00",
+  "context": "Root-reported07e5791b1fc1ad1fcfd5c55c2913d8a45f1b20cb, independently filesystem-pinned; no own Git certification",
+  "role": "Prior R37/R38/R39 metadata/history/aggregate reviewer; not original source author, not blind reviewer and not fix implementer. Current source-stage follow-up only.",
+  "files": [
+    {
+      "path": "packages/core/src/plugins/pluginCatalog.ts",
+      "bytes": 7737,
+      "sha256": "7069ccbf6c1b0f5b479ef156eff2fa67d00d7d27f8f537a34489800fa748d2e7",
+      "initialSemanticReadSha256": "7069ccbf6c1b0f5b479ef156eff2fa67d00d7d27f8f537a34489800fa748d2e7",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          26,
+          32
+        ],
+        [
+          118,
+          128
+        ],
+        [
+          135,
+          150
+        ],
+        [
+          171,
+          173
+        ],
+        [
+          180,
+          186
+        ],
+        [
+          190,
+          192
+        ],
+        [
+          195,
+          203
+        ]
+      ],
+      "displayedLineRanges": [
+        [
+          13,
+          36
+        ],
+        [
+          88,
+          98
+        ],
+        [
+          118,
+          151
+        ],
+        [
+          164,
+          204
+        ]
+      ],
+      "semanticLines": 56,
+      "displayedLines": 110,
+      "scope": "Ordinary already-valid normal install key/layout classification and catalog DTO field. Does not certify path containment, symlink/realpath, manifest safety/identity or custody. Wrong navigation range88–98 displayed only, excluded.",
+      "pinUTC": "2026-10-17T14:58:41.070804+00:00",
+      "pinOrigin": "initial-pins.json",
+      "endingUTC": "2026-10-17T15:01:20.965551+00:00",
+      "endingBytes": 7737,
+      "endingSha256": "7069ccbf6c1b0f5b479ef156eff2fa67d00d7d27f8f537a34489800fa748d2e7",
+      "unchanged": true
+    },
+    {
+      "path": "packages/desktop/src/main/plugins-service.ts",
+      "bytes": 11622,
+      "sha256": "10c83843cb0e88f4fc19410a39cb9c75d897184a51703fe68d4bdf36ce86debd",
+      "initialSemanticReadSha256": "10c83843cb0e88f4fc19410a39cb9c75d897184a51703fe68d4bdf36ce86debd",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          43,
+          53
+        ],
+        [
+          130,
+          143
+        ],
+        [
+          146,
+          148
+        ],
+        [
+          152,
+          154
+        ],
+        [
+          156,
+          162
+        ],
+        [
+          165,
+          167
+        ]
+      ],
+      "displayedLineRanges": [
+        [
+          43,
+          56
+        ],
+        [
+          121,
+          168
+        ]
+      ],
+      "semanticLines": 41,
+      "displayedLines": 62,
+      "scope": "Ordinary catalog load and installationKind propagation to PluginSummary; filesystem skill count/manifest/media correctness excluded.",
+      "pinUTC": "2026-10-17T14:58:41.072954+00:00",
+      "pinOrigin": "initial-pins.json",
+      "endingUTC": "2026-10-17T15:01:20.966975+00:00",
+      "endingBytes": 11622,
+      "endingSha256": "10c83843cb0e88f4fc19410a39cb9c75d897184a51703fe68d4bdf36ce86debd",
+      "unchanged": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/extensions/uninstallTarget.ts",
+      "bytes": 1240,
+      "sha256": "d238384ba133d6d85cbcf0e8870967f4596dade20e910a3feb75ea4161557675",
+      "initialSemanticReadSha256": "d238384ba133d6d85cbcf0e8870967f4596dade20e910a3feb75ea4161557675",
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          29
+        ]
+      ],
+      "displayedLineRanges": [
+        [
+          1,
+          29
+        ]
+      ],
+      "semanticLines": 29,
+      "displayedLines": 29,
+      "scope": "Full 29-line ordinary source-tag routing helper; no function invocation and no claim on Core source validation correctness.",
+      "pinUTC": "2026-10-17T14:58:41.073566+00:00",
+      "pinOrigin": "initial-pins.json",
+      "endingUTC": "2026-10-17T15:01:20.967369+00:00",
+      "endingBytes": 1240,
+      "endingSha256": "d238384ba133d6d85cbcf0e8870967f4596dade20e910a3feb75ea4161557675",
+      "unchanged": true
+    },
+    {
+      "path": "packages/desktop/src/preload/types.d.ts",
+      "bytes": 102370,
+      "sha256": "31935ed8a627c1552a4a6867d0811c667e27bf8dfdf7240853eba8198ebde0f0",
+      "initialSemanticReadSha256": "31935ed8a627c1552a4a6867d0811c667e27bf8dfdf7240853eba8198ebde0f0",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          2797,
+          2810
+        ]
+      ],
+      "displayedLineRanges": [
+        [
+          2795,
+          2812
+        ]
+      ],
+      "semanticLines": 14,
+      "displayedLines": 18,
+      "scope": "Only ordinary PluginSummary installationKind DTO declaration, no whole-file audit.",
+      "pinUTC": "2026-10-17T14:58:41.074612+00:00",
+      "pinOrigin": "initial-pins.json",
+      "endingUTC": "2026-10-17T15:01:20.968271+00:00",
+      "endingBytes": 102370,
+      "endingSha256": "31935ed8a627c1552a4a6867d0811c667e27bf8dfdf7240853eba8198ebde0f0",
+      "unchanged": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/extensions/PluginsTab.tsx",
+      "bytes": 18987,
+      "sha256": "347d6e15c50e20beb4699852bcf6773f017585039996d91c4d781ac6824fc045",
+      "initialSemanticReadSha256": "347d6e15c50e20beb4699852bcf6773f017585039996d91c4d781ac6824fc045",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          131,
+          139
+        ],
+        [
+          147,
+          155
+        ]
+      ],
+      "displayedLineRanges": [
+        [
+          127,
+          156
+        ]
+      ],
+      "semanticLines": 18,
+      "displayedLines": 30,
+      "scope": "Actual resolver caller and local-vs-marketplace dispatch names as source only; confirmation operation and uninstall native/filesystem behavior excluded.",
+      "pinUTC": "2026-10-17T14:58:41.077036+00:00",
+      "pinOrigin": "initial-pins.json",
+      "endingUTC": "2026-10-17T15:01:20.969238+00:00",
+      "endingBytes": 18987,
+      "endingSha256": "347d6e15c50e20beb4699852bcf6773f017585039996d91c4d781ac6824fc045",
+      "unchanged": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/McpSection.tsx",
+      "bytes": 75595,
+      "sha256": "228d18e442ddc37752407383cf311050df4409972e78ea7e029ea21665d67334",
+      "initialSemanticReadSha256": "228d18e442ddc37752407383cf311050df4409972e78ea7e029ea21665d67334",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          45,
+          48
+        ],
+        [
+          433,
+          458
+        ],
+        [
+          717,
+          731
+        ],
+        [
+          1121,
+          1128
+        ],
+        [
+          1131,
+          1141
+        ],
+        [
+          1319,
+          1321
+        ],
+        [
+          1393,
+          1413
+        ],
+        [
+          1424,
+          1426
+        ],
+        [
+          1781,
+          1797
+        ]
+      ],
+      "displayedLineRanges": [
+        [
+          26,
+          51
+        ],
+        [
+          250,
+          279
+        ],
+        [
+          408,
+          466
+        ],
+        [
+          717,
+          735
+        ],
+        [
+          1118,
+          1142
+        ],
+        [
+          1310,
+          1325
+        ],
+        [
+          1388,
+          1429
+        ],
+        [
+          1781,
+          1813
+        ]
+      ],
+      "semanticLines": 108,
+      "displayedLines": 250,
+      "scope": "Only original full stdio value-equal Args preservation and full editor rename carrying3supported non-editor fields; list raw-spread/actual editor callback. HTTP/auth/probe/trust/lifecycle and arbitrary grammar/edit intent excluded despite adjacent display.",
+      "pinUTC": "2026-10-17T14:58:41.075636+00:00",
+      "pinOrigin": "initial-pins.json",
+      "endingUTC": "2026-10-17T15:01:20.970082+00:00",
+      "endingBytes": 75595,
+      "endingSha256": "228d18e442ddc37752407383cf311050df4409972e78ea7e029ea21665d67334",
+      "unchanged": true
+    },
+    {
+      "path": "packages/core/src/plugins/pluginInstaller.ts",
+      "bytes": 19962,
+      "sha256": "263ce32aaee6b062513389f93cf29c5f3b5779a160da3979f036fb38b176a30a",
+      "initialSemanticReadSha256": "263ce32aaee6b062513389f93cf29c5f3b5779a160da3979f036fb38b176a30a",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          44,
+          46
+        ],
+        [
+          60,
+          60
+        ],
+        [
+          64,
+          65
+        ],
+        [
+          267,
+          267
+        ],
+        [
+          272,
+          272
+        ],
+        [
+          293,
+          293
+        ],
+        [
+          298,
+          298
+        ],
+        [
+          315,
+          315
+        ],
+        [
+          320,
+          320
+        ],
+        [
+          338,
+          338
+        ],
+        [
+          372,
+          372
+        ],
+        [
+          408,
+          415
+        ],
+        [
+          423,
+          427
+        ]
+      ],
+      "displayedLineRanges": [
+        [
+          42,
+          57
+        ],
+        [
+          60,
+          67
+        ],
+        [
+          267,
+          267
+        ],
+        [
+          272,
+          272
+        ],
+        [
+          293,
+          293
+        ],
+        [
+          298,
+          298
+        ],
+        [
+          315,
+          315
+        ],
+        [
+          320,
+          320
+        ],
+        [
+          337,
+          340
+        ],
+        [
+          356,
+          374
+        ],
+        [
+          401,
+          427
+        ]
+      ],
+      "semanticLines": 27,
+      "displayedLines": 80,
+      "scope": "Normal marketplace cache path composition and materialization return→install record data only. No IO, installer validation/custody/security or tool/native execution audited.",
+      "pinUTC": "2026-10-17T14:59:13.569615+00:00",
+      "pinOrigin": "producer-pins.json",
+      "endingUTC": "2026-10-17T15:01:20.971104+00:00",
+      "endingBytes": 19962,
+      "endingSha256": "263ce32aaee6b062513389f93cf29c5f3b5779a160da3979f036fb38b176a30a",
+      "unchanged": true
+    },
+    {
+      "path": "packages/core/src/plugins/installer/install.ts",
+      "bytes": 3010,
+      "sha256": "1773b85309de88bc25da1f696fa7937c3af7a0e10af732fcc6fb59ca1fbf04aa",
+      "initialSemanticReadSha256": "1773b85309de88bc25da1f696fa7937c3af7a0e10af732fcc6fb59ca1fbf04aa",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          36,
+          36
+        ],
+        [
+          57,
+          65
+        ]
+      ],
+      "displayedLineRanges": [
+        [
+          30,
+          37
+        ],
+        [
+          55,
+          68
+        ]
+      ],
+      "semanticLines": 10,
+      "displayedLines": 22,
+      "scope": "Normal direct finalDir→local-tagged installed record layout only. No copying/rename/filesystem safety or installation performed.",
+      "pinUTC": "2026-10-17T14:59:13.571862+00:00",
+      "pinOrigin": "producer-pins.json",
+      "endingUTC": "2026-10-17T15:01:20.971496+00:00",
+      "endingBytes": 3010,
+      "endingSha256": "1773b85309de88bc25da1f696fa7937c3af7a0e10af732fcc6fb59ca1fbf04aa",
+      "unchanged": true
+    },
+    {
+      "path": "packages/core/src/plugins/installer/paths.ts",
+      "bytes": 994,
+      "sha256": "323f660b827a86eff5ffaa0b87d60e04b18ae907406ac8d74f123e96239fbbb2",
+      "initialSemanticReadSha256": "323f660b827a86eff5ffaa0b87d60e04b18ae907406ac8d74f123e96239fbbb2",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          19,
+          21
+        ],
+        [
+          23,
+          23
+        ],
+        [
+          25,
+          26
+        ]
+      ],
+      "displayedLineRanges": [
+        [
+          19,
+          26
+        ]
+      ],
+      "semanticLines": 6,
+      "displayedLines": 8,
+      "scope": "Only normal plugins root/direct dirname composition, not name-validation correctness.",
+      "pinUTC": "2026-10-17T14:59:13.572690+00:00",
+      "pinOrigin": "producer-pins.json",
+      "endingUTC": "2026-10-17T15:01:20.971901+00:00",
+      "endingBytes": 994,
+      "endingSha256": "323f660b827a86eff5ffaa0b87d60e04b18ae907406ac8d74f123e96239fbbb2",
+      "unchanged": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/mcpSettingsPatch.ts",
+      "bytes": 1991,
+      "sha256": "6364bb8818f5a8e883c240d971793205a3f1507b287346e8eb8ee2ba962ef3d1",
+      "initialSemanticReadSha256": "6364bb8818f5a8e883c240d971793205a3f1507b287346e8eb8ee2ba962ef3d1",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          3,
+          5
+        ],
+        [
+          18,
+          26
+        ],
+        [
+          31,
+          39
+        ],
+        [
+          43,
+          62
+        ]
+      ],
+      "displayedLineRanges": [
+        [
+          1,
+          62
+        ]
+      ],
+      "semanticLines": 41,
+      "displayedLines": 62,
+      "scope": "Ordinary explicit editor-field payload builder, Args array copy and absence of3non-editor keys from default field list. Authentication/override policy mechanisms not audited.",
+      "pinUTC": "2026-10-17T14:59:35.765565+00:00",
+      "pinOrigin": "patch-pins.json",
+      "endingUTC": "2026-10-17T15:01:20.972434+00:00",
+      "endingBytes": 1991,
+      "endingSha256": "6364bb8818f5a8e883c240d971793205a3f1507b287346e8eb8ee2ba962ef3d1",
+      "unchanged": true
+    }
+  ],
+  "hashOnlyFiles": [],
+  "navigationOnlyFiles": [],
+  "semanticProductLines": 350,
+  "displayedProductLines": 671,
+  "fullProductFiles": 1,
+  "selectedProductFiles": 9,
+  "noTestsOpened": true,
+  "metadataSnapshotNotNewSemanticRead": true
+}

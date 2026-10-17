@@ -1,0 +1,60 @@
+{
+  "createdUTC": "2026-10-17T14:56:04.510749+00:00",
+  "sourceFiles": 4642,
+  "sourceBytes": 39613094,
+  "history": {
+    "discovered": 3877,
+    "included": 3869,
+    "excluded": 8,
+    "md": 1391,
+    "json": 2478,
+    "jsonStringValues": 1255894,
+    "jsonScalarValues": 1896731,
+    "jsonObjects": 523234,
+    "parseOrDriftErrors": [],
+    "archiveBySubstring": 175,
+    "archiveExactDirectory": 162,
+    "frozen42Included": true
+  },
+  "anchorsBeforeDedup": {
+    "object-scalar-field": 31091,
+    "list-scalar": 20602
+  },
+  "deduplicatedClaims": 16674,
+  "provenanceReferences": 51548,
+  "claimKinds": {
+    "incidental-path-or-pin-object": 13492,
+    "scope-unknown": 430,
+    "explicit-full": 683,
+    "limited-or-not-full-scope-unknown": 524,
+    "explicit-nonsemantic-or-hash-only": 938,
+    "explicit-selected": 455,
+    "full-word-vetoed-or-conflicting-scope": 56,
+    "explicit-navigation-only": 4,
+    "selected-claim-unbound-or-prior-sha": 58,
+    "full-claim-unbound-or-ambiguous": 34
+  },
+  "fileStatuses": {
+    "no-row-in-this-json-object-index-unknown": 291,
+    "historical-object-no-current-explicit-semantic-coverage": 3905,
+    "current-sha-explicit-full-object": 292,
+    "current-sha-explicit-selected-object": 154
+  },
+  "noCoveragePercentage": true,
+  "productReads": "byte length / SHA / splitlines only;0 body semantic reading",
+  "productAttempts": 0,
+  "gitCommands": 0,
+  "network": 0,
+  "sourceInventorySnapshotUTC": "2026-10-17T14:50:14.179171+00:00",
+  "historyInventorySnapshotUTC": "2026-10-17T14:50:15.424863+00:00",
+  "endingDrift": {
+    "sourceInitial": 4642,
+    "sourceEnding": 4643,
+    "sourceChanged": 9,
+    "sourceAdded": 1,
+    "historyChanged": 1,
+    "historyJsonChanged": 0,
+    "rank20Unaffected": true,
+    "overlay": "ending-coverage-overlay.json"
+  }
+}

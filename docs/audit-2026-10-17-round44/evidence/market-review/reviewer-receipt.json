@@ -1,0 +1,120 @@
+{
+  "frozenUTC": "2026-10-17T14:56:32.823006+00:00",
+  "scope": "exact /tmp/codeshell-audit-round48-notification-review/ only; independent MarketList selected source and prior-own R36 exclusion",
+  "files": [
+    {
+      "path": "classification.json",
+      "bytes": 1938,
+      "sha256": "e4807f7ef1feac5b0f844ca84cd3b92dcb22e2510f4ce3439a9cb472a470b462"
+    },
+    {
+      "path": "consumer-initial-pins.json",
+      "bytes": 742,
+      "sha256": "98e4faad126914a5eb56191e57d22abecce399e3ce6a038c766ae630f5d50672"
+    },
+    {
+      "path": "coverage-gate-rows.json",
+      "bytes": 7531,
+      "sha256": "1cd89a962f88fe213b9f71d94c0f53312271adb53fa0e7b5768f9a49538acd3f"
+    },
+    {
+      "path": "dto-initial-pins.json",
+      "bytes": 754,
+      "sha256": "2ebad27bec952402ce667f43ccc944ff65247f68da049941df3d331f04a4a80a"
+    },
+    {
+      "path": "dto-range-drift-check.json",
+      "bytes": 2921,
+      "sha256": "4a9a520406570ae53f56990274b385948ddb6ab8a69c1036035f8f57f5a3a800"
+    },
+    {
+      "path": "ending-checks.first.json",
+      "bytes": 5680,
+      "sha256": "286fe16d6eda8f84249aadbab7027befddca4dd6ea040707af29990e18c798ca"
+    },
+    {
+      "path": "ending-checks.json",
+      "bytes": 6059,
+      "sha256": "f75711cfa36ce56345331b318d4b91dfa5cfe3cc7d9c3d1d38e907ba5798ce4d"
+    },
+    {
+      "path": "history-contexts.json",
+      "bytes": 27677,
+      "sha256": "938485cce16dbfdc4f7219c5d60bb89c518b7b003aebebe6abb2d76bf516a382"
+    },
+    {
+      "path": "history-method.py",
+      "bytes": 3793,
+      "sha256": "b85761b939531a7cde3207b35a91bc5305179255a088671651c10a35c36022c0"
+    },
+    {
+      "path": "history.json",
+      "bytes": 768834,
+      "sha256": "207037d1a3fce38d9a389a8d62b907435a11b28818afad25bb85ac6ad7e44336"
+    },
+    {
+      "path": "initial-pins.json",
+      "bytes": 867,
+      "sha256": "33960e18956ed7a8bdcbad0c906015817aceaba0c537b8f73d4c391583bdf345"
+    },
+    {
+      "path": "metadata-diagnostics.json",
+      "bytes": 1893,
+      "sha256": "0c7b4bbd535616d5f3b9233b1d5709cebfb76bc091f12e0c8da6059e729a2ea6"
+    },
+    {
+      "path": "review.md",
+      "bytes": 4477,
+      "sha256": "90bc33f8265e7c6026f63ffd66ba97556aa46bf7d42849d028887c83e6fceafe"
+    },
+    {
+      "path": "source-excerpts.first.json",
+      "bytes": 36611,
+      "sha256": "cf924a9ad8502c8e6e9e5c5d4cd779205198c923cffc93e30cbf5e85aa280dd2"
+    },
+    {
+      "path": "source-excerpts.json",
+      "bytes": 37099,
+      "sha256": "3dc9deea1bd68bf0cba42d0575fbcf5ffa1c1ea4eddf23466feb5f5bec64a9ff"
+    },
+    {
+      "path": "source-manifest.first.json",
+      "bytes": 9852,
+      "sha256": "a7e5c165469637f9247f91b29468b5ef4b8c79a171300408118d5dac8329c286"
+    },
+    {
+      "path": "source-manifest.json",
+      "bytes": 10723,
+      "sha256": "85bcddb4af3e95f19b61810a1f1adbabea103ac569f31be32a0ea0579c658cd8"
+    }
+  ],
+  "selfExcluded": "reviewer-receipt.json",
+  "fileCountExcludingSelf": 17,
+  "totalFilesIncludingSelf": 18,
+  "reportLinks": {
+    "count": 14,
+    "missing": []
+  },
+  "classification": {
+    "formal": 0,
+    "candidates": 0,
+    "related": 0,
+    "oldSameFlowReadBeforeExclusions": 1
+  },
+  "coverage": {
+    "semanticProductFiles": 5,
+    "semanticProductLines": 563,
+    "semanticPriorReportLines": 3,
+    "productDisplayedLines": 795,
+    "semanticSourceRows": 6,
+    "hashOnlyRows": 1,
+    "fullProductFiles": 0
+  },
+  "sourceChecks": "6 of 7 pins unchanged full-file; one types.d.ts full SHA drift, exact earlier displayed 2 ranges unchanged. Read-time and ending SHA separated, no extra semantic read.",
+  "historyChecks": "3869 set unchanged; one release TODO dated byte drift retained.",
+  "productExecutions": 0,
+  "testExecutions": 0,
+  "gitOperations": 0,
+  "authorReportRead": false,
+  "roleDisclosure": "Reviewer is original R36 ui-state/NotificationHistory author; no current NotificationHistory body and no claim of second independent R36 source review."
+}

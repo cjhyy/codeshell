@@ -1,0 +1,233 @@
+{
+  "capturedUTC": "2026-10-17T14:55:23.055989+00:00",
+  "scope": "Eleven actual historical source-row metadata examples;0 product body reads. Resolve historyRow via history-inventory.json files zero-based. Examples are not proof every historic scope form is understood.",
+  "samples": [
+    {
+      "reason": "Accepted explicit full field adapter review",
+      "claimId": "C001514",
+      "path": "packages/core/src/context/compaction.ts",
+      "scopeFields": {
+        "review": "full"
+      },
+      "sourceHashFields": {
+        "sha256": "981daf03db583c466b7c190efdd9336167978e193690096cec8c9e9c8ec7d81e"
+      },
+      "provenance": [
+        {
+          "historyRow": 2274,
+          "jsonPointer": "/sources/1"
+        }
+      ]
+    },
+    {
+      "reason": "Accepted explicit full field adapter scope",
+      "claimId": "C001058",
+      "path": "packages/coding/src/index.git.ts",
+      "scopeFields": {
+        "scope": "full"
+      },
+      "sourceHashFields": {
+        "sha256": "d48ac031afd8a3c9196d410d4029286ccae89eac7f9efdf0310758a3a6a291dc"
+      },
+      "provenance": [
+        {
+          "historyRow": 1252,
+          "jsonPointer": "/workerSourceChecks/19"
+        }
+      ]
+    },
+    {
+      "reason": "Accepted explicit full field adapter coverage",
+      "claimId": "C000054",
+      "path": "docs/audit-2026-10-17-round16/evidence/root-memoize.test.ts",
+      "scopeFields": {
+        "coverage": "full"
+      },
+      "sourceHashFields": {
+        "sha256": "a2c7013d8a09c59aea7df283de9c5e06fd27ffb469d064feff4f229a29e01b2b",
+        "initialSemanticReadSha256": "a2c7013d8a09c59aea7df283de9c5e06fd27ffb469d064feff4f229a29e01b2b"
+      },
+      "provenance": [
+        {
+          "historyRow": 1830,
+          "jsonPointer": "/sources/9"
+        }
+      ]
+    },
+    {
+      "reason": "Accepted explicit full field adapter readScope",
+      "claimId": "C001175",
+      "path": "packages/coding/src/tools/apply-patch/applier.ts",
+      "scopeFields": {
+        "readScope": "full"
+      },
+      "sourceHashFields": {
+        "frozenSourceSha256": "8f4bfde4d496e3eae137525fc4a5af0a1c2db79f6b1d8c3cf0e8ca4989a4b4bb"
+      },
+      "provenance": [
+        {
+          "historyRow": 2657,
+          "jsonPointer": "/sources/19"
+        }
+      ]
+    },
+    {
+      "reason": "Accepted explicit full field adapter coverageClaimFromAuthor",
+      "claimId": "C003634",
+      "path": "packages/core/src/plugins/installer/install.ts",
+      "scopeFields": {
+        "coverageClaimFromAuthor": "full"
+      },
+      "sourceHashFields": {
+        "sha256": "1773b85309de88bc25da1f696fa7937c3af7a0e10af732fcc6fb59ca1fbf04aa"
+      },
+      "provenance": [
+        {
+          "historyRow": 2005,
+          "jsonPointer": "/authorSourceManifestChecks/1/rows/11"
+        }
+      ]
+    },
+    {
+      "reason": "Conservative category exemplar full-word-vetoed-or-conflicting-scope",
+      "claimId": "C001132",
+      "path": "packages/coding/src/review/review-prompt.test.ts",
+      "scopeFields": {
+        "coverage": "full"
+      },
+      "sourceHashFields": {
+        "sha256": "0b5312b672242622eab82cd24fca842eefda14a91437e83bf73d4a0f1b4a3a02",
+        "frozenSha256": "0b5312b672242622eab82cd24fca842eefda14a91437e83bf73d4a0f1b4a3a02"
+      },
+      "rangeFields": {
+        "selectedLineRanges": [
+          [
+            1,
+            138
+          ]
+        ]
+      },
+      "roleBoundaryFields": {
+        "note": "Root read scope only;fullhash not allcontract/runtimecoverage. Existingtest source only,0execution."
+      },
+      "provenance": [
+        {
+          "historyRow": 1215,
+          "jsonPointer": "/files/9"
+        }
+      ]
+    },
+    {
+      "reason": "Conservative category exemplar explicit-selected",
+      "claimId": "C000544",
+      "path": "packages/chat/src/channel.test.ts",
+      "scopeFields": {},
+      "sourceHashFields": {
+        "initialFilesystemSha256": "a9b9a177ebf0b8dff33b66c22642d06704fc57cdd3d6ecf9847dde7befa2fd1b",
+        "initialSemanticReadSha256": "a9b9a177ebf0b8dff33b66c22642d06704fc57cdd3d6ecf9847dde7befa2fd1b",
+        "frozenFilesystemSha256": "a9b9a177ebf0b8dff33b66c22642d06704fc57cdd3d6ecf9847dde7befa2fd1b"
+      },
+      "rangeFields": {
+        "selectedRanges": [
+          [
+            1,
+            93
+          ]
+        ]
+      },
+      "roleBoundaryFields": {
+        "purpose": "Existing test declarations only; matrix and granular legacy compatibility, not executed."
+      },
+      "provenance": [
+        {
+          "historyRow": 1552,
+          "jsonPointer": "/files/2"
+        },
+        {
+          "historyRow": 1560,
+          "jsonPointer": "/files/2/prepSourceRow"
+        }
+      ]
+    },
+    {
+      "reason": "Conservative category exemplar explicit-navigation-only",
+      "claimId": "C001966",
+      "path": "packages/core/src/engine/engine.ts",
+      "scopeFields": {
+        "scope": "Selected consumer excerpts only (steer enqueue/unsteer/consume/restore, prompt-context assembly and static locators); never imported or executed."
+      },
+      "sourceHashFields": {
+        "frozenSha256": "43ed9545f9c4ea2930b2855d58bf9b48ff2584cc6bba397daaa9c99ad0833307",
+        "sha256": "43ed9545f9c4ea2930b2855d58bf9b48ff2584cc6bba397daaa9c99ad0833307",
+        "currentSha256": "43ed9545f9c4ea2930b2855d58bf9b48ff2584cc6bba397daaa9c99ad0833307"
+      },
+      "rangeFields": {},
+      "roleBoundaryFields": {},
+      "provenance": [
+        {
+          "historyRow": 509,
+          "jsonPointer": "/sources/6"
+        }
+      ]
+    },
+    {
+      "reason": "Conservative category exemplar explicit-nonsemantic-or-hash-only",
+      "claimId": "C000078",
+      "path": "docs/audit-2026-10-17-round18/evidence/unread-pure.test.ts",
+      "scopeFields": {
+        "scope": "Metadata only: actual source bytes and absolute import target; no dependency/resolver probing and no product import."
+      },
+      "sourceHashFields": {
+        "sourceSha256": "e2d445686f64876b3a855a8c7c64505ed34d8b3436409b0a422aa26760bba971",
+        "frozenSha256": "e2d445686f64876b3a855a8c7c64505ed34d8b3436409b0a422aa26760bba971",
+        "fixtureSha256": "1b09f1c3798c3e5b4f4fd98888f8033b73b759e97c288746c3fc93916e9b9b89"
+      },
+      "rangeFields": {},
+      "roleBoundaryFields": {},
+      "provenance": [
+        {
+          "historyRow": 697,
+          "jsonPointer": ""
+        }
+      ]
+    },
+    {
+      "reason": "Conservative category exemplar limited-or-not-full-scope-unknown",
+      "claimId": "C000060",
+      "path": "docs/audit-2026-10-17-round16/evidence/root-memoize.test.ts",
+      "scopeFields": {},
+      "sourceHashFields": {
+        "sha256": "a2c7013d8a09c59aea7df283de9c5e06fd27ffb469d064feff4f229a29e01b2b"
+      },
+      "rangeFields": {},
+      "roleBoundaryFields": {
+        "timing": "Before direct existing test-source read; filename inventory only"
+      },
+      "provenance": [
+        {
+          "historyRow": 1844,
+          "jsonPointer": ""
+        }
+      ]
+    },
+    {
+      "reason": "Conservative category exemplar full-claim-unbound-or-ambiguous",
+      "claimId": "C004847",
+      "path": "packages/core/src/runtime/output-clean.test.ts",
+      "scopeFields": {
+        "coverage": "full"
+      },
+      "sourceHashFields": {
+        "sha256": "5118d580eeb7038205e16ad0a050a74c0e1d51a00ae19abadb71742e5a57b127"
+      },
+      "rangeFields": {},
+      "roleBoundaryFields": {},
+      "provenance": [
+        {
+          "historyRow": 1142,
+          "jsonPointer": "/sourceChecks/1"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,42 @@
+{
+  "frozenUTC": "2026-10-17T15:14:38.483463+00:00",
+  "scope": "Exactly this packet excluding the unchanged raw tmp first-diff text; reversible JSON preserves those exact stdout bytes. No source-body reread.",
+  "files": [
+    {
+      "path": "initial-pins.json",
+      "bytes": 1856,
+      "sha256": "27a5a956866cc6f7d21908ac2a7b915371b7fdee50094c9df4fc0d90c767c9fc"
+    },
+    {
+      "path": "report.md",
+      "bytes": 1668,
+      "sha256": "7c5943798f57e6f19847fc7f85913a539df97226e5f6093e53c5ed0bd8e41518"
+    },
+    {
+      "path": "source-diff-preserved.json",
+      "bytes": 22576,
+      "sha256": "69a190ae41aa0ca3ef40eab1ff494a39bd08176f152278c479f004fa5b4c4682"
+    },
+    {
+      "path": "source-diff.first-exit.json",
+      "bytes": 58,
+      "sha256": "e290fae1a2445d22b9cfe268bc0ead8a20c3235e8a3798e2932e05a7cc9e7046"
+    },
+    {
+      "path": "source-manifest.json",
+      "bytes": 5794,
+      "sha256": "82d2b23034d4aabba3c253db405a234969a230f0c27497f0bb6ada84f8357a2e"
+    },
+    {
+      "path": "source-status-updates.json",
+      "bytes": 1852,
+      "sha256": "0fc21a4d63bdff7d9ffe139e7d6749171730b05ad138e50f455c3ca81efe7f65"
+    }
+  ],
+  "explicitExcludedTmpFiles": [
+    "source-diff.first.txt"
+  ],
+  "artifactCountExcludingSelf": 6,
+  "totalFilesIncludingSelf": 7,
+  "productAttempts": 0
+}

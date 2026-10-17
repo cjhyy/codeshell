@@ -1,0 +1,21 @@
+{
+  "scope": "before ordinary parent query and selected-market display consumer body; no install/remove/native/network mechanisms",
+  "files": [
+    {
+      "path": "packages/desktop/src/renderer/extensions/ManagePage.tsx",
+      "bytes": 9977,
+      "sha256": "df9c16a316ced03bfbdb4b2f1acf9166eea935d295fe257463871aca796542a5",
+      "lineCount": 252,
+      "pinUTC": "2026-10-17T14:44:46.103933+00:00",
+      "semanticRead": false
+    },
+    {
+      "path": "packages/desktop/src/renderer/extensions/MarketDetail.tsx",
+      "bytes": 8445,
+      "sha256": "046138869b49e0c567963f180022e2d53a22c917c6643f43f23ee7829fa0284d",
+      "lineCount": 212,
+      "pinUTC": "2026-10-17T14:44:46.105953+00:00",
+      "semanticRead": false
+    }
+  ]
+}

@@ -1,0 +1,17 @@
+{
+  "items": [
+    {
+      "toolChunk": "e1bb89",
+      "exitCode": 0,
+      "classification": "replacement historical context console display truncated at6500 token cap;10 structured source scope rows visible; all27 retained filename/list contexts not claimed fully read. Stored original full results; exact main scope is selectedR37, not full."
+    },
+    {
+      "toolChunk": "988423",
+      "exitCode": 1,
+      "classification": "rg -l no matching direct MarketList/recommended grouping tests in bounded renderer extensions/main test globs. Negative filename/content locator, not failing test or product process."
+    }
+  ],
+  "productFailures": 0,
+  "metadataProcessFailures": 0,
+  "currentSourceChanges": 0
+}

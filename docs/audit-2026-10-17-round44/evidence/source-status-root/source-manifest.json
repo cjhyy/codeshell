@@ -1,0 +1,196 @@
+{
+  "capturedUTC": "2026-10-17T15:14:38.461313+00:00",
+  "frozenBaseline": "c2db5d9259afcc4c7264d190ab6bb673d49d5fe0",
+  "readSourceBaseline": "07e5791b1fc1ad1fcfd5c55c2913d8a45f1b20cb",
+  "files": [
+    {
+      "path": "packages/core/src/plugins/pluginCatalog.ts",
+      "bytes": 7737,
+      "sha256": "7069ccbf6c1b0f5b479ef156eff2fa67d00d7d27f8f537a34489800fa748d2e7",
+      "lineCount": 228,
+      "beforeDedicatedCurrentSourceDiffRead": true,
+      "firstEverSemanticReadClaim": false,
+      "coverage": "selected-diff-source-status",
+      "diffOldLineRanges": [
+        [
+          1,
+          29
+        ],
+        [
+          96,
+          143
+        ]
+      ],
+      "displayedNewDiffLineRanges": [
+        [
+          1,
+          39
+        ],
+        [
+          106,
+          214
+        ]
+      ],
+      "oldDiffLines": 77,
+      "newDiffLines": 148,
+      "selectedLineRanges": [],
+      "scope": "Focused old-condition source follow-up through first Git diff, not full file review or whole-hunk mechanism certification. Adjacent authority/native/containment code does not acquire a verdict. No repeated source body reading in this metadata packaging."
+    },
+    {
+      "path": "packages/desktop/src/main/plugins-service.ts",
+      "bytes": 11622,
+      "sha256": "10c83843cb0e88f4fc19410a39cb9c75d897184a51703fe68d4bdf36ce86debd",
+      "lineCount": 334,
+      "beforeDedicatedCurrentSourceDiffRead": true,
+      "firstEverSemanticReadClaim": false,
+      "coverage": "selected-diff-source-status",
+      "diffOldLineRanges": [
+        [
+          44,
+          59
+        ],
+        [
+          126,
+          161
+        ],
+        [
+          217,
+          233
+        ],
+        [
+          276,
+          294
+        ]
+      ],
+      "displayedNewDiffLineRanges": [
+        [
+          44,
+          60
+        ],
+        [
+          127,
+          166
+        ],
+        [
+          222,
+          241
+        ],
+        [
+          284,
+          305
+        ]
+      ],
+      "oldDiffLines": 88,
+      "newDiffLines": 99,
+      "selectedLineRanges": [],
+      "scope": "Focused old-condition source follow-up through first Git diff, not full file review or whole-hunk mechanism certification. Adjacent authority/native/containment code does not acquire a verdict. No repeated source body reading in this metadata packaging."
+    },
+    {
+      "path": "packages/desktop/src/preload/types.d.ts",
+      "bytes": 102370,
+      "sha256": "31935ed8a627c1552a4a6867d0811c667e27bf8dfdf7240853eba8198ebde0f0",
+      "lineCount": 2984,
+      "beforeDedicatedCurrentSourceDiffRead": true,
+      "firstEverSemanticReadClaim": false,
+      "coverage": "selected-diff-source-status",
+      "diffOldLineRanges": [
+        [
+          2798,
+          2813
+        ]
+      ],
+      "displayedNewDiffLineRanges": [
+        [
+          2798,
+          2815
+        ]
+      ],
+      "oldDiffLines": 16,
+      "newDiffLines": 18,
+      "selectedLineRanges": [],
+      "scope": "Focused old-condition source follow-up through first Git diff, not full file review or whole-hunk mechanism certification. Adjacent authority/native/containment code does not acquire a verdict. No repeated source body reading in this metadata packaging."
+    },
+    {
+      "path": "packages/desktop/src/renderer/extensions/uninstallTarget.ts",
+      "bytes": 1240,
+      "sha256": "d238384ba133d6d85cbcf0e8870967f4596dade20e910a3feb75ea4161557675",
+      "lineCount": 29,
+      "beforeDedicatedCurrentSourceDiffRead": true,
+      "firstEverSemanticReadClaim": false,
+      "coverage": "selected-diff-source-status",
+      "diffOldLineRanges": [
+        [
+          1,
+          39
+        ]
+      ],
+      "displayedNewDiffLineRanges": [
+        [
+          1,
+          29
+        ]
+      ],
+      "oldDiffLines": 39,
+      "newDiffLines": 29,
+      "selectedLineRanges": [],
+      "scope": "Focused old-condition source follow-up through first Git diff, not full file review or whole-hunk mechanism certification. Adjacent authority/native/containment code does not acquire a verdict. No repeated source body reading in this metadata packaging."
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/McpSection.tsx",
+      "bytes": 75595,
+      "sha256": "228d18e442ddc37752407383cf311050df4409972e78ea7e029ea21665d67334",
+      "lineCount": 1918,
+      "beforeDedicatedCurrentSourceDiffRead": true,
+      "firstEverSemanticReadClaim": false,
+      "coverage": "selected-diff-source-status",
+      "diffOldLineRanges": [
+        [
+          37,
+          52
+        ],
+        [
+          421,
+          458
+        ],
+        [
+          1114,
+          1130
+        ],
+        [
+          1376,
+          1392
+        ]
+      ],
+      "displayedNewDiffLineRanges": [
+        [
+          37,
+          56
+        ],
+        [
+          425,
+          475
+        ],
+        [
+          1131,
+          1148
+        ],
+        [
+          1394,
+          1417
+        ]
+      ],
+      "oldDiffLines": 88,
+      "newDiffLines": 113,
+      "selectedLineRanges": [],
+      "scope": "Focused old-condition source follow-up through first Git diff, not full file review or whole-hunk mechanism certification. Adjacent authority/native/containment code does not acquire a verdict. No repeated source body reading in this metadata packaging."
+    }
+  ],
+  "sourceDiffArtifact": "source-diff-preserved.json",
+  "sourceDiffFirstActualGitRead": 1,
+  "productAttempts": 0,
+  "testRuns": 0,
+  "repeatedSourceBodyReadsByThisPackaging": 0,
+  "sumDiffNewLines": 407,
+  "sumDiffOldLines": 308,
+  "lineCountsMeaning": "Displayed Git-diff old and new side ranges; do not sum as new whole-module semantic coverage. Dedicated initial pins preceded that first current diff read; the causes were already known."
+}

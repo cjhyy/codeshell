@@ -1,0 +1,590 @@
+{
+  "notification": [
+    {
+      "path": "docs/audit-2026-10-16/inventory.json",
+      "locator": "/source_inventory/1807",
+      "valueChars": 56,
+      "offset": 0,
+      "contextStart": 0,
+      "contextEnd": 56,
+      "text": "packages/desktop/src/renderer/ui/NotificationHistory.tsx",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+      "locator": "/files/3193/path",
+      "valueChars": 56,
+      "offset": 0,
+      "contextStart": 0,
+      "contextEnd": 56,
+      "text": "packages/desktop/src/renderer/ui/NotificationHistory.tsx",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round36/evidence/root-review/source-checks.json",
+      "locator": "/checks/23/path",
+      "valueChars": 56,
+      "offset": 0,
+      "contextStart": 0,
+      "contextEnd": 56,
+      "text": "packages/desktop/src/renderer/ui/NotificationHistory.tsx",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round36/evidence/ui-state-frontier/display-pins.json",
+      "locator": "/files/0/path",
+      "valueChars": 56,
+      "offset": 0,
+      "contextStart": 0,
+      "contextEnd": 56,
+      "text": "packages/desktop/src/renderer/ui/NotificationHistory.tsx",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round36/evidence/ui-state-frontier/history-supplement.json",
+      "locator": "/hits/toast-contract/4/context",
+      "valueChars": 56,
+      "offset": 0,
+      "contextStart": 0,
+      "contextEnd": 56,
+      "text": "packages/desktop/src/renderer/ui/NotificationHistory.tsx",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round36/evidence/ui-state-frontier/history-supplement.json",
+      "locator": "/hits/toast-contract/11/context",
+      "valueChars": 56,
+      "offset": 0,
+      "contextStart": 0,
+      "contextEnd": 56,
+      "text": "packages/desktop/src/renderer/ui/NotificationHistory.tsx",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round36/evidence/ui-state-frontier/source-manifest.json",
+      "locator": "/files/7/path",
+      "valueChars": 56,
+      "offset": 0,
+      "contextStart": 0,
+      "contextEnd": 56,
+      "text": "packages/desktop/src/renderer/ui/NotificationHistory.tsx",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round36/evidence/ui-state-frontier/source-manifest.json",
+      "locator": "/sourcePinsFinish/11/path",
+      "valueChars": 56,
+      "offset": 0,
+      "contextStart": 0,
+      "contextEnd": 56,
+      "text": "packages/desktop/src/renderer/ui/NotificationHistory.tsx",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round36/source-manifest.json",
+      "locator": "/files/20/path",
+      "valueChars": 56,
+      "offset": 0,
+      "contextStart": 0,
+      "contextEnd": 56,
+      "text": "packages/desktop/src/renderer/ui/NotificationHistory.tsx",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round36/source-manifest.json",
+      "locator": "/workerSourceChecks/21/path",
+      "valueChars": 56,
+      "offset": 0,
+      "contextStart": 0,
+      "contextEnd": 56,
+      "text": "packages/desktop/src/renderer/ui/NotificationHistory.tsx",
+      "wholeValueIncluded": true
+    }
+  ],
+  "market": [
+    {
+      "path": "docs/architecture/11-feature-inventory.md",
+      "locator": "markdown-text",
+      "valueChars": 41296,
+      "offset": 21240,
+      "contextStart": 20840,
+      "contextEnd": 22140,
+      "text": "c/renderer/extensions/SkillsTab.tsx:31`，`packages/desktop/src/renderer/extensions/SkillDetailModal.tsx:15` | Extensions -> Skills |\n| **MCP tab** | Extensions 管理页内直接复用 McpSection 管理 MCP server | `packages/desktop/src/renderer/extensions/ManagePage.tsx:119`，`packages/desktop/src/renderer/extensions/ManagePage.tsx:169` | Extensions -> MCP |\n| **市场 tab + 安装任务面板** | 浏览市场插件、安装、查看后台 install jobs 并重试 | `packages/desktop/src/renderer/extensions/MarketList.tsx:84`，`packages/desktop/src/renderer/extensions/MarketDetail.tsx:23`，`packages/desktop/src/renderer/extensions/PluginInstallJobsPanel.tsx:89` | Extensions -> Market |\n| **凭证页（Cookie/Token/Link）** | 三 tab 管理 cookie 登录态、permission token 和业务 link | `packages/desktop/src/renderer/credentials/CredentialsPage.tsx:11` | 设置菜单 → 凭证 |\n| **Cookie 登录态桥接** | 登录 URL、列域名、预览 cookie、捕获/恢复浏览器 cookie | `packages/desktop/src/renderer/credentials/CookieTab.tsx:55` | Credentials -> Cookie |\n| **Permission Token / Link** | 新增、保存、删除 token/link 凭证 | `packages/desktop/src/renderer/credentials/TokenTab.tsx:17`，`packages/desktop/src/renderer/credentials/LinkTab.tsx:16` | Credentials -> Token 或 Link |\n\n### 全屏视图（自动化/运行/审批/会话/日志）\n\n| 功能 | 做什么 | 入口 | 怎么用 |\n|------|--------|------|--------|\n| **自动化视图** | 列定时任务，新建、编辑、启停、立即运行、取消和查看上次运行 | `packages/desktop/src/renderer/a",
+      "wholeValueIncluded": false
+    },
+    {
+      "path": "docs/audit-2026-10-16/inventory.json",
+      "locator": "/source_inventory/1487",
+      "valueChars": 55,
+      "offset": 0,
+      "contextStart": 0,
+      "contextEnd": 55,
+      "text": "packages/desktop/src/renderer/extensions/MarketList.tsx",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+      "locator": "/files/2684/path",
+      "valueChars": 55,
+      "offset": 0,
+      "contextStart": 0,
+      "contextEnd": 55,
+      "text": "packages/desktop/src/renderer/extensions/MarketList.tsx",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round33/evidence/plugin-input-review/history.json",
+      "locator": "/hits/source-normalization/68/context",
+      "valueChars": 867,
+      "offset": 151,
+      "contextStart": 0,
+      "contextEnd": 867,
+      "text": "add`→`addMarketplace(name, source)`、`marketplace:remove`→`removeMarketplace(name)`、`plugins:install`→`installPlugin(pluginName, marketplaceName)`。\n- **MarketList.tsx**：列已添加市场（名称 + pluginCount + 来源）+「添加市场」入口（输入 git/github 源，调 `marketplace:add`）。\n- **MarketDetail.tsx**：`marketplace:load` 列该市场插件；每项「安装」按钮（`plugins:install`），安装中 disabled + \"安装中…\"，完成刷新插件 tab 计数；已安装项标记。\n- **接入 ManagePage**：加第四个 tab「市场」。\n- 错误/重试/空态同 P1 约定。\n\n---\n\n# Phase 3 — 发现首页（概要）\n\n- **DiscoverHome.tsx**：居中大标题「让 codeshell 按你的方式工作」+ 搜索框 + 「已安装概览」（插件 N · 技能 N · MCP N，点击跳对应 tab）。**不做** banner、不做 Featured 网格。\n- 搜索：输入后切到管理页并把关键词作为 query 下传跨 tab 过滤。\n- `ExtensionsPage` 加首页/管理页切换。\n- `featured.json`（仓库内置精选源）仅作为「市场」tab 的推荐入口，轻量、可后置。\n- 收尾：移除过渡保留的旧 `mcp`、`plugins-skills` 入口。\n\n---\n\n## Self-Review\n\n- **Spec 覆盖**：管理页分类 tab（Task 7）✓；插件开关+卸载（Task 1/2/3/6）✓；技能开关+点开 modal（Task 4/5）✓；MCP 完整并入（Task 7 挂 McpSection）✓",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round37/evidence/aggregate-review/checks.json",
+      "locator": "/authorSourceManifestChecks/0/rows/23/path",
+      "valueChars": 55,
+      "offset": 0,
+      "contextStart": 0,
+      "contextEnd": 55,
+      "text": "packages/desktop/src/renderer/extensions/MarketList.tsx",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round37/evidence/aggregate-review/checks.json",
+      "locator": "/authorSourceManifestChecks/0/rows/23/dedicatedInitialPin/path",
+      "valueChars": 55,
+      "offset": 0,
+      "contextStart": 0,
+      "contextEnd": 55,
+      "text": "packages/desktop/src/renderer/extensions/MarketList.tsx",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round37/evidence/marketplace-local-frontier/finish-checks.json",
+      "locator": "/sourceFiles/23/path",
+      "valueChars": 55,
+      "offset": 0,
+      "contextStart": 0,
+      "contextEnd": 55,
+      "text": "packages/desktop/src/renderer/extensions/MarketList.tsx",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round37/evidence/marketplace-local-frontier/market-list-pin.json",
+      "locator": "/files/0/path",
+      "valueChars": 55,
+      "offset": 0,
+      "contextStart": 0,
+      "contextEnd": 55,
+      "text": "packages/desktop/src/renderer/extensions/MarketList.tsx",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round37/evidence/marketplace-local-frontier/source-manifest.json",
+      "locator": "/files/23/path",
+      "valueChars": 55,
+      "offset": 0,
+      "contextStart": 0,
+      "contextEnd": 55,
+      "text": "packages/desktop/src/renderer/extensions/MarketList.tsx",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round37/evidence/marketplace-local-frontier/source-manifest.json",
+      "locator": "/files/23/prepPinRow/path",
+      "valueChars": 55,
+      "offset": 0,
+      "contextStart": 0,
+      "contextEnd": 55,
+      "text": "packages/desktop/src/renderer/extensions/MarketList.tsx",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round37/evidence/root-review/source-checks.json",
+      "locator": "/checks/23/path",
+      "valueChars": 55,
+      "offset": 0,
+      "contextStart": 0,
+      "contextEnd": 55,
+      "text": "packages/desktop/src/renderer/extensions/MarketList.tsx",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round37/source-manifest.json",
+      "locator": "/files/21/path",
+      "valueChars": 55,
+      "offset": 0,
+      "contextStart": 0,
+      "contextEnd": 55,
+      "text": "packages/desktop/src/renderer/extensions/MarketList.tsx",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round37/source-manifest.json",
+      "locator": "/workerSourceChecks/19/path",
+      "valueChars": 55,
+      "offset": 0,
+      "contextStart": 0,
+      "contextEnd": 55,
+      "text": "packages/desktop/src/renderer/extensions/MarketList.tsx",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round38/evidence/root-history.json",
+      "locator": "/hits/sources/2/context",
+      "valueChars": 730,
+      "offset": 392,
+      "contextStart": 0,
+      "contextEnd": 730,
+      "text": "er/extensions/SkillsTab.tsx:31`，`packages/desktop/src/renderer/extensions/SkillDetailModal.tsx:15` | Extensions -> Skills |\n| **MCP tab** | Extensions 管理页内直接复用 McpSection 管理 MCP server | `packages/desktop/src/renderer/extensions/ManagePage.tsx:119`，`packages/desktop/src/renderer/extensions/ManagePage.tsx:169` | Extensions -> MCP |\n| **市场 tab + 安装任务面板** | 浏览市场插件、安装、查看后台 install jobs 并重试 | `packages/desktop/src/renderer/extensions/MarketList.tsx:84`，`packages/desktop/src/renderer/extensions/MarketDetail.tsx:23`，`packages/desktop/src/renderer/extensions/PluginInstallJobsPanel.tsx:89` | Extensions -> Market |\n| **凭证页（Cookie/Token/Link）** | 三 tab 管理 cookie 登录态、permission token 和业务 link | `packages/desktop/src/renderer/credent",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round39/evidence/mcp-rename-fields-frontier/matching-history-objects.first.json",
+      "locator": "/objects/44/object/context",
+      "valueChars": 867,
+      "offset": 151,
+      "contextStart": 0,
+      "contextEnd": 867,
+      "text": "add`→`addMarketplace(name, source)`、`marketplace:remove`→`removeMarketplace(name)`、`plugins:install`→`installPlugin(pluginName, marketplaceName)`。\n- **MarketList.tsx**：列已添加市场（名称 + pluginCount + 来源）+「添加市场」入口（输入 git/github 源，调 `marketplace:add`）。\n- **MarketDetail.tsx**：`marketplace:load` 列该市场插件；每项「安装」按钮（`plugins:install`），安装中 disabled + \"安装中…\"，完成刷新插件 tab 计数；已安装项标记。\n- **接入 ManagePage**：加第四个 tab「市场」。\n- 错误/重试/空态同 P1 约定。\n\n---\n\n# Phase 3 — 发现首页（概要）\n\n- **DiscoverHome.tsx**：居中大标题「让 codeshell 按你的方式工作」+ 搜索框 + 「已安装概览」（插件 N · 技能 N · MCP N，点击跳对应 tab）。**不做** banner、不做 Featured 网格。\n- 搜索：输入后切到管理页并把关键词作为 query 下传跨 tab 过滤。\n- `ExtensionsPage` 加首页/管理页切换。\n- `featured.json`（仓库内置精选源）仅作为「市场」tab 的推荐入口，轻量、可后置。\n- 收尾：移除过渡保留的旧 `mcp`、`plugins-skills` 入口。\n\n---\n\n## Self-Review\n\n- **Spec 覆盖**：管理页分类 tab（Task 7）✓；插件开关+卸载（Task 1/2/3/6）✓；技能开关+点开 modal（Task 4/5）✓；MCP 完整并入（Task 7 挂 McpSection）✓",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/superpowers/plans/2026-05-30-codex-style-extensions-ui.md",
+      "locator": "markdown-text",
+      "valueChars": 24745,
+      "offset": 22300,
+      "contextStart": 21900,
+      "contextEnd": 23200,
+      "text": "e-column rows + modal\"\n```\n\n---\n\n# Phase 2 — 市场 tab（概要，P1 完成后细化为完整任务）\n\nP1 验证通过后，把以下展开为与上面同粒度的 TDD 任务：\n\n- **新 IPC**（main/index.ts + preload，模式同 Task 2/3）：`marketplace:list`→`listMarketplaces()`、`marketplace:load`→`loadMarketplace(name)`、`marketplace:add`→`addMarketplace(name, source)`、`marketplace:remove`→`removeMarketplace(name)`、`plugins:install`→`installPlugin(pluginName, marketplaceName)`。\n- **MarketList.tsx**：列已添加市场（名称 + pluginCount + 来源）+「添加市场」入口（输入 git/github 源，调 `marketplace:add`）。\n- **MarketDetail.tsx**：`marketplace:load` 列该市场插件；每项「安装」按钮（`plugins:install`），安装中 disabled + \"安装中…\"，完成刷新插件 tab 计数；已安装项标记。\n- **接入 ManagePage**：加第四个 tab「市场」。\n- 错误/重试/空态同 P1 约定。\n\n---\n\n# Phase 3 — 发现首页（概要）\n\n- **DiscoverHome.tsx**：居中大标题「让 codeshell 按你的方式工作」+ 搜索框 + 「已安装概览」（插件 N · 技能 N · MCP N，点击跳对应 tab）。**不做** banner、不做 Featured 网格。\n- 搜索：输入后切到管理页并把关键词作为 query 下传跨 tab 过滤。\n- `ExtensionsPage` 加首页/管理页切换。\n- `featured.json`（仓库内置精选源）仅作为「市场」tab 的推荐入口，轻量、可后置。\n- 收尾：移除过渡保留的旧 `mcp`、`plugins-skills` 入口。\n\n---\n\n## Self-Review\n\n- **Spec 覆盖**：管理页分类 tab（Task 7）✓；插件开关+卸载（Task 1/2/3/6）✓；技能开关+点开 modal（Task 4/5）✓；MCP 完整并入（Task 7 挂 McpSection）✓；市场两层（P2）✓；发现首页极简（P3）✓；体验缺口 spinner/空态/重试/确认（Task 5/6/9 内置）✓。\n- **占位符**：P1 各步均有完整代码/命令；P2/P3 为明确标注的概要（待 P1 后细化），非 P1 任务内的占位。\n- **类型一致**：`resolveUninstallTarget`（Task1）↔ PluginsTab 调用（T",
+      "wholeValueIncluded": false
+    }
+  ],
+  "notification-sha": [
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+      "locator": "/files/3193/sha256",
+      "valueChars": 64,
+      "offset": 0,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "6a1fb4ae386e46fe4cc598111be6e96a28f9608a46a1cd90de1d4af57fdb434d",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round36/evidence/root-review/source-checks.json",
+      "locator": "/checks/23/sha256",
+      "valueChars": 64,
+      "offset": 0,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "6a1fb4ae386e46fe4cc598111be6e96a28f9608a46a1cd90de1d4af57fdb434d",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round36/evidence/ui-state-frontier/display-pins.json",
+      "locator": "/files/0/sha256",
+      "valueChars": 64,
+      "offset": 0,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "6a1fb4ae386e46fe4cc598111be6e96a28f9608a46a1cd90de1d4af57fdb434d",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round36/evidence/ui-state-frontier/display-pins.json",
+      "locator": "/files/0/initialSemanticReadSha256",
+      "valueChars": 64,
+      "offset": 0,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "6a1fb4ae386e46fe4cc598111be6e96a28f9608a46a1cd90de1d4af57fdb434d",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round36/evidence/ui-state-frontier/source-manifest.json",
+      "locator": "/files/7/sha256",
+      "valueChars": 64,
+      "offset": 0,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "6a1fb4ae386e46fe4cc598111be6e96a28f9608a46a1cd90de1d4af57fdb434d",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round36/evidence/ui-state-frontier/source-manifest.json",
+      "locator": "/files/7/initialSha256",
+      "valueChars": 64,
+      "offset": 0,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "6a1fb4ae386e46fe4cc598111be6e96a28f9608a46a1cd90de1d4af57fdb434d",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round36/evidence/ui-state-frontier/source-manifest.json",
+      "locator": "/files/7/finishSha256",
+      "valueChars": 64,
+      "offset": 0,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "6a1fb4ae386e46fe4cc598111be6e96a28f9608a46a1cd90de1d4af57fdb434d",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round36/evidence/ui-state-frontier/source-manifest.json",
+      "locator": "/files/7/initialSemanticReadSha256",
+      "valueChars": 64,
+      "offset": 0,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "6a1fb4ae386e46fe4cc598111be6e96a28f9608a46a1cd90de1d4af57fdb434d",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round36/evidence/ui-state-frontier/source-manifest.json",
+      "locator": "/sourcePinsFinish/11/initialSha256",
+      "valueChars": 64,
+      "offset": 0,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "6a1fb4ae386e46fe4cc598111be6e96a28f9608a46a1cd90de1d4af57fdb434d",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round36/evidence/ui-state-frontier/source-manifest.json",
+      "locator": "/sourcePinsFinish/11/finishSha256",
+      "valueChars": 64,
+      "offset": 0,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "6a1fb4ae386e46fe4cc598111be6e96a28f9608a46a1cd90de1d4af57fdb434d",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round36/source-manifest.json",
+      "locator": "/files/20/sha256",
+      "valueChars": 64,
+      "offset": 0,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "6a1fb4ae386e46fe4cc598111be6e96a28f9608a46a1cd90de1d4af57fdb434d",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round36/source-manifest.json",
+      "locator": "/files/20/currentSha256",
+      "valueChars": 64,
+      "offset": 0,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "6a1fb4ae386e46fe4cc598111be6e96a28f9608a46a1cd90de1d4af57fdb434d",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round36/source-manifest.json",
+      "locator": "/files/20/mainSha256",
+      "valueChars": 64,
+      "offset": 0,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "6a1fb4ae386e46fe4cc598111be6e96a28f9608a46a1cd90de1d4af57fdb434d",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round36/source-manifest.json",
+      "locator": "/workerSourceChecks/21/sha256",
+      "valueChars": 64,
+      "offset": 0,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "6a1fb4ae386e46fe4cc598111be6e96a28f9608a46a1cd90de1d4af57fdb434d",
+      "wholeValueIncluded": true
+    }
+  ],
+  "market-sha": [
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+      "locator": "/files/2684/sha256",
+      "valueChars": 64,
+      "offset": 0,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "acdb1ab1fddfa75f19301042559a281eae2925d9a53ec34abc5e2640e07df9b9",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round37/evidence/aggregate-review/checks.json",
+      "locator": "/authorSourceManifestChecks/0/rows/23/sha256",
+      "valueChars": 64,
+      "offset": 0,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "acdb1ab1fddfa75f19301042559a281eae2925d9a53ec34abc5e2640e07df9b9",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round37/evidence/aggregate-review/checks.json",
+      "locator": "/authorSourceManifestChecks/0/rows/23/initialSemanticReadSha256Claim",
+      "valueChars": 64,
+      "offset": 0,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "acdb1ab1fddfa75f19301042559a281eae2925d9a53ec34abc5e2640e07df9b9",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round37/evidence/aggregate-review/checks.json",
+      "locator": "/authorSourceManifestChecks/0/rows/23/dedicatedInitialPin/sha256",
+      "valueChars": 64,
+      "offset": 0,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "acdb1ab1fddfa75f19301042559a281eae2925d9a53ec34abc5e2640e07df9b9",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round37/evidence/aggregate-review/checks.json",
+      "locator": "/authorSourceManifestChecks/0/rows/23/dedicatedInitialPin/initialSemanticReadSha256",
+      "valueChars": 64,
+      "offset": 0,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "acdb1ab1fddfa75f19301042559a281eae2925d9a53ec34abc5e2640e07df9b9",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round37/evidence/marketplace-local-frontier/finish-checks.json",
+      "locator": "/sourceFiles/23/sha256",
+      "valueChars": 64,
+      "offset": 0,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "acdb1ab1fddfa75f19301042559a281eae2925d9a53ec34abc5e2640e07df9b9",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round37/evidence/marketplace-local-frontier/market-list-pin.json",
+      "locator": "/files/0/sha256",
+      "valueChars": 64,
+      "offset": 0,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "acdb1ab1fddfa75f19301042559a281eae2925d9a53ec34abc5e2640e07df9b9",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round37/evidence/marketplace-local-frontier/market-list-pin.json",
+      "locator": "/files/0/initialSemanticReadSha256",
+      "valueChars": 64,
+      "offset": 0,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "acdb1ab1fddfa75f19301042559a281eae2925d9a53ec34abc5e2640e07df9b9",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round37/evidence/marketplace-local-frontier/source-manifest.json",
+      "locator": "/files/23/sha256",
+      "valueChars": 64,
+      "offset": 0,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "acdb1ab1fddfa75f19301042559a281eae2925d9a53ec34abc5e2640e07df9b9",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round37/evidence/marketplace-local-frontier/source-manifest.json",
+      "locator": "/files/23/initialSemanticReadSha256",
+      "valueChars": 64,
+      "offset": 0,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "acdb1ab1fddfa75f19301042559a281eae2925d9a53ec34abc5e2640e07df9b9",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round37/evidence/marketplace-local-frontier/source-manifest.json",
+      "locator": "/files/23/endingSha256",
+      "valueChars": 64,
+      "offset": 0,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "acdb1ab1fddfa75f19301042559a281eae2925d9a53ec34abc5e2640e07df9b9",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round37/evidence/marketplace-local-frontier/source-manifest.json",
+      "locator": "/files/23/prepPinRow/sha256",
+      "valueChars": 64,
+      "offset": 0,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "acdb1ab1fddfa75f19301042559a281eae2925d9a53ec34abc5e2640e07df9b9",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round37/evidence/marketplace-local-frontier/source-manifest.json",
+      "locator": "/files/23/prepPinRow/initialSemanticReadSha256",
+      "valueChars": 64,
+      "offset": 0,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "acdb1ab1fddfa75f19301042559a281eae2925d9a53ec34abc5e2640e07df9b9",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round37/evidence/root-review/source-checks.json",
+      "locator": "/checks/23/sha256",
+      "valueChars": 64,
+      "offset": 0,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "acdb1ab1fddfa75f19301042559a281eae2925d9a53ec34abc5e2640e07df9b9",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round37/source-manifest.json",
+      "locator": "/files/21/sha256",
+      "valueChars": 64,
+      "offset": 0,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "acdb1ab1fddfa75f19301042559a281eae2925d9a53ec34abc5e2640e07df9b9",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round37/source-manifest.json",
+      "locator": "/files/21/currentSha256",
+      "valueChars": 64,
+      "offset": 0,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "acdb1ab1fddfa75f19301042559a281eae2925d9a53ec34abc5e2640e07df9b9",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round37/source-manifest.json",
+      "locator": "/files/21/mainSha256",
+      "valueChars": 64,
+      "offset": 0,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "acdb1ab1fddfa75f19301042559a281eae2925d9a53ec34abc5e2640e07df9b9",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round37/source-manifest.json",
+      "locator": "/workerSourceChecks/19/sha256",
+      "valueChars": 64,
+      "offset": 0,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "acdb1ab1fddfa75f19301042559a281eae2925d9a53ec34abc5e2640e07df9b9",
+      "wholeValueIncluded": true
+    }
+  ]
+}

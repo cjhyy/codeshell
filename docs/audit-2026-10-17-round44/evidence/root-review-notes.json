@@ -1,0 +1,11 @@
+{
+  "scope": "Formalization of frozen ordinary-market data, historical issue source-stage status and conservative coverage metadata",
+  "newSourceBodyReadsByThisFormalization": 0,
+  "priorRootDiffRead": 1,
+  "newFormal": 0,
+  "newCandidates": 0,
+  "newRelated": 0,
+  "oldIdsSourceAddressedRuntimeUnverified": 3,
+  "largeClaimsSemanticallyRead": false,
+  "goalStillActive": true
+}

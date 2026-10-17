@@ -1,0 +1,39 @@
+{
+  "oldIdsOnly": true,
+  "updates": [
+    {
+      "id": "MARKETPLACE-R37-01",
+      "sourceDisposition": "source-addressed",
+      "atSourceBaseline": "07e5791b1fc1ad1fcfd5c55c2913d8a45f1b20cb",
+      "runtimeRetested": false,
+      "originalClassificationUnchanged": true,
+      "newFinding": false,
+      "reason": "Actual installation layout now supplies installationKind through catalog, summary DTO and resolver; market name local alone no longer selects direct-local uninstall.",
+      "limit": "Only the prior reserved-name routing condition. No install/uninstall, filesystem containment, native or custody experiment."
+    },
+    {
+      "id": "MCP-R38-01",
+      "sourceDisposition": "source-addressed",
+      "atSourceBaseline": "07e5791b1fc1ad1fcfd5c55c2913d8a45f1b20cb",
+      "runtimeRetested": false,
+      "originalClassificationUnchanged": true,
+      "newFinding": false,
+      "reason": "When displayed args equal initialArgsText, saving copies the original structured args array; this preserves unchanged-form argument boundaries.",
+      "limit": "Only reopening and unchanged args text saving. Edited text still follows the existing parser; no general grammar or lifecycle guarantee."
+    },
+    {
+      "id": "MCP-R39-01",
+      "sourceDisposition": "source-addressed",
+      "atSourceBaseline": "07e5791b1fc1ad1fcfd5c55c2913d8a45f1b20cb",
+      "runtimeRetested": false,
+      "originalClassificationUnchanged": true,
+      "newFinding": false,
+      "reason": "Rename explicitly carries connectTimeoutMs, connectRetries and inlineImages, with undefined checks preserving zero/false, into the renamed record.",
+      "limit": "Only the three supported prior non-editor fields. No arbitrary unknown fields or all rename races guarantee."
+    }
+  ],
+  "newFormal": 0,
+  "newCandidates": 0,
+  "newRelated": 0,
+  "runtimeRuns": 0
+}

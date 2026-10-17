@@ -1,0 +1,42 @@
+{
+  "capturedUTC": "2026-10-17T15:11:40.371975+00:00",
+  "count": 7,
+  "links": [
+    {
+      "link": "current-inventory.json",
+      "inside": true,
+      "exists": true
+    },
+    {
+      "link": "summary.json",
+      "inside": true,
+      "exists": true
+    },
+    {
+      "link": "comparison.json",
+      "inside": true,
+      "exists": true
+    },
+    {
+      "link": "input-pins.json",
+      "inside": true,
+      "exists": true
+    },
+    {
+      "link": "checks.json",
+      "inside": true,
+      "exists": true
+    },
+    {
+      "link": "source-manifest.json",
+      "inside": true,
+      "exists": true
+    },
+    {
+      "link": "artifact-receipt.json",
+      "inside": true,
+      "exists": true
+    }
+  ],
+  "outsideRelativeAliasesNeeded": false
+}

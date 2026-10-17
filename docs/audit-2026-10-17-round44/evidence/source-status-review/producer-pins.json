@@ -1,0 +1,29 @@
+{
+  "purpose": "before ordinary normal installation record/path layout text only; no filesystem custody or authorization review",
+  "files": [
+    {
+      "path": "packages/core/src/plugins/pluginInstaller.ts",
+      "bytes": 19962,
+      "sha256": "263ce32aaee6b062513389f93cf29c5f3b5779a160da3979f036fb38b176a30a",
+      "lines": 487,
+      "pinUTC": "2026-10-17T14:59:13.569615+00:00",
+      "semanticRead": false
+    },
+    {
+      "path": "packages/core/src/plugins/installer/install.ts",
+      "bytes": 3010,
+      "sha256": "1773b85309de88bc25da1f696fa7937c3af7a0e10af732fcc6fb59ca1fbf04aa",
+      "lines": 74,
+      "pinUTC": "2026-10-17T14:59:13.571862+00:00",
+      "semanticRead": false
+    },
+    {
+      "path": "packages/core/src/plugins/installer/paths.ts",
+      "bytes": 994,
+      "sha256": "323f660b827a86eff5ffaa0b87d60e04b18ae907406ac8d74f123e96239fbbb2",
+      "lines": 30,
+      "pinUTC": "2026-10-17T14:59:13.572690+00:00",
+      "semanticRead": false
+    }
+  ]
+}

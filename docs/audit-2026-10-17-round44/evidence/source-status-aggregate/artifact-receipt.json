@@ -1,0 +1,25 @@
+{
+  "frozenUTC": "2026-10-17T15:10:46.314082+00:00",
+  "scope": "Round50 source-stage follow-up metadata review only",
+  "files": [
+    {
+      "path": "checks.json",
+      "bytes": 15595,
+      "sha256": "eacce273b2452065b7529822708bb79c092831a005e81ef019783e7c6d21ca85"
+    },
+    {
+      "path": "review.md",
+      "bytes": 1503,
+      "sha256": "1835dbf329ea67e66f76a0de4b5358118a196e17ab1fa8d74f13f4312ce1afe8"
+    }
+  ],
+  "selfExcluded": true,
+  "totalFilesIncludingSelf": 3,
+  "inputFiles": 10,
+  "inputReceiptRows": 9,
+  "inputLinks": 9,
+  "newSourceBytes": 0,
+  "newSourceSemanticLines": 0,
+  "productRuns": 0,
+  "gitCommands": 0
+}

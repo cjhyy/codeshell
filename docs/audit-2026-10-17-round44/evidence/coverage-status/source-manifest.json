@@ -1,0 +1,18 @@
+{
+  "capturedUTC": "2026-10-17T15:11:40.368497+00:00",
+  "scope": "Metadata-only status snapshot, not a new product review. No semantic source rows.",
+  "files": [],
+  "semanticLines": 0,
+  "hashOnlyInventory": {
+    "path": "current-inventory.json",
+    "bytes": 1643022,
+    "sha256": "d1735b9e71d40ff96ad99d122d6d7fd53f2b27e6dd643a31f280c4e5a33b07dc",
+    "files": 4643,
+    "root": "/Users/admin/Documents/个人学习/代码学习/codeshell"
+  },
+  "inputInventory": "input-pins.json",
+  "historyRescanned": false,
+  "sourceBodyReads": 0,
+  "productAttempts": 0,
+  "gitCommands": 0
+}

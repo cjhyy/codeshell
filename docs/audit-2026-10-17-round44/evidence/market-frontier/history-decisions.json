@@ -1,0 +1,102 @@
+{
+  "capturedUTC": "2026-10-17T14:44:59.789940+00:00",
+  "formal": 0,
+  "candidates": 0,
+  "related": 0,
+  "excludedPriorScopeFlows": 1,
+  "exactOldBugsNewlyCounted": 0,
+  "initialGate": {
+    "path": "packages/desktop/src/renderer/ui/NotificationHistory.tsx",
+    "sameShaPriorSelected": [
+      [
+        1,
+        108
+      ],
+      [
+        150,
+        193
+      ]
+    ],
+    "priorManifest": "docs/audit-2026-10-17-round36/evidence/ui-state-frontier/source-manifest.json",
+    "priorReadLines": 152,
+    "reason": "R36 report already addresses same ordinary filtering/markRead/clear history DTO path. Deferred before product body, not an asserted whole-file full claim. No-rowR28 was not used as never-read."
+  },
+  "replacementGate": {
+    "path": "packages/desktop/src/renderer/extensions/MarketList.tsx",
+    "sameShaPriorSelected": [
+      [
+        175,
+        194
+      ],
+      [
+        308,
+        330
+      ]
+    ],
+    "priorManifest": "docs/audit-2026-10-17-round37/evidence/marketplace-local-frontier/source-manifest.json",
+    "structuredSamePathShaRows": 10,
+    "explicitFullRowFound": false,
+    "noNeverReadClaim": true,
+    "priorCause": "R37 literal marketplace-local namespace path not reopened. Selected ordinary list grouping is a distinct limited source question."
+  },
+  "freshHistory": {
+    "included": 3869,
+    "md": 1391,
+    "json": 2478,
+    "strings": 1255894,
+    "scalars": 1896731,
+    "parseErrors": [],
+    "frozenRound42Included": true,
+    "excludedRoundRules": [
+      43,
+      44,
+      45,
+      46,
+      47,
+      48
+    ],
+    "actualExcluded": 0,
+    "allMarkdownAndRecursiveScalarValues": true,
+    "keysNotValues": true,
+    "initialHitTotals": {
+      "source_path": 10,
+      "source_filename": 14,
+      "source_sha": 14,
+      "notification_history": 21
+    },
+    "replacementHitTotals": {
+      "source_path": 13,
+      "source_filename": 25,
+      "source_sha": 18,
+      "market_list": 2
+    },
+    "capPerGroup": 160,
+    "allGroupsBelowCap": true,
+    "initialUniqueContextsFullyDisplayed": 49,
+    "replacementStructuredScopeRowsRead": 10,
+    "replacementAllRetainedWindowsRead": false,
+    "semanticExhaustion": false
+  },
+  "judgments": [
+    {
+      "lead": "Market query ignored",
+      "verdict": "negative",
+      "counterevidence": "ManagePage177 hides search UI whenmarket/mcp;248 intentionally does not pass query. No ordinary market query producer exposed in this selected route."
+    },
+    {
+      "lead": "Recommended existing custom alias remains addable due name-only producer marker",
+      "verdict": "negative",
+      "counterevidence": "marketplace-service245–255 checks name OR source, sets added fromactual match; all list fallback returns284–312 decorate items. UI uses current markets membership and same-source grouping; no static counterexample established under supported normal DTOs."
+    },
+    {
+      "lead": "Custom rows lost by recommendation partition",
+      "verdict": "negative",
+      "counterevidence": "MarketList278–283 partitions all markets using predicate and its negation. 498–547 renders each partition once; selected route258–265 supplies exact selected display name to MarketDetail. No pagination cap or query truncation was introduced here."
+    }
+  ],
+  "limits": [
+    "No claim all marketplace input equivalences, URL repository semantics or case-sensitive Git server behavior are correct.",
+    "No install/add/remove/refresh/cache/storage/network service operations invoked or independently validated.",
+    "No external mutation/timing fixture or malformed DTO generated."
+  ]
+}

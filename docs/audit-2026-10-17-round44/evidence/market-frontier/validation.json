@@ -1,0 +1,39 @@
+{
+  "capturedUTC": "2026-10-17T14:45:57.152794+00:00",
+  "mode": "static-selected-source-and-history",
+  "classification": {
+    "formal": 0,
+    "candidates": 0,
+    "related": 0
+  },
+  "currentProductSemanticLines": 553,
+  "currentTestSemanticLines": 0,
+  "displayedSourceLines": 842,
+  "sourceChecks": 12,
+  "sourceMatch": true,
+  "historyFiles": 3869,
+  "productFunctions": 0,
+  "imports": 0,
+  "languageFixtures": 0,
+  "tests": 0,
+  "uiReactBrowser": 0,
+  "native": 0,
+  "identityPermissions": 0,
+  "models": 0,
+  "businessNetwork": 0,
+  "web": 0,
+  "realStates": 0,
+  "installRemoveAdd": 0,
+  "gitCommands": 0,
+  "repositoryWrites": 0,
+  "sourceWrites": 0,
+  "productFailures": 0,
+  "metadataProcessFailures": 0,
+  "metadataConsoleTruncations": 1,
+  "negativeRgLocatorExit1": 1,
+  "limitations": [
+    "No runtime pass, no installed-host/network/cache/real plugin behavior observation.",
+    "Existing namespace/local/install/parse-input causes and all old failed dynamic directions left closed.",
+    "5 selected sources, not whole MarketList/ExtensionsPage correctness. No malformed fake DTO or external mutation timing generated."
+  ]
+}

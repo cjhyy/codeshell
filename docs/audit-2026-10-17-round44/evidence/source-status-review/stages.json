@@ -1,0 +1,44 @@
+{
+  "createdUTC": "2026-10-17T15:01:20.973598+00:00",
+  "newFormal": 0,
+  "newCandidates": 0,
+  "newRelated": 0,
+  "originalClassificationsChanged": false,
+  "originalArtifactsChanged": false,
+  "fixImplementationByReviewer": false,
+  "entries": [
+    {
+      "id": "MARKETPLACE-R37-01",
+      "stage": "source-addressed at Root-reported07e / runtime not revalidated",
+      "originalCondition": "Ordinary installed marketplace literally named local was inferred as direct-local by namespace; no direct directory was assumed.",
+      "sourceReason": "Normal marketplace writer composes plugins/cache/marketplace/plugin/version and installs that cacheDir; direct writer uses plugins/name with local record tag. Catalog supplies installationKind, summary/preload preserve it, resolver routes marketplace-kind local name to marketplace, direct-kind to local; actual PluginsTab uses resolver result.",
+      "limits": "Assumes ordinary accepted record/layout; no custody/path validation/manifest binding certification or actual uninstall."
+    },
+    {
+      "id": "MCP-R38-01",
+      "stage": "source-addressed at Root-reported07e / runtime not revalidated",
+      "originalCondition": "Full stdio form save without changing Args text had joined and reparsed a nonempty quoted argument array.",
+      "sourceReason": "Args text exactly equal to initialArgsText now uses initial?.args?.slice(); only different text reaches existing splitArgs path. Actual full editor callback reaches saveEdit/patch helper.",
+      "limits": "Only unchanged/equal displayed text original condition, not full parser grammar, arbitrary edits, semantic intent, empty/missing variants or actual MCP command execution."
+    },
+    {
+      "id": "MCP-R39-01",
+      "stage": "source-addressed at Root-reported07e / runtime not revalidated",
+      "originalCondition": "Renaming full settings server lost3supported options that form does not author.",
+      "sourceReason": "saveEdit obtains previous by originalName and conditionally transfers exactly connectTimeoutMs/connectRetries/inlineImages using !==undefined. Rename record spreads preserved keys before explicit editor patch and nulls old key; 0/false survive. The default patch field list excludes those3, and local savedNext also retains them.",
+      "limits": "Only those3supported fields and ordinary previously loaded record; no arbitrary unknown extras, backend transaction/lifecycle, override or auth policy certification."
+    }
+  ],
+  "runtime": {
+    "productFunctions": 0,
+    "imports": 0,
+    "testsBodyReads": 0,
+    "testsExecuted": 0,
+    "fixtures": 0,
+    "realFilesystemOperations": 0,
+    "uiBrowserReact": 0,
+    "nativeNetworkProcesses": 0,
+    "git": 0
+  },
+  "historyPolicy": "No new whole-history scan requested/performed; existing three old IDs and original conditions supplied by Root and prior review context. No new ID, no original report/status rewrite. Original latest catalog111 is historical data, not overwritten."
+}

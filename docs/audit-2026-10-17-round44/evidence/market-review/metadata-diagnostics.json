@@ -1,0 +1,37 @@
+{
+  "observed": [
+    {
+      "toolChunk": "942c7b",
+      "exitCode": 1,
+      "kind": "locator/pin metadata failure, no product execution",
+      "facts": [
+        "rg reported missing packages/desktop/src/preload/types.ts",
+        "Python pin loop obtained marketplace-service bytes in memory but did not durably save dto-initial-pins.json before FileNotFoundError",
+        "No requested source-body ranges in that script were reached"
+      ],
+      "correction": "Locate actual preload type filename with rg --files; durable pin before its selected read. No product retry."
+    },
+    {
+      "toolChunk": "717b18",
+      "aggregateExitCode": 0,
+      "kind": "secondary old-report locator miss",
+      "facts": [
+        "rg printed missing docs/audit-2026-10-17-round37/evidence/marketplace-local-frontier/report.md",
+        "The combined command then printed known R36 selected lines with Python and returned 0; no independent rg exit captured",
+        "No R37 report body was read at the guessed missing path"
+      ],
+      "correction": "R37 old coverage gate remains explicit existing source-manifest row; no guessed report or full-read claim."
+    },
+    {
+      "toolChunk": "0b16fa",
+      "exitCode": 0,
+      "kind": "ending metadata discovered real file drift, not product execution",
+      "facts": [
+        "preload/types.d.ts file hash changed after selected semantic read",
+        "release TODO changed during history snapshot interval",
+        "First metadata writer placed ending file bytes/hash in row.sha256 but retained original initialSemanticReadSha256 and unchanged=false. Active source row will use original read-time bytes/SHA; first manifest/checks/excerpts retained."
+      ],
+      "correction": "Compare exact earlier displayed DTO text against ending ranges as metadata; preserve dated history drift without rewriting initial history."
+    }
+  ]
+}

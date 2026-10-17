@@ -1,0 +1,12 @@
+{
+  "capturedUTC": "2026-10-17T14:45:57.137183+00:00",
+  "initial": 3869,
+  "ending": 3869,
+  "added": [],
+  "removed": [],
+  "changed": [],
+  "allUnchanged": true,
+  "archiveBySubstring": 175,
+  "archiveExactDirectory": 162,
+  "scope": "Dated filesystem byte check, no history semantic scan or Git read at finish"
+}

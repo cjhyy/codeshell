@@ -1,0 +1,378 @@
+{
+  "capturedUTC": "2026-10-17T14:55:23.054572+00:00",
+  "scope": "Exactly20 manually ranked ordinary UI/data filename-domain suggestions from dated metadata only,100–1000lines and no current explicit-full JSON object. This is not a safe-to-run list, novelty claim or body review. All pending46/47/48 paths excluded separately; no tmp coverage backfill.",
+  "method": "Prefer UI settings/list/text/selection DTO domains and variety across Desktop/Web/TUI. Manual ordering by ordinary-data scope, no-row/unknown not used as never-read. Current-SHA full object exclusions are mechanical; MD-only full and old-cause gates remain mandatory.",
+  "files": [
+    {
+      "rank": 1,
+      "path": "packages/desktop/src/renderer/settings/ContextSettingsSection.tsx",
+      "bytes": 12329,
+      "lines": 341,
+      "sha256": "1eb4b93e6170a3567fa373b9e60eefbb009079281bd30a2615200311b3b3c94e",
+      "historicalStatus": "historical-object-no-current-explicit-semantic-coverage",
+      "currentExplicitSelectedClaimIds": [],
+      "historicalClaimIds": [
+        "C011922",
+        "C011923",
+        "C011924",
+        "C011925",
+        "C011926"
+      ],
+      "whySuggested": "Settings text/numeric form mapping; selection only after later exact history/ordinary-producer gate.",
+      "notUnreadClaim": true,
+      "sourceBodyOpened": false,
+      "mandatoryNextGate": "Fresh exact MD+recursive JSON scalar old full/scope/cause gate, normal producer/consumer evidence and permission boundary check before any source body; do not restart old failed dynamic directions."
+    },
+    {
+      "rank": 2,
+      "path": "packages/desktop/src/renderer/settings/AppearanceSection.tsx",
+      "bytes": 14267,
+      "lines": 362,
+      "sha256": "a14d459b73a619f6f4c403fa2cb78b7a1beb5eae8a924a207bbdf9691e4c16e3",
+      "historicalStatus": "historical-object-no-current-explicit-semantic-coverage",
+      "currentExplicitSelectedClaimIds": [],
+      "historicalClaimIds": [
+        "C011837",
+        "C011838",
+        "C011839",
+        "C011840",
+        "C011841"
+      ],
+      "whySuggested": "Appearance preference form/display mapping; no theme/audio/native execution.",
+      "notUnreadClaim": true,
+      "sourceBodyOpened": false,
+      "mandatoryNextGate": "Fresh exact MD+recursive JSON scalar old full/scope/cause gate, normal producer/consumer evidence and permission boundary check before any source body; do not restart old failed dynamic directions."
+    },
+    {
+      "rank": 3,
+      "path": "packages/desktop/src/renderer/settings/ConversationSettingsSection.tsx",
+      "bytes": 12083,
+      "lines": 321,
+      "sha256": "1a6892f40f4ae355f7575921c4748b1fb3c3c1da32b430e6e082e60f8fd725df",
+      "historicalStatus": "historical-object-no-current-explicit-semantic-coverage",
+      "currentExplicitSelectedClaimIds": [],
+      "historicalClaimIds": [
+        "C011927",
+        "C011928",
+        "C011929",
+        "C011930",
+        "C011931"
+      ],
+      "whySuggested": "Conversation preference form serialization/display only; stop at any authority boundary.",
+      "notUnreadClaim": true,
+      "sourceBodyOpened": false,
+      "mandatoryNextGate": "Fresh exact MD+recursive JSON scalar old full/scope/cause gate, normal producer/consumer evidence and permission boundary check before any source body; do not restart old failed dynamic directions."
+    },
+    {
+      "rank": 4,
+      "path": "packages/desktop/src/renderer/logs/LogsView.tsx",
+      "bytes": 12912,
+      "lines": 355,
+      "sha256": "4799aa28eaef52b4d59aef1cfd04b57e862401001c6ba91d4df4713c603fd21a",
+      "historicalStatus": "historical-object-no-current-explicit-semantic-coverage",
+      "currentExplicitSelectedClaimIds": [],
+      "historicalClaimIds": [
+        "C010986",
+        "C010987",
+        "C010988"
+      ],
+      "whySuggested": "Log list text/filter presentation only; no real log source or native access.",
+      "notUnreadClaim": true,
+      "sourceBodyOpened": false,
+      "mandatoryNextGate": "Fresh exact MD+recursive JSON scalar old full/scope/cause gate, normal producer/consumer evidence and permission boundary check before any source body; do not restart old failed dynamic directions."
+    },
+    {
+      "rank": 5,
+      "path": "packages/desktop/src/renderer/panels/PanelTabStrip.tsx",
+      "bytes": 5067,
+      "lines": 142,
+      "sha256": "980334fe3022d1ee8139150cb3705550263af6a2668611804fd84fd61b62a405",
+      "historicalStatus": "historical-object-no-current-explicit-semantic-coverage",
+      "currentExplicitSelectedClaimIds": [],
+      "historicalClaimIds": [
+        "C011400",
+        "C011401"
+      ],
+      "whySuggested": "Tab label/order/selected display metadata; no panel runtime/native action.",
+      "notUnreadClaim": true,
+      "sourceBodyOpened": false,
+      "mandatoryNextGate": "Fresh exact MD+recursive JSON scalar old full/scope/cause gate, normal producer/consumer evidence and permission boundary check before any source body; do not restart old failed dynamic directions."
+    },
+    {
+      "rank": 6,
+      "path": "packages/desktop/src/renderer/tool-cards/ToolCardShell.tsx",
+      "bytes": 5192,
+      "lines": 133,
+      "sha256": "4a8597d1e9f055fc855f9b4a601da7e0289df3102a8309ab598e12ccb716f3ea",
+      "historicalStatus": "historical-object-no-current-explicit-semantic-coverage",
+      "currentExplicitSelectedClaimIds": [],
+      "historicalClaimIds": [
+        "C012726",
+        "C012727"
+      ],
+      "whySuggested": "Ordinary card labels/conditional presentation; no tool invocation.",
+      "notUnreadClaim": true,
+      "sourceBodyOpened": false,
+      "mandatoryNextGate": "Fresh exact MD+recursive JSON scalar old full/scope/cause gate, normal producer/consumer evidence and permission boundary check before any source body; do not restart old failed dynamic directions."
+    },
+    {
+      "rank": 7,
+      "path": "packages/desktop/src/renderer/tool-cards/AttachmentCard.tsx",
+      "bytes": 5462,
+      "lines": 166,
+      "sha256": "6974357e1045d40a02464d97a2b609111c1d4a2fd119d6e3600a9d0378b7ac4b",
+      "historicalStatus": "historical-object-no-current-explicit-semantic-coverage",
+      "currentExplicitSelectedClaimIds": [],
+      "historicalClaimIds": [
+        "C012683",
+        "C012684",
+        "C012685",
+        "C012686",
+        "C012687"
+      ],
+      "whySuggested": "Attachment DTO labels/display; no file opening/admission/identity experiment.",
+      "notUnreadClaim": true,
+      "sourceBodyOpened": false,
+      "mandatoryNextGate": "Fresh exact MD+recursive JSON scalar old full/scope/cause gate, normal producer/consumer evidence and permission boundary check before any source body; do not restart old failed dynamic directions."
+    },
+    {
+      "rank": 8,
+      "path": "packages/desktop/src/renderer/messages/AskUserMessageView.tsx",
+      "bytes": 15445,
+      "lines": 379,
+      "sha256": "69fb04884169e496da1d9a09fb4df04e7c1efa3e6133339c3d484ae7f0a0739d",
+      "historicalStatus": "historical-object-no-current-explicit-semantic-coverage",
+      "currentExplicitSelectedClaimIds": [],
+      "historicalClaimIds": [
+        "C011052",
+        "C011053",
+        "C011054",
+        "C011055"
+      ],
+      "whySuggested": "Question option selection/text DTO; exact old sticky-form cause gate required first.",
+      "notUnreadClaim": true,
+      "sourceBodyOpened": false,
+      "mandatoryNextGate": "Fresh exact MD+recursive JSON scalar old full/scope/cause gate, normal producer/consumer evidence and permission boundary check before any source body; do not restart old failed dynamic directions."
+    },
+    {
+      "rank": 9,
+      "path": "packages/desktop/src/renderer/pages/PageRegistry.ts",
+      "bytes": 9305,
+      "lines": 276,
+      "sha256": "15be073ab0f01f9bc2b219a7f40b7543089525c290a3bff8238bceeac32c84bf",
+      "historicalStatus": "historical-object-no-current-explicit-semantic-coverage",
+      "currentExplicitSelectedClaimIds": [],
+      "historicalClaimIds": [
+        "C011305",
+        "C011306",
+        "C011307"
+      ],
+      "whySuggested": "UI registry metadata/name mapping only; no registered action execution.",
+      "notUnreadClaim": true,
+      "sourceBodyOpened": false,
+      "mandatoryNextGate": "Fresh exact MD+recursive JSON scalar old full/scope/cause gate, normal producer/consumer evidence and permission boundary check before any source body; do not restart old failed dynamic directions."
+    },
+    {
+      "rank": 10,
+      "path": "packages/desktop/src/renderer/shell/SessionSearchModal.tsx",
+      "bytes": 11253,
+      "lines": 293,
+      "sha256": "ec4107adfbf8b8c95b232570ed1b8b24e1f81609016f41c16598aa294b52c71f",
+      "historicalStatus": "historical-object-no-current-explicit-semantic-coverage",
+      "currentExplicitSelectedClaimIds": [],
+      "historicalClaimIds": [
+        "C012509",
+        "C012510",
+        "C012511",
+        "C012512",
+        "C012513"
+      ],
+      "whySuggested": "Search list/filter/display state only; exact prior search cause gate required first.",
+      "notUnreadClaim": true,
+      "sourceBodyOpened": false,
+      "mandatoryNextGate": "Fresh exact MD+recursive JSON scalar old full/scope/cause gate, normal producer/consumer evidence and permission boundary check before any source body; do not restart old failed dynamic directions."
+    },
+    {
+      "rank": 11,
+      "path": "packages/web/app/MessageContent.tsx",
+      "bytes": 9846,
+      "lines": 295,
+      "sha256": "76d03d244e420ffef0921946267aa7f508b394ec78a5db356b4c827424ece87e",
+      "historicalStatus": "historical-object-no-current-explicit-semantic-coverage",
+      "currentExplicitSelectedClaimIds": [],
+      "historicalClaimIds": [
+        "C015907",
+        "C015908"
+      ],
+      "whySuggested": "Ordinary message text/display metadata; old format/markdown/stream causes require exact gate.",
+      "notUnreadClaim": true,
+      "sourceBodyOpened": false,
+      "mandatoryNextGate": "Fresh exact MD+recursive JSON scalar old full/scope/cause gate, normal producer/consumer evidence and permission boundary check before any source body; do not restart old failed dynamic directions."
+    },
+    {
+      "rank": 12,
+      "path": "packages/web/app/HubSessions.tsx",
+      "bytes": 29167,
+      "lines": 772,
+      "sha256": "ba90415e1a7e30b42fe478fc9a525423da949f31c45906429559bb3e73ee005f",
+      "historicalStatus": "historical-object-no-current-explicit-semantic-coverage",
+      "currentExplicitSelectedClaimIds": [],
+      "historicalClaimIds": [
+        "C015891",
+        "C015892"
+      ],
+      "whySuggested": "Session list/filter/pagination display only; no routing/identity/real history operations.",
+      "notUnreadClaim": true,
+      "sourceBodyOpened": false,
+      "mandatoryNextGate": "Fresh exact MD+recursive JSON scalar old full/scope/cause gate, normal producer/consumer evidence and permission boundary check before any source body; do not restart old failed dynamic directions."
+    },
+    {
+      "rank": 13,
+      "path": "packages/web/app/HubSkills.tsx",
+      "bytes": 29669,
+      "lines": 857,
+      "sha256": "e8b4a0b742d0db26ba0fc4169cf7eeb887d0a9d825394b512dd2a9a52b16fdce",
+      "historicalStatus": "historical-object-no-current-explicit-semantic-coverage",
+      "currentExplicitSelectedClaimIds": [],
+      "historicalClaimIds": [
+        "C015895",
+        "C015896"
+      ],
+      "whySuggested": "Skill list/query presentation only; no loader/import/install/update/native operations.",
+      "notUnreadClaim": true,
+      "sourceBodyOpened": false,
+      "mandatoryNextGate": "Fresh exact MD+recursive JSON scalar old full/scope/cause gate, normal producer/consumer evidence and permission boundary check before any source body; do not restart old failed dynamic directions."
+    },
+    {
+      "rank": 14,
+      "path": "packages/tui/src/ui/components/AskUserPrompt.tsx",
+      "bytes": 14910,
+      "lines": 440,
+      "sha256": "1d31c1920c640c3211401d111072f92a084da2088e0fd5f3300698301aeb989b",
+      "historicalStatus": "historical-object-no-current-explicit-semantic-coverage",
+      "currentExplicitSelectedClaimIds": [],
+      "historicalClaimIds": [
+        "C015597",
+        "C015598",
+        "C015599",
+        "C015600",
+        "C015601"
+      ],
+      "whySuggested": "Ordinary question option/text conversion only; no TTY/native/UI/authority execution.",
+      "notUnreadClaim": true,
+      "sourceBodyOpened": false,
+      "mandatoryNextGate": "Fresh exact MD+recursive JSON scalar old full/scope/cause gate, normal producer/consumer evidence and permission boundary check before any source body; do not restart old failed dynamic directions."
+    },
+    {
+      "rank": 15,
+      "path": "packages/tui/src/ui/components/SessionPicker.tsx",
+      "bytes": 3758,
+      "lines": 113,
+      "sha256": "2a56204748cf5549f6284bcb03a7968edd34e9faa542d70e0532c3c776ed62a5",
+      "historicalStatus": "historical-object-no-current-explicit-semantic-coverage",
+      "currentExplicitSelectedClaimIds": [],
+      "historicalClaimIds": [
+        "C015668",
+        "C015669"
+      ],
+      "whySuggested": "Picker label/list filtering only; no selected session operation.",
+      "notUnreadClaim": true,
+      "sourceBodyOpened": false,
+      "mandatoryNextGate": "Fresh exact MD+recursive JSON scalar old full/scope/cause gate, normal producer/consumer evidence and permission boundary check before any source body; do not restart old failed dynamic directions."
+    },
+    {
+      "rank": 16,
+      "path": "packages/tui/src/ui/components/StatusLine.tsx",
+      "bytes": 7462,
+      "lines": 227,
+      "sha256": "59bef2bd5014ce72d2d2d63e24ed7e10c20efb7e2355601a0264202cf8582c43",
+      "historicalStatus": "historical-object-no-current-explicit-semantic-coverage",
+      "currentExplicitSelectedClaimIds": [],
+      "historicalClaimIds": [
+        "C015675",
+        "C015676"
+      ],
+      "whySuggested": "Status text and metrics formatting only; no real task/native state.",
+      "notUnreadClaim": true,
+      "sourceBodyOpened": false,
+      "mandatoryNextGate": "Fresh exact MD+recursive JSON scalar old full/scope/cause gate, normal producer/consumer evidence and permission boundary check before any source body; do not restart old failed dynamic directions."
+    },
+    {
+      "rank": 17,
+      "path": "packages/tui/src/ui/components/SpinnerWithVerb.tsx",
+      "bytes": 10431,
+      "lines": 250,
+      "sha256": "731616a5b11966795d21b960d37d0903fcb6c677406aa26aaf1d5eb0533ca022",
+      "historicalStatus": "historical-object-no-current-explicit-semantic-coverage",
+      "currentExplicitSelectedClaimIds": [],
+      "historicalClaimIds": [
+        "C015672",
+        "C015673"
+      ],
+      "whySuggested": "Status verb/text selection only; no timer/renderer/TTY execution.",
+      "notUnreadClaim": true,
+      "sourceBodyOpened": false,
+      "mandatoryNextGate": "Fresh exact MD+recursive JSON scalar old full/scope/cause gate, normal producer/consumer evidence and permission boundary check before any source body; do not restart old failed dynamic directions."
+    },
+    {
+      "rank": 18,
+      "path": "packages/tui/src/ui/input-history.ts",
+      "bytes": 10254,
+      "lines": 343,
+      "sha256": "4d1a5084b69a2de5b2d946ef3a06e773a393fa33f82e9345e692357bc1d483d7",
+      "historicalStatus": "historical-object-no-current-explicit-semantic-coverage",
+      "currentExplicitSelectedClaimIds": [],
+      "historicalClaimIds": [
+        "C015759",
+        "C015760",
+        "C015761",
+        "C015762"
+      ],
+      "whySuggested": "UI input-history text/list DTO; exact MD/JSON old-full/cause gate required before source reading.",
+      "notUnreadClaim": true,
+      "sourceBodyOpened": false,
+      "mandatoryNextGate": "Fresh exact MD+recursive JSON scalar old full/scope/cause gate, normal producer/consumer evidence and permission boundary check before any source body; do not restart old failed dynamic directions."
+    },
+    {
+      "rank": 19,
+      "path": "packages/tui/src/ui/pending-questions.ts",
+      "bytes": 3788,
+      "lines": 118,
+      "sha256": "63a20c516aa258c2242e035de25a94cf83c0c0defa8feaa6b9528a149f0d6782",
+      "historicalStatus": "historical-object-no-current-explicit-semantic-coverage",
+      "currentExplicitSelectedClaimIds": [],
+      "historicalClaimIds": [
+        "C015769",
+        "C015770",
+        "C015771",
+        "C015772"
+      ],
+      "whySuggested": "Pending-question selection DTO mapping only; stop at request authority boundary.",
+      "notUnreadClaim": true,
+      "sourceBodyOpened": false,
+      "mandatoryNextGate": "Fresh exact MD+recursive JSON scalar old full/scope/cause gate, normal producer/consumer evidence and permission boundary check before any source body; do not restart old failed dynamic directions."
+    },
+    {
+      "rank": 20,
+      "path": "packages/tui/src/ui/components/CommandInput.tsx",
+      "bytes": 8606,
+      "lines": 245,
+      "sha256": "53dbcf557487814747ac14945f103d844f7affef3de29f196c9d4610d37081fc",
+      "historicalStatus": "historical-object-no-current-explicit-semantic-coverage",
+      "currentExplicitSelectedClaimIds": [],
+      "historicalClaimIds": [
+        "C015613",
+        "C015614",
+        "C015615",
+        "C015616",
+        "C015617",
+        "C015618",
+        "C015619"
+      ],
+      "whySuggested": "Input draft/text presentation only; old CLI/TUI failed dynamic directions remain closed.",
+      "notUnreadClaim": true,
+      "sourceBodyOpened": false,
+      "mandatoryNextGate": "Fresh exact MD+recursive JSON scalar old full/scope/cause gate, normal producer/consumer evidence and permission boundary check before any source body; do not restart old failed dynamic directions."
+    }
+  ]
+}

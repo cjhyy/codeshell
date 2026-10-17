@@ -1,0 +1,25 @@
+{
+  "frozenUTC": "2026-10-17T15:00:04.467205+00:00",
+  "scope": "Future formal44 MarketList metadata aggregation only",
+  "files": [
+    {
+      "path": "checks.json",
+      "bytes": 41131,
+      "sha256": "b47cfa9775a6f871285d4c2e60c1930ff1b97997e2f988b01858bdfd4448963a"
+    },
+    {
+      "path": "review.md",
+      "bytes": 3233,
+      "sha256": "7e8fb8da9628c1cb3042754e801af836e6085e835d5decd5b4efb35915cf1051"
+    }
+  ],
+  "selfExcluded": true,
+  "totalFilesIncludingSelf": 3,
+  "inputFiles": 43,
+  "inputReceiptRows": 41,
+  "inputRelativeMarkdownLinks": 26,
+  "newSourceBytes": 0,
+  "newSourceSemanticLines": 0,
+  "productExecutions": 0,
+  "gitCommands": 0
+}

@@ -1,0 +1,208 @@
+{
+  "rows": [
+    {
+      "candidate": "market",
+      "historyPath": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+      "pointer": "/files/2684/path",
+      "row": {
+        "path": "packages/desktop/src/renderer/extensions/MarketList.tsx",
+        "sha256": "acdb1ab1fddfa75f19301042559a281eae2925d9a53ec34abc5e2640e07df9b9",
+        "lines": 550
+      }
+    },
+    {
+      "candidate": "notification",
+      "historyPath": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+      "pointer": "/files/3193/path",
+      "row": {
+        "path": "packages/desktop/src/renderer/ui/NotificationHistory.tsx",
+        "sha256": "6a1fb4ae386e46fe4cc598111be6e96a28f9608a46a1cd90de1d4af57fdb434d",
+        "lines": 193
+      }
+    },
+    {
+      "candidate": "notification",
+      "historyPath": "docs/audit-2026-10-17-round36/evidence/root-review/source-checks.json",
+      "pointer": "/checks/23/path",
+      "row": {
+        "path": "packages/desktop/src/renderer/ui/NotificationHistory.tsx",
+        "sha256": "6a1fb4ae386e46fe4cc598111be6e96a28f9608a46a1cd90de1d4af57fdb434d",
+        "coverage": "selected"
+      }
+    },
+    {
+      "candidate": "notification",
+      "historyPath": "docs/audit-2026-10-17-round36/evidence/ui-state-frontier/display-pins.json",
+      "pointer": "/files/0/path",
+      "row": {
+        "path": "packages/desktop/src/renderer/ui/NotificationHistory.tsx",
+        "sha256": "6a1fb4ae386e46fe4cc598111be6e96a28f9608a46a1cd90de1d4af57fdb434d",
+        "lineCount": 193
+      }
+    },
+    {
+      "candidate": "notification",
+      "historyPath": "docs/audit-2026-10-17-round36/evidence/ui-state-frontier/history-supplement.json",
+      "pointer": "/hits/toast-contract/4/context",
+      "row": {
+        "path": "docs/audit-2026-10-16/inventory.json"
+      }
+    },
+    {
+      "candidate": "notification",
+      "historyPath": "docs/audit-2026-10-17-round36/evidence/ui-state-frontier/history-supplement.json",
+      "pointer": "/hits/toast-contract/11/context",
+      "row": {
+        "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json"
+      }
+    },
+    {
+      "candidate": "notification",
+      "historyPath": "docs/audit-2026-10-17-round36/evidence/ui-state-frontier/source-manifest.json",
+      "pointer": "/files/7/path",
+      "row": {
+        "path": "packages/desktop/src/renderer/ui/NotificationHistory.tsx",
+        "sha256": "6a1fb4ae386e46fe4cc598111be6e96a28f9608a46a1cd90de1d4af57fdb434d",
+        "coverage": "selected",
+        "selectedLineRanges": [
+          [
+            1,
+            108
+          ],
+          [
+            150,
+            193
+          ]
+        ],
+        "lineCount": 193
+      }
+    },
+    {
+      "candidate": "notification",
+      "historyPath": "docs/audit-2026-10-17-round36/evidence/ui-state-frontier/source-manifest.json",
+      "pointer": "/sourcePinsFinish/11/path",
+      "row": {
+        "path": "packages/desktop/src/renderer/ui/NotificationHistory.tsx"
+      }
+    },
+    {
+      "candidate": "notification",
+      "historyPath": "docs/audit-2026-10-17-round36/source-manifest.json",
+      "pointer": "/files/20/path",
+      "row": {
+        "path": "packages/desktop/src/renderer/ui/NotificationHistory.tsx",
+        "sha256": "6a1fb4ae386e46fe4cc598111be6e96a28f9608a46a1cd90de1d4af57fdb434d"
+      }
+    },
+    {
+      "candidate": "notification",
+      "historyPath": "docs/audit-2026-10-17-round36/source-manifest.json",
+      "pointer": "/workerSourceChecks/21/path",
+      "row": {
+        "path": "packages/desktop/src/renderer/ui/NotificationHistory.tsx",
+        "sha256": "6a1fb4ae386e46fe4cc598111be6e96a28f9608a46a1cd90de1d4af57fdb434d",
+        "coverage": "selected"
+      }
+    },
+    {
+      "candidate": "market",
+      "historyPath": "docs/audit-2026-10-17-round37/evidence/aggregate-review/checks.json",
+      "pointer": "/authorSourceManifestChecks/0/rows/23/path",
+      "row": {
+        "path": "packages/desktop/src/renderer/extensions/MarketList.tsx",
+        "sha256": "acdb1ab1fddfa75f19301042559a281eae2925d9a53ec34abc5e2640e07df9b9"
+      }
+    },
+    {
+      "candidate": "market",
+      "historyPath": "docs/audit-2026-10-17-round37/evidence/aggregate-review/checks.json",
+      "pointer": "/authorSourceManifestChecks/0/rows/23/dedicatedInitialPin/path",
+      "row": {
+        "path": "packages/desktop/src/renderer/extensions/MarketList.tsx",
+        "sha256": "acdb1ab1fddfa75f19301042559a281eae2925d9a53ec34abc5e2640e07df9b9",
+        "lineCount": 550
+      }
+    },
+    {
+      "candidate": "market",
+      "historyPath": "docs/audit-2026-10-17-round37/evidence/marketplace-local-frontier/finish-checks.json",
+      "pointer": "/sourceFiles/23/path",
+      "row": {
+        "path": "packages/desktop/src/renderer/extensions/MarketList.tsx",
+        "sha256": "acdb1ab1fddfa75f19301042559a281eae2925d9a53ec34abc5e2640e07df9b9"
+      }
+    },
+    {
+      "candidate": "market",
+      "historyPath": "docs/audit-2026-10-17-round37/evidence/marketplace-local-frontier/market-list-pin.json",
+      "pointer": "/files/0/path",
+      "row": {
+        "path": "packages/desktop/src/renderer/extensions/MarketList.tsx",
+        "sha256": "acdb1ab1fddfa75f19301042559a281eae2925d9a53ec34abc5e2640e07df9b9",
+        "lineCount": 550
+      }
+    },
+    {
+      "candidate": "market",
+      "historyPath": "docs/audit-2026-10-17-round37/evidence/marketplace-local-frontier/source-manifest.json",
+      "pointer": "/files/23/path",
+      "row": {
+        "path": "packages/desktop/src/renderer/extensions/MarketList.tsx",
+        "sha256": "acdb1ab1fddfa75f19301042559a281eae2925d9a53ec34abc5e2640e07df9b9",
+        "coverage": "selected",
+        "selectedLineRanges": [
+          [
+            175,
+            194
+          ],
+          [
+            308,
+            330
+          ]
+        ],
+        "lineCount": 550
+      }
+    },
+    {
+      "candidate": "market",
+      "historyPath": "docs/audit-2026-10-17-round37/evidence/marketplace-local-frontier/source-manifest.json",
+      "pointer": "/files/23/prepPinRow/path",
+      "row": {
+        "path": "packages/desktop/src/renderer/extensions/MarketList.tsx",
+        "sha256": "acdb1ab1fddfa75f19301042559a281eae2925d9a53ec34abc5e2640e07df9b9",
+        "lineCount": 550
+      }
+    },
+    {
+      "candidate": "market",
+      "historyPath": "docs/audit-2026-10-17-round37/evidence/root-review/source-checks.json",
+      "pointer": "/checks/23/path",
+      "row": {
+        "path": "packages/desktop/src/renderer/extensions/MarketList.tsx",
+        "sha256": "acdb1ab1fddfa75f19301042559a281eae2925d9a53ec34abc5e2640e07df9b9",
+        "coverage": "selected"
+      }
+    },
+    {
+      "candidate": "market",
+      "historyPath": "docs/audit-2026-10-17-round37/source-manifest.json",
+      "pointer": "/files/21/path",
+      "row": {
+        "path": "packages/desktop/src/renderer/extensions/MarketList.tsx",
+        "sha256": "acdb1ab1fddfa75f19301042559a281eae2925d9a53ec34abc5e2640e07df9b9"
+      }
+    },
+    {
+      "candidate": "market",
+      "historyPath": "docs/audit-2026-10-17-round37/source-manifest.json",
+      "pointer": "/workerSourceChecks/19/path",
+      "row": {
+        "path": "packages/desktop/src/renderer/extensions/MarketList.tsx",
+        "sha256": "acdb1ab1fddfa75f19301042559a281eae2925d9a53ec34abc5e2640e07df9b9",
+        "coverage": "selected"
+      }
+    }
+  ],
+  "count": 19,
+  "requiresManualFullOrSelectedInterpretation": true
+}

@@ -1,0 +1,28 @@
+{
+  "files": [
+    {
+      "path": "packages/desktop/src/renderer/extensions/ManagePage.tsx",
+      "bytes": 9977,
+      "sha256": "df9c16a316ced03bfbdb4b2f1acf9166eea935d295fe257463871aca796542a5",
+      "lineCount": 252,
+      "capturedUTC": "2026-10-17T14:42:05.806318+00:00",
+      "timing": "before source body/navigation read for ordinary list path"
+    },
+    {
+      "path": "packages/desktop/src/renderer/extensions/MarketDetail.tsx",
+      "bytes": 8445,
+      "sha256": "046138869b49e0c567963f180022e2d53a22c917c6643f43f23ee7829fa0284d",
+      "lineCount": 212,
+      "capturedUTC": "2026-10-17T14:42:05.808541+00:00",
+      "timing": "before source body/navigation read for ordinary list path"
+    },
+    {
+      "path": "packages/desktop/src/renderer/extensions/ExtensionsPage.tsx",
+      "bytes": 3628,
+      "sha256": "a532030f03846f7b261f73dd89e15a2a38d2519a85ab3b5f3b48c5892de71ee7",
+      "lineCount": 113,
+      "capturedUTC": "2026-10-17T14:42:05.809250+00:00",
+      "timing": "before source body/navigation read for ordinary list path"
+    }
+  ]
+}

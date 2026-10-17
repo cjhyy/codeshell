@@ -1,0 +1,26 @@
+{
+  "capturedUTC": "2026-10-17T15:10:47.615235+00:00",
+  "scope": "Frozen49 files read only; no mutation",
+  "files": [
+    {
+      "path": "/tmp/codeshell-audit-round49-coverage-frontier/coverage-index.json",
+      "bytes": 2055917,
+      "sha256": "78e65550fef49fec2bd688455b17edf6de8465486cd9651634b4cd483f5aacda"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round49-coverage-frontier/ending-coverage-overlay.json",
+      "bytes": 13255,
+      "sha256": "99c428c7b04b45e2f62cdbe41559ea897e9c63621f1e3c8cc5da16a09fde4020"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round49-coverage-frontier/source-ending-checks.json",
+      "bytes": 3168,
+      "sha256": "e391b315a357d473fe7fdeda22a096797cc27fbae7c5453f74b78d95b504a2cb"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round49-coverage-frontier/package-inventory.json",
+      "bytes": 958678,
+      "sha256": "862732b8c0bdc13733ead08b43c47d0854c8c12b96ea68ee5427ecf6a740d28b"
+    }
+  ]
+}
