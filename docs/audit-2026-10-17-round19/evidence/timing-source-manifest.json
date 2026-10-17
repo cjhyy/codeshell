@@ -1,0 +1,126 @@
+{
+  "base": "5f5cf69df8526470700712a4dc2d5ae6bd2da132",
+  "files": [
+    {
+      "path": "packages/core/src/session/stream-timing.ts",
+      "frozenSha256": "9306f80c1fa56b8f59f35afc879045140d08129e8cbf167085fb82f63c831ced",
+      "currentSha256": "9306f80c1fa56b8f59f35afc879045140d08129e8cbf167085fb82f63c831ced",
+      "matchesFrozen": true,
+      "bytes": 1606,
+      "lineCount": 41,
+      "ranges": [
+        "1-41 (full source)"
+      ],
+      "kind": "actual runtime leaf; type-only import erased"
+    },
+    {
+      "path": "packages/core/src/session/stream-timing.test.ts",
+      "frozenSha256": "9dffcaa98d129f79dfd8547a656b796bcf613e848e1c764dee488341f90a0a04",
+      "currentSha256": "9dffcaa98d129f79dfd8547a656b796bcf613e848e1c764dee488341f90a0a04",
+      "matchesFrozen": true,
+      "bytes": 2058,
+      "lineCount": 70,
+      "ranges": [
+        "1-70 (full source)"
+      ],
+      "kind": "existing 2 tests, selected for guarded shard"
+    },
+    {
+      "path": "packages/core/src/types.ts",
+      "frozenSha256": "a60cb4b3d6177af79e875f6bfffa7788b930964daf123d034008e2925737a4db",
+      "currentSha256": "a60cb4b3d6177af79e875f6bfffa7788b930964daf123d034008e2925737a4db",
+      "matchesFrozen": true,
+      "bytes": 50794,
+      "lineCount": 1306,
+      "ranges": [
+        "650-770 (selected declarations)"
+      ],
+      "kind": "type declarations only; no runtime import"
+    },
+    {
+      "path": "packages/core/src/engine/engine.ts",
+      "frozenSha256": "43ed9545f9c4ea2930b2855d58bf9b48ff2584cc6bba397daaa9c99ad0833307",
+      "currentSha256": "43ed9545f9c4ea2930b2855d58bf9b48ff2584cc6bba397daaa9c99ad0833307",
+      "matchesFrozen": true,
+      "bytes": 210013,
+      "lineCount": 5072,
+      "ranges": [
+        "1420-1480",
+        "1560-1705",
+        "2495-2530"
+      ],
+      "kind": "selected ordinary caller/producer static source only; no Engine import/execution"
+    },
+    {
+      "path": "packages/core/src/engine/run-stream.ts",
+      "frozenSha256": "8210d4745f69991ede8144f9a1ac4136cea8bbf438bd46fa9970b69f601d33ce",
+      "currentSha256": "8210d4745f69991ede8144f9a1ac4136cea8bbf438bd46fa9970b69f601d33ce",
+      "matchesFrozen": true,
+      "bytes": 9777,
+      "lineCount": 255,
+      "ranges": [
+        "1-210 (selected prefix)"
+      ],
+      "kind": "static wrapper/stamping/child dispatch only; no runtime import/execution"
+    },
+    {
+      "path": "packages/core/src/session/output-publisher.ts",
+      "frozenSha256": "8018fa8898785bba81b15c0e0405c25ede862079750ff623d3853cbdfa2efd52",
+      "currentSha256": "8018fa8898785bba81b15c0e0405c25ede862079750ff623d3853cbdfa2efd52",
+      "matchesFrozen": true,
+      "bytes": 6285,
+      "lineCount": 175,
+      "ranges": [
+        "1-175 (full source; initial read requested up to 215)"
+      ],
+      "kind": "static timestamp call; no runtime import/execution"
+    },
+    {
+      "path": "scripts/run-bun-test-shard.mjs",
+      "frozenSha256": "dd2b245afbcb5aa7c798c8674d34edb8e02bb42be0be320050adf9be5ed2fd7d",
+      "currentSha256": "dd2b245afbcb5aa7c798c8674d34edb8e02bb42be0be320050adf9be5ed2fd7d",
+      "matchesFrozen": true,
+      "bytes": 233,
+      "lineCount": 8,
+      "ranges": [
+        "1-8 (full source)"
+      ],
+      "kind": "guard entry source read; selected for execution"
+    },
+    {
+      "path": "scripts/bun-test-completion.mjs",
+      "frozenSha256": "99808f8f7c67ae5f108243b0649557209991f148f0150785fcde83d47465047e",
+      "currentSha256": "99808f8f7c67ae5f108243b0649557209991f148f0150785fcde83d47465047e",
+      "matchesFrozen": true,
+      "bytes": 6518,
+      "lineCount": 152,
+      "ranges": [],
+      "kind": "metadata pin only; invoked by guard, not source-audited"
+    },
+    {
+      "path": "CODESHELL.md",
+      "frozenSha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "currentSha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "matchesFrozen": true,
+      "bytes": 17639,
+      "lineCount": 217,
+      "ranges": [
+        "full file"
+      ],
+      "kind": "repository instructions, not product bug coverage"
+    }
+  ],
+  "limitations": [
+    "Selected byte pins are not whole-file/transitive coverage except explicitly labeled full reads.",
+    "No recorder/Engine/run-stream/publisher runtime imports or actual timer/transport/journal/replay operations."
+  ],
+  "metadataAdjustments": [
+    {
+      "kind": "source range metadata correction",
+      "initialDescription": "output-publisher.ts 1-180 (full source)",
+      "actualFileLineCount": 175,
+      "correctedDescription": "1-175 (full source; initial read requested up to 215)",
+      "handling": "Corrected descriptions only; source/fixture/raw bytes unchanged; no product rerun."
+    }
+  ]
+}

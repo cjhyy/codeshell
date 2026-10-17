@@ -1,0 +1,25 @@
+[
+  {
+    "id": "REVIEWPROMPT-R19-R1",
+    "priorId": "R2-03",
+    "title": "固定三反引号包围正文的旧机制在 review builder 的静态上下文",
+    "file": "packages/coding/src/review/review-prompt.ts",
+    "line": 86,
+    "otherLine": 103,
+    "priorReport": "docs/audit-2026-10-17/root.md#L26",
+    "classification": "related only; no new finding or candidate",
+    "evidenceLevel": "Static source only. No new Markdown lexer/render/export/model/prompt-injection test.",
+    "detail": "Ordinary Markdown source or a diff context line can contain closing triple backticks; builder inserts the body unchanged between fixed triple backtick fences. Same mechanism as old R2-03; actual model interpretation and security impact unverified."
+  },
+  {
+    "id": "REVIEWPROMPT-R19-R2",
+    "priorId": "DESKTOP-R12-01",
+    "title": "UTF-16 slice 截断的旧机制在 review content 上限的静态上下文",
+    "file": "packages/coding/src/review/review-prompt.ts",
+    "line": 63,
+    "priorReport": "docs/audit-2026-10-17-round12/desktop.md#L7",
+    "classification": "related only; no new finding or candidate",
+    "evidenceLevel": "Static source only. No new Unicode truncate/encode/UI/model test.",
+    "detail": "Content slice(0,maxChars) may cut a surrogate pair at a positive/default boundary. Same mechanism as old DESKTOP-R12-01; no claim that prior Desktop source repair covers this builder."
+  }
+]

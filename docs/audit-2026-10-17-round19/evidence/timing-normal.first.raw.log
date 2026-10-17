@@ -1,0 +1,21 @@
+bun test v1.3.11 (af24e281)
+
+docs/audit-2026-10-17-round19/evidence/timing-normal.test.ts:
+(pass) valid epoch and fractional source times retain the original event object [0.26ms]
+(pass) a missing source time stamps a copy without changing payload or caller object [0.19ms]
+(pass) root session start reports logical submission start while retaining its source time [0.05ms]
+(pass) ordinary nonterminal events retain valid source identities through preparation
+(pass) root completion combines source completion time with monotonic elapsed duration [0.47ms]
+(pass) a later root terminal preserves first timing and keeps its own non-timing payload [0.02ms]
+(pass) an unstamped child terminal receives source time but cannot finish the root clock
+(pass) separate logical submissions keep independent start and terminal timing
+
+packages/core/src/session/stream-timing.test.ts:
+(pass) source timestamps remain stable and invalid timestamps are replaced
+(pass) logical timing includes preparation and uses a monotonic duration across wall-clock changes [0.08ms]
+
+ 10 pass
+ 0 fail
+ 37 expect() calls
+Ran 10 tests across 2 files. [53.00ms]
+Completed Bun shard: 10 tests, 0 skipped; 0 failures.

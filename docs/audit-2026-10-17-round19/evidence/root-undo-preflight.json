@@ -1,0 +1,25 @@
+{
+  "baseline": "5f5cf69df8526470700712a4dc2d5ae6bd2da132",
+  "files": [
+    {
+      "path": "packages/core/src/session/undo-target.ts",
+      "bytes": 7551,
+      "sha256": "ec84eced06a0288a7cfd65526056a05457650fa17f4e20890310f5acdc561063",
+      "frozenBlobVerified": true
+    },
+    {
+      "path": "packages/core/src/session/undo-target.test.ts",
+      "bytes": 10429,
+      "sha256": "7f27451c9d7536258c1532e8fbc01c80973c95661e794933c7da0b4c7b9eebf0",
+      "frozenBlobVerified": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round19/evidence/root-undo.test.ts",
+      "bytes": 2639,
+      "sha256": "560db8571ca7fa07eee1d798296eb8b3c391f6aa96b8274dabe1643429619ebc"
+    }
+  ],
+  "typeOnlyProductImport": true,
+  "metadataOnly": true,
+  "note": "Actual inventoried leaf and fixture bytes; no package resolver or dependency-path guess."
+}

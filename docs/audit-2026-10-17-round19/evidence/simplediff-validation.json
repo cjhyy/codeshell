@@ -1,0 +1,69 @@
+{
+  "base": "5f5cf69df8526470700712a4dc2d5ae6bd2da132",
+  "formalCount": 0,
+  "candidateCount": 0,
+  "relatedCount": 0,
+  "runs": [
+    {
+      "command": [
+        "node",
+        "scripts/run-bun-test-shard.mjs",
+        "--timeout",
+        "30000",
+        "packages/core/src/session/simple-diff.test.ts",
+        "docs/audit-2026-10-17-round19/evidence/simplediff-focused.test.ts"
+      ],
+      "rawLog": "docs/audit-2026-10-17-round19/evidence/simplediff-normal.first.raw.log",
+      "exitReceipt": "docs/audit-2026-10-17-round19/evidence/simplediff-normal.first.exit.json",
+      "exitCode": 0,
+      "attempt": 1,
+      "completedGuard": true,
+      "testsPassed": 17,
+      "expectations": 57,
+      "testsFailed": 0,
+      "testsSkipped": 0,
+      "existingTests": 7,
+      "focusedTests": 10,
+      "existingExpectations": 13,
+      "focusedExpectations": 44,
+      "rawSha256": "b6f3347ad1b1a34e5b75413f9de8d127959f6b0a8aa47426daa453b91406ba01",
+      "rawAndExitSavedBeforeInspection": true
+    }
+  ],
+  "cleanTotals": {
+    "shards": 1,
+    "testsPassed": 17,
+    "expectations": 57,
+    "existingTests": 7,
+    "focusedTests": 10,
+    "testsFailed": 0,
+    "testsSkipped": 0
+  },
+  "failedShards": [],
+  "skippedDirections": [],
+  "excludedDirections": [
+    {
+      "direction": "simple-diff O(n*m) LCS cost",
+      "prior": "docs/audit-2026-10-17-round4/root.md:26",
+      "reason": "Previously recorded static cost; wholly excluded here, no large input/performance/pressure/memory validation."
+    },
+    {
+      "direction": "FileHistory, undo command and renderer integration",
+      "reason": "Leaf text projection only; consumer source read statically. No filesystem, actual command or renderer execution."
+    },
+    {
+      "direction": "invalid context numbers",
+      "reason": "Ordinary TUI uses omitted default context. No ordinary producer for negative, fractional, NaN or infinite context was established; not tested or counted as a bug."
+    }
+  ],
+  "metadataFailures": [],
+  "scope": "Actual zero-import diffLines/renderDiffPreview with small owned strings; 7 existing leaf tests and 10 focused tests in one first guarded shard. TUI consumer static only.",
+  "fixtureLimitations": [
+    "Empty strings and final newline characters appear as empty split tokens; output is a human preview, not a patch format. Characterization of those markers is not treated as a defect.",
+    "CRLF-only changes intentionally collapse under the explicit source normalization contract.",
+    "No line-number/hunk-header/no-newline-marker or byte-exact patch contract is inferred.",
+    "Default TUI context is statically traced; explicit finite nonnegative integer contexts 0, 1 and 2 are leaf-only probes."
+  ],
+  "productChanges": false,
+  "reruns": 0
+}

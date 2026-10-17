@@ -1,0 +1,40 @@
+bun test v1.3.11 (af24e281)
+
+docs/audit-2026-10-17-round19/evidence/root-undo.test.ts:
+(pass) owned frozen snapshots retain turn precedence across clock reversal and undone rows [1.49ms]
+(pass) owned three pending redo turns select the lowest turn independently of record order [0.11ms]
+(pass) owned whole-session Unicode and spaced path labels remain distinct with stable tied baselines [0.10ms]
+(pass) legacy single-modification selector accepts finite timestamps before the Unix epoch [0.24ms]
+
+packages/core/src/session/undo-target.test.ts:
+(pass) latestUndoTarget > empty history → null [0.02ms]
+(pass) latestUndoTarget > single snapshot → itself [0.03ms]
+(pass) latestUndoTarget > picks the greatest timestamp regardless of array order [0.01ms]
+(pass) latestUndoTarget > same-millisecond tie → last entry in array order wins
+(pass) earliestSnapshotsPerFile > empty → []
+(pass) earliestSnapshotsPerFile > one snapshot per file, earliest of each [0.04ms]
+(pass) earliestSnapshotsPerFile > ordered by each file's first-edit time, oldest first
+(pass) earliestSnapshotsPerFile > same-ms tie for one file → first array entry wins [0.06ms]
+(pass) latestTurnUndoTargets > empty history → []
+(pass) latestTurnUndoTargets > only the latest turn's files, each at its pre-turn state [0.10ms]
+(pass) latestTurnUndoTargets > ordered by each file's first-edit time within the turn, oldest first [0.03ms]
+(pass) latestTurnUndoTargets > picks the greatest turnSeq even if its timestamps are not the newest overall [0.02ms]
+(pass) latestTurnUndoTargets > legacy snapshots without turnSeq fall back to a single 'turn' (undefined) [0.01ms]
+(pass) latestTurnUndoTargets > mixed legacy + tagged → tagged turns win over the undefined bucket [0.04ms]
+(pass) latestTurnUndoTargets > skips undone turns: after turn 2 is undone, selects turn 1 (peel onion) [0.03ms]
+(pass) latestTurnUndoTargets > all turns undone → [] [0.01ms]
+(pass) earliestSnapshotsPerFile (skip undone) > undone snapshots are ignored when picking each file's baseline [0.01ms]
+(pass) earliestSnapshotsPerFile (skip undone) > a file with only undone snapshots drops out entirely [0.02ms]
+(pass) latestRedoTargets > empty inputs → []
+(pass) latestRedoTargets > returns the latest-turn redo records when that turn is the redoable one [0.03ms]
+(pass) latestRedoTargets > picks only the LOWEST pending turnSeq — the most recently undone turn [0.02ms]
+(pass) latestRedoTargets > a newer LIVE turn supersedes the redo turn → [] [0.01ms]
+(pass) latestRedoTargets > created-only redo record (existedBefore false, no pre-turn snapshot) still returned
+(pass) latestRedoTargets > several undone turns redo in stack order, newest-undone first [0.04ms]
+(pass) latestRedoTargets > a fresh live turn still invalidates the whole pending redo chain
+
+ 29 pass
+ 0 fail
+ 49 expect() calls
+Ran 29 tests across 2 files. [184.00ms]
+Completed Bun shard: 29 tests, 0 skipped; 0 failures.

@@ -1,0 +1,298 @@
+{
+  "base": "5f5cf69df8526470700712a4dc2d5ae6bd2da132",
+  "scope": "all inventoried docs/bugs Markdown and recursively parsed JSON scalar values, including archives; current batch excluded",
+  "statistics": {
+    "files": 2050,
+    "markdownFiles": 1161,
+    "jsonFiles": 889,
+    "jsonStringLeaves": 260970,
+    "jsonScalarLeaves": 363859,
+    "readOrParseErrors": []
+  },
+  "inventorySha256": "9519d2728936992a38479f1e00ce0afb7b91522177a42ac3b6b953f6490db3c0",
+  "patterns": {
+    "exact_leaf": "stream-timing|stampStreamEvent|createRunTiming",
+    "timing_contract": "(?:monotonic|单调|logical submission|逻辑.{0,8}(?:计时|时钟)).{0,100}(?:duration|terminal|complete|持续|耗时|结束)|(?:durationMs|completedAt|startedAt).{0,90}(?:replay|child|parent|回放|子|父)",
+    "source_timestamp": "(?:timestamp|时间戳).{0,100}(?:journal|reconnect|invalid|stable|回放|重连|保留|无效)",
+    "excluded_recorder_direction": "recorder.{0,80}midnight|midnight.{0,80}recorder|recorder.{0,80}跨日|跨日.{0,80}recorder"
+  },
+  "matchCounts": {
+    "exact_leaf": 2,
+    "timing_contract": 6,
+    "source_timestamp": 7,
+    "excluded_recorder_direction": 6
+  },
+  "matchingFiles": {
+    "exact_leaf": [
+      "docs/audit-2026-10-16/inventory.json",
+      "docs/audit-2026-10-17-round4/root.md"
+    ],
+    "timing_contract": [
+      "docs/audit-2026-10-17-round14/evidence/review-traces.md",
+      "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+      "docs/refactor/_archive/goal-persistence-redesign-codex.md",
+      "docs/review-2026-10-12/validation/original-modern-desktop-image-round25/same-mtime-prerequisites.md",
+      "docs/superpowers/plans/2026-05-28-electron-turn-summary.md"
+    ],
+    "source_timestamp": [
+      "docs/audit-2026-10-17-round12/schedule-display.md",
+      "docs/audit-2026-10-17-round13/evidence/history-findings.json",
+      "docs/audit-2026-10-17-round13/evidence/review-history.md",
+      "docs/audit-2026-10-17-round13/findings.json",
+      "docs/audit-2026-10-17-round13/history.md",
+      "docs/panel-apps.md",
+      "docs/todo/small-features-2026-07-10/session-fork.md"
+    ],
+    "excluded_recorder_direction": [
+      "docs/audit-2026-10-17-round13/evidence/groups-skip-note.md",
+      "docs/audit-2026-10-17-round13/groups.md",
+      "docs/audit-2026-10-17-round15/evidence/injection-dedup.json",
+      "docs/audit-2026-10-17-round15/evidence/migration-dedup.json",
+      "docs/audit-2026-10-17-round4/coverage.md",
+      "docs/audit-2026-10-17-round4/quality-coding.md"
+    ]
+  },
+  "contextsPerPatternCap": 18,
+  "contexts": {
+    "exact_leaf": [
+      {
+        "path": "docs/audit-2026-10-16/inventory.json",
+        "locator": "$[\"source_inventory\"][570]",
+        "context": "packages/core/src/session/stream-timing.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round4/root.md",
+        "locator": "line:26",
+        "context": "s、loop/list-files/image/goal/core/extra/more/utility commands，以及 Core logger/session-recorder/utils/stream-timing/simple-diff 的选择性相邻源码；只读检查不等于所有分支执行覆盖。earlyInput 虽导出但没有找到当前启动调用，不把 escape parser 线索作为正常 TUI bug。simple-diff 的 O(n*m) LCS 成本仅静态观察，未运行压力实验或计为确认项。"
+      }
+    ],
+    "timing_contract": [
+      {
+        "path": "docs/audit-2026-10-17-round14/evidence/review-traces.md",
+        "locator": "line:8",
+        "context": "- helper 两个依赖 import 均为 type-only；key-echo `t`、仅保留 id/traceId/startedAt/parentId 的普通内存投影由 fixture 明示。实际测试没有 IPC、React、Core barrel 或翻译运行时。调用排序返回新数组、group 输入不变、最大四层与环终止均由当前源码和断言支持；未知 status、非有限 time、破损 parent 的防御控制没有被报成正常生产者 bug。"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+        "locator": "$[\"hits\"][283][\"matches\"][0][\"text\"]",
+        "context": "| 原生会话创建 | `packages/core/src/session/session-manager.ts:724,764–781` | state.startedAt 使用 Date.now；另行 mkdir、原子写 state、创建 transcript。没有把 startedAt 赋给目录时间，没有跨会话共同时间值。 |"
+      },
+      {
+        "path": "docs/refactor/_archive/goal-persistence-redesign-codex.md",
+        "locator": "line:135",
+        "context": "| 不可变 `goalId` + 单调 `goalRevision` + CAS | 将 identity 与 `objective/setAtMs` 解耦；让 A terminal 不误清 same-objective B；给 stale generation 排序 | revision 分配绑到通用 `saveState`；revisionless 值被 blanket suppress；上溢/损坏处理；CAS 正确性又依赖锁 | 第一轮 blocker 2 要求真正 identity（`go"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-modern-desktop-image-round25/same-mtime-prerequisites.md",
+        "locator": "line:29",
+        "context": "| 原生会话创建 | `packages/core/src/session/session-manager.ts:724,764–781` | state.startedAt 使用 Date.now；另行 mkdir、原子写 state、创建 transcript。没有把 startedAt 赋给目录时间，没有跨会话共同时间值。 |"
+      },
+      {
+        "path": "docs/superpowers/plans/2026-05-28-electron-turn-summary.md",
+        "locator": "line:206",
+        "context": "   * Monotonic counter incremented on each turn_complete. ToolCard /"
+      },
+      {
+        "path": "docs/superpowers/plans/2026-05-28-electron-turn-summary.md",
+        "locator": "line:1566",
+        "context": "   * Monotonic counter incremented on each turn_complete. Forwarded to"
+      }
+    ],
+    "source_timestamp": [
+      {
+        "path": "docs/audit-2026-10-17-round12/schedule-display.md",
+        "locator": "line:20",
+        "context": " a nonempty browser time value. No ordinary invalid-time producer was established. `0h`, non-finite timestamps, and invalid timezone names were not manufactured as product triggers."
+      },
+      {
+        "path": "docs/audit-2026-10-17-round13/evidence/history-findings.json",
+        "locator": "$[0][\"actual\"]",
+        "context": "真实 helper 第一次 up 返回 previous session input，第二次才返回 current session input；同一模块 timestamped history 正确把 current input 放在首位，磁盘两项均保留。"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round13/evidence/review-history.md",
+        "locator": "line:10",
+        "context": "`:305` 保存独立字符串数组。夹具先按普通 submit 执行 add+refresh，正常 flush 后再 remove，旧 navigator 返回 interrupted input，而 timestamped、新建 navigator 与显式 refresh 都只保留 kept input。这不依赖同 tick 抢占。"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round13/findings.json",
+        "locator": "$[\"findings\"][0][\"details\"][\"actual\"]",
+        "context": "真实 helper 第一次 up 返回 previous session input，第二次才返回 current session input；同一模块 timestamped history 正确把 current input 放在首位，磁盘两项均保留。"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round13/history.md",
+        "locator": "line:7",
+        "context": "ssion 再提交 `current session input`。真实 `createHistoryNavigator().up()` 第一次返回旧输入，第二次才返回本次新输入。同一模块的 `getTimestampedHistory()` 正确把本次新输入列为最新，真实临时 JSONL 也保留正确追加顺序。"
+      },
+      {
+        "path": "docs/panel-apps.md",
+        "locator": "line:257",
+        "context": "counters, next-run timestamps and execution receipts do not invalidate it."
+      },
+      {
+        "path": "docs/todo/small-features-2026-07-10/session-fork.md",
+        "locator": "line:695",
+        "context": "- target event id 全部新生成且唯一；timestamp/turnNumber/toolCallId/data 保留；下一次 append turnNumber 连续。"
+      }
+    ],
+    "excluded_recorder_direction": [
+      {
+        "path": "docs/audit-2026-10-17-round13/evidence/groups-skip-note.md",
+        "locator": "line:9",
+        "context": "time.ts`、`turnTiming.test.ts` 本轮为源码阅读，没有为它们执行额外 shard；没有恢复旧 i18n、Desktop 投影坏导入、TUI Diff/Questions 或 recorder midnight 失败方向。"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round13/groups.md",
+        "locator": "line:36",
+        "context": "ts:86` 的固定 24 小时算昨天与 `:66` 的固定毫秒回推周一在夏令时日历下需要进一步核对；本轮没有设置实际时区、验证相邻 DST 日或运行时间/i18n 入口，不登记正式/候选，也不把旧 recorder midnight 失败路线恢复为新证据。未来跨日时间归类与超出 Date 可表示范围同样缺少正常 producer 合同，未新增项。"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round15/evidence/injection-dedup.json",
+        "locator": "$[\"hits\"][\"steering_queue\"][37][\"context\"]",
+        "context": "ts:86` 的固定 24 小时算昨天与 `:66` 的固定毫秒回推周一在夏令时日历下需要进一步核对；本轮没有设置实际时区、验证相邻 DST 日或运行时间/i18n 入口，不登记正式/候选，也不把旧 recorder midnight 失败路线恢复为新证据。未来跨日时间归类与超出 Date 可表示范围同样缺少正常 producer 合同，未新增项。\n-"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round15/evidence/migration-dedup.json",
+        "locator": "$[\"hits\"][\"migration\"][15][\"text\"]",
+        "context": "完整 YAML/migration 组合、完整 Settings/Core/Coding/仓库 suite 仍未运行。迁移 providerKey、未来版本/gap stamp、全部 CLI 线索与 recorder 跨日行为继续留在候选列表，不进入新增确认数。"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round4/coverage.md",
+        "locator": "line:11",
+        "context": "| Core logging | logger/session-recorder 相邻源码；真实轮转与读取、自有 tmp/单 bucket 控制 | dev recorder 跨日 fixture 路径控制失败后跳过；真实应用启动、真实时钟跨日、所有日志消费者 |"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round4/quality-coding.md",
+        "locator": "line:29",
+        "context": "完整 YAML/migration 组合、完整 Settings/Core/Coding/仓库 suite 仍未运行。迁移 providerKey、未来版本/gap stamp、全部 CLI 线索与 recorder 跨日行为继续留在候选列表，不进入新增确认数。"
+      }
+    ]
+  },
+  "allMatchLocators": {
+    "exact_leaf": [
+      {
+        "path": "docs/audit-2026-10-16/inventory.json",
+        "locator": "$[\"source_inventory\"][570]",
+        "offset": 26
+      },
+      {
+        "path": "docs/audit-2026-10-17-round4/root.md",
+        "locator": "line:26",
+        "offset": 173
+      }
+    ],
+    "timing_contract": [
+      {
+        "path": "docs/audit-2026-10-17-round14/evidence/review-traces.md",
+        "locator": "line:8",
+        "offset": 62
+      },
+      {
+        "path": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+        "locator": "$[\"hits\"][283][\"matches\"][0][\"text\"]",
+        "offset": 78
+      },
+      {
+        "path": "docs/refactor/_archive/goal-persistence-redesign-codex.md",
+        "locator": "line:135",
+        "offset": 17
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-modern-desktop-image-round25/same-mtime-prerequisites.md",
+        "locator": "line:29",
+        "offset": 78
+      },
+      {
+        "path": "docs/superpowers/plans/2026-05-28-electron-turn-summary.md",
+        "locator": "line:206",
+        "offset": 5
+      },
+      {
+        "path": "docs/superpowers/plans/2026-05-28-electron-turn-summary.md",
+        "locator": "line:1566",
+        "offset": 5
+      }
+    ],
+    "source_timestamp": [
+      {
+        "path": "docs/audit-2026-10-17-round12/schedule-display.md",
+        "locator": "line:20",
+        "offset": 229
+      },
+      {
+        "path": "docs/audit-2026-10-17-round13/evidence/history-findings.json",
+        "locator": "$[0][\"actual\"]",
+        "offset": 77
+      },
+      {
+        "path": "docs/audit-2026-10-17-round13/evidence/review-history.md",
+        "locator": "line:10",
+        "offset": 186
+      },
+      {
+        "path": "docs/audit-2026-10-17-round13/findings.json",
+        "locator": "$[\"findings\"][0][\"details\"][\"actual\"]",
+        "offset": 77
+      },
+      {
+        "path": "docs/audit-2026-10-17-round13/history.md",
+        "locator": "line:7",
+        "offset": 160
+      },
+      {
+        "path": "docs/panel-apps.md",
+        "locator": "line:257",
+        "offset": 19
+      },
+      {
+        "path": "docs/todo/small-features-2026-07-10/session-fork.md",
+        "locator": "line:695",
+        "offset": 27
+      }
+    ],
+    "excluded_recorder_direction": [
+      {
+        "path": "docs/audit-2026-10-17-round13/evidence/groups-skip-note.md",
+        "locator": "line:9",
+        "offset": 122
+      },
+      {
+        "path": "docs/audit-2026-10-17-round13/groups.md",
+        "locator": "line:36",
+        "offset": 108
+      },
+      {
+        "path": "docs/audit-2026-10-17-round15/evidence/injection-dedup.json",
+        "locator": "$[\"hits\"][\"steering_queue\"][37][\"context\"]",
+        "offset": 376
+      },
+      {
+        "path": "docs/audit-2026-10-17-round15/evidence/migration-dedup.json",
+        "locator": "$[\"hits\"][\"migration\"][15][\"text\"]",
+        "offset": 157
+      },
+      {
+        "path": "docs/audit-2026-10-17-round4/coverage.md",
+        "locator": "line:11",
+        "offset": 32
+      },
+      {
+        "path": "docs/audit-2026-10-17-round4/quality-coding.md",
+        "locator": "line:29",
+        "offset": 157
+      }
+    ]
+  },
+  "limitations": "Patterns are retrieval indexes, not proof of semantic exhaustion. Context caps do not cap counts. Non-string scalar values are counted but cannot match these string patterns.",
+  "semanticReview": {
+    "selectedPriorDocumentsReadInFull": [
+      "docs/audit-2026-10-17-round4/root.md",
+      "docs/audit-2026-10-17-round4/coverage.md",
+      "docs/audit-2026-10-17-round4/quality-coding.md"
+    ],
+    "exactLeaf": "Two hits are initial source inventory and round4 selective static read, not a prior verified stream-timing bug.",
+    "otherContexts": "All 6 timing-contract and 7 source-timestamp contexts were inspected; they concern trace projection, session history, identity plans or unrelated timestamp retention.",
+    "exclusion": "All 6 recorder-index contexts retain the failed midnight direction as skipped; this leaf validation does not recover it.",
+    "limitations": "No new finding/candidate is asserted, and retrieval indexes are not an exhaustive semantic correctness proof."
+  }
+}

@@ -1,0 +1,81 @@
+{
+  "base": "5f5cf69df8526470700712a4dc2d5ae6bd2da132",
+  "report": "docs/audit-2026-10-17-round19/simplediff.md",
+  "formalCount": 0,
+  "candidateCount": 0,
+  "relatedCount": 0,
+  "files": [
+    {
+      "path": "docs/audit-2026-10-17-round19/simplediff.md",
+      "sha256": "a2309fec29f3e213c772d7010a5456cbd41519fb355cd628bb40c8ef1fbfc930",
+      "bytes": 6379
+    },
+    {
+      "path": "docs/audit-2026-10-17-round19/evidence/simplediff-candidates.json",
+      "sha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570",
+      "bytes": 3
+    },
+    {
+      "path": "docs/audit-2026-10-17-round19/evidence/simplediff-dedup.json",
+      "sha256": "8f7a5e5db0173a61ad18adaa20611d8ec6489e513f37ad4083050ea9d3050e7d",
+      "bytes": 21628
+    },
+    {
+      "path": "docs/audit-2026-10-17-round19/evidence/simplediff-dedup.py",
+      "sha256": "57fd778cbc7c13dbc2b0e94f09edcb92c41fdd2f022d2d31667c61baec50542d",
+      "bytes": 3661
+    },
+    {
+      "path": "docs/audit-2026-10-17-round19/evidence/simplediff-findings.json",
+      "sha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570",
+      "bytes": 3
+    },
+    {
+      "path": "docs/audit-2026-10-17-round19/evidence/simplediff-focused.test.ts",
+      "sha256": "2c6a39087a5e2630c212d21973d7bf15058038cd3ba442472e22c4ed075de10d",
+      "bytes": 3555
+    },
+    {
+      "path": "docs/audit-2026-10-17-round19/evidence/simplediff-normal.first.exit.json",
+      "sha256": "6186edd659a2862018299b2c697b6cd9db24e070cc32ad8ccbb58170e262c065",
+      "bytes": 697
+    },
+    {
+      "path": "docs/audit-2026-10-17-round19/evidence/simplediff-normal.first.raw.log",
+      "sha256": "b6f3347ad1b1a34e5b75413f9de8d127959f6b0a8aa47426daa453b91406ba01",
+      "bytes": 1850
+    },
+    {
+      "path": "docs/audit-2026-10-17-round19/evidence/simplediff-preflight.json",
+      "sha256": "0f0acc02bee548404876e12f7bb40d8a75dbb7a474c2b7103620e7dd1b3be791",
+      "bytes": 1735
+    },
+    {
+      "path": "docs/audit-2026-10-17-round19/evidence/simplediff-related.json",
+      "sha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570",
+      "bytes": 3
+    },
+    {
+      "path": "docs/audit-2026-10-17-round19/evidence/simplediff-source-manifest.json",
+      "sha256": "90ec59e07bfe6494afd980a372bddd3adc59af77deb31313a89be91ab12357c9",
+      "bytes": 3230
+    },
+    {
+      "path": "docs/audit-2026-10-17-round19/evidence/simplediff-validation.json",
+      "sha256": "a550cdcb2b32b805a7a7df029e045c0d224b640ec732813fe309e8cc56997f0a",
+      "bytes": 2772
+    }
+  ],
+  "selfExcluded": true,
+  "rawLogsPreservedVerbatim": true,
+  "metadataOnlyReview": {
+    "reportLinksChecked": 19,
+    "allTargetsExist": true,
+    "referencedLinesInBounds": true,
+    "artifactHashesChecked": 12,
+    "testReruns": 0
+  },
+  "metadataAdjustments": [
+    "Pre-submission prose clarified that one focused projection test has 12 input pairs and that no Git writes were executed; no product or validation rerun."
+  ]
+}

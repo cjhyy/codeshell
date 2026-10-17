@@ -1,0 +1,19 @@
+{
+  "command": [
+    "node",
+    "scripts/run-bun-test-shard.mjs",
+    "--timeout",
+    "30000",
+    "packages/core/src/session/stream-timing.test.ts",
+    "docs/audit-2026-10-17-round19/evidence/timing-normal.test.ts"
+  ],
+  "attempt": 1,
+  "exitCode": 0,
+  "rawLog": "docs/audit-2026-10-17-round19/evidence/timing-normal.first.raw.log",
+  "rawBytes": 1185,
+  "rawSha256": "8abd530b2545b293931994cc6d5039bb8a2651d58814ed60769f1a8e4dbe6933",
+  "elapsedSeconds": 0.156,
+  "stdoutAndStderrCombined": true,
+  "rawAndExitSavedBeforeInspection": true,
+  "testReruns": 0
+}

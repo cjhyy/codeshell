@@ -1,0 +1,77 @@
+{
+  "base": "5f5cf69df8526470700712a4dc2d5ae6bd2da132",
+  "formalCount": 0,
+  "candidateCount": 0,
+  "relatedCount": 0,
+  "runs": [
+    {
+      "command": [
+        "node",
+        "scripts/run-bun-test-shard.mjs",
+        "--timeout",
+        "30000",
+        "packages/core/src/session/stream-timing.test.ts",
+        "docs/audit-2026-10-17-round19/evidence/timing-normal.test.ts"
+      ],
+      "attempt": 1,
+      "exitCode": 0,
+      "rawLog": "docs/audit-2026-10-17-round19/evidence/timing-normal.first.raw.log",
+      "rawBytes": 1185,
+      "rawSha256": "8abd530b2545b293931994cc6d5039bb8a2651d58814ed60769f1a8e4dbe6933",
+      "elapsedSeconds": 0.156,
+      "stdoutAndStderrCombined": true,
+      "rawAndExitSavedBeforeInspection": true,
+      "testReruns": 0,
+      "exitReceipt": "docs/audit-2026-10-17-round19/evidence/timing-normal.first.exit.json",
+      "completedGuard": true,
+      "testsPassed": 10,
+      "expectations": 37,
+      "testsFailed": 0,
+      "testsSkipped": 0,
+      "existingTests": 2,
+      "focusedTests": 8,
+      "existingExpectations": 10,
+      "focusedExpectations": 27
+    }
+  ],
+  "cleanTotals": {
+    "shards": 1,
+    "testsPassed": 10,
+    "expectations": 37,
+    "existingTests": 2,
+    "focusedTests": 8,
+    "existingExpectations": 10,
+    "focusedExpectations": 27,
+    "testsFailed": 0,
+    "testsSkipped": 0
+  },
+  "failedShards": [],
+  "skippedDirections": [
+    "Old recorder midnight direction remains skipped; no recorder runtime was imported or copied."
+  ],
+  "metadataFailures": [
+    {
+      "kind": "navigation-only shell glob failure",
+      "command": "rg -n 'createRunTiming|stampStreamEvent|interface RunTiming|type RunTiming|startedAt|durationMs' packages/core/src/engine/engine.ts packages/core/src/engine/run-stream.ts packages/core/src/session/output-publisher.ts packages/core/src/types/stream* packages/core/src/session/session-message.ts",
+      "exitCode": 1,
+      "firstOutput": "zsh:1: no matches found: packages/core/src/types/stream*\n",
+      "productOrBunAttempt": false,
+      "handling": "Preserved and skipped guessed path; inventoried actual source files through rg --files and selected types.ts. No product rerun."
+    },
+    {
+      "kind": "source range metadata correction",
+      "initialDescription": "output-publisher.ts 1-180 (full source)",
+      "actualFileLineCount": 175,
+      "correctedDescription": "1-175 (full source; initial read requested up to 215)",
+      "handling": "Corrected descriptions only; source/fixture/raw bytes unchanged; no product rerun."
+    }
+  ],
+  "scope": "Actual stream-timing leaf only with caller-owned deterministic clock numbers and in-memory events; selected Engine/run-stream/publisher/type consumers were read statically.",
+  "productChanges": false,
+  "reruns": 0,
+  "limitations": [
+    "No Engine/run-stream/publisher/journal/replay/recorder runtime imports.",
+    "No actual timers, system clock mutation, model/transport/native/FS product operations.",
+    "Default Date.now/performance.now paths not executed; no platform precision or scheduling claim."
+  ]
+}

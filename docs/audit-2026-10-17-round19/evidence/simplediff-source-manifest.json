@@ -1,0 +1,80 @@
+{
+  "base": "5f5cf69df8526470700712a4dc2d5ae6bd2da132",
+  "files": [
+    {
+      "path": "packages/core/src/session/simple-diff.ts",
+      "frozenSha256": "fc1d8e83f81bc3d6042561fb3549dc0af14e228d20b6a76b46998d9b3446ffeb",
+      "currentSha256": "fc1d8e83f81bc3d6042561fb3549dc0af14e228d20b6a76b46998d9b3446ffeb",
+      "matchesFrozen": true,
+      "bytes": 3041,
+      "lineCount": 89,
+      "ranges": [
+        "1-89 (full source)"
+      ],
+      "kind": "actual runtime zero-import leaf; small owned strings only"
+    },
+    {
+      "path": "packages/core/src/session/simple-diff.test.ts",
+      "frozenSha256": "a38f35d8159d8de537cc27ba052587d18744fc30f37dfd458bb687a503bfe83d",
+      "currentSha256": "a38f35d8159d8de537cc27ba052587d18744fc30f37dfd458bb687a503bfe83d",
+      "matchesFrozen": true,
+      "bytes": 1828,
+      "lineCount": 60,
+      "ranges": [
+        "1-60 (full source)"
+      ],
+      "kind": "existing leaf tests selected for the one guarded shard"
+    },
+    {
+      "path": "packages/tui/src/cli/commands/builtin/utility-commands.ts",
+      "frozenSha256": "30f57f0789dc55613f4a50115bf5d9900793c8e9ec5d0d144f4ad3c7e2a55f60",
+      "currentSha256": "30f57f0789dc55613f4a50115bf5d9900793c8e9ec5d0d144f4ad3c7e2a55f60",
+      "matchesFrozen": true,
+      "bytes": 9016,
+      "lineCount": 231,
+      "ranges": [
+        "41-159 ordinary /undo consumer selected; full initial read displayed lines 1-231"
+      ],
+      "kind": "source only; no import/command/FileHistory/filesystem/renderer execution; other utility commands not audited"
+    },
+    {
+      "path": "scripts/run-bun-test-shard.mjs",
+      "frozenSha256": "dd2b245afbcb5aa7c798c8674d34edb8e02bb42be0be320050adf9be5ed2fd7d",
+      "currentSha256": "dd2b245afbcb5aa7c798c8674d34edb8e02bb42be0be320050adf9be5ed2fd7d",
+      "matchesFrozen": true,
+      "bytes": 233,
+      "lineCount": 8,
+      "ranges": [
+        "1-8 (full source)"
+      ],
+      "kind": "guard entry read and executed for one shard"
+    },
+    {
+      "path": "scripts/bun-test-completion.mjs",
+      "frozenSha256": "99808f8f7c67ae5f108243b0649557209991f148f0150785fcde83d47465047e",
+      "currentSha256": "99808f8f7c67ae5f108243b0649557209991f148f0150785fcde83d47465047e",
+      "matchesFrozen": true,
+      "bytes": 6518,
+      "lineCount": 152,
+      "ranges": [],
+      "kind": "metadata byte pin only; runner invokes it, not independently source-audited"
+    },
+    {
+      "path": "CODESHELL.md",
+      "frozenSha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "currentSha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "matchesFrozen": true,
+      "bytes": 17639,
+      "lineCount": 217,
+      "ranges": [
+        "1-217 (full instructions read)"
+      ],
+      "kind": "repository instructions; not product coverage"
+    }
+  ],
+  "limitations": [
+    "Selected source pins do not prove entire-file or transitive runtime coverage.",
+    "The TUI utility consumer was read statically only. No command, undo, FileHistory, filesystem, patch applier or renderer executed.",
+    "The known round4 O(n*m) cost direction is excluded; no large input, pressure, performance, memory or timing experiment."
+  ]
+}

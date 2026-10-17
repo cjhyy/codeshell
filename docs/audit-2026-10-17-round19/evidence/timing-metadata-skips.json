@@ -1,0 +1,17 @@
+[
+  {
+    "kind": "navigation-only shell glob failure",
+    "command": "rg -n 'createRunTiming|stampStreamEvent|interface RunTiming|type RunTiming|startedAt|durationMs' packages/core/src/engine/engine.ts packages/core/src/engine/run-stream.ts packages/core/src/session/output-publisher.ts packages/core/src/types/stream* packages/core/src/session/session-message.ts",
+    "exitCode": 1,
+    "firstOutput": "zsh:1: no matches found: packages/core/src/types/stream*\n",
+    "productOrBunAttempt": false,
+    "handling": "Preserved and skipped guessed path; inventoried actual source files through rg --files and selected types.ts. No product rerun."
+  },
+  {
+    "kind": "source range metadata correction",
+    "initialDescription": "output-publisher.ts 1-180 (full source)",
+    "actualFileLineCount": 175,
+    "correctedDescription": "1-175 (full source; initial read requested up to 215)",
+    "handling": "Corrected descriptions only; source/fixture/raw bytes unchanged; no product rerun."
+  }
+]

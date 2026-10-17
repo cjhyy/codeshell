@@ -1,0 +1,37 @@
+{
+  "base": "5f5cf69df8526470700712a4dc2d5ae6bd2da132",
+  "repo": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell",
+  "metadataOnly": true,
+  "fixturePath": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17-round19/evidence/simplediff-focused.test.ts",
+  "fixtureSha256": "2c6a39087a5e2630c212d21973d7bf15058038cd3ba442472e22c4ed075de10d",
+  "runtimeImports": [
+    "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/packages/core/src/session/simple-diff.ts"
+  ],
+  "sourcePathsExist": true,
+  "allSelectedFilesMatchFrozen": true,
+  "fixtureContainsAbsoluteActualLeafImport": true,
+  "leafHasNoRuntimeImports": true,
+  "proposalBase": "65691923fa629970ac26dc04e35362a9c4ab57a8",
+  "proposalRevalidatedAgainstRound19Frozen": [
+    {
+      "path": "packages/core/src/session/simple-diff.ts",
+      "proposalSha256": "fc1d8e83f81bc3d6042561fb3549dc0af14e228d20b6a76b46998d9b3446ffeb",
+      "round19FrozenSha256": "fc1d8e83f81bc3d6042561fb3549dc0af14e228d20b6a76b46998d9b3446ffeb",
+      "matches": true
+    },
+    {
+      "path": "packages/core/src/session/simple-diff.test.ts",
+      "proposalSha256": "a38f35d8159d8de537cc27ba052587d18744fc30f37dfd458bb687a503bfe83d",
+      "round19FrozenSha256": "a38f35d8159d8de537cc27ba052587d18744fc30f37dfd458bb687a503bfe83d",
+      "matches": true
+    },
+    {
+      "path": "packages/tui/src/cli/commands/builtin/utility-commands.ts",
+      "proposalSha256": "30f57f0789dc55613f4a50115bf5d9900793c8e9ec5d0d144f4ad3c7e2a55f60",
+      "round19FrozenSha256": "30f57f0789dc55613f4a50115bf5d9900793c8e9ec5d0d144f4ad3c7e2a55f60",
+      "matches": true
+    }
+  ],
+  "noGuessedDependencyPaths": true,
+  "productExecutionDuringPreflight": false
+}

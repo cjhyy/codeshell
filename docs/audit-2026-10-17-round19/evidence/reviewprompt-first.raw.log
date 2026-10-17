@@ -1,0 +1,26 @@
+bun test v1.3.11 (af24e281)
+
+docs/audit-2026-10-17-round19/evidence/reviewprompt-focused.test.ts:
+(pass) round19 actual review prompt leaf, owned ordinary strings > characterizes mixed dimensions shown by TUI help: perf is silently dropped [2.29ms]
+(pass) round19 actual review prompt leaf, owned ordinary strings > characterizes perf alone broadening to all dimensions; canonical name remains scoped
+(pass) round19 actual review prompt leaf, owned ordinary strings > normalizes ordinary case, separators, duplicates, and unknown names
+(pass) round19 actual review prompt leaf, owned ordinary strings > does not mutate caller-owned options or dimension arrays [0.14ms]
+(pass) round19 actual review prompt leaf, owned ordinary strings > honors the documented default length boundary with an explicit marker only above it [0.09ms]
+(pass) round19 actual review prompt leaf, owned ordinary strings > defaults an empty dimension list and preserves ordinary labels in both output modes [0.04ms]
+
+packages/coding/src/review/review-prompt.test.ts:
+(pass) coding parseDimensions > defaults to all dimensions when empty [0.02ms]
+(pass) coding parseDimensions > parses a comma/space list and keeps canonical order [0.03ms]
+(pass) coding parseDimensions > drops unknown names, falling back to all if none valid [0.03ms]
+(pass) buildReviewPrompt > includes the priority guide and the content in a diff fence [0.03ms]
+(pass) buildReviewPrompt > uses a plain fence and 'code' wording for full-file (non-incremental) [0.01ms]
+(pass) buildReviewPrompt > only lists requested dimensions [0.03ms]
+(pass) buildReviewPrompt > json mode asks for a JSON object and no prose [0.03ms]
+(pass) buildReviewPrompt > truncates overly long content [0.39ms]
+(pass) buildReviewPrompt > includes the label when provided [0.08ms]
+
+ 15 pass
+ 0 fail
+ 44 expect() calls
+Ran 15 tests across 2 files. [199.00ms]
+Completed Bun shard: 15 tests, 0 skipped; 0 failures.
