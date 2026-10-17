@@ -64,7 +64,8 @@ export function observeElectronDiagnostic(diagnostics, method, ...args) {
 }
 
 /** Evidence only: never confers process authority or changes an acceptance gate. */
-export function createElectronTestDiagnostics({ ownedRoots = [] } = {}) {
+export function createElectronTestDiagnostics({ ownedRoots = [], additionalPhases = [] } = {}) {
+  const allowedPhases = new Set([...diagnosticPhases, ...additionalPhases]);
   const normalize = (text) => {
     const path = text.replace(/\\/g, "/");
     return process.platform === "win32" ? path.toLowerCase() : path;
@@ -97,7 +98,7 @@ export function createElectronTestDiagnostics({ ownedRoots = [] } = {}) {
   return {
     receipt,
     phase(phase) {
-      assert(diagnosticPhases.has(phase), "Unknown Electron diagnostic phase");
+      assert(allowedPhases.has(phase), "Unknown Electron diagnostic phase");
       receipt.phase = phase;
       event("phase", { phase });
     },

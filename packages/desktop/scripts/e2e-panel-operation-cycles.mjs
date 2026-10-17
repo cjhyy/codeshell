@@ -3,6 +3,7 @@
 /* global document, window */
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
+import { createHash } from "node:crypto";
 import { createServer } from "node:http";
 import { mkdir, mkdtemp, readFile, realpath, rename, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -10,6 +11,7 @@ import { basename, dirname, isAbsolute, join, relative, resolve, sep } from "nod
 import { fileURLToPath } from "node:url";
 import { prepareConfinedElectronFixture } from "./confined-electron-fixture.mjs";
 import { watchElectronTestProcess } from "./electron-test-watchdog.mjs";
+import { createPanelOperationDiagnostics } from "./panel-operation-diagnostics.mjs";
 import {
   assertSourceElectronTransportSettled,
   expandSidebar,
@@ -38,6 +40,11 @@ assert.ok(
   "Evidence must remain outside Desktop",
 );
 if (evidenceArgs.length) await mkdir(evidence, { mode: 0o700 });
+const diagnostics = createPanelOperationDiagnostics({
+  evidence,
+  ownedRoots: [resolve(appDir, "../.."), evidence],
+});
+diagnostics.phase("panel-fixture-init");
 const isolated = await makeIsolatedElectronHome("codeshell-panel-operation-cycles-");
 const projectPath = join(isolated.home, "operation-project");
 const generatedPath = join(
@@ -55,7 +62,27 @@ const imageSize = { width: ownedImage.readUInt32BE(16), height: ownedImage.readU
 const secondaryPath = join(isolated.home, "secondary-folder");
 const sessionId = "panel-operation-session";
 const title = "Panel operation conversation";
-const report = { cases: [], errors: [], evidence };
+const report = { cases: [], errors: [], evidence, privateHomeRemoved: false };
+function recordCase(name) {
+  report.cases.push(name);
+  diagnostics.caseCompleted(name, report.cases.length);
+}
+try {
+  diagnostics.provenance({
+    sourceHead: execFileSync("git", ["rev-parse", "HEAD"], { cwd: appDir, stdio: "pipe" })
+      .toString()
+      .trim(),
+    fixtureSHA256: createHash("sha256")
+      .update(await readFile(fileURLToPath(import.meta.url)))
+      .digest("hex"),
+    platform: process.platform,
+    arch: process.arch,
+    privateHome: isolated.home,
+  });
+} catch {
+  diagnostics.receipt.recordingFailed = true;
+}
+diagnostics.homeRemoved(false);
 let electron, win, failure, processMonitor, mainChild, mainClosed;
 let routeAvailable = false;
 const requests = [];
@@ -179,6 +206,7 @@ async function seed() {
 }
 try {
   await seed();
+  diagnostics.phase("panel-launch");
   electron = await launchCodeShellElectron(
     {
       appDir,
@@ -191,18 +219,33 @@ try {
       watch: (child, options) => {
         assert.equal(mainChild, undefined, "One direct Main per panel fixture");
         mainChild = child;
+        diagnostics.observeChild(child);
         mainClosed = new Promise((done) =>
           child.once("close", (code, signal) => done({ code, signal })),
         );
-        processMonitor = watchElectronTestProcess(child, options);
+        processMonitor = watchElectronTestProcess(child, {
+          ...options,
+          signalProcess: (pid, signal) => {
+            diagnostics.signal(pid, signal);
+            return process.kill(pid, signal);
+          },
+        });
         return processMonitor;
       },
-      reportFailure: (message) => report.errors.push(message),
+      reportFailure: (message) => {
+        diagnostics.error(message, mainChild);
+        report.errors.push(message);
+      },
+      diagnostics,
     },
   );
+  diagnostics.phase("panel-find-renderer");
   win = await findCodeShellWindow(electron);
   win.setDefaultTimeout(15_000);
-  win.on("pageerror", (error) => report.errors.push(error.message));
+  win.on("pageerror", (error) => {
+    diagnostics.error(error, mainChild);
+    report.errors.push(error.message);
+  });
   await win.setViewportSize({ width: 1280, height: 850 });
   await dismissTrust();
   await win.evaluate((cwd) => window.codeshell.setTrust(cwd, "trusted"), projectPath);
@@ -224,6 +267,7 @@ try {
     project.id,
   );
   assert.equal(multiRootProject.project.roots.length, 2);
+  diagnostics.phase("panel-session-seed");
   const folder = join(isolated.codeShellHome, "sessions", sessionId);
   await mkdir(folder, { recursive: true });
   await writeFile(
@@ -297,6 +341,7 @@ try {
   report.confinement = await confined.assertWorker(electron, { requireWorker: false });
   // Production history replay and real Main image IPC render this owned PNG.
   // GenerateImage/provider execution and OS-default opening are not invoked.
+  diagnostics.phase("panel-image");
   const imageProcess = win.locator(
     '[data-message-kind="process"][data-tool-names~="GenerateImage"]',
   );
@@ -339,7 +384,7 @@ try {
       "Owned PNG and seeded production-format tool history; real replay/renderer/Main image IPC and decoding, no provider/Engine/OS open",
   };
   await win.screenshot({ path: join(evidence, "generated-image-complete-path.png") });
-  report.cases.push(
+  recordCase(
     "Generated image history preserves the complete space-containing native path and decodes exact owned PNG bytes",
   );
   await imageHeading.click();
@@ -350,12 +395,13 @@ try {
     await imageCard.locator("button[title] img").evaluate((node) => node.closest("button").title),
     generatedPath,
   );
-  report.cases.push(
+  recordCase(
     "Generated image details collapse and reopen without inventing a residual attachment path",
   );
   await imageHeading.click();
   await processHeading.click();
   const composer = win.locator('textarea[aria-autocomplete="list"]:visible');
+  diagnostics.phase("panel-mentions");
   for (const [query, name, path, content] of [
     ["报告", "报告.md", join(projectPath, "报告.md"), "owned Unicode mention content\n"],
     [
@@ -378,7 +424,7 @@ try {
     assert.equal(await readFile(path, "utf8"), content);
     await composer.fill("");
     await composer.press("Escape");
-    report.cases.push(`Composer @${query} selects the readable file in its authoritative root`);
+    recordCase(`Composer @${query} selects the readable file in its authoritative root`);
   }
   await win.evaluate(() => {
     window.__panelOperationAnchors = [];
@@ -387,6 +433,7 @@ try {
     );
   });
 
+  diagnostics.phase("panel-files");
   const files = await openPanel("files");
   const alpha = files.locator("[data-files-path]").filter({ hasText: "alpha.txt" });
   await alpha.click();
@@ -397,14 +444,14 @@ try {
   await rename(join(projectPath, "alpha-hidden.txt"), join(projectPath, "alpha.txt"));
   await files.getByRole("button", { name: "刷新", exact: true }).last().click();
   await files.getByText("updated content", { exact: true }).waitFor();
-  report.cases.push(
+  recordCase(
     "Files opens real project content, exposes deleted-file failure and refresh recovers it",
   );
   await files.getByRole("button", { name: /返回文件|Back to files/ }).click();
   await files.locator("input").fill("README");
   await files.locator("[data-files-path]").filter({ hasText: "README.md" }).click();
   await files.getByRole("heading", { name: "Fixture document" }).waitFor();
-  report.cases.push("Files filter and Markdown preview use owned project files");
+  recordCase("Files filter and Markdown preview use owned project files");
   await files.getByRole("button", { name: /返回文件|Back to files/ }).click();
   await files.locator("input").fill("");
   await files.getByRole("combobox", { name: "项目文件夹", exact: true }).click();
@@ -420,7 +467,7 @@ try {
     await files.getByText("secondary folder actual content", { exact: true }).count(),
     0,
   );
-  report.cases.push(
+  recordCase(
     "Files real registered secondary-root selection reads its scoped files and switching back clears stale content",
   );
   await files.getByRole("button", { name: "评论此行", exact: true }).first().click();
@@ -438,10 +485,11 @@ try {
   const fileChip = win.locator('[title^="Owned file line comment"]');
   await fileChip.getByRole("button", { name: "移除标注", exact: true }).click();
   await fileChip.waitFor({ state: "hidden" });
-  report.cases.push(
+  recordCase(
     "Files line-comment Escape cancels; adding pins the exact file and line to the composer and removal clears it",
   );
 
+  diagnostics.phase("panel-browser-navigation");
   const browser = await navigate(`${origin}/a`, "Fixture A");
   await navigate(`${origin}/b`, "Fixture B");
   await browser.getByRole("button", { name: "后退", exact: true }).click();
@@ -516,9 +564,10 @@ try {
     "Switching browser tabs must retain navigation history",
   );
   assert.equal(afterSwitch.requests, 0, "Switching browser tabs must not reload the retained page");
-  report.cases.push(
+  recordCase(
     "Browser back/forward and tab switching preserve guest, page draft and navigation history",
   );
+  diagnostics.phase("panel-browser-layout");
   report.browserLayouts = [];
   for (const width of [390, 768, 1280]) {
     await win.setViewportSize({ width, height: 850 });
@@ -540,6 +589,7 @@ try {
     join(evidence, "browser-layouts.json"),
     JSON.stringify(report.browserLayouts, null, 2),
   );
+  diagnostics.phase("panel-browser-markers");
   const pickButton = browser.getByRole("button", { name: "圈选元素(加入输入框)", exact: true });
   async function pickHeading() {
     await pickButton.click();
@@ -574,9 +624,10 @@ try {
     .getByTitle("Updated browser element comment", { exact: true })
     .waitFor({ state: "hidden" });
   assert.equal(await win.getByRole("button", { name: "移除标注", exact: true }).count(), 0);
-  report.cases.push(
+  recordCase(
     "Browser real element picking cancels on Escape/tab switch; saved marker carries the exact page and supports edit/save/delete",
   );
+  diagnostics.phase("panel-browser-draft");
   await browser.locator('input[placeholder*="URL"]').fill("Keep A address while opening B");
   await browser.getByRole("button", { name: "新选项卡", exact: true }).last().click();
   await navigate(`${origin}/idle`, "Fixture Idle");
@@ -587,20 +638,22 @@ try {
     "Keep A address while opening B",
     "Opening and closing another live guest must preserve this tab's unsubmitted address draft",
   );
-  report.cases.push(
+  recordCase(
     "Browser opening and closing another live tab preserves the first tab's unsubmitted address draft",
   );
+  diagnostics.phase("panel-browser-retry");
   await navigate(`${origin}/retry`);
   await browser.getByRole("button", { name: "重试", exact: true }).waitFor();
   routeAvailable = true;
   await browser.getByRole("button", { name: "重试", exact: true }).click();
   await browser.getByRole("button", { name: "Fixture A", exact: true }).waitFor();
-  report.cases.push("Browser real connection failure shows Retry and recovers on the owned server");
+  recordCase("Browser real connection failure shows Retry and recovers on the owned server");
 
   // A retained background page may redirect or change its title. The active
   // tab keeps its own address and history while the hidden tab records them.
   await browser.getByRole("button", { name: "新选项卡", exact: true }).last().click();
   await navigate(`${origin}/b`, "Fixture B");
+  diagnostics.phase("panel-browser-background");
   const secondGuestId = await activeGuest().evaluate((node) => node.getWebContentsId());
   await electron.evaluate(({ webContents }, { id, url }) => webContents.fromId(id).loadURL(url), {
     id: guestId,
@@ -615,9 +668,8 @@ try {
     await browser.locator('input[placeholder*="URL"]').inputValue(),
     `${origin}/background`,
   );
-  report.cases.push(
-    "Browser background navigation updates its own tab without replacing the active page",
-  );
+  recordCase("Browser background navigation updates its own tab without replacing the active page");
+  diagnostics.phase("panel-browser-close");
   await browser.getByRole("button", { name: "关闭标签", exact: true }).first().click();
   await win.waitForFunction(
     (id) =>
@@ -631,12 +683,11 @@ try {
     guestId,
   );
   assert.equal(await activeGuest().evaluate((node) => node.getWebContentsId()), secondGuestId);
-  report.cases.push(
-    "Closing the selected browser tab destroys its guest and selects the surviving tab",
-  );
+  recordCase("Closing the selected browser tab destroys its guest and selects the surviving tab");
 
   // Advance only the owned renderer's clock to exercise the production idle
   // policy without holding a release audit open for five real minutes.
+  diagnostics.phase("panel-browser-idle");
   await win.clock.install();
   await browser.getByRole("button", { name: "新选项卡", exact: true }).last().click();
   await navigate(`${origin}/idle`, "Fixture Idle");
@@ -673,47 +724,51 @@ try {
   await navigate(`${origin}/a`, "Fixture A");
   await browser.getByRole("button", { name: "后退", exact: true }).click();
   await browser.getByRole("button", { name: "Fixture B", exact: true }).waitFor();
-  report.cases.push(
+  recordCase(
     "Browser five-minute idle eviction frees the hidden guest and remount restores working navigation listeners",
   );
   await win.clock.resume();
 
+  diagnostics.phase("panel-review-working");
   const review = await openPanel("review");
   await review.getByText("updated content", { exact: true }).waitFor();
+  diagnostics.phase("panel-review-stage");
   execFileSync("git", ["add", "alpha.txt"], { cwd: projectPath });
   await review.getByRole("button", { name: "选择审查范围", exact: true }).click();
   await win.getByRole("menuitem", { name: "已暂存", exact: true }).click();
   await review.getByText("updated content", { exact: true }).waitFor();
-  report.cases.push("Review reads actual working and staged Git diffs");
+  recordCase("Review reads actual working and staged Git diffs");
   const indexPath = join(projectPath, ".git", "index");
   const indexBytes = await readFile(indexPath);
+  diagnostics.phase("panel-review-corrupt");
   await writeFile(indexPath, "broken fixture index");
   await review.getByRole("button", { name: "刷新", exact: true }).click();
   await review.getByText(/index file|bad index|index.*corrupt/).waitFor();
+  diagnostics.phase("panel-review-repair");
   await writeFile(indexPath, indexBytes);
   await review.getByRole("button", { name: "刷新", exact: true }).click();
   await review.getByText("updated content", { exact: true }).waitFor();
-  report.cases.push(
-    "Review exposes a real corrupted-index error and refresh recovers after repair",
-  );
+  recordCase("Review exposes a real corrupted-index error and refresh recovers after repair");
   await review.getByRole("button", { name: "选择审查范围", exact: true }).click();
+  diagnostics.phase("panel-review-root-commit");
   await win.getByRole("menuitem", { name: "提交", exact: true }).hover();
   await win.getByRole("menuitem", { name: /Fixture initial commit/ }).click();
   await review.getByText("first content", { exact: true }).waitFor();
-  report.cases.push(
-    "Review selected root commit displays its real additions instead of an empty diff",
-  );
+  recordCase("Review selected root commit displays its real additions instead of an empty diff");
 
+  diagnostics.phase("panel-terminal-input");
   const terminal = await openPanel("terminal");
   const input = terminal.locator(".xterm-helper-textarea");
   await input.focus();
   await win.keyboard.type("printf 'PANEL_OPERATION_PTY_OK\\n'\n");
   await terminal.getByText("PANEL_OPERATION_PTY_OK", { exact: true }).waitFor();
+  diagnostics.phase("panel-terminal-switch");
   await openPanel("files");
   await openPanel("terminal");
   await terminal.getByText("PANEL_OPERATION_PTY_OK", { exact: true }).waitFor();
-  report.cases.push("Terminal executes real PTY input and preserves output across panel switches");
+  recordCase("Terminal executes real PTY input and preserves output across panel switches");
   await input.focus();
+  diagnostics.phase("panel-terminal-interrupt");
   await win.keyboard.type("printf 'PANEL_OPERATION_SLEEP_STARTED\\n'; sleep 60\n");
   await terminal.getByText("PANEL_OPERATION_SLEEP_STARTED", { exact: true }).waitFor();
   await win.keyboard.press("Control+C");
@@ -725,6 +780,7 @@ try {
   });
   await win.keyboard.type("printf 'PANEL_OPERATION_CANCEL_OK\\n'\n");
   await terminal.getByText("PANEL_OPERATION_CANCEL_OK", { exact: true }).waitFor();
+  diagnostics.phase("panel-terminal-exit");
   await win.keyboard.type("exit\n");
   await terminal.getByText(/进程已退出/).waitFor();
   const terminalLabel = await terminal.getAttribute("aria-labelledby");
@@ -733,16 +789,18 @@ try {
     .locator("..")
     .getByRole("button", { name: "关闭标签: 终端", exact: true })
     .click();
+  diagnostics.phase("panel-terminal-reopen");
   const replacement = await openPanel("terminal");
   await replacement.locator(".xterm-helper-textarea").focus();
   await win.keyboard.type("printf 'PANEL_OPERATION_REOPEN_OK\\n'\n");
   await replacement.getByText("PANEL_OPERATION_REOPEN_OK", { exact: true }).waitFor();
-  report.cases.push(
+  recordCase(
     "Terminal Ctrl+C cancels a real process; exit and reopening starts a fresh usable PTY",
   );
   assert.deepEqual(report.errors, []);
   report.result = "pass";
 } catch (error) {
+  diagnostics.error(error, mainChild);
   failure = error;
   report.result = "fail";
   report.failure = error.stack;
@@ -755,25 +813,34 @@ try {
       .catch(() => "unavailable")) ?? "unavailable",
   );
 } finally {
+  const cleanup = diagnostics.cleanup(failure ? "cycle-error" : "cycle-complete", mainChild);
+  let homeCleanupAuthorized = false;
   let closeTimer;
   try {
     if (electron) {
       assert.ok(processMonitor, "No birth custody: unsafe ordinary close skipped");
+      diagnostics.phase("panel-graceful-close");
+      if (cleanup) diagnostics.request(cleanup, "application.close", mainChild);
       await Promise.race([
         electron.close(),
         new Promise((_, reject) => {
           closeTimer = setTimeout(() => reject(Error("Owned panel close timed out")), 8000);
         }),
       ]);
+      diagnostics.closeReturned(mainChild);
     }
   } catch (error) {
+    diagnostics.error(error, mainChild);
     report.errors.push(error.message);
     failure ??= error;
   } finally {
     clearTimeout(closeTimer);
   }
   try {
+    diagnostics.phase("panel-custody");
+    if (cleanup) diagnostics.request(cleanup, "monitor.terminate", mainChild);
     report.processSettlement = (await processMonitor?.terminate()) ?? null;
+    if (cleanup) diagnostics.settled(cleanup, mainChild);
     assert.equal(
       report.processSettlement?.status,
       "cleaned",
@@ -783,6 +850,7 @@ try {
     assert.equal(report.processSettlement.remainingCount, 0);
     let exitTimer;
     try {
+      diagnostics.phase("panel-main-close");
       assert.ok(mainClosed, "Direct Main close event was not captured");
       report.mainExit = await Promise.race([
         mainClosed,
@@ -794,15 +862,16 @@ try {
       clearTimeout(exitTimer);
     }
     assert.deepEqual(report.mainExit, { code: 0, signal: null });
+    diagnostics.phase("panel-transport");
     report.windowsTransport = assertSourceElectronTransportSettled(mainChild);
     assert.deepEqual(
       report.errors,
       [],
       "Late renderer/transport/close failure must fail acceptance",
     );
-    await isolated.cleanup();
-    report.privateHomeRemoved = true;
+    homeCleanupAuthorized = !failure && report.result === "pass";
   } catch (error) {
+    diagnostics.error(error, mainChild);
     report.errors.push(error.message);
     report.retainedHome = isolated.home;
     failure ??= error;
@@ -810,13 +879,44 @@ try {
     mainChild?.stdout?.unref?.();
     mainChild?.stderr?.unref?.();
   }
-  server.closeAllConnections();
-  await new Promise((done) => server.close(done));
+  diagnostics.phase("panel-server-close");
+  try {
+    server.closeAllConnections();
+    await new Promise((done) => server.close(done));
+  } catch (error) {
+    diagnostics.error(error, mainChild);
+    report.errors.push(error.message);
+    failure ??= error;
+  }
+  // Settle the owned server before deciding whether this failed fixture's HOME
+  // can be removed. All existing Main/custody/transport gates have run above.
+  diagnostics.phase("panel-home-cleanup");
+  if (homeCleanupAuthorized && !failure && report.result === "pass") {
+    try {
+      await isolated.cleanup();
+      report.privateHomeRemoved = true;
+      diagnostics.homeRemoved(true);
+    } catch (error) {
+      diagnostics.error(error, mainChild);
+      report.errors.push(error.message);
+      report.retainedHome = isolated.home;
+      failure ??= error;
+    }
+  } else {
+    report.retainedHome = isolated.home;
+  }
   if (failure) {
     report.result = "fail";
     report.failure ??= failure.stack;
   }
-  await writeFile(join(evidence, "report.json"), JSON.stringify(report, null, 2));
+  diagnostics.phase("panel-final-report");
+  try {
+    await writeFile(join(evidence, "report.json"), JSON.stringify(report, null, 2));
+    diagnostics.finalReportWritten(report.result);
+  } catch (error) {
+    diagnostics.error(error, mainChild);
+    failure ??= error;
+  }
 }
 console.log(JSON.stringify(report, null, 2));
 if (failure) throw failure;
