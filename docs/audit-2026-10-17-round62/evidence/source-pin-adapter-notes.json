@@ -1,0 +1,8 @@
+{
+  "missingDeclaredByteCounts": [],
+  "nonReadingGateAssertions": [],
+  "unboundNavigationReferences": [],
+  "externalMetadataInputs": [],
+  "scope": "Only explicit frozen source/instruction/nav/hash pins bound; filename-only references stay unbound, missing bytes derived separately from baseline Git, never fabricated into original rows. Nested historical inputs without the canonical sha256 key remain original author metadata, not additional source coverage.",
+  "productRuns": 0
+}

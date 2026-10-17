@@ -1,0 +1,17 @@
+packages/core/src/model-catalog/params.ts
+packages/core/src/model-catalog/resolve.ts
+packages/core/src/model-catalog/index.ts
+packages/core/src/model-catalog/gen-connections.ts
+packages/core/src/model-catalog/save-entry.test.ts
+packages/core/src/model-catalog/params.test.ts
+packages/core/src/model-catalog/resolve.test.ts
+packages/core/src/model-catalog/types.ts
+packages/core/src/model-catalog/origins.test.ts
+packages/core/src/model-catalog/builtin-text.test.ts
+packages/core/src/model-catalog/gen-connections.test.ts
+packages/core/src/model-catalog/types.test.ts
+packages/core/src/model-catalog/catalog.test.ts
+packages/core/src/model-catalog/builtin.ts
+packages/core/src/model-catalog/save-entry.ts
+packages/core/src/model-catalog/upsert.test.ts
+packages/core/src/model-catalog/upsert.ts

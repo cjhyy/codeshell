@@ -1,0 +1,49 @@
+{
+  "root": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell",
+  "rootReportedHead": "d195788bc2c18cd85c81aea4a431ab29074df5cf",
+  "GitVerified": false,
+  "branchReported": 62,
+  "files": [
+    {
+      "path": "CODESHELL.md",
+      "bytes": 17639,
+      "lines": 217,
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "pinAt": "2026-10-17T20:34:36.394943+00:00",
+      "coverage": "hash-only before product body/line-navigation"
+    },
+    {
+      "path": "AGENTS.md",
+      "bytes": 206,
+      "lines": 5,
+      "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "pinAt": "2026-10-17T20:34:36.396828+00:00",
+      "coverage": "hash-only before product body/line-navigation"
+    },
+    {
+      "path": "packages/core/src/model-catalog/resolve.ts",
+      "bytes": 4284,
+      "lines": 113,
+      "sha256": "9d955240b7e33f2da3dc3f9162d68ead625565b5a75bcf7aff3ccc775052e140",
+      "pinAt": "2026-10-17T20:34:36.398034+00:00",
+      "coverage": "hash-only before product body/line-navigation"
+    },
+    {
+      "path": "packages/core/src/model-catalog/gen-connections.ts",
+      "bytes": 1539,
+      "lines": 43,
+      "sha256": "d8cd452cbacf4b5b6a1c318e04fabd4a9a8285e0ad0fe87bd0378332427948ce",
+      "pinAt": "2026-10-17T20:34:36.398790+00:00",
+      "coverage": "hash-only before product body/line-navigation"
+    },
+    {
+      "path": "packages/core/src/model-catalog/upsert.ts",
+      "bytes": 1099,
+      "lines": 25,
+      "sha256": "3d2dac35037d3a1df50154d874019a5efa61bc51e4211b7874428fbf99bc9380",
+      "pinAt": "2026-10-17T20:34:36.399605+00:00",
+      "coverage": "hash-only before product body/line-navigation"
+    }
+  ],
+  "instructionScope": "Previously read same-SHA CODESHELL/AGENTS reused without new semantic reading."
+}

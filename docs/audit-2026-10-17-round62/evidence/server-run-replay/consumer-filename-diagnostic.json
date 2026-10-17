@@ -1,0 +1,12 @@
+{
+  "toolChunk": "4e206f",
+  "exitCode": 2,
+  "stderrExcerpt": "rg: packages/server/test: No such file or directory (os error 2)\nrg: packages/server/tests: No such file or directory (os error 2)\n",
+  "existingMatchedFiles": [
+    "packages/server/src/desktop-web/http-api.ts",
+    "packages/server/src/serve/headless-server.ts",
+    "packages/server/src/hub/run-replay.test.ts",
+    "packages/server/src/hub/run-replay.ts"
+  ],
+  "resolution": "Use only actual matched source filenames. No product or test executed."
+}

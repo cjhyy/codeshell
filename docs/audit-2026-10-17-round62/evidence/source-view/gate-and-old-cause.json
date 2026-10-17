@@ -1,0 +1,72 @@
+{
+  "sharedHistoryProjection": "history-projection.json",
+  "scope": "Prior history navigation only; all four target totals exceed100 and only first100 retained each. No absence/unread/novelty claim from capped navigation. MD/JSON original scopes personally read are listed here.",
+  "canonicalJsonRead": "canonical-read.json",
+  "originalMdReads": [
+    {
+      "path": "docs/audit-2026-10-17-round15/documents.md",
+      "lineRanges": [
+        [
+          1,
+          27
+        ]
+      ],
+      "meaning": "Line23 lists complete reading and resolve ordinary propagation; line25 states priority/summary chain. Old preflight/navigation/parse failure and SKIP boundaries are historical only, not resumed or borrowed."
+    },
+    {
+      "path": "docs/audit-2026-10-17-round20/coverage.md",
+      "lineRanges": [
+        [
+          1,
+          15
+        ]
+      ],
+      "meaning": "Original scope/testing limits only; no old pass becomes a prep165 product result."
+    },
+    {
+      "path": "docs/audit-2026-10-17/sources.md",
+      "lineRanges": [
+        [
+          1,
+          74
+        ]
+      ],
+      "semanticOldCauseRanges": [
+        [
+          46,
+          56
+        ]
+      ],
+      "meaning": "Original S03 is single-file query JSON.stringify followed by free-text scrubSecrets damaging serialization. The wrapper/source caller family is retained as old context, not newly counted or revalidated."
+    }
+  ],
+  "exclusions": [
+    {
+      "path": "packages/core/src/sources/context-summary.ts",
+      "sha256": "adb53dc4fe6fa3d417f0893c64416447afdbc3305639aa3d27b29d229b203742",
+      "basis": "R20 root-source-manifest /files/11 explicit Full static leaf and same SHA36, also R15 same SHA + original scope MD; body0 now."
+    },
+    {
+      "path": "packages/core/src/sources/resolve.ts",
+      "sha256": "3d54fa881dd97c8b183fef070dc4f69742b391a730f0f9f3b20bb47301a3ef98",
+      "basis": "R15 worker /files/7 same SHA138 combined with original documents.md23–25 complete/ordinary-propagation scope; same ordinary boundary excluded before body. Not a claim that all authority/custody contracts were historically reviewed."
+    }
+  ],
+  "selectedLeafHistory": [
+    {
+      "path": "packages/core/src/sources/link-view.ts",
+      "basis": "R44 claims5745–5747 original objects are inventory/pin/loaded-module/import metadata; no semantic-full scope in inspected rows. Not evidence of unread. Old loaded-module/native failure records were not opened or treated as execution/coverage."
+    },
+    {
+      "path": "packages/core/src/sources/collection.ts",
+      "basis": "R44 claims5660–5662 same kind of inventory/pin/import metadata. Original sources.md7 says selected/逐段 reading, so this actual static DTO reread has known overlap, not first coverage."
+    }
+  ],
+  "earlyS03Lookup": {
+    "path": "docs/audit-2026-10-16/findings.json",
+    "query": "Exact issues[*].id == S03",
+    "retainedRows": 0,
+    "meaning": "Wrong historical epoch/limited locator, not an error or proof of no old cause. Filename-only S03 lookup found the actual original Sources report."
+  },
+  "globalCoverageUpdated": false
+}

@@ -1,0 +1,10 @@
+packages/core/src/themes/paths.ts
+packages/core/src/themes/index.ts
+packages/core/src/themes/manifest.ts
+packages/core/src/themes/audio.test.ts
+packages/core/src/themes/installer.ts
+packages/core/src/themes/audio.ts
+packages/core/src/themes/archive.test.ts
+packages/core/src/themes/source.ts
+packages/core/src/themes/themes.test.ts
+packages/core/src/themes/image.ts

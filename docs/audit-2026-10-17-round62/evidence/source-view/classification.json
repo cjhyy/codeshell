@@ -1,0 +1,26 @@
+{
+  "counts": {
+    "formal": 0,
+    "candidates": 0,
+    "newRelated": 0
+  },
+  "formal": [],
+  "candidates": [],
+  "newRelated": [],
+  "oldCauseReferences": [
+    {
+      "id": "S03",
+      "canonical": "docs/audit-2026-10-17/sources.md:46-56",
+      "countedAsNewRelated": false,
+      "meaning": "Known serialization/redaction order cause; current adapter JSON.stringify branch alone is not evidence of a new bug or current outer scrubber fix status."
+    }
+  ],
+  "negative": "No new ordinary source-reference/display/config counterexample established in the selected finite chain. Not all Sources/collections/URLs/authority or full IO review.",
+  "normalChainAndCounterevidence": [
+    "Catalog parse/save selected code validates Link/collection configs via their actual helpers; no invented malformed/null DTO supplied.",
+    "linkSourceView normal config schema/default params/size bound and scopeId/title projection were read; provider registry/action/availability/grant enforcement not audited.",
+    "Collection DTO declares bounded explicit entries with unique IDs and stable names; local capture uses the same schema for id/name/output, with actual IO/custody boundary excluded from correctness opinion.",
+    "Adapter uses the same entry.id for scope/resource lookup, relativePath??name for labels, and preserved entry.id/sourceHash in query/chunk references. No new mismatch found, no real file or query executed.",
+    "Context summary/resolve old-scope bodies excluded; no permanent parser/SDK/native/search failure direction reopened."
+  ]
+}

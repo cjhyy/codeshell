@@ -1,0 +1,10 @@
+{
+  "toolChunk": "9e3631",
+  "exitCode": 1,
+  "output": "Traceback (most recent call last):\n  File \"/tmp/codeshell-audit-round163-coverage61/finalize.py\", line 25, in <module>\n    assert path.is_relative_to(P.resolve()) and path.exists(),str(path)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError: /private/tmp/codeshell-audit-round163-coverage61/artifact-receipt.json\n",
+  "outputChannels": "Original tool combined output copied exactly; not reconstructed separated stderr/stdout. No finalizer success output preceded this traceback.",
+  "firstMethodPath": "finalize.first.py",
+  "firstMethodSHA256": "ae1b929bd96803a7a6560eb4d6cec9ac3249e27ebf8128d2dd92ff91514b324d",
+  "scope": "Own metadata finalizer; no product execution or frozen input changes",
+  "correction": "Allow the self-excluded receipt link as pending until the receipt is created, then verify its existence within the exact directory."
+}

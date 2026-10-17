@@ -1,0 +1,459 @@
+{
+  "baseline": "d195788bc2c18cd85c81aea4a431ab29074df5cf",
+  "files": [
+    {
+      "path": "packages/desktop/src/main/theme-pack-conversion.ts",
+      "bytes": 2306,
+      "lines": 61,
+      "sha256": "b36b92022953a00de6247f6a34f76de02e5217fa79c8d6f27051ca2a2db4c116",
+      "beforeBodyOrLineNavigation": true,
+      "scope": "Ordinary validated id/canonical local asset name -> InstalledTheme -> renderer pack URL -> URL/MIME/range response fields. Full labels only for whole text of small conversion/URL/type leaves; no real installation, Electron startup, media decode/playback, file custody/race/security or renderer application verification.",
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          61
+        ]
+      ],
+      "bodyDisplayedLineRanges": [
+        [
+          1,
+          61
+        ]
+      ],
+      "semanticLineCount": 61,
+      "bodyDisplayedLineCount": 61,
+      "semanticFull": true,
+      "newUniqueCoverageClaim": false,
+      "endingSha256": "b36b92022953a00de6247f6a34f76de02e5217fa79c8d6f27051ca2a2db4c116",
+      "overlap": "Core themes manifest/paths original R7 same-SHA full reading retained; selected reuse does not become newly unique. Main index is selected only."
+    },
+    {
+      "path": "packages/desktop/src/main/theme-asset-url.ts",
+      "bytes": 1823,
+      "lines": 70,
+      "sha256": "4cff00aa4bd26d2c7c6b0e262ac213012e8381879a56086fadd6496fbf7fb007",
+      "beforeBodyOrLineNavigation": true,
+      "scope": "Ordinary validated id/canonical local asset name -> InstalledTheme -> renderer pack URL -> URL/MIME/range response fields. Full labels only for whole text of small conversion/URL/type leaves; no real installation, Electron startup, media decode/playback, file custody/race/security or renderer application verification.",
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          70
+        ]
+      ],
+      "bodyDisplayedLineRanges": [
+        [
+          1,
+          70
+        ]
+      ],
+      "semanticLineCount": 70,
+      "bodyDisplayedLineCount": 70,
+      "semanticFull": true,
+      "newUniqueCoverageClaim": false,
+      "endingSha256": "4cff00aa4bd26d2c7c6b0e262ac213012e8381879a56086fadd6496fbf7fb007",
+      "overlap": "Core themes manifest/paths original R7 same-SHA full reading retained; selected reuse does not become newly unique. Main index is selected only."
+    },
+    {
+      "path": "packages/desktop/src/main/theme-asset-protocol.ts",
+      "bytes": 5489,
+      "lines": 141,
+      "sha256": "5b1d516a23147892df124f5f3ea85e0a0f4d5f125311899797f8ff2164f83ee8",
+      "beforeBodyOrLineNavigation": true,
+      "scope": "Ordinary validated id/canonical local asset name -> InstalledTheme -> renderer pack URL -> URL/MIME/range response fields. Full labels only for whole text of small conversion/URL/type leaves; no real installation, Electron startup, media decode/playback, file custody/race/security or renderer application verification.",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          20,
+          27
+        ],
+        [
+          49,
+          85
+        ],
+        [
+          90,
+          108
+        ],
+        [
+          110,
+          127
+        ],
+        [
+          137,
+          140
+        ]
+      ],
+      "bodyDisplayedLineRanges": [
+        [
+          1,
+          141
+        ]
+      ],
+      "semanticLineCount": 86,
+      "bodyDisplayedLineCount": 141,
+      "semanticFull": false,
+      "newUniqueCoverageClaim": false,
+      "endingSha256": "5b1d516a23147892df124f5f3ea85e0a0f4d5f125311899797f8ff2164f83ee8",
+      "overlap": "Core themes manifest/paths original R7 same-SHA full reading retained; selected reuse does not become newly unique. Main index is selected only."
+    },
+    {
+      "path": "packages/core/src/themes/manifest.ts",
+      "bytes": 6099,
+      "lines": 195,
+      "sha256": "ed8c193ec2cf85fe392c6c67fa0b6a73e13481e62260f50a64ca5f8decb2bd38",
+      "beforeBodyOrLineNavigation": true,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          69,
+          79
+        ],
+        [
+          125,
+          146
+        ],
+        [
+          150,
+          188
+        ],
+        [
+          193,
+          195
+        ]
+      ],
+      "bodyDisplayedLineRanges": [
+        [
+          67,
+          85
+        ],
+        [
+          125,
+          195
+        ]
+      ],
+      "semanticLineCount": 75,
+      "bodyDisplayedLineCount": 90,
+      "semanticFull": false,
+      "newUniqueCoverageClaim": false,
+      "endingSha256": "ed8c193ec2cf85fe392c6c67fa0b6a73e13481e62260f50a64ca5f8decb2bd38",
+      "scope": "Ordinary validated id/canonical local asset name -> InstalledTheme -> renderer pack URL -> URL/MIME/range response fields. Full labels only for whole text of small conversion/URL/type leaves; no real installation, Electron startup, media decode/playback, file custody/race/security or renderer application verification.",
+      "overlap": "Core themes manifest/paths original R7 same-SHA full reading retained; selected reuse does not become newly unique. Main index is selected only."
+    },
+    {
+      "path": "packages/core/src/themes/paths.ts",
+      "bytes": 2101,
+      "lines": 60,
+      "sha256": "d2e7032ff99af741fe8da35cb8d4687c3c7579b41ad788be9c6801057bf49d9f",
+      "beforeBodyOrLineNavigation": true,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          38,
+          55
+        ]
+      ],
+      "bodyDisplayedLineRanges": [
+        [
+          1,
+          60
+        ]
+      ],
+      "semanticLineCount": 18,
+      "bodyDisplayedLineCount": 60,
+      "semanticFull": false,
+      "newUniqueCoverageClaim": false,
+      "endingSha256": "d2e7032ff99af741fe8da35cb8d4687c3c7579b41ad788be9c6801057bf49d9f",
+      "scope": "Ordinary validated id/canonical local asset name -> InstalledTheme -> renderer pack URL -> URL/MIME/range response fields. Full labels only for whole text of small conversion/URL/type leaves; no real installation, Electron startup, media decode/playback, file custody/race/security or renderer application verification.",
+      "overlap": "Core themes manifest/paths original R7 same-SHA full reading retained; selected reuse does not become newly unique. Main index is selected only."
+    },
+    {
+      "path": "packages/core/src/themes/installer.ts",
+      "bytes": 24118,
+      "lines": 662,
+      "sha256": "ad0061ca6299f48274c7dbe839c14129d57f938e0091fd6621be7fc6993cd360",
+      "beforeBodyOrLineNavigation": true,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          80,
+          91
+        ],
+        [
+          170,
+          188
+        ],
+        [
+          201,
+          210
+        ],
+        [
+          427,
+          514
+        ],
+        [
+          614,
+          619
+        ]
+      ],
+      "bodyDisplayedLineRanges": [
+        [
+          75,
+          105
+        ],
+        [
+          163,
+          212
+        ],
+        [
+          427,
+          519
+        ],
+        [
+          605,
+          627
+        ]
+      ],
+      "semanticLineCount": 135,
+      "bodyDisplayedLineCount": 197,
+      "semanticFull": false,
+      "newUniqueCoverageClaim": false,
+      "endingSha256": "ad0061ca6299f48274c7dbe839c14129d57f938e0091fd6621be7fc6993cd360",
+      "scope": "Ordinary validated id/canonical local asset name -> InstalledTheme -> renderer pack URL -> URL/MIME/range response fields. Full labels only for whole text of small conversion/URL/type leaves; no real installation, Electron startup, media decode/playback, file custody/race/security or renderer application verification.",
+      "overlap": "Core themes manifest/paths original R7 same-SHA full reading retained; selected reuse does not become newly unique. Main index is selected only."
+    },
+    {
+      "path": "packages/desktop/src/shared/theme-packs.ts",
+      "bytes": 1788,
+      "lines": 53,
+      "sha256": "b6826a52ced3345a0531a1d41a73b18eaab71a6300222de709b1738cf382e0ca",
+      "beforeBodyOrLineNavigation": true,
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          53
+        ]
+      ],
+      "bodyDisplayedLineRanges": [
+        [
+          1,
+          53
+        ]
+      ],
+      "semanticLineCount": 53,
+      "bodyDisplayedLineCount": 53,
+      "semanticFull": true,
+      "newUniqueCoverageClaim": false,
+      "endingSha256": "b6826a52ced3345a0531a1d41a73b18eaab71a6300222de709b1738cf382e0ca",
+      "scope": "Ordinary validated id/canonical local asset name -> InstalledTheme -> renderer pack URL -> URL/MIME/range response fields. Full labels only for whole text of small conversion/URL/type leaves; no real installation, Electron startup, media decode/playback, file custody/race/security or renderer application verification.",
+      "overlap": "Core themes manifest/paths original R7 same-SHA full reading retained; selected reuse does not become newly unique. Main index is selected only."
+    },
+    {
+      "path": "packages/desktop/src/main/index.ts",
+      "bytes": 299337,
+      "lines": 7330,
+      "sha256": "105b2b49a28e0a7ef10980ac5feaa3a07ff81e7197f5acbefd95feb2498224c0",
+      "beforeBodyOrLineNavigation": true,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          3478,
+          3480
+        ],
+        [
+          4964,
+          4967
+        ],
+        [
+          4985,
+          4994
+        ],
+        [
+          4996,
+          5002
+        ]
+      ],
+      "bodyDisplayedLineRanges": [
+        [
+          3475,
+          3485
+        ],
+        [
+          4955,
+          5004
+        ]
+      ],
+      "semanticLineCount": 24,
+      "bodyDisplayedLineCount": 61,
+      "semanticFull": false,
+      "newUniqueCoverageClaim": false,
+      "endingSha256": "105b2b49a28e0a7ef10980ac5feaa3a07ff81e7197f5acbefd95feb2498224c0",
+      "scope": "Ordinary validated id/canonical local asset name -> InstalledTheme -> renderer pack URL -> URL/MIME/range response fields. Full labels only for whole text of small conversion/URL/type leaves; no real installation, Electron startup, media decode/playback, file custody/race/security or renderer application verification.",
+      "overlap": "Core themes manifest/paths original R7 same-SHA full reading retained; selected reuse does not become newly unique. Main index is selected only."
+    }
+  ],
+  "hashOnlyFiles": [
+    {
+      "path": "packages/core/src/model-catalog/resolve.ts",
+      "bytes": 4284,
+      "lines": 113,
+      "sha256": "9d955240b7e33f2da3dc3f9162d68ead625565b5a75bcf7aff3ccc775052e140",
+      "beforeBodyOrLineNavigation": true,
+      "scope": "Only shared query source byte pin, prior window-state cause gate, or same-SHA instruction reuse. No Root product body reading.",
+      "coverage": "hash-only",
+      "semanticLineCount": 0
+    },
+    {
+      "path": "packages/core/src/model-catalog/gen-connections.ts",
+      "bytes": 1539,
+      "lines": 43,
+      "sha256": "d8cd452cbacf4b5b6a1c318e04fabd4a9a8285e0ad0fe87bd0378332427948ce",
+      "beforeBodyOrLineNavigation": true,
+      "scope": "Only shared query source byte pin, prior window-state cause gate, or same-SHA instruction reuse. No Root product body reading.",
+      "coverage": "hash-only",
+      "semanticLineCount": 0
+    },
+    {
+      "path": "packages/core/src/model-catalog/upsert.ts",
+      "bytes": 1099,
+      "lines": 25,
+      "sha256": "3d2dac35037d3a1df50154d874019a5efa61bc51e4211b7874428fbf99bc9380",
+      "beforeBodyOrLineNavigation": true,
+      "scope": "Only shared query source byte pin, prior window-state cause gate, or same-SHA instruction reuse. No Root product body reading.",
+      "coverage": "hash-only",
+      "semanticLineCount": 0
+    },
+    {
+      "path": "packages/core/src/sources/link-view.ts",
+      "bytes": 3804,
+      "lines": 97,
+      "sha256": "b93f18dd00dddd7abb6a67df1faafda6b3f1d9e445cda2c18a3860eedae5a135",
+      "beforeBodyOrLineNavigation": true,
+      "scope": "Only shared query source byte pin, prior window-state cause gate, or same-SHA instruction reuse. No Root product body reading.",
+      "coverage": "hash-only",
+      "semanticLineCount": 0
+    },
+    {
+      "path": "packages/core/src/sources/context-summary.ts",
+      "bytes": 1622,
+      "lines": 36,
+      "sha256": "adb53dc4fe6fa3d417f0893c64416447afdbc3305639aa3d27b29d229b203742",
+      "beforeBodyOrLineNavigation": true,
+      "scope": "Only shared query source byte pin, prior window-state cause gate, or same-SHA instruction reuse. No Root product body reading.",
+      "coverage": "hash-only",
+      "semanticLineCount": 0
+    },
+    {
+      "path": "packages/core/src/sources/collection.ts",
+      "bytes": 3025,
+      "lines": 89,
+      "sha256": "ab6ca6eaa24f1eec564d5a77d14a216e2fc8ce3358243470f82aefb5eb0418a6",
+      "beforeBodyOrLineNavigation": true,
+      "scope": "Only shared query source byte pin, prior window-state cause gate, or same-SHA instruction reuse. No Root product body reading.",
+      "coverage": "hash-only",
+      "semanticLineCount": 0
+    },
+    {
+      "path": "packages/core/src/sources/resolve.ts",
+      "bytes": 5489,
+      "lines": 138,
+      "sha256": "3d54fa881dd97c8b183fef070dc4f69742b391a730f0f9f3b20bb47301a3ef98",
+      "beforeBodyOrLineNavigation": true,
+      "scope": "Only shared query source byte pin, prior window-state cause gate, or same-SHA instruction reuse. No Root product body reading.",
+      "coverage": "hash-only",
+      "semanticLineCount": 0
+    },
+    {
+      "path": "packages/desktop/src/main/window-state-store.ts",
+      "bytes": 2847,
+      "lines": 85,
+      "sha256": "f19da0384ad722fe634974269e6218bf96a12e6f1f678419a0271005a6769199",
+      "beforeBodyOrLineNavigation": true,
+      "scope": "Only shared query source byte pin, prior window-state cause gate, or same-SHA instruction reuse. No Root product body reading.",
+      "coverage": "hash-only",
+      "semanticLineCount": 0
+    },
+    {
+      "path": "CODESHELL.md",
+      "bytes": 17639,
+      "lines": 217,
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "beforeBodyOrLineNavigation": true,
+      "scope": "Only shared query source byte pin, prior window-state cause gate, or same-SHA instruction reuse. No Root product body reading.",
+      "coverage": "hash-only",
+      "semanticLineCount": 0
+    },
+    {
+      "path": "AGENTS.md",
+      "bytes": 206,
+      "lines": 5,
+      "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "beforeBodyOrLineNavigation": true,
+      "scope": "Only shared query source byte pin, prior window-state cause gate, or same-SHA instruction reuse. No Root product body reading.",
+      "coverage": "hash-only",
+      "semanticLineCount": 0
+    }
+  ],
+  "historicalReportReads": [
+    {
+      "path": "docs/archive/review-2026-05-30/findings.json",
+      "bytes": 222261,
+      "sha256": "6937976e6107dbbbab93fd429900e6f236352d67ba4f287526f529a48e6a3a35",
+      "beforeOwnMetadataParse": true,
+      "coverage": "selected-metadata",
+      "scope": "Only exact selected original objects/ranges in prior-canonical-read.json and old-theme-canonical-read.json; not whole history or source semantic reading."
+    },
+    {
+      "path": "docs/archive/review-2026-05-30/low_confirmed.json",
+      "bytes": 111340,
+      "sha256": "99d2ef32a15255c9d22fe21b2a9f2c7e8cf00c71e7bde5902718c012b6f834fd",
+      "beforeOwnMetadataParse": true,
+      "coverage": "selected-metadata",
+      "scope": "Only exact selected original objects/ranges in prior-canonical-read.json and old-theme-canonical-read.json; not whole history or source semantic reading."
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+      "bytes": 841639,
+      "sha256": "12c53ba7d8a17673382d352a48a8ca3afc25a4913fcc96d63d22319e7a00b1eb",
+      "beforeOwnMetadataParse": true,
+      "coverage": "selected-metadata",
+      "scope": "Only exact selected original objects/ranges in prior-canonical-read.json and old-theme-canonical-read.json; not whole history or source semantic reading."
+    },
+    {
+      "path": "docs/audit-2026-10-17-round7/evidence/root-dedup.json",
+      "bytes": 244127,
+      "sha256": "cb465195195433b72d3de735ea2a724470a22fd3bf6ad781f58f83fbe61dd7c2",
+      "beforeOwnMetadataParse": true,
+      "coverage": "navigation-only-metadata",
+      "scope": "Only exact selected original objects/ranges in prior-canonical-read.json and old-theme-canonical-read.json; not whole history or source semantic reading."
+    },
+    {
+      "path": "docs/audit-2026-10-17-round7/root-metadata.md",
+      "bytes": 4033,
+      "sha256": "85293596049364a1b941e7e68be4b393f2a97e2d7bca14776ce34aecd01b2e75",
+      "beforeOwnMetadataParse": true,
+      "coverage": "selected-metadata",
+      "scope": "Only exact selected original objects/ranges in prior-canonical-read.json and old-theme-canonical-read.json; not whole history or source semantic reading."
+    },
+    {
+      "path": "docs/audit-2026-10-17-round7/source-manifest.json",
+      "bytes": 26410,
+      "sha256": "3dc95bf97f942b7a36ec522264eb5741ea7be5b97979411f3756898c4da9fc3f",
+      "beforeOwnMetadataParse": true,
+      "coverage": "selected-metadata",
+      "scope": "Only exact selected original objects/ranges in prior-canonical-read.json and old-theme-canonical-read.json; not whole history or source semantic reading."
+    }
+  ],
+  "productExecution": 0,
+  "totals": {
+    "productSemanticFiles": 8,
+    "full": 3,
+    "selected": 5,
+    "semanticLines": 522,
+    "bodyDisplayedLines": 733,
+    "testDeclarations": 0
+  },
+  "fullMeaning": "Purpose-bound whole semantic source text, not complete behavior/platform/runtime verification. Complete display does not promote selected protocol/installer/paths/manifest/index."
+}

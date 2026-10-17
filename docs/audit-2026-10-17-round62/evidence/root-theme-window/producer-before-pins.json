@@ -1,0 +1,40 @@
+{
+  "atUTC": "2026-10-17T20:38:25.952901+00:00",
+  "files": [
+    {
+      "path": "packages/core/src/themes/manifest.ts",
+      "bytes": 6099,
+      "lines": 195,
+      "sha256": "ed8c193ec2cf85fe392c6c67fa0b6a73e13481e62260f50a64ca5f8decb2bd38",
+      "beforeBodyOrLineNavigation": true
+    },
+    {
+      "path": "packages/core/src/themes/paths.ts",
+      "bytes": 2101,
+      "lines": 60,
+      "sha256": "d2e7032ff99af741fe8da35cb8d4687c3c7579b41ad788be9c6801057bf49d9f",
+      "beforeBodyOrLineNavigation": true
+    },
+    {
+      "path": "packages/core/src/themes/installer.ts",
+      "bytes": 24118,
+      "lines": 662,
+      "sha256": "ad0061ca6299f48274c7dbe839c14129d57f938e0091fd6621be7fc6993cd360",
+      "beforeBodyOrLineNavigation": true
+    },
+    {
+      "path": "packages/desktop/src/shared/theme-packs.ts",
+      "bytes": 1788,
+      "lines": 53,
+      "sha256": "b6826a52ced3345a0531a1d41a73b18eaab71a6300222de709b1738cf382e0ca",
+      "beforeBodyOrLineNavigation": true
+    },
+    {
+      "path": "packages/desktop/src/main/index.ts",
+      "bytes": 299337,
+      "lines": 7330,
+      "sha256": "105b2b49a28e0a7ef10980ac5feaa3a07ff81e7197f5acbefd95feb2498224c0",
+      "beforeBodyOrLineNavigation": true
+    }
+  ]
+}

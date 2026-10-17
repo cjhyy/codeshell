@@ -1,0 +1,109 @@
+{
+  "atUTC": "2026-10-17T20:35:18.627150+00:00",
+  "files": [
+    {
+      "path": "packages/core/src/model-catalog/resolve.ts",
+      "bytes": 4284,
+      "lines": 113,
+      "sha256": "9d955240b7e33f2da3dc3f9162d68ead625565b5a75bcf7aff3ccc775052e140",
+      "beforeBodyOrLineNavigation": true,
+      "scope": "Query source byte pins only; assigned Root bodies not read before old scope gate. Instructions same-SHA reused."
+    },
+    {
+      "path": "packages/core/src/model-catalog/gen-connections.ts",
+      "bytes": 1539,
+      "lines": 43,
+      "sha256": "d8cd452cbacf4b5b6a1c318e04fabd4a9a8285e0ad0fe87bd0378332427948ce",
+      "beforeBodyOrLineNavigation": true,
+      "scope": "Query source byte pins only; assigned Root bodies not read before old scope gate. Instructions same-SHA reused."
+    },
+    {
+      "path": "packages/core/src/model-catalog/upsert.ts",
+      "bytes": 1099,
+      "lines": 25,
+      "sha256": "3d2dac35037d3a1df50154d874019a5efa61bc51e4211b7874428fbf99bc9380",
+      "beforeBodyOrLineNavigation": true,
+      "scope": "Query source byte pins only; assigned Root bodies not read before old scope gate. Instructions same-SHA reused."
+    },
+    {
+      "path": "packages/core/src/sources/link-view.ts",
+      "bytes": 3804,
+      "lines": 97,
+      "sha256": "b93f18dd00dddd7abb6a67df1faafda6b3f1d9e445cda2c18a3860eedae5a135",
+      "beforeBodyOrLineNavigation": true,
+      "scope": "Query source byte pins only; assigned Root bodies not read before old scope gate. Instructions same-SHA reused."
+    },
+    {
+      "path": "packages/core/src/sources/context-summary.ts",
+      "bytes": 1622,
+      "lines": 36,
+      "sha256": "adb53dc4fe6fa3d417f0893c64416447afdbc3305639aa3d27b29d229b203742",
+      "beforeBodyOrLineNavigation": true,
+      "scope": "Query source byte pins only; assigned Root bodies not read before old scope gate. Instructions same-SHA reused."
+    },
+    {
+      "path": "packages/core/src/sources/collection.ts",
+      "bytes": 3025,
+      "lines": 89,
+      "sha256": "ab6ca6eaa24f1eec564d5a77d14a216e2fc8ce3358243470f82aefb5eb0418a6",
+      "beforeBodyOrLineNavigation": true,
+      "scope": "Query source byte pins only; assigned Root bodies not read before old scope gate. Instructions same-SHA reused."
+    },
+    {
+      "path": "packages/core/src/sources/resolve.ts",
+      "bytes": 5489,
+      "lines": 138,
+      "sha256": "3d54fa881dd97c8b183fef070dc4f69742b391a730f0f9f3b20bb47301a3ef98",
+      "beforeBodyOrLineNavigation": true,
+      "scope": "Query source byte pins only; assigned Root bodies not read before old scope gate. Instructions same-SHA reused."
+    },
+    {
+      "path": "packages/desktop/src/main/window-state-store.ts",
+      "bytes": 2847,
+      "lines": 85,
+      "sha256": "f19da0384ad722fe634974269e6218bf96a12e6f1f678419a0271005a6769199",
+      "beforeBodyOrLineNavigation": true,
+      "scope": "Query source byte pins only; assigned Root bodies not read before old scope gate. Instructions same-SHA reused."
+    },
+    {
+      "path": "packages/desktop/src/main/theme-pack-conversion.ts",
+      "bytes": 2306,
+      "lines": 61,
+      "sha256": "b36b92022953a00de6247f6a34f76de02e5217fa79c8d6f27051ca2a2db4c116",
+      "beforeBodyOrLineNavigation": true,
+      "scope": "Query source byte pins only; assigned Root bodies not read before old scope gate. Instructions same-SHA reused."
+    },
+    {
+      "path": "packages/desktop/src/main/theme-asset-url.ts",
+      "bytes": 1823,
+      "lines": 70,
+      "sha256": "4cff00aa4bd26d2c7c6b0e262ac213012e8381879a56086fadd6496fbf7fb007",
+      "beforeBodyOrLineNavigation": true,
+      "scope": "Query source byte pins only; assigned Root bodies not read before old scope gate. Instructions same-SHA reused."
+    },
+    {
+      "path": "packages/desktop/src/main/theme-asset-protocol.ts",
+      "bytes": 5489,
+      "lines": 141,
+      "sha256": "5b1d516a23147892df124f5f3ea85e0a0f4d5f125311899797f8ff2164f83ee8",
+      "beforeBodyOrLineNavigation": true,
+      "scope": "Query source byte pins only; assigned Root bodies not read before old scope gate. Instructions same-SHA reused."
+    },
+    {
+      "path": "CODESHELL.md",
+      "bytes": 17639,
+      "lines": 217,
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "beforeBodyOrLineNavigation": true,
+      "scope": "Query source byte pins only; assigned Root bodies not read before old scope gate. Instructions same-SHA reused."
+    },
+    {
+      "path": "AGENTS.md",
+      "bytes": 206,
+      "lines": 5,
+      "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "beforeBodyOrLineNavigation": true,
+      "scope": "Query source byte pins only; assigned Root bodies not read before old scope gate. Instructions same-SHA reused."
+    }
+  ]
+}

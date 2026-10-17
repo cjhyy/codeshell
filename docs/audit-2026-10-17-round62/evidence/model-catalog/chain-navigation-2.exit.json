@@ -1,0 +1,1 @@
+{"exitCode": 0, "command": ["rg", "-n", "^describe|^  it|^  test|genInstancesFromConnections|upsertCatalogEntry|upsertModelPreset", "packages/core/src/model-catalog/gen-connections.test.ts", "packages/core/src/model-catalog/upsert.test.ts"]}

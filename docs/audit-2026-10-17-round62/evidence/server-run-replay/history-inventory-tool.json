@@ -1,0 +1,14 @@
+{
+  "args": [
+    "rg",
+    "--files",
+    "docs",
+    "bugs",
+    "-g",
+    "*.md",
+    "-g",
+    "*.json"
+  ],
+  "exitCode": 0,
+  "stderr": ""
+}

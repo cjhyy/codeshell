@@ -1,0 +1,35 @@
+{
+  "files": [
+    {
+      "source": "migrate.py",
+      "destination": "migrate.first.py",
+      "bytes": 11363,
+      "sha256": "550a8713b8afe4525de3d659dbd9366f254b9c4de2c768a9467e89dd44fb847a"
+    },
+    {
+      "source": "summary.json",
+      "destination": "summary.first.json",
+      "bytes": 1863,
+      "sha256": "0b461e96039cfc34a0fb93d8793901310cd288c865c8b2783b65e26e4a22c6a1"
+    },
+    {
+      "source": "deferred-rows.json",
+      "destination": "deferred-rows.first.json",
+      "bytes": 5664,
+      "sha256": "589eba1298e11d05041f20e5830195819c1363fdd6c5b1991f0b4fdc6cadcf12"
+    },
+    {
+      "source": "transitions.json",
+      "destination": "transitions.first.json",
+      "bytes": 11663,
+      "sha256": "60764075bb7afab12c1a8e85e9b93a42aa7ec8db4c3678fa73fb00a243eff0bc"
+    },
+    {
+      "source": "semantic-claims.json",
+      "destination": "semantic-claims.first.json",
+      "bytes": 121392,
+      "sha256": "eeeefb2b72e7174998f33e4393a9808164287e5e1d1e95d7da5724a07bd85dec"
+    }
+  ],
+  "reason": "Strict body-only containment incorrectly deferred explicit selected line17 already present in actual body+navigation display union; no old frozen input changed."
+}

@@ -1,0 +1,39 @@
+{
+  "firstMetadataSchemaPeek": {
+    "toolChunkId": "5bb239",
+    "exitCodeObserved": 0,
+    "scope": "Shared history-batch top-level keys/counts only, no source body.",
+    "rawSeparatelyCaptured": false,
+    "limitation": "Displayed from the tool response before separate stdout/stderr/exit artifact saved; capture-process deviation, no raw stream fabricated."
+  },
+  "projectionDisplayCap": {
+    "toolChunkId": "309729",
+    "childExitCode": 0,
+    "rawStdoutArtifact": "project-history.first.stdout.txt",
+    "rawStdoutBytes": 71554,
+    "wrapperDisplayedFirstChars": 24000,
+    "meaning": "Deliberate display cap cut inside early gen-connections compact navigation metadata. All 300 saved shared hits are in history-projection.json; they are not all semantic reads."
+  },
+  "firstFinalizerOuterError": {
+    "toolChunkId": "eb7b30",
+    "observedExitCode": 1,
+    "phase": "outer metadata wrapper parsing before writing finalize-packet.py or starting a child process",
+    "diagnostic": "SyntaxError: invalid character U+3001 at Chinese report text; nested triple-single-quoted source/report strings closed the wrapper string early",
+    "rawSeparateChildStreamsAvailable": false,
+    "productAttempt": false,
+    "correction": "Use an outer triple-double-quoted audit-script string; no source or product/test operation is retried."
+  },
+  "firstFinalizerChildError": {
+    "exitArtifact": "finalize-packet.corrected.exit.json",
+    "stderrArtifact": "finalize-packet.corrected.stderr.txt",
+    "scriptArtifact": "finalize-packet.pinfield.first.py",
+    "error": "KeyError pinAtUTC; original initial-pins rows use pinAt",
+    "correction": "Map original pinAt value, do not backfill or repeat source reads"
+  },
+  "currentSourceDisplayTruncations": [],
+  "oldFailuresPreserved": [
+    "R10 catalog-static-read-failure.md: guessed engine.ts cache-refresh direction skipped",
+    "R17 catalog-navigation-skip.md: historical glob/receipt-order diagnostics are not new executions"
+  ],
+  "productFailuresOrTestRuns": 0
+}

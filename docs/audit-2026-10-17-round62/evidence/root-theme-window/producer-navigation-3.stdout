@@ -1,0 +1,15 @@
+15:export const THEME_VAR_NAMES = [
+69:export const THEME_ID = /^[a-z0-9][a-z0-9-]{1,63}$/;
+72:export const THEME_SURFACE_NAMES = [
+83:    light: z.string().regex(HSL).optional(),
+84:    dark: z.string().regex(HSL).optional(),
+107:export type ThemeSurfaceName = (typeof THEME_SURFACE_NAMES)[number];
+108:export type ThemeSurface = z.infer<typeof ThemeSurfaceSchema>;
+109:export type ThemeFrame = z.infer<typeof ThemeFrameSchema>;
+112:export const THEME_SOUND_EVENTS = ["send", "complete", "approval", "error"] as const;
+113:export type ThemeSoundEvent = (typeof THEME_SOUND_EVENTS)[number];
+148:export type ThemeMusicTrack = z.infer<typeof ThemeMusicTrackSchema>;
+150:export const ThemeManifestSchema = z.object({
+152:  id: z.string().regex(THEME_ID, "id must match ^[a-z0-9][a-z0-9-]{1,63}$"),
+190:export type ThemeManifest = z.infer<typeof ThemeManifestSchema>;
+193:export function parseThemeManifest(raw: unknown): ThemeManifest {

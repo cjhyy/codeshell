@@ -1,0 +1,64 @@
+{
+  "files": [
+    {
+      "path": "docs/audit-2026-10-17-round61/README.md",
+      "bytes": 3659,
+      "sha256": "3cafa0f15fbe6e2505ed2cdf1935a3428cb80e8ee431c4b68e618ffc1d8f66b5",
+      "unchanged": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round61/evidence/coverage-migration/unified-current-index.json",
+      "bytes": 3097431,
+      "sha256": "249c7298280d2ff1f3bde4333c98f4d831c27e24a725dc7d9b0d818ed8db9671",
+      "unchanged": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round61/evidence/capability-control/source-manifest.json",
+      "bytes": 17239,
+      "sha256": "2bc4f306cb196da6b708a12d46ffb94a90a7e70005c35a6e0895a3ddfe8579dc",
+      "unchanged": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round61/evidence/session-context-store/source-manifest.json",
+      "bytes": 16641,
+      "sha256": "1b37c178df1886adc9aa74c03b0e251c7cf966d3cfc89fbd4cb323b86952139a",
+      "unchanged": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round61/evidence/root-composition-lifetime/source-manifest.json",
+      "bytes": 8643,
+      "sha256": "26684f7c05228b545ae46aac8b7cf316fbfae8e72c04e1f983efd2e59ad30c61",
+      "unchanged": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round61/evidence/dotted-capability-review/source-manifest.json",
+      "bytes": 23653,
+      "sha256": "ded0cf26558d9c246bca02f45630975a9603c1e2b4470c29d4830e26f40ac537",
+      "unchanged": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round61/evidence/root-dotted-mcp-decision/source-manifest.json",
+      "bytes": 13120,
+      "sha256": "63bcf78f3467aacd94847a178f95ac8447d04b3d19d1b3d5aa8a6eb6f051babc",
+      "unchanged": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round61/evidence/mcp-dot-readback-review/source-manifest.json",
+      "bytes": 18677,
+      "sha256": "2d0587f3d282f941078273a7755602b348307393858cd1f90a0046caa5afcf4f",
+      "unchanged": true
+    },
+    {
+      "path": "CODESHELL.md",
+      "bytes": 17639,
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "unchanged": true
+    },
+    {
+      "path": "AGENTS.md",
+      "bytes": 206,
+      "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "unchanged": true
+    }
+  ]
+}

@@ -1,0 +1,61 @@
+catalog metadata filenames
+docs/audit-2026-10-17-round17/catalog.md
+docs/audit-2026-10-17-round10/catalog.md
+docs/audit-2026-10-17-round10/evidence/cross-review-catalog.md
+docs/audit-2026-10-17-round10/evidence/catalog-static-read-failure.md
+docs/audit-2026-10-17-round10/evidence/catalog-source-manifest.json
+docs/audit-2026-10-17-round17/evidence/catalog-navigation-skip.md
+docs/audit-2026-10-17-round17/evidence/catalog-source-manifest.json
+docs/audit-2026-10-17-round17/evidence/review-catalog.md
+
+DOCUMENT docs/audit-2026-10-17-round10/evidence/catalog-source-manifest.json keys ['frozenCommit', 'scope', 'files']
+root frozenCommit "6966dc0f98d21dbc2ecced6cdd6467d17b81bc39"
+root scope "Directly inspected/read sources and executed baseline test files; not a transitive dependency or full repository coverage claim."
+{
+  "document": "docs/audit-2026-10-17-round10/evidence/catalog-source-manifest.json",
+  "pointer": "/files/3",
+  "row": {
+    "path": "packages/core/src/model-catalog/resolve.ts",
+    "frozenSha256": "9d955240b7e33f2da3dc3f9162d68ead625565b5a75bcf7aff3ccc775052e140",
+    "currentSha256": "9d955240b7e33f2da3dc3f9162d68ead625565b5a75bcf7aff3ccc775052e140",
+    "currentEqualsFrozen": true
+  }
+}
+{
+  "document": "docs/audit-2026-10-17-round10/evidence/catalog-source-manifest.json",
+  "pointer": "/files/4",
+  "row": {
+    "path": "packages/core/src/model-catalog/upsert.ts",
+    "frozenSha256": "3d2dac35037d3a1df50154d874019a5efa61bc51e4211b7874428fbf99bc9380",
+    "currentSha256": "3d2dac35037d3a1df50154d874019a5efa61bc51e4211b7874428fbf99bc9380",
+    "currentEqualsFrozen": true
+  }
+}
+{
+  "document": "docs/audit-2026-10-17-round10/evidence/catalog-source-manifest.json",
+  "pointer": "/files/7",
+  "row": {
+    "path": "packages/core/src/model-catalog/gen-connections.ts",
+    "frozenSha256": "d8cd452cbacf4b5b6a1c318e04fabd4a9a8285e0ad0fe87bd0378332427948ce",
+    "currentSha256": "d8cd452cbacf4b5b6a1c318e04fabd4a9a8285e0ad0fe87bd0378332427948ce",
+    "currentEqualsFrozen": true
+  }
+}
+
+DOCUMENT docs/audit-2026-10-17-round17/evidence/catalog-source-manifest.json keys ['frozenBase', 'sourceCount', 'sources', 'pinMeaning', 'skippedGuessedReferences']
+root frozenBase "d86db33012dffd5d1849e76b869fa15eb260324f"
+root sourceCount 25
+root pinMeaning "Frozen bytes plus explicit selected reading/runtime coverage, not full repository or transitive coverage."
+{
+  "document": "docs/audit-2026-10-17-round17/evidence/catalog-source-manifest.json",
+  "pointer": "/sources/14",
+  "row": {
+    "path": "packages/core/src/model-catalog/resolve.ts",
+    "bytes": 4284,
+    "sha256": "9d955240b7e33f2da3dc3f9162d68ead625565b5a75bcf7aff3ccc775052e140",
+    "currentSha256": "9d955240b7e33f2da3dc3f9162d68ead625565b5a75bcf7aff3ccc775052e140",
+    "currentMatchesFrozen": true,
+    "kind": "static-read",
+    "coverage": "80–113; raw model and exact preset lookup, not executed"
+  }
+}

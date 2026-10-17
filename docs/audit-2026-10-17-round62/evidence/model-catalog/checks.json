@@ -1,0 +1,63 @@
+{
+  "reportLinks": [
+    {
+      "label": "精确范围与预读 pin",
+      "target": "source-manifest.json",
+      "exists": true
+    },
+    {
+      "label": "分类与逐链依据",
+      "target": "classification.json",
+      "exists": true
+    },
+    {
+      "label": "目标投影",
+      "target": "history-projection.json",
+      "exists": true
+    },
+    {
+      "label": "原对象",
+      "target": "canonical-selected-objects.json",
+      "exists": true
+    },
+    {
+      "label": "旧报告范围",
+      "target": "prior-report-read-ranges.json",
+      "exists": true
+    },
+    {
+      "label": "结束检查",
+      "target": "ending-checks.json",
+      "exists": true
+    },
+    {
+      "label": "诊断",
+      "target": "diagnostics.json",
+      "exists": true
+    }
+  ],
+  "allReportLinksExist": true,
+  "classification": {
+    "formal": 0,
+    "candidate": 0,
+    "newRelated": 0
+  },
+  "sourceCounts": {
+    "files": 12,
+    "productFiles": 8,
+    "testDeclarationFiles": 2,
+    "instructionHashOnlyFiles": 2,
+    "productSemanticLines": 490,
+    "testDeclarationLines": 126,
+    "productAndTestDisplayedLines": 616,
+    "fullProductFiles": 3,
+    "selectedProductFiles": 5
+  },
+  "selectedCanonicalObjects": 4,
+  "selectedPriorMarkdownLines": 119,
+  "sourceEndingSame": true,
+  "selectedMetadataEndingSame": true,
+  "filesAreSourcesNotCurrentArtifacts": true,
+  "gitCalls": 0,
+  "productExecutions": 0
+}

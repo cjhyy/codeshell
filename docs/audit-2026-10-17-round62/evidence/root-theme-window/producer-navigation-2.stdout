@@ -1,0 +1,32 @@
+2: * Theme-pack installer: validate → normalize → atomically install a local theme
+5: * Mirrors the plugin installer's discipline (safe names, canonical asset paths,
+36:  THEME_ASSET_DIR,
+55:/** One resolved asset: where the author put it → the canonical name we store. */
+58:  canonicalName: string; // e.g. "pet-idle.webp"
+80:export interface InstalledTheme {
+85:  pet: Partial<Record<PetState, string>> & { walk?: string[] }; // canonical relative asset paths
+163:/** Collect the declared assets, validating each, into canonical-name mappings. */
+173:    const canonicalName = `${base}.${ext}`;
+174:    assets.push({ sourceRel: rel, canonicalName });
+175:    bytesByName.set(canonicalName, bytes);
+201:    const canonicalName = `${base}.wav`;
+202:    assets.push({ sourceRel: rel, canonicalName });
+203:    bytesByName.set(canonicalName, bytes);
+214:/** Deterministic digest over manifest + every canonical asset's bytes. */
+332:): Promise<InstalledTheme> {
+341:): Promise<InstalledTheme> {
+351:    // Rewrite the manifest to canonical asset paths, then stage assets.
+352:    const canonical = canonicalManifestFor(manifest, assets);
+353:    await writeFile(join(staging, MANIFEST_FILE), `${JSON.stringify(canonical, null, 2)}\n`, {
+356:    await mkdir(join(staging, THEME_ASSET_DIR), { recursive: true, mode: 0o700 });
+359:        join(staging, THEME_ASSET_DIR, asset.canonicalName),
+360:        bytesByName.get(asset.canonicalName)!,
+423:  return toInstalledTheme(canonicalManifestFor(manifest, assets));
+426:/** Canonical manifest stored on disk: asset fields point at THEME_ASSET_DIR/*. */
+427:function canonicalManifestFor(manifest: ThemeManifest, assets: ResolvedAsset[]): ThemeManifest {
+429:    assets.find((a) => a.canonicalName.startsWith(`${base}.`))?.canonicalName;
+432:    return n ? `${THEME_ASSET_DIR}/${n}` : undefined;
+497:function toInstalledTheme(manifest: ThemeManifest): InstalledTheme {
+605:export async function listInstalledThemes(): Promise<InstalledTheme[]> {
+613:  const themes: InstalledTheme[] = [];
+619:      themes.push(toInstalledTheme(manifest));

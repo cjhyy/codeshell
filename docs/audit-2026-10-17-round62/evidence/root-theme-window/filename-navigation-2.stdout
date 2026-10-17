@@ -1,0 +1,7 @@
+packages/desktop/src/main/theme-pack-conversion.ts
+packages/desktop/src/main/theme-pack-conversion.test.ts
+packages/desktop/src/main/theme-asset-protocol.test.ts
+packages/desktop/src/main/theme-asset-url.test.ts
+packages/desktop/src/main/theme-asset-protocol.ts
+packages/desktop/src/main/theme-asset-url.ts
+packages/desktop/src/main/index.ts

@@ -1,0 +1,32 @@
+{
+  "files": [
+    {
+      "path": "docs/audit-2026-10-17-round23/evidence/root-source-manifest.json",
+      "bytes": 12586,
+      "sha256": "25cde34c621c86dbe1f4b7f1ff40934e09fd47a864b6f4d3b59c24c36c443dae",
+      "beforeTargetedMetadataRead": true,
+      "atUTC": "2026-10-17T20:41:20.772863+00:00"
+    },
+    {
+      "path": "docs/review-2026-10-12/quality-audit.md",
+      "bytes": 10648,
+      "sha256": "c2a286f5026778105341baa47927449137e5149fcc86c31d21f037abf8c639ea",
+      "beforeTargetedMetadataRead": true,
+      "atUTC": "2026-10-17T20:41:20.774890+00:00"
+    },
+    {
+      "path": "docs/review-2026-10-12/README.md",
+      "bytes": 72500,
+      "sha256": "0b3bbba150474889a536dda42e62e73490bcc7f4adbcdcf77a9be49ab940d9a7",
+      "beforeTargetedMetadataRead": true,
+      "atUTC": "2026-10-17T20:41:20.775752+00:00"
+    },
+    {
+      "path": "docs/review-2026-10-12/auth-round7.md",
+      "bytes": 13793,
+      "sha256": "5867acdd224c61e8b0a953e003a7574b2919271bcaa19bfe412b3903997de914",
+      "beforeTargetedMetadataRead": true,
+      "atUTC": "2026-10-17T20:41:20.776468+00:00"
+    }
+  ]
+}

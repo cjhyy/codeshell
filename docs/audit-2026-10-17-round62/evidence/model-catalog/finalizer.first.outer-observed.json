@@ -1,0 +1,9 @@
+{
+  "toolChunkId": "eb7b30",
+  "observedExitCode": 1,
+  "phase": "outer metadata wrapper parsing before writing finalize-packet.py or starting a child process",
+  "diagnostic": "SyntaxError: invalid character U+3001 at Chinese report text; nested triple-single-quoted source/report strings closed the wrapper string early",
+  "rawSeparateChildStreamsAvailable": false,
+  "productAttempt": false,
+  "correction": "Use an outer triple-double-quoted audit-script string; no source or product/test operation is retried."
+}

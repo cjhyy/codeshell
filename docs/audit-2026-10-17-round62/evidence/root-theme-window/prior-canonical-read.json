@@ -1,0 +1,127 @@
+{
+  "rows": [
+    {
+      "document": "docs/archive/review-2026-05-30/findings.json",
+      "pointer": "/249",
+      "targets": [
+        "packages/desktop/src/main/window-state-store.ts"
+      ],
+      "original": {
+        "file": "packages/desktop/src/main/window-state-store.ts",
+        "line": "19-20",
+        "category": "correctness",
+        "severity": "medium",
+        "confidence": "high",
+        "title": "Stored window state values not validated, allowing invalid data to be used",
+        "detail": "Line 19 casts JSON.parse result to Partial<WindowState> without type validation. If the stored JSON contains invalid values (e.g., width: \"abc\" or x: NaN), they bypass TypeScript's type checking and are spread directly into the return object. When this state is passed to BrowserWindow constructor (lines 108-111 in index.ts), invalid dimensions will cause undefined behavior.",
+        "fix": "Add runtime validation after parsing JSON: check that width/height are positive numbers, x/y are numbers or undefined, and maximized is boolean or undefined. Return DEFAULT if validation fails."
+      }
+    },
+    {
+      "document": "docs/archive/review-2026-05-30/findings.json",
+      "pointer": "/250",
+      "targets": [
+        "packages/desktop/src/main/window-state-store.ts"
+      ],
+      "original": {
+        "file": "packages/desktop/src/main/window-state-store.ts",
+        "line": "21-23",
+        "category": "correctness",
+        "severity": "low",
+        "confidence": "high",
+        "title": "File read errors silently ignored, making debugging impossible",
+        "detail": "Line 21-23: catch block with no logging or error reporting. If the window.json file is corrupted, permissions-denied, or disk read fails, the user gets default window dimensions with no indication of the problem. This makes it hard to debug file system issues.",
+        "fix": "Add minimal error logging (e.g., console.error or dlog) to record file read failures, or at least pass them to the caller's logging system."
+      }
+    },
+    {
+      "document": "docs/archive/review-2026-05-30/findings.json",
+      "pointer": "/251",
+      "targets": [
+        "packages/desktop/src/main/window-state-store.ts"
+      ],
+      "original": {
+        "file": "packages/desktop/src/main/window-state-store.ts",
+        "line": "30-32",
+        "category": "correctness",
+        "severity": "low",
+        "confidence": "high",
+        "title": "File write errors silently ignored, state not persisted",
+        "detail": "Line 30-32: catch block with only a comment 'best effort' but no logging. If writeFile fails (permission denied, disk full, etc.), the user has no way to know that the window state wasn't saved. On next launch, window geometry will revert to defaults, and the root cause is invisible.",
+        "fix": "Add error logging to record file write failures so users can diagnose why window state isn't persisting."
+      }
+    },
+    {
+      "document": "docs/archive/review-2026-05-30/low_confirmed.json",
+      "pointer": "/32",
+      "targets": [
+        "packages/desktop/src/main/window-state-store.ts"
+      ],
+      "original": {
+        "pkg": "desktop",
+        "file": "packages/desktop/src/main/window-state-store.ts",
+        "line": "19-20",
+        "category": "correctness",
+        "severity": "low",
+        "title": "Stored window state values not validated, allowing invalid data to be used",
+        "detail": "Line 19 casts JSON.parse result to Partial<WindowState> without type validation. If the stored JSON contains invalid values (e.g., width: \"abc\" or x: NaN), they bypass TypeScript's type checking and are spread directly into the return object. When this state is passed to BrowserWindow constructor (lines 108-111 in index.ts), invalid dimensions will cause undefined behavior.",
+        "fix": "Add runtime validation after parsing JSON: check that width/height are positive numbers, x/y are numbers or undefined, and maximized is boolean or undefined. Return DEFAULT if validation fails.",
+        "verify_note": "The defect is real but severity is lowered to 'low' because: (1) the file is stored in the user's home directory (~/.code-shell/desktop/window.json), not externally attacker-controlled; (2) Electron's BrowserWindow constructor has built-in error handling for invalid dimensions and coerces or ignores bad values rather than crashing; (3) worst-case impact is a window created with incorrect dimensions, not a security or stability issue. The reviewer's proposed fix (runtime validation) is reasonable but the actual practical risk is minimal.",
+        "verify_reason": "The code at line 19 in window-state-store.ts uses a TypeScript type assertion `as Partial<WindowState>` which only provides compile-time type checking. At runtime, JSON.parse can return any value, including invalid types (e.g., `{\"width\": \"abc\", \"height\": 500}`). This invalid-but-valid JSON is spread into the return object at line 20, bypassing the DEFAULT values for any keys that were explicitly set in the JSON. The window state is then directly passed to BrowserWindow constructor in index.ts lines 108-111 without validation, allowing invalid dimension/position values to reach the Electron API."
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+      "pointer": "/files/2257",
+      "targets": [
+        "packages/desktop/src/main/theme-asset-protocol.ts"
+      ],
+      "original": {
+        "path": "packages/desktop/src/main/theme-asset-protocol.ts",
+        "bytes": 5489,
+        "lines": 141,
+        "sha256": "5b1d516a23147892df124f5f3ea85e0a0f4d5f125311899797f8ff2164f83ee8"
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+      "pointer": "/files/2259",
+      "targets": [
+        "packages/desktop/src/main/theme-asset-url.ts"
+      ],
+      "original": {
+        "path": "packages/desktop/src/main/theme-asset-url.ts",
+        "bytes": 1823,
+        "lines": 70,
+        "sha256": "4cff00aa4bd26d2c7c6b0e262ac213012e8381879a56086fadd6496fbf7fb007"
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+      "pointer": "/files/2263",
+      "targets": [
+        "packages/desktop/src/main/theme-pack-conversion.ts"
+      ],
+      "original": {
+        "path": "packages/desktop/src/main/theme-pack-conversion.ts",
+        "bytes": 2306,
+        "lines": 61,
+        "sha256": "b36b92022953a00de6247f6a34f76de02e5217fa79c8d6f27051ca2a2db4c116"
+      }
+    },
+    {
+      "document": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+      "pointer": "/files/2283",
+      "targets": [
+        "packages/desktop/src/main/window-state-store.ts"
+      ],
+      "original": {
+        "path": "packages/desktop/src/main/window-state-store.ts",
+        "bytes": 2847,
+        "lines": 85,
+        "sha256": "f19da0384ad722fe634974269e6218bf96a12e6f1f678419a0271005a6769199"
+      }
+    }
+  ],
+  "scope": "Selected original metadata objects, not source body or derived full claim."
+}

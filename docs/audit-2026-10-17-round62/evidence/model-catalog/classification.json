@@ -1,0 +1,42 @@
+{
+  "formalFindings": [],
+  "candidates": [],
+  "newRelatedFindings": [],
+  "counts": {
+    "formal": 0,
+    "candidate": 0,
+    "newRelated": 0
+  },
+  "result": "Finite static negative for selected ordinary model/connection field contracts.",
+  "existingObservationsRetained": [
+    {
+      "id": "CATALOG-R17-C1",
+      "status": "old candidate; Panel default-vs-core fallback contract remains as recorded, no recount/promotion"
+    },
+    {
+      "id": "CATALOG-R17-C2",
+      "status": "old candidate; Panel trim identity contract remains as recorded, no recount/promotion"
+    }
+  ],
+  "oldFailureSkip": "R10 guessed packages/core/src/engine.ts static cache-refresh call-chain failure remains skipped; no corrected-path retry or replacement product validation.",
+  "counterevidence": [
+    {
+      "source": "packages/core/src/model-catalog/resolve.ts:91-111",
+      "conclusion": "Exact catalog id/preset value resolution preserves inst.model/paramValues; absent catalog returns null. This ordinary check does not certify credential policy."
+    },
+    {
+      "source": "packages/core/src/model-catalog/gen-connections.ts:29-40",
+      "conclusion": "Tag filtering retains connection id, resolved adapter kind/base URL, and model or catalog default."
+    },
+    {
+      "source": "packages/core/src/tool-system/builtin/generate-image.ts:193-204,424-439; generate-video.ts:239-263,350-370",
+      "conclusion": "Actual unified settings consumers carry bridge defaultModel through normal provider selection to call-arg > instance-default > kind-default model choice."
+    },
+    {
+      "source": "packages/core/src/model-catalog/upsert.ts:10-24; save-entry.ts:123-138; index.ts:68-86",
+      "conclusion": "Exact id/value replacement preserves order via a copied array; actual validated save call uses this helper and selected catalog merge preserves per-value keyed preset replacement."
+    }
+  ],
+  "notEstablished": "No declared normal producer requiring a contrary mapping/priority/duplicate-entry behavior was established. This does not prove all accepted configurations or lifecycle behavior correct.",
+  "runtimeValidation": "none; no tests/import/helper/provider/fs mutation/network/model execution"
+}

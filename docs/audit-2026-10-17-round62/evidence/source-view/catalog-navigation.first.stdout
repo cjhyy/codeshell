@@ -1,0 +1,21 @@
+8:import { linkSourceView } from "./link-view.js";
+9:import { collectionConfig, CollectionConfigSchema } from "./collection.js";
+15:export function sourceCatalogPath(): string {
+19:function parseCatalog(rawText: string | undefined): SourceDefinition[] {
+34:          if (parsed.data.kind === "link") linkSourceView(parsed.data);
+35:          if (parsed.data.kind === "collection") collectionConfig(parsed.data);
+65:function load(): SourceDefinition[] {
+77:function mutateCatalog(
+106:            if (current.kind === "collection") collectionConfig(current);
+107:            if (current.kind === "link") linkSourceView(current);
+126:export function listSourceDefinitions(): SourceDefinition[] {
+130:export function readSourceDefinition(id: string): SourceDefinition | undefined {
+135:export function insertSourceDefinitionsIfAbsent(
+143:    if (source.kind === "link") linkSourceView(source);
+165:export function saveSourceDefinition(
+170:  if (parsed.kind === "link") linkSourceView(parsed);
+171:  if (parsed.kind === "collection") collectionConfig(parsed);
+195:              collectionConfig(existing).revision !== options.expectedCollectionRevision
+200:          collectionConfig(parsed).revision === options.expectedCollectionRevision
+212:export function deleteSourceDefinition(
+226:          collectionConfig(existing).revision !== options.expectedCollectionRevision)

@@ -1,0 +1,13 @@
+{
+  "originalArtifact": "history-navigation.json",
+  "originalField": "scalarValuesVisited",
+  "originalValue": 4876274,
+  "actualMethodMeaning": "Combined MD-line and recursive JSON scalar visits. In pin-and-history.py, each Markdown line becomes one value and JSON leaves become recursive scalar values before the same counter is incremented.",
+  "notPureJSONScalarCount": true,
+  "ownSeparatePureJSONCount": null,
+  "rootOtherBatchPureJSONCountContextOnly": 4639853,
+  "comparisonBoundary": "The original combined count is not directly interchangeable with the Root166 pure-JSON scalar count. This task did not separately persist its JSON-only subtotal and does not infer or claim one now.",
+  "noRescanForThisClarification": true,
+  "originalArtifactAndFirstMethodUnmodified": true,
+  "sourceSemanticReadsFromHistoryMachineNavigation": 0
+}

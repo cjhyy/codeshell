@@ -1,0 +1,203 @@
+{
+  "count": 8,
+  "files": [
+    {
+      "path": "packages/core/src/composition/types.ts",
+      "sha256": "5fce8d8f3426f70762a8bee84c95f2982657cfd785d02c0d1d538f1d57f99e5e",
+      "before": "selected",
+      "after": "selected",
+      "claimIds": [
+        "61-019"
+      ],
+      "canonicalLocators": [
+        {
+          "metadataPath": "docs/audit-2026-10-17-round61/evidence/root-composition-lifetime/source-manifest.json",
+          "metadataSHA256": "26684f7c05228b545ae46aac8b7cf316fbfae8e72c04e1f983efd2e59ad30c61",
+          "jsonPointer": "/files/4"
+        }
+      ],
+      "originalPurposeAndLimitsInClaims": true,
+      "notFirstSourceReadClaim": true
+    },
+    {
+      "path": "packages/core/src/engine/engine.ts",
+      "sha256": "cdbfc7a777e3e304b6d365988daf6a45ff24b7cd5b62f634e3b11908c701e2e0",
+      "before": "selected",
+      "after": "selected",
+      "claimIds": [
+        "61-017"
+      ],
+      "canonicalLocators": [
+        {
+          "metadataPath": "docs/audit-2026-10-17-round61/evidence/root-composition-lifetime/source-manifest.json",
+          "metadataSHA256": "26684f7c05228b545ae46aac8b7cf316fbfae8e72c04e1f983efd2e59ad30c61",
+          "jsonPointer": "/files/2"
+        }
+      ],
+      "originalPurposeAndLimitsInClaims": true,
+      "notFirstSourceReadClaim": true
+    },
+    {
+      "path": "packages/core/src/engine/runtime.ts",
+      "sha256": "9f04d688231ba7603e402f8b032ba94a24c82ec4705bdb59abc81460e1ad64ce",
+      "before": "selected",
+      "after": "selected",
+      "claimIds": [
+        "61-018"
+      ],
+      "canonicalLocators": [
+        {
+          "metadataPath": "docs/audit-2026-10-17-round61/evidence/root-composition-lifetime/source-manifest.json",
+          "metadataSHA256": "26684f7c05228b545ae46aac8b7cf316fbfae8e72c04e1f983efd2e59ad30c61",
+          "jsonPointer": "/files/3"
+        }
+      ],
+      "originalPurposeAndLimitsInClaims": true,
+      "notFirstSourceReadClaim": true
+    },
+    {
+      "path": "packages/core/src/settings/manager.ts",
+      "sha256": "0c92e26bbbf252d1f6bbc0859d91bdae40c846aa9d9f597812a35c829ba629ec",
+      "before": "selected",
+      "after": "selected",
+      "claimIds": [
+        "61-007",
+        "61-022",
+        "61-028",
+        "61-035"
+      ],
+      "canonicalLocators": [
+        {
+          "metadataPath": "docs/audit-2026-10-17-round61/evidence/capability-control/source-manifest.json",
+          "metadataSHA256": "2bc4f306cb196da6b708a12d46ffb94a90a7e70005c35a6e0895a3ddfe8579dc",
+          "jsonPointer": "/files/6"
+        },
+        {
+          "metadataPath": "docs/audit-2026-10-17-round61/evidence/dotted-capability-review/source-manifest.json",
+          "metadataSHA256": "ded0cf26558d9c246bca02f45630975a9603c1e2b4470c29d4830e26f40ac537",
+          "jsonPointer": "/files/6"
+        },
+        {
+          "metadataPath": "docs/audit-2026-10-17-round61/evidence/root-dotted-mcp-decision/source-manifest.json",
+          "metadataSHA256": "63bcf78f3467aacd94847a178f95ac8447d04b3d19d1b3d5aa8a6eb6f051babc",
+          "jsonPointer": "/files/3"
+        },
+        {
+          "metadataPath": "docs/audit-2026-10-17-round61/evidence/mcp-dot-readback-review/source-manifest.json",
+          "metadataSHA256": "2d0587f3d282f941078273a7755602b348307393858cd1f90a0046caa5afcf4f",
+          "jsonPointer": "/files/2"
+        }
+      ],
+      "originalPurposeAndLimitsInClaims": true,
+      "notFirstSourceReadClaim": true
+    },
+    {
+      "path": "packages/core/src/settings/schema.ts",
+      "sha256": "2496b8aefd8ea32f7fc7ac23b26878475809be952a5fdbd8ac247cf0d40b3139",
+      "before": "selected",
+      "after": "selected",
+      "claimIds": [
+        "61-009",
+        "61-029",
+        "61-036"
+      ],
+      "canonicalLocators": [
+        {
+          "metadataPath": "docs/audit-2026-10-17-round61/evidence/capability-control/source-manifest.json",
+          "metadataSHA256": "2bc4f306cb196da6b708a12d46ffb94a90a7e70005c35a6e0895a3ddfe8579dc",
+          "jsonPointer": "/files/8"
+        },
+        {
+          "metadataPath": "docs/audit-2026-10-17-round61/evidence/root-dotted-mcp-decision/source-manifest.json",
+          "metadataSHA256": "63bcf78f3467aacd94847a178f95ac8447d04b3d19d1b3d5aa8a6eb6f051babc",
+          "jsonPointer": "/files/4"
+        },
+        {
+          "metadataPath": "docs/audit-2026-10-17-round61/evidence/mcp-dot-readback-review/source-manifest.json",
+          "metadataSHA256": "2d0587f3d282f941078273a7755602b348307393858cd1f90a0046caa5afcf4f",
+          "jsonPointer": "/files/3"
+        }
+      ],
+      "originalPurposeAndLimitsInClaims": true,
+      "notFirstSourceReadClaim": true
+    },
+    {
+      "path": "packages/desktop/src/main/index.ts",
+      "sha256": "105b2b49a28e0a7ef10980ac5feaa3a07ff81e7197f5acbefd95feb2498224c0",
+      "before": "selected",
+      "after": "selected",
+      "claimIds": [
+        "61-034",
+        "61-037"
+      ],
+      "canonicalLocators": [
+        {
+          "metadataPath": "docs/audit-2026-10-17-round61/evidence/root-dotted-mcp-decision/source-manifest.json",
+          "metadataSHA256": "63bcf78f3467aacd94847a178f95ac8447d04b3d19d1b3d5aa8a6eb6f051babc",
+          "jsonPointer": "/files/9"
+        },
+        {
+          "metadataPath": "docs/audit-2026-10-17-round61/evidence/mcp-dot-readback-review/source-manifest.json",
+          "metadataSHA256": "2d0587f3d282f941078273a7755602b348307393858cd1f90a0046caa5afcf4f",
+          "jsonPointer": "/files/4"
+        }
+      ],
+      "originalPurposeAndLimitsInClaims": true,
+      "notFirstSourceReadClaim": true
+    },
+    {
+      "path": "packages/desktop/src/preload/index.ts",
+      "sha256": "05dbc9b534bdc68c30f255f53a96617e50fb0c445ce2fc1bde4be31e3f8a6901",
+      "before": "selected",
+      "after": "selected",
+      "claimIds": [
+        "61-032",
+        "61-038"
+      ],
+      "canonicalLocators": [
+        {
+          "metadataPath": "docs/audit-2026-10-17-round61/evidence/root-dotted-mcp-decision/source-manifest.json",
+          "metadataSHA256": "63bcf78f3467aacd94847a178f95ac8447d04b3d19d1b3d5aa8a6eb6f051babc",
+          "jsonPointer": "/files/7"
+        },
+        {
+          "metadataPath": "docs/audit-2026-10-17-round61/evidence/mcp-dot-readback-review/source-manifest.json",
+          "metadataSHA256": "2d0587f3d282f941078273a7755602b348307393858cd1f90a0046caa5afcf4f",
+          "jsonPointer": "/files/5"
+        }
+      ],
+      "originalPurposeAndLimitsInClaims": true,
+      "notFirstSourceReadClaim": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/McpSection.tsx",
+      "sha256": "228d18e442ddc37752407383cf311050df4409972e78ea7e029ea21665d67334",
+      "before": "selected",
+      "after": "selected",
+      "claimIds": [
+        "61-008",
+        "61-023",
+        "61-030"
+      ],
+      "canonicalLocators": [
+        {
+          "metadataPath": "docs/audit-2026-10-17-round61/evidence/capability-control/source-manifest.json",
+          "metadataSHA256": "2bc4f306cb196da6b708a12d46ffb94a90a7e70005c35a6e0895a3ddfe8579dc",
+          "jsonPointer": "/files/7"
+        },
+        {
+          "metadataPath": "docs/audit-2026-10-17-round61/evidence/dotted-capability-review/source-manifest.json",
+          "metadataSHA256": "ded0cf26558d9c246bca02f45630975a9603c1e2b4470c29d4830e26f40ac537",
+          "jsonPointer": "/files/13"
+        },
+        {
+          "metadataPath": "docs/audit-2026-10-17-round61/evidence/root-dotted-mcp-decision/source-manifest.json",
+          "metadataSHA256": "63bcf78f3467aacd94847a178f95ac8447d04b3d19d1b3d5aa8a6eb6f051babc",
+          "jsonPointer": "/files/5"
+        }
+      ],
+      "originalPurposeAndLimitsInClaims": true,
+      "notFirstSourceReadClaim": true
+    }
+  ]
+}

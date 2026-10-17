@@ -1,0 +1,62 @@
+[
+  {
+    "path": "packages/core/src/tool-system/builtin/generate-image.ts",
+    "bytes": 20093,
+    "lines": 500,
+    "sha256": "8355e742c5a68e833e6675f7982ec73227c8e049825f4b0c1116f8c2fb0fd72b",
+    "pinAtUTC": "2026-10-17T20:38:15.677581+00:00",
+    "kind": "product",
+    "coverage": "selected",
+    "selectedLineRanges": [
+      [
+        55,
+        105
+      ]
+    ]
+  },
+  {
+    "path": "packages/core/src/model-catalog/types.ts",
+    "bytes": 5401,
+    "lines": 121,
+    "sha256": "5e587cf05befb277ad46060de5e5fb885f7b59208b98f41b10d0b62375a39fa1",
+    "pinAtUTC": "2026-10-17T20:38:15.681570+00:00",
+    "kind": "product",
+    "coverage": "selected",
+    "selectedLineRanges": [
+      [
+        113,
+        118
+      ]
+    ]
+  },
+  {
+    "path": "packages/core/src/model-catalog/index.ts",
+    "bytes": 4933,
+    "lines": 127,
+    "sha256": "ecf52ac27efcd35cccda428ce4b7c59d0baceedbcba4eb0728fcca75992a15eb",
+    "pinAtUTC": "2026-10-17T20:38:15.682924+00:00",
+    "kind": "product",
+    "coverage": "selected",
+    "selectedLineRanges": [
+      [
+        107,
+        113
+      ]
+    ]
+  },
+  {
+    "path": "packages/core/src/model-catalog/upsert.test.ts",
+    "bytes": 2537,
+    "lines": 80,
+    "sha256": "874f1c3a49a6cbc5c11b5339eed7e2342972c243565a60813554096c9a6c72f8",
+    "pinAtUTC": "2026-10-17T20:38:15.684251+00:00",
+    "kind": "test-declaration",
+    "coverage": "selected",
+    "selectedLineRanges": [
+      [
+        77,
+        80
+      ]
+    ]
+  }
+]

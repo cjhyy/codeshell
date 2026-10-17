@@ -1,0 +1,70 @@
+{
+  "count": 1,
+  "rows": [
+    {
+      "locator": {
+        "metadataPath": "docs/audit-2026-10-17-round61/evidence/mcp-dot-readback-review/source-manifest.json",
+        "metadataSHA256": "2d0587f3d282f941078273a7755602b348307393858cd1f90a0046caa5afcf4f",
+        "jsonPointer": "/files/7"
+      },
+      "originalObject": {
+        "path": "packages/desktop/src/main/capabilities-service.ts",
+        "bytes": 4475,
+        "lineCount": 120,
+        "sha256": "029af36987fe6ae5dce537e54b32ba9f64a01a2230ed6fa735d39aa1c1e55ebb",
+        "pinnedAtUTC": "2026-10-17T20:20:15.062779+00:00",
+        "timing": "before own prep161 body/nav; actual paths supplied by parent inventory",
+        "selectedLineRanges": [
+          [
+            51,
+            80
+          ],
+          [
+            114,
+            120
+          ]
+        ],
+        "semanticLineCount": 37,
+        "bodyDisplayedLineRanges": [
+          [
+            40,
+            124
+          ]
+        ],
+        "bodyDisplayedLineCount": 85,
+        "additionalNavigationSnippetLineRanges": [],
+        "displayedLineRanges": [
+          [
+            40,
+            124
+          ]
+        ],
+        "displayedLineCount": 85,
+        "coverage": "selected",
+        "semanticFull": false,
+        "category": "product-selected",
+        "scopeBoundary": "Ordinary settings write/merge/parse/readback and explicit RPC value forwarding only. Adjacent files/locks/trust/credentials/native/hook provenance shown in body are not certified. Existing prep158/source-history overlap is not new unique or first coverage."
+      },
+      "path": "packages/desktop/src/main/capabilities-service.ts",
+      "declaredCoverage": "selected",
+      "issues": [
+        "bodyDisplayedLineRanges: outside EOF [40, 124]",
+        "body display count mismatch or absent",
+        "displayedLineRanges: outside EOF [40, 124]",
+        "total display count mismatch",
+        "semantic ranges not contained in actual body/navigation display union"
+      ],
+      "validSemanticRangesRetainedForDiagnosisOnly": [
+        [
+          51,
+          80
+        ],
+        [
+          114,
+          120
+        ]
+      ],
+      "policy": "Conservatively defer this entire metadata row; other valid canonical rows may support the same path."
+    }
+  ]
+}

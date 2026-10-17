@@ -1,0 +1,20 @@
+{
+  "files": [
+    {
+      "path": "packages/server/src/serve/headless-server.ts",
+      "bytes": 66162,
+      "sha256": "dda2af52d1cf136ae0c7ff6ed9697216b603a5b8beb66e204582d3c532098376",
+      "lines": 1690,
+      "beforeBodyAndLineNavigation": true,
+      "atUTC": "2026-10-17T20:41:50.075968+00:00"
+    },
+    {
+      "path": "packages/server/src/hub/run-replay.test.ts",
+      "bytes": 5239,
+      "sha256": "3eb48339592a4ad005a47de25a6d1b425e50349ea491dc970fd2462dbc016cbd",
+      "lines": 109,
+      "beforeBodyAndLineNavigation": true,
+      "atUTC": "2026-10-17T20:41:50.077900+00:00"
+    }
+  ]
+}

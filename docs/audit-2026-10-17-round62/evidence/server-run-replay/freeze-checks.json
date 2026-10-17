@@ -1,0 +1,95 @@
+{
+  "atUTC": "2026-10-17T20:44:56.024068+00:00",
+  "metadataChecksOnly": true,
+  "sourceRangesValid": true,
+  "sourceInstructionCanonicalEndingPins": 10,
+  "allUnchanged": true,
+  "historyEndingDocuments": 6484,
+  "historyDrift": 0,
+  "productTestsRun": 0,
+  "Git": 0,
+  "links": [
+    {
+      "document": "report.md",
+      "target": "classification.json",
+      "verifiedWithinExactDirectoryAfterReceiptCreation": true
+    },
+    {
+      "document": "report.md",
+      "target": "source-manifest.json",
+      "verifiedWithinExactDirectoryAfterReceiptCreation": true
+    },
+    {
+      "document": "report.md",
+      "target": "old-coverage-gate.json",
+      "verifiedWithinExactDirectoryAfterReceiptCreation": true
+    },
+    {
+      "document": "report.md",
+      "target": "actual-history-windows.json",
+      "verifiedWithinExactDirectoryAfterReceiptCreation": true
+    },
+    {
+      "document": "report.md",
+      "target": "source-excerpts.json",
+      "verifiedWithinExactDirectoryAfterReceiptCreation": true
+    },
+    {
+      "document": "report.md",
+      "target": "validation.json",
+      "verifiedWithinExactDirectoryAfterReceiptCreation": true
+    },
+    {
+      "document": "report.md",
+      "target": "history-navigation.json",
+      "verifiedWithinExactDirectoryAfterReceiptCreation": true
+    },
+    {
+      "document": "report.md",
+      "target": "history-count-clarification.json",
+      "verifiedWithinExactDirectoryAfterReceiptCreation": true
+    },
+    {
+      "document": "report.md",
+      "target": "initial-pins.json",
+      "verifiedWithinExactDirectoryAfterReceiptCreation": true
+    },
+    {
+      "document": "report.md",
+      "target": "dependent-source-pins.json",
+      "verifiedWithinExactDirectoryAfterReceiptCreation": true
+    },
+    {
+      "document": "report.md",
+      "target": "ending.json",
+      "verifiedWithinExactDirectoryAfterReceiptCreation": true
+    },
+    {
+      "document": "report.md",
+      "target": "early-log-read-diagnostic.json",
+      "verifiedWithinExactDirectoryAfterReceiptCreation": true
+    },
+    {
+      "document": "report.md",
+      "target": "consumer-filename-diagnostic.json",
+      "verifiedWithinExactDirectoryAfterReceiptCreation": true
+    },
+    {
+      "document": "report.md",
+      "target": "metadata-output-boundary.json",
+      "verifiedWithinExactDirectoryAfterReceiptCreation": true
+    },
+    {
+      "document": "report.md",
+      "target": "artifact-receipt.json",
+      "verifiedWithinExactDirectoryAfterReceiptCreation": true
+    }
+  ],
+  "linkCount": 15,
+  "counts": {
+    "newFormal": 0,
+    "newCandidate": 0,
+    "newRelated": 0
+  },
+  "noFirstSourceOrUniqueCoverageClaim": true
+}

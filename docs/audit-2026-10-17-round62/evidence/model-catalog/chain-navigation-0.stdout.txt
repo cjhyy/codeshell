@@ -1,0 +1,29 @@
+packages/core/src/tool-system/builtin/generate-video.ts:40:import { genInstancesFromConnections } from "../../model-catalog/gen-connections.js";
+packages/core/src/tool-system/builtin/generate-video.ts:48:  defaultModel?: string;
+packages/core/src/tool-system/builtin/generate-video.ts:167:    value = resolveVideoProvider(cwd) !== null;
+packages/core/src/tool-system/builtin/generate-video.ts:231:  defaultModel?: string;
+packages/core/src/tool-system/builtin/generate-video.ts:234:function resolveVideoProvider(cwd: string, preferKind?: string): ResolvedVideoProvider | null {
+packages/core/src/tool-system/builtin/generate-video.ts:242:    const list = genInstancesFromConnections(
+packages/core/src/tool-system/builtin/generate-video.ts:257:        return { kind: chosen.kind, creds: credsOf(chosen), defaultModel: chosen.defaultModel };
+packages/core/src/tool-system/builtin/generate-video.ts:263:      return { kind: chosen.kind, creds: credsOf(chosen), defaultModel: chosen.defaultModel };
+packages/core/src/tool-system/builtin/generate-video.ts:281:        return { kind: chosen.kind, creds: credsOf(chosen), defaultModel: chosen.defaultModel };
+packages/core/src/tool-system/builtin/generate-video.ts:289:      return { kind: chosen.kind, creds: credsOf(chosen), defaultModel: chosen.defaultModel };
+packages/core/src/tool-system/builtin/generate-video.ts:308:export function __resolveVideoProviderForTests(
+packages/core/src/tool-system/builtin/generate-video.ts:312:  return resolveVideoProvider(cwd, preferKind);
+packages/core/src/tool-system/builtin/generate-video.ts:350:  let defaultModel: string | undefined;
+packages/core/src/tool-system/builtin/generate-video.ts:356:    const resolved = resolveVideoProvider(cwd, preferKind);
+packages/core/src/tool-system/builtin/generate-video.ts:367:    defaultModel = resolved.defaultModel;
+packages/core/src/tool-system/builtin/generate-video.ts:370:  const model = overrideModel ?? defaultModel ?? DEFAULT_VIDEO_MODEL[kind] ?? kind;
+packages/core/src/tool-system/builtin/generate-image.ts:41:import { genInstancesFromConnections } from "../../model-catalog/gen-connections.js";
+packages/core/src/tool-system/builtin/generate-image.ts:49:  defaultModel?: string;
+packages/core/src/tool-system/builtin/generate-image.ts:97:      return { kind: chosen.kind, creds: credsOf(chosen), defaultModel: chosen.defaultModel };
+packages/core/src/tool-system/builtin/generate-image.ts:103:    ? { kind: chosen.kind, creds: credsOf(chosen), defaultModel: chosen.defaultModel }
+packages/core/src/tool-system/builtin/generate-image.ts:170:  defaultModel?: string;
+packages/core/src/tool-system/builtin/generate-image.ts:186:function resolveImageProvider(cwd: string, prefer?: string): ResolvedImageProvider | null {
+packages/core/src/tool-system/builtin/generate-image.ts:196:    const list = genInstancesFromConnections(
+packages/core/src/tool-system/builtin/generate-image.ts:226:        return { kind: chosen.kind, creds: credsOf(chosen), defaultModel: chosen.defaultModel };
+packages/core/src/tool-system/builtin/generate-image.ts:239:      return { kind: chosen.kind, creds: credsOf(chosen), defaultModel: chosen.defaultModel };
+packages/core/src/tool-system/builtin/generate-image.ts:347:    value = resolveImageProvider(cwd) !== null;
+packages/core/src/tool-system/builtin/generate-image.ts:424:  const resolved = resolveImageProvider(cwd, preferKind);
+packages/core/src/tool-system/builtin/generate-image.ts:437:  // Model precedence: call arg > instance defaultModel (imageGen) > kind default.
+packages/core/src/tool-system/builtin/generate-image.ts:439:    overrideModel ?? resolved.defaultModel ?? DEFAULT_IMAGE_MODEL[resolved.kind] ?? "gpt-image-2";

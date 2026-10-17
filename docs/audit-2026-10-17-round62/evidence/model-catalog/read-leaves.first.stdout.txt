@@ -1,0 +1,187 @@
+
+SOURCE packages/core/src/model-catalog/resolve.ts
+1: /**
+2:  * resolveInstance — single resolver every capability entry (chat /
+3:  * GenerateImage / GenerateVideo) goes through. Turns a stored ModelInstance +
+4:  * credentials + catalog into the runtime shape: which adapter, which key (from
+5:  * the referenced credential), which preset, which param values. text/image/
+6:  * video all share this — only adapterKind differs ("底层一套").
+7:  * See docs/superpowers/specs/2026-06-15-unified-model-catalog-design.md §6.
+8:  */
+9: import { findCatalogEntry, type CatalogEntry } from "./index.js";
+10: import type { ModelPreset } from "./types.js";
+11: 
+12: /** An independent credential (mirrors settings.credentials[] entries). */
+13: export interface Credential {
+14:   id: string;
+15:   catalogId: string;
+16:   apiKey?: string;
+17:   baseUrl?: string;
+18: }
+19: 
+20: /** A stored connection instance (mirrors settings.modelConnections[] entries). */
+21: export interface ModelInstance {
+22:   id: string;
+23:   catalogId: string;
+24:   tag: "text" | "image" | "video" | "audio" | "speech";
+25:   model: string;
+26:   baseUrl?: string;
+27:   /** Which credential supplies the key (independent entity, shareable). */
+28:   credentialId?: string;
+29:   paramValues?: Record<string, unknown>;
+30: }
+31: 
+32: export interface ResolvedInstance {
+33:   entry: CatalogEntry;
+34:   adapterKind: string;
+35:   baseUrl: string;
+36:   apiKey?: string;
+37:   /** Whether the catalog template requires a key (false = local/no-auth provider).
+38:    *  Surfaced so higher layers can tell "needs a key but has none" (a misconfig
+39:    *  worth a clear error) from "legitimately keyless". resolveInstance itself
+40:    *  still NEVER throws on a missing key — that no-crash contract is unchanged. */
+41:   needsKey: boolean;
+42:   preset?: ModelPreset;
+43:   model: string;
+44:   paramValues: Record<string, unknown>;
+45: }
+46: 
+47: function endpointOrigin(baseUrl: string | undefined): string | undefined {
+48:   if (!baseUrl) return undefined;
+49:   try {
+50:     return new URL(baseUrl).origin.toLowerCase();
+51:   } catch {
+52:     return undefined;
+53:   }
+54: }
+55: 
+56: /**
+57:  * A credential may be shared by multiple catalog entries only when they refer
+58:  * to the same provider family AND endpoint origin. This preserves intentional
+59:  * sharing such as OpenAI text ↔ OpenAI Images/Transcribe while preventing an
+60:  * OpenAI account from being attached to an OpenRouter template merely because
+61:  * both speak the OpenAI-compatible protocol.
+62:  *
+63:  * An exact catalogId match remains authoritative: a credential can carry an
+64:  * explicit provider-specific baseUrl override for that catalog entry.
+65:  */
+66: export function isCredentialCompatible(
+67:   entry: CatalogEntry,
+68:   credential: Credential,
+69:   catalog: CatalogEntry[],
+70:   connectionBaseUrl?: string,
+71: ): boolean {
+72:   if (credential.catalogId === entry.id) return true;
+73:   const credentialEntry = findCatalogEntry(catalog, credential.catalogId);
+74:   if (!credentialEntry || credentialEntry.adapterKind !== entry.adapterKind) return false;
+75:   const connectionOrigin = endpointOrigin(connectionBaseUrl ?? entry.defaultBaseUrl);
+76:   const credentialOrigin = endpointOrigin(credential.baseUrl ?? credentialEntry.defaultBaseUrl);
+77:   return Boolean(connectionOrigin && credentialOrigin && connectionOrigin === credentialOrigin);
+78: }
+79: 
+80: /**
+81:  * Resolve `inst` against the credential list (for its key) and `catalog`.
+82:  * Returns null when the instance's catalogId resolves to no entry or an
+83:  * explicitly referenced credential belongs to a different provider/endpoint.
+84:  * baseUrl precedence: connection override → credential → catalog default.
+85:  */
+86: export function resolveInstance(
+87:   inst: ModelInstance,
+88:   credentials: Credential[],
+89:   catalog: CatalogEntry[],
+90: ): ResolvedInstance | null {
+91:   const entry = findCatalogEntry(catalog, inst.catalogId);
+92:   if (!entry) return null;
+93: 
+94:   const candidate = inst.credentialId
+95:     ? credentials.find((c) => c.id === inst.credentialId)
+96:     : undefined;
+97:   if (candidate && !isCredentialCompatible(entry, candidate, catalog, inst.baseUrl)) {
+98:     return null;
+99:   }
+100:   const cred = candidate;
+101:   const preset = entry.modelPresets?.find((p) => p.value === inst.model);
+102: 
+103:   return {
+104:     entry,
+105:     adapterKind: entry.adapterKind,
+106:     baseUrl: inst.baseUrl ?? cred?.baseUrl ?? entry.defaultBaseUrl,
+107:     apiKey: cred?.apiKey,
+108:     needsKey: entry.needsKey !== false, // default-true: only an explicit false is keyless
+109:     preset,
+110:     model: inst.model,
+111:     paramValues: inst.paramValues ?? {},
+112:   };
+113: }
+
+SOURCE packages/core/src/model-catalog/gen-connections.ts
+1: /**
+2:  * genInstancesFromConnections — bridge unified modelConnections (tag=image or
+3:  * video) + credentials into the GenInstance shape the image/video runtime
+4:  * resolvers (resolveImageProvider / resolveVideoProvider) consume. Lets
+5:  * image/video flow through the unified credentials store; key comes from the
+6:  * referenced credential. Connections whose catalogId doesn't resolve are
+7:  * skipped. See docs/.../2026-06-15-unified-model-catalog-design.md §6.
+8:  */
+9: import { resolveInstance, type ModelInstance, type Credential } from "./resolve.js";
+10: import type { CatalogEntry } from "./index.js";
+11: 
+12: /** The shape image/video resolvers expect (mirrors generate-image GenInstance). */
+13: export interface GenRuntimeInstance {
+14:   id: string;
+15:   kind: string;
+16:   baseUrl: string;
+17:   apiKey?: string;
+18:   defaultModel?: string;
+19:   catalogId: string;
+20: }
+21: 
+22: export function genInstancesFromConnections(
+23:   connections: ModelInstance[],
+24:   credentials: Credential[],
+25:   catalog: CatalogEntry[],
+26:   tag: "image" | "video" | "audio",
+27: ): GenRuntimeInstance[] {
+28:   const out: GenRuntimeInstance[] = [];
+29:   for (const inst of connections) {
+30:     if (inst.tag !== tag) continue;
+31:     const resolved = resolveInstance(inst, credentials, catalog);
+32:     if (!resolved) continue;
+33:     out.push({
+34:       id: inst.id,
+35:       kind: resolved.adapterKind,
+36:       baseUrl: resolved.baseUrl,
+37:       ...(resolved.apiKey !== undefined ? { apiKey: resolved.apiKey } : {}),
+38:       defaultModel: inst.model || resolved.entry.defaultModel,
+39:       catalogId: inst.catalogId,
+40:     });
+41:   }
+42:   return out;
+43: }
+
+SOURCE packages/core/src/model-catalog/upsert.ts
+1: /**
+2:  * upsertCatalogEntry — add-or-update a CatalogEntry in the user catalog array,
+3:  * keyed by `id`. Pure: returns a new array, input untouched. Existing id →
+4:  * replaced in place (order preserved); new id → appended. The catalog edit tool
+5:  * wraps this with backup + zod validate + atomic write.
+6:  * See docs/superpowers/specs/2026-06-15-unified-model-catalog-design.md §7.
+7:  */
+8: import type { CatalogEntry, ModelPreset } from "./types.js";
+9: 
+10: export function upsertCatalogEntry(existing: CatalogEntry[], entry: CatalogEntry): CatalogEntry[] {
+11:   const idx = existing.findIndex((e) => e.id === entry.id);
+12:   if (idx === -1) return [...existing, entry];
+13:   const next = existing.slice();
+14:   next[idx] = entry;
+15:   return next;
+16: }
+17: 
+18: /** Add or replace one model preset by its provider-scoped model id. */
+19: export function upsertModelPreset(existing: ModelPreset[], preset: ModelPreset): ModelPreset[] {
+20:   const idx = existing.findIndex((candidate) => candidate.value === preset.value);
+21:   if (idx === -1) return [...existing, preset];
+22:   const next = existing.slice();
+23:   next[idx] = preset;
+24:   return next;
+25: }

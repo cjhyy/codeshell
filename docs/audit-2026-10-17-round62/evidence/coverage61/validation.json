@@ -1,0 +1,34 @@
+{
+  "files": [],
+  "metadataOnly": true,
+  "productSourceSemanticReads": 0,
+  "rawByteHashInventoryRows": 4643,
+  "productImports": 0,
+  "productHelpers": 0,
+  "fixtures": 0,
+  "testsExecuted": 0,
+  "UI": 0,
+  "native": 0,
+  "model": 0,
+  "network": 0,
+  "Git": 0,
+  "sourceRepairs": 0,
+  "originalMetadataRepairs": 0,
+  "independentPeerDelivered": false,
+  "metadataMethods": {
+    "schemaFirstExit": 0,
+    "migrationFirstExit": 0,
+    "migrationSecondExit": 0,
+    "independentFirstExit": 0,
+    "endingFirstExit": 0
+  },
+  "firstOutputsRetained": true,
+  "diagnostics": [
+    "Filename navigation included one nonexistent date directory; exit2 preserved as tool excerpt.",
+    "Initial body-only containment deferred explicit selected17 supported by original body+navigation display; reader false positive withdrawn with first method and output retained.",
+    "Original161/files7 displayed40-124 exceeds EOF120; entire row deferred without rewriting original.",
+    "Attempted peer request crossed a new165 assignment; no peer result claimed.",
+    "First own finalizer exit1: receipt link checked before self-excluded receipt existed. Original method/tool output/exit retained; only this link creation order corrected before freeze."
+  ],
+  "notAProductPassOrFailure": true
+}

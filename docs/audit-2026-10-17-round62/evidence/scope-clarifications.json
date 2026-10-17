@@ -1,0 +1,32 @@
+{
+  "old61Display": {
+    "path": "docs/audit-2026-10-17-round61/evidence/mcp-dot-readback-review/source-manifest.json",
+    "pointer": "/files/7",
+    "actualEOF": 120,
+    "declaredDisplay": [
+      [
+        40,
+        124
+      ]
+    ],
+    "declaredDisplayCount": 85,
+    "semanticSelection": [
+      [
+        51,
+        80
+      ],
+      [
+        114,
+        120
+      ]
+    ],
+    "semanticLineCount": 37,
+    "scope": "Source-selected ranges valid; original display assertion cannot be certified. Entire row deferred in163; original frozen161 left intact. Other155/159 valid source claims carry this path. No actual renderer/helper body rerun and no replacement display total asserted."
+  },
+  "root166Wording": {
+    "packet": "root-theme-window/report.md",
+    "clarification": "The sentence saying realpath/open stops at display boundary is overbroad for protocol79–85. Those7 guard/control-flow lines are explicitly selected in the authoritative source-manifest for ordinary routing; their filesystem security, races and actual native behavior remain unverified. open86–89 is display-only. No selected range/count change or new source reading; full protocol not claimed.",
+    "originalReportPreserved": true
+  },
+  "productRuns": 0
+}

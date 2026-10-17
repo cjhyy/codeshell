@@ -1,0 +1,1 @@
+{"classification": "0/0/0", "sourceRows": 12, "productLines": 490, "testDeclarationLines": 126, "displayLines": 616, "sourceEndingAllSame": true, "reportLinks": 7}

@@ -1,0 +1,34 @@
+[
+  {
+    "path": "docs/audit-2026-10-17-round10/catalog.md",
+    "bytes": 4690,
+    "lines": 35,
+    "sha256": "f7f958a8b13d27694c8b61c81330fa1d8ef695f54a797b973ca72a90e813399d",
+    "pinAtUTC": "2026-10-17T20:36:38.875969+00:00",
+    "kind": "prior-audit-report"
+  },
+  {
+    "path": "docs/audit-2026-10-17-round10/evidence/catalog-static-read-failure.md",
+    "bytes": 570,
+    "lines": 10,
+    "sha256": "7bdc168137ef8248bbe9e5c0483fb7fb184a946da6256db9354841dbd21fdf61",
+    "pinAtUTC": "2026-10-17T20:36:38.878676+00:00",
+    "kind": "prior-audit-report"
+  },
+  {
+    "path": "docs/audit-2026-10-17-round17/catalog.md",
+    "bytes": 8419,
+    "lines": 43,
+    "sha256": "2a8acde17a0ab61a9a1975dff3ed83bc0f26b1ae6c59148ea0be087eead7f5ce",
+    "pinAtUTC": "2026-10-17T20:36:38.879687+00:00",
+    "kind": "prior-audit-report"
+  },
+  {
+    "path": "docs/audit-2026-10-17-round17/evidence/catalog-navigation-skip.md",
+    "bytes": 1800,
+    "lines": 31,
+    "sha256": "89df4c2777bd599f2b6d72599d6e628e813bf2d7507888417bc29912058d0e14",
+    "pinAtUTC": "2026-10-17T20:36:38.880660+00:00",
+    "kind": "prior-audit-report"
+  }
+]
