@@ -241,6 +241,12 @@ jobs:
           set -euo pipefail
           node scripts/run-isolated-node-smoke.mjs --test packages/desktop/scripts/windows-nsis-acceptance.test.mjs packages/desktop/scripts/packaged-signal-diagnostics.test.mjs packages/desktop/scripts/smoke-windows-nsis-install.test.mjs packages/desktop/scripts/windows-nsis-checkpoint-diagnostics.test.mjs packages/desktop/scripts/windows-nsis-crash-evidence.test.mjs packages/desktop/scripts/windows-packaged-main-crash-evidence.test.mjs 2>&1 | tee "$ACCEPTANCE_ROOT/windows-nsis-contracts.log"
 
+      - name: operation evidence and paused Goal fixture contracts
+        timeout-minutes: 2
+        run: |
+          set -euo pipefail
+          node scripts/run-isolated-node-smoke.mjs --test packages/desktop/scripts/composer-operation-diagnostics.test.mjs packages/desktop/scripts/windows-nsis-process-roles.test.mjs packages/desktop/scripts/packaged-startup-observation.test.mjs packages/desktop/scripts/preference-goal-delete-acceptance.test.mjs 2>&1 | tee "$ACCEPTANCE_ROOT/operation-evidence-contracts.log"
+
       - name: Review first-error and cleanup observation contracts
         timeout-minutes: 2
         run: |
@@ -293,6 +299,12 @@ jobs:
         run: |
           set -euo pipefail
           node scripts/run-bun-test-shard.mjs --timeout 30000 packages/tui/src/cli/commands/builtin/branch-command.test.ts 2>&1 | tee "$ACCEPTANCE_ROOT/branch-command.log"
+
+      - name: project capability literal-key regressions
+        timeout-minutes: 2
+        run: |
+          set -euo pipefail
+          node scripts/run-bun-test-shard.mjs --timeout 30000 packages/core/src/capability-control/service.literal-override.test.ts packages/core/src/capability-control/service.test.ts 2>&1 | tee "$ACCEPTANCE_ROOT/mcp-project-overrides.log"
 
       - name: materialize production workspace packages
         timeout-minutes: 5
@@ -491,6 +503,8 @@ jobs:
             ${{ env.ACCEPTANCE_ROOT }}/startup/cost-gui-guard.jsonl
             ${{ env.ACCEPTANCE_ROOT }}/startup/real-keyring-bootstrap.jsonl
             ${{ env.ACCEPTANCE_ROOT }}/review.log
+            ${{ env.ACCEPTANCE_ROOT }}/operation-evidence-contracts.log
+            ${{ env.ACCEPTANCE_ROOT }}/mcp-project-overrides.log
             ${{ env.ACCEPTANCE_ROOT }}/review-diagnostic-contracts.log
             ${{ env.ACCEPTANCE_ROOT }}/review-draft-contracts.log
             ${{ env.ACCEPTANCE_ROOT }}/review-draft-operations.log
@@ -608,6 +622,8 @@ jobs:
             ${{ env.ACCEPTANCE_ROOT }}/startup/cost-gui-guard.jsonl
             ${{ env.ACCEPTANCE_ROOT }}/startup/real-keyring-bootstrap.jsonl
             ${{ env.ACCEPTANCE_ROOT }}/review.log
+            ${{ env.ACCEPTANCE_ROOT }}/operation-evidence-contracts.log
+            ${{ env.ACCEPTANCE_ROOT }}/mcp-project-overrides.log
             ${{ env.ACCEPTANCE_ROOT }}/review-diagnostic-contracts.log
             ${{ env.ACCEPTANCE_ROOT }}/review-draft-contracts.log
             ${{ env.ACCEPTANCE_ROOT }}/review-draft-operations.log
@@ -821,6 +837,12 @@ jobs:
           set -euo pipefail
           node scripts/run-isolated-node-smoke.mjs --test packages/desktop/scripts/packaged-startup-observation.test.mjs packages/desktop/scripts/preference-goal-delete-acceptance.test.mjs 2>&1 | tee "$ACCEPTANCE_ROOT/passive-startup-goal-contracts.log"
 
+      - name: operation evidence contracts
+        timeout-minutes: 2
+        run: |
+          set -euo pipefail
+          node scripts/run-isolated-node-smoke.mjs --test packages/desktop/scripts/composer-operation-diagnostics.test.mjs packages/desktop/scripts/windows-nsis-process-roles.test.mjs 2>&1 | tee "$ACCEPTANCE_ROOT/operation-evidence-contracts.log"
+
       - name: verify local package authority and output ownership
         run: node scripts/run-isolated-node-smoke.mjs --test packages/desktop/scripts/smoke-local-package.test.mjs
 
@@ -901,6 +923,7 @@ jobs:
             ${{ env.ACCEPTANCE_ROOT }}/process-metadata/report.json
             ${{ env.ACCEPTANCE_ROOT }}/windows-nsis-contracts.log
             ${{ env.ACCEPTANCE_ROOT }}/passive-startup-goal-contracts.log
+            ${{ env.ACCEPTANCE_ROOT }}/operation-evidence-contracts.log
             ${{ env.ACCEPTANCE_ROOT }}/windows-nsis.log
             ${{ env.ACCEPTANCE_ROOT }}/windows-nsis/receipt.json
             ${{ env.ACCEPTANCE_ROOT }}/windows-nsis/journal.jsonl
