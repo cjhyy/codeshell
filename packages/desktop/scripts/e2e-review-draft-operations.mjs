@@ -25,7 +25,10 @@ import {
 import { prepareConfinedElectronFixture } from "./confined-electron-fixture.mjs";
 import { watchElectronTestProcess } from "./electron-test-watchdog.mjs";
 import { createReviewOperationDiagnostics } from "./review-operation-diagnostics.mjs";
-import { reviewDraftReadonlyRpcGuardSource } from "./review-draft-readonly-rpc-guard.mjs";
+import {
+  reconcileReviewDraftReadonlyRpcLedger,
+  reviewDraftReadonlyRpcGuardSource,
+} from "./review-draft-readonly-rpc-guard.mjs";
 
 assert.equal(process.env.NODE_ENV, "test");
 assert.equal(process.env.CODE_SHELL_TEST_HOME, join(process.env.HOME, ".code-shell"));
@@ -703,16 +706,16 @@ state.probing=false;
           [2, 4],
         );
         assert.equal(rows.filter((row) => row.kind === "gate-closed").length, 1);
-        assert.deepEqual(
-          rows
-            .filter((row) => row.kind === "readonly-agent-rpc")
-            .map(({ method, sessionId, id }) => ({ method, sessionId, id })),
+        const readonlyAgentRpc = reconcileReviewDraftReadonlyRpcLedger(
+          sessions.map((session) => session.id),
           report.main.readonlyAgentRequests,
+          rows.filter((row) => row.kind === "readonly-agent-rpc"),
         );
         report.ipcLedger = {
           bytes: Buffer.byteLength(content),
           sha256: hash(content),
           records: rows.length,
+          readonlyAgentRpc,
           boundary:
             "Actual production IPC arguments/results and fixture response release, not a model turn",
         };

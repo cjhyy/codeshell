@@ -7,7 +7,10 @@ import { join } from "node:path";
 import { test } from "node:test";
 import vm from "node:vm";
 import { createReviewDraftResponseGate } from "./review-draft-response-gate.mjs";
-import { reviewDraftReadonlyRpcGuardSource } from "./review-draft-readonly-rpc-guard.mjs";
+import {
+  reconcileReviewDraftReadonlyRpcLedger,
+  reviewDraftReadonlyRpcGuardSource,
+} from "./review-draft-readonly-rpc-guard.mjs";
 
 const ids = ["owned-a", "owned-b"];
 const request = (mode = "staged") => ({
@@ -517,6 +520,7 @@ test("read guard preserves exact production failures and refuses evidence IO fai
     /ledger IO failure/,
   );
   assert.equal(calls, 0);
+  assert.equal(broken.denied.length, 1, "IO failure is also latched in the final denial ledger");
   const asynchronous = readonlyGuard(() => ({
     get then() {
       throw Error("must not inspect thenable");
@@ -546,6 +550,114 @@ test("read metadata traffic has a finite admission cap and never records raw mes
   assert.ok(
     guard.records.every((row) => Object.keys(row).sort().join(",") === "id,kind,method,sessionId"),
   );
+});
+
+test("final metadata preserves the exact Main prefix while retaining permitted reads during close", () => {
+  const guard = readonlyGuard();
+  guard.ipcMain.on("agent:msg", () => undefined);
+  guard.listeners.get("agent:msg")({}, readonlyLine("agent/goalGet", { sessionId: ids[0] }, 1));
+  const snapshot = JSON.parse(JSON.stringify(guard.state.readonlyAgentRequests));
+  guard.listeners.get("agent:msg")(
+    {},
+    readonlyLine("agent/backgroundWork", { sessionId: ids[1], scope: "all" }, 2),
+  );
+  const final = reconcileReviewDraftReadonlyRpcLedger(ids, snapshot, guard.records);
+  assert.deepEqual(final, {
+    snapshotRecords: 1,
+    lateRecords: 1,
+    requests: [
+      { method: "agent/goalGet", sessionId: ids[0], id: 1 },
+      { method: "agent/backgroundWork", sessionId: ids[1], id: 2 },
+    ],
+  });
+  assert.equal(snapshot.length, 1);
+  assert.equal(guard.denied.length, 0);
+  final.requests[0].id = "changed-copy";
+  assert.equal(guard.records[0].id, 1);
+});
+
+test("post-snapshot forbidden reads or ledger IO failures still deny delegation and fail acceptance", () => {
+  const guard = readonlyGuard();
+  let calls = 0;
+  guard.ipcMain.on("agent:msg", () => calls++);
+  guard.listeners.get("agent:msg")({}, readonlyLine("agent/goalGet", { sessionId: ids[0] }, 1));
+  const snapshot = JSON.parse(JSON.stringify(guard.state.readonlyAgentRequests));
+  assert.throws(
+    () =>
+      guard.listeners.get("agent:msg")(
+        {},
+        readonlyLine("agent/goalUpdate", { sessionId: ids[0], objective: "never admitted" }, 2),
+      ),
+    /Owned RPC denied/,
+  );
+  assert.equal(calls, 1);
+  assert.equal(guard.denied.length, 1);
+  assert.deepEqual(
+    reconcileReviewDraftReadonlyRpcLedger(ids, snapshot, guard.records).requests,
+    snapshot,
+  );
+  const error = Error("owned late ledger IO failure");
+  let broken = false;
+  const io = readonlyGuard(() => {
+    if (broken) throw error;
+  });
+  io.ipcMain.on("agent:msg", () => calls++);
+  io.listeners.get("agent:msg")({}, readonlyLine("agent/goalGet", { sessionId: ids[0] }, 1));
+  broken = true;
+  assert.throws(
+    () =>
+      io.listeners.get("agent:msg")({}, readonlyLine("agent/goalGet", { sessionId: ids[1] }, 2)),
+    (found) => found === error,
+  );
+  assert.equal(calls, 2);
+  assert.equal(io.records.length, 1);
+  assert.equal(io.denied.length, 1);
+  const source = readFileSync(
+    new URL("./e2e-review-draft-operations.mjs", import.meta.url),
+    "utf8",
+  );
+  const parsed = ts.createSourceFile(
+    "driver.mjs",
+    source,
+    ts.ScriptTarget.Latest,
+    true,
+    ts.ScriptKind.JS,
+  );
+  const gates = [];
+  function visit(node) {
+    if (
+      ts.isIfStatement(node) &&
+      node.expression.getText(parsed).includes('"denied-attempts.jsonl"')
+    )
+      gates.push(node);
+    ts.forEachChild(node, visit);
+  }
+  visit(parsed);
+  assert.equal(gates.length, 1);
+  // Execute only the actual final denial-ledger condition, without importing the driver.
+  const failures = [];
+  vm.runInNewContext(gates[0].getText(parsed), {
+    name: "denied-attempts.jsonl",
+    content: JSON.stringify(guard.denied[0]) + "\n",
+    failures,
+  });
+  assert.equal(failures.length, 1);
+  assert.equal(failures[0].stage, "late-ledger");
+});
+
+test("final readonly sequence rejects changed prefixes, foreign metadata, extra fields and overflow", () => {
+  const first = { method: "agent/goalGet", sessionId: ids[0], id: 1 };
+  const row = { kind: "readonly-agent-rpc", ...first };
+  for (const [snapshot, records] of [
+    [[{ ...first, id: 2 }], [row]],
+    [[first], []],
+    [[], [{ ...row, method: "agent/goalUpdate" }]],
+    [[], [{ ...row, sessionId: "foreign" }]],
+    [[], [{ ...row, id: "x".repeat(129) }]],
+    [[], [{ ...row, task: "must not be present" }]],
+    [[], Array.from({ length: 129 }, () => row)],
+  ])
+    assert.throws(() => reconcileReviewDraftReadonlyRpcLedger(ids, snapshot, records));
 });
 
 function pureTypescript(

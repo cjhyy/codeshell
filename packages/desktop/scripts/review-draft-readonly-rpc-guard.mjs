@@ -74,8 +74,19 @@ function installReadonlyReviewRpcGuard(ipcMain, sessionIds, record, refuse) {
               throw new Error("Owned Review RPC refused");
             }
             admitted++;
-            if (record(metadata) !== undefined)
-              throw new Error("Review RPC metadata sink must be synchronous");
+            try {
+              if (record(metadata) !== undefined)
+                throw new Error("Review RPC metadata sink must be synchronous");
+            } catch (error) {
+              // Preserve the original IO failure, and latch the same denial path
+              // used for forbidden requests even if this occurs after Main snapshot.
+              try {
+                refuse(metadata);
+              } catch {
+                // A failed refusal sink must not replace the original IO error.
+              }
+              throw error;
+            }
             // Preserve the exact receiver, event, line and listener return/rejection.
             return listener.call(this, event, line);
           },
@@ -93,4 +104,50 @@ export function reviewDraftReadonlyRpcGuardSource(sessionIds) {
       if(state.agentMessages.length<16)state.agentMessages.push(metadata);
       return deny("agent:msg",metadata);
     });`;
+}
+
+/** Final durable metadata can extend the earlier Main snapshot during close.
+ * Every admitted raw frame already passed the strict guard above. This rechecks
+ * the final finite metadata schema and the complete unchanged snapshot prefix. */
+export function reconcileReviewDraftReadonlyRpcLedger(sessionIds, snapshot, records) {
+  const allowed = new Set(sessionIds);
+  if (
+    sessionIds.length !== 2 ||
+    allowed.size !== 2 ||
+    !sessionIds.every((id) => typeof id === "string" && /^[A-Za-z0-9._-]{1,128}$/.test(id)) ||
+    !Array.isArray(snapshot) ||
+    !Array.isArray(records) ||
+    snapshot.length > records.length ||
+    records.length > 128
+  )
+    throw new Error("Invalid final Review RPC sequence");
+  const validate = (row, durable) => {
+    if (
+      !row ||
+      typeof row !== "object" ||
+      Array.isArray(row) ||
+      Object.keys(row).sort().join(",") !==
+        (durable ? "id,kind,method,sessionId" : "id,method,sessionId") ||
+      (durable && row.kind !== "readonly-agent-rpc") ||
+      !["agent/goalGet", "agent/backgroundWork", "agent/backgroundShells"].includes(row.method) ||
+      !allowed.has(row.sessionId) ||
+      !(
+        (typeof row.id === "string" && /^[A-Za-z0-9._:-]{1,128}$/.test(row.id)) ||
+        (typeof row.id === "number" && Number.isSafeInteger(row.id) && row.id >= 0)
+      )
+    )
+      throw new Error("Invalid final Review RPC metadata");
+    return { method: row.method, sessionId: row.sessionId, id: row.id };
+  };
+  const requests = records.map((row) => validate(row, true));
+  for (const [index, row] of snapshot.entries()) {
+    const expected = validate(row, false);
+    if (["method", "sessionId", "id"].some((key) => expected[key] !== requests[index][key]))
+      throw new Error("Main Review RPC snapshot is not a durable prefix");
+  }
+  return {
+    snapshotRecords: snapshot.length,
+    lateRecords: requests.length - snapshot.length,
+    requests,
+  };
 }
