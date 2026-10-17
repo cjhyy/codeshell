@@ -18,7 +18,8 @@ import { useT } from "../i18n/I18nProvider";
 import { groupReviewSnapshot, selectReviewSnapshot } from "../diff/reviewSnapshot";
 import { useReviewPrompt } from "./useReviewPrompt";
 
-const ALL_FILES = "__all__";
+const ALL_FILES_VALUE = "all";
+const fileOptionValue = (path: string): string => `path:${path}`;
 
 interface Props {
   /** Workspace root; null when no project is active. */
@@ -115,8 +116,8 @@ export function ReviewPanel({
   // Apply availability during render so a previously selected Git scope cannot
   // issue a request before effects respond to the workspace change.
   const activeScope = gitAvailable ? scope : "turn";
-  // Turn-scope file filter for the dropdown (#5 ②). "" / ALL_FILES = show all.
-  const [turnFileSel, setTurnFileSel] = useState<string>(ALL_FILES);
+  // Keep all-files state separate from every possible literal file path.
+  const [turnFileSel, setTurnFileSel] = useState<string | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
   // Total +/- for the current scope, reported by the diff viewer — shown next
   // to the scope dropdown (Codex style).
@@ -135,7 +136,11 @@ export function ReviewPanel({
   }, [turnDiff]);
   // A file selected in an earlier turn may not exist in the next snapshot.
   // Resolve that stale filter immediately, before the diff viewer renders.
-  const activeTurnFileSel = turnFilePaths.includes(turnFileSel) ? turnFileSel : ALL_FILES;
+  const activeTurnFileSel =
+    turnFileSel !== null && turnFilePaths.includes(turnFileSel) ? turnFileSel : null;
+  useEffect(() => {
+    if (turnFileSel !== null && !turnFilePaths.includes(turnFileSel)) setTurnFileSel(null);
+  }, [turnFileSel, turnFilePaths]);
   // The commit picked from the 提交 submenu (committed scope diffs <hash>^..<hash>).
   // null = no specific commit picked → default to the most recent (HEAD~1..HEAD).
   const [selectedCommit, setSelectedCommit] = useState<ReviewGitCommit | null>(null);
@@ -207,11 +212,8 @@ export function ReviewPanel({
       activeScope === "turn"
         ? {
             kind: "snapshot",
-            diff: selectReviewSnapshot(
-              turnDiff!,
-              activeTurnFileSel === ALL_FILES ? null : activeTurnFileSel,
-            ),
-            label: activeTurnFileSel === ALL_FILES ? undefined : activeTurnFileSel,
+            diff: selectReviewSnapshot(turnDiff!, activeTurnFileSel),
+            label: activeTurnFileSel ?? undefined,
             instructions,
           }
         : { kind: "git", scope: reviewRequest, instructions },
@@ -324,14 +326,18 @@ export function ReviewPanel({
           <SimpleSelect
             size="sm"
             ariaLabel={t("panels.review.selectFile")}
-            value={activeTurnFileSel}
-            onChange={setTurnFileSel}
+            value={
+              activeTurnFileSel === null ? ALL_FILES_VALUE : fileOptionValue(activeTurnFileSel)
+            }
+            onChange={(value) =>
+              setTurnFileSel(turnFilePaths.find((path) => fileOptionValue(path) === value) ?? null)
+            }
             options={[
               {
-                value: ALL_FILES,
+                value: ALL_FILES_VALUE,
                 label: t("panels.review.allFiles", { count: turnFilePaths.length }),
               },
-              ...turnFilePaths.map((p) => ({ value: p, label: p })),
+              ...turnFilePaths.map((path) => ({ value: fileOptionValue(path), label: path })),
             ]}
           />
         )}
@@ -421,7 +427,7 @@ export function ReviewPanel({
           <UnifiedDiffViewer
             cwd={cwd}
             diffText={turnDiff}
-            onlyPath={activeTurnFileSel === ALL_FILES ? null : activeTurnFileSel}
+            onlyPath={activeTurnFileSel}
             onStats={setStats}
           />
         ) : (
