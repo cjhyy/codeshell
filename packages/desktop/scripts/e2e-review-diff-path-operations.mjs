@@ -27,11 +27,25 @@ assert.equal(process.argv[2], "--evidence-dir");
 const requestedEvidence = resolve(process.argv[3]);
 const evidence = join(await realpath(dirname(requestedEvidence)), basename(requestedEvidence));
 const appDir = resolve(dirname(fileURLToPath(import.meta.url)), "..");
-const repo = resolve(appDir, "../..");
+const repo = await realpath(resolve(appDir, "../.."));
 const outside = relative(repo, evidence);
-assert.ok(outside === ".." || outside.startsWith(`..${sep}`) || isAbsolute(outside));
+assert.ok(
+  outside === ".." || outside.startsWith(`..${sep}`) || isAbsolute(outside),
+  "Evidence must be outside the checkout",
+);
+const outerHome = await realpath(process.env.HOME);
+const outsideHome = relative(outerHome, evidence);
+assert.ok(
+  outsideHome === ".." || outsideHome.startsWith(`..${sep}`) || isAbsolute(outsideHome),
+  "Evidence must be outside the outer HOME",
+);
 await mkdir(evidence, { mode: 0o700 });
 const isolated = await makeIsolatedElectronHome("codeshell-review-diff-native-");
+const privateRelative = relative(outerHome, isolated.home);
+assert.ok(
+  privateRelative === ".." || privateRelative.startsWith(`..${sep}`) || isAbsolute(privateRelative),
+  "Private native HOME must survive the outer runner on failure",
+);
 const projectPath = join(isolated.home, "owned-review-repo");
 const sessionId = "owned-review-session",
   title = "Owned Review conversation";
