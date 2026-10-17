@@ -10,6 +10,7 @@ import { build } from "esbuild";
 import { _electron } from "playwright";
 import { ensureElectronKeychainContext } from "./electron-keychain-preflight.mjs";
 import { watchElectronTestProcess } from "./electron-test-watchdog.mjs";
+import { createPackagedSignalDiagnostics } from "./packaged-signal-diagnostics.mjs";
 import { snapshotElectronTestProcesses } from "./electron-test-process-snapshot.mjs";
 import { preloadPausedPackagedMain } from "./packaged-main-preload.mjs";
 import { capturePackagedAppIntegrity } from "./packaged-app-integrity.mjs";
@@ -117,6 +118,7 @@ export async function preparePackagedPetFixture({
   if (appImageRuntime) Object.assign(environment, appImageRuntime.environment);
   const children = [];
   const processMonitors = [];
+  const signalDiagnostics = createPackagedSignalDiagnostics();
   const monitorsByChild = new Map();
   const workers = new Set();
   const verifiedMains = new Set();
@@ -161,6 +163,7 @@ export async function preparePackagedPetFixture({
         let rootIdentity;
         const monitor = watchElectronTestProcess(child, {
           timeoutMs: 120_000,
+          signalProcess: signalDiagnostics.request,
           ...(appImageRuntime
             ? {
                 snapshotProcesses: () => {
@@ -467,6 +470,7 @@ export async function preparePackagedPetFixture({
         unchangedAfterRuntime: true,
         ...(runtime ? { appImageRuntime: runtime } : {}),
         observedProcessSettlements,
+        observedSignalRequests: signalDiagnostics.receipt(),
         windowsTransports: windowsTransports.map((transport) => transport.receipt()),
         transportFailures: [...transportFailures],
         bootstrapSHA256: hash(await readFile(bootstrap)),
