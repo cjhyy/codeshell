@@ -114,11 +114,16 @@ and its sole report write follows all cleanup. Missing screenshots do not prove
 that catch was skipped, because screenshot failure is swallowed. The follow-up
 adds bounded synchronous phase/first-error evidence and Main stream/exit
 observations before diagnostic awaits, retaining the original 20 cases, timing,
-custody and normal-exit requirements. Failed owned HOMEs will remain available;
-passing runs still require their original successful cleanup. This is a fixture
+custody and normal-exit requirements. Fixed commit `d8f9a2fad` has passed
+independent review and the combined guarded Node shard (26 tests), syntax,
+lint and formatting checks. Known UI, Main, custody, transport or server-close
+failure now prevents owned HOME removal; a final report-write failure after
+successful HOME removal cannot restore that directory. Diagnostics explicitly
+distinguish those outcomes, incomplete case progress and controller/Main exits.
+Passing runs still require the original successful cleanup. This is a fixture
 evidence repair, not a diagnosis or fix of the CI12 first cause. Its four precise
-artifact paths preserve the original report/body/PNG allowlist. CI12 has not been
-retried; the next remote run awaits the reviewed source changes.
+artifact paths preserve the original report/body/PNG allowlist. The reviewed
+changes are integrated for the next full remote matrix; CI12 is retained intact.
 
 CI12's independently verified summaries remain
 `ci-39013381607-web-independent-audit.json` (SHA256
@@ -142,12 +147,17 @@ without claiming every glyph or Linux installation. Actual AppImage Main/runtime
 identities, sandbox requests, source/cache bytes and full modes remain verified;
 all eight suite receipts pass, including panel 20 and updater ten manifest GETs.
 
-The next independent UI task addresses the recorded R2-10 header-only diff
-boundary: real Git Review still loses paths for mode-only/binary/empty changes,
-showing unknown-file titles and wrong open targets. Existing producer/consumer
-wiring is confirmed and focused owned-Git/React regressions reproduce it. The
-fix is not yet integrated or native-verified; it is separate from the unexplained
-CI12 Windows failure.
+The recorded R2-10 header-only diff boundary is repaired in `9d7577249`:
+real Git mode-only/binary/empty changes previously lost their paths, showing
+unknown-file titles and wrong open targets. The parser now uses unambiguous
+`diff --git` paths while preserving explicit header overrides and rejecting
+ambiguous names. Actual temporary Git and React regressions reproduce the old
+failure. The integrated combination passes 20 tests/65 assertions, Desktop build
+and all 14 workspace typechecks. Independently reviewed fixture `a71af2f65`
+preserves the original eight native Review operations and adds three: mode-only
+and CJK binary cards plus the actual mode-only Files preview. These three remain
+pending native CI. This product fix is separate from the unexplained CI12
+Windows failure.
 
 Windows CI11's frozen summary is
 `ci-39012279115-windows-20261017/verified-summary.json` (SHA256
