@@ -72,7 +72,7 @@ function captured(before: Buffer, after: Buffer) {
   expect(process.env.NODE_ENV).toBe("test");
   expect(process.env.CODE_SHELL_TEST_HOME).toBe(join(process.env.HOME!, ".code-shell"));
   expect(guardProbes).toBe(6);
-  const cwd = realpathSync(mkdtempSync(join(process.env.HOME!, "owned-turn-diff-bom-")));
+  const cwd = realpathSync.native(mkdtempSync(join(process.env.HOME!, "owned-turn-diff-bom-")));
   roots.push(cwd);
   const path = join(cwd, "bytes.txt");
   writeFileSync(path, before);
