@@ -38,6 +38,7 @@ Cross-platform fixture tests alone are not native acceptance.
 | Context forwarding after truncated history | Selecting RECENT from the actual 512 KiB history tail could forward OLD because visible groups used raw-history ordinals. | Preserve durable source event IDs and resolve the exact raw range; reject unknown, ambiguous or discontinuous mappings. Eight actual reader/fold/React-handler scenarios pass without invoking a fork or provider. |
 | Multiline annotations | Actual CommentBox typing and Save retained the full text, but its wire projection displayed only the first line and interpreted colon/fake-entry text as other fields. | Version only new multiline blocks and consume a bounded explicit line count. Actual CommentBox/codec/AnnotationsBlock passes eight browser sequences at 1000/390px, with whitespace and fake-format text preserved. Ordinary single-line wire stays byte-compatible; ambiguous historical unframed comments are not guessed. |
 | Web child-stream lifecycle | Background child detail changed a completed parent to running; a child error also cleared the parent's live output. Supported orphan tool results bypassed ordinary display cleanup. | Keep child activity in its own bucket, retain the parent's lifecycle and normalize both tool-result orders equally. Combined reducer/replay/controller regression passes 86 tests/242 assertions. Actual Workbench/ProtocolClient browser verification passes eight sequences at 1280/390, with real Send/Stop and expanded tool-result controls. |
+| Native file labels and image previews | Actual Windows Files/CommentBox displayed the complete native path as its short filename. Real React tests additionally exposed incorrect drive/UNC image IPC paths, root-level Markdown image directories, and a POSIX media fallback losing a literal backslash. | Preload platform selects native separators for display and dirname; complete locators and file authority remain unchanged. Image attachments preserve native absolute paths and join relative paths only once. FilesPanel, Markdown, attachment/media cards, recent references and workspace labels share the display helper. The combined focused shard passes 115 tests/386 assertions, followed by Desktop build and all 14 workspace typechecks. Native Windows verification of these repairs is pending the next CI. |
 
 ## Evidence boundaries
 
@@ -88,11 +89,86 @@ main, tags and publication remain outside that authorization. The branch is
 | [39003474715](https://github.com/cjhyy/codeshell/actions/runs/39003474715), source `dac146ed2` | Complete macOS job passes, including packaged updater five modes/ten GETs and actual DMG install/replacement 13+13 UI operations. Linux preferences 6 and directory packaged UI 13 pass; updater makes zero requests because this artifact is a directory app without runtime-owned `APPIMAGE`. Windows clean-source build and packaging pass with fixed LF attributes and PowerShell 7 identity queries (472/487ms). Its three cold launches/reloads and second-window operations finish, then one shutdown custody query fails; the overall job fails and no full Windows acceptance is claimed. Headless Web again fails actual blur; other auth cases and ServiceWorker pass. |
 | [39004577231](https://github.com/cjhyy/codeshell/actions/runs/39004577231), source `ccaed3142`, manual `suite=web` | Web ServiceWorker 11 and authentication 4 pass in hosted Linux Chromium under Xvfb. The login tab reports `focused=false` before an actual trusted focus event, with no status read during its pending login. Native jobs are intentionally skipped in this diagnostic run; it is not a complete matrix pass. |
 | [39007288837](https://github.com/cjhyy/codeshell/actions/runs/39007288837), source `34553b747`, manual `suite=web` | The expanded browser job passes: ServiceWorker 11, authentication 4, child-state/send/stop/tool display 8 and multiline CommentBox/save/display 8. New receipts bind clean source `34553b747`, normal browser exits and ten observed incarnations cleaned with zero remaining. Narrow screenshots were independently inspected. Native jobs are skipped while the Windows transport is repaired; this is not a full matrix pass. |
+| [39008016212](https://github.com/cjhyy/codeshell/actions/runs/39008016212), source `1b4b3340f` | Web passes all 31 operations again. The complete macOS job passes, including updater and DMG, with 78 independent receipt checks. Windows now passes three cold Main launches/reloads/second-window and Review 8, then exposes a real Files UI defect: the comment title displays the full Windows path instead of `alpha.txt`. Main exits normally with zero remaining owned processes and no transport fallback. Linux passes all six source suites, sandbox-requested directory UI and the actual AppImage build; its updater fixture fails after successful extraction because a LICENSE file's mode changes from 0600 to 0644 while bytes match. No AppImage Main or updater request starts. Both first failures are retained, and neither incomplete platform is counted as fully accepted. |
 
 Artifacts are downloaded as ZIPs under the private operation evidence root,
 with individual reports inspected directly. First-failure Main logs missing from
 the early Ubuntu memory artifact were a coverage gap; subsequent runs explicitly
 retain them. A later successful launch does not classify that earlier GC failure.
+
+Run `39008016212` has finished with a failed overall matrix, separate from its
+passing Web/macOS jobs. The Web ZIP's child-state and annotation receipts bind
+clean source `1b4b3340f`, both browser exits are 0/no signal, each observed ten
+incarnations cleaned with zero remaining and no query failure, and renderer/
+driver guard failures are empty. Its actual 390px multiline and 320px offline
+screenshots were independently inspected and remain readable without clipped
+controls. Linux's failed payload check retains the original AppImage/runtime
+receipts and HOME; it is not evidence that sandboxed AppImage execution or update
+recovery has run. Windows' first-failure body and screenshot retain the complete
+path in the comment heading rather than changing the test's expected short name.
+
+The macOS artifact `12092405047` has ZIP SHA256
+`54b7ace41800675b586aa4851fad658f2bcc04730dbdcd7b87905722f48a0b4f`.
+Independent receipt checks bind its compiled source fixtures and the same ASAR/
+managed-Node manifest across directory UI, updater and both DMG installation
+copies. Startup has three normally closed Main processes and seven actual Pet
+IPC operations; Review has eight diff/open operations, preferences six across
+three Main processes, packaged UI thirteen, updater five response modes and ten
+actual manifest GETs, and installed/reinstalled DMG UI thirteen each. Relevant
+Main/runner exits are 0/no signal, observed identities settle cleaned with zero
+remaining/no query failures, final worker/deny/renderer ledgers are empty, and
+both readonly mount attachments detach. An auditor initially expected a boolean
+where the declared DMG metadata override is the string `title`; its schema
+diagnostic is preserved separately from the passing product receipts. This is
+macOS arm64/ad-hoc, controlled nativeTheme and same-build owned replacement
+evidence; publisher signing, notarization, Gatekeeper, operator OS appearance,
+update downloads/install and real user-data migration remain outside the run.
+
+The Linux payload verifier now permits only three explicit builder conversions:
+the public managed-Node LICENSE from 0600 to 0644 with the same type/size/SHA,
+directories from 0700 to 0755, and removal of the already-approved sandbox's
+setuid bit before its separate owned configuration. Every other file permission,
+file byte, type and symlink target remains strict. An additional AppImage-only
+inventory records all 07777 permission bits before/after for the source and
+runtime cache; foreign setuid, SGID/sticky and group/other-write bits are rejected.
+The existing generic inventory's version/format is unchanged. The first owned
+disk LICENSE reproduction and the original CI failure stay separate from six
+passing focused Node tests. Builder source explains the observed normalization,
+but its master source plus installed binary symbols are not claimed to prove
+byte-identical provenance for the installed builder. Actual AppImage Main,
+sandbox and updater execution still require the next native Linux run.
+The combined AppImage/build/process-custody Node shard passes 53 tests. Its first
+command also included a Bun-only preload test in Node, which correctly rejected
+the `bun:` import before running that file; that command error is retained and
+the preload suite is run separately with the guarded Bun runner. This runner
+diagnostic is not classified as a product or native Linux failure.
+The corrected preload shard passes ten tests/46 assertions. Scoped lint/format
+pass; the updated workflow parses as two jobs and all 32 Bash run blocks pass
+syntax checks. The system Python lacks PyYAML, so this syntax check uses the
+already-installed Bun YAML parser without installing another dependency.
+
+Windows file fixes use Main's explicit platform for basename and dirname, with
+POSIX backslashes/filename whitespace preserved. Real React regressions retain
+two Windows title failures and three Markdown image-directory failures before
+the fix. Additional attachment tests use controlled image/media bridge replies;
+they prove the exact requested paths and labels, not a native Windows image
+decode. The first attachment fixture used a non-aggregating MiniDOM text getter;
+another intermediate fixture's raw Unicode template produced a literal escaped
+name. Both diagnostics are retained, and the final literals/collector are
+corrected without changing product expectations. The final combined UI shard
+passes 115 tests/386 assertions. Desktop builds and all fourteen workspace
+typechecks pass; the public package contents are unchanged by this wave, so the
+earlier package-release gate is not represented as a new run.
+
+Local integration preserved another task's newly added round-eight audit records.
+An overlapping uncommitted workflow draft was separately backed up and its SHA,
+mode and size retained. The user explicitly approved adopting the acceptance
+version. Only that approved path was restored before the disjoint fast-forward;
+the other five pre-existing paths retained identical status, bytes, mode and size
+in both resolution and integration receipts. Local `main` is now `6e4b663dc`,
+which adds the reviewed Windows fixture transports and audit records; the remote
+run remains bound to its original `1b4b3340f` source. Remote `main`, tags and
+publication have not been changed by this task.
 
 The Windows diagnostic measured the identical strict CIM identity query through
 PS5 at 25,351ms (minimal environment) and 17,721ms (owned profile/temp), versus
