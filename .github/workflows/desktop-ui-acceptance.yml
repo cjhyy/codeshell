@@ -286,7 +286,7 @@ jobs:
         timeout-minutes: 2
         run: |
           set -euo pipefail
-          node scripts/run-bun-test-shard.mjs --timeout 30000 packages/desktop/src/renderer/messages/fileChangeAggregator.test.ts packages/desktop/src/renderer/types.test.ts packages/desktop/src/renderer/panels/ReviewPanel.workspace.test.tsx packages/desktop/src/renderer/messages/externalFileTargets.test.tsx packages/desktop/src/renderer/markdown/splitStreamingMarkdown.test.ts packages/desktop/src/renderer/messages/StreamingMarkdown.test.tsx packages/desktop/src/renderer/Markdown.test.tsx 2>&1 | tee "$ACCEPTANCE_ROOT/review-file-aggregation.log"
+          node scripts/run-bun-test-shard.mjs --timeout 30000 packages/desktop/src/renderer/messages/fileChangeAggregator.test.ts packages/desktop/src/renderer/types.test.ts packages/desktop/src/renderer/panels/ReviewPanel.workspace.test.tsx packages/desktop/src/renderer/messages/externalFileTargets.test.tsx packages/desktop/src/renderer/markdown/splitStreamingMarkdown.test.ts packages/desktop/src/renderer/messages/StreamingMarkdown.test.tsx packages/desktop/src/renderer/Markdown.test.tsx packages/desktop/src/renderer/diff/composeFileEdits.test.ts packages/desktop/src/renderer/diff/composeFileEdits.containment.test.ts 2>&1 | tee "$ACCEPTANCE_ROOT/review-file-aggregation.log"
 
       - name: branch command argument token regressions
         timeout-minutes: 2
