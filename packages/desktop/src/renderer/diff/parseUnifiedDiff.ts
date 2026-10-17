@@ -47,9 +47,10 @@ export function parseUnifiedDiff(diff: string): DiffFile[] {
 
     if (line.startsWith("diff --git ")) {
       if (cur) files.push(cur);
+      const paths = gitHeaderPaths(line.slice("diff --git ".length));
       cur = {
-        oldPath: null,
-        newPath: null,
+        oldPath: paths?.[0] ?? null,
+        newPath: paths?.[1] ?? null,
         status: "modified",
         hunks: [],
       };
@@ -83,10 +84,12 @@ export function parseUnifiedDiff(diff: string): DiffFile[] {
     }
     if (line.startsWith("new file mode")) {
       cur.status = "added";
+      cur.oldPath = null;
       continue;
     }
     if (line.startsWith("deleted file mode")) {
       cur.status = "deleted";
+      cur.newPath = null;
       continue;
     }
 
@@ -151,6 +154,13 @@ function gitPath(raw: string): string {
   // Unquoted ---/+++ paths may carry a tab-delimited timestamp. Never trim
   // actual leading/trailing filename spaces or split a decoded literal tab.
   if (!raw.startsWith('"')) return raw.split("\t", 1)[0];
+  return quotedGitPath(raw)?.path ?? raw;
+}
+
+/** A quoted header token must expose its exact closing boundary as well as
+ * its decoded bytes; otherwise a second path or trailing junk gets consumed. */
+function quotedGitPath(raw: string): { path: string; end: number } | null {
+  if (!raw.startsWith('"')) return null;
   const bytes: number[] = [];
   const encoder = new TextEncoder();
   const escapes: Record<string, number> = {
@@ -166,7 +176,8 @@ function gitPath(raw: string): string {
   };
   for (let index = 1; index < raw.length; index++) {
     const char = raw[index];
-    if (char === '"') return new TextDecoder().decode(new Uint8Array(bytes));
+    if (char === '"')
+      return { path: new TextDecoder().decode(new Uint8Array(bytes)), end: index + 1 };
     if (char === "\\") {
       const octal = /^[0-7]{1,3}/.exec(raw.slice(index + 1));
       if (octal) {
@@ -185,7 +196,66 @@ function gitPath(raw: string): string {
     bytes.push(...encoder.encode(point));
     index += point.length - 1;
   }
-  return raw; // An incomplete quoted header has no trustworthy decoded path.
+  return null; // An incomplete quoted header has no trustworthy decoded path.
+}
+
+/** Header identity is a fallback: content and rename headers remain authoritative.
+ * Unquoted spaces can only describe the same old/new path unambiguously.
+ * Equal sides determine one split by length, even if the filename contains b/.
+ * Avoid guessing different space-containing paths or retrying every separator. */
+function gitHeaderPaths(raw: string): [string, string] | null {
+  let oldPath: string;
+  let newPath: string;
+  const unquoted = (path: string) => path.length > 0 && !/["\\\x00-\x1f\x7f]/.test(path);
+  if (raw.startsWith('"')) {
+    const old = quotedGitPath(raw);
+    if (!old || raw[old.end] !== " ") return null;
+    oldPath = old.path;
+    const remainder = raw.slice(old.end + 1);
+    if (remainder.startsWith('"')) {
+      const next = quotedGitPath(remainder);
+      if (!next || next.end !== remainder.length) return null;
+      newPath = next.path;
+    } else {
+      if (!unquoted(remainder)) return null;
+      newPath = remainder;
+      if (newPath.includes(" ") && oldPath.slice(2) !== newPath.slice(2)) return null;
+    }
+  } else {
+    const at = raw.indexOf(" ");
+    if (at < 0) return null;
+    const remainder = raw.slice(at + 1);
+    if (remainder.startsWith('"')) {
+      oldPath = raw.slice(0, at);
+      const next = quotedGitPath(remainder);
+      if (!unquoted(oldPath) || !next || next.end !== remainder.length) return null;
+      newPath = next.path;
+    } else {
+      if (!unquoted(raw)) return null;
+      const length = (raw.length - 5) / 2;
+      const split = 2 + length;
+      if (
+        Number.isInteger(length) &&
+        raw.slice(split, split + 3) === " b/" &&
+        raw.slice(2, split) === raw.slice(split + 3)
+      ) {
+        oldPath = raw.slice(0, split);
+        newPath = raw.slice(split + 1);
+      } else {
+        if (remainder.includes(" ")) return null;
+        oldPath = raw.slice(0, at);
+        newPath = remainder;
+      }
+    }
+  }
+  if (
+    !oldPath.startsWith("a/") ||
+    !newPath.startsWith("b/") ||
+    oldPath.length <= 2 ||
+    newPath.length <= 2
+  )
+    return null;
+  return [oldPath.slice(2), newPath.slice(2)];
 }
 
 /** Strip a/ or b/ prefix from git diff paths. */
