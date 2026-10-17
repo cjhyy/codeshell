@@ -14,8 +14,8 @@ new Review drafts three/one and installed/replaced UI 13+13, then fails because 
 owned installation path still exists after normal uninstaller exit. Cache cleanup
 and final OS restoration are not reached; the residual entry and cause are unknown.
 See the [CI23 actual record](#ci23--actual-platform-results-and-windows-uninstall-failure).
-The child fallback repair below has pure reducer validation only; no new native
-validation is asserted, and additional NSIS diagnostics remain work in progress.
+The child fallback repair and added NSIS metadata diagnostics have local guarded-test
+validation; fresh CI24 native/browser runtime acceptance remains pending.
 
 CI14 remains the latest fully passing matrix. The
 [CI17 record](#ci17--windows-nsis-failure-without-an-artifact), CI16 fixture failure
@@ -2461,3 +2461,67 @@ has SHA-256 `346295666283139cae1fde47046e1d067d21db14811393cabfebcb5d7651586b`.
 Additional NSIS diagnostics are still work in progress, not completed preparation
 or an explanation of the CI23 uninstall failure. CI14 remains the last fully passing
 matrix; a future CI24 runtime result is not asserted.
+
+## CI24 — combined local gates, runtime pending
+
+The local candidate is `a5c516be8a418d13fa6a77850c6894a0f27a6ff8`; CI24 has
+not been pushed or executed. Its four runtime jobs and actual Windows residual
+observation remain pending. CI23's post-uninstaller absence gate remains failed;
+the new diagnostic does not repair or explain the residual entry or its cause.
+
+Root's complete guarded Bun v2 shard passes 417 tests/3,502 assertions across the
+same thirty finite files, zero failures/skips, at
+`2bd5cfebb0fdc325900f8dd0d612eb51a8e35451`. All thirty input pins remain identical
+at a5c. The earlier full shard's 416 passes/one failure out of 417, with 3,497
+assertions, remains retained: broad `.not.toContain("B")` matched a random temporary
+path header while the actual net patch was correctly `-A/+C`. It is a test assertion
+false positive, not a reproduced UI product defect. Commit
+`3da3ea529af842941cb551faa3d531db6d055e67` fixes only that test: default fixture
+`a.ts` stays, the first case uses `aB.ts` deterministically, and the negative check
+matches complete diff content rows. Exact single-file RED has 22 passes/one failure;
+fixed GREEN has 23 tests/1,555 assertions, zero failures/skips. Other twenty-two
+cases, positive patch/applyDiff roundtrip and tool IDs are preserved. Its proof is
+`codeshell-turn-diff-content-assertion-proof-20261018/verified-source-summary.json`,
+SHA-256 `39f8c20269adcdc84942fc187bab798c67b8e40d51547fb0b9f0cea6115ea316`.
+
+The combined explicit Node gate passes 140/140 across nine pre-read files at a5c,
+zero skipped/cancelled/failed; legacy native-query tests are excluded. Six changed
+source files pass lint with zero warnings and formatting; actual engine-bypass and
+diff checks pass. Fourteen workspace typechecks and four safe Desktop bundles
+(main/preload/renderer/mobile) were actually passed at
+`82561a1be323994113cd5de2b9decf20115f7328`. Subsequent deltas are the excluded Core
+test, standalone acceptance scripts/tests and docs. Compiled production inputs are
+unchanged; those checks are reused at their original source checkpoint, not claimed
+as a fresh current-HEAD build or new full workspace build. Counts overlap earlier
+component/reducer checks and are not summed into additional tests or native operations.
+
+Commit `ab2d78960c720edd0c434ef7358804accc7ab9d9` adds passive bounded metadata
+only after the same post-uninstaller absence error. It retains the first failure
+and records bounded direct-child name/type/regular-size metadata without following
+links, recursion, file contents, deletion, retry, new process authority or changed
+installer gates/budgets. IO, alias, drift, unsafe name, cap and soft-deadline errors
+remain bounded unknown outcomes; the original acceptance still fails. It writes an
+existing receipt field, requiring no new public artifact or workflow path.
+
+The diagnostic's first module setup failure registers zero named cases; it is not
+product RED. The next 17-case run has 16 passes/one failure because its mock maps
+`..` to a parent file Stats; the helper correctly refuses that alias. Correcting
+only the mock yields 17 passes. Initial regex-space lint is fixed with equivalent
+quantifiers/formatting; final-source 17 and three-file static checks pass. A separate
+undefined-error trigger flaw was found and fixed during source pre-read before
+those tests. No actual Windows metadata collection or installer is run locally.
+Author proof `codeshell-nsis-post-uninstall-metadata-proof-20261017/verified-source-summary.json`
+has SHA-256 `92b810c3961bcdec5c754a7e36eaed5fbfea864ab687e49db8fded0d8c059757`.
+The later independent NSIS source peer passes 46 readonly checks, zero failures,
+without running tests/VM/native. Its `independent-panel-source-peer.json` SHA-256 is
+`4d4936b56b77675cdef9cdc9a7fdd1c8c96bcd936a664ecfe49a8524e549c855`.
+
+The frozen combined local proof `ci24-frozen-combined-local-gates-20261018.json`
+has SHA-256 `2045ee7fb04ff8ad4874549aaaf86ef1805f831baaf1b55622c4959b44bbe7bb`.
+It binds actual Bun v2 log `b8b714ab69d10bfde42dbe7b6f506792f40a1f51cab6f433234b6a0a4848a1dd`,
+Node log `4ee314f167b7e58a21236af3865fddf142fb208bce702b0b224dafb1113a1593` and static
+log `28503a2cb3cc525006537e4d8689461526b968d5667660f9423629b617a52b32`.
+These are local pure/mocked or owned-filesystem checks, with no local native App,
+browser, PowerShell, process-query, real installer or provider validation. Historical
+GC, Setup, inode, revoked CI21 custody and discovery-incident effects/descendants
+remain unresolved; neither local green gate nor diagnostics establishes a new runtime pass.
