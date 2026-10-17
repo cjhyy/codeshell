@@ -1,0 +1,981 @@
+{
+  "atUTC": "2026-10-17T20:16:02.115015+00:00",
+  "role": "Metadata-only conservative canonical46–60 coverage migration; not product source reviewer/runtime validator",
+  "files": [],
+  "metadataFiles": [
+    {
+      "path": "docs/audit-2026-10-17-round55/evidence/coverage-current/unified-current-index.json",
+      "bytes": 1941121,
+      "sha256": "5adcd53bfca820e03282db45815c370bcc529c3606aa4c8f860126d14e646ee2",
+      "beforeMetadataParse": true,
+      "readMode": "Original4643 per-path status reconstruction, metadata only"
+    },
+    {
+      "round": 46,
+      "path": "docs/audit-2026-10-17-round46/source-manifest.json",
+      "bytes": 21417,
+      "sha256": "a044e7d436e3b538cd8e1b79edf9218daeca213de25b2560d07e7c5c5e5e741e",
+      "beforeMetadataParse": true,
+      "readMode": "Standard-library JSON metadata parsing; only primary row fields/scope inspected, no source excerpts/body expanded"
+    },
+    {
+      "round": 46,
+      "path": "docs/audit-2026-10-17-round46/evidence/panel-review/source-manifest.json",
+      "bytes": 3143,
+      "sha256": "2c6c6ba34dfa2e58519b9da3b8f2e1bf10320c760d65a79ab5df8325d58b67aa",
+      "beforeMetadataParse": true,
+      "readMode": "Standard-library JSON metadata parsing; only primary row fields/scope inspected, no source excerpts/body expanded"
+    },
+    {
+      "round": 46,
+      "path": "docs/audit-2026-10-17-round46/evidence/prior-scope-gate/source-manifest.json",
+      "bytes": 4420,
+      "sha256": "2cd1a8e2e0cd46765588158ce9ecf267fbb0f052856fee74f6563fb49dbbff50",
+      "beforeMetadataParse": true,
+      "readMode": "Standard-library JSON metadata parsing; only primary row fields/scope inspected, no source excerpts/body expanded"
+    },
+    {
+      "round": 46,
+      "path": "docs/audit-2026-10-17-round46/evidence/tool-card-review/source-manifest.json",
+      "bytes": 11908,
+      "sha256": "7eb17ef7982cf394a04be7af46421e593ce38185adbb6350c16bc800cd6442e5",
+      "beforeMetadataParse": true,
+      "readMode": "Standard-library JSON metadata parsing; only primary row fields/scope inspected, no source excerpts/body expanded"
+    },
+    {
+      "round": 46,
+      "path": "docs/audit-2026-10-17-round46/evidence/panel-frontier/source-manifest.json",
+      "bytes": 10921,
+      "sha256": "91e9bff80b73ff631d843b71dec2042f1b5d4a64077f3ca6a8c6317f4a4d1c9b",
+      "beforeMetadataParse": true,
+      "readMode": "Standard-library JSON metadata parsing; only primary row fields/scope inspected, no source excerpts/body expanded"
+    },
+    {
+      "round": 46,
+      "path": "docs/audit-2026-10-17-round46/evidence/tool-card-frontier/source-manifest.json",
+      "bytes": 11058,
+      "sha256": "ff0b5099c6f49c86c7885fb37f3a24a3990ffc69276b15233bcf9ea075980709",
+      "beforeMetadataParse": true,
+      "readMode": "Standard-library JSON metadata parsing; only primary row fields/scope inspected, no source excerpts/body expanded"
+    },
+    {
+      "round": 47,
+      "path": "docs/audit-2026-10-17-round47/source-manifest.json",
+      "bytes": 6886,
+      "sha256": "10e6c37fa6952033018bf6d4e9eb971aa2e1a239ef19442a2c3c0fbb58887677",
+      "beforeMetadataParse": true,
+      "readMode": "Standard-library JSON metadata parsing; only primary row fields/scope inspected, no source excerpts/body expanded"
+    },
+    {
+      "round": 47,
+      "path": "docs/audit-2026-10-17-round47/evidence/coverage-adapter/source-manifest.json",
+      "bytes": 578,
+      "sha256": "a4d768cdfc27cdc6d6e7aef0602c3c985b9fb3130a26b9f92110919381884388",
+      "beforeMetadataParse": true,
+      "readMode": "Standard-library JSON metadata parsing; only primary row fields/scope inspected, no source excerpts/body expanded"
+    },
+    {
+      "round": 47,
+      "path": "docs/audit-2026-10-17-round47/evidence/web-message-frontier/source-manifest.json",
+      "bytes": 13259,
+      "sha256": "ae862a2e9372bd5df41686c5f5583c0817499be44f4c7e8a58ea4e41c243db95",
+      "beforeMetadataParse": true,
+      "readMode": "Standard-library JSON metadata parsing; only primary row fields/scope inspected, no source excerpts/body expanded"
+    },
+    {
+      "round": 48,
+      "path": "docs/audit-2026-10-17-round48/source-manifest.json",
+      "bytes": 41082,
+      "sha256": "d32c80324665bd2328165db26aeefa7f1e3b2d84388cc41643c38b54ed90c654",
+      "beforeMetadataParse": true,
+      "readMode": "Standard-library JSON metadata parsing; only primary row fields/scope inspected, no source excerpts/body expanded"
+    },
+    {
+      "round": 48,
+      "path": "docs/audit-2026-10-17-round48/evidence/chat-adapter-frontier/source-manifest.json",
+      "bytes": 6755,
+      "sha256": "a9beb0fe1c66036e3a543463fbcf358871e5c5917619ff575fd61a8a644ff84f",
+      "beforeMetadataParse": true,
+      "readMode": "Standard-library JSON metadata parsing; only primary row fields/scope inspected, no source excerpts/body expanded"
+    },
+    {
+      "round": 48,
+      "path": "docs/audit-2026-10-17-round48/evidence/cost-context-frontier/source-manifest.json",
+      "bytes": 17666,
+      "sha256": "59a04a819e8567e05b34e316964453d345af9046fe7d7a06763095b2a2331d66",
+      "beforeMetadataParse": true,
+      "readMode": "Standard-library JSON metadata parsing; only primary row fields/scope inspected, no source excerpts/body expanded"
+    },
+    {
+      "round": 48,
+      "path": "docs/audit-2026-10-17-round48/evidence/root-elapsed-review/source-manifest.json",
+      "bytes": 12071,
+      "sha256": "a1525b445a3fc2c2b064e7707c25100ad4faef12f2c14f243928d2760a994e98",
+      "beforeMetadataParse": true,
+      "readMode": "Standard-library JSON metadata parsing; only primary row fields/scope inspected, no source excerpts/body expanded"
+    },
+    {
+      "round": 48,
+      "path": "docs/audit-2026-10-17-round48/evidence/session-title-frontier/source-manifest.json",
+      "bytes": 10530,
+      "sha256": "a44cc3dcb3ed9f6e622e3fe1736cec767a4c5a2e81ce46393403d70e8a6048dc",
+      "beforeMetadataParse": true,
+      "readMode": "Standard-library JSON metadata parsing; only primary row fields/scope inspected, no source excerpts/body expanded"
+    },
+    {
+      "round": 48,
+      "path": "docs/audit-2026-10-17-round48/evidence/elapsed-frontier/source-manifest.json",
+      "bytes": 11083,
+      "sha256": "324a90226130555686b1152a1e4b3301b74095f6bf93fbfa18a3bb9c81f1e395",
+      "beforeMetadataParse": true,
+      "readMode": "Standard-library JSON metadata parsing; only primary row fields/scope inspected, no source excerpts/body expanded"
+    },
+    {
+      "round": 48,
+      "path": "docs/audit-2026-10-17-round48/evidence/cost-context-review/source-manifest.json",
+      "bytes": 11461,
+      "sha256": "8f269e3b13e00c32234eb309fcc0a0e2a0fccd08aecf088268c763b05e8f0d81",
+      "beforeMetadataParse": true,
+      "readMode": "Standard-library JSON metadata parsing; only primary row fields/scope inspected, no source excerpts/body expanded"
+    },
+    {
+      "round": 48,
+      "path": "docs/audit-2026-10-17-round48/evidence/elapsed-review/source-manifest.json",
+      "bytes": 20337,
+      "sha256": "8695a3f101a94f20810ffb927d923dc9e4074a049ee14b173bf3c1177361e613",
+      "beforeMetadataParse": true,
+      "readMode": "Standard-library JSON metadata parsing; only primary row fields/scope inspected, no source excerpts/body expanded"
+    },
+    {
+      "round": 49,
+      "path": "docs/audit-2026-10-17-round49/source-manifest.json",
+      "bytes": 52140,
+      "sha256": "719b627b2947ac161bd11503ebb1ee520eaed510e936d4447d7ad8ff04e7d5c2",
+      "beforeMetadataParse": true,
+      "readMode": "Standard-library JSON metadata parsing; only primary row fields/scope inspected, no source excerpts/body expanded"
+    },
+    {
+      "round": 49,
+      "path": "docs/audit-2026-10-17-round49/evidence/model-display-gate/source-manifest.json",
+      "bytes": 7841,
+      "sha256": "23c8c98c622d78b972e07ba545de152cb610445b091c15e8c877c7c104e6b7e2",
+      "beforeMetadataParse": true,
+      "readMode": "Standard-library JSON metadata parsing; only primary row fields/scope inspected, no source excerpts/body expanded"
+    },
+    {
+      "round": 49,
+      "path": "docs/audit-2026-10-17-round49/evidence/root-summary-review/source-manifest.json",
+      "bytes": 8690,
+      "sha256": "4cf0957b27ba4364cf150137f127fc32ed7033bc2ce4d6d8b8f2beefc78224e4",
+      "beforeMetadataParse": true,
+      "readMode": "Standard-library JSON metadata parsing; only primary row fields/scope inspected, no source excerpts/body expanded"
+    },
+    {
+      "round": 49,
+      "path": "docs/audit-2026-10-17-round49/evidence/complete-gate-review/source-manifest.json",
+      "bytes": 2688,
+      "sha256": "224e235a7876b5e16240834d9c560b8d726ef7bb5be5e7d21a66deddd9fc1a3a",
+      "beforeMetadataParse": true,
+      "readMode": "Standard-library JSON metadata parsing; only primary row fields/scope inspected, no source excerpts/body expanded"
+    },
+    {
+      "round": 49,
+      "path": "docs/audit-2026-10-17-round49/evidence/web-format-gate/source-manifest.json",
+      "bytes": 6675,
+      "sha256": "478902b33f2f1eaeed5cc56292db7962f7e8a0c9b2d54e4fa5681e11c8e74214",
+      "beforeMetadataParse": true,
+      "readMode": "Standard-library JSON metadata parsing; only primary row fields/scope inspected, no source excerpts/body expanded"
+    },
+    {
+      "round": 49,
+      "path": "docs/audit-2026-10-17-round49/evidence/agent-definition-gate/source-manifest.json",
+      "bytes": 2735,
+      "sha256": "34a3c70fb3ccb06f67fe6cddd207d921e77770b04f0b23e8c75dadb696659248",
+      "beforeMetadataParse": true,
+      "readMode": "Standard-library JSON metadata parsing; only primary row fields/scope inspected, no source excerpts/body expanded"
+    },
+    {
+      "round": 49,
+      "path": "docs/audit-2026-10-17-round49/evidence/title-gate/source-manifest.json",
+      "bytes": 2409,
+      "sha256": "4ef3aa35e0ff7cb67736a2230582a41c23d48be4d4e72809fffa4027c52ae14d",
+      "beforeMetadataParse": true,
+      "readMode": "Standard-library JSON metadata parsing; only primary row fields/scope inspected, no source excerpts/body expanded"
+    },
+    {
+      "round": 49,
+      "path": "docs/audit-2026-10-17-round49/evidence/latest-message-frontier/source-manifest.json",
+      "bytes": 15665,
+      "sha256": "4eae37fb4100651da55d4673cbc84cce95f33683078d3f27a7bd73b8aba75532",
+      "beforeMetadataParse": true,
+      "readMode": "Standard-library JSON metadata parsing; only primary row fields/scope inspected, no source excerpts/body expanded"
+    },
+    {
+      "round": 49,
+      "path": "docs/audit-2026-10-17-round49/evidence/session-usage-gate/source-manifest.json",
+      "bytes": 2157,
+      "sha256": "cba47b441fccf5381e3b016732cd6b7f24a5b7bb93c4dd10464481eebe7c99b9",
+      "beforeMetadataParse": true,
+      "readMode": "Standard-library JSON metadata parsing; only primary row fields/scope inspected, no source excerpts/body expanded"
+    },
+    {
+      "round": 49,
+      "path": "docs/audit-2026-10-17-round49/evidence/cost-review/source-manifest.json",
+      "bytes": 13784,
+      "sha256": "0bde34ff267296749553f2fcbdb4cbeb79d8bc4e7e9b07ca5b3f6bd5611a09ec",
+      "beforeMetadataParse": true,
+      "readMode": "Standard-library JSON metadata parsing; only primary row fields/scope inspected, no source excerpts/body expanded"
+    },
+    {
+      "round": 49,
+      "path": "docs/audit-2026-10-17-round49/evidence/root-cost-review/source-manifest.json",
+      "bytes": 6387,
+      "sha256": "10f4b239327cf4ed8fa6adf29092f2102af3942df36aebfabe1000f73b125de4",
+      "beforeMetadataParse": true,
+      "readMode": "Standard-library JSON metadata parsing; only primary row fields/scope inspected, no source excerpts/body expanded"
+    },
+    {
+      "round": 49,
+      "path": "docs/audit-2026-10-17-round49/evidence/preset-review/source-manifest.json",
+      "bytes": 17880,
+      "sha256": "18fed2052b18564baf3e58ac321a586921681c5ba40cad75f685ae53c66cdc48",
+      "beforeMetadataParse": true,
+      "readMode": "Standard-library JSON metadata parsing; only primary row fields/scope inspected, no source excerpts/body expanded"
+    },
+    {
+      "round": 49,
+      "path": "docs/audit-2026-10-17-round49/evidence/trace-history-frontier/source-manifest.json",
+      "bytes": 8939,
+      "sha256": "5c69dc71f41e34690d648e1705734d9562bbd09099b23a34cc1ede8cd65a008a",
+      "beforeMetadataParse": true,
+      "readMode": "Standard-library JSON metadata parsing; only primary row fields/scope inspected, no source excerpts/body expanded"
+    },
+    {
+      "round": 50,
+      "path": "docs/audit-2026-10-17-round50/source-manifest.json",
+      "bytes": 81939,
+      "sha256": "62ee29069f3994a9c24c4a4d22c99dded52da412235c938a8306bc166dc94fdb",
+      "beforeMetadataParse": true,
+      "readMode": "Standard-library JSON metadata parsing; only primary row fields/scope inspected, no source excerpts/body expanded"
+    },
+    {
+      "round": 50,
+      "path": "docs/audit-2026-10-17-round50/evidence/param-controls/source-manifest.json",
+      "bytes": 25973,
+      "sha256": "9232c81e0dfc3d4f888e4fcd3a45d378b8f0796c27f69bac16e9e433b88a71aa",
+      "beforeMetadataParse": true,
+      "readMode": "Standard-library JSON metadata parsing; only primary row fields/scope inspected, no source excerpts/body expanded"
+    },
+    {
+      "round": 50,
+      "path": "docs/audit-2026-10-17-round50/evidence/goal-progress/source-manifest.json",
+      "bytes": 17809,
+      "sha256": "29e3cbdf65dabe4073902d4e046d411dd8d232b7e85eea6224fe74ee6136f7ba",
+      "beforeMetadataParse": true,
+      "readMode": "Standard-library JSON metadata parsing; only primary row fields/scope inspected, no source excerpts/body expanded"
+    },
+    {
+      "round": 50,
+      "path": "docs/audit-2026-10-17-round50/evidence/composer-suggestions/source-manifest.json",
+      "bytes": 9869,
+      "sha256": "4fb3048fae5f0347a406826428aa397315687991cb3b4c4cb04a622b6c47daad",
+      "beforeMetadataParse": true,
+      "readMode": "Standard-library JSON metadata parsing; only primary row fields/scope inspected, no source excerpts/body expanded"
+    },
+    {
+      "round": 50,
+      "path": "docs/audit-2026-10-17-round50/evidence/packet-review/source-manifest.json",
+      "bytes": 8627,
+      "sha256": "120bde03e81d8497e8aec941fd7a6d00199c4e591f3b770d3dda4b8dae044625",
+      "beforeMetadataParse": true,
+      "readMode": "Standard-library JSON metadata parsing; only primary row fields/scope inspected, no source excerpts/body expanded"
+    },
+    {
+      "round": 50,
+      "path": "docs/audit-2026-10-17-round50/evidence/root-scroll-review/source-manifest.json",
+      "bytes": 5844,
+      "sha256": "45142dec1057c87ebebfd2a9b9139a7e5fad47b0110ea2419d1c8eab1fe9f6c4",
+      "beforeMetadataParse": true,
+      "readMode": "Standard-library JSON metadata parsing; only primary row fields/scope inspected, no source excerpts/body expanded"
+    },
+    {
+      "round": 50,
+      "path": "docs/audit-2026-10-17-round50/evidence/plugin-presentation/source-manifest.json",
+      "bytes": 9527,
+      "sha256": "37ffe1273bbe469210c4ba67f201c036a01dd15652e65511d0264d399dcfe7d8",
+      "beforeMetadataParse": true,
+      "readMode": "Standard-library JSON metadata parsing; only primary row fields/scope inspected, no source excerpts/body expanded"
+    },
+    {
+      "round": 50,
+      "path": "docs/audit-2026-10-17-round50/evidence/goal-extend-review/source-manifest.json",
+      "bytes": 26771,
+      "sha256": "3462523cdd33523f6b70a3ebf285df90db153a4e2310ec34a4b1e0150fbe5b00",
+      "beforeMetadataParse": true,
+      "readMode": "Standard-library JSON metadata parsing; only primary row fields/scope inspected, no source excerpts/body expanded"
+    },
+    {
+      "round": 50,
+      "path": "docs/audit-2026-10-17-round50/evidence/scroll-review/source-manifest.json",
+      "bytes": 7863,
+      "sha256": "4be8fbb61d5fff2be3ba3d86631210aa9b42107de790987722e373ba39c74079",
+      "beforeMetadataParse": true,
+      "readMode": "Standard-library JSON metadata parsing; only primary row fields/scope inspected, no source excerpts/body expanded"
+    },
+    {
+      "round": 50,
+      "path": "docs/audit-2026-10-17-round50/evidence/frontier-selection/source-manifest.json",
+      "bytes": 17425,
+      "sha256": "5343e12c9a27ab2fd6f616dc13ed3a6e0c8589fe4ae570fc21c892fc0c1303f9",
+      "beforeMetadataParse": true,
+      "readMode": "Standard-library JSON metadata parsing; only primary row fields/scope inspected, no source excerpts/body expanded"
+    },
+    {
+      "round": 50,
+      "path": "docs/audit-2026-10-17-round50/evidence/trace-query-review/source-manifest.json",
+      "bytes": 13074,
+      "sha256": "6bdec64ed918b057c65867a6d9a65f234a2a29f62dcb1f8ec04f4814f8177abd",
+      "beforeMetadataParse": true,
+      "readMode": "Standard-library JSON metadata parsing; only primary row fields/scope inspected, no source excerpts/body expanded"
+    },
+    {
+      "round": 51,
+      "path": "docs/audit-2026-10-17-round51/source-manifest.json",
+      "bytes": 30307,
+      "sha256": "b0f015b9742b990cbac2b9f5fafac614d8a43ec5bbfa8dfbf8870489fd83574f",
+      "beforeMetadataParse": true,
+      "readMode": "Standard-library JSON metadata parsing; only primary row fields/scope inspected, no source excerpts/body expanded"
+    },
+    {
+      "round": 51,
+      "path": "docs/audit-2026-10-17-round51/evidence/context-boundary/source-manifest.json",
+      "bytes": 10818,
+      "sha256": "630c202f4da7a451d90dbb10e55c4b8fc1a356e59ffa5e8b51ab7af90bf11d6b",
+      "beforeMetadataParse": true,
+      "readMode": "Standard-library JSON metadata parsing; only primary row fields/scope inspected, no source excerpts/body expanded"
+    },
+    {
+      "round": 51,
+      "path": "docs/audit-2026-10-17-round51/evidence/time-gate-review/source-manifest.json",
+      "bytes": 1776,
+      "sha256": "10d6ee72bd3d4c8d6e030b74f61aed8de7bd72cbd8e55fe4e95bf594aee85167",
+      "beforeMetadataParse": true,
+      "readMode": "Standard-library JSON metadata parsing; only primary row fields/scope inspected, no source excerpts/body expanded"
+    },
+    {
+      "round": 51,
+      "path": "docs/audit-2026-10-17-round51/evidence/time-gate-review/source-manifest.first.json",
+      "bytes": 1212,
+      "sha256": "8fc507c58f94c7602e2a3f636d3b7539dc9b175ba935489566c5fde3b1e79d9f",
+      "beforeMetadataParse": true,
+      "readMode": "Standard-library JSON metadata parsing; only primary row fields/scope inspected, no source excerpts/body expanded"
+    },
+    {
+      "round": 51,
+      "path": "docs/audit-2026-10-17-round51/evidence/shortcuts-reference/source-manifest.json",
+      "bytes": 15181,
+      "sha256": "19270b89b4e8c296313626ce1405261cdaf295daeb541b042bd952f695b18dc6",
+      "beforeMetadataParse": true,
+      "readMode": "Standard-library JSON metadata parsing; only primary row fields/scope inspected, no source excerpts/body expanded"
+    },
+    {
+      "round": 51,
+      "path": "docs/audit-2026-10-17-round51/evidence/root-panel-resize/source-manifest.json",
+      "bytes": 7838,
+      "sha256": "ca3ebe5de3787018e99addf517fa58bfd9e45a612708042428a69497c2ebb4dd",
+      "beforeMetadataParse": true,
+      "readMode": "Standard-library JSON metadata parsing; only primary row fields/scope inspected, no source excerpts/body expanded"
+    },
+    {
+      "round": 51,
+      "path": "docs/audit-2026-10-17-round51/evidence/time-full-gate/source-manifest.json",
+      "bytes": 6614,
+      "sha256": "db31a674354ce888e01caa09a1dbef81e3207b5f883650353b02d0408c11e5ce",
+      "beforeMetadataParse": true,
+      "readMode": "Standard-library JSON metadata parsing; only primary row fields/scope inspected, no source excerpts/body expanded"
+    },
+    {
+      "round": 51,
+      "path": "docs/audit-2026-10-17-round51/evidence/context-ring/source-manifest.json",
+      "bytes": 13684,
+      "sha256": "6bab3e691f584b5a4649e28465ae075d0bc6b46594e041b1b9f9f54fa092f366",
+      "beforeMetadataParse": true,
+      "readMode": "Standard-library JSON metadata parsing; only primary row fields/scope inspected, no source excerpts/body expanded"
+    },
+    {
+      "round": 52,
+      "path": "docs/audit-2026-10-17-round52/source-manifest.json",
+      "bytes": 30236,
+      "sha256": "3426333c68d980c8d9976bc8b45a5c367a4afdac7b07774744b76b495a6f9836",
+      "beforeMetadataParse": true,
+      "readMode": "Standard-library JSON metadata parsing; only primary row fields/scope inspected, no source excerpts/body expanded"
+    },
+    {
+      "round": 52,
+      "path": "docs/audit-2026-10-17-round52/evidence/theme-preview/source-manifest.json",
+      "bytes": 11334,
+      "sha256": "6b004cbe543bb25816a084be21034e2bb26a8bc1f3003cfd29c5f5d749267533",
+      "beforeMetadataParse": true,
+      "readMode": "Standard-library JSON metadata parsing; only primary row fields/scope inspected, no source excerpts/body expanded"
+    },
+    {
+      "round": 52,
+      "path": "docs/audit-2026-10-17-round52/evidence/live-activity/source-manifest.json",
+      "bytes": 18760,
+      "sha256": "997d9ee97d2350c4969fdbfdd439c32356c74ac930810b1d097ab94a82f5df7e",
+      "beforeMetadataParse": true,
+      "readMode": "Standard-library JSON metadata parsing; only primary row fields/scope inspected, no source excerpts/body expanded"
+    },
+    {
+      "round": 52,
+      "path": "docs/audit-2026-10-17-round52/evidence/coverage-status/source-manifest.json",
+      "bytes": 5726,
+      "sha256": "8cd254e29e9d2db379dd8a5d9517376c3269afdc8108189cf7526d3c28ecf81e",
+      "beforeMetadataParse": true,
+      "readMode": "Standard-library JSON metadata parsing; only primary row fields/scope inspected, no source excerpts/body expanded"
+    },
+    {
+      "round": 52,
+      "path": "docs/audit-2026-10-17-round52/evidence/image-sizing-review/source-manifest.json",
+      "bytes": 14285,
+      "sha256": "adf953e3d9ba903f596a1366b844054ad76d6dbaef26a0985e15573c1fd2eafe",
+      "beforeMetadataParse": true,
+      "readMode": "Standard-library JSON metadata parsing; only primary row fields/scope inspected, no source excerpts/body expanded"
+    },
+    {
+      "round": 52,
+      "path": "docs/audit-2026-10-17-round52/evidence/character-theme-gate/source-manifest.json",
+      "bytes": 4510,
+      "sha256": "978441c2db6a51c8fd482205d4c55b7548d911d0cde4b0dd8abfbf0c969bf6e9",
+      "beforeMetadataParse": true,
+      "readMode": "Standard-library JSON metadata parsing; only primary row fields/scope inspected, no source excerpts/body expanded"
+    },
+    {
+      "round": 52,
+      "path": "docs/audit-2026-10-17-round52/evidence/root-image-compress/source-manifest.json",
+      "bytes": 5604,
+      "sha256": "02bf05ec24671b93a1b49c55f63125cdd2896802b4dacdbca71e2196befc6ef5",
+      "beforeMetadataParse": true,
+      "readMode": "Standard-library JSON metadata parsing; only primary row fields/scope inspected, no source excerpts/body expanded"
+    },
+    {
+      "round": 53,
+      "path": "docs/audit-2026-10-17-round53/source-manifest.json",
+      "bytes": 43961,
+      "sha256": "ee316532021437d4bbcfca0754f40331b8b2db054c8a74a061462f5945453ff6",
+      "beforeMetadataParse": true,
+      "readMode": "Standard-library JSON metadata parsing; only primary row fields/scope inspected, no source excerpts/body expanded"
+    },
+    {
+      "round": 53,
+      "path": "docs/audit-2026-10-17-round53/evidence/root-task-parse-gate/source-manifest.json",
+      "bytes": 1599,
+      "sha256": "01d55931a5789610f77407c0f9d01f61a4a731c0a23dfced1e81e3d78d90a159",
+      "beforeMetadataParse": true,
+      "readMode": "Standard-library JSON metadata parsing; only primary row fields/scope inspected, no source excerpts/body expanded"
+    },
+    {
+      "round": 53,
+      "path": "docs/audit-2026-10-17-round53/evidence/root-windows-contract/source-manifest.json",
+      "bytes": 2588,
+      "sha256": "fb65e678bfc332092c6f7f911c202f3da949c2e7fd600d778c78d7d34b2d1ecd",
+      "beforeMetadataParse": true,
+      "readMode": "Standard-library JSON metadata parsing; only primary row fields/scope inspected, no source excerpts/body expanded"
+    },
+    {
+      "round": 53,
+      "path": "docs/audit-2026-10-17-round53/evidence/web-format-gate/source-manifest.json",
+      "bytes": 14251,
+      "sha256": "2f287fe507017db71c047864effb40d057b975ec6d1df5e5e90c71c8963f7892",
+      "beforeMetadataParse": true,
+      "readMode": "Standard-library JSON metadata parsing; only primary row fields/scope inspected, no source excerpts/body expanded"
+    },
+    {
+      "round": 53,
+      "path": "docs/audit-2026-10-17-round53/evidence/trace-history/source-manifest.json",
+      "bytes": 11040,
+      "sha256": "665b3ed432568948338fb341f3b7cf311631668a9c95cb99b25492adc1fbca57",
+      "beforeMetadataParse": true,
+      "readMode": "Standard-library JSON metadata parsing; only primary row fields/scope inspected, no source excerpts/body expanded"
+    },
+    {
+      "round": 53,
+      "path": "docs/audit-2026-10-17-round53/evidence/root-tool-display/source-manifest.json",
+      "bytes": 7482,
+      "sha256": "c6e5492e7af68ff6e5a55653e2e12f8b17914e4a0ce6f8f3fc2709ec9e8ba05c",
+      "beforeMetadataParse": true,
+      "readMode": "Standard-library JSON metadata parsing; only primary row fields/scope inspected, no source excerpts/body expanded"
+    },
+    {
+      "round": 53,
+      "path": "docs/audit-2026-10-17-round53/evidence/cache-data/source-manifest.json",
+      "bytes": 7611,
+      "sha256": "e3cd3d0f89d92b858095c7329670d933c0a14b6890e5848b31acd44c95079094",
+      "beforeMetadataParse": true,
+      "readMode": "Standard-library JSON metadata parsing; only primary row fields/scope inspected, no source excerpts/body expanded"
+    },
+    {
+      "round": 53,
+      "path": "docs/audit-2026-10-17-round53/evidence/windows-path-review/source-manifest.json",
+      "bytes": 11836,
+      "sha256": "7c990c22a7ce21c445390b859c589c06d6316ead5de02e6661a6bcf865b2a182",
+      "beforeMetadataParse": true,
+      "readMode": "Standard-library JSON metadata parsing; only primary row fields/scope inspected, no source excerpts/body expanded"
+    },
+    {
+      "round": 53,
+      "path": "docs/audit-2026-10-17-round53/evidence/glob-summary-review/source-manifest.json",
+      "bytes": 21594,
+      "sha256": "20171ef2e40630cdd7172fb01adc0a71b68d9a696f4f5f666a98a53c39026bd4",
+      "beforeMetadataParse": true,
+      "readMode": "Standard-library JSON metadata parsing; only primary row fields/scope inspected, no source excerpts/body expanded"
+    },
+    {
+      "round": 54,
+      "path": "docs/audit-2026-10-17-round54/source-manifest.json",
+      "bytes": 36733,
+      "sha256": "569941302e81e60a1ad01851ba8ca49d02263bcb901ca20bc3d6d6e8f2e6008f",
+      "beforeMetadataParse": true,
+      "readMode": "Standard-library JSON metadata parsing; only primary row fields/scope inspected, no source excerpts/body expanded"
+    },
+    {
+      "round": 54,
+      "path": "docs/audit-2026-10-17-round54/evidence/web-coverage-gate/source-manifest.json",
+      "bytes": 8457,
+      "sha256": "2554153a74d272d4adbeccf8fbd8e8c407d302d6b02cdab03184647313fab6c1",
+      "beforeMetadataParse": true,
+      "readMode": "Standard-library JSON metadata parsing; only primary row fields/scope inspected, no source excerpts/body expanded"
+    },
+    {
+      "round": 54,
+      "path": "docs/audit-2026-10-17-round54/evidence/link-contracts/source-manifest.json",
+      "bytes": 25491,
+      "sha256": "b8c21767a99fda1a8230add15c859b817564fa0cf6c6fec82c245890b3cb7f10",
+      "beforeMetadataParse": true,
+      "readMode": "Standard-library JSON metadata parsing; only primary row fields/scope inspected, no source excerpts/body expanded"
+    },
+    {
+      "round": 54,
+      "path": "docs/audit-2026-10-17-round54/evidence/host-request-gate/source-manifest.json",
+      "bytes": 4113,
+      "sha256": "44b9606c2962f4487459ed811d8ac6afdc51d420e2a4134e7b040a1542b8ae42",
+      "beforeMetadataParse": true,
+      "readMode": "Standard-library JSON metadata parsing; only primary row fields/scope inspected, no source excerpts/body expanded"
+    },
+    {
+      "round": 54,
+      "path": "docs/audit-2026-10-17-round54/evidence/backup-format/source-manifest.json",
+      "bytes": 12864,
+      "sha256": "2faad6d2d3a458e6dc6006ec5321d05b7d98726839e3dd6a042ebf1aaf584f0d",
+      "beforeMetadataParse": true,
+      "readMode": "Standard-library JSON metadata parsing; only primary row fields/scope inspected, no source excerpts/body expanded"
+    },
+    {
+      "round": 54,
+      "path": "docs/audit-2026-10-17-round54/evidence/root-link-validation/source-manifest.json",
+      "bytes": 7902,
+      "sha256": "d58ac2fff23adecfdf58b673ea7feb6d1f984d5ad7bfd9dca676117736d2e5df",
+      "beforeMetadataParse": true,
+      "readMode": "Standard-library JSON metadata parsing; only primary row fields/scope inspected, no source excerpts/body expanded"
+    },
+    {
+      "round": 54,
+      "path": "docs/audit-2026-10-17-round54/evidence/chat-lifecycle-gate/source-manifest.json",
+      "bytes": 10135,
+      "sha256": "944176588fd9bdfd9089adeb21327a1073349da897b2b67e7c5c56a6cc51bf31",
+      "beforeMetadataParse": true,
+      "readMode": "Standard-library JSON metadata parsing; only primary row fields/scope inspected, no source excerpts/body expanded"
+    },
+    {
+      "round": 55,
+      "path": "docs/audit-2026-10-17-round55/source-manifest.json",
+      "bytes": 48468,
+      "sha256": "2453b9c2e4f9d5fcb5c263433901b2bab448161653c271ec52bf7f660df1d066",
+      "beforeMetadataParse": true,
+      "readMode": "Standard-library JSON metadata parsing; only primary row fields/scope inspected, no source excerpts/body expanded"
+    },
+    {
+      "round": 55,
+      "path": "docs/audit-2026-10-17-round55/evidence/root-strip-vision/source-manifest.json",
+      "bytes": 4859,
+      "sha256": "4b53f61f509216af8c553d53efadf03df52fb2fdc1ee3a2e204acdb83c8b723d",
+      "beforeMetadataParse": true,
+      "readMode": "Standard-library JSON metadata parsing; only primary row fields/scope inspected, no source excerpts/body expanded"
+    },
+    {
+      "round": 55,
+      "path": "docs/audit-2026-10-17-round55/evidence/root-agent-registry/source-manifest.json",
+      "bytes": 2411,
+      "sha256": "ef89e209a51984f2e8e554d3de0e83311f2877326852877134f0c903646cb82a",
+      "beforeMetadataParse": true,
+      "readMode": "Standard-library JSON metadata parsing; only primary row fields/scope inspected, no source excerpts/body expanded"
+    },
+    {
+      "round": 55,
+      "path": "docs/audit-2026-10-17-round55/evidence/model-discovery/source-manifest.json",
+      "bytes": 12221,
+      "sha256": "682d302585b61fdc3c9e91229622ccbdc5ee111a62e1c4043b7415078c04ac33",
+      "beforeMetadataParse": true,
+      "readMode": "Standard-library JSON metadata parsing; only primary row fields/scope inspected, no source excerpts/body expanded"
+    },
+    {
+      "round": 55,
+      "path": "docs/audit-2026-10-17-round55/evidence/cost-ledger/source-manifest.json",
+      "bytes": 21840,
+      "sha256": "e188d74953f308210255c00c17aadb407a9b214674dc7876234df5e689006cbf",
+      "beforeMetadataParse": true,
+      "readMode": "Standard-library JSON metadata parsing; only primary row fields/scope inspected, no source excerpts/body expanded"
+    },
+    {
+      "round": 55,
+      "path": "docs/audit-2026-10-17-round55/evidence/root-model-pool/source-manifest.json",
+      "bytes": 11156,
+      "sha256": "f4cd5a8b1daaeb2fbc13cd61e93ee899591051b63a49b21ab7e0d60457673dcb",
+      "beforeMetadataParse": true,
+      "readMode": "Standard-library JSON metadata parsing; only primary row fields/scope inspected, no source excerpts/body expanded"
+    },
+    {
+      "round": 55,
+      "path": "docs/audit-2026-10-17-round55/evidence/chat-media/source-manifest.json",
+      "bytes": 18254,
+      "sha256": "9523ee4854119105fa255d8b0e668382677e83c50b19f54ab1daaf39762466c8",
+      "beforeMetadataParse": true,
+      "readMode": "Standard-library JSON metadata parsing; only primary row fields/scope inspected, no source excerpts/body expanded"
+    },
+    {
+      "round": 55,
+      "path": "docs/audit-2026-10-17-round55/evidence/coverage-current/source-manifest.json",
+      "bytes": 873,
+      "sha256": "dd76abf57188ee228be2a42fdb7d23553d833beb46c4081bf18ec8b68af48579",
+      "beforeMetadataParse": true,
+      "readMode": "Standard-library JSON metadata parsing; only primary row fields/scope inspected, no source excerpts/body expanded"
+    },
+    {
+      "round": 56,
+      "path": "docs/audit-2026-10-17-round56/source-manifest.json",
+      "bytes": 29187,
+      "sha256": "3b25da3719a555da4a626475f69bebc7062c285a25012c3907ee82958c3d6f26",
+      "beforeMetadataParse": true,
+      "readMode": "Standard-library JSON metadata parsing; only primary row fields/scope inspected, no source excerpts/body expanded"
+    },
+    {
+      "round": 56,
+      "path": "docs/audit-2026-10-17-round56/evidence/image-window/source-manifest.json",
+      "bytes": 9720,
+      "sha256": "39cef09c4ef573b0e7c82d07bd26e9f3a40870ec8b42c8438870827825f71ea5",
+      "beforeMetadataParse": true,
+      "readMode": "Standard-library JSON metadata parsing; only primary row fields/scope inspected, no source excerpts/body expanded"
+    },
+    {
+      "round": 56,
+      "path": "docs/audit-2026-10-17-round56/evidence/trace-history/source-manifest.json",
+      "bytes": 10607,
+      "sha256": "90ed52f8c985d3d6e50196b1e1670aa05cf1ccb09b8dcef44d48c6c47f555a63",
+      "beforeMetadataParse": true,
+      "readMode": "Standard-library JSON metadata parsing; only primary row fields/scope inspected, no source excerpts/body expanded"
+    },
+    {
+      "round": 56,
+      "path": "docs/audit-2026-10-17-round56/evidence/network-diagnostics/source-manifest.json",
+      "bytes": 17430,
+      "sha256": "b5442a8b9cbdbeab8e817969407c87292eb1974fe4d3a5eff96c2efa7a18bc0e",
+      "beforeMetadataParse": true,
+      "readMode": "Standard-library JSON metadata parsing; only primary row fields/scope inspected, no source excerpts/body expanded"
+    },
+    {
+      "round": 56,
+      "path": "docs/audit-2026-10-17-round56/evidence/root-tool-results/source-manifest.json",
+      "bytes": 7441,
+      "sha256": "8360d79ee4d6849cb40df1759a36a9c86e5e5e54aca92a9758bea09aa6411c8e",
+      "beforeMetadataParse": true,
+      "readMode": "Standard-library JSON metadata parsing; only primary row fields/scope inspected, no source excerpts/body expanded"
+    },
+    {
+      "round": 57,
+      "path": "docs/audit-2026-10-17-round57/source-manifest.json",
+      "bytes": 78049,
+      "sha256": "5c7d5a6ea41e170b3def4e4acc47fbcbe22a06f49288e8f1d8d265cfe246aa88",
+      "beforeMetadataParse": true,
+      "readMode": "Standard-library JSON metadata parsing; only primary row fields/scope inspected, no source excerpts/body expanded"
+    },
+    {
+      "round": 57,
+      "path": "docs/audit-2026-10-17-round57/evidence/tool-jobs/source-manifest.json",
+      "bytes": 21592,
+      "sha256": "8e2b57c73e971cba443b8cee4ede6f31b25f93573c87e666019feeaf47993ff1",
+      "beforeMetadataParse": true,
+      "readMode": "Standard-library JSON metadata parsing; only primary row fields/scope inspected, no source excerpts/body expanded"
+    },
+    {
+      "round": 57,
+      "path": "docs/audit-2026-10-17-round57/evidence/pet-closure-review/source-manifest.json",
+      "bytes": 50537,
+      "sha256": "e69aa62d62dc78b0d3aa7680a42fffe7deb08e9e5836f5ce683e4db956dab550",
+      "beforeMetadataParse": true,
+      "readMode": "Standard-library JSON metadata parsing; only primary row fields/scope inspected, no source excerpts/body expanded"
+    },
+    {
+      "round": 57,
+      "path": "docs/audit-2026-10-17-round57/evidence/mobile-path-review/source-manifest.json",
+      "bytes": 18098,
+      "sha256": "fada57568381e16aef70d293fd8145666dc4ab9e40f5c12297fc216fb3cd8d0a",
+      "beforeMetadataParse": true,
+      "readMode": "Standard-library JSON metadata parsing; only primary row fields/scope inspected, no source excerpts/body expanded"
+    },
+    {
+      "round": 57,
+      "path": "docs/audit-2026-10-17-round57/evidence/pet-topic/source-manifest.json",
+      "bytes": 39532,
+      "sha256": "b29c26853ae81955824fde33a0ecf76eb58660f1bf77390a0bec836a1bc274e6",
+      "beforeMetadataParse": true,
+      "readMode": "Standard-library JSON metadata parsing; only primary row fields/scope inspected, no source excerpts/body expanded"
+    },
+    {
+      "round": 57,
+      "path": "docs/audit-2026-10-17-round57/evidence/root-static-files/source-manifest.json",
+      "bytes": 9835,
+      "sha256": "189191f57b6356f585885a08b6db7ff5b38553edca6293b25a25e9ed49d2e3db",
+      "beforeMetadataParse": true,
+      "readMode": "Standard-library JSON metadata parsing; only primary row fields/scope inspected, no source excerpts/body expanded"
+    },
+    {
+      "round": 57,
+      "path": "docs/audit-2026-10-17-round57/evidence/session-titles/source-manifest.json",
+      "bytes": 19537,
+      "sha256": "bb686df4a25de2df6851224f2e343e30309a91c3cda0a120a29e29eb11ae08e8",
+      "beforeMetadataParse": true,
+      "readMode": "Standard-library JSON metadata parsing; only primary row fields/scope inspected, no source excerpts/body expanded"
+    },
+    {
+      "round": 58,
+      "path": "docs/audit-2026-10-17-round58/source-manifest.json",
+      "bytes": 71045,
+      "sha256": "3db5306b76c37c20bcb3afb0fe7bc4602c152ca9184ed06790245c49f58fd9e9",
+      "beforeMetadataParse": true,
+      "readMode": "Standard-library JSON metadata parsing; only primary row fields/scope inspected, no source excerpts/body expanded"
+    },
+    {
+      "round": 58,
+      "path": "docs/audit-2026-10-17-round58/evidence/web-storage/source-manifest.json",
+      "bytes": 27187,
+      "sha256": "5d2e951f21b60ec40dc3712cfe7e0d8fec786dec6bb56890d7f972ebe226c5f9",
+      "beforeMetadataParse": true,
+      "readMode": "Standard-library JSON metadata parsing; only primary row fields/scope inspected, no source excerpts/body expanded"
+    },
+    {
+      "round": 58,
+      "path": "docs/audit-2026-10-17-round58/evidence/approval-replay-review/source-manifest.json",
+      "bytes": 23037,
+      "sha256": "be37281b13229a8c5c05e615c3feb98efd73726079abeb6a7a5dd2eaa3b96032",
+      "beforeMetadataParse": true,
+      "readMode": "Standard-library JSON metadata parsing; only primary row fields/scope inspected, no source excerpts/body expanded"
+    },
+    {
+      "round": 58,
+      "path": "docs/audit-2026-10-17-round58/evidence/root-pairing/source-manifest.json",
+      "bytes": 11974,
+      "sha256": "ce135a5eea258e4a0909d285eac3c352be9b893f7804edbc54fe7459c5e9a42d",
+      "beforeMetadataParse": true,
+      "readMode": "Standard-library JSON metadata parsing; only primary row fields/scope inspected, no source excerpts/body expanded"
+    },
+    {
+      "round": 58,
+      "path": "docs/audit-2026-10-17-round58/evidence/delivery-shutdown-review/source-manifest.json",
+      "bytes": 21744,
+      "sha256": "1ddd863456ca42f2d886f10021582461572ef0d294e25ea3d3594da2b0963769",
+      "beforeMetadataParse": true,
+      "readMode": "Standard-library JSON metadata parsing; only primary row fields/scope inspected, no source excerpts/body expanded"
+    },
+    {
+      "round": 58,
+      "path": "docs/audit-2026-10-17-round58/evidence/relay-stream/source-manifest.json",
+      "bytes": 15732,
+      "sha256": "9a6fefeb0256efae8cd903fbc52d85deab56e72527204b44c33a603ffc41aedf",
+      "beforeMetadataParse": true,
+      "readMode": "Standard-library JSON metadata parsing; only primary row fields/scope inspected, no source excerpts/body expanded"
+    },
+    {
+      "round": 58,
+      "path": "docs/audit-2026-10-17-round58/evidence/delivery-queue/source-manifest.json",
+      "bytes": 19743,
+      "sha256": "8b90b4cecc7b30f055880efd22133e7e532fd7d444a801a14682ca7064ccddf2",
+      "beforeMetadataParse": true,
+      "readMode": "Standard-library JSON metadata parsing; only primary row fields/scope inspected, no source excerpts/body expanded"
+    },
+    {
+      "round": 59,
+      "path": "docs/audit-2026-10-17-round59/source-manifest.json",
+      "bytes": 50806,
+      "sha256": "97d094840c1a80ef998f12a09348acd0460258b7afafd67d43b73b86a8dba1d1",
+      "beforeMetadataParse": true,
+      "readMode": "Standard-library JSON metadata parsing; only primary row fields/scope inspected, no source excerpts/body expanded"
+    },
+    {
+      "round": 59,
+      "path": "docs/audit-2026-10-17-round59/evidence/session-usage/source-manifest.json",
+      "bytes": 18112,
+      "sha256": "b25df1056ee6686a0c2a8553400362a95c1511020be2b948484cb693d8fe54b0",
+      "beforeMetadataParse": true,
+      "readMode": "Standard-library JSON metadata parsing; only primary row fields/scope inspected, no source excerpts/body expanded"
+    },
+    {
+      "round": 59,
+      "path": "docs/audit-2026-10-17-round59/evidence/root-subagent-continuation/source-manifest.json",
+      "bytes": 11798,
+      "sha256": "c9ab15c5dc34193661a73efed36760d1248a6e16d986fd91a8538c912ecb0169",
+      "beforeMetadataParse": true,
+      "readMode": "Standard-library JSON metadata parsing; only primary row fields/scope inspected, no source excerpts/body expanded"
+    },
+    {
+      "round": 59,
+      "path": "docs/audit-2026-10-17-round59/evidence/session-fork/source-manifest.json",
+      "bytes": 20304,
+      "sha256": "5017fdad034f01042f4f6195459ab4d959556eee5391c5add16b1a125387b93b",
+      "beforeMetadataParse": true,
+      "readMode": "Standard-library JSON metadata parsing; only primary row fields/scope inspected, no source excerpts/body expanded"
+    },
+    {
+      "round": 59,
+      "path": "docs/audit-2026-10-17-round59/evidence/subagent-continuation-review/source-manifest.json",
+      "bytes": 12902,
+      "sha256": "b5d0f56d7dc78e6bc3c7fb6402040d2c2d8efb8daedb529ee3da2911dc889a98",
+      "beforeMetadataParse": true,
+      "readMode": "Standard-library JSON metadata parsing; only primary row fields/scope inspected, no source excerpts/body expanded"
+    },
+    {
+      "round": 59,
+      "path": "docs/audit-2026-10-17-round59/evidence/lsp-root/source-manifest.json",
+      "bytes": 13665,
+      "sha256": "3199d3b45561a1cdd61a390dd5e68c5b5ff59d5f7f4f1a048e0065604fede629",
+      "beforeMetadataParse": true,
+      "readMode": "Standard-library JSON metadata parsing; only primary row fields/scope inspected, no source excerpts/body expanded"
+    },
+    {
+      "round": 60,
+      "path": "docs/audit-2026-10-17-round60/source-manifest.json",
+      "bytes": 43384,
+      "sha256": "c1d2d95ab0171a7221d62b50b32ce3b9585fd83a68a179e9eb72b6911dc874f9",
+      "beforeMetadataParse": true,
+      "readMode": "Standard-library JSON metadata parsing; only primary row fields/scope inspected, no source excerpts/body expanded"
+    },
+    {
+      "round": 60,
+      "path": "docs/audit-2026-10-17-round60/evidence/build-meta/source-manifest.json",
+      "bytes": 6807,
+      "sha256": "c705fc3b1fa910ab6a6fb281fe7fc6b6756d6e7e9619bb4ca991dbb3c61c2685",
+      "beforeMetadataParse": true,
+      "readMode": "Standard-library JSON metadata parsing; only primary row fields/scope inspected, no source excerpts/body expanded"
+    },
+    {
+      "round": 60,
+      "path": "docs/audit-2026-10-17-round60/evidence/copy-assets/source-manifest.json",
+      "bytes": 14588,
+      "sha256": "49de95dd79539621fafb016f8d52a60200ad90f52a110fedc3d6f3f87dc6c808",
+      "beforeMetadataParse": true,
+      "readMode": "Standard-library JSON metadata parsing; only primary row fields/scope inspected, no source excerpts/body expanded"
+    },
+    {
+      "round": 60,
+      "path": "docs/audit-2026-10-17-round60/evidence/root-release-audit-config/source-manifest.json",
+      "bytes": 8143,
+      "sha256": "ded50793541f5f47edf2b8aaff6edf545f94a9c3311881102f9437c16add4eca",
+      "beforeMetadataParse": true,
+      "readMode": "Standard-library JSON metadata parsing; only primary row fields/scope inspected, no source excerpts/body expanded"
+    },
+    {
+      "round": 60,
+      "path": "docs/audit-2026-10-17-round60/evidence/release-versions/source-manifest.json",
+      "bytes": 38576,
+      "sha256": "2a75d840cb0b3f6aa7be297e8a293f82301059d5dc8d5976bad53a2f221f83b6",
+      "beforeMetadataParse": true,
+      "readMode": "Standard-library JSON metadata parsing; only primary row fields/scope inspected, no source excerpts/body expanded"
+    },
+    {
+      "round": 60,
+      "path": "docs/audit-2026-10-17-round60/evidence/before-concurrent-refresh/source-manifest.json",
+      "bytes": 43384,
+      "sha256": "8e9085241c46d0e91a594db9e86f6ebf8c8fb0916ba1970f906ee291cf2ac9ec",
+      "beforeMetadataParse": true,
+      "readMode": "Standard-library JSON metadata parsing; only primary row fields/scope inspected, no source excerpts/body expanded"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round55/evidence/coverage-current/increment-summary.first.json",
+      "bytes": 1133,
+      "sha256": "7b3ab64dcc1d8c956f8a4e283e692d23bfa0c01d6e9f557324c1f41950396f90",
+      "beforeMetadataParse": true,
+      "readMode": "Old first outcome/diagnosis JSON metadata read, not method execution"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round55/evidence/coverage-current/metadata-diagnostics.json",
+      "bytes": 1675,
+      "sha256": "b875963bd49651974dff37060b6df5fb8f9199f2a8bf1b21af055bb0db307b8e",
+      "beforeMetadataParse": true,
+      "readMode": "Old first outcome/diagnosis JSON metadata read, not method execution"
+    }
+  ],
+  "instructionHashOnly": [
+    {
+      "path": "AGENTS.md",
+      "bytes": 206,
+      "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "beforeMetadataParse": true
+    },
+    {
+      "path": "CODESHELL.md",
+      "bytes": 17639,
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "beforeMetadataParse": true
+    }
+  ],
+  "oldFirstFailureHashOnly": [
+    {
+      "path": "docs/audit-2026-10-17-round55/evidence/coverage-current/increment.first.py",
+      "bytes": 9276,
+      "sha256": "6d92eed1c2b6a95f4390d67d192b87f5d61b1545a11615b3f309e738bbd0e5dd",
+      "beforeMetadataParse": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round55/evidence/coverage-current/increment-claims.first.json",
+      "bytes": 462069,
+      "sha256": "523cffc05ebf6e4d69a067efcd938d74c8d31bc19662e9a977baece7e3240222",
+      "beforeMetadataParse": true,
+      "hashOnlyPreservation": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round55/evidence/coverage-current/unified-current-index.first.json",
+      "bytes": 1941044,
+      "sha256": "2e1693238ea4140dcb6f1bc8a4416fe356e1b559d901a7bf2c5bc492192c4c08",
+      "beforeMetadataParse": true,
+      "hashOnlyPreservation": true
+    }
+  ],
+  "sourceByteInventoryArtifacts": [
+    {
+      "path": "current-source-inventory.json",
+      "bytes": 1706809,
+      "sha256": "8e3c78d9cbbaae82af49ccacad450cc8b6b91012343cdee2c32bf717d5dad317"
+    },
+    {
+      "path": "ending-source-inventory.json",
+      "bytes": 1002718,
+      "sha256": "fa81e6992d66808e16fa9f8148174dfada2cd98d9d102120066558c88a6cccee"
+    }
+  ],
+  "sourceInventoryMode": "4643 original paths hashed in bulk as raw bytes/line counts only, no product semantic body interpretation. Not flattened into files/hashOnlySourceRows. Extra round57 evidence TS fixture separate in inventory, outside denominator.",
+  "rootReportedBaselineOnly": "659b6b2ce5888723a40ce046cbbf643382cb130b",
+  "gitCertified": false,
+  "methodsExecuted": [
+    "current-inventory.py raw byte inventory",
+    "migrate-coverage.py independent metadata adapter once",
+    "preserve-constraints.py metadata provenance annotation without reclassification",
+    "verify-migration.py independent metadata pointer/range/index checks",
+    "ending-inventory.py raw byte ending inventory",
+    "finalize-metadata.py own metadata receipt"
+  ],
+  "oldMethodsExecuted": false,
+  "productSourceSemanticReads": 0,
+  "productImportsHelpersTestsNativeNetworkGit": 0,
+  "schemaScope": "Only77 nonempty standard canonical .files lists in formal46–60.15 aggregate binding-only manifests/17empty gates/2inactive snapshots add no reading. No old archive/MD-only/other schema reclassification.",
+  "fullMeaning": "Full is explicit whole source text semantic reading for original stated ordinary purpose, not all behaviors, transitive mechanisms, platforms or runtime validation. Test declarations remain declarations, never pass.",
+  "metadataTypeCorrection": "test-kind-correction.json: separate11 declaration texts +1 infrastructure text among new full51; coverage states/ranges unchanged"
+}

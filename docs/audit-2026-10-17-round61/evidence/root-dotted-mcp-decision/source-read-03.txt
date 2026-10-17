@@ -1,0 +1,156 @@
+packages/core/src/settings/manager.ts:486–508
+486:     this.mergedHookSources = [];
+487:   }
+488: 
+489:   private replaceSource(
+490:     name: SettingsSourceName,
+491:     data: Record<string, unknown>,
+492:     origin?: SettingsHookSourceSnapshot,
+493:   ): void {
+494:     this.sources = this.sources.map((source) =>
+495:       source.name === name
+496:         ? Object.freeze({ name, priority: source.priority, data, origin })
+497:         : source,
+498:     );
+499:   }
+500: 
+501:   private validateMerged(raw: Record<string, unknown>): ValidatedSettings {
+502:     const validated = validateSettings(raw);
+503:     const hooks = validated.hooks ?? [];
+504:     this.hookOrigins = Object.freeze(
+505:       hooks.map((hook, index) => {
+506:         const selected = this.mergedHookSources[index];
+507:         if (
+508:           !this.hookOriginsEnabled ||
+
+packages/core/src/settings/manager.ts:696–741
+696:    * tri-state inheritance. user → ~/.code-shell/settings.json, project →
+697:    * ${cwd}/.code-shell/settings.json, local →
+698:    * ${cwd}/.code-shell/settings.local.json. Only keys actually present in the
+699:    * file are returned (defaults are not synthesized), so an absent file → {}.
+700:    */
+701:   getForScope(scope: "user" | "project" | "local", cwd?: string): Partial<ValidatedSettings> {
+702:     const raw = this.getRawForScope(scope, cwd);
+703:     // validateSettings applies defaults; for a scope view we want only the
+704:     // file's own keys, so validate then project back the present keys.
+705:     const normalized = merge({}, raw);
+706:     const validated = validateSettings(normalized) as Record<string, unknown>;
+707:     const out: Record<string, unknown> = {};
+708:     for (const k of Object.keys(normalized)) out[k] = validated[k];
+709:     return out as Partial<ValidatedSettings>;
+710:   }
+711: 
+712:   /**
+713:    * Read a bounded, unmerged layer, retaining null deletion markers for host
+714:    * configuration editors. Values can contain credentials: never expose this
+715:    * object directly to a renderer or remote client. The workspace trust gate
+716:    * still applies. Every call parses a fresh object, so callers cannot mutate
+717:    * the effective settings cache through this view.
+718:    * Strict reads reject existing unsafe or malformed files instead of returning
+719:    * an empty layer; use them when absence would change code-selection authority.
+720:    */
+721:   getRawForScope(
+722:     scope: "user" | "project" | "local",
+723:     cwd?: string,
+724:     options: { strict?: boolean } = {},
+725:   ): Record<string, unknown> {
+726:     const path =
+727:       scope === "user"
+728:         ? join(this.userConfigDir(), "settings.json")
+729:         : scope === "local"
+730:           ? this.tryProjectSettingsPath(cwd ?? this.cwd, "settings.local.json", options.strict)
+731:           : this.tryProjectSettingsPath(cwd ?? this.cwd, "settings.json", options.strict);
+732:     if (!path) return {};
+733:     const raw = options.strict ? this.readJsonObjectForMutation(path) : this.readJsonObject(path);
+734:     // Same workspace-trust gate as load(): project/local scope reads bypass the
+735:     // merge, so an untrusted project's dangerous fields (for example an MCP
+736:     // server or setup script) must be stripped here too.
+737:     if ((scope === "project" || scope === "local") && !this.projectTrusted) {
+738:       for (const field of DANGEROUS_PROJECT_FIELDS) delete raw[field];
+739:     }
+740:     return raw;
+741:   }
+
+packages/core/src/settings/schema.ts:725–731
+725:   .passthrough();
+726: 
+727: export type ValidatedSettings = z.infer<typeof SettingsSchema>;
+728: 
+729: export function validateSettings(raw: unknown): ValidatedSettings {
+730:   return SettingsSchema.parse(raw);
+731: }
+
+packages/desktop/src/main/capabilities-service.ts:1–73
+1: /**
+2:  * Capability-control forwarders for the 扩展能力 settings page.
+3:  *
+4:  * The desktop main process imports core's host surface directly (same rationale as
+5:  * skills-service): the agent worker isn't running between turns, and this is
+6:  * "what's configured on disk" data. We build a fresh CapabilityService per
+7:  * call — it holds no mutable state, so there's nothing to cache.
+8:  *
+9:  * Scope "full" is used so list() reflects the user-level toggles that
+10:  * setEnabled writes (SettingsManager.saveUserSetting always targets
+11:  * ~/.code-shell/settings.json; "project" scope wouldn't read that layer back).
+12:  *
+13:  * Note: the registry built here is NOT MCP-connected, so MCP toolCount reads
+14:  * as 0. That's acceptable for the settings UI — a server's enabled/disabled
+15:  * state is driven entirely by the mcpServers config, not by live tool counts.
+16:  */
+17: 
+18: import {
+19:   SettingsManager,
+20:   ToolRegistry,
+21:   scanSkills,
+22:   readInstalledPlugins,
+23:   compileComposition,
+24:   compositionToolCatalog,
+25:   resolvePresetFromComposition,
+26:   resolveToolNamesForPreset,
+27:   loadAgentDefinitionsForCwd,
+28:   type CapabilityDescriptor,
+29: } from "@cjhyy/code-shell-core";
+30: import { CapabilityService } from "@cjhyy/code-shell-core/internal";
+31: import { createCodingModule } from "@cjhyy/code-shell-capability-coding/capability";
+32: 
+33: const composition = compileComposition({ modules: [createCodingModule()] });
+34: const adjusters = composition.engine.toolSelectionAdjusters.map((a) => a.value);
+35: 
+36: function resolveNames(options?: {
+37:   preset?: string;
+38:   host?: string;
+39:   enabledBuiltinTools?: string[];
+40:   disabledBuiltinTools?: string[];
+41: }): string[] {
+42:   return resolveToolNamesForPreset({
+43:     preset: resolvePresetFromComposition(composition, options?.preset),
+44:     host: options?.host,
+45:     enabledBuiltinTools: options?.enabledBuiltinTools,
+46:     disabledBuiltinTools: options?.disabledBuiltinTools,
+47:     adjusters,
+48:   });
+49: }
+50: 
+51: function makeService(cwd: string, readOnly = false): CapabilityService {
+52:   const settings = new SettingsManager(cwd, "full");
+53:   if (readOnly) settings.load(undefined, { persistMigrations: false });
+54:   const preset = (settings.get() as { agent?: { preset?: string } }).agent?.preset;
+55:   const registry = new ToolRegistry({
+56:     builtinTools: resolveNames({ preset, host: "desktop" }),
+57:     toolCatalog: compositionToolCatalog(composition),
+58:   });
+59:   return new CapabilityService({
+60:     registry,
+61:     settings,
+62:     cwd,
+63:     scanSkills,
+64:     // Full agent role set (user + project), UNFILTERED by disabledAgents so the
+65:     // capability list shows disabled roles too. loadAgentDefinitionsForCwd
+66:     // tolerates an empty cwd (skips the project dir → user roles only).
+67:     scanAgents: (c: string) => loadAgentDefinitionsForCwd(c, [], []).list(),
+68:     readInstalledPlugins,
+69:     resolveBuiltinToolNames: (options) => resolveNames(options),
+70:     builtinToolHost: "desktop",
+71:   });
+72: }
+73: 

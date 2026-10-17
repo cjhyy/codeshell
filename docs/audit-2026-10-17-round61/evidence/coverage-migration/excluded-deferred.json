@@ -1,0 +1,1672 @@
+{
+  "excluded": [
+    {
+      "manifest": "docs/audit-2026-10-17-round46/evidence/tool-card-review/source-manifest.json",
+      "manifestSha256": "7eb17ef7982cf394a04be7af46421e593ce38185adbb6350c16bc800cd6442e5",
+      "pointer": "/files/4",
+      "round": 46,
+      "path": "packages/desktop/src/renderer/types.ts",
+      "declaredCoverage": "selected",
+      "sourceSha256": "345b05e12819f499643fd628ebcc02541e50386fede974856f4a8333a8928984",
+      "reason": "source-version-not-current-sha256",
+      "currentSha256": "6d7b173656e7ebe22d5c9347b7097d2040793610135c1f797d76139aa6f69845"
+    },
+    {
+      "manifest": "docs/audit-2026-10-17-round46/evidence/panel-frontier/source-manifest.json",
+      "manifestSha256": "91e9bff80b73ff631d843b71dec2042f1b5d4a64077f3ca6a8c6317f4a4d1c9b",
+      "pointer": "/files/1",
+      "round": 46,
+      "path": "CODESHELL.md",
+      "declaredCoverage": "hash-only",
+      "reason": "outside-original4643-denominator"
+    },
+    {
+      "manifest": "docs/audit-2026-10-17-round46/evidence/panel-frontier/source-manifest.json",
+      "manifestSha256": "91e9bff80b73ff631d843b71dec2042f1b5d4a64077f3ca6a8c6317f4a4d1c9b",
+      "pointer": "/files/2",
+      "round": 46,
+      "path": "AGENTS.md",
+      "declaredCoverage": "hash-only",
+      "reason": "outside-original4643-denominator"
+    },
+    {
+      "manifest": "docs/audit-2026-10-17-round46/evidence/tool-card-frontier/source-manifest.json",
+      "manifestSha256": "ff0b5099c6f49c86c7885fb37f3a24a3990ffc69276b15233bcf9ea075980709",
+      "pointer": "/files/3",
+      "round": 46,
+      "path": "packages/desktop/src/renderer/MessageStream.tsx",
+      "declaredCoverage": "selected",
+      "sourceSha256": "f74d19bddcdc48c0de2e63921ba598d733e2f1c3d58f68e7c8c0b32046ddbd4c",
+      "reason": "source-version-not-current-sha256",
+      "currentSha256": "b353994c6988952c08cbfee802b4e5e7101ac87b766e9588679814cf77cf6152"
+    },
+    {
+      "manifest": "docs/audit-2026-10-17-round46/evidence/tool-card-frontier/source-manifest.json",
+      "manifestSha256": "ff0b5099c6f49c86c7885fb37f3a24a3990ffc69276b15233bcf9ea075980709",
+      "pointer": "/files/5",
+      "round": 46,
+      "path": "packages/desktop/src/renderer/types.ts",
+      "declaredCoverage": "selected",
+      "sourceSha256": "345b05e12819f499643fd628ebcc02541e50386fede974856f4a8333a8928984",
+      "reason": "source-version-not-current-sha256",
+      "currentSha256": "6d7b173656e7ebe22d5c9347b7097d2040793610135c1f797d76139aa6f69845"
+    },
+    {
+      "manifest": "docs/audit-2026-10-17-round47/evidence/web-message-frontier/source-manifest.json",
+      "manifestSha256": "ae862a2e9372bd5df41686c5f5583c0817499be44f4c7e8a58ea4e41c243db95",
+      "pointer": "/files/4",
+      "round": 47,
+      "path": "packages/web/app/useLatestMessages.ts",
+      "declaredCoverage": "hash-only; no new semantic source reading",
+      "reason": "explicit-hash-navigation-instruction-only-not-reading"
+    },
+    {
+      "manifest": "docs/audit-2026-10-17-round47/evidence/web-message-frontier/source-manifest.json",
+      "manifestSha256": "ae862a2e9372bd5df41686c5f5583c0817499be44f4c7e8a58ea4e41c243db95",
+      "pointer": "/files/5",
+      "round": 47,
+      "path": "CODESHELL.md",
+      "declaredCoverage": "hash-only; no new semantic source reading",
+      "reason": "outside-original4643-denominator"
+    },
+    {
+      "manifest": "docs/audit-2026-10-17-round47/evidence/web-message-frontier/source-manifest.json",
+      "manifestSha256": "ae862a2e9372bd5df41686c5f5583c0817499be44f4c7e8a58ea4e41c243db95",
+      "pointer": "/files/6",
+      "round": 47,
+      "path": "AGENTS.md",
+      "declaredCoverage": "hash-only; no new semantic source reading",
+      "reason": "outside-original4643-denominator"
+    },
+    {
+      "manifest": "docs/audit-2026-10-17-round48/evidence/cost-context-frontier/source-manifest.json",
+      "manifestSha256": "59a04a819e8567e05b34e316964453d345af9046fe7d7a06763095b2a2331d66",
+      "pointer": "/files/4",
+      "round": 48,
+      "path": "packages/core/src/engine/engine.ts",
+      "declaredCoverage": "navigation-only; no semantic body review",
+      "reason": "explicit-hash-navigation-instruction-only-not-reading"
+    },
+    {
+      "manifest": "docs/audit-2026-10-17-round48/evidence/cost-context-frontier/source-manifest.json",
+      "manifestSha256": "59a04a819e8567e05b34e316964453d345af9046fe7d7a06763095b2a2331d66",
+      "pointer": "/files/5",
+      "round": 48,
+      "path": "packages/core/src/cost-ledger/ledger.test.ts",
+      "declaredCoverage": "navigation-only; no semantic body review",
+      "reason": "explicit-hash-navigation-instruction-only-not-reading"
+    },
+    {
+      "manifest": "docs/audit-2026-10-17-round48/evidence/cost-context-frontier/source-manifest.json",
+      "manifestSha256": "59a04a819e8567e05b34e316964453d345af9046fe7d7a06763095b2a2331d66",
+      "pointer": "/files/6",
+      "round": 48,
+      "path": "CODESHELL.md",
+      "declaredCoverage": "hash-only; no new semantic source reading",
+      "reason": "outside-original4643-denominator"
+    },
+    {
+      "manifest": "docs/audit-2026-10-17-round48/evidence/cost-context-frontier/source-manifest.json",
+      "manifestSha256": "59a04a819e8567e05b34e316964453d345af9046fe7d7a06763095b2a2331d66",
+      "pointer": "/files/7",
+      "round": 48,
+      "path": "AGENTS.md",
+      "declaredCoverage": "hash-only; no new semantic source reading",
+      "reason": "outside-original4643-denominator"
+    },
+    {
+      "manifest": "docs/audit-2026-10-17-round48/evidence/session-title-frontier/source-manifest.json",
+      "manifestSha256": "a44cc3dcb3ed9f6e622e3fe1736cec767a4c5a2e81ce46393403d70e8a6048dc",
+      "pointer": "/files/3",
+      "round": 48,
+      "path": "CODESHELL.md",
+      "declaredCoverage": "hash-only; no new semantic source reading",
+      "reason": "outside-original4643-denominator"
+    },
+    {
+      "manifest": "docs/audit-2026-10-17-round48/evidence/session-title-frontier/source-manifest.json",
+      "manifestSha256": "a44cc3dcb3ed9f6e622e3fe1736cec767a4c5a2e81ce46393403d70e8a6048dc",
+      "pointer": "/files/4",
+      "round": 48,
+      "path": "AGENTS.md",
+      "declaredCoverage": "hash-only; no new semantic source reading",
+      "reason": "outside-original4643-denominator"
+    },
+    {
+      "manifest": "docs/audit-2026-10-17-round49/evidence/model-display-gate/source-manifest.json",
+      "manifestSha256": "23c8c98c622d78b972e07ba545de152cb610445b091c15e8c877c7c104e6b7e2",
+      "pointer": "/files/0",
+      "round": 49,
+      "path": "CODESHELL.md",
+      "declaredCoverage": "hash-only; no new semantic/source body reading",
+      "reason": "outside-original4643-denominator"
+    },
+    {
+      "manifest": "docs/audit-2026-10-17-round49/evidence/model-display-gate/source-manifest.json",
+      "manifestSha256": "23c8c98c622d78b972e07ba545de152cb610445b091c15e8c877c7c104e6b7e2",
+      "pointer": "/files/1",
+      "round": 49,
+      "path": "AGENTS.md",
+      "declaredCoverage": "hash-only; no new semantic/source body reading",
+      "reason": "outside-original4643-denominator"
+    },
+    {
+      "manifest": "docs/audit-2026-10-17-round49/evidence/model-display-gate/source-manifest.json",
+      "manifestSha256": "23c8c98c622d78b972e07ba545de152cb610445b091c15e8c877c7c104e6b7e2",
+      "pointer": "/files/2",
+      "round": 49,
+      "path": "packages/tui/src/ui/components/model-display.ts",
+      "declaredCoverage": "hash-only; no new semantic/source body reading",
+      "reason": "explicit-hash-navigation-instruction-only-not-reading"
+    },
+    {
+      "manifest": "docs/audit-2026-10-17-round49/evidence/model-display-gate/source-manifest.json",
+      "manifestSha256": "23c8c98c622d78b972e07ba545de152cb610445b091c15e8c877c7c104e6b7e2",
+      "pointer": "/files/3",
+      "round": 49,
+      "path": "packages/tui/src/cli/parse-int-option.ts",
+      "declaredCoverage": "hash-only; no new semantic/source body reading",
+      "reason": "explicit-hash-navigation-instruction-only-not-reading"
+    },
+    {
+      "manifest": "docs/audit-2026-10-17-round49/evidence/preset-review/source-manifest.json",
+      "manifestSha256": "18fed2052b18564baf3e58ac321a586921681c5ba40cad75f685ae53c66cdc48",
+      "pointer": "/files/5",
+      "round": 49,
+      "path": "packages/core/src/preset/index.ts",
+      "declaredCoverage": "navigation-only; no semantic body",
+      "reason": "explicit-hash-navigation-instruction-only-not-reading"
+    },
+    {
+      "manifest": "docs/audit-2026-10-17-round49/evidence/preset-review/source-manifest.json",
+      "manifestSha256": "18fed2052b18564baf3e58ac321a586921681c5ba40cad75f685ae53c66cdc48",
+      "pointer": "/files/6",
+      "round": 49,
+      "path": "CODESHELL.md",
+      "declaredCoverage": "hash-only; no current source semantic reading",
+      "reason": "outside-original4643-denominator"
+    },
+    {
+      "manifest": "docs/audit-2026-10-17-round49/evidence/preset-review/source-manifest.json",
+      "manifestSha256": "18fed2052b18564baf3e58ac321a586921681c5ba40cad75f685ae53c66cdc48",
+      "pointer": "/files/7",
+      "round": 49,
+      "path": "AGENTS.md",
+      "declaredCoverage": "hash-only; no current source semantic reading",
+      "reason": "outside-original4643-denominator"
+    },
+    {
+      "manifest": "docs/audit-2026-10-17-round49/evidence/preset-review/source-manifest.json",
+      "manifestSha256": "18fed2052b18564baf3e58ac321a586921681c5ba40cad75f685ae53c66cdc48",
+      "pointer": "/files/8",
+      "round": 49,
+      "path": "packages/core/src/colorizer.ts",
+      "declaredCoverage": "hash-only; no current source semantic reading",
+      "reason": "explicit-hash-navigation-instruction-only-not-reading"
+    },
+    {
+      "manifest": "docs/audit-2026-10-17-round50/evidence/goal-progress/source-manifest.json",
+      "manifestSha256": "29e3cbdf65dabe4073902d4e046d411dd8d232b7e85eea6224fe74ee6136f7ba",
+      "pointer": "/files/1",
+      "round": 50,
+      "path": "packages/desktop/src/renderer/messages/TurnProcessGroupCard.tsx",
+      "declaredCoverage": "selected",
+      "sourceSha256": "d96ccf9fdd6d252cf6bb8e39a9fe74a3b55df401a92beadfe17f0816a4884128",
+      "reason": "source-version-not-current-sha256",
+      "currentSha256": "4522429b243871bd04ca01377e76106eacf7750a2d7600182d7b0742b0fc7b7b"
+    },
+    {
+      "manifest": "docs/audit-2026-10-17-round50/evidence/goal-progress/source-manifest.json",
+      "manifestSha256": "29e3cbdf65dabe4073902d4e046d411dd8d232b7e85eea6224fe74ee6136f7ba",
+      "pointer": "/files/2",
+      "round": 50,
+      "path": "packages/desktop/src/renderer/MessageStream.tsx",
+      "declaredCoverage": "selected",
+      "sourceSha256": "f74d19bddcdc48c0de2e63921ba598d733e2f1c3d58f68e7c8c0b32046ddbd4c",
+      "reason": "source-version-not-current-sha256",
+      "currentSha256": "b353994c6988952c08cbfee802b4e5e7101ac87b766e9588679814cf77cf6152"
+    },
+    {
+      "manifest": "docs/audit-2026-10-17-round50/evidence/root-scroll-review/source-manifest.json",
+      "manifestSha256": "45142dec1057c87ebebfd2a9b9139a7e5fad47b0110ea2419d1c8eab1fe9f6c4",
+      "pointer": "/files/2",
+      "round": 50,
+      "path": "packages/web/app/app.css",
+      "declaredCoverage": "selected",
+      "reason": "outside-original4643-denominator"
+    },
+    {
+      "manifest": "docs/audit-2026-10-17-round50/evidence/goal-extend-review/source-manifest.json",
+      "manifestSha256": "3462523cdd33523f6b70a3ebf285df90db153a4e2310ec34a4b1e0150fbe5b00",
+      "pointer": "/files/1",
+      "round": 50,
+      "path": "packages/desktop/src/renderer/MessageStream.tsx",
+      "declaredCoverage": "selected",
+      "sourceSha256": "f74d19bddcdc48c0de2e63921ba598d733e2f1c3d58f68e7c8c0b32046ddbd4c",
+      "reason": "source-version-not-current-sha256",
+      "currentSha256": "b353994c6988952c08cbfee802b4e5e7101ac87b766e9588679814cf77cf6152"
+    },
+    {
+      "manifest": "docs/audit-2026-10-17-round50/evidence/goal-extend-review/source-manifest.json",
+      "manifestSha256": "3462523cdd33523f6b70a3ebf285df90db153a4e2310ec34a4b1e0150fbe5b00",
+      "pointer": "/files/9",
+      "round": 50,
+      "path": "packages/desktop/src/renderer/messages/TurnProcessGroupCard.tsx",
+      "declaredCoverage": "selected",
+      "sourceSha256": "d96ccf9fdd6d252cf6bb8e39a9fe74a3b55df401a92beadfe17f0816a4884128",
+      "reason": "source-version-not-current-sha256",
+      "currentSha256": "4522429b243871bd04ca01377e76106eacf7750a2d7600182d7b0742b0fc7b7b"
+    },
+    {
+      "manifest": "docs/audit-2026-10-17-round50/evidence/scroll-review/source-manifest.json",
+      "manifestSha256": "4be8fbb61d5fff2be3ba3d86631210aa9b42107de790987722e373ba39c74079",
+      "pointer": "/files/2",
+      "round": 50,
+      "path": "packages/web/app/app.css",
+      "declaredCoverage": "selected",
+      "reason": "outside-original4643-denominator"
+    },
+    {
+      "manifest": "docs/audit-2026-10-17-round50/evidence/frontier-selection/source-manifest.json",
+      "manifestSha256": "5343e12c9a27ab2fd6f616dc13ed3a6e0c8589fe4ae570fc21c892fc0c1303f9",
+      "pointer": "/files/0",
+      "round": 50,
+      "path": "packages/desktop/src/renderer/app/appUtils.ts",
+      "declaredCoverage": "hash-only",
+      "reason": "explicit-hash-navigation-instruction-only-not-reading"
+    },
+    {
+      "manifest": "docs/audit-2026-10-17-round50/evidence/frontier-selection/source-manifest.json",
+      "manifestSha256": "5343e12c9a27ab2fd6f616dc13ed3a6e0c8589fe4ae570fc21c892fc0c1303f9",
+      "pointer": "/files/1",
+      "round": 50,
+      "path": "packages/desktop/src/renderer/app/panelResize.ts",
+      "declaredCoverage": "hash-only",
+      "reason": "explicit-hash-navigation-instruction-only-not-reading"
+    },
+    {
+      "manifest": "docs/audit-2026-10-17-round50/evidence/frontier-selection/source-manifest.json",
+      "manifestSha256": "5343e12c9a27ab2fd6f616dc13ed3a6e0c8589fe4ae570fc21c892fc0c1303f9",
+      "pointer": "/files/2",
+      "round": 50,
+      "path": "packages/desktop/src/renderer/builtin-character-themes.ts",
+      "declaredCoverage": "hash-only",
+      "reason": "explicit-hash-navigation-instruction-only-not-reading"
+    },
+    {
+      "manifest": "docs/audit-2026-10-17-round50/evidence/frontier-selection/source-manifest.json",
+      "manifestSha256": "5343e12c9a27ab2fd6f616dc13ed3a6e0c8589fe4ae570fc21c892fc0c1303f9",
+      "pointer": "/files/3",
+      "round": 50,
+      "path": "packages/desktop/src/renderer/chat/ComposerSuggestions.tsx",
+      "declaredCoverage": "hash-only",
+      "reason": "explicit-hash-navigation-instruction-only-not-reading"
+    },
+    {
+      "manifest": "docs/audit-2026-10-17-round50/evidence/frontier-selection/source-manifest.json",
+      "manifestSha256": "5343e12c9a27ab2fd6f616dc13ed3a6e0c8589fe4ae570fc21c892fc0c1303f9",
+      "pointer": "/files/4",
+      "round": 50,
+      "path": "packages/desktop/src/renderer/chat/ContextRing.tsx",
+      "declaredCoverage": "hash-only",
+      "reason": "explicit-hash-navigation-instruction-only-not-reading"
+    },
+    {
+      "manifest": "docs/audit-2026-10-17-round50/evidence/frontier-selection/source-manifest.json",
+      "manifestSha256": "5343e12c9a27ab2fd6f616dc13ed3a6e0c8589fe4ae570fc21c892fc0c1303f9",
+      "pointer": "/files/5",
+      "round": 50,
+      "path": "packages/desktop/src/renderer/chat/InlineMedia.tsx",
+      "declaredCoverage": "hash-only",
+      "reason": "explicit-hash-navigation-instruction-only-not-reading"
+    },
+    {
+      "manifest": "docs/audit-2026-10-17-round50/evidence/frontier-selection/source-manifest.json",
+      "manifestSha256": "5343e12c9a27ab2fd6f616dc13ed3a6e0c8589fe4ae570fc21c892fc0c1303f9",
+      "pointer": "/files/6",
+      "round": 50,
+      "path": "packages/desktop/src/renderer/chat/Lightbox.tsx",
+      "declaredCoverage": "hash-only",
+      "reason": "explicit-hash-navigation-instruction-only-not-reading"
+    },
+    {
+      "manifest": "docs/audit-2026-10-17-round50/evidence/frontier-selection/source-manifest.json",
+      "manifestSha256": "5343e12c9a27ab2fd6f616dc13ed3a6e0c8589fe4ae570fc21c892fc0c1303f9",
+      "pointer": "/files/7",
+      "round": 50,
+      "path": "packages/desktop/src/renderer/chat/MentionPopover.tsx",
+      "declaredCoverage": "hash-only",
+      "reason": "explicit-hash-navigation-instruction-only-not-reading"
+    },
+    {
+      "manifest": "docs/audit-2026-10-17-round50/evidence/frontier-selection/source-manifest.json",
+      "manifestSha256": "5343e12c9a27ab2fd6f616dc13ed3a6e0c8589fe4ae570fc21c892fc0c1303f9",
+      "pointer": "/files/8",
+      "round": 50,
+      "path": "packages/desktop/src/renderer/chat/ModelPill.tsx",
+      "declaredCoverage": "hash-only",
+      "reason": "explicit-hash-navigation-instruction-only-not-reading"
+    },
+    {
+      "manifest": "docs/audit-2026-10-17-round50/evidence/frontier-selection/source-manifest.json",
+      "manifestSha256": "5343e12c9a27ab2fd6f616dc13ed3a6e0c8589fe4ae570fc21c892fc0c1303f9",
+      "pointer": "/files/9",
+      "round": 50,
+      "path": "packages/desktop/src/renderer/chat/compress.ts",
+      "declaredCoverage": "hash-only",
+      "reason": "explicit-hash-navigation-instruction-only-not-reading"
+    },
+    {
+      "manifest": "docs/audit-2026-10-17-round50/evidence/frontier-selection/source-manifest.json",
+      "manifestSha256": "5343e12c9a27ab2fd6f616dc13ed3a6e0c8589fe4ae570fc21c892fc0c1303f9",
+      "pointer": "/files/10",
+      "round": 50,
+      "path": "packages/desktop/src/renderer/chat/useAnchoredPopover.ts",
+      "declaredCoverage": "hash-only",
+      "reason": "explicit-hash-navigation-instruction-only-not-reading"
+    },
+    {
+      "manifest": "docs/audit-2026-10-17-round50/evidence/frontier-selection/source-manifest.json",
+      "manifestSha256": "5343e12c9a27ab2fd6f616dc13ed3a6e0c8589fe4ae570fc21c892fc0c1303f9",
+      "pointer": "/files/11",
+      "round": 50,
+      "path": "packages/desktop/src/renderer/components/ui/dialog.tsx",
+      "declaredCoverage": "hash-only",
+      "reason": "explicit-hash-navigation-instruction-only-not-reading"
+    },
+    {
+      "manifest": "docs/audit-2026-10-17-round50/evidence/frontier-selection/source-manifest.json",
+      "manifestSha256": "5343e12c9a27ab2fd6f616dc13ed3a6e0c8589fe4ae570fc21c892fc0c1303f9",
+      "pointer": "/files/12",
+      "round": 50,
+      "path": "packages/desktop/src/renderer/components/ui/dropdown-menu.tsx",
+      "declaredCoverage": "hash-only",
+      "reason": "explicit-hash-navigation-instruction-only-not-reading"
+    },
+    {
+      "manifest": "docs/audit-2026-10-17-round50/evidence/frontier-selection/source-manifest.json",
+      "manifestSha256": "5343e12c9a27ab2fd6f616dc13ed3a6e0c8589fe4ae570fc21c892fc0c1303f9",
+      "pointer": "/files/13",
+      "round": 50,
+      "path": "packages/desktop/src/renderer/components/ui/select.tsx",
+      "declaredCoverage": "hash-only",
+      "reason": "explicit-hash-navigation-instruction-only-not-reading"
+    },
+    {
+      "manifest": "docs/audit-2026-10-17-round50/evidence/frontier-selection/source-manifest.json",
+      "manifestSha256": "5343e12c9a27ab2fd6f616dc13ed3a6e0c8589fe4ae570fc21c892fc0c1303f9",
+      "pointer": "/files/14",
+      "round": 50,
+      "path": "packages/desktop/src/renderer/extensions/pluginPresentation.ts",
+      "declaredCoverage": "hash-only",
+      "reason": "explicit-hash-navigation-instruction-only-not-reading"
+    },
+    {
+      "manifest": "docs/audit-2026-10-17-round50/evidence/frontier-selection/source-manifest.json",
+      "manifestSha256": "5343e12c9a27ab2fd6f616dc13ed3a6e0c8589fe4ae570fc21c892fc0c1303f9",
+      "pointer": "/files/15",
+      "round": 50,
+      "path": "packages/desktop/src/renderer/messages/AgentMessageView.tsx",
+      "declaredCoverage": "hash-only",
+      "reason": "explicit-hash-navigation-instruction-only-not-reading"
+    },
+    {
+      "manifest": "docs/audit-2026-10-17-round50/evidence/frontier-selection/source-manifest.json",
+      "manifestSha256": "5343e12c9a27ab2fd6f616dc13ed3a6e0c8589fe4ae570fc21c892fc0c1303f9",
+      "pointer": "/files/16",
+      "round": 50,
+      "path": "packages/desktop/src/renderer/messages/ContextBoundaryView.tsx",
+      "declaredCoverage": "hash-only",
+      "reason": "explicit-hash-navigation-instruction-only-not-reading"
+    },
+    {
+      "manifest": "docs/audit-2026-10-17-round50/evidence/frontier-selection/source-manifest.json",
+      "manifestSha256": "5343e12c9a27ab2fd6f616dc13ed3a6e0c8589fe4ae570fc21c892fc0c1303f9",
+      "pointer": "/files/17",
+      "round": 50,
+      "path": "packages/desktop/src/renderer/messages/GoalProgressView.tsx",
+      "declaredCoverage": "hash-only",
+      "reason": "explicit-hash-navigation-instruction-only-not-reading"
+    },
+    {
+      "manifest": "docs/audit-2026-10-17-round50/evidence/frontier-selection/source-manifest.json",
+      "manifestSha256": "5343e12c9a27ab2fd6f616dc13ed3a6e0c8589fe4ae570fc21c892fc0c1303f9",
+      "pointer": "/files/18",
+      "round": 50,
+      "path": "packages/desktop/src/renderer/messages/StreamingMarkdown.tsx",
+      "declaredCoverage": "hash-only",
+      "reason": "explicit-hash-navigation-instruction-only-not-reading"
+    },
+    {
+      "manifest": "docs/audit-2026-10-17-round50/evidence/frontier-selection/source-manifest.json",
+      "manifestSha256": "5343e12c9a27ab2fd6f616dc13ed3a6e0c8589fe4ae570fc21c892fc0c1303f9",
+      "pointer": "/files/19",
+      "round": 50,
+      "path": "packages/desktop/src/renderer/messages/agentGroup.ts",
+      "declaredCoverage": "hash-only",
+      "reason": "explicit-hash-navigation-instruction-only-not-reading"
+    },
+    {
+      "manifest": "docs/audit-2026-10-17-round50/evidence/frontier-selection/source-manifest.json",
+      "manifestSha256": "5343e12c9a27ab2fd6f616dc13ed3a6e0c8589fe4ae570fc21c892fc0c1303f9",
+      "pointer": "/files/20",
+      "round": 50,
+      "path": "packages/desktop/src/renderer/messages/time.ts",
+      "declaredCoverage": "hash-only",
+      "reason": "explicit-hash-navigation-instruction-only-not-reading"
+    },
+    {
+      "manifest": "docs/audit-2026-10-17-round50/evidence/frontier-selection/source-manifest.json",
+      "manifestSha256": "5343e12c9a27ab2fd6f616dc13ed3a6e0c8589fe4ae570fc21c892fc0c1303f9",
+      "pointer": "/files/21",
+      "round": 50,
+      "path": "packages/desktop/src/renderer/settings/ParamControls.tsx",
+      "declaredCoverage": "hash-only",
+      "reason": "explicit-hash-navigation-instruction-only-not-reading"
+    },
+    {
+      "manifest": "docs/audit-2026-10-17-round50/evidence/frontier-selection/source-manifest.json",
+      "manifestSha256": "5343e12c9a27ab2fd6f616dc13ed3a6e0c8589fe4ae570fc21c892fc0c1303f9",
+      "pointer": "/files/22",
+      "round": 50,
+      "path": "packages/desktop/src/renderer/settings/ShortcutsSection.tsx",
+      "declaredCoverage": "hash-only",
+      "reason": "explicit-hash-navigation-instruction-only-not-reading"
+    },
+    {
+      "manifest": "docs/audit-2026-10-17-round50/evidence/frontier-selection/source-manifest.json",
+      "manifestSha256": "5343e12c9a27ab2fd6f616dc13ed3a6e0c8589fe4ae570fc21c892fc0c1303f9",
+      "pointer": "/files/23",
+      "round": 50,
+      "path": "packages/desktop/src/renderer/settings/ThemePackPreview.tsx",
+      "declaredCoverage": "hash-only",
+      "reason": "explicit-hash-navigation-instruction-only-not-reading"
+    },
+    {
+      "manifest": "docs/audit-2026-10-17-round50/evidence/frontier-selection/source-manifest.json",
+      "manifestSha256": "5343e12c9a27ab2fd6f616dc13ed3a6e0c8589fe4ae570fc21c892fc0c1303f9",
+      "pointer": "/files/24",
+      "round": 50,
+      "path": "packages/desktop/src/renderer/settings/SettingsMenu.tsx",
+      "declaredCoverage": "hash-only",
+      "reason": "explicit-hash-navigation-instruction-only-not-reading"
+    },
+    {
+      "manifest": "docs/audit-2026-10-17-round50/evidence/frontier-selection/source-manifest.json",
+      "manifestSha256": "5343e12c9a27ab2fd6f616dc13ed3a6e0c8589fe4ae570fc21c892fc0c1303f9",
+      "pointer": "/files/25",
+      "round": 50,
+      "path": "packages/desktop/src/renderer/settings/useSettingsNavigationFocus.ts",
+      "declaredCoverage": "hash-only",
+      "reason": "explicit-hash-navigation-instruction-only-not-reading"
+    },
+    {
+      "manifest": "docs/audit-2026-10-17-round50/evidence/frontier-selection/source-manifest.json",
+      "manifestSha256": "5343e12c9a27ab2fd6f616dc13ed3a6e0c8589fe4ae570fc21c892fc0c1303f9",
+      "pointer": "/files/26",
+      "round": 50,
+      "path": "packages/desktop/src/renderer/topbar/liveActivity.ts",
+      "declaredCoverage": "hash-only",
+      "reason": "explicit-hash-navigation-instruction-only-not-reading"
+    },
+    {
+      "manifest": "docs/audit-2026-10-17-round50/evidence/frontier-selection/source-manifest.json",
+      "manifestSha256": "5343e12c9a27ab2fd6f616dc13ed3a6e0c8589fe4ae570fc21c892fc0c1303f9",
+      "pointer": "/files/27",
+      "round": 50,
+      "path": "packages/desktop/src/renderer/theme.ts",
+      "declaredCoverage": "hash-only",
+      "reason": "explicit-hash-navigation-instruction-only-not-reading"
+    },
+    {
+      "manifest": "docs/audit-2026-10-17-round50/evidence/frontier-selection/source-manifest.json",
+      "manifestSha256": "5343e12c9a27ab2fd6f616dc13ed3a6e0c8589fe4ae570fc21c892fc0c1303f9",
+      "pointer": "/files/28",
+      "round": 50,
+      "path": "packages/desktop/src/renderer/theme-packs.ts",
+      "declaredCoverage": "hash-only",
+      "reason": "explicit-hash-navigation-instruction-only-not-reading"
+    },
+    {
+      "manifest": "docs/audit-2026-10-17-round50/evidence/frontier-selection/source-manifest.json",
+      "manifestSha256": "5343e12c9a27ab2fd6f616dc13ed3a6e0c8589fe4ae570fc21c892fc0c1303f9",
+      "pointer": "/files/29",
+      "round": 50,
+      "path": "packages/desktop/src/renderer/shell/CommandPalette.tsx",
+      "declaredCoverage": "hash-only",
+      "reason": "explicit-hash-navigation-instruction-only-not-reading"
+    },
+    {
+      "manifest": "docs/audit-2026-10-17-round51/evidence/context-boundary/source-manifest.json",
+      "manifestSha256": "630c202f4da7a451d90dbb10e55c4b8fc1a356e59ffa5e8b51ab7af90bf11d6b",
+      "pointer": "/files/3",
+      "round": 51,
+      "path": "packages/desktop/src/renderer/MessageStream.tsx",
+      "declaredCoverage": "selected",
+      "sourceSha256": "f74d19bddcdc48c0de2e63921ba598d733e2f1c3d58f68e7c8c0b32046ddbd4c",
+      "reason": "source-version-not-current-sha256",
+      "currentSha256": "b353994c6988952c08cbfee802b4e5e7101ac87b766e9588679814cf77cf6152"
+    },
+    {
+      "manifest": "docs/audit-2026-10-17-round51/evidence/context-boundary/source-manifest.json",
+      "manifestSha256": "630c202f4da7a451d90dbb10e55c4b8fc1a356e59ffa5e8b51ab7af90bf11d6b",
+      "pointer": "/files/4",
+      "round": 51,
+      "path": "packages/desktop/src/renderer/messages/TurnProcessGroupCard.tsx",
+      "declaredCoverage": "selected",
+      "sourceSha256": "d96ccf9fdd6d252cf6bb8e39a9fe74a3b55df401a92beadfe17f0816a4884128",
+      "reason": "source-version-not-current-sha256",
+      "currentSha256": "4522429b243871bd04ca01377e76106eacf7750a2d7600182d7b0742b0fc7b7b"
+    },
+    {
+      "manifest": "docs/audit-2026-10-17-round51/evidence/time-full-gate/source-manifest.json",
+      "manifestSha256": "db31a674354ce888e01caa09a1dbef81e3207b5f883650353b02d0408c11e5ce",
+      "pointer": "/files/0",
+      "round": 51,
+      "path": "packages/desktop/src/renderer/messages/time.ts",
+      "declaredCoverage": "hash-only",
+      "reason": "explicit-hash-navigation-instruction-only-not-reading"
+    },
+    {
+      "manifest": "docs/audit-2026-10-17-round51/evidence/time-full-gate/source-manifest.json",
+      "manifestSha256": "db31a674354ce888e01caa09a1dbef81e3207b5f883650353b02d0408c11e5ce",
+      "pointer": "/files/1",
+      "round": 51,
+      "path": "packages/desktop/src/renderer/messages/time.test.ts",
+      "declaredCoverage": "hash-only",
+      "reason": "explicit-hash-navigation-instruction-only-not-reading"
+    },
+    {
+      "manifest": "docs/audit-2026-10-17-round51/evidence/time-full-gate/source-manifest.json",
+      "manifestSha256": "db31a674354ce888e01caa09a1dbef81e3207b5f883650353b02d0408c11e5ce",
+      "pointer": "/files/2",
+      "round": 51,
+      "path": "packages/desktop/src/renderer/MessageStream.tsx",
+      "declaredCoverage": "hash-only",
+      "reason": "explicit-hash-navigation-instruction-only-not-reading"
+    },
+    {
+      "manifest": "docs/audit-2026-10-17-round51/evidence/time-full-gate/source-manifest.json",
+      "manifestSha256": "db31a674354ce888e01caa09a1dbef81e3207b5f883650353b02d0408c11e5ce",
+      "pointer": "/files/3",
+      "round": 51,
+      "path": "packages/desktop/src/renderer/messages/AssistantMessageView.tsx",
+      "declaredCoverage": "hash-only",
+      "reason": "explicit-hash-navigation-instruction-only-not-reading"
+    },
+    {
+      "manifest": "docs/audit-2026-10-17-round52/evidence/live-activity/source-manifest.json",
+      "manifestSha256": "997d9ee97d2350c4969fdbfdd439c32356c74ac930810b1d097ab94a82f5df7e",
+      "pointer": "/files/8",
+      "round": 52,
+      "path": "packages/desktop/src/renderer/MessageStream.tsx",
+      "declaredCoverage": "selected",
+      "sourceSha256": "f74d19bddcdc48c0de2e63921ba598d733e2f1c3d58f68e7c8c0b32046ddbd4c",
+      "reason": "source-version-not-current-sha256",
+      "currentSha256": "b353994c6988952c08cbfee802b4e5e7101ac87b766e9588679814cf77cf6152"
+    },
+    {
+      "manifest": "docs/audit-2026-10-17-round52/evidence/image-sizing-review/source-manifest.json",
+      "manifestSha256": "adf953e3d9ba903f596a1366b844054ad76d6dbaef26a0985e15573c1fd2eafe",
+      "pointer": "/files/0",
+      "round": 52,
+      "path": "packages/desktop/src/renderer/chat/compress.ts",
+      "declaredCoverage": "full",
+      "sourceSha256": "05ca45452af16298d425059a174f5673b3c855ba481ea514c167af6206028f50",
+      "reason": "source-version-not-current-sha256",
+      "currentSha256": "a5a4872f18dd0455dd8f50cccf89f97432b0a845011f876e350c97f71caf8446"
+    },
+    {
+      "manifest": "docs/audit-2026-10-17-round52/evidence/image-sizing-review/source-manifest.json",
+      "manifestSha256": "adf953e3d9ba903f596a1366b844054ad76d6dbaef26a0985e15573c1fd2eafe",
+      "pointer": "/files/4",
+      "round": 52,
+      "path": "packages/desktop/src/renderer/chat/compress.test.ts",
+      "declaredCoverage": "full",
+      "sourceSha256": "9ead09fa0889d3ec6fec907cb21d28db72738b7f65f921ccf8de727fd1796bd8",
+      "reason": "source-version-not-current-sha256",
+      "currentSha256": "ec175e769ea96c7d4aaca7a3fdf591f1bc8481f262f0144cb69a6b4674870f1a"
+    },
+    {
+      "manifest": "docs/audit-2026-10-17-round52/evidence/character-theme-gate/source-manifest.json",
+      "manifestSha256": "978441c2db6a51c8fd482205d4c55b7548d911d0cde4b0dd8abfbf0c969bf6e9",
+      "pointer": "/files/0",
+      "round": 52,
+      "path": "packages/desktop/src/renderer/builtin-character-themes.ts",
+      "declaredCoverage": "hash-only",
+      "reason": "explicit-hash-navigation-instruction-only-not-reading"
+    },
+    {
+      "manifest": "docs/audit-2026-10-17-round52/evidence/character-theme-gate/source-manifest.json",
+      "manifestSha256": "978441c2db6a51c8fd482205d4c55b7548d911d0cde4b0dd8abfbf0c969bf6e9",
+      "pointer": "/files/1",
+      "round": 52,
+      "path": "packages/desktop/src/renderer/theme-packs.ts",
+      "declaredCoverage": "hash-only",
+      "reason": "explicit-hash-navigation-instruction-only-not-reading"
+    },
+    {
+      "manifest": "docs/audit-2026-10-17-round52/evidence/root-image-compress/source-manifest.json",
+      "manifestSha256": "02bf05ec24671b93a1b49c55f63125cdd2896802b4dacdbca71e2196befc6ef5",
+      "pointer": "/files/0",
+      "round": 52,
+      "path": "packages/desktop/src/renderer/chat/compress.ts",
+      "declaredCoverage": "selected",
+      "sourceSha256": "05ca45452af16298d425059a174f5673b3c855ba481ea514c167af6206028f50",
+      "reason": "source-version-not-current-sha256",
+      "currentSha256": "a5a4872f18dd0455dd8f50cccf89f97432b0a845011f876e350c97f71caf8446"
+    },
+    {
+      "manifest": "docs/audit-2026-10-17-round52/evidence/root-image-compress/source-manifest.json",
+      "manifestSha256": "02bf05ec24671b93a1b49c55f63125cdd2896802b4dacdbca71e2196befc6ef5",
+      "pointer": "/files/3",
+      "round": 52,
+      "path": "packages/desktop/src/renderer/chat/compress.test.ts",
+      "declaredCoverage": "selected",
+      "sourceSha256": "9ead09fa0889d3ec6fec907cb21d28db72738b7f65f921ccf8de727fd1796bd8",
+      "reason": "source-version-not-current-sha256",
+      "currentSha256": "ec175e769ea96c7d4aaca7a3fdf591f1bc8481f262f0144cb69a6b4674870f1a"
+    },
+    {
+      "manifest": "docs/audit-2026-10-17-round56/evidence/network-diagnostics/source-manifest.json",
+      "manifestSha256": "b5442a8b9cbdbeab8e817969407c87292eb1974fe4d3a5eff96c2efa7a18bc0e",
+      "pointer": "/files/7",
+      "round": 56,
+      "path": "packages/browser-devtools/README.md",
+      "declaredCoverage": "selected",
+      "reason": "outside-original4643-denominator"
+    },
+    {
+      "manifest": "docs/audit-2026-10-17-round57/evidence/pet-closure-review/source-manifest.json",
+      "manifestSha256": "e69aa62d62dc78b0d3aa7680a42fffe7deb08e9e5836f5ce683e4db956dab550",
+      "pointer": "/files/24",
+      "round": 57,
+      "path": "packages/desktop/src/main/pet/pet-follow-up-service.ts",
+      "declaredCoverage": "hash-only-this-packet",
+      "reason": "explicit-hash-navigation-instruction-only-not-reading"
+    },
+    {
+      "manifest": "docs/audit-2026-10-17-round57/evidence/pet-closure-review/source-manifest.json",
+      "manifestSha256": "e69aa62d62dc78b0d3aa7680a42fffe7deb08e9e5836f5ce683e4db956dab550",
+      "pointer": "/files/25",
+      "round": 57,
+      "path": "CODESHELL.md",
+      "declaredCoverage": "instruction-read-full-this-packet",
+      "reason": "outside-original4643-denominator"
+    },
+    {
+      "manifest": "docs/audit-2026-10-17-round57/evidence/pet-closure-review/source-manifest.json",
+      "manifestSha256": "e69aa62d62dc78b0d3aa7680a42fffe7deb08e9e5836f5ce683e4db956dab550",
+      "pointer": "/files/26",
+      "round": 57,
+      "path": "AGENTS.md",
+      "declaredCoverage": "hash-only-this-packet",
+      "reason": "outside-original4643-denominator"
+    },
+    {
+      "manifest": "docs/audit-2026-10-17-round57/evidence/mobile-path-review/source-manifest.json",
+      "manifestSha256": "fada57568381e16aef70d293fd8145666dc4ab9e40f5c12297fc216fb3cd8d0a",
+      "pointer": "/files/3",
+      "round": 57,
+      "path": "packages/desktop/src/mobile/index.html",
+      "declaredCoverage": "selected",
+      "reason": "outside-original4643-denominator"
+    },
+    {
+      "manifest": "docs/audit-2026-10-17-round57/evidence/mobile-path-review/source-manifest.json",
+      "manifestSha256": "fada57568381e16aef70d293fd8145666dc4ab9e40f5c12297fc216fb3cd8d0a",
+      "pointer": "/files/5",
+      "round": 57,
+      "path": "packages/web/app/public/manifest.webmanifest",
+      "declaredCoverage": "selected",
+      "reason": "outside-original4643-denominator"
+    },
+    {
+      "manifest": "docs/audit-2026-10-17-round57/evidence/mobile-path-review/source-manifest.json",
+      "manifestSha256": "fada57568381e16aef70d293fd8145666dc4ab9e40f5c12297fc216fb3cd8d0a",
+      "pointer": "/files/6",
+      "round": 57,
+      "path": "packages/web/app/public/sw.js",
+      "declaredCoverage": "selected",
+      "reason": "outside-original4643-denominator"
+    },
+    {
+      "manifest": "docs/audit-2026-10-17-round57/evidence/root-static-files/source-manifest.json",
+      "manifestSha256": "189191f57b6356f585885a08b6db7ff5b38553edca6293b25a25e9ed49d2e3db",
+      "pointer": "/files/7",
+      "round": 57,
+      "path": "scripts/run-bun-test-shard.mjs",
+      "declaredCoverage": "full-finite-runner",
+      "reason": "outside-original4643-denominator"
+    },
+    {
+      "manifest": "docs/audit-2026-10-17-round57/evidence/root-static-files/source-manifest.json",
+      "manifestSha256": "189191f57b6356f585885a08b6db7ff5b38553edca6293b25a25e9ed49d2e3db",
+      "pointer": "/files/8",
+      "round": 57,
+      "path": "scripts/bun-test-completion.mjs",
+      "declaredCoverage": "full-finite-runner",
+      "reason": "outside-original4643-denominator"
+    },
+    {
+      "manifest": "docs/audit-2026-10-17-round57/evidence/root-static-files/source-manifest.json",
+      "manifestSha256": "189191f57b6356f585885a08b6db7ff5b38553edca6293b25a25e9ed49d2e3db",
+      "pointer": "/files/9",
+      "round": 57,
+      "path": "bunfig.toml",
+      "declaredCoverage": "full-finite-config",
+      "reason": "outside-original4643-denominator"
+    },
+    {
+      "manifest": "docs/audit-2026-10-17-round57/evidence/session-titles/source-manifest.json",
+      "manifestSha256": "bb686df4a25de2df6851224f2e343e30309a91c3cda0a120a29e29eb11ae08e8",
+      "pointer": "/files/9",
+      "round": 57,
+      "path": "CODESHELL.md",
+      "declaredCoverage": "hash-only-this-packet; prior full instruction read reused",
+      "reason": "outside-original4643-denominator"
+    },
+    {
+      "manifest": "docs/audit-2026-10-17-round57/evidence/session-titles/source-manifest.json",
+      "manifestSha256": "bb686df4a25de2df6851224f2e343e30309a91c3cda0a120a29e29eb11ae08e8",
+      "pointer": "/files/10",
+      "round": 57,
+      "path": "AGENTS.md",
+      "declaredCoverage": "hash-only-this-packet; prior full instruction read reused",
+      "reason": "outside-original4643-denominator"
+    },
+    {
+      "manifest": "docs/audit-2026-10-17-round58/evidence/web-storage/source-manifest.json",
+      "manifestSha256": "5d2e951f21b60ec40dc3712cfe7e0d8fec786dec6bb56890d7f972ebe226c5f9",
+      "pointer": "/files/7",
+      "round": 58,
+      "path": "packages/web/app/WebsiteShell.tsx",
+      "declaredCoverage": "navigation-only; semantic0",
+      "reason": "explicit-hash-navigation-instruction-only-not-reading"
+    },
+    {
+      "manifest": "docs/audit-2026-10-17-round58/evidence/web-storage/source-manifest.json",
+      "manifestSha256": "5d2e951f21b60ec40dc3712cfe7e0d8fec786dec6bb56890d7f972ebe226c5f9",
+      "pointer": "/files/15",
+      "round": 58,
+      "path": "CODESHELL.md",
+      "declaredCoverage": "hash-only-this-packet; same-SHA prior instruction read reused",
+      "reason": "outside-original4643-denominator"
+    },
+    {
+      "manifest": "docs/audit-2026-10-17-round58/evidence/web-storage/source-manifest.json",
+      "manifestSha256": "5d2e951f21b60ec40dc3712cfe7e0d8fec786dec6bb56890d7f972ebe226c5f9",
+      "pointer": "/files/16",
+      "round": 58,
+      "path": "AGENTS.md",
+      "declaredCoverage": "hash-only-this-packet; same-SHA prior instruction read reused",
+      "reason": "outside-original4643-denominator"
+    },
+    {
+      "manifest": "docs/audit-2026-10-17-round58/evidence/delivery-shutdown-review/source-manifest.json",
+      "manifestSha256": "1ddd863456ca42f2d886f10021582461572ef0d294e25ea3d3594da2b0963769",
+      "pointer": "/files/9",
+      "round": 58,
+      "path": "CODESHELL.md",
+      "declaredCoverage": "hash-only-this-packet; same-SHA prior instruction read reused",
+      "reason": "outside-original4643-denominator"
+    },
+    {
+      "manifest": "docs/audit-2026-10-17-round58/evidence/delivery-shutdown-review/source-manifest.json",
+      "manifestSha256": "1ddd863456ca42f2d886f10021582461572ef0d294e25ea3d3594da2b0963769",
+      "pointer": "/files/10",
+      "round": 58,
+      "path": "AGENTS.md",
+      "declaredCoverage": "hash-only-this-packet; same-SHA prior instruction read reused",
+      "reason": "outside-original4643-denominator"
+    },
+    {
+      "manifest": "docs/audit-2026-10-17-round58/evidence/relay-stream/source-manifest.json",
+      "manifestSha256": "9a6fefeb0256efae8cd903fbc52d85deab56e72527204b44c33a603ffc41aedf",
+      "pointer": "/files/4",
+      "round": 58,
+      "path": "docs/device-relay.md",
+      "declaredCoverage": "selected",
+      "reason": "outside-original4643-denominator"
+    },
+    {
+      "manifest": "docs/audit-2026-10-17-round58/evidence/relay-stream/source-manifest.json",
+      "manifestSha256": "9a6fefeb0256efae8cd903fbc52d85deab56e72527204b44c33a603ffc41aedf",
+      "pointer": "/files/5",
+      "round": 58,
+      "path": "tests/fixtures/device-relay/runner.mjs",
+      "declaredCoverage": "selected",
+      "reason": "outside-original4643-denominator"
+    },
+    {
+      "manifest": "docs/audit-2026-10-17-round58/evidence/relay-stream/source-manifest.json",
+      "manifestSha256": "9a6fefeb0256efae8cd903fbc52d85deab56e72527204b44c33a603ffc41aedf",
+      "pointer": "/files/6",
+      "round": 58,
+      "path": "tests/fixtures/device-relay/byte-stream.mjs",
+      "declaredCoverage": "selected",
+      "reason": "outside-original4643-denominator"
+    },
+    {
+      "manifest": "docs/audit-2026-10-17-round59/evidence/session-fork/source-manifest.json",
+      "manifestSha256": "5017fdad034f01042f4f6195459ab4d959556eee5391c5add16b1a125387b93b",
+      "pointer": "/files/7",
+      "round": 59,
+      "path": "packages/core/src/protocol/server.fork.test.ts",
+      "declaredCoverage": "navigation-only;semantic0;body0",
+      "reason": "explicit-hash-navigation-instruction-only-not-reading"
+    },
+    {
+      "manifest": "docs/audit-2026-10-17-round59/evidence/session-fork/source-manifest.json",
+      "manifestSha256": "5017fdad034f01042f4f6195459ab4d959556eee5391c5add16b1a125387b93b",
+      "pointer": "/files/8",
+      "round": 59,
+      "path": "packages/core/src/engine/engine.session-fork-history.test.ts",
+      "declaredCoverage": "navigation-only;semantic0;body0",
+      "reason": "explicit-hash-navigation-instruction-only-not-reading"
+    },
+    {
+      "manifest": "docs/audit-2026-10-17-round59/evidence/session-fork/source-manifest.json",
+      "manifestSha256": "5017fdad034f01042f4f6195459ab4d959556eee5391c5add16b1a125387b93b",
+      "pointer": "/files/9",
+      "round": 59,
+      "path": "CODESHELL.md",
+      "declaredCoverage": "hash-only-this-packet; sameSHA prior full instructions reused",
+      "reason": "outside-original4643-denominator"
+    },
+    {
+      "manifest": "docs/audit-2026-10-17-round59/evidence/session-fork/source-manifest.json",
+      "manifestSha256": "5017fdad034f01042f4f6195459ab4d959556eee5391c5add16b1a125387b93b",
+      "pointer": "/files/10",
+      "round": 59,
+      "path": "AGENTS.md",
+      "declaredCoverage": "hash-only-this-packet; sameSHA prior full instructions reused",
+      "reason": "outside-original4643-denominator"
+    },
+    {
+      "manifest": "docs/audit-2026-10-17-round60/evidence/build-meta/source-manifest.json",
+      "manifestSha256": "c705fc3b1fa910ab6a6fb281fe7fc6b6756d6e7e9619bb4ca991dbb3c61c2685",
+      "pointer": "/files/1",
+      "round": 60,
+      "path": "package.json",
+      "declaredCoverage": "selected-json-values",
+      "reason": "outside-original4643-denominator"
+    },
+    {
+      "manifest": "docs/audit-2026-10-17-round60/evidence/build-meta/source-manifest.json",
+      "manifestSha256": "c705fc3b1fa910ab6a6fb281fe7fc6b6756d6e7e9619bb4ca991dbb3c61c2685",
+      "pointer": "/files/2",
+      "round": 60,
+      "path": "packages/core/package.json",
+      "declaredCoverage": "selected-json-values",
+      "reason": "outside-original4643-denominator"
+    },
+    {
+      "manifest": "docs/audit-2026-10-17-round60/evidence/build-meta/source-manifest.json",
+      "manifestSha256": "c705fc3b1fa910ab6a6fb281fe7fc6b6756d6e7e9619bb4ca991dbb3c61c2685",
+      "pointer": "/files/3",
+      "round": 60,
+      "path": "packages/tui/package.json",
+      "declaredCoverage": "selected-json-values",
+      "reason": "outside-original4643-denominator"
+    },
+    {
+      "manifest": "docs/audit-2026-10-17-round60/evidence/build-meta/source-manifest.json",
+      "manifestSha256": "c705fc3b1fa910ab6a6fb281fe7fc6b6756d6e7e9619bb4ca991dbb3c61c2685",
+      "pointer": "/files/4",
+      "round": 60,
+      "path": "packages/core/tsconfig.json",
+      "declaredCoverage": "full",
+      "reason": "outside-original4643-denominator"
+    },
+    {
+      "manifest": "docs/audit-2026-10-17-round60/evidence/build-meta/source-manifest.json",
+      "manifestSha256": "c705fc3b1fa910ab6a6fb281fe7fc6b6756d6e7e9619bb4ca991dbb3c61c2685",
+      "pointer": "/files/5",
+      "round": 60,
+      "path": "packages/tui/tsconfig.json",
+      "declaredCoverage": "full",
+      "reason": "outside-original4643-denominator"
+    },
+    {
+      "manifest": "docs/audit-2026-10-17-round60/evidence/copy-assets/source-manifest.json",
+      "manifestSha256": "49de95dd79539621fafb016f8d52a60200ad90f52a110fedc3d6f3f87dc6c808",
+      "pointer": "/files/0",
+      "round": 60,
+      "path": "scripts/copy-assets.mjs",
+      "declaredCoverage": "full",
+      "reason": "outside-original4643-denominator"
+    },
+    {
+      "manifest": "docs/audit-2026-10-17-round60/evidence/root-release-audit-config/source-manifest.json",
+      "manifestSha256": "ded50793541f5f47edf2b8aaff6edf545f94a9c3311881102f9437c16add4eca",
+      "pointer": "/files/3",
+      "round": 60,
+      "path": "package.json",
+      "declaredCoverage": "selected-metadata",
+      "reason": "outside-original4643-denominator"
+    },
+    {
+      "manifest": "docs/audit-2026-10-17-round60/evidence/root-release-audit-config/source-manifest.json",
+      "manifestSha256": "ded50793541f5f47edf2b8aaff6edf545f94a9c3311881102f9437c16add4eca",
+      "pointer": "/files/4",
+      "round": 60,
+      "path": "packages/core/package.json",
+      "declaredCoverage": "selected-metadata",
+      "reason": "outside-original4643-denominator"
+    },
+    {
+      "manifest": "docs/audit-2026-10-17-round60/evidence/root-release-audit-config/source-manifest.json",
+      "manifestSha256": "ded50793541f5f47edf2b8aaff6edf545f94a9c3311881102f9437c16add4eca",
+      "pointer": "/files/5",
+      "round": 60,
+      "path": "packages/web/package.json",
+      "declaredCoverage": "selected-metadata",
+      "reason": "outside-original4643-denominator"
+    },
+    {
+      "manifest": "docs/audit-2026-10-17-round60/evidence/release-versions/source-manifest.json",
+      "manifestSha256": "2a75d840cb0b3f6aa7be297e8a293f82301059d5dc8d5976bad53a2f221f83b6",
+      "pointer": "/files/0",
+      "round": 60,
+      "path": "CODESHELL.md",
+      "declaredCoverage": "hash-only",
+      "reason": "outside-original4643-denominator"
+    },
+    {
+      "manifest": "docs/audit-2026-10-17-round60/evidence/release-versions/source-manifest.json",
+      "manifestSha256": "2a75d840cb0b3f6aa7be297e8a293f82301059d5dc8d5976bad53a2f221f83b6",
+      "pointer": "/files/1",
+      "round": 60,
+      "path": "AGENTS.md",
+      "declaredCoverage": "hash-only",
+      "reason": "outside-original4643-denominator"
+    },
+    {
+      "manifest": "docs/audit-2026-10-17-round60/evidence/release-versions/source-manifest.json",
+      "manifestSha256": "2a75d840cb0b3f6aa7be297e8a293f82301059d5dc8d5976bad53a2f221f83b6",
+      "pointer": "/files/3",
+      "round": 60,
+      "path": "package.json",
+      "declaredCoverage": "selected",
+      "reason": "outside-original4643-denominator"
+    },
+    {
+      "manifest": "docs/audit-2026-10-17-round60/evidence/release-versions/source-manifest.json",
+      "manifestSha256": "2a75d840cb0b3f6aa7be297e8a293f82301059d5dc8d5976bad53a2f221f83b6",
+      "pointer": "/files/7",
+      "round": 60,
+      "path": ".github/workflows/release.yml",
+      "declaredCoverage": "selected",
+      "reason": "outside-original4643-denominator"
+    },
+    {
+      "manifest": "docs/audit-2026-10-17-round60/evidence/release-versions/source-manifest.json",
+      "manifestSha256": "2a75d840cb0b3f6aa7be297e8a293f82301059d5dc8d5976bad53a2f221f83b6",
+      "pointer": "/files/8",
+      "round": 60,
+      "path": ".github/workflows/release-recovery.yml",
+      "declaredCoverage": "selected",
+      "reason": "outside-original4643-denominator"
+    },
+    {
+      "manifest": "docs/audit-2026-10-17-round60/evidence/release-versions/source-manifest.json",
+      "manifestSha256": "2a75d840cb0b3f6aa7be297e8a293f82301059d5dc8d5976bad53a2f221f83b6",
+      "pointer": "/files/10",
+      "round": 60,
+      "path": "bun.lock",
+      "declaredCoverage": "selected",
+      "reason": "outside-original4643-denominator"
+    },
+    {
+      "manifest": "docs/audit-2026-10-17-round60/evidence/release-versions/source-manifest.json",
+      "manifestSha256": "2a75d840cb0b3f6aa7be297e8a293f82301059d5dc8d5976bad53a2f221f83b6",
+      "pointer": "/files/12",
+      "round": 60,
+      "path": "packages/arena/package.json",
+      "declaredCoverage": "selected",
+      "reason": "outside-original4643-denominator"
+    },
+    {
+      "manifest": "docs/audit-2026-10-17-round60/evidence/release-versions/source-manifest.json",
+      "manifestSha256": "2a75d840cb0b3f6aa7be297e8a293f82301059d5dc8d5976bad53a2f221f83b6",
+      "pointer": "/files/13",
+      "round": 60,
+      "path": "packages/browser-devtools/package.json",
+      "declaredCoverage": "selected",
+      "reason": "outside-original4643-denominator"
+    },
+    {
+      "manifest": "docs/audit-2026-10-17-round60/evidence/release-versions/source-manifest.json",
+      "manifestSha256": "2a75d840cb0b3f6aa7be297e8a293f82301059d5dc8d5976bad53a2f221f83b6",
+      "pointer": "/files/14",
+      "round": 60,
+      "path": "packages/cdp/package.json",
+      "declaredCoverage": "selected",
+      "reason": "outside-original4643-denominator"
+    },
+    {
+      "manifest": "docs/audit-2026-10-17-round60/evidence/release-versions/source-manifest.json",
+      "manifestSha256": "2a75d840cb0b3f6aa7be297e8a293f82301059d5dc8d5976bad53a2f221f83b6",
+      "pointer": "/files/15",
+      "round": 60,
+      "path": "packages/chat/package.json",
+      "declaredCoverage": "selected",
+      "reason": "outside-original4643-denominator"
+    },
+    {
+      "manifest": "docs/audit-2026-10-17-round60/evidence/release-versions/source-manifest.json",
+      "manifestSha256": "2a75d840cb0b3f6aa7be297e8a293f82301059d5dc8d5976bad53a2f221f83b6",
+      "pointer": "/files/16",
+      "round": 60,
+      "path": "packages/coding/package.json",
+      "declaredCoverage": "selected",
+      "reason": "outside-original4643-denominator"
+    },
+    {
+      "manifest": "docs/audit-2026-10-17-round60/evidence/release-versions/source-manifest.json",
+      "manifestSha256": "2a75d840cb0b3f6aa7be297e8a293f82301059d5dc8d5976bad53a2f221f83b6",
+      "pointer": "/files/17",
+      "round": 60,
+      "path": "packages/core/package.json",
+      "declaredCoverage": "selected",
+      "reason": "outside-original4643-denominator"
+    },
+    {
+      "manifest": "docs/audit-2026-10-17-round60/evidence/release-versions/source-manifest.json",
+      "manifestSha256": "2a75d840cb0b3f6aa7be297e8a293f82301059d5dc8d5976bad53a2f221f83b6",
+      "pointer": "/files/18",
+      "round": 60,
+      "path": "packages/desktop/package.json",
+      "declaredCoverage": "selected",
+      "reason": "outside-original4643-denominator"
+    },
+    {
+      "manifest": "docs/audit-2026-10-17-round60/evidence/release-versions/source-manifest.json",
+      "manifestSha256": "2a75d840cb0b3f6aa7be297e8a293f82301059d5dc8d5976bad53a2f221f83b6",
+      "pointer": "/files/19",
+      "round": 60,
+      "path": "packages/host/package.json",
+      "declaredCoverage": "selected",
+      "reason": "outside-original4643-denominator"
+    },
+    {
+      "manifest": "docs/audit-2026-10-17-round60/evidence/release-versions/source-manifest.json",
+      "manifestSha256": "2a75d840cb0b3f6aa7be297e8a293f82301059d5dc8d5976bad53a2f221f83b6",
+      "pointer": "/files/20",
+      "round": 60,
+      "path": "packages/link/package.json",
+      "declaredCoverage": "selected",
+      "reason": "outside-original4643-denominator"
+    },
+    {
+      "manifest": "docs/audit-2026-10-17-round60/evidence/release-versions/source-manifest.json",
+      "manifestSha256": "2a75d840cb0b3f6aa7be297e8a293f82301059d5dc8d5976bad53a2f221f83b6",
+      "pointer": "/files/21",
+      "round": 60,
+      "path": "packages/optimization-lab/package.json",
+      "declaredCoverage": "selected",
+      "reason": "outside-original4643-denominator"
+    },
+    {
+      "manifest": "docs/audit-2026-10-17-round60/evidence/release-versions/source-manifest.json",
+      "manifestSha256": "2a75d840cb0b3f6aa7be297e8a293f82301059d5dc8d5976bad53a2f221f83b6",
+      "pointer": "/files/22",
+      "round": 60,
+      "path": "packages/pet/package.json",
+      "declaredCoverage": "selected",
+      "reason": "outside-original4643-denominator"
+    },
+    {
+      "manifest": "docs/audit-2026-10-17-round60/evidence/release-versions/source-manifest.json",
+      "manifestSha256": "2a75d840cb0b3f6aa7be297e8a293f82301059d5dc8d5976bad53a2f221f83b6",
+      "pointer": "/files/23",
+      "round": 60,
+      "path": "packages/server/package.json",
+      "declaredCoverage": "selected",
+      "reason": "outside-original4643-denominator"
+    },
+    {
+      "manifest": "docs/audit-2026-10-17-round60/evidence/release-versions/source-manifest.json",
+      "manifestSha256": "2a75d840cb0b3f6aa7be297e8a293f82301059d5dc8d5976bad53a2f221f83b6",
+      "pointer": "/files/24",
+      "round": 60,
+      "path": "packages/tui/package.json",
+      "declaredCoverage": "selected",
+      "reason": "outside-original4643-denominator"
+    },
+    {
+      "manifest": "docs/audit-2026-10-17-round60/evidence/release-versions/source-manifest.json",
+      "manifestSha256": "2a75d840cb0b3f6aa7be297e8a293f82301059d5dc8d5976bad53a2f221f83b6",
+      "pointer": "/files/25",
+      "round": 60,
+      "path": "packages/web/package.json",
+      "declaredCoverage": "selected",
+      "reason": "outside-original4643-denominator"
+    }
+  ],
+  "deferred": [],
+  "documentDecisions": [
+    {
+      "path": "docs/audit-2026-10-17-round46/source-manifest.json",
+      "reason": "aggregate-source-byte-bindings-without-per-row-semantic-coverage-not-new-reading"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round46/evidence/panel-review/source-manifest.json",
+      "reason": "primary-standard-semantic-files-list-inspected",
+      "rows": 2
+    },
+    {
+      "path": "docs/audit-2026-10-17-round46/evidence/prior-scope-gate/source-manifest.json",
+      "reason": "empty-semantic-files-no-gate-replay-upgrade"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round46/evidence/tool-card-review/source-manifest.json",
+      "reason": "primary-standard-semantic-files-list-inspected",
+      "rows": 8
+    },
+    {
+      "path": "docs/audit-2026-10-17-round46/evidence/panel-frontier/source-manifest.json",
+      "reason": "primary-standard-semantic-files-list-inspected",
+      "rows": 6
+    },
+    {
+      "path": "docs/audit-2026-10-17-round46/evidence/tool-card-frontier/source-manifest.json",
+      "reason": "primary-standard-semantic-files-list-inspected",
+      "rows": 8
+    },
+    {
+      "path": "docs/audit-2026-10-17-round47/source-manifest.json",
+      "reason": "aggregate-source-byte-bindings-without-per-row-semantic-coverage-not-new-reading"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round47/evidence/coverage-adapter/source-manifest.json",
+      "reason": "empty-semantic-files-no-gate-replay-upgrade"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round47/evidence/web-message-frontier/source-manifest.json",
+      "reason": "primary-standard-semantic-files-list-inspected",
+      "rows": 7
+    },
+    {
+      "path": "docs/audit-2026-10-17-round48/source-manifest.json",
+      "reason": "aggregate-source-byte-bindings-without-per-row-semantic-coverage-not-new-reading"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round48/evidence/chat-adapter-frontier/source-manifest.json",
+      "reason": "primary-standard-semantic-files-list-inspected",
+      "rows": 5
+    },
+    {
+      "path": "docs/audit-2026-10-17-round48/evidence/cost-context-frontier/source-manifest.json",
+      "reason": "primary-standard-semantic-files-list-inspected",
+      "rows": 8
+    },
+    {
+      "path": "docs/audit-2026-10-17-round48/evidence/root-elapsed-review/source-manifest.json",
+      "reason": "primary-standard-semantic-files-list-inspected",
+      "rows": 10
+    },
+    {
+      "path": "docs/audit-2026-10-17-round48/evidence/session-title-frontier/source-manifest.json",
+      "reason": "primary-standard-semantic-files-list-inspected",
+      "rows": 5
+    },
+    {
+      "path": "docs/audit-2026-10-17-round48/evidence/elapsed-frontier/source-manifest.json",
+      "reason": "primary-standard-semantic-files-list-inspected",
+      "rows": 5
+    },
+    {
+      "path": "docs/audit-2026-10-17-round48/evidence/cost-context-review/source-manifest.json",
+      "reason": "primary-standard-semantic-files-list-inspected",
+      "rows": 7
+    },
+    {
+      "path": "docs/audit-2026-10-17-round48/evidence/elapsed-review/source-manifest.json",
+      "reason": "primary-standard-semantic-files-list-inspected",
+      "rows": 8
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/source-manifest.json",
+      "reason": "aggregate-source-byte-bindings-without-per-row-semantic-coverage-not-new-reading"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/model-display-gate/source-manifest.json",
+      "reason": "primary-standard-semantic-files-list-inspected",
+      "rows": 4
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/root-summary-review/source-manifest.json",
+      "reason": "primary-standard-semantic-files-list-inspected",
+      "rows": 7
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/complete-gate-review/source-manifest.json",
+      "reason": "empty-semantic-files-no-gate-replay-upgrade"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/web-format-gate/source-manifest.json",
+      "reason": "empty-semantic-files-no-gate-replay-upgrade"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/agent-definition-gate/source-manifest.json",
+      "reason": "empty-semantic-files-no-gate-replay-upgrade"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/title-gate/source-manifest.json",
+      "reason": "empty-semantic-files-no-gate-replay-upgrade"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/latest-message-frontier/source-manifest.json",
+      "reason": "primary-standard-semantic-files-list-inspected",
+      "rows": 6
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/session-usage-gate/source-manifest.json",
+      "reason": "empty-semantic-files-no-gate-replay-upgrade"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/cost-review/source-manifest.json",
+      "reason": "primary-standard-semantic-files-list-inspected",
+      "rows": 7
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/root-cost-review/source-manifest.json",
+      "reason": "primary-standard-semantic-files-list-inspected",
+      "rows": 6
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/preset-review/source-manifest.json",
+      "reason": "primary-standard-semantic-files-list-inspected",
+      "rows": 9
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/trace-history-frontier/source-manifest.json",
+      "reason": "primary-standard-semantic-files-list-inspected",
+      "rows": 5
+    },
+    {
+      "path": "docs/audit-2026-10-17-round50/source-manifest.json",
+      "reason": "aggregate-source-byte-bindings-without-per-row-semantic-coverage-not-new-reading"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round50/evidence/param-controls/source-manifest.json",
+      "reason": "primary-standard-semantic-files-list-inspected",
+      "rows": 16
+    },
+    {
+      "path": "docs/audit-2026-10-17-round50/evidence/goal-progress/source-manifest.json",
+      "reason": "primary-standard-semantic-files-list-inspected",
+      "rows": 13
+    },
+    {
+      "path": "docs/audit-2026-10-17-round50/evidence/composer-suggestions/source-manifest.json",
+      "reason": "primary-standard-semantic-files-list-inspected",
+      "rows": 3
+    },
+    {
+      "path": "docs/audit-2026-10-17-round50/evidence/packet-review/source-manifest.json",
+      "reason": "empty-semantic-files-no-gate-replay-upgrade"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round50/evidence/root-scroll-review/source-manifest.json",
+      "reason": "primary-standard-semantic-files-list-inspected",
+      "rows": 3
+    },
+    {
+      "path": "docs/audit-2026-10-17-round50/evidence/plugin-presentation/source-manifest.json",
+      "reason": "primary-standard-semantic-files-list-inspected",
+      "rows": 4
+    },
+    {
+      "path": "docs/audit-2026-10-17-round50/evidence/goal-extend-review/source-manifest.json",
+      "reason": "primary-standard-semantic-files-list-inspected",
+      "rows": 13
+    },
+    {
+      "path": "docs/audit-2026-10-17-round50/evidence/scroll-review/source-manifest.json",
+      "reason": "primary-standard-semantic-files-list-inspected",
+      "rows": 3
+    },
+    {
+      "path": "docs/audit-2026-10-17-round50/evidence/frontier-selection/source-manifest.json",
+      "reason": "primary-standard-semantic-files-list-inspected",
+      "rows": 30
+    },
+    {
+      "path": "docs/audit-2026-10-17-round50/evidence/trace-query-review/source-manifest.json",
+      "reason": "primary-standard-semantic-files-list-inspected",
+      "rows": 6
+    },
+    {
+      "path": "docs/audit-2026-10-17-round51/source-manifest.json",
+      "reason": "aggregate-source-byte-bindings-without-per-row-semantic-coverage-not-new-reading"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round51/evidence/context-boundary/source-manifest.json",
+      "reason": "primary-standard-semantic-files-list-inspected",
+      "rows": 7
+    },
+    {
+      "path": "docs/audit-2026-10-17-round51/evidence/time-gate-review/source-manifest.json",
+      "reason": "empty-semantic-files-no-gate-replay-upgrade"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round51/evidence/time-gate-review/source-manifest.first.json",
+      "reason": "inactive-first-or-concurrent-refresh-snapshot-not-a-second-reading"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round51/evidence/shortcuts-reference/source-manifest.json",
+      "reason": "primary-standard-semantic-files-list-inspected",
+      "rows": 7
+    },
+    {
+      "path": "docs/audit-2026-10-17-round51/evidence/root-panel-resize/source-manifest.json",
+      "reason": "primary-standard-semantic-files-list-inspected",
+      "rows": 5
+    },
+    {
+      "path": "docs/audit-2026-10-17-round51/evidence/time-full-gate/source-manifest.json",
+      "reason": "primary-standard-semantic-files-list-inspected",
+      "rows": 4
+    },
+    {
+      "path": "docs/audit-2026-10-17-round51/evidence/context-ring/source-manifest.json",
+      "reason": "primary-standard-semantic-files-list-inspected",
+      "rows": 5
+    },
+    {
+      "path": "docs/audit-2026-10-17-round52/source-manifest.json",
+      "reason": "aggregate-source-byte-bindings-without-per-row-semantic-coverage-not-new-reading"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round52/evidence/theme-preview/source-manifest.json",
+      "reason": "primary-standard-semantic-files-list-inspected",
+      "rows": 4
+    },
+    {
+      "path": "docs/audit-2026-10-17-round52/evidence/live-activity/source-manifest.json",
+      "reason": "primary-standard-semantic-files-list-inspected",
+      "rows": 10
+    },
+    {
+      "path": "docs/audit-2026-10-17-round52/evidence/coverage-status/source-manifest.json",
+      "reason": "empty-semantic-files-no-gate-replay-upgrade"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round52/evidence/image-sizing-review/source-manifest.json",
+      "reason": "primary-standard-semantic-files-list-inspected",
+      "rows": 5
+    },
+    {
+      "path": "docs/audit-2026-10-17-round52/evidence/character-theme-gate/source-manifest.json",
+      "reason": "primary-standard-semantic-files-list-inspected",
+      "rows": 2
+    },
+    {
+      "path": "docs/audit-2026-10-17-round52/evidence/root-image-compress/source-manifest.json",
+      "reason": "primary-standard-semantic-files-list-inspected",
+      "rows": 4
+    },
+    {
+      "path": "docs/audit-2026-10-17-round53/source-manifest.json",
+      "reason": "aggregate-source-byte-bindings-without-per-row-semantic-coverage-not-new-reading"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round53/evidence/root-task-parse-gate/source-manifest.json",
+      "reason": "empty-semantic-files-no-gate-replay-upgrade"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round53/evidence/root-windows-contract/source-manifest.json",
+      "reason": "primary-standard-semantic-files-list-inspected",
+      "rows": 1
+    },
+    {
+      "path": "docs/audit-2026-10-17-round53/evidence/web-format-gate/source-manifest.json",
+      "reason": "empty-semantic-files-no-gate-replay-upgrade"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round53/evidence/trace-history/source-manifest.json",
+      "reason": "primary-standard-semantic-files-list-inspected",
+      "rows": 5
+    },
+    {
+      "path": "docs/audit-2026-10-17-round53/evidence/root-tool-display/source-manifest.json",
+      "reason": "primary-standard-semantic-files-list-inspected",
+      "rows": 4
+    },
+    {
+      "path": "docs/audit-2026-10-17-round53/evidence/cache-data/source-manifest.json",
+      "reason": "primary-standard-semantic-files-list-inspected",
+      "rows": 2
+    },
+    {
+      "path": "docs/audit-2026-10-17-round53/evidence/windows-path-review/source-manifest.json",
+      "reason": "primary-standard-semantic-files-list-inspected",
+      "rows": 4
+    },
+    {
+      "path": "docs/audit-2026-10-17-round53/evidence/glob-summary-review/source-manifest.json",
+      "reason": "primary-standard-semantic-files-list-inspected",
+      "rows": 11
+    },
+    {
+      "path": "docs/audit-2026-10-17-round54/source-manifest.json",
+      "reason": "aggregate-source-byte-bindings-without-per-row-semantic-coverage-not-new-reading"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round54/evidence/web-coverage-gate/source-manifest.json",
+      "reason": "empty-semantic-files-no-gate-replay-upgrade"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round54/evidence/link-contracts/source-manifest.json",
+      "reason": "primary-standard-semantic-files-list-inspected",
+      "rows": 8
+    },
+    {
+      "path": "docs/audit-2026-10-17-round54/evidence/host-request-gate/source-manifest.json",
+      "reason": "empty-semantic-files-no-gate-replay-upgrade"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round54/evidence/backup-format/source-manifest.json",
+      "reason": "primary-standard-semantic-files-list-inspected",
+      "rows": 5
+    },
+    {
+      "path": "docs/audit-2026-10-17-round54/evidence/root-link-validation/source-manifest.json",
+      "reason": "primary-standard-semantic-files-list-inspected",
+      "rows": 5
+    },
+    {
+      "path": "docs/audit-2026-10-17-round54/evidence/chat-lifecycle-gate/source-manifest.json",
+      "reason": "empty-semantic-files-no-gate-replay-upgrade"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round55/source-manifest.json",
+      "reason": "aggregate-source-byte-bindings-without-per-row-semantic-coverage-not-new-reading"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round55/evidence/root-strip-vision/source-manifest.json",
+      "reason": "primary-standard-semantic-files-list-inspected",
+      "rows": 5
+    },
+    {
+      "path": "docs/audit-2026-10-17-round55/evidence/root-agent-registry/source-manifest.json",
+      "reason": "empty-semantic-files-no-gate-replay-upgrade"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round55/evidence/model-discovery/source-manifest.json",
+      "reason": "primary-standard-semantic-files-list-inspected",
+      "rows": 8
+    },
+    {
+      "path": "docs/audit-2026-10-17-round55/evidence/cost-ledger/source-manifest.json",
+      "reason": "primary-standard-semantic-files-list-inspected",
+      "rows": 12
+    },
+    {
+      "path": "docs/audit-2026-10-17-round55/evidence/root-model-pool/source-manifest.json",
+      "reason": "primary-standard-semantic-files-list-inspected",
+      "rows": 10
+    },
+    {
+      "path": "docs/audit-2026-10-17-round55/evidence/chat-media/source-manifest.json",
+      "reason": "primary-standard-semantic-files-list-inspected",
+      "rows": 7
+    },
+    {
+      "path": "docs/audit-2026-10-17-round55/evidence/coverage-current/source-manifest.json",
+      "reason": "empty-semantic-files-no-gate-replay-upgrade"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round56/source-manifest.json",
+      "reason": "aggregate-source-byte-bindings-without-per-row-semantic-coverage-not-new-reading"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round56/evidence/image-window/source-manifest.json",
+      "reason": "primary-standard-semantic-files-list-inspected",
+      "rows": 4
+    },
+    {
+      "path": "docs/audit-2026-10-17-round56/evidence/trace-history/source-manifest.json",
+      "reason": "primary-standard-semantic-files-list-inspected",
+      "rows": 6
+    },
+    {
+      "path": "docs/audit-2026-10-17-round56/evidence/network-diagnostics/source-manifest.json",
+      "reason": "primary-standard-semantic-files-list-inspected",
+      "rows": 8
+    },
+    {
+      "path": "docs/audit-2026-10-17-round56/evidence/root-tool-results/source-manifest.json",
+      "reason": "primary-standard-semantic-files-list-inspected",
+      "rows": 5
+    },
+    {
+      "path": "docs/audit-2026-10-17-round57/source-manifest.json",
+      "reason": "aggregate-source-byte-bindings-without-per-row-semantic-coverage-not-new-reading"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round57/evidence/tool-jobs/source-manifest.json",
+      "reason": "primary-standard-semantic-files-list-inspected",
+      "rows": 7
+    },
+    {
+      "path": "docs/audit-2026-10-17-round57/evidence/pet-closure-review/source-manifest.json",
+      "reason": "primary-standard-semantic-files-list-inspected",
+      "rows": 27
+    },
+    {
+      "path": "docs/audit-2026-10-17-round57/evidence/mobile-path-review/source-manifest.json",
+      "reason": "primary-standard-semantic-files-list-inspected",
+      "rows": 9
+    },
+    {
+      "path": "docs/audit-2026-10-17-round57/evidence/pet-topic/source-manifest.json",
+      "reason": "primary-standard-semantic-files-list-inspected",
+      "rows": 23
+    },
+    {
+      "path": "docs/audit-2026-10-17-round57/evidence/root-static-files/source-manifest.json",
+      "reason": "primary-standard-semantic-files-list-inspected",
+      "rows": 11
+    },
+    {
+      "path": "docs/audit-2026-10-17-round57/evidence/session-titles/source-manifest.json",
+      "reason": "primary-standard-semantic-files-list-inspected",
+      "rows": 11
+    },
+    {
+      "path": "docs/audit-2026-10-17-round58/source-manifest.json",
+      "reason": "aggregate-source-byte-bindings-without-per-row-semantic-coverage-not-new-reading"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round58/evidence/web-storage/source-manifest.json",
+      "reason": "primary-standard-semantic-files-list-inspected",
+      "rows": 17
+    },
+    {
+      "path": "docs/audit-2026-10-17-round58/evidence/approval-replay-review/source-manifest.json",
+      "reason": "primary-standard-semantic-files-list-inspected",
+      "rows": 13
+    },
+    {
+      "path": "docs/audit-2026-10-17-round58/evidence/root-pairing/source-manifest.json",
+      "reason": "primary-standard-semantic-files-list-inspected",
+      "rows": 11
+    },
+    {
+      "path": "docs/audit-2026-10-17-round58/evidence/delivery-shutdown-review/source-manifest.json",
+      "reason": "primary-standard-semantic-files-list-inspected",
+      "rows": 11
+    },
+    {
+      "path": "docs/audit-2026-10-17-round58/evidence/relay-stream/source-manifest.json",
+      "reason": "primary-standard-semantic-files-list-inspected",
+      "rows": 7
+    },
+    {
+      "path": "docs/audit-2026-10-17-round58/evidence/delivery-queue/source-manifest.json",
+      "reason": "primary-standard-semantic-files-list-inspected",
+      "rows": 11
+    },
+    {
+      "path": "docs/audit-2026-10-17-round59/source-manifest.json",
+      "reason": "aggregate-source-byte-bindings-without-per-row-semantic-coverage-not-new-reading"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round59/evidence/session-usage/source-manifest.json",
+      "reason": "primary-standard-semantic-files-list-inspected",
+      "rows": 8
+    },
+    {
+      "path": "docs/audit-2026-10-17-round59/evidence/root-subagent-continuation/source-manifest.json",
+      "reason": "primary-standard-semantic-files-list-inspected",
+      "rows": 7
+    },
+    {
+      "path": "docs/audit-2026-10-17-round59/evidence/session-fork/source-manifest.json",
+      "reason": "primary-standard-semantic-files-list-inspected",
+      "rows": 11
+    },
+    {
+      "path": "docs/audit-2026-10-17-round59/evidence/subagent-continuation-review/source-manifest.json",
+      "reason": "primary-standard-semantic-files-list-inspected",
+      "rows": 7
+    },
+    {
+      "path": "docs/audit-2026-10-17-round59/evidence/lsp-root/source-manifest.json",
+      "reason": "primary-standard-semantic-files-list-inspected",
+      "rows": 8
+    },
+    {
+      "path": "docs/audit-2026-10-17-round60/source-manifest.json",
+      "reason": "aggregate-source-byte-bindings-without-per-row-semantic-coverage-not-new-reading"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round60/evidence/build-meta/source-manifest.json",
+      "reason": "primary-standard-semantic-files-list-inspected",
+      "rows": 6
+    },
+    {
+      "path": "docs/audit-2026-10-17-round60/evidence/copy-assets/source-manifest.json",
+      "reason": "primary-standard-semantic-files-list-inspected",
+      "rows": 5
+    },
+    {
+      "path": "docs/audit-2026-10-17-round60/evidence/root-release-audit-config/source-manifest.json",
+      "reason": "primary-standard-semantic-files-list-inspected",
+      "rows": 6
+    },
+    {
+      "path": "docs/audit-2026-10-17-round60/evidence/release-versions/source-manifest.json",
+      "reason": "primary-standard-semantic-files-list-inspected",
+      "rows": 26
+    },
+    {
+      "path": "docs/audit-2026-10-17-round60/evidence/before-concurrent-refresh/source-manifest.json",
+      "reason": "inactive-first-or-concurrent-refresh-snapshot-not-a-second-reading"
+    }
+  ]
+}

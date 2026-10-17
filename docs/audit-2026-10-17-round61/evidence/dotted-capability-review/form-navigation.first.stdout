@@ -1,0 +1,20 @@
+171: * Tell other components that read mcpServers (e.g. McpView in the sidebar)
+194:  // saved to the global mcpServerOverrides layer (not mcpServers).
+261:        settingsRecordOf(s.mcpServers),
+274:      const list = mcpServersFromSettings(merged);
+322:      // Only clear the names this run set — a concurrent testOne() owns its
+358:      await updateScopedSettings(scope, { mcpServers: { [name]: null } }, projectPath);
+359:      await window.codeshell.invalidateMcpProbeCache(name);
+384:          await window.codeshell.invalidateMcpProbeCache(s.name);
+402:        { mcpServers: { [s.name]: { enabled: nextEnabled } } },
+409:        await window.codeshell.invalidateMcpProbeCache(s.name);
+430:      // delete a key, so { mcpServers: { new: {...}, old: null } } does both.
+453:      await updateScopedSettings(scope, { mcpServers: record }, projectPath);
+463:      await window.codeshell.invalidateMcpProbeCache(next.name);
+471:  // writes the GLOBAL mcpServerOverrides layer — never mcpServers — so the
+485:      await window.codeshell.invalidateMcpProbeCache(name);
+1271:      const serverName = name.trim();
+1321:    const trimmedName = name.trim();
+1377:          name: trimmedName,
+1394:          name: trimmedName,
+1781:export function mcpServersFromSettings(value: unknown): McpServer[] {

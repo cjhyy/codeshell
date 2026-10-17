@@ -1,0 +1,53 @@
+{
+  "atUTC": "2026-10-17T20:08:46.971140+00:00",
+  "files": [
+    {
+      "path": "packages/core/src/capability-control/overlay.ts",
+      "bytes": 7815,
+      "lines": 211,
+      "sha256": "75477176f70ab8d97f7669c0929dfdbcbc549f42121d46faa95766310e99e7c5",
+      "beforeBodyOrLineNavigation": true,
+      "scope": "Shared query hash only; source review delegated"
+    },
+    {
+      "path": "packages/core/src/capability-control/service.ts",
+      "bytes": 7690,
+      "lines": 197,
+      "sha256": "22378bf6addc85ebdaf2aace6a85121545ecbb1481bddfc18ffc0d58545a7c4e",
+      "beforeBodyOrLineNavigation": true,
+      "scope": "Shared query hash only; source review delegated"
+    },
+    {
+      "path": "packages/core/src/capability-control/project.ts",
+      "bytes": 5930,
+      "lines": 172,
+      "sha256": "df94303b6212824eedf24e98859fb5d955ce8fa97a21b200e2e8a524c99f5c7b",
+      "beforeBodyOrLineNavigation": true,
+      "scope": "Shared query hash only; source review delegated"
+    },
+    {
+      "path": "packages/coding/src/external-runtimes/shared/session-context-store.ts",
+      "bytes": 6343,
+      "lines": 153,
+      "sha256": "956a4699d1167beefc694dbf5cdf1884bd17caee0f7f3ce689f2a1d37a2e56b3",
+      "beforeBodyOrLineNavigation": true,
+      "scope": "Shared query hash only; source review delegated"
+    },
+    {
+      "path": "packages/core/src/composition/lifetime.ts",
+      "bytes": 2868,
+      "lines": 95,
+      "sha256": "42b02192611a9d2290dc61d892c73823e71634031954dc6440e3ccf1b911518b",
+      "beforeBodyOrLineNavigation": true,
+      "scope": "Root target"
+    },
+    {
+      "path": "packages/core/src/composition/activation.ts",
+      "bytes": 4413,
+      "lines": 146,
+      "sha256": "fbb9f7fe70b413a8661ccc50f98ebbb557456a43101baf95753c634cba774374",
+      "beforeBodyOrLineNavigation": true,
+      "scope": "Root target"
+    }
+  ]
+}

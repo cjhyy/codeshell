@@ -1,0 +1,61 @@
+{
+  "checks": [
+    {
+      "path": "packages/core/src/capability-control/overlay.ts",
+      "beforeSha256": "75477176f70ab8d97f7669c0929dfdbcbc549f42121d46faa95766310e99e7c5",
+      "afterSha256": "75477176f70ab8d97f7669c0929dfdbcbc549f42121d46faa95766310e99e7c5",
+      "same": true
+    },
+    {
+      "path": "packages/core/src/capability-control/service.ts",
+      "beforeSha256": "22378bf6addc85ebdaf2aace6a85121545ecbb1481bddfc18ffc0d58545a7c4e",
+      "afterSha256": "22378bf6addc85ebdaf2aace6a85121545ecbb1481bddfc18ffc0d58545a7c4e",
+      "same": true
+    },
+    {
+      "path": "packages/core/src/capability-control/project.ts",
+      "beforeSha256": "df94303b6212824eedf24e98859fb5d955ce8fa97a21b200e2e8a524c99f5c7b",
+      "afterSha256": "df94303b6212824eedf24e98859fb5d955ce8fa97a21b200e2e8a524c99f5c7b",
+      "same": true
+    },
+    {
+      "path": "packages/coding/src/external-runtimes/shared/session-context-store.ts",
+      "beforeSha256": "956a4699d1167beefc694dbf5cdf1884bd17caee0f7f3ce689f2a1d37a2e56b3",
+      "afterSha256": "956a4699d1167beefc694dbf5cdf1884bd17caee0f7f3ce689f2a1d37a2e56b3",
+      "same": true
+    },
+    {
+      "path": "packages/core/src/composition/lifetime.ts",
+      "beforeSha256": "42b02192611a9d2290dc61d892c73823e71634031954dc6440e3ccf1b911518b",
+      "afterSha256": "42b02192611a9d2290dc61d892c73823e71634031954dc6440e3ccf1b911518b",
+      "same": true
+    },
+    {
+      "path": "packages/core/src/composition/activation.ts",
+      "beforeSha256": "fbb9f7fe70b413a8661ccc50f98ebbb557456a43101baf95753c634cba774374",
+      "afterSha256": "fbb9f7fe70b413a8661ccc50f98ebbb557456a43101baf95753c634cba774374",
+      "same": true
+    },
+    {
+      "path": "packages/core/src/engine/runtime.ts",
+      "beforeSha256": "9f04d688231ba7603e402f8b032ba94a24c82ec4705bdb59abc81460e1ad64ce",
+      "afterSha256": "9f04d688231ba7603e402f8b032ba94a24c82ec4705bdb59abc81460e1ad64ce",
+      "same": true
+    },
+    {
+      "path": "packages/core/src/engine/engine.ts",
+      "beforeSha256": "cdbfc7a777e3e304b6d365988daf6a45ff24b7cd5b62f634e3b11908c701e2e0",
+      "afterSha256": "cdbfc7a777e3e304b6d365988daf6a45ff24b7cd5b62f634e3b11908c701e2e0",
+      "same": true
+    },
+    {
+      "path": "packages/core/src/composition/types.ts",
+      "beforeSha256": "5fce8d8f3426f70762a8bee84c95f2982657cfd785d02c0d1d538f1d57f99e5e",
+      "afterSha256": "5fce8d8f3426f70762a8bee84c95f2982657cfd785d02c0d1d538f1d57f99e5e",
+      "same": true
+    }
+  ],
+  "allSame": true,
+  "atUTC": "2026-10-17T20:14:21.407954+00:00",
+  "productExecution": 0
+}

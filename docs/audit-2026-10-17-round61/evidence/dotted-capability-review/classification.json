@@ -1,0 +1,37 @@
+{
+  "counts": {
+    "formal": 0,
+    "candidates": 1,
+    "newRelated": 0
+  },
+  "formal": [],
+  "candidates": [
+    {
+      "alias": "prep155 current dotted MCP/project override lead",
+      "priorityRecommendation": "P3",
+      "newIndependentId": false,
+      "evidence": "Static current input/representation mismatch; no runtime or actual settings write",
+      "finalClassificationOwner": "Root"
+    }
+  ],
+  "newRelated": [],
+  "reviewedAlias": "prep155 dotted MCP/project override lead; no new ID",
+  "decision": "retain-current-lead-not-safe-to-dedup-on-archive-alone",
+  "legacyCausalFamily": {
+    "canonical": "docs/archive/bug-followups-2026-08-13.md:36-45",
+    "oldLocation": "install-capability plugin/Skill name in capabilityOverrides.plugins.<opaque-name>",
+    "currentLocation": "capability-control service project override in capabilityOverrides.mcp.<opaque-server-name>",
+    "sharedRepresentationFailure": "Opaque token is concatenated into a dotted setting path; manager splits every dot into nested properties; overlay reads the token as one literal record key.",
+    "importantContractDifference": "Archive section2 explicitly names plugin/Skill admission. The completed historical rejection of dotted names does not cover MCP names still admitted by the current editor or establish a generic opaque-key write fix. A current repair must reach this caller/input contract.",
+    "currentFixStatus": "Not certified or inferred from archive completion. Current selected source still shows the MCP dotted-name route.",
+    "newRelatedRecordCount": 0
+  },
+  "counterevidence": [
+    "McpSection full-editor name validation checks trimmed nonempty/duplicate, not dots; it builds name:trimmedName and the same component saver uses [next.name] structured MCP settings record. Ordinary dotted names are not inherently invalid input. No real configuration was written.",
+    "projectMcp constructs descriptors even for unconnected configured servers; the id is mcp:<serverName> and token is that unchanged name. No actual MCP connection is needed to explain the ordinary descriptor producer.",
+    "Current global MCP path saves the whole mcpServers record and is not this project dotted override trigger; the report does not claim every toggle/save fails.",
+    "No claim of security bypass, external host behavior, actual file corruption, runtime success/failure, or all-history uniqueness.",
+    "The project-toggle UI-to-service complete invocation path was not independently retraced here; Root/155 production reachability evidence remains separate from this limited old-cause review."
+  ],
+  "opinionRevision": "decision-history.json"
+}

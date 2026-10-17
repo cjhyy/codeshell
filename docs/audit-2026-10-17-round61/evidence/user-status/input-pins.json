@@ -1,0 +1,30 @@
+{
+  "atUTC": "2026-10-17T20:23:58.580071+00:00",
+  "files": [
+    {
+      "path": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17-round58/recorded-findings-catalog.json",
+      "bytes": 80337,
+      "sha256": "db4370c2544acbe67b6400d3b740d95cc3b170690184be1accc00120bc4a53ac",
+      "beforeMetadataParse": true
+    },
+    {
+      "path": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17-round58/ALL-ISSUES.md",
+      "bytes": 22551,
+      "sha256": "accf0323cae4898ee4c202ca8201402b60b434192567b954351940113a0ecad6",
+      "beforeMetadataParse": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round154-coverage-migration/unified-current-index.json",
+      "bytes": 3097431,
+      "sha256": "249c7298280d2ff1f3bde4333c98f4d831c27e24a725dc7d9b0d818ed8db9671",
+      "beforeMetadataParse": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round154-coverage-migration/current-source-inventory.json",
+      "bytes": 1706809,
+      "sha256": "8e3c78d9cbbaae82af49ccacad450cc8b6b91012343cdee2c32bf717d5dad317",
+      "beforeMetadataParse": true
+    }
+  ],
+  "role": "Read-only historical issue/status metadata crosscheck, product semantic/exec/Git0"
+}

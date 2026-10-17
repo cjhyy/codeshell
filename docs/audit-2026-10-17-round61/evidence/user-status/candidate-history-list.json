@@ -1,0 +1,2024 @@
+{
+  "scope": "Formal root candidates.json through frozen60 only; historical candidate records incl SKIP/unproven/downgraded, not current-active/unresolved count; no cause/current-status reassessment. Evidence/nested/archive copies and mutable61 not enumerated.",
+  "inputFiles": 55,
+  "rawOccurrences": 42,
+  "uniqueOriginalIDs": 42,
+  "recordsWithoutID": 0,
+  "duplicateIDOccurrencesBeyondFirst": 0,
+  "candidatesByOriginalID": [
+    {
+      "id": "S-C1",
+      "occurrences": [
+        {
+          "sourceRound": 6,
+          "canonicalFile": "docs/audit-2026-10-17-round6/candidates.json",
+          "pointer": "/candidates/0",
+          "id": "S-C1",
+          "title": "Skill frontmatter may terminate on embedded triple dashes",
+          "status": "static-candidate-SKIP",
+          "summary": null,
+          "hypothesis": null,
+          "displayTextOriginalField": "Skill frontmatter may terminate on embedded triple dashes",
+          "originalObject": {
+            "id": "S-C1",
+            "report": "skills-agents.md",
+            "source": "packages/core/src/skills/frontmatter.ts",
+            "line": 9,
+            "title": "Skill frontmatter may terminate on embedded triple dashes",
+            "status": "static-candidate-SKIP",
+            "validation": "Custom fixture never executed: direct yaml import unresolved. No repair/retry/alternate validation."
+          }
+        }
+      ]
+    },
+    {
+      "id": "S-C2",
+      "occurrences": [
+        {
+          "sourceRound": 6,
+          "canonicalFile": "docs/audit-2026-10-17-round6/candidates.json",
+          "pointer": "/candidates/1",
+          "id": "S-C2",
+          "title": "CRLF agent-definition delimiter may fail parsing",
+          "status": "static-candidate-SKIP",
+          "summary": null,
+          "hypothesis": null,
+          "displayTextOriginalField": "CRLF agent-definition delimiter may fail parsing",
+          "originalObject": {
+            "id": "S-C2",
+            "report": "skills-agents.md",
+            "source": "packages/core/src/agent/agent-definition.ts",
+            "line": 90,
+            "title": "CRLF agent-definition delimiter may fail parsing",
+            "status": "static-candidate-SKIP",
+            "validation": "Custom fixture never executed: same first shard dependency failure. No real Windows or registry/UI observation."
+          }
+        }
+      ]
+    },
+    {
+      "id": "PACKAGE-C1",
+      "occurrences": [
+        {
+          "sourceRound": 6,
+          "canonicalFile": "docs/audit-2026-10-17-round6/candidates.json",
+          "pointer": "/candidates/2",
+          "id": "PACKAGE-C1",
+          "title": "Watch test script differs from required guarded test entry",
+          "status": "static-candidate-unvalidated",
+          "summary": null,
+          "hypothesis": null,
+          "displayTextOriginalField": "Watch test script differs from required guarded test entry",
+          "originalObject": {
+            "id": "PACKAGE-C1",
+            "report": "root-package.md",
+            "source": "package.json",
+            "line": 42,
+            "title": "Watch test script differs from required guarded test entry",
+            "status": "static-candidate-unvalidated",
+            "validation": "No watch execution or operator state/credential inspection; maintenance intent and actual impact unconfirmed."
+          }
+        }
+      ]
+    },
+    {
+      "id": "FILES-R7-02",
+      "occurrences": [
+        {
+          "sourceRound": 7,
+          "canonicalFile": "docs/audit-2026-10-17-round7/candidates.json",
+          "pointer": "/candidates/0",
+          "id": "FILES-R7-02",
+          "title": null,
+          "status": "observed-behavior-contract-unproven",
+          "summary": null,
+          "hypothesis": null,
+          "displayTextOriginalField": null,
+          "originalObject": {
+            "id": "FILES-R7-02",
+            "report": "files.md",
+            "source": "packages/core/src/tool-system/builtin/glob.ts",
+            "line": 90,
+            "status": "observed-behavior-contract-unproven",
+            "reason": "Returned subset is sorted; no explicit global-newest-200 contract found. Downgraded after review, not counted."
+          }
+        }
+      ]
+    },
+    {
+      "id": "PROV-R7-C1",
+      "occurrences": [
+        {
+          "sourceRound": 7,
+          "canonicalFile": "docs/audit-2026-10-17-round7/candidates.json",
+          "pointer": "/candidates/1",
+          "id": "PROV-R7-C1",
+          "title": null,
+          "status": "observed-fake-input-reachability-unproven",
+          "summary": null,
+          "hypothesis": null,
+          "displayTextOriginalField": null,
+          "originalObject": {
+            "id": "PROV-R7-C1",
+            "report": "providers.md",
+            "source": "packages/core/src/llm/providers/openai.ts",
+            "line": 831,
+            "status": "observed-fake-input-reachability-unproven",
+            "reason": "Late identity fake reproduces behavior, but no valid normal producer/protocol ordering proof; final TurnLoop also backfills start. Not counted."
+          }
+        }
+      ]
+    },
+    {
+      "id": "PROV-R7-C2",
+      "occurrences": [
+        {
+          "sourceRound": 7,
+          "canonicalFile": "docs/audit-2026-10-17-round7/candidates.json",
+          "pointer": "/candidates/2",
+          "id": "PROV-R7-C2",
+          "title": null,
+          "status": "SKIP-after-first-fixture-assertion-failure",
+          "summary": null,
+          "hypothesis": null,
+          "displayTextOriginalField": null,
+          "originalObject": {
+            "id": "PROV-R7-C2",
+            "report": "providers.md",
+            "source": "packages/core/src/llm/providers/anthropic.ts",
+            "line": 385,
+            "status": "SKIP-after-first-fixture-assertion-failure",
+            "reason": "Thinking roundtrip first shard fails due to unaccounted automatic cache_control. Partial observations are not confirmation; no repair/retry/alternate validation."
+          }
+        }
+      ]
+    },
+    {
+      "id": "TUI-C1",
+      "occurrences": [
+        {
+          "sourceRound": 7,
+          "canonicalFile": "docs/audit-2026-10-17-round7/candidates.json",
+          "pointer": "/candidates/3",
+          "id": "TUI-C1",
+          "title": null,
+          "status": "source-only-SKIP",
+          "summary": null,
+          "hypothesis": null,
+          "displayTextOriginalField": null,
+          "originalObject": {
+            "id": "TUI-C1",
+            "report": "tui.md",
+            "source": "packages/tui/src/ui/components/DiffLine.tsx",
+            "line": 102,
+            "status": "source-only-SKIP",
+            "reason": "Diff classification fixture import over-traverses path. No product assertion executed; no repair/retry/alternate validation."
+          }
+        }
+      ]
+    },
+    {
+      "id": "TUI-C2",
+      "occurrences": [
+        {
+          "sourceRound": 7,
+          "canonicalFile": "docs/audit-2026-10-17-round7/candidates.json",
+          "pointer": "/candidates/4",
+          "id": "TUI-C2",
+          "title": null,
+          "status": "source-only-SKIP",
+          "summary": null,
+          "hypothesis": null,
+          "displayTextOriginalField": null,
+          "originalObject": {
+            "id": "TUI-C2",
+            "report": "tui.md",
+            "source": "packages/tui/src/ui/components/DiffLine.tsx",
+            "line": 48,
+            "status": "source-only-SKIP",
+            "reason": "Same failed Diff fixture; terminal-column padding prediction has no successful renderer/width observation."
+          }
+        }
+      ]
+    },
+    {
+      "id": "Q-R8-C1",
+      "occurrences": [
+        {
+          "sourceRound": 8,
+          "canonicalFile": "docs/audit-2026-10-17-round8/candidates.json",
+          "pointer": "/candidates/0",
+          "id": "Q-R8-C1",
+          "title": null,
+          "status": "source-candidate-SKIP-contract-unproven",
+          "summary": null,
+          "hypothesis": null,
+          "displayTextOriginalField": null,
+          "originalObject": {
+            "id": "Q-R8-C1",
+            "report": "questions.md",
+            "status": "source-candidate-SKIP-contract-unproven",
+            "reason": "Mobile fixture import failed; hosts may ignore additive hints, no explicit Mobile multiSelect acceptance contract established."
+          }
+        }
+      ]
+    },
+    {
+      "id": "Q-R8-C2",
+      "occurrences": [
+        {
+          "sourceRound": 8,
+          "canonicalFile": "docs/audit-2026-10-17-round8/candidates.json",
+          "pointer": "/candidates/1",
+          "id": "Q-R8-C2",
+          "title": null,
+          "status": "source-candidate-SKIP-control-not-established",
+          "summary": null,
+          "hypothesis": null,
+          "displayTextOriginalField": null,
+          "originalObject": {
+            "id": "Q-R8-C2",
+            "report": "questions.md",
+            "status": "source-candidate-SKIP-control-not-established",
+            "reason": "Batched and flushed TUI fixture cases both failed; no batch-specific observed defect. No timing repair/retry/alternate validation."
+          }
+        }
+      ]
+    },
+    {
+      "id": "TOOLS-R9-C1",
+      "occurrences": [
+        {
+          "sourceRound": 9,
+          "canonicalFile": "docs/audit-2026-10-17-round9/candidates.json",
+          "pointer": "/candidates/0",
+          "id": "TOOLS-R9-C1",
+          "title": "同名 definition-only 注册仍保留前次实现",
+          "status": "unconfirmed-contract-gap",
+          "summary": null,
+          "hypothesis": null,
+          "displayTextOriginalField": "同名 definition-only 注册仍保留前次实现",
+          "originalObject": {
+            "id": "TOOLS-R9-C1",
+            "status": "unconfirmed-contract-gap",
+            "title": "同名 definition-only 注册仍保留前次实现",
+            "location": {
+              "path": "packages/core/src/tool-system/registry.ts",
+              "line": 92
+            },
+            "actualEvidence": "Actual Registry and ToolSearch; in-memory fake implementation; 3 tests including two controls",
+            "limits": "No explicit API replacement contract; existing Engine/MCP registration paths pass executor. No actual tool/server/host/provider run. Not counted as confirmed bug.",
+            "fixture": "tools-registry-replacement.test.ts",
+            "firstLog": "tools-registry-replacement.first.log"
+          }
+        }
+      ]
+    },
+    {
+      "id": "RUN-R10-C1",
+      "occurrences": [
+        {
+          "sourceRound": 10,
+          "canonicalFile": "docs/audit-2026-10-17-round10/candidates.json",
+          "pointer": "/candidates/0",
+          "id": "RUN-R10-C1",
+          "title": "否定测试状态文本被关键词检查点标成 tests_passing",
+          "status": "observed-heuristic-semantics-contract-unproven",
+          "summary": null,
+          "hypothesis": null,
+          "displayTextOriginalField": "否定测试状态文本被关键词检查点标成 tests_passing",
+          "originalObject": {
+            "id": "RUN-R10-C1",
+            "status": "observed-heuristic-semantics-contract-unproven",
+            "title": "否定测试状态文本被关键词检查点标成 tests_passing",
+            "file": "packages/core/src/run/CheckpointWriter.ts",
+            "line": 42,
+            "actual": "真实CheckpointWriter消费正常assistant_message \"The tests did not pass. More work is required.\"，输出phase=tests_passing；正向tests pass对照也输出同phase。summary原始否定文字完整保留。",
+            "contractGap": "模块与架构文档明确是keyword-based heuristic；未找到承诺通用否定语言理解或准确成功判定的更强契约。未验证生产UI/任务状态错误；不计formal。",
+            "evidence": [
+              "root-run-data.test.ts",
+              "root-run-data.first.log"
+            ],
+            "scope": "Only actual writer + fake RunStore saveCheckpoint seam, no Engine/RunManager/evaluator/tool execution/UI/native.",
+            "dedup": "May 30 CheckpointWriter finding is summary truncation edge case, different root cause; keyword matching itself documented and not new."
+          }
+        }
+      ]
+    },
+    {
+      "id": "HOOK-R11-C1",
+      "occurrences": [
+        {
+          "sourceRound": 11,
+          "canonicalFile": "docs/audit-2026-10-17-round11/candidates.json",
+          "pointer": "/candidates/0",
+          "id": "HOOK-R11-C1",
+          "title": "Registering a higher-priority hook during emit duplicates an existing handler",
+          "status": "observed-candidate",
+          "summary": null,
+          "hypothesis": null,
+          "displayTextOriginalField": "Registering a higher-priority hook during emit duplicates an existing handler",
+          "originalObject": {
+            "id": "HOOK-R11-C1",
+            "status": "observed-candidate",
+            "priority": null,
+            "title": "Registering a higher-priority hook during emit duplicates an existing handler",
+            "source": {
+              "path": "packages/core/src/hooks/registry.ts",
+              "line": 43,
+              "relatedLines": [
+                45,
+                86,
+                92,
+                94
+              ]
+            },
+            "normalInput": "A real HookRegistry with two async-capable handlers; while emit waits on the first, register a third handler at higher priority. All data is in memory and handler results are ordinary messages.",
+            "observed": "Existing-high runs twice, existing-low once, new-high zero times in the same emit. Final registration count is 3 and aggregated messages contain the existing-high message twice.",
+            "controls": [
+              "All handlers registered before emit run once each in descending priority",
+              "The suspended handler with no mid-emit register runs once"
+            ],
+            "evidenceLevel": "actual HookRegistry source + bounded in-memory fake handlers; no Engine or shell runner",
+            "missingContract": "The public SDK exports HookRegistry, but a supported normal Engine/SDK producer timing and an explicit mid-emit registration visibility/once-per-chain contract were not established. Therefore no product bug severity or Engine duplicate-injection claim.",
+            "test": "evidence/hooks-pure-contracts.test.ts",
+            "log": "evidence/hooks-pure-contracts.first.log",
+            "exit": "evidence/hooks-pure-contracts.first.exit.json",
+            "dedup": "evidence/hooks-dedup.json"
+          }
+        }
+      ]
+    },
+    {
+      "id": "CHAT-R11-C1",
+      "occurrences": [
+        {
+          "sourceRound": 11,
+          "canonicalFile": "docs/audit-2026-10-17-round11/candidates.json",
+          "pointer": "/candidates/1",
+          "id": "CHAT-R11-C1",
+          "title": "通用 Markdown button URL/标签仅转义右方括号，普通括号或反斜杠是否破坏 labelled link",
+          "status": "static-unconfirmed-skipped",
+          "summary": null,
+          "hypothesis": null,
+          "displayTextOriginalField": "通用 Markdown button URL/标签仅转义右方括号，普通括号或反斜杠是否破坏 labelled link",
+          "originalObject": {
+            "id": "CHAT-R11-C1",
+            "status": "static-unconfirmed-skipped",
+            "title": "通用 Markdown button URL/标签仅转义右方括号，普通括号或反斜杠是否破坏 labelled link",
+            "source": "packages/chat/src/lifecycle.ts",
+            "line": 14,
+            "evidenceLevel": "static source only; no product fixture",
+            "observation": "formatter 把 HTTP(S) URL 原样放入括号，并仅替换 label 的 ]；gateway.ts:291-312 接受合法 HTTP(S) URL 和普通标签。Mattermost send:97 消费此 formatter。",
+            "missingProof": "尚未取得确切当前 Mattermost renderer grammar/实际解析结果，不能把别的 Markdown parser 当成该平台。",
+            "disposition": "官方文档正文不可读，官方源码树首次 fetch 被拒后 SKIP；未重试、下载、换 parser/方式验证。",
+            "evidence": [
+              "evidence/chat-primary-contracts.json"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "TUI-R12-C1",
+      "occurrences": [
+        {
+          "sourceRound": 12,
+          "canonicalFile": "docs/audit-2026-10-17-round12/candidates.json",
+          "pointer": "/candidates/0",
+          "id": "TUI-R12-C1",
+          "title": "ANSI Parser 的组合重音 grapheme 宽度 metadata 错误",
+          "status": null,
+          "summary": null,
+          "hypothesis": null,
+          "displayTextOriginalField": "ANSI Parser 的组合重音 grapheme 宽度 metadata 错误",
+          "originalObject": {
+            "id": "TUI-R12-C1",
+            "title": "ANSI Parser 的组合重音 grapheme 宽度 metadata 错误",
+            "file": "packages/tui/src/render/termio/parser.ts",
+            "line": 64,
+            "observed": "真实 Parser.feed(e+U+0301) 输出 width=2；真实 stringWidth 得 1；NFC é 的 Parser width=1；ASCII/CJK/emoji 控制一致。",
+            "whyCandidate": "types.ts 明确 width 为列数，但唯一生产 Parser 消费者 Ansi.tsx:134 只拼 grapheme.value，未读取 width；没有证明现有产品布局/显示受损，不计正式。",
+            "fixture": "tui-text-data.test.ts",
+            "log": "tui-text-data.first.log",
+            "dependencyIsolation": "first-run-before-import mock.module redirects Core barrel getGraphemeSegmenter to real frozen core/src/utils/intl.ts function; env fixed; unrelated OSC execFileNoThrow is throwing zero-call stub",
+            "runtimeScope": "pure parser/tokenizer/stringWidth/cache arithmetic only; no ANSI rendering"
+          }
+        }
+      ]
+    },
+    {
+      "id": "DESKTOP-R12-C1",
+      "occurrences": [
+        {
+          "sourceRound": 12,
+          "canonicalFile": "docs/audit-2026-10-17-round12/candidates.json",
+          "pointer": "/candidates/1",
+          "id": "DESKTOP-R12-C1",
+          "title": "Write 工具卡把字符串长度标为字节",
+          "status": null,
+          "summary": null,
+          "hypothesis": null,
+          "displayTextOriginalField": "Write 工具卡把字符串长度标为字节",
+          "originalObject": {
+            "id": "DESKTOP-R12-C1",
+            "title": "Write 工具卡把字符串长度标为字节",
+            "file": "packages/desktop/src/renderer/tool-cards/FileToolCard.tsx",
+            "line": 56,
+            "evidenceLevel": "Source-only candidate",
+            "reason": "content.length is UTF-16 code units while B denotes bytes; ordinary Unicode differs from UTF-8 byte count",
+            "limits": "No actual component mount or production Write execution; not counted confirmed",
+            "sourceBase": "d5fae44358b3a92d4d02fd5fcc4ac21c56b2a08a"
+          }
+        }
+      ]
+    },
+    {
+      "id": "HIST-R13-C1",
+      "occurrences": [
+        {
+          "sourceRound": 13,
+          "canonicalFile": "docs/audit-2026-10-17-round13/candidates.json",
+          "pointer": "/candidates/0",
+          "id": "HIST-R13-C1",
+          "title": "同 tick 撤销清空 pending 后，自动 flush 标记不复位",
+          "status": "candidate",
+          "summary": null,
+          "hypothesis": null,
+          "displayTextOriginalField": "同 tick 撤销清空 pending 后，自动 flush 标记不复位",
+          "originalObject": {
+            "id": "HIST-R13-C1",
+            "status": "candidate",
+            "title": "同 tick 撤销清空 pending 后，自动 flush 标记不复位",
+            "file": "packages/tui/src/ui/input-history.ts",
+            "line": 168,
+            "related": [
+              {
+                "file": "packages/tui/src/ui/input-history.ts",
+                "line": 183
+              },
+              {
+                "file": "packages/tui/src/ui/input-history.ts",
+                "line": 230
+              }
+            ],
+            "actual": "真实 add→remove→drainTick→add→drainTick 后第二条普通输入在 memory 但磁盘为空；显式 flushHistorySync 后落盘恢复。非空正常 flush 对照会允许下一次自动 flush。",
+            "reasonNotConfirmed": "普通 App Esc 在后续输入事件中通常已过 nextTick；本轮没有证明真实 TUI 能在 nextTick 前到达 remove，clearPendingHistoryEntries 也未发现正常调用点。保留函数序列结果，不将同 tick 到达性猜测升级成用户缺陷。",
+            "fixture": "history-characterization.test.ts",
+            "log": "history-characterization.first.log",
+            "limits": "无永久数据丢失结论，正常进程退出显式 flush 仍可恢复；未模拟崩溃或完整输入事件调度。"
+          }
+        }
+      ]
+    },
+    {
+      "id": "SEARCH-R13-C1",
+      "occurrences": [
+        {
+          "sourceRound": 13,
+          "canonicalFile": "docs/audit-2026-10-17-round13/candidates.json",
+          "pointer": "/candidates/1",
+          "id": "SEARCH-R13-C1",
+          "title": "Content-query readiness differs from Main's trimmed 2-128 length gate",
+          "status": "candidate",
+          "summary": null,
+          "hypothesis": null,
+          "displayTextOriginalField": "Content-query readiness differs from Main's trimmed 2-128 length gate",
+          "originalObject": {
+            "id": "SEARCH-R13-C1",
+            "status": "candidate",
+            "title": "Content-query readiness differs from Main's trimmed 2-128 length gate",
+            "file": "packages/desktop/src/renderer/shell/sessionContentSearch.ts",
+            "line": 29,
+            "sourceBase": "7927a7c8b80b4aec710dee1f6d831ad1982bb466",
+            "trigger": "Ordinary content input with one non-space character plus trailing space, or a 129-character term",
+            "actual": "Real pure parser returns ready:true; Main source trim/length contract rejects these terms",
+            "controls": [
+              "one character without trailing whitespace is not ready",
+              "two characters plus trailing whitespace are ready with trimmed length 2",
+              "128-character term is ready",
+              "title query remains outside content mode"
+            ],
+            "evidenceLevel": "Actual production pure parser observations; UI/hook/preload/Main connection inspected as source only",
+            "limitations": "No actual Main handler, IPC, debounce or UI execution; frontend contract explicitly documents only minimum length, so no formal severity or observed UI failure claimed",
+            "report": "docs/audit-2026-10-17-round13/search.md",
+            "fixture": "docs/audit-2026-10-17-round13/evidence/search-pure-contracts.test.ts",
+            "rawLog": "docs/audit-2026-10-17-round13/evidence/search-pure-contracts.first.log"
+          }
+        }
+      ]
+    },
+    {
+      "id": "GROUPS-R13-C1",
+      "occurrences": [
+        {
+          "sourceRound": 13,
+          "canonicalFile": "docs/audit-2026-10-17-round13/candidates.json",
+          "pointer": "/candidates/2",
+          "id": "GROUPS-R13-C1",
+          "title": "合法 header-only Delete 补丁可能不生成 Desktop 文件摘要",
+          "status": null,
+          "summary": null,
+          "hypothesis": null,
+          "displayTextOriginalField": "合法 header-only Delete 补丁可能不生成 Desktop 文件摘要",
+          "originalObject": {
+            "sourceBase": "7927a7c8b80b4aec710dee1f6d831ad1982bb466",
+            "evidenceLevel": "Source-only candidate; focused first fixture failed before tests loaded; whole focused direction skipped without repair or alternative validation",
+            "report": "docs/audit-2026-10-17-round13/groups.md",
+            "limits": "No production ApplyPatch, UI/React/native/Git product process/model/network/user-data execution. No actual summary result observed for candidate cases.",
+            "id": "GROUPS-R13-C1",
+            "title": "合法 header-only Delete 补丁可能不生成 Desktop 文件摘要",
+            "file": "packages/desktop/src/renderer/messages/fileChangeAggregator.ts",
+            "line": 95,
+            "relatedSources": [
+              "packages/coding/src/tools/apply-patch/parser.ts:127",
+              "packages/coding/src/tools/apply-patch/index.ts:42",
+              "packages/desktop/src/renderer/types.ts:1897"
+            ],
+            "reason": "Delete header initializes zero added/removed; flush requires nonzero content line counts, so source predicts a missing changed-file entry. Exact deleted line counts are not required by this candidate."
+          }
+        }
+      ]
+    },
+    {
+      "id": "GROUPS-R13-C2",
+      "occurrences": [
+        {
+          "sourceRound": 13,
+          "canonicalFile": "docs/audit-2026-10-17-round13/candidates.json",
+          "pointer": "/candidates/3",
+          "id": "GROUPS-R13-C2",
+          "title": "合法 V4A ++/-- 内容可能被当作 unified diff header 排除",
+          "status": null,
+          "summary": null,
+          "hypothesis": null,
+          "displayTextOriginalField": "合法 V4A ++/-- 内容可能被当作 unified diff header 排除",
+          "originalObject": {
+            "sourceBase": "7927a7c8b80b4aec710dee1f6d831ad1982bb466",
+            "evidenceLevel": "Source-only candidate; focused first fixture failed before tests loaded; whole focused direction skipped without repair or alternative validation",
+            "report": "docs/audit-2026-10-17-round13/groups.md",
+            "limits": "No production ApplyPatch, UI/React/native/Git product process/model/network/user-data execution. No actual summary result observed for candidate cases.",
+            "id": "GROUPS-R13-C2",
+            "title": "合法 V4A ++/-- 内容可能被当作 unified diff header 排除",
+            "file": "packages/desktop/src/renderer/messages/fileChangeAggregator.ts",
+            "line": 137,
+            "relatedSources": [
+              "packages/coding/src/tools/apply-patch/parser.ts:14"
+            ],
+            "reason": "V4A marker plus ++counter;/--counter; yields +++counter;/---counter;, but Desktop parser excludes those prefixes, predicting missing entries or one-sided counts/synthetic diff."
+          }
+        }
+      ]
+    },
+    {
+      "id": "UTIL-R14-C1",
+      "occurrences": [
+        {
+          "sourceRound": 14,
+          "canonicalFile": "docs/audit-2026-10-17-round14/candidates.json",
+          "pointer": "/candidates/0",
+          "id": "UTIL-R14-C1",
+          "title": "sliceAnsi uses UTF-16 indexes where ordinary consumers pass display columns",
+          "status": "static-candidate-runtime-skipped",
+          "summary": null,
+          "hypothesis": null,
+          "displayTextOriginalField": "sliceAnsi uses UTF-16 indexes where ordinary consumers pass display columns",
+          "originalObject": {
+            "id": "UTIL-R14-C1",
+            "title": "sliceAnsi uses UTF-16 indexes where ordinary consumers pass display columns",
+            "source": "packages/core/src/utils/sliceAnsi.ts",
+            "lines": [
+              25,
+              37,
+              42,
+              58,
+              67
+            ],
+            "status": "static-candidate-runtime-skipped",
+            "severity": null,
+            "normalProducer": "TUI wrapText truncate-start/middle calculates start/end using stringWidth; Output horizontal clipping passes x/column bounds. Ordinary CJK text is permitted.",
+            "contract": "Header says display-column positions; however header also explicitly limits full fidelity for wide characters.",
+            "staticPrediction": {
+              "input": "中文XYZ",
+              "start": 4,
+              "end": 7,
+              "expectedByColumnContract": "XYZ",
+              "predictedBySource": "Z"
+            },
+            "limits": [
+              "First fixture import failed before loading production source; no runtime observation supports this prediction.",
+              "No TUI, terminal, screen, or actual renderer was executed.",
+              "Existing width-overflow retry only tightens end and does not rebase the incorrect start index (static consumer trace)."
+            ],
+            "evidence": [
+              "evidence/utils-slice-columns.first.raw.log",
+              "evidence/utils-slice-columns.first.exit.json",
+              "evidence/utils-skip-note.md"
+            ],
+            "dedup": "Compared full historical MD and parsed JSON leaves. Older render-border finding concerns direct substring splitting ANSI codes, not this helper column/UTF-16 mismatch."
+          }
+        }
+      ]
+    },
+    {
+      "id": "UTIL-R14-C2",
+      "occurrences": [
+        {
+          "sourceRound": 14,
+          "canonicalFile": "docs/audit-2026-10-17-round14/candidates.json",
+          "pointer": "/candidates/1",
+          "id": "UTIL-R14-C2",
+          "title": "sliceAnsi stops before a trailing SGR reset even for an entire basic styled string",
+          "status": "static-candidate-runtime-skipped",
+          "summary": null,
+          "hypothesis": null,
+          "displayTextOriginalField": "sliceAnsi stops before a trailing SGR reset even for an entire basic styled string",
+          "originalObject": {
+            "id": "UTIL-R14-C2",
+            "title": "sliceAnsi stops before a trailing SGR reset even for an entire basic styled string",
+            "source": "packages/core/src/utils/sliceAnsi.ts",
+            "lines": [
+              42,
+              47,
+              67
+            ],
+            "status": "static-candidate-runtime-skipped",
+            "severity": null,
+            "normalProducer": "Ordinary pre-rendered SGR-styled text enters truncation/clipping helpers.",
+            "contract": "Slice helper says it preserves escape sequences; basic SGR is recognized by its own regex.",
+            "staticPrediction": {
+              "input": "\\x1b[31mXYZ\\x1b[39m",
+              "start": 0,
+              "end": "omitted",
+              "predictedBySource": "\\x1b[31mXYZ"
+            },
+            "limits": [
+              "First fixture import failed before loading source; test body did not run.",
+              "No actual style leak to another node, terminal, or external output was established; consumer parser state may bound the effect."
+            ],
+            "evidence": [
+              "evidence/utils-slice-columns.first.raw.log",
+              "evidence/utils-slice-columns.first.exit.json",
+              "evidence/utils-skip-note.md"
+            ],
+            "dedup": "Historical render-border substring ANSI corruption is a different source mechanism; no duplicate formal trailing-reset record found in full corpus."
+          }
+        }
+      ]
+    },
+    {
+      "id": "WEB-R14-C1",
+      "occurrences": [
+        {
+          "sourceRound": 14,
+          "canonicalFile": "docs/audit-2026-10-17-round14/candidates.json",
+          "pointer": "/candidates/2",
+          "id": "WEB-R14-C1",
+          "title": "Ordinary user XML can be mistaken for internal attachment plumbing",
+          "status": "candidate",
+          "summary": null,
+          "hypothesis": null,
+          "displayTextOriginalField": "Ordinary user XML can be mistaken for internal attachment plumbing",
+          "originalObject": {
+            "id": "WEB-R14-C1",
+            "status": "candidate",
+            "severity": null,
+            "title": "Ordinary user XML can be mistaken for internal attachment plumbing",
+            "evidenceLevel": "static only; first focused fixture failed import before any test body, entire display direction skipped",
+            "source": [
+              {
+                "path": "packages/web/src/lib/userMessageDisplay.ts",
+                "line": 85
+              },
+              {
+                "path": "packages/web/src/lib/userMessageDisplay.ts",
+                "line": 97
+              }
+            ],
+            "normalTrigger": "Plain user XML example with attached-directory or attached-image-paths, no actual attachments and no explicit displayText",
+            "contract": "Existing transcriptReplay test explicitly preserves ordinary user-written XML, with attached-file control only",
+            "dedup": "all docs/bugs MD and recursive JSON string leaves excluding round14; distinct from R84 missing legacy projection",
+            "limits": [
+              "No observed product output",
+              "No assertions or controls from the focused fixture executed",
+              "No original transcript, image-byte, model-input, permission or file-access loss claim"
+            ],
+            "report": "web.md",
+            "fixture": "evidence/web-user-display.test.ts",
+            "firstRawLog": "evidence/web-user-display.first.raw.log",
+            "firstExitReceipt": "evidence/web-user-display.first.exit.json"
+          }
+        }
+      ]
+    },
+    {
+      "id": "BYTES-R14-C1",
+      "occurrences": [
+        {
+          "sourceRound": 14,
+          "canonicalFile": "docs/audit-2026-10-17-round14/candidates.json",
+          "pointer": "/candidates/3",
+          "id": "BYTES-R14-C1",
+          "title": "JPEG SOF3 识别与全局 DQT 前提可能不一致",
+          "status": null,
+          "summary": null,
+          "hypothesis": null,
+          "displayTextOriginalField": "JPEG SOF3 识别与全局 DQT 前提可能不一致",
+          "originalObject": {
+            "id": "BYTES-R14-C1",
+            "title": "JPEG SOF3 识别与全局 DQT 前提可能不一致",
+            "sourceBase": "badc2262a90966f6f903977b849adf1f22b55e9f",
+            "file": "packages/server/src/image-byte-probe.ts",
+            "line": 119,
+            "report": "docs/audit-2026-10-17-round14/bytes.md",
+            "evidenceLevel": "Real pure probe rejection of self-built SOF3 marker sequence; format source read; candidate only",
+            "reason": "Recognized SOF set includes lossless SOF3, but EOI requires DQT independently of frame coding mode.",
+            "limits": "No independent pixel-decoder proof of sample validity or normal downstream lossless JPEG support/contract; no stage/upload/file/native/runtime/network/UI exercised. No severity or confirmed bug claim."
+          }
+        }
+      ]
+    },
+    {
+      "id": "DOCINPUT-R15-C1",
+      "occurrences": [
+        {
+          "sourceRound": 15,
+          "canonicalFile": "docs/audit-2026-10-17-round15/candidates.json",
+          "pointer": "/candidates/0",
+          "id": "DOCINPUT-R15-C1",
+          "title": "Two-byte PK / %P prefix classification may reject ordinary supported UTF-8 text",
+          "status": "static-candidate-runtime-skipped",
+          "summary": null,
+          "hypothesis": null,
+          "displayTextOriginalField": "Two-byte PK / %P prefix classification may reject ordinary supported UTF-8 text",
+          "originalObject": {
+            "id": "DOCINPUT-R15-C1",
+            "title": "Two-byte PK / %P prefix classification may reject ordinary supported UTF-8 text",
+            "severity": null,
+            "status": "static-candidate-runtime-skipped",
+            "source": "packages/core/src/sources/documents/parse.ts",
+            "lines": [
+              397,
+              398,
+              403,
+              404
+            ],
+            "contract": "docs/todo/workspace-upload-document-index-delivery.md:7 supports UTF-8 Markdown/CSV/JSON",
+            "normalInputs": [
+              {
+                "filename": "review.md",
+                "text": "PK review notes\n项目进展：正常文本。\n"
+              },
+              {
+                "filename": "progress.csv",
+                "text": "%Progress,Task\n50,Implementation\n"
+              }
+            ],
+            "actualObserved": null,
+            "staticInference": "Before decodeText, either two-byte prefix causes an unsupported-format exception; shifted/lowercase prefixes do not meet that branch condition. No runtime observation or controls were executed.",
+            "runtimeSkip": "First metadata-only preflight asserted guessed root node_modules package.json paths and failed before fixture creation. No product import or Bun resolver tested; dynamic parser direction skipped.",
+            "dedup": "No same-cause formal/candidate located in full historical Markdown/parsed JSON inventory; existing Office and phonetic issues excluded.",
+            "limits": [
+              "No parser invocation",
+              "No worker/ReadSource/UI execution",
+              "No user artifact",
+              "No product dependency failure proven"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "MIG-R15-C1",
+      "occurrences": [
+        {
+          "sourceRound": 15,
+          "canonicalFile": "docs/audit-2026-10-17-round15/candidates.json",
+          "pointer": "/candidates/1",
+          "id": "MIG-R15-C1",
+          "title": "Source .git normalization edge observations",
+          "status": "observed-pure-candidate-contract-incomplete",
+          "summary": null,
+          "hypothesis": null,
+          "displayTextOriginalField": "Source .git normalization edge observations",
+          "originalObject": {
+            "id": "MIG-R15-C1",
+            "title": "Source .git normalization edge observations",
+            "severity": null,
+            "status": "observed-pure-candidate-contract-incomplete",
+            "sources": [
+              {
+                "path": "packages/core/src/plugins/installer/parseSource.ts",
+                "lines": [
+                  123,
+                  124,
+                  125,
+                  182,
+                  187
+                ]
+              },
+              {
+                "path": "packages/core/src/plugins/gitOps.ts",
+                "lines": [
+                  206,
+                  207
+                ]
+              }
+            ],
+            "observations": [
+              "HTTPS .git/ source preserves inferredName notes.git; no trailing slash control gives notes",
+              "github:owned/notes.git appends .git again; suffix-free shorthand control gives one .git"
+            ],
+            "actualFunction": "parseSource",
+            "fixture": "evidence/migration-source-pure.test.ts",
+            "rawLog": "evidence/migration-source-pure.first.log",
+            "exit": "evidence/migration-source-pure.first.exit.json",
+            "producerStaticOnly": "CLI plugin install forwards user source and consumes inferredName when --name absent",
+            "missingEvidence": "Current supported-input contract/normal application producer for these two boundary forms; no remote or clone validation",
+            "limits": [
+              "No Git command",
+              "No clone",
+              "No install",
+              "No CLI execution",
+              "No remote existence claim",
+              "No security or credential experiment"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "STEER-R15-C1",
+      "occurrences": [
+        {
+          "sourceRound": 15,
+          "canonicalFile": "docs/audit-2026-10-17-round15/candidates.json",
+          "pointer": "/candidates/2",
+          "id": "STEER-R15-C1",
+          "title": "Default steer id derived from current queue length can reuse a still-pending id after revocation",
+          "status": "candidate-no-severity",
+          "summary": null,
+          "hypothesis": null,
+          "displayTextOriginalField": "Default steer id derived from current queue length can reuse a still-pending id after revocation",
+          "originalObject": {
+            "id": "STEER-R15-C1",
+            "status": "candidate-no-severity",
+            "title": "Default steer id derived from current queue length can reuse a still-pending id after revocation",
+            "source": "packages/core/src/engine/engine.ts:1160",
+            "helperSource": "packages/core/src/engine/steer-queue.ts:58",
+            "contract": "Queue entries carry stable ids for individual pending-entry correlation and revocation; Engine id argument has a default.",
+            "actualEvidence": "Pure helper calls with the independently inspected default id expression create [steer-1(second), steer-1(third)]; removeSteerItem(..., steer-1) removes both.",
+            "producerEvidence": "Static Engine.enqueueSteer default expression and protocol pass-through only. No actual Engine execution or ordinary host caller omitting ids was established.",
+            "controls": "Distinct host ids revoke exactly one pending entry; FIFO drain and input-array preservation pass.",
+            "limits": [
+              "No UI, real active run, actual default-id allocation, protocol RPC or lost user work was reproduced.",
+              "Helpers intentionally accept caller-supplied ids; duplicate external ids alone are not a separate defect."
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "IMAGE-R15-C1",
+      "occurrences": [
+        {
+          "sourceRound": 15,
+          "canonicalFile": "docs/audit-2026-10-17-round15/candidates.json",
+          "pointer": "/candidates/3",
+          "id": "IMAGE-R15-C1",
+          "title": "Equal opening/closing tag counts do not ensure all malformed inline-image markup is rejected",
+          "status": "candidate-no-severity",
+          "summary": null,
+          "hypothesis": null,
+          "displayTextOriginalField": "Equal opening/closing tag counts do not ensure all malformed inline-image markup is rejected",
+          "originalObject": {
+            "id": "IMAGE-R15-C1",
+            "status": "candidate-no-severity",
+            "title": "Equal opening/closing tag counts do not ensure all malformed inline-image markup is rejected",
+            "source": "packages/core/src/engine/parse-task.ts:142",
+            "contractSource": "packages/core/src/engine/parse-task.ts:127",
+            "actualEvidence": "Actual parseTaskWithImages accepts a closing tag before its only opening tag, returns unchanged text and hasImages false. A valid block plus the same malformed tail returns one image and leaves malformed tag text.",
+            "producerEvidence": "Hand-built malformed wire only. Static Desktop encoder always emits complete opener/body/closer blocks; no ordinary encoder or transport corruption producer of the reversed ordering was established.",
+            "controls": "True unbalanced opener and invalid data body throw ImageParseError; valid block parses; escaped attrs and source-order images pass.",
+            "limits": [
+              "No real image decode, staged file, provider input, actual byte loss or user-visible failure was reproduced.",
+              "Fixture base64 YQ== is parser syntax data, not a claim of a decodable PNG.",
+              "Reserved literal opener rejection is an explicit existing test policy; not promoted as a new bug."
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "TAB-R16-C1",
+      "occurrences": [
+        {
+          "sourceRound": 16,
+          "canonicalFile": "docs/audit-2026-10-17-round16/candidates.json",
+          "pointer": "/candidates/0",
+          "id": "TAB-R16-C1",
+          "title": "TUI tab measurement uses relative column zero while static screen writer uses absolute origin",
+          "status": "candidate",
+          "summary": null,
+          "hypothesis": null,
+          "displayTextOriginalField": "TUI tab measurement uses relative column zero while static screen writer uses absolute origin",
+          "originalObject": {
+            "id": "TAB-R16-C1",
+            "title": "TUI tab measurement uses relative column zero while static screen writer uses absolute origin",
+            "status": "candidate",
+            "frozenBase": "ac314bf73e99399b72ec0aa7c8ce9d5c3ab4bc2f",
+            "source": [
+              {
+                "path": "packages/tui/src/render/tabstops.ts",
+                "line": 22
+              },
+              {
+                "path": "packages/tui/src/render/dom.ts",
+                "line": 350
+              },
+              {
+                "path": "packages/tui/src/render/output.ts",
+                "line": 683
+              }
+            ],
+            "observed": "Actual expandTabs and Bun.stringWidth produce width 9 for aaaaaaa\\tX. Static output arithmetic at origin 5 implies relative width 12.",
+            "normalProducer": "CodeBlock.tsx:29,41,42 keeps code tabs in a Text node after margin/prefix; source-only.",
+            "whyCandidate": "Actual DOM/Yoga/writer/terminal not executed; final visible/layout impact and correction by other constraints unproven. The 12 result is standalone integer arithmetic from static source, not an executed product writer.",
+            "controls": "Default leading/consecutive/exact-boundary tabs, newline reset and positive custom interval.",
+            "runtimeEvidence": "evidence/tabstops-pure.first.raw.log",
+            "runtimeScope": "Actual pure expandTabs, real tokenizer and real Bun.stringWidth; static output arithmetic."
+          }
+        }
+      ]
+    },
+    {
+      "id": "TAB-R16-C2",
+      "occurrences": [
+        {
+          "sourceRound": 16,
+          "canonicalFile": "docs/audit-2026-10-17-round16/candidates.json",
+          "pointer": "/candidates/1",
+          "id": "TAB-R16-C2",
+          "title": "SGR boundary inside a hand-built ZWJ cluster changes tab padding",
+          "status": "candidate",
+          "summary": null,
+          "hypothesis": null,
+          "displayTextOriginalField": "SGR boundary inside a hand-built ZWJ cluster changes tab padding",
+          "originalObject": {
+            "id": "TAB-R16-C2",
+            "title": "SGR boundary inside a hand-built ZWJ cluster changes tab padding",
+            "status": "candidate",
+            "frozenBase": "ac314bf73e99399b72ec0aa7c8ce9d5c3ab4bc2f",
+            "source": [
+              {
+                "path": "packages/tui/src/render/tabstops.ts",
+                "line": 24
+              },
+              {
+                "path": "packages/tui/src/render/tabstops.ts",
+                "line": 39
+              }
+            ],
+            "observed": "Actual whole emoji width 2 and styled whole prefix width 2, but text-token widths 2+2 cause tab padding 6→4; actual styled expanded line width 7.",
+            "normalProducer": "Unproven; SGR boundary inside the grapheme is hand-built. Ordinary markdown/highlighter not executed.",
+            "whyCandidate": "No ordinary producer or terminal rendering evidence for a style change inside a ZWJ grapheme. No confirmed product impact.",
+            "controls": "ASCII SGR boundaries, complete OSC 8 string, Chinese width, decomposed Latin width, unsplit emoji.",
+            "runtimeEvidence": "evidence/tabstops-pure.first.raw.log",
+            "runtimeScope": "Actual pure expandTabs, real tokenizer and real Bun.stringWidth; no JS fallback, ANSI Parser, UI or terminal."
+          }
+        }
+      ]
+    },
+    {
+      "id": "TASKNOISE-R16-C1",
+      "occurrences": [
+        {
+          "sourceRound": 16,
+          "canonicalFile": "docs/audit-2026-10-17-round16/candidates.json",
+          "pointer": "/candidates/2",
+          "id": "TASKNOISE-R16-C1",
+          "title": "BOX_RE does not recognize project-defined dashed border glyphs",
+          "status": "candidate",
+          "summary": null,
+          "hypothesis": null,
+          "displayTextOriginalField": "BOX_RE does not recognize project-defined dashed border glyphs",
+          "originalObject": {
+            "id": "TASKNOISE-R16-C1",
+            "status": "candidate",
+            "title": "BOX_RE does not recognize project-defined dashed border glyphs",
+            "source": "packages/core/src/utils/task-sanitizer.ts",
+            "line": 2,
+            "observed": "Actual helper accepts 140 ╌ and 140 ╎ as signal; solid ─ and │ controls reject as noise.",
+            "staticProducer": "packages/tui/src/render/render-border.ts:17-29 defines supported dashed style; actual ordinary UI selection not established.",
+            "contract": "Archived utils role describes box-heavy pasted task detection; no exhaustive glyph requirement.",
+            "limitation": "Renderer, clipboard, Host/Engine and real user path not executed. Hand-constructed helper inputs do not prove normal reachability.",
+            "evidence": [
+              "evidence/tasknoise-pure.test.ts",
+              "evidence/tasknoise-pure.first.raw.log"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "TASKNOISE-R16-C2",
+      "occurrences": [
+        {
+          "sourceRound": 16,
+          "canonicalFile": "docs/audit-2026-10-17-round16/candidates.json",
+          "pointer": "/candidates/3",
+          "id": "TASKNOISE-R16-C2",
+          "title": "ANSI noise stripping does not cover locally supported colon SGR and OSC",
+          "status": "candidate",
+          "summary": null,
+          "hypothesis": null,
+          "displayTextOriginalField": "ANSI noise stripping does not cover locally supported colon SGR and OSC",
+          "originalObject": {
+            "id": "TASKNOISE-R16-C2",
+            "status": "candidate",
+            "title": "ANSI noise stripping does not cover locally supported colon SGR and OSC",
+            "source": "packages/core/src/utils/task-sanitizer.ts",
+            "line": 1,
+            "observed": "Actual helper retains colon RGB SGR-only and OSC8-only strings as signal; semicolon RGB/basic SGR controls reject.",
+            "staticProducer": "Local SGR parser supports colon; local OSC link producer emits OSC8. Neither module imported/invoked.",
+            "contract": "Broad archived ANSI-heavy detection description; no exhaustive terminal protocol promise.",
+            "limitation": "Raw control-preserving ordinary input transport not established. TUI TextInput statically removes ESC. No terminal/Engine/provider invocation.",
+            "evidence": [
+              "evidence/tasknoise-pure.test.ts",
+              "evidence/tasknoise-pure.first.raw.log"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "BIDI-R16-C1",
+      "occurrences": [
+        {
+          "sourceRound": 16,
+          "canonicalFile": "docs/audit-2026-10-17-round16/candidates.json",
+          "pointer": "/candidates/4",
+          "id": "BIDI-R16-C1",
+          "title": "Hard-coded RTL fast filter excludes Adlam strong RTL letters",
+          "status": "candidate",
+          "summary": null,
+          "hypothesis": null,
+          "displayTextOriginalField": "Hard-coded RTL fast filter excludes Adlam strong RTL letters",
+          "originalObject": {
+            "id": "BIDI-R16-C1",
+            "status": "candidate",
+            "title": "Hard-coded RTL fast filter excludes Adlam strong RTL letters",
+            "frozenBase": "ac314bf73e99399b72ec0aa7c8ce9d5c3ab4bc2f",
+            "source": "packages/tui/src/render/bidi.ts:132",
+            "consumer": "packages/tui/src/render/bidi.ts:63",
+            "evidence": "Exact frozen-source predicate returns false for U+1E900/U+1E901; returns true when ordinary Hebrew appended. Unicode DerivedBidiClass marks 1E900..1E943 as R.",
+            "execution": "source-extracted predicate only; no actual module export or bidi-js call",
+            "ordinaryInput": "Two normal Adlam Unicode letters; no explicit formatting control needed.",
+            "limits": "Platform gate, complete reorder, font/terminal display and explicit current Adlam product support contract were not verified. Candidate only.",
+            "externalContract": "https://www.unicode.org/Public/UCD/latest/ucd/extracted/DerivedBidiClass.txt",
+            "formalSeverity": null
+          }
+        }
+      ]
+    },
+    {
+      "id": "BIDI-R16-C2",
+      "occurrences": [
+        {
+          "sourceRound": 16,
+          "canonicalFile": "docs/audit-2026-10-17-round16/candidates.json",
+          "pointer": "/candidates/5",
+          "id": "BIDI-R16-C2",
+          "title": "No mirroring step visible in object-only bidi permutation",
+          "status": "candidate",
+          "summary": null,
+          "hypothesis": null,
+          "displayTextOriginalField": "No mirroring step visible in object-only bidi permutation",
+          "originalObject": {
+            "id": "BIDI-R16-C2",
+            "status": "candidate",
+            "title": "No mirroring step visible in object-only bidi permutation",
+            "frozenBase": "ac314bf73e99399b72ec0aa7c8ce9d5c3ab4bc2f",
+            "source": "packages/tui/src/render/bidi.ts:67",
+            "consumer": "packages/tui/src/render/output.ts:805",
+            "evidence": "Static function returns original value fields after object permutation; direct Output consumer passes value to setCellAt. UAX #9 L4/section 7 requires mirrored glyph handling for odd resolved levels.",
+            "execution": "source only; the embedding levels and reordered result for parenthesized Hebrew were not executed",
+            "ordinaryInput": "Parenthesized ordinary Hebrew text such as (שלום), only an illustrative unexecuted input.",
+            "limits": "No verified downstream font/terminal mirroring contract; no observed bad bracket output. Candidate only, not a claim that code-point substitution is always required.",
+            "externalContract": "https://www.unicode.org/reports/tr9/",
+            "formalSeverity": null
+          }
+        }
+      ]
+    },
+    {
+      "id": "CATALOG-R17-C1",
+      "occurrences": [
+        {
+          "sourceRound": 17,
+          "canonicalFile": "docs/audit-2026-10-17-round17/candidates.json",
+          "pointer": "/candidates/0",
+          "id": "CATALOG-R17-C1",
+          "title": "Panel catalog default omits Core first-connection fallback",
+          "status": "candidate",
+          "summary": null,
+          "hypothesis": null,
+          "displayTextOriginalField": "Panel catalog default omits Core first-connection fallback",
+          "originalObject": {
+            "id": "CATALOG-R17-C1",
+            "status": "candidate",
+            "title": "Panel catalog default omits Core first-connection fallback",
+            "source": {
+              "path": "packages/server/src/panels/agent-task-models.ts",
+              "start": 75,
+              "end": 82
+            },
+            "ordinaryTrigger": "Configured plain text connection with missing or stale defaults.text; settings schema permits an absent default.",
+            "observed": "Actual leaf returns a nonempty models list without defaultModel; an exact default control retains its id.",
+            "contract": "docs/panel-apps.md:373–377 says effective defaultModel and omitted start.model follows the effective CodeShell default; Engine/runtime static paths fall back to the first entry.",
+            "consumerStatic": "packages/server/src/panels/agent-task-host.ts:348–350 requires input.model or catalog.defaultModel.",
+            "reasonNotConfirmed": "Existing Desktop test deliberately expects invalid default omission. Ordinary UI addition fills a default. Host/Engine/settings loading/task execution were not run, so policy and complete task failure remain unverified.",
+            "evidence": [
+              "docs/audit-2026-10-17-round17/evidence/catalog-pure.test.ts",
+              "docs/audit-2026-10-17-round17/evidence/catalog-pure.first.raw.log"
+            ],
+            "runtimeBoundary": "Actual server leaf only for default; downstream and schema read statically."
+          }
+        }
+      ]
+    },
+    {
+      "id": "CATALOG-R17-C2",
+      "occurrences": [
+        {
+          "sourceRound": 17,
+          "canonicalFile": "docs/audit-2026-10-17-round17/candidates.json",
+          "pointer": "/candidates/1",
+          "id": "CATALOG-R17-C2",
+          "title": "Panel catalog trim rewrites configured connection identity",
+          "status": "candidate",
+          "summary": null,
+          "hypothesis": null,
+          "displayTextOriginalField": "Panel catalog trim rewrites configured connection identity",
+          "originalObject": {
+            "id": "CATALOG-R17-C2",
+            "status": "candidate",
+            "title": "Panel catalog trim rewrites configured connection identity",
+            "source": {
+              "path": "packages/server/src/panels/agent-task-models.ts",
+              "start": 27,
+              "end": 31
+            },
+            "additionalSource": {
+              "path": "packages/server/src/panels/agent-task-models.ts",
+              "start": 60,
+              "end": 72
+            },
+            "ordinaryTrigger": "Manual catalog editor can retain surrounding spaces in provider id or preset value; actual validateEntry/buildInstance/catalogModelOptions retain those ordinary in-memory records.",
+            "observed": "Actual catalog output changes connection id and default from \" local \" to \"local\". Distinct padded/unpadded ids collapse. Padded model value loses its exact preset label.",
+            "control": "Unpadded catalog id remains equal to actual buildInstance id and picker key.",
+            "contract": "Catalog leaf says connections are real engine pool keys; docs says returned id selects the Task connection. Core model-connections-pool uses raw inst.id, read statically.",
+            "reasonNotConfirmed": "No React editor, IPC persistence, schema.safeParse, Core pool selection or Panel worker execution. Task service separately trims model input, so intended cross-boundary restriction/policy remains unverified; no claim a live model accepts padded model ids.",
+            "evidence": [
+              "docs/audit-2026-10-17-round17/evidence/catalog-pure.test.ts",
+              "docs/audit-2026-10-17-round17/evidence/catalog-pure.first.raw.log"
+            ],
+            "runtimeBoundary": "Actual buildPanelAgentTaskModelCatalog, validateEntry, buildInstance and catalogModelOptions; downstream static only."
+          }
+        }
+      ]
+    },
+    {
+      "id": "MAPPERS-R17-C1",
+      "occurrences": [
+        {
+          "sourceRound": 17,
+          "canonicalFile": "docs/audit-2026-10-17-round17/candidates.json",
+          "pointer": "/candidates/2",
+          "id": "MAPPERS-R17-C1",
+          "title": "Snapshot tool start uses a positional id while later real-id room result retains original toolId",
+          "status": "candidate",
+          "summary": null,
+          "hypothesis": null,
+          "displayTextOriginalField": "Snapshot tool start uses a positional id while later real-id room result retains original toolId",
+          "originalObject": {
+            "id": "MAPPERS-R17-C1",
+            "status": "candidate",
+            "priority": null,
+            "title": "Snapshot tool start uses a positional id while later real-id room result retains original toolId",
+            "ordinaryTrigger": "Opening/re-subscribing to a followed external session while a tool call is in flight (static production wiring only; not executed).",
+            "sourceLocations": [
+              {
+                "path": "packages/web/src/lib/messageMappers.ts",
+                "lines": "112-123,54-59"
+              },
+              {
+                "path": "packages/coding/src/cc-orchestrator/session-history.ts",
+                "lines": "7-15"
+              },
+              {
+                "path": "packages/desktop/src/main/cc-room/transcript-subscriptions.ts",
+                "lines": "135-140,217-225,551-557"
+              },
+              {
+                "path": "packages/web/src/hooks/useRemoteApp.ts",
+                "lines": "1157-1177"
+              }
+            ],
+            "observed": "Actual mapper APIs on ordinary owned HistoryMessage and RoomMessage objects yield cc-hist-0-0 for the history tool start and toolu_owned_running for the result; direct live start/result both retain toolu_owned_running.",
+            "dynamicScope": "Pure mapper functions only; hand-built valid object shapes; no production parser/follower/RoomManager/reducer/consumer execution.",
+            "controls": [
+              "Normal RoomMessage start/result pairing retains real ids including out-of-order results.",
+              "Legacy starts retain sequence-based id and legacy results keep id-less event.",
+              "History tool positional ids are distinct and deterministic.",
+              "Prose, args and user attachments preserve documented mappings; frozen inputs remain unchanged."
+            ],
+            "missingEvidence": [
+              "Actual common in-flight call across snapshot/live boundary not reproduced.",
+              "Contract requiring id identity across a historical completed boundary and subsequent live result not independently established.",
+              "Consumer/reducer outcome not executed; no result loss, mispairing, stuck state, duplicate UI, or other display claim."
+            ],
+            "test": "evidence/mappers-pure.test.ts",
+            "rawLog": "evidence/mappers-pure.first.raw.log",
+            "baseCommit": "d86db33012dffd5d1849e76b869fa15eb260324f",
+            "relatedHistoricalRecordsExcluded": [
+              "old non-array room-history guard",
+              "old top-level Engine duplicate turn_complete",
+              "old parallel tool-id pairing",
+              "old Codex MCP summary",
+              "round14 failed userMessageDisplay dynamic direction"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "UNREAD-R18-C1",
+      "occurrences": [
+        {
+          "sourceRound": 18,
+          "canonicalFile": "docs/audit-2026-10-17-round18/candidates.json",
+          "pointer": "/candidates/0",
+          "id": "UNREAD-R18-C1",
+          "title": "List refresh may clear an unread background session that the browser does not select",
+          "status": "candidate",
+          "summary": null,
+          "hypothesis": null,
+          "displayTextOriginalField": "List refresh may clear an unread background session that the browser does not select",
+          "originalObject": {
+            "id": "UNREAD-R18-C1",
+            "status": "candidate",
+            "title": "List refresh may clear an unread background session that the browser does not select",
+            "sourceRefs": [
+              {
+                "path": "packages/web/src/hooks/useRemoteApp.ts",
+                "line": 685,
+                "endLine": 709
+              },
+              {
+                "path": "packages/web/src/hooks/useRemoteApp.ts",
+                "line": 813,
+                "endLine": 819
+              },
+              {
+                "path": "packages/desktop/src/main/mobile-remote/handle-client-event.ts",
+                "line": 513,
+                "endLine": 534
+              }
+            ],
+            "ordinaryTriggerHypothesis": "Browser already bound A with conversation revision 1; background B has unread mark; ordinary list reply keeps A/B with activeSessionId B. The navigation guard rejects B but unread clear precedes it. Actual cross-tab/device producer timing not executed.",
+            "observed": "Actual leaf helpers plus manually mirrored list composition produce empty unread set while mirrored navigation predicate is false; original Set still contains B.",
+            "controls": [
+              "No-op branches preserve reference",
+              "Changing branches clone and preserve original Set",
+              "Prune handles array/Set/single-consumption generator",
+              "Clearing missing browser binding A leaves B untouched"
+            ],
+            "runtimeEvidence": "evidence/unread-pure.first.raw.log",
+            "fixture": "evidence/unread-pure.test.ts",
+            "report": "unread.md#unread-r18-c1--列表刷新可能清掉浏览器未查看的后台会话标记候选",
+            "limits": "useRemoteApp and producer are static only; no hook/React/socket/history/UI/real device/network/native/model/user data. Not a hook or end-to-end reproduction; no message loss, navigation, draft movement or wrong-send claim.",
+            "dedupDisposition": "No helper name hits in complete historical MD/parsed JSON corpus. Old R61 Desktop shared SessionCatalog navigation and W11 pending-create stream binding are exclusion comparisons, not new related counts."
+          }
+        }
+      ]
+    },
+    {
+      "id": "COMPOSE-R27-C1",
+      "occurrences": [
+        {
+          "sourceRound": 27,
+          "canonicalFile": "docs/audit-2026-10-17-round27/candidates.json",
+          "pointer": "/candidates/0",
+          "id": "COMPOSE-R27-C1",
+          "title": "Outer containment is insufficient proof that two successful edits touch the same location",
+          "status": "candidate-static-direction-skipped",
+          "summary": null,
+          "hypothesis": null,
+          "displayTextOriginalField": "Outer containment is insufficient proof that two successful edits touch the same location",
+          "originalObject": {
+            "id": "COMPOSE-R27-C1",
+            "status": "candidate-static-direction-skipped",
+            "title": "Outer containment is insufficient proof that two successful edits touch the same location",
+            "suspectedPriority": 2,
+            "formal": false,
+            "location": {
+              "path": "packages/desktop/src/renderer/diff/composeFileEdits.ts",
+              "start": 139,
+              "end": 147
+            },
+            "cause": "uniqueIndex(edit.oldText, snippet.newText) checks uniqueness within the later old snippet, not uniqueness/location of the prior after fragment in the whole file.",
+            "ordinaryInputContract": "Edit allows new_string to duplicate existing text; old_string alone must uniquely match the current file. The second old_string is two lines of ordinary necessary context.",
+            "staticCase": {
+              "initialFile": "before();\n// later\nshared();\n",
+              "operations": [
+                {
+                  "kind": "edit",
+                  "oldText": "before();",
+                  "newText": "shared();",
+                  "replaceAll": false
+                },
+                {
+                  "kind": "edit",
+                  "oldText": "// later\nshared();",
+                  "newText": "// later\nfinal();",
+                  "replaceAll": false
+                }
+              ],
+              "afterFirstEdit": "shared();\n// later\nshared();\n",
+              "intendedFinalFile": "shared();\n// later\nfinal();\n",
+              "alternateSameLocationInitialFile": "// later\nbefore();\n",
+              "alternateSameLocationFinalFile": "// later\nfinal();\n",
+              "sourceDerivedComposedOldSnippet": "// later\nbefore();",
+              "sourceDerivedComposedNewSnippet": "// later\nfinal();",
+              "sourceDerivedAdded": 1,
+              "sourceDerivedRemoved": 1,
+              "expectedSeparatePayloadAdded": 2,
+              "expectedSeparatePayloadRemoved": 2,
+              "note": "All literal strings and values are static source derivation, not captured product observations or executed owned-model output."
+            },
+            "producerConsumerAnchors": [
+              {
+                "path": "packages/core/src/tool-system/builtin/edit.ts",
+                "ranges": [
+                  [
+                    19,
+                    45
+                  ],
+                  [
+                    82,
+                    108
+                  ]
+                ]
+              },
+              {
+                "path": "packages/desktop/src/renderer/messages/fileChangeAggregator.ts",
+                "ranges": [
+                  [
+                    155,
+                    205
+                  ],
+                  [
+                    338,
+                    361
+                  ],
+                  [
+                    375,
+                    395
+                  ]
+                ]
+              },
+              {
+                "path": "packages/desktop/src/renderer/types.ts",
+                "ranges": [
+                  [
+                    290,
+                    316
+                  ],
+                  [
+                    629,
+                    642
+                  ]
+                ]
+              },
+              {
+                "path": "packages/desktop/src/renderer/messages/FilesChangedCard.tsx",
+                "ranges": [
+                  [
+                    83,
+                    90
+                  ]
+                ]
+              }
+            ],
+            "impact": "Source-derived preview can discard a separate changed location and replace it with a before-context that never occurred in that position; per-file added/removed and downstream review snapshot share that same composed result. Original tool payloads and on-disk file are not mutated by this helper.",
+            "counterevidence": [
+              "The same payload sequence can describe a truly overlapping edit with expanding context, so banning every such sequence is not implied. Current existing test57–69 intentionally exercises a valid overlap.",
+              "Inner replay checks that later old text occurs in a known after snippet; the finding is only the outer-context branch141–147.",
+              "Write fullContent blocks outer expansion; replace_all and opaque operations create barriers; ambiguous multiple matches retain separate hunks.",
+              "Synthetic preview line numbers are declared snippet coordinates, not real file coordinates. This candidate concerns lost distinct content, not those declared synthetic numbers."
+            ],
+            "validation": "Root first focused fixture failed to resolve its incorrect relative import before any of its3 test bodies or owned-model helper executed. Entire direction SKIP, no fixture repair/rerun/alternate validation. Existing16pass54expect from the failed shard do not validate this candidate.",
+            "rootAttemptRaw": "evidence/root-containment-first.raw.log",
+            "rootAttemptExit": "evidence/root-containment-first.exit.json",
+            "reproduced": false,
+            "bugOutputObserved": false,
+            "productFix": false,
+            "recommendation": "If revisited separately, require actual location evidence before outer composition or conservatively retain unresolved operations as separate hunks. No implementation change in this audit."
+          }
+        }
+      ]
+    },
+    {
+      "id": "SEARCH-R31-C1",
+      "occurrences": [
+        {
+          "sourceRound": 31,
+          "canonicalFile": "docs/audit-2026-10-17-round31/candidates.json",
+          "pointer": "/candidates/0",
+          "id": "SEARCH-R31-C1",
+          "title": "Per-cell lowercasing loses Greek final-sigma context",
+          "status": null,
+          "summary": null,
+          "hypothesis": null,
+          "displayTextOriginalField": "Per-cell lowercasing loses Greek final-sigma context",
+          "originalObject": {
+            "id": "SEARCH-R31-C1",
+            "title": "Per-cell lowercasing loses Greek final-sigma context",
+            "confidence": "Strong static helper algorithm cause; no runtime observed",
+            "riskIfReachable": "P3 display search omission",
+            "location": "packages/tui/src/render/searchMatches.ts:38",
+            "input": {
+              "rowCells": [
+                "Ο",
+                "Σ"
+              ],
+              "query": "ΟΣ"
+            },
+            "staticDerivation": {
+              "perCellRow": "οσ",
+              "wholeQuery": "ος",
+              "helperMatches": []
+            },
+            "expectedFromDocumentedHelperContract": "Identical query text should match the two cells under the stated case-insensitive contract.",
+            "limitation": "Current App/UI caller and public package consumer not established. Entry reviewer found hook not re-exported through public barrel/package entries and no App caller found, default query empty. Root therefore records candidate, not a confirmed production UI finding. Independent source reviewer supports P3 helper defect; original review opinion preserved."
+          }
+        }
+      ]
+    },
+    {
+      "id": "UTF8-R34-C1",
+      "occurrences": [
+        {
+          "sourceRound": 34,
+          "canonicalFile": "docs/audit-2026-10-17-round34/candidates.json",
+          "pointer": "/candidates/0",
+          "id": "UTF8-R34-C1",
+          "title": "Incremental background output can consume an unfinished UTF8 tail before its remaining bytes arrive",
+          "status": "static-candidate",
+          "summary": null,
+          "hypothesis": null,
+          "displayTextOriginalField": "Incremental background output can consume an unfinished UTF8 tail before its remaining bytes arrive",
+          "originalObject": {
+            "id": "UTF8-R34-C1",
+            "title": "Incremental background output can consume an unfinished UTF8 tail before its remaining bytes arrive",
+            "severity": "P3",
+            "status": "static-candidate",
+            "location": {
+              "path": "packages/core/src/runtime/background-shell.ts",
+              "start": 479,
+              "end": 498
+            },
+            "trigger": "A valid overall UTF8 process stream is split across data events, and an ordinary BashOutput incremental peek occurs after a partial character prefix but before the remaining bytes; retained new output is at most the16KiB cap.",
+            "cause": "onData writes original Buffer chunks into RingFile. For rawBuf.length <= READ_RETURN_CAP no safe cut is applied. toString(utf8) decodes the unfinished tail, then agentReadOffset advances by its complete byte count; later bytes cannot be rejoined for incremental output.",
+            "impact": "Static inference: replacement text and loss of the original character across successive incremental reads. Full retained snapshot may still recover the original after completion if bytes remain; no disk corruption or permanent raw-buffer loss claimed.",
+            "ordinaryEntry": "BashOutput definition explicitly advertises a STILL-RUNNING on-demand peek; default incremental directly calls the manager readOutput.",
+            "evidence": [
+              "evidence/utf8-frontier/source-manifest.json",
+              "evidence/utf8-frontier/external-sources.json"
+            ],
+            "validation": "No runtime/Buffer/stream/language fixture, shell or product test executed. Current host cross-character data event scheduling and peek timing were not observed.",
+            "classificationLimit": "Strong source-level candidate retained pending direct runtime evidence; no new formal finding. Independent review keeps same adjacent lead unclassified; Root owns candidate classification.",
+            "exclusions": [
+              "Not the complete valid-buffer16KiB helper cut: that ordinary helper path had no new counterexample.",
+              "NaN/fractional caps, arbitrary invalid Buffer input, ring wrap and all-snapshot UTF16 slicing are outside this item.",
+              "Historical exact-tail cause search found no matching record in stated inventory; regex search is not semantic exhaustion."
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "STATIC-R135-C1",
+      "occurrences": [
+        {
+          "sourceRound": 57,
+          "canonicalFile": "docs/audit-2026-10-17-round57/candidates.json",
+          "pointer": "/candidates/0",
+          "id": "STATIC-R135-C1",
+          "title": "移动静态资源未解码编码文件名",
+          "status": "Candidate retained, not formal: handler404 reproduced for owned space-named file; current default product resource producer unestablished.",
+          "summary": null,
+          "hypothesis": null,
+          "displayTextOriginalField": "移动静态资源未解码编码文件名",
+          "originalObject": {
+            "id": "STATIC-R135-C1",
+            "proposedPriority": "P3",
+            "title": "移动静态资源未解码编码文件名",
+            "location": {
+              "path": "packages/server/src/mobile-remote/mobile-static.ts",
+              "line": 27,
+              "endLine": 31
+            },
+            "status": "Candidate retained, not formal: handler404 reproduced for owned space-named file; current default product resource producer unestablished.",
+            "validation": "Single guarded shard3pass/8expect/0failure, no reruns; actual serveMobile and real temporary files, Writable response recorder, no HTTP server/socket.",
+            "counterevidence": "Independent137 found4 current public names and selected actual URLs are ASCII. Its208 filename inventory is not a full dependency/bundle closure. Do not claim current product resource breakage or absence of all encoded assets.",
+            "evidence": [
+              "evidence/root-static-files/report.md",
+              "evidence/mobile-path-review/report.md",
+              "evidence/static-path.test.ts"
+            ]
+          }
+        }
+      ]
+    }
+  ],
+  "recordsWithoutIDList": [],
+  "perFileCounts": [
+    {
+      "sourceRound": 6,
+      "path": "docs/audit-2026-10-17-round6/candidates.json",
+      "declaredCount": 3,
+      "actualCandidates": 3,
+      "declaredCountMatches": true
+    },
+    {
+      "sourceRound": 7,
+      "path": "docs/audit-2026-10-17-round7/candidates.json",
+      "declaredCount": 5,
+      "actualCandidates": 5,
+      "declaredCountMatches": true
+    },
+    {
+      "sourceRound": 8,
+      "path": "docs/audit-2026-10-17-round8/candidates.json",
+      "declaredCount": 2,
+      "actualCandidates": 2,
+      "declaredCountMatches": true
+    },
+    {
+      "sourceRound": 9,
+      "path": "docs/audit-2026-10-17-round9/candidates.json",
+      "declaredCount": 1,
+      "actualCandidates": 1,
+      "declaredCountMatches": true
+    },
+    {
+      "sourceRound": 10,
+      "path": "docs/audit-2026-10-17-round10/candidates.json",
+      "declaredCount": 1,
+      "actualCandidates": 1,
+      "declaredCountMatches": true
+    },
+    {
+      "sourceRound": 11,
+      "path": "docs/audit-2026-10-17-round11/candidates.json",
+      "declaredCount": 2,
+      "actualCandidates": 2,
+      "declaredCountMatches": true
+    },
+    {
+      "sourceRound": 12,
+      "path": "docs/audit-2026-10-17-round12/candidates.json",
+      "declaredCount": 2,
+      "actualCandidates": 2,
+      "declaredCountMatches": true
+    },
+    {
+      "sourceRound": 13,
+      "path": "docs/audit-2026-10-17-round13/candidates.json",
+      "declaredCount": 4,
+      "actualCandidates": 4,
+      "declaredCountMatches": true
+    },
+    {
+      "sourceRound": 14,
+      "path": "docs/audit-2026-10-17-round14/candidates.json",
+      "declaredCount": 4,
+      "actualCandidates": 4,
+      "declaredCountMatches": true
+    },
+    {
+      "sourceRound": 15,
+      "path": "docs/audit-2026-10-17-round15/candidates.json",
+      "declaredCount": 4,
+      "actualCandidates": 4,
+      "declaredCountMatches": true
+    },
+    {
+      "sourceRound": 16,
+      "path": "docs/audit-2026-10-17-round16/candidates.json",
+      "declaredCount": 6,
+      "actualCandidates": 6,
+      "declaredCountMatches": true
+    },
+    {
+      "sourceRound": 17,
+      "path": "docs/audit-2026-10-17-round17/candidates.json",
+      "declaredCount": 3,
+      "actualCandidates": 3,
+      "declaredCountMatches": true
+    },
+    {
+      "sourceRound": 18,
+      "path": "docs/audit-2026-10-17-round18/candidates.json",
+      "declaredCount": 1,
+      "actualCandidates": 1,
+      "declaredCountMatches": true
+    },
+    {
+      "sourceRound": 19,
+      "path": "docs/audit-2026-10-17-round19/candidates.json",
+      "declaredCount": 0,
+      "actualCandidates": 0,
+      "declaredCountMatches": true
+    },
+    {
+      "sourceRound": 20,
+      "path": "docs/audit-2026-10-17-round20/candidates.json",
+      "declaredCount": 0,
+      "actualCandidates": 0,
+      "declaredCountMatches": true
+    },
+    {
+      "sourceRound": 21,
+      "path": "docs/audit-2026-10-17-round21/candidates.json",
+      "declaredCount": 0,
+      "actualCandidates": 0,
+      "declaredCountMatches": true
+    },
+    {
+      "sourceRound": 22,
+      "path": "docs/audit-2026-10-17-round22/candidates.json",
+      "declaredCount": 0,
+      "actualCandidates": 0,
+      "declaredCountMatches": true
+    },
+    {
+      "sourceRound": 23,
+      "path": "docs/audit-2026-10-17-round23/candidates.json",
+      "declaredCount": 0,
+      "actualCandidates": 0,
+      "declaredCountMatches": true
+    },
+    {
+      "sourceRound": 24,
+      "path": "docs/audit-2026-10-17-round24/candidates.json",
+      "declaredCount": 0,
+      "actualCandidates": 0,
+      "declaredCountMatches": true
+    },
+    {
+      "sourceRound": 25,
+      "path": "docs/audit-2026-10-17-round25/candidates.json",
+      "declaredCount": 0,
+      "actualCandidates": 0,
+      "declaredCountMatches": true
+    },
+    {
+      "sourceRound": 26,
+      "path": "docs/audit-2026-10-17-round26/candidates.json",
+      "declaredCount": 0,
+      "actualCandidates": 0,
+      "declaredCountMatches": true
+    },
+    {
+      "sourceRound": 27,
+      "path": "docs/audit-2026-10-17-round27/candidates.json",
+      "declaredCount": 1,
+      "actualCandidates": 1,
+      "declaredCountMatches": true
+    },
+    {
+      "sourceRound": 28,
+      "path": "docs/audit-2026-10-17-round28/candidates.json",
+      "declaredCount": 0,
+      "actualCandidates": 0,
+      "declaredCountMatches": true
+    },
+    {
+      "sourceRound": 29,
+      "path": "docs/audit-2026-10-17-round29/candidates.json",
+      "declaredCount": 0,
+      "actualCandidates": 0,
+      "declaredCountMatches": true
+    },
+    {
+      "sourceRound": 30,
+      "path": "docs/audit-2026-10-17-round30/candidates.json",
+      "declaredCount": 0,
+      "actualCandidates": 0,
+      "declaredCountMatches": true
+    },
+    {
+      "sourceRound": 31,
+      "path": "docs/audit-2026-10-17-round31/candidates.json",
+      "declaredCount": 1,
+      "actualCandidates": 1,
+      "declaredCountMatches": true
+    },
+    {
+      "sourceRound": 32,
+      "path": "docs/audit-2026-10-17-round32/candidates.json",
+      "declaredCount": 0,
+      "actualCandidates": 0,
+      "declaredCountMatches": true
+    },
+    {
+      "sourceRound": 33,
+      "path": "docs/audit-2026-10-17-round33/candidates.json",
+      "declaredCount": 0,
+      "actualCandidates": 0,
+      "declaredCountMatches": true
+    },
+    {
+      "sourceRound": 34,
+      "path": "docs/audit-2026-10-17-round34/candidates.json",
+      "declaredCount": 1,
+      "actualCandidates": 1,
+      "declaredCountMatches": true
+    },
+    {
+      "sourceRound": 35,
+      "path": "docs/audit-2026-10-17-round35/candidates.json",
+      "declaredCount": 0,
+      "actualCandidates": 0,
+      "declaredCountMatches": true
+    },
+    {
+      "sourceRound": 36,
+      "path": "docs/audit-2026-10-17-round36/candidates.json",
+      "declaredCount": 0,
+      "actualCandidates": 0,
+      "declaredCountMatches": true
+    },
+    {
+      "sourceRound": 37,
+      "path": "docs/audit-2026-10-17-round37/candidates.json",
+      "declaredCount": 0,
+      "actualCandidates": 0,
+      "declaredCountMatches": true
+    },
+    {
+      "sourceRound": 38,
+      "path": "docs/audit-2026-10-17-round38/candidates.json",
+      "declaredCount": 0,
+      "actualCandidates": 0,
+      "declaredCountMatches": true
+    },
+    {
+      "sourceRound": 39,
+      "path": "docs/audit-2026-10-17-round39/candidates.json",
+      "declaredCount": 0,
+      "actualCandidates": 0,
+      "declaredCountMatches": true
+    },
+    {
+      "sourceRound": 40,
+      "path": "docs/audit-2026-10-17-round40/candidates.json",
+      "declaredCount": 0,
+      "actualCandidates": 0,
+      "declaredCountMatches": true
+    },
+    {
+      "sourceRound": 41,
+      "path": "docs/audit-2026-10-17-round41/candidates.json",
+      "declaredCount": 0,
+      "actualCandidates": 0,
+      "declaredCountMatches": true
+    },
+    {
+      "sourceRound": 42,
+      "path": "docs/audit-2026-10-17-round42/candidates.json",
+      "declaredCount": 0,
+      "actualCandidates": 0,
+      "declaredCountMatches": true
+    },
+    {
+      "sourceRound": 43,
+      "path": "docs/audit-2026-10-17-round43/candidates.json",
+      "declaredCount": 0,
+      "actualCandidates": 0,
+      "declaredCountMatches": true
+    },
+    {
+      "sourceRound": 44,
+      "path": "docs/audit-2026-10-17-round44/candidates.json",
+      "declaredCount": 0,
+      "actualCandidates": 0,
+      "declaredCountMatches": true
+    },
+    {
+      "sourceRound": 45,
+      "path": "docs/audit-2026-10-17-round45/candidates.json",
+      "declaredCount": 0,
+      "actualCandidates": 0,
+      "declaredCountMatches": true
+    },
+    {
+      "sourceRound": 46,
+      "path": "docs/audit-2026-10-17-round46/candidates.json",
+      "declaredCount": 0,
+      "actualCandidates": 0,
+      "declaredCountMatches": true
+    },
+    {
+      "sourceRound": 47,
+      "path": "docs/audit-2026-10-17-round47/candidates.json",
+      "declaredCount": 0,
+      "actualCandidates": 0,
+      "declaredCountMatches": true
+    },
+    {
+      "sourceRound": 48,
+      "path": "docs/audit-2026-10-17-round48/candidates.json",
+      "declaredCount": 0,
+      "actualCandidates": 0,
+      "declaredCountMatches": true
+    },
+    {
+      "sourceRound": 49,
+      "path": "docs/audit-2026-10-17-round49/candidates.json",
+      "declaredCount": 0,
+      "actualCandidates": 0,
+      "declaredCountMatches": true
+    },
+    {
+      "sourceRound": 50,
+      "path": "docs/audit-2026-10-17-round50/candidates.json",
+      "declaredCount": 0,
+      "actualCandidates": 0,
+      "declaredCountMatches": true
+    },
+    {
+      "sourceRound": 51,
+      "path": "docs/audit-2026-10-17-round51/candidates.json",
+      "declaredCount": 0,
+      "actualCandidates": 0,
+      "declaredCountMatches": true
+    },
+    {
+      "sourceRound": 52,
+      "path": "docs/audit-2026-10-17-round52/candidates.json",
+      "declaredCount": 0,
+      "actualCandidates": 0,
+      "declaredCountMatches": true
+    },
+    {
+      "sourceRound": 53,
+      "path": "docs/audit-2026-10-17-round53/candidates.json",
+      "declaredCount": 0,
+      "actualCandidates": 0,
+      "declaredCountMatches": true
+    },
+    {
+      "sourceRound": 54,
+      "path": "docs/audit-2026-10-17-round54/candidates.json",
+      "declaredCount": 0,
+      "actualCandidates": 0,
+      "declaredCountMatches": true
+    },
+    {
+      "sourceRound": 55,
+      "path": "docs/audit-2026-10-17-round55/candidates.json",
+      "declaredCount": 0,
+      "actualCandidates": 0,
+      "declaredCountMatches": true
+    },
+    {
+      "sourceRound": 56,
+      "path": "docs/audit-2026-10-17-round56/candidates.json",
+      "declaredCount": 0,
+      "actualCandidates": 0,
+      "declaredCountMatches": true
+    },
+    {
+      "sourceRound": 57,
+      "path": "docs/audit-2026-10-17-round57/candidates.json",
+      "declaredCount": 1,
+      "actualCandidates": 1,
+      "declaredCountMatches": true
+    },
+    {
+      "sourceRound": 58,
+      "path": "docs/audit-2026-10-17-round58/candidates.json",
+      "declaredCount": 0,
+      "actualCandidates": 0,
+      "declaredCountMatches": true
+    },
+    {
+      "sourceRound": 59,
+      "path": "docs/audit-2026-10-17-round59/candidates.json",
+      "declaredCount": 0,
+      "actualCandidates": 0,
+      "declaredCountMatches": true
+    },
+    {
+      "sourceRound": 60,
+      "path": "docs/audit-2026-10-17-round60/candidates.json",
+      "declaredCount": 0,
+      "actualCandidates": 0,
+      "declaredCountMatches": true
+    }
+  ],
+  "supplementalCollectionsSeparate": [
+    {
+      "sourceRound": 9,
+      "path": "docs/audit-2026-10-17-round9/candidates.json",
+      "field": "otherStaticObservations",
+      "count": 2,
+      "originalValues": [
+        {
+          "report": "attachments.md",
+          "subject": "Windows/backslash compatibility",
+          "status": "static-only-not-promoted",
+          "reason": "No Windows/native validation; no extra confirmed issue."
+        },
+        {
+          "report": "attachments.md",
+          "subject": "directory depth and truncated marker",
+          "status": "static-only-not-promoted",
+          "reason": "Consumer contract does not establish that depth omission must set truncated."
+        }
+      ],
+      "note": "Supplemental static observations/promoted alias metadata; not automatically candidate records or merged IDs."
+    },
+    {
+      "sourceRound": 10,
+      "path": "docs/audit-2026-10-17-round10/candidates.json",
+      "field": "staticNotPromoted",
+      "count": 3,
+      "originalValues": [
+        {
+          "report": "catalog.md",
+          "subject": "inferred context-window cache provenance/refresh",
+          "reason": "Known design observation; caller lookup skipped and no stronger refresh contract."
+        },
+        {
+          "report": "runs.md",
+          "subject": "equal checkpoint timestamp ordering and per-execution model labels",
+          "reason": "No tie-order or verified historical identity producer/consumer contract; renderer lookup skipped."
+        },
+        {
+          "report": "diagnostics.md",
+          "subject": "performance latest/global time ordering",
+          "reason": "No promise of latest N or global chronological ordering found."
+        }
+      ],
+      "note": "Supplemental static observations/promoted alias metadata; not automatically candidate records or merged IDs."
+    },
+    {
+      "sourceRound": 11,
+      "path": "docs/audit-2026-10-17-round11/candidates.json",
+      "field": "staticNotPromoted",
+      "count": 2,
+      "originalValues": [
+        {
+          "report": "composition.md",
+          "subject": "digest body exclusions and non-ordinary declaration shapes",
+          "reason": "Topology projection is deliberate; no normal producer/stronger accepted contract for null-prototype/complex Map-key shape."
+        },
+        {
+          "report": "host.md",
+          "subject": "mutable caller-owned service references",
+          "reason": "Known HL-C1 and no new normal mutation/snapshot contract; not repeated."
+        }
+      ],
+      "note": "Supplemental static observations/promoted alias metadata; not automatically candidate records or merged IDs."
+    },
+    {
+      "sourceRound": 37,
+      "path": "docs/audit-2026-10-17-round37/candidates.json",
+      "field": "promotedAliases",
+      "count": 1,
+      "originalValues": [
+        {
+          "fromId": "MARKETPLACE-LOCAL-R37-C1",
+          "toId": "MARKETPLACE-R37-01"
+        }
+      ],
+      "note": "Supplemental static observations/promoted alias metadata; not automatically candidate records or merged IDs."
+    },
+    {
+      "sourceRound": 48,
+      "path": "docs/audit-2026-10-17-round48/candidates.json",
+      "field": "promotedAliases",
+      "count": 1,
+      "originalValues": [
+        "STATUSLINE-R64-C1"
+      ],
+      "note": "Supplemental static observations/promoted alias metadata; not automatically candidate records or merged IDs."
+    }
+  ],
+  "limits": "Missing title/summary/hypothesis/status stays null. Display may show source reason without inventing a title/status. Promoted aliases remain original metadata; not automatically merged or deleted."
+}

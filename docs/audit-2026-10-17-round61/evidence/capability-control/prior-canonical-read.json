@@ -1,0 +1,82 @@
+[
+  {
+    "path": "docs/audit-2026-10-17-round5/evidence/profile-source-manifest.json",
+    "bytes": 8960,
+    "sha256": "846b73a17037299a131795cb80ce11afe04d00fa9b62bc5cc20be6c4c7640771",
+    "pinAt": "2026-10-17T20:10:11.435237+00:00",
+    "selectedObjects": [
+      {
+        "pointer": "/sources/8",
+        "value": {
+          "path": "packages/core/src/capability-control/overlay.ts",
+          "sha256": "75477176f70ab8d97f7669c0929dfdbcbc549f42121d46faa95766310e99e7c5",
+          "frozenSha256": "75477176f70ab8d97f7669c0929dfdbcbc549f42121d46faa95766310e99e7c5",
+          "matchesFrozen": true,
+          "reviewedRanges": [
+            "whole"
+          ]
+        }
+      }
+    ],
+    "readAt": "2026-10-17T20:10:11.435760+00:00"
+  },
+  {
+    "path": "docs/audit-2026-10-17-round5/source-manifest.json",
+    "bytes": 25980,
+    "sha256": "10eba76ac5dcbf79a05671b6bf651765ff83aa4ac7db430a20d9acd5e4f35a55",
+    "pinAt": "2026-10-17T20:10:11.435989+00:00",
+    "selectedObjects": [
+      {
+        "pointer": "/files/31",
+        "value": {
+          "path": "packages/core/src/capability-control/overlay.ts",
+          "bytes": 7815,
+          "sha256": "75477176f70ab8d97f7669c0929dfdbcbc549f42121d46faa95766310e99e7c5",
+          "frozenBlobVerified": true,
+          "currentWorkingTreeMatchesFrozenBlob": true
+        }
+      }
+    ],
+    "readAt": "2026-10-17T20:10:11.436050+00:00"
+  },
+  {
+    "path": "bugs/2026-07-13-repo-audit.md",
+    "bytes": 60400,
+    "sha256": "f2bc07b459be0e653aae535af308b4aa162e33efc88b8100a8ae4d95a256d513",
+    "pinAt": "2026-10-17T20:10:11.436840+00:00",
+    "selectedLineRanges": [
+      [
+        180,
+        194
+      ]
+    ],
+    "readAt": "2026-10-17T20:10:11.436844+00:00",
+    "ranges": [
+      {
+        "first": 180,
+        "last": 194,
+        "text": "180: - **影响**：进入 worktree 后，连 user-global credential 的工具可见性与 env exposure 都消失。\n181: - **证据**：renderer 仍发送原 root：`packages/desktop/src/renderer/App.tsx:2612`；bridge 只推该路径 snapshot：`packages/desktop/src/main/agent-bridge.ts:403`；Engine resume 改用持久化 worktree cwd：`packages/core/src/engine/engine.ts:1150`；worker access 严格按 cwd：`packages/core/src/credentials/access.ts:141`。\n182: - **复现/测试**：snapshot 只有 `/repo/main` 时，`/repo/worktree` 查询返回空 credential/env。\n183: - **建议修复**：workspace switch 后立即为 effective root 推 snapshot；user-global 与 project-scoped credential 分层索引。\n184: \n185: ### P1-20 未信任项目可重新启用用户关闭的插件/skill/shell 能力（确认）\n186: \n187: - **影响**：仓库提交的 `capabilityOverrides.*=\"on\"` 或 `featureFlags.shell_tool=true` 可推翻用户全局禁用，重新启用已安装插件的 shell hooks/MCP 或内置 shell。\n188: - **证据**：`packages/core/src/settings/manager.ts:174-180` 的危险字段漏掉 `capabilityOverrides`/`featureFlags`；`packages/core/src/capability-control/overlay.ts:71-82` 允许 project on 覆盖 global off；`disabled-lists.ts:32-69` 据此恢复插件；hook 执行见 `packages/core/src/plugins/loadPluginHooks.ts:153-220`；feature flag project 优先见 `packages/core/src/settings/feature-flags.ts:8-31`。\n189: - **复现/测试**：untrusted project 下，用户 disabled plugin 被 `project on` 从 effective disabled list 移除，`shell_tool` 也从 false 变 true；现有 `manager.test.ts:234-246` 反而将其编码为“benign”。\n190: - **建议修复**：未信任项目不能使用任何“on”扩大能力，只允许进一步关闭；trust gate 后再计算 effective lists/flags。\n191: \n192: ### P1-21 RunManager 取消竞态可把 cancelled 任务重新跑完（确认）\n193: \n194: - **影响**：用户已取消的自动化仍可能执行写操作，最终状态从 cancelled 变 completed。"
+      }
+    ]
+  },
+  {
+    "path": "docs/archive/review-2026-07-09/05-p2-deep-dive-and-fix-design.md",
+    "bytes": 39170,
+    "sha256": "6b5fede9d7a924c6be358ef8a51c84cd0b7fe37e0c7827f1308e18baece0e59a",
+    "pinAt": "2026-10-17T20:10:11.437454+00:00",
+    "selectedLineRanges": [
+      [
+        65,
+        108
+      ]
+    ],
+    "readAt": "2026-10-17T20:10:11.437460+00:00",
+    "ranges": [
+      {
+        "first": 65,
+        "last": 108,
+        "text": "65: 2. 不能破坏 live session 的 `permissionMode` 重应用；这曾是明确修复点，见 `packages/core/src/protocol/chat-session-manager.ts:58`、`packages/core/src/protocol/chat-session-manager.ts:63`、`packages/core/src/protocol/chat-session-manager.permission.test.ts:115`、`packages/core/src/protocol/chat-session-manager.permission.test.ts:119`。\n66: 3. 不能把“不存在”误判为“可新建”：`requireExisting:false` 仍必须保持 resume-or-create 行为，现有测试见 `packages/core/src/protocol/server.require-existing.test.ts:104`、`packages/core/src/protocol/server.require-existing.test.ts:117`、`packages/core/src/protocol/server.require-existing.test.ts:121`。\n67: 4. 如果后续把 probe 封装到 `ChatSessionManager`，要避免 manager 直接依赖 `Engine.sessionExistsOnDisk()` 之外的更大 Engine 表面；A1 已记录 manager/Engine 边界，见 `docs/archive/review-2026-07-09/01-core-engine-structure.md:225`、`docs/archive/review-2026-07-09/01-core-engine-structure.md:235`。\n68: \n69: ## F-07 builtin capability 的 `off` 可热生效，`on` 受构造期 frozen registry 限制\n70: \n71: ### 1. 根因链\n72: \n73: 1. 能力控制层允许项目级 override 写到 `capabilityOverrides.builtin.<token>`；`setEnabled(..., { scope:\"project\" })` 会转成 `setOverride(id, \"on\" | \"off\")`，见 `packages/core/src/capability-control/service.ts:123`、`packages/core/src/capability-control/service.ts:125`、`packages/core/src/capability-control/service.ts:127`、`packages/core/src/capability-control/service.ts:130`。\n74: 2. `CapabilityService.setOverride()` 注释明确说 all capability kinds 包括 builtin 都支持 project overrides，见 `packages/core/src/capability-control/service.ts:136`、`packages/core/src/capability-control/service.ts:138`、`packages/core/src/capability-control/service.ts:139`、`packages/core/src/capability-control/service.ts:143`。\n75: 3. builtin override 的合并语义在 `effectiveBuiltinLists()` 中是三态覆盖：`on` 加入 enabled、移出 disabled；`off` 加入 disabled、移出 enabled，见 `packages/core/src/capability-control/overlay.ts:120`、`packages/core/src/capability-control/overlay.ts:123`、`packages/core/src/capability-control/overlay.ts:136`、`packages/core/src/capability-control/overlay.ts:141`。\n76: 4. Engine 构造期会读取 `readBuiltinOverride(config.cwd)` 并生成 builtinLists，然后用 `resolveBuiltinToolNames()` 构造 `ToolRegistry`，见 `packages/core/src/engine/engine.ts:562`、`packages/core/src/engine/engine.ts:578`、`packages/core/src/engine/engine.ts:580`、`packages/core/src/engine/engine.ts:582`。\n77: 5. 构造期注释已明确这是 frozen builtin tool set：`on` 能在构造时把全局禁用工具 force-enable 进集合，但 mid-session 的 `on` 无法把不在 registry 的工具加回来，需要 session restart，见 `packages/core/src/engine/engine.ts:569`、`packages/core/src/engine/engine.ts:573`、`packages/core/src/engine/engine.ts:575`、`packages/core/src/engine/engine.ts:576`。\n78: 6. 每 turn 的动态路径只做过滤：`applyBuiltinOverrideVisibility()` 对 `off` 过滤工具，对 `on` / `inherit` 只是 keep；注释同样写明“can't re-add a tool the ctor-frozen registry omitted”，见 `packages/core/src/engine/engine.ts:267`、`packages/core/src/engine/engine.ts:270`、`packages/core/src/engine/engine.ts:271`、`packages/core/src/engine/engine.ts:280`。\n79: 7. `run()` 每 turn 重新读取 override，并把 `off` 同时转成 executor 执行期 gate；但 `allToolDefs` 的来源仍是当前 registry，所以缺失工具不能被 `on` 加回，见 `packages/core/src/engine/engine.ts:1754`、`packages/core/src/engine/engine.ts:1761`、`packages/core/src/engine/engine.ts:1771`、`packages/core/src/engine/engine.ts:1808`。\n80: 8. `ToolRegistry` 的 builtin 注册只在 constructor 里调用 `registerBuiltins()`；后续 `getToolDefinitions()` 只是返回 map 里已有工具，见 `packages/core/src/tool-system/registry.ts:26`、`packages/core/src/tool-system/registry.ts:27`、`packages/core/src/tool-system/registry.ts:69`、`packages/core/src/tool-system/registry.ts:74`。\n81: 9. 因此这条不是隐藏的实现 bug，而是代码注释承认的折中。03 把它归为 P2，理由是设置语义不对称、排障成本增加，见 `docs/archive/review-2026-07-09/03-optimization-findings.md:74`、`docs/archive/review-2026-07-09/03-optimization-findings.md:76`、`docs/archive/review-2026-07-09/03-optimization-findings.md:77`。\n82: \n83: ### 2. 复现/触发路径\n84: \n85: 1. 构造一个 Engine，其 builtin set 中不包含某个工具，例如该工具被全局 `disabledBuiltinTools` 移除，或不在 preset effective builtin set 中。`resolveBuiltinToolNames()` 会先加 enabled，再按 disabled 删除，见 `packages/core/src/preset/index.ts:331`、`packages/core/src/preset/index.ts:341`、`packages/core/src/preset/index.ts:345`。\n86: 2. 同一个 session 运行期间，项目设置写入 `capabilityOverrides.builtin.<tool> = \"on\"`。desktop main 的 `capabilities:setOverride` IPC 会调用 `setCapabilityOverride(cwd, id, state)`，见 `packages/desktop/src/main/index.ts:1728`、`packages/desktop/src/main/index.ts:1734`；实际写入由 `CapabilityService.setOverride()` 完成，见 `packages/core/src/capability-control/service.ts:153`、`packages/core/src/capability-control/service.ts:156`。\n87: 3. 下一条消息进入同一个 Engine。`run()` 重新读取 builtin override，见 `packages/core/src/engine/engine.ts:1765`。\n88: 4. 如果 override 是 `on`，`applyBuiltinOverrideVisibility()` 不会过滤，但也无法把 registry 没有的工具加回；`allToolDefs` 仍来自 `this.toolRegistry.getToolDefinitions()`，见 `packages/core/src/engine/engine.ts:1808`、`packages/core/src/engine/engine.ts:1809`、`packages/core/src/engine/engine.ts:1810`。\n89: 5. 模型仍看不到该工具；如果模型直接点名该工具，`ToolRegistry.executeTool()` 会在 map 中找不到并抛 `ToolNotFoundError`，见 `packages/core/src/tool-system/registry.ts:90`、`packages/core/src/tool-system/registry.ts:92`。\n90: 6. 相反，从 `on` 或 inherit 热切到 `off` 能生效：工具列表被过滤，executor 还会因 `ctx.disabledBuiltins` 拒绝直接调用，见 `packages/core/src/engine/engine.ts:1771`、`packages/core/src/tool-system/executor.ts:139`、`packages/core/src/tool-system/executor.ts:145`、`packages/core/src/tool-system/executor.ts:149`。\n91: \n92: ### 3. 影响边界\n93: \n94: 1. 影响 builtin capability 的 mid-session enable，不影响 mid-session disable。现有测试已覆盖 `off` 可隐藏、执行期可拒绝，见 `packages/core/src/engine/__tests__/builtin-override-per-turn.test.ts:16`、`packages/core/src/engine/__tests__/builtin-override-per-turn.test.ts:19`、`packages/core/src/tool-system/__tests__/disabled-builtin-execution-gate.test.ts:47`、`packages/core/src/tool-system/__tests__/disabled-builtin-execution-gate.test.ts:65`。\n95: 2. 安全角度是 fail-closed：本该启用的工具继续不可用，而不是本该禁用的工具被放开。这也是本条保持 P2 的主要原因。\n96: 3. UX/配置角度存在不一致：能力列表可以把 project override 显示为 enabled，`CapabilityService.list()` 会按 override 计算 `enabled` 与 `effectiveSource`，见 `packages/core/src/capability-control/service.ts:105`、`packages/core/src/capability-control/service.ts:109`、`packages/core/src/capability-control/service.ts:112`、`packages/core/src/capability-control/service.ts:115`；但已存在 Engine 的工具 registry 不能热加入该 builtin。\n97: 4. 这条不应顺手扩展到 plugin hook：Engine 注释已说明 plugin hooks 的 override 也是 new sessions 生效，见 `packages/core/src/engine/engine.ts:605`、`packages/core/src/engine/engine.ts:607`。本条只讨论 03 指出的 builtin visibility / execution 语义。\n98: 5. 本条我判断不值得作为近期 core 重构强行修。依据是：限制已经被代码注释明示，且失败模式是工具继续不可用；完整热启用需要改 registry/visibility/executor 三层，半径明显大于收益。若产品必须承诺“启用后下一条消息可用”，再做长期方案。\n99: \n100: ### 4. 修复方案\n101: \n102: 1. 短期推荐方案：承认这是设计折中，把行为显式暴露为“启用 builtin 需要新 session / 重启，禁用下一条消息生效”。\n103:    - 在 `packages/core/src/capability-control/types.ts` 的 `CapabilityDescriptor` 增加可选运行时提示字段，例如 `runtimeEffect?: \"nextTurn\" | \"nextSession\"` 或更具体的 `requiresNewSessionOnEnable?: boolean`。\n104:    - 在 `packages/core/src/capability-control/service.ts` 生成 builtin descriptor 时，如果 `d.kind === \"builtin\"` 且项目 override 为 `on`、但该 builtin 不是当前 live Engine registry 的成员，则标记需要新 session。当前 service 只能看到 settings UI 临时 registry，见 `packages/desktop/src/main/capabilities-service.ts:29`、`packages/desktop/src/main/capabilities-service.ts:32`、`packages/desktop/src/main/capabilities-service.ts:35`；是否能准确判断 live Engine 缺失，需要 main 额外传入 active session registry 信息（这一点属于推测，因为当前 main service 注释说明它只看“configured on disk data”，见 `packages/desktop/src/main/capabilities-service.ts:4`、`packages/desktop/src/main/capabilities-service.ts:7`）。\n105:    - 在 `packages/desktop/src/renderer/settings/CapabilitiesOverviewSection.tsx` 的 project override 操作后，展示该提示；当前保存后只 reload list，见 `packages/desktop/src/renderer/settings/CapabilitiesOverviewSection.tsx:205`、`packages/desktop/src/renderer/settings/CapabilitiesOverviewSection.tsx:209`。\n106: 2. 若只想避免误导，也可以不加 descriptor 字段，而是在 `packages/desktop/src/main/capabilities-service.ts` 或相关设置文案中把 builtin project `on` 标为 new-session 生效。这个方案不改变 core runtime，风险最低。\n107: 3. 长期对称热生效方案：拆分“工具定义注册全集”和“本 turn 可见/可执行集合”。\n108:    - 修改 `packages/core/src/tool-system/registry.ts`，让 registry 能持有 host 支持的 builtin 全集，而不是只持有当前 preset/effective set。现有 constructor 只注册 selected builtins，见 `packages/core/src/tool-system/registry.ts:26`、`packages/core/src/tool-system/registry.ts:30`、`packages/core/src/tool-system/registry.ts:45`。"
+      }
+    ]
+  }
+]

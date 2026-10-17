@@ -1,0 +1,40 @@
+[
+  {
+    "path": "docs/audit-2026-10-17-round11/evidence/root-source-manifest.json",
+    "bytes": 6593,
+    "sha256": "2fad2c50ead1bcdda50c866118c1f310e960cc8c1e46741ec3e21699cfa341d1",
+    "pointer": "/files/9",
+    "value": {
+      "path": "packages/core/src/composition/activation.ts",
+      "bytes": 4413,
+      "sha256": "fbb9f7fe70b413a8661ccc50f98ebbb557456a43101baf95753c634cba774374",
+      "currentMatchesFrozen": true,
+      "coverage": "Selected implementation/tests/excerpts or static consumer references; hash inventory is not whole-file or whole-dependency review."
+    }
+  },
+  {
+    "path": "docs/audit-2026-10-17-round11/evidence/root-source-manifest.json",
+    "bytes": 6593,
+    "sha256": "2fad2c50ead1bcdda50c866118c1f310e960cc8c1e46741ec3e21699cfa341d1",
+    "pointer": "/files/10",
+    "value": {
+      "path": "packages/core/src/composition/lifetime.ts",
+      "bytes": 2868,
+      "sha256": "42b02192611a9d2290dc61d892c73823e71634031954dc6440e3ccf1b911518b",
+      "currentMatchesFrozen": true,
+      "coverage": "Selected implementation/tests/excerpts or static consumer references; hash inventory is not whole-file or whole-dependency review."
+    }
+  },
+  {
+    "path": "docs/audit-2026-10-17-round11/evidence/hooks-source-manifest.json",
+    "bytes": 5637,
+    "sha256": "ed1601cf0ddf7256f5f677ae5a09d46b2ce5110e35ea26c9c929789646c09005",
+    "pointer": "/files/11",
+    "value": {
+      "path": "packages/core/src/composition/lifetime.ts",
+      "frozenSha256": "42b02192611a9d2290dc61d892c73823e71634031954dc6440e3ccf1b911518b",
+      "matchesCurrent": true,
+      "coverage": "full; onceDispose imported by actual HookRegistry"
+    }
+  }
+]

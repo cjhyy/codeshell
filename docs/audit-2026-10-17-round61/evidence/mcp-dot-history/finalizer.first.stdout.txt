@@ -1,0 +1,1 @@
+{"prepared": true, "historyFiles": 6244, "actualWindowReads": 28, "uniqueSelectedMetadataDocuments": 16, "reportLinks": 11, "endingUnchanged": true, "productSourcesRead": 0}

@@ -1,0 +1,177 @@
+[
+  {
+    "query": "dot-name-generic",
+    "savedIndex": 4,
+    "documentPin": {
+      "path": "docs/superpowers/plans/2026-05-29-capability-control.md",
+      "bytes": 25436,
+      "sha256": "e92d901d65edda5c333c126c5abf8f44f9d586225d840e3efb7e625198f01838",
+      "pinAt": "2026-10-17T20:20:07.331246+00:00"
+    },
+    "hit": {
+      "document": "docs/superpowers/plans/2026-05-29-capability-control.md",
+      "location": "/text",
+      "matchStart": 15191,
+      "matchEnd": 15261,
+      "windowStart": 15041,
+      "windowEnd": 15481,
+      "wholeValueCharacters": 25379,
+      "window": "led(\"skill:a\", true);\n    expect(f.get().disabledSkills).toEqual([]);\n  });\n\n  it(\"allowlist: builtin not in preset writes agent.enabledBuiltinTools (dotted)\", () => {\n    const f = fakes();\n    const svc = new CapabilityService({\n      registry: { listToolsDetailed: () => [{ name: \"REPL\", description: \"\", inputSchema: {}, source: \"builtin\", permissionDefault: \"allow\" }] } as any,\n      settings: f.settings as any, cwd: \"/x\",\n      scan",
+      "windowTruncated": true,
+      "matchStartLine": 404,
+      "windowStartLine": 400
+    },
+    "readAt": "2026-10-17T20:20:07.336309+00:00",
+    "scope": "Only this saved bounded window read; not whole giant JSON scalar or document."
+  },
+  {
+    "query": "dot-name-generic",
+    "savedIndex": 5,
+    "documentPin": {
+      "path": "docs/superpowers/plans/2026-06-01-project-scoped-capabilities.md",
+      "bytes": 69839,
+      "sha256": "7b4c870d59ccfe7d5a4fef1b7b7e3d8d32edba7016bd51b21e1b1023dc6a20a1",
+      "pinAt": "2026-10-17T20:20:07.336952+00:00"
+    },
+    "hit": {
+      "document": "docs/superpowers/plans/2026-06-01-project-scoped-capabilities.md",
+      "location": "/text",
+      "matchStart": 10941,
+      "matchEnd": 11092,
+      "windowStart": 10791,
+      "windowEnd": 11312,
+      "wholeValueCharacters": 69582,
+      "window": " function projectJson(): any {\n    return JSON.parse(_rf(join(cwd, \".code-shell\", \"settings.json\"), \"utf-8\"));\n  }\n\n  test(\"saveProjectSetting writes dotted path to project settings.json\", () => {\n    const sm = new SettingsManager(cwd, \"project\");\n    sm.saveProjectSetting(\"capabilityOverrides.skills.helper\", \"on\", cwd);\n    expect(projectJson().capabilityOverrides.skills.helper).toBe(\"on\");\n  });\n\n  test(\"saveProjectSetting creates .code-shell dir if absent\", () => {\n    const sm = new SettingsManager(cwd, \"projec",
+      "windowTruncated": true,
+      "matchStartLine": 178,
+      "windowStartLine": 174
+    },
+    "readAt": "2026-10-17T20:20:07.340689+00:00",
+    "scope": "Only this saved bounded window read; not whole giant JSON scalar or document."
+  },
+  {
+    "query": "dot-name-generic",
+    "savedIndex": 6,
+    "documentPin": {
+      "path": "docs/superpowers/plans/2026-06-01-project-scoped-capabilities.md",
+      "bytes": 69839,
+      "sha256": "7b4c870d59ccfe7d5a4fef1b7b7e3d8d32edba7016bd51b21e1b1023dc6a20a1",
+      "pinAt": "2026-10-17T20:20:07.341047+00:00"
+    },
+    "hit": {
+      "document": "docs/superpowers/plans/2026-06-01-project-scoped-capabilities.md",
+      "location": "/text",
+      "matchStart": 12852,
+      "matchEnd": 12971,
+      "windowStart": 12702,
+      "windowEnd": 13191,
+      "wholeValueCharacters": 69582,
+      "window": "d a private helper and two public methods to the `SettingsManager` class (place after `saveUserSetting`):\n\n```ts\n  /**\n   * Persist a single setting (dotted key path) to the PROJECT-level config\n   * file at ${cwd}/.code-shell/settings.json. Used for capabilityOverrides:\n   * project overlays live here, never in the global user file. Atomic write\n   * + cache invalidation mirror saveUserSetting.\n   */\n  saveProjectSetting(key: string, value: unknown, cwd: string): void {\n    const pat",
+      "windowTruncated": true,
+      "matchStartLine": 225,
+      "windowStartLine": 221
+    },
+    "readAt": "2026-10-17T20:20:07.344980+00:00",
+    "scope": "Only this saved bounded window read; not whole giant JSON scalar or document."
+  },
+  {
+    "query": "dot-name-generic",
+    "savedIndex": 7,
+    "documentPin": {
+      "path": "docs/superpowers/plans/2026-06-01-project-scoped-capabilities.md",
+      "bytes": 69839,
+      "sha256": "7b4c870d59ccfe7d5a4fef1b7b7e3d8d32edba7016bd51b21e1b1023dc6a20a1",
+      "pinAt": "2026-10-17T20:20:07.345375+00:00"
+    },
+    "hit": {
+      "document": "docs/superpowers/plans/2026-06-01-project-scoped-capabilities.md",
+      "location": "/text",
+      "matchStart": 13775,
+      "matchEnd": 13921,
+      "windowStart": 13625,
+      "windowEnd": 14141,
+      "wholeValueCharacters": 69582,
+      "window": ";\n    }\n    target[parts[parts.length - 1]!] = value;\n    this.atomicWriteJson(path, current);\n    this.invalidate();\n  }\n\n  /**\n   * Delete a single dotted key from the PROJECT-level config file. Used to\n   * express \"inherit\" (we don't persist the literal \"inherit\"; we remove the\n   * override key). No-ops if the file or any intermediate segment is absent.\n   */\n  deleteProjectSetting(key: string, cwd: string): void {\n    const path = this.projectSettingsPath(cwd);\n    if (!existsSync(path)) return;\n    const",
+      "windowTruncated": true,
+      "matchStartLine": 249,
+      "windowStartLine": 241
+    },
+    "readAt": "2026-10-17T20:20:07.349295+00:00",
+    "scope": "Only this saved bounded window read; not whole giant JSON scalar or document."
+  },
+  {
+    "query": "dot-name-generic",
+    "savedIndex": 8,
+    "documentPin": {
+      "path": "docs/superpowers/specs/2026-05-29-capability-control-design.md",
+      "bytes": 13804,
+      "sha256": "b1557dc65dccbe867d9309023f373f396c33df536a8d59045bfea073ce5b32c8",
+      "pinAt": "2026-10-17T20:20:07.349833+00:00"
+    },
+    "hit": {
+      "document": "docs/superpowers/specs/2026-05-29-capability-control-design.md",
+      "location": "/text",
+      "matchStart": 1533,
+      "matchEnd": 1679,
+      "windowStart": 1383,
+      "windowEnd": 1899,
+      "wholeValueCharacters": 10237,
+      "window": "层） | `SkillDefinition`（`source: \"plugin\"`） |\n\n**与原始草案的三处偏差（已修正进本稿）：**\n1. builtin 的开关 key **嵌套在 `agent.` 下**，不是顶层。`SettingsManager.saveUserSetting` 已支持点号路径（`manager.ts:178`），故 `settingsKey` 用 `\"agent.enabledBuiltinTools\"` 等点号形式。\n2. `src/llm/capabilities/`（模型能力，无关）已存在；为避免命名歧义，新模块落 **`src/capability-control/`**。\n3. `saveUserSetting` 内部已调用 `invalidate()`（`manager.ts:197`），故路由器无需再显式 invalidate。\n\n## 2. 为什么只收口控制层（不动执行层）\n\ntool（模型直接调，走 `ToolRegistry`）与 skill（prompt 期展开 / dispatcher，走 `scanSkills`）是**故意区分**的两个概念。把 skill ",
+      "windowTruncated": true,
+      "matchStartLine": 22,
+      "windowStartLine": 19
+    },
+    "readAt": "2026-10-17T20:20:07.354413+00:00",
+    "scope": "Only this saved bounded window read; not whole giant JSON scalar or document."
+  },
+  {
+    "query": "dot-name-generic",
+    "savedIndex": 9,
+    "documentPin": {
+      "path": "docs/superpowers/specs/2026-05-29-capability-control-design.md",
+      "bytes": 13804,
+      "sha256": "b1557dc65dccbe867d9309023f373f396c33df536a8d59045bfea073ce5b32c8",
+      "pinAt": "2026-10-17T20:20:07.354777+00:00"
+    },
+    "hit": {
+      "document": "docs/superpowers/specs/2026-05-29-capability-control-design.md",
+      "location": "/text",
+      "matchStart": 8245,
+      "matchEnd": 8350,
+      "windowStart": 8095,
+      "windowEnd": 8570,
+      "wholeValueCharacters": 10237,
+      "window": "ledBuiltinTools\")` 按点号路径从 `ValidatedSettings` 取数组（builtin key 嵌套在 `agent.` 下）。\n- 写入复用现有 `SettingsManager.saveUserSetting(key, value)`（原子 tmp+rename，支持点号路径），不新增持久化路径。\n\n## 8. 生效时机\n\n- **写入即落盘**（`saveUserSetting` 原子写）。\n- **何时影响运行中 agent**：builtin/skill/plugin 在下次 `engine.run()` 重新 `resolveBuiltinToolNames` / `scanSkills` 时生效；MCP 的 `enabled` 在下次 `connectAll` 生效。**本设计不热重载运行中会话**（与现状一致，YAGNI）。UI 提示「下次对话生效」。\n\n## 9. desktop 侧\n\n只加两个转发端点，逻辑全在 core（照 `skills:list` / `settings:set` 既",
+      "windowTruncated": true,
+      "matchStartLine": 174,
+      "windowStartLine": 173
+    },
+    "readAt": "2026-10-17T20:20:07.361043+00:00",
+    "scope": "Only this saved bounded window read; not whole giant JSON scalar or document."
+  },
+  {
+    "query": "dot-name-generic",
+    "savedIndex": 10,
+    "documentPin": {
+      "path": "docs/superpowers/specs/2026-05-29-capability-control-design.md",
+      "bytes": 13804,
+      "sha256": "b1557dc65dccbe867d9309023f373f396c33df536a8d59045bfea073ce5b32c8",
+      "pinAt": "2026-10-17T20:20:07.361309+00:00"
+    },
+    "hit": {
+      "document": "docs/superpowers/specs/2026-05-29-capability-control-design.md",
+      "location": "/text",
+      "matchStart": 9681,
+      "matchEnd": 9817,
+      "windowStart": 9531,
+      "windowEnd": 10037,
+      "wholeValueCharacters": 10237,
+      "window": "in/builtin/mcp 各验一遍）。\n- **`setEnabled` 路由单测**（`service.ts`）：四种 mode × 开/关，断言写进 settings 的最终形状（denylist 增删、allowlist 增删、record-flag 翻转、未配置 server 不凭空建、点号路径写到 `agent.*`）。\n- **回归**：跑现有 engine / tool-system 测试，确认执行层零行为变化（本设计不碰执行路径，应全绿）。\n\n## 11. 迁移步骤（TDD）\n\n1. 新建 `packages/core/src/capability-control/`：`types.ts`、`project.ts`、`service.ts`、`index.ts`。\n2. 先写投影 + 路由单测（红），再实现（绿）。\n3. `engine.ts` 装配：暴露 `CapabilityService`（或一个 getter），复用 `getToolRegistry()` + `getSettingsManager()`。\n4. desktop：`capabilities-servic",
+      "windowTruncated": true,
+      "matchStartLine": 200,
+      "windowStartLine": 199
+    },
+    "readAt": "2026-10-17T20:20:07.365881+00:00",
+    "scope": "Only this saved bounded window read; not whole giant JSON scalar or document."
+  }
+]

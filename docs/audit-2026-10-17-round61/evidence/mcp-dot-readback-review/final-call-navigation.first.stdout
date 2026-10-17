@@ -1,0 +1,7 @@
+266:    this.merged = null;
+386:          return this.validateMerged(remerged);
+393:    return this.validateMerged(raw);
+452:    this.merged = null;
+501:  private validateMerged(raw: Record<string, unknown>): ValidatedSettings {
+524:    this.merged = validated;
+979:function parseConfigFile(path: string): Record<string, unknown> | null {

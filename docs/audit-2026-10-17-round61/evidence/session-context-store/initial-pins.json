@@ -1,0 +1,39 @@
+{
+  "rootReportedBaseline": "659b6b2ce5888723a40ce046cbbf643382cb130b",
+  "gitCertified": false,
+  "instructionReuse": "Previously fully read CODESHELL.md and AGENTS.md; same SHA checked, no new instruction body156",
+  "files": [
+    {
+      "path": "CODESHELL.md",
+      "bytes": 17639,
+      "lineCount": 217,
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "pinnedAtUTC": "2026-10-17T20:08:43.964119+00:00",
+      "timing": "before any own body/nav prep156"
+    },
+    {
+      "path": "AGENTS.md",
+      "bytes": 206,
+      "lineCount": 5,
+      "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "pinnedAtUTC": "2026-10-17T20:08:43.966313+00:00",
+      "timing": "before any own body/nav prep156"
+    },
+    {
+      "path": "packages/coding/src/external-runtimes/shared/session-context-store.ts",
+      "bytes": 6343,
+      "lineCount": 153,
+      "sha256": "956a4699d1167beefc694dbf5cdf1884bd17caee0f7f3ce689f2a1d37a2e56b3",
+      "pinnedAtUTC": "2026-10-17T20:08:43.967235+00:00",
+      "timing": "before any own body/nav prep156"
+    },
+    {
+      "path": "packages/coding/src/external-runtimes/shared/session-context-store.test.ts",
+      "bytes": 8764,
+      "lineCount": 190,
+      "sha256": "f937e91242a66a509d87d4dceafbc47d273bb8c7852d979b57452d57a5b90409",
+      "pinnedAtUTC": "2026-10-17T20:08:43.968133+00:00",
+      "timing": "before any own body/nav prep156"
+    }
+  ]
+}

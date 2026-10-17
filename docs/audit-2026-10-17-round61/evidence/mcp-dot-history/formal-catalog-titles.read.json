@@ -1,0 +1,37 @@
+[
+  {
+    "path": "docs/audit-2026-10-17-round58/recorded-findings-catalog.json",
+    "bytes": 80337,
+    "sha256": "db4370c2544acbe67b6400d3b740d95cc3b170690184be1accc00120bc4a53ac",
+    "pinAt": "2026-10-17T20:20:13.406311+00:00",
+    "readAt": "2026-10-17T20:20:13.408318+00:00",
+    "selectedTitleObjects": [
+      {
+        "pointer": "/findings/13",
+        "id": "C02",
+        "priority": "P2",
+        "title": "pre_tool_use 改写参数后未重复 Plan/MCP 参数权限门禁（旧报告已知，仍存在）"
+      },
+      {
+        "pointer": "/findings/52",
+        "id": "R3-02",
+        "priority": "P3",
+        "title": "Codex MCP结果与失败原因变成不可读摘要"
+      },
+      {
+        "pointer": "/findings/108",
+        "id": "MCP-R38-01",
+        "priority": "P3",
+        "title": "Reopening and saving a stdio MCP form loses structured argument boundaries"
+      },
+      {
+        "pointer": "/findings/109",
+        "id": "MCP-R39-01",
+        "priority": "P3",
+        "title": "Renaming a settings-owned MCP server drops supported non-editor fields"
+      }
+    ],
+    "machineIdTitleRowsSeen": 118,
+    "allRowsSemanticallyRead": false
+  }
+]

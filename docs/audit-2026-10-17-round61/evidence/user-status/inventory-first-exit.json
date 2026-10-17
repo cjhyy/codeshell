@@ -1,0 +1,18 @@
+{
+  "atUTC": "2026-10-17T20:25:50.061219+00:00",
+  "argv": [
+    "rg",
+    "--files",
+    "-g",
+    "*.ts",
+    "-g",
+    "*.tsx"
+  ],
+  "cwd": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell",
+  "exitCode": 0,
+  "stdoutBytes": 244647,
+  "stdoutSha256": "4a998023ed569c51f37d506cc5aeca2373de6bbfd410e9b4deb974dcf68339ef",
+  "stderrBytes": 0,
+  "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "scope": "Filename inventory only, no source bytes/body/import/test/Git."
+}

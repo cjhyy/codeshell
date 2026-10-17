@@ -1,0 +1,10 @@
+{
+  "toolChunkId": "01e972",
+  "exitCodeObserved": 1,
+  "stdoutObservation": "packages/core/src/capability-control/overlay.ts total 93 saved 93",
+  "exceptionObserved": "TypeError: sequence item 0: expected str instance, int found",
+  "cause": "Display-only join assumed string locations; shared batch Markdown locations may be integer line numbers. Projection was saved before failure.",
+  "separateRawStdoutStderrCaptured": false,
+  "productExecuted": false,
+  "correction": "Use str(location) only when formatting compact metadata locators; no history rescan and no product rerun."
+}

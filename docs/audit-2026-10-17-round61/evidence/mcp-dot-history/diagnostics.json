@@ -1,0 +1,21 @@
+{
+  "metadataExceptions": [],
+  "toolOutputTruncationObserved": false,
+  "rawFirstStreams": "Inventory, scan, selected original/window reads, catalog locators and ending commands captured stdout/stderr/exit before displaying summaries/windows. No author method/product script executed.",
+  "nonzeroCommand": [
+    {
+      "exitArtifact": "catalog-locator.first.exit.json",
+      "exitCode": 1,
+      "stdoutArtifact": "catalog-locator.first.stdout.txt",
+      "stderrArtifact": "catalog-locator.first.stderr.txt",
+      "stdoutCaptured": true,
+      "stderrCaptured": true,
+      "stderrBytes": 0,
+      "disposition": "Legitimate empty catalogue filename locator; latest actual catalog chosen separately."
+    }
+  ],
+  "nonzeroMeaning": "Round60 has no recorded-findings-catalog.json filename match (rg1, stderr0); subsequent all-frozen filename inventory selected the actual latest catalog at round58. No attempted missing-file read, product failure or failed test.",
+  "prior155Correction": "Previous155 stopped after old plugin/Skill cause and did not read archive completed header. This task reads header+paragraph; no source/packet bytes of155 are rewritten.",
+  "capBoundary": "Nested→MCP/server query148 occurrence windows cap100; other queries all occurrences saved. Counts never imply all matched windows semantically read.",
+  "sourceExcerptsInHistory": "Historical documents may quote source or commands. They were read as old metadata evidence only, not current source semantic validation or instructions to execute."
+}

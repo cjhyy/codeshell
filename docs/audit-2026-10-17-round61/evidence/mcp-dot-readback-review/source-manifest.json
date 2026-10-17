@@ -1,0 +1,889 @@
+{
+  "atUTC": "2026-10-17T20:24:33.392036+00:00",
+  "rootReportedBaseline": "659b6b2ce5888723a40ce046cbbf643382cb130b",
+  "gitCertified": false,
+  "files": [
+    {
+      "path": "CODESHELL.md",
+      "bytes": 17639,
+      "lineCount": 217,
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "pinnedAtUTC": "2026-10-17T20:19:50.812896+00:00",
+      "timing": "before any own prep161 body/nav",
+      "selectedLineRanges": [],
+      "semanticLineCount": 0,
+      "bodyDisplayedLineRanges": [],
+      "bodyDisplayedLineCount": 0,
+      "additionalNavigationSnippetLineRanges": [],
+      "displayedLineRanges": [],
+      "displayedLineCount": 0,
+      "coverage": "hash-only",
+      "semanticFull": false,
+      "category": "instruction-hash-reuse",
+      "scopeBoundary": "Same-SHA previously fully read instructions reused; no instruction body prep161."
+    },
+    {
+      "path": "AGENTS.md",
+      "bytes": 206,
+      "lineCount": 5,
+      "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "pinnedAtUTC": "2026-10-17T20:19:50.814784+00:00",
+      "timing": "before any own prep161 body/nav",
+      "selectedLineRanges": [],
+      "semanticLineCount": 0,
+      "bodyDisplayedLineRanges": [],
+      "bodyDisplayedLineCount": 0,
+      "additionalNavigationSnippetLineRanges": [],
+      "displayedLineRanges": [],
+      "displayedLineCount": 0,
+      "coverage": "hash-only",
+      "semanticFull": false,
+      "category": "instruction-hash-reuse",
+      "scopeBoundary": "Same-SHA previously fully read instructions reused; no instruction body prep161."
+    },
+    {
+      "path": "packages/core/src/settings/manager.ts",
+      "bytes": 46928,
+      "lineCount": 1139,
+      "sha256": "0c92e26bbbf252d1f6bbc0859d91bdae40c846aa9d9f597812a35c829ba629ec",
+      "pinnedAtUTC": "2026-10-17T20:19:50.815946+00:00",
+      "timing": "before any own prep161 body/nav",
+      "selectedLineRanges": [
+        [
+          21,
+          21
+        ],
+        [
+          83,
+          92
+        ],
+        [
+          94,
+          112
+        ],
+        [
+          144,
+          155
+        ],
+        [
+          186,
+          192
+        ],
+        [
+          225,
+          240
+        ],
+        [
+          261,
+          310
+        ],
+        [
+          325,
+          348
+        ],
+        [
+          375,
+          393
+        ],
+        [
+          405,
+          437
+        ],
+        [
+          442,
+          452
+        ],
+        [
+          501,
+          502
+        ],
+        [
+          524,
+          526
+        ],
+        [
+          572,
+          585
+        ],
+        [
+          701,
+          741
+        ],
+        [
+          793,
+          799
+        ],
+        [
+          807,
+          832
+        ],
+        [
+          834,
+          844
+        ],
+        [
+          872,
+          891
+        ],
+        [
+          921,
+          934
+        ],
+        [
+          979,
+          1002
+        ],
+        [
+          1017,
+          1029
+        ],
+        [
+          1109,
+          1139
+        ]
+      ],
+      "semanticLineCount": 408,
+      "bodyDisplayedLineRanges": [
+        [
+          1,
+          31
+        ],
+        [
+          83,
+          92
+        ],
+        [
+          94,
+          112
+        ],
+        [
+          144,
+          155
+        ],
+        [
+          182,
+          205
+        ],
+        [
+          218,
+          259
+        ],
+        [
+          261,
+          366
+        ],
+        [
+          375,
+          395
+        ],
+        [
+          398,
+          452
+        ],
+        [
+          488,
+          526
+        ],
+        [
+          572,
+          585
+        ],
+        [
+          690,
+          783
+        ],
+        [
+          793,
+          849
+        ],
+        [
+          866,
+          938
+        ],
+        [
+          977,
+          1037
+        ],
+        [
+          1103,
+          1139
+        ]
+      ],
+      "bodyDisplayedLineCount": 695,
+      "additionalNavigationSnippetLineRanges": [
+        [
+          456,
+          456
+        ],
+        [
+          534,
+          534
+        ],
+        [
+          539,
+          540
+        ],
+        [
+          542,
+          542
+        ],
+        [
+          558,
+          558
+        ],
+        [
+          563,
+          563
+        ],
+        [
+          596,
+          596
+        ],
+        [
+          599,
+          599
+        ],
+        [
+          602,
+          602
+        ],
+        [
+          629,
+          629
+        ],
+        [
+          632,
+          632
+        ],
+        [
+          639,
+          639
+        ],
+        [
+          642,
+          642
+        ],
+        [
+          672,
+          672
+        ],
+        [
+          676,
+          676
+        ],
+        [
+          689,
+          689
+        ],
+        [
+          851,
+          851
+        ],
+        [
+          940,
+          940
+        ],
+        [
+          960,
+          961
+        ],
+        [
+          1046,
+          1046
+        ],
+        [
+          1060,
+          1060
+        ]
+      ],
+      "displayedLineRanges": [
+        [
+          1,
+          31
+        ],
+        [
+          83,
+          92
+        ],
+        [
+          94,
+          112
+        ],
+        [
+          144,
+          155
+        ],
+        [
+          182,
+          205
+        ],
+        [
+          218,
+          259
+        ],
+        [
+          261,
+          366
+        ],
+        [
+          375,
+          395
+        ],
+        [
+          398,
+          452
+        ],
+        [
+          456,
+          456
+        ],
+        [
+          488,
+          526
+        ],
+        [
+          534,
+          534
+        ],
+        [
+          539,
+          540
+        ],
+        [
+          542,
+          542
+        ],
+        [
+          558,
+          558
+        ],
+        [
+          563,
+          563
+        ],
+        [
+          572,
+          585
+        ],
+        [
+          596,
+          596
+        ],
+        [
+          599,
+          599
+        ],
+        [
+          602,
+          602
+        ],
+        [
+          629,
+          629
+        ],
+        [
+          632,
+          632
+        ],
+        [
+          639,
+          639
+        ],
+        [
+          642,
+          642
+        ],
+        [
+          672,
+          672
+        ],
+        [
+          676,
+          676
+        ],
+        [
+          689,
+          783
+        ],
+        [
+          793,
+          849
+        ],
+        [
+          851,
+          851
+        ],
+        [
+          866,
+          938
+        ],
+        [
+          940,
+          940
+        ],
+        [
+          960,
+          961
+        ],
+        [
+          977,
+          1037
+        ],
+        [
+          1046,
+          1046
+        ],
+        [
+          1060,
+          1060
+        ],
+        [
+          1103,
+          1139
+        ]
+      ],
+      "displayedLineCount": 718,
+      "coverage": "selected",
+      "semanticFull": false,
+      "category": "product-selected",
+      "scopeBoundary": "Ordinary settings write/merge/parse/readback and explicit RPC value forwarding only. Adjacent files/locks/trust/credentials/native/hook provenance shown in body are not certified. Existing prep158/source-history overlap is not new unique or first coverage."
+    },
+    {
+      "path": "packages/core/src/settings/schema.ts",
+      "bytes": 29767,
+      "lineCount": 731,
+      "sha256": "2496b8aefd8ea32f7fc7ac23b26878475809be952a5fdbd8ac247cf0d40b3139",
+      "pinnedAtUTC": "2026-10-17T20:19:50.816724+00:00",
+      "timing": "before any own prep161 body/nav",
+      "selectedLineRanges": [
+        [
+          57,
+          78
+        ],
+        [
+          477,
+          477
+        ],
+        [
+          729,
+          731
+        ]
+      ],
+      "semanticLineCount": 26,
+      "bodyDisplayedLineRanges": [
+        [
+          54,
+          81
+        ],
+        [
+          470,
+          480
+        ],
+        [
+          723,
+          731
+        ]
+      ],
+      "bodyDisplayedLineCount": 48,
+      "additionalNavigationSnippetLineRanges": [
+        [
+          88,
+          88
+        ],
+        [
+          483,
+          483
+        ]
+      ],
+      "displayedLineRanges": [
+        [
+          54,
+          81
+        ],
+        [
+          88,
+          88
+        ],
+        [
+          470,
+          480
+        ],
+        [
+          483,
+          483
+        ],
+        [
+          723,
+          731
+        ]
+      ],
+      "displayedLineCount": 50,
+      "coverage": "selected",
+      "semanticFull": false,
+      "category": "product-selected",
+      "scopeBoundary": "Ordinary settings write/merge/parse/readback and explicit RPC value forwarding only. Adjacent files/locks/trust/credentials/native/hook provenance shown in body are not certified. Existing prep158/source-history overlap is not new unique or first coverage."
+    },
+    {
+      "path": "packages/desktop/src/main/index.ts",
+      "bytes": 299337,
+      "lineCount": 7330,
+      "sha256": "105b2b49a28e0a7ef10980ac5feaa3a07ff81e7197f5acbefd95feb2498224c0",
+      "pinnedAtUTC": "2026-10-17T20:19:50.818366+00:00",
+      "timing": "before any own prep161 body/nav",
+      "selectedLineRanges": [
+        [
+          3840,
+          3847
+        ]
+      ],
+      "semanticLineCount": 8,
+      "bodyDisplayedLineRanges": [
+        [
+          3835,
+          3852
+        ]
+      ],
+      "bodyDisplayedLineCount": 18,
+      "additionalNavigationSnippetLineRanges": [],
+      "displayedLineRanges": [
+        [
+          3835,
+          3852
+        ]
+      ],
+      "displayedLineCount": 18,
+      "coverage": "selected",
+      "semanticFull": false,
+      "category": "product-selected",
+      "scopeBoundary": "Ordinary settings write/merge/parse/readback and explicit RPC value forwarding only. Adjacent files/locks/trust/credentials/native/hook provenance shown in body are not certified. Existing prep158/source-history overlap is not new unique or first coverage."
+    },
+    {
+      "path": "packages/desktop/src/preload/index.ts",
+      "bytes": 86436,
+      "lineCount": 1892,
+      "sha256": "05dbc9b534bdc68c30f255f53a96617e50fb0c445ce2fc1bde4be31e3f8a6901",
+      "pinnedAtUTC": "2026-10-17T20:19:50.819569+00:00",
+      "timing": "before any own prep161 body/nav",
+      "selectedLineRanges": [
+        [
+          1119,
+          1123
+        ]
+      ],
+      "semanticLineCount": 5,
+      "bodyDisplayedLineRanges": [
+        [
+          1116,
+          1125
+        ]
+      ],
+      "bodyDisplayedLineCount": 10,
+      "additionalNavigationSnippetLineRanges": [],
+      "displayedLineRanges": [
+        [
+          1116,
+          1125
+        ]
+      ],
+      "displayedLineCount": 10,
+      "coverage": "selected",
+      "semanticFull": false,
+      "category": "product-selected",
+      "scopeBoundary": "Ordinary settings write/merge/parse/readback and explicit RPC value forwarding only. Adjacent files/locks/trust/credentials/native/hook provenance shown in body are not certified. Existing prep158/source-history overlap is not new unique or first coverage."
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/CapabilitiesOverviewSection.tsx",
+      "bytes": 26939,
+      "lineCount": 623,
+      "sha256": "0bc7f4d26156dcfb5c117af4f4dc27d7898859248f64a9dcd6cff1d17113b709",
+      "pinnedAtUTC": "2026-10-17T20:20:15.061130+00:00",
+      "timing": "before own prep161 body/nav; actual paths supplied by parent inventory",
+      "selectedLineRanges": [
+        [
+          261,
+          279
+        ]
+      ],
+      "semanticLineCount": 19,
+      "bodyDisplayedLineRanges": [
+        [
+          253,
+          279
+        ]
+      ],
+      "bodyDisplayedLineCount": 27,
+      "additionalNavigationSnippetLineRanges": [],
+      "displayedLineRanges": [
+        [
+          253,
+          279
+        ]
+      ],
+      "displayedLineCount": 27,
+      "coverage": "selected",
+      "semanticFull": false,
+      "category": "product-selected",
+      "scopeBoundary": "Ordinary settings write/merge/parse/readback and explicit RPC value forwarding only. Adjacent files/locks/trust/credentials/native/hook provenance shown in body are not certified. Existing prep158/source-history overlap is not new unique or first coverage."
+    },
+    {
+      "path": "packages/desktop/src/main/capabilities-service.ts",
+      "bytes": 4475,
+      "lineCount": 120,
+      "sha256": "029af36987fe6ae5dce537e54b32ba9f64a01a2230ed6fa735d39aa1c1e55ebb",
+      "pinnedAtUTC": "2026-10-17T20:20:15.062779+00:00",
+      "timing": "before own prep161 body/nav; actual paths supplied by parent inventory",
+      "selectedLineRanges": [
+        [
+          51,
+          80
+        ],
+        [
+          114,
+          120
+        ]
+      ],
+      "semanticLineCount": 37,
+      "bodyDisplayedLineRanges": [
+        [
+          40,
+          124
+        ]
+      ],
+      "bodyDisplayedLineCount": 85,
+      "additionalNavigationSnippetLineRanges": [],
+      "displayedLineRanges": [
+        [
+          40,
+          124
+        ]
+      ],
+      "displayedLineCount": 85,
+      "coverage": "selected",
+      "semanticFull": false,
+      "category": "product-selected",
+      "scopeBoundary": "Ordinary settings write/merge/parse/readback and explicit RPC value forwarding only. Adjacent files/locks/trust/credentials/native/hook provenance shown in body are not certified. Existing prep158/source-history overlap is not new unique or first coverage."
+    },
+    {
+      "path": "packages/core/src/capability-control/service.ts",
+      "bytes": 7690,
+      "lineCount": 197,
+      "sha256": "22378bf6addc85ebdaf2aace6a85121545ecbb1481bddfc18ffc0d58545a7c4e",
+      "pinnedAtUTC": "2026-10-17T20:20:15.063617+00:00",
+      "timing": "before own prep161 body/nav; actual paths supplied by parent inventory",
+      "selectedLineRanges": [
+        [
+          107,
+          117
+        ],
+        [
+          151,
+          165
+        ]
+      ],
+      "semanticLineCount": 26,
+      "bodyDisplayedLineRanges": [
+        [
+          105,
+          124
+        ],
+        [
+          151,
+          165
+        ]
+      ],
+      "bodyDisplayedLineCount": 35,
+      "additionalNavigationSnippetLineRanges": [],
+      "displayedLineRanges": [
+        [
+          105,
+          124
+        ],
+        [
+          151,
+          165
+        ]
+      ],
+      "displayedLineCount": 35,
+      "coverage": "selected",
+      "semanticFull": false,
+      "category": "product-selected",
+      "scopeBoundary": "Ordinary settings write/merge/parse/readback and explicit RPC value forwarding only. Adjacent files/locks/trust/credentials/native/hook provenance shown in body are not certified. Existing prep158/source-history overlap is not new unique or first coverage."
+    },
+    {
+      "path": "packages/core/src/capability-control/overlay.ts",
+      "bytes": 7815,
+      "lineCount": 211,
+      "sha256": "75477176f70ab8d97f7669c0929dfdbcbc549f42121d46faa95766310e99e7c5",
+      "pinnedAtUTC": "2026-10-17T20:20:15.064519+00:00",
+      "timing": "before own prep161 body/nav; actual paths supplied by parent inventory",
+      "selectedLineRanges": [
+        [
+          184,
+          211
+        ]
+      ],
+      "semanticLineCount": 28,
+      "bodyDisplayedLineRanges": [
+        [
+          181,
+          211
+        ]
+      ],
+      "bodyDisplayedLineCount": 31,
+      "additionalNavigationSnippetLineRanges": [],
+      "displayedLineRanges": [
+        [
+          181,
+          211
+        ]
+      ],
+      "displayedLineCount": 31,
+      "coverage": "selected",
+      "semanticFull": false,
+      "category": "product-selected",
+      "scopeBoundary": "Ordinary settings write/merge/parse/readback and explicit RPC value forwarding only. Adjacent files/locks/trust/credentials/native/hook provenance shown in body are not certified. Existing prep158/source-history overlap is not new unique or first coverage."
+    },
+    {
+      "path": "packages/core/src/settings/migrate-config.ts",
+      "bytes": 5819,
+      "lineCount": 149,
+      "sha256": "d47ac81e8bb7894d1162df3d54fc6569abed4e5af7906a131113e56b1deeb6dc",
+      "pinnedAtUTC": "2026-10-17T20:21:57.791266+00:00",
+      "timing": "before own prep161 body/nav; imported manager path, exact inventory confirmed",
+      "selectedLineRanges": [
+        [
+          17,
+          17
+        ],
+        [
+          91,
+          102
+        ],
+        [
+          119,
+          147
+        ]
+      ],
+      "semanticLineCount": 42,
+      "bodyDisplayedLineRanges": [
+        [
+          91,
+          147
+        ]
+      ],
+      "bodyDisplayedLineCount": 57,
+      "additionalNavigationSnippetLineRanges": [
+        [
+          7,
+          7
+        ],
+        [
+          17,
+          17
+        ],
+        [
+          49,
+          49
+        ],
+        [
+          51,
+          51
+        ],
+        [
+          53,
+          53
+        ],
+        [
+          55,
+          55
+        ],
+        [
+          59,
+          59
+        ],
+        [
+          72,
+          72
+        ],
+        [
+          81,
+          81
+        ],
+        [
+          84,
+          84
+        ],
+        [
+          88,
+          89
+        ]
+      ],
+      "displayedLineRanges": [
+        [
+          7,
+          7
+        ],
+        [
+          17,
+          17
+        ],
+        [
+          49,
+          49
+        ],
+        [
+          51,
+          51
+        ],
+        [
+          53,
+          53
+        ],
+        [
+          55,
+          55
+        ],
+        [
+          59,
+          59
+        ],
+        [
+          72,
+          72
+        ],
+        [
+          81,
+          81
+        ],
+        [
+          84,
+          84
+        ],
+        [
+          88,
+          89
+        ],
+        [
+          91,
+          147
+        ]
+      ],
+      "displayedLineCount": 69,
+      "coverage": "selected",
+      "semanticFull": false,
+      "category": "product-selected",
+      "scopeBoundary": "Ordinary settings write/merge/parse/readback and explicit RPC value forwarding only. Adjacent files/locks/trust/credentials/native/hook provenance shown in body are not certified. Existing prep158/source-history overlap is not new unique or first coverage."
+    }
+  ],
+  "summary": {
+    "sourceRows": 11,
+    "productSelectedRows": 9,
+    "productSemanticLines": 599,
+    "bodyDisplayedLines": 1006,
+    "displayedUnionLinesIncludingNavigation": 1043,
+    "semanticFullRows": 0,
+    "instructionHashOnlyRows": 2,
+    "testDeclarationLines": 0,
+    "productTestExecution": 0
+  }
+}

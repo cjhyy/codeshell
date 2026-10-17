@@ -1,0 +1,13 @@
+{
+  "productHelperImportFixtureTestExecution": 0,
+  "gitCommands": 0,
+  "actualUserConfigurationReadOrWrite": 0,
+  "networkNativeExecution": 0,
+  "firstInventoryExit": 0,
+  "firstMetadataFailure": null,
+  "outputTruncation": false,
+  "preliminarySourceEndMarkers": "After the initial bounded read, only minimal final load validation/JSON call binding and current-version migration counterevidence were added under before pins. No product retry or broad new mechanism; final ranges include all actual displays.",
+  "sourceReadingEnded": "2026-10-17T20:24:33.392036+00:00",
+  "foreignDiagnosticBoundary": "Root159 source display IndexError was parent-reported, not an own failure, test result or source read; no foreign raw log was copied or attributed here.",
+  "validation": "Own stdlib metadata hashing/range/receipt only. Zod enum/object mismatch is a static schema-contract conclusion, not an executed fixture/pass."
+}

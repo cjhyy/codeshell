@@ -1,0 +1,12 @@
+packages/core/src/capability-control/overlay.ts
+packages/core/src/settings/manager.mutate-fail-closed.test.ts
+packages/core/src/capability-control/service.ts
+packages/core/src/settings/manager.test.ts
+packages/core/src/settings/manager.ts
+packages/core/src/settings/manager-concurrency.test.ts
+packages/core/src/settings/manager.custom-root.test.ts
+packages/core/src/settings/manager.local-tombstones.test.ts
+packages/desktop/src/renderer/settings/McpSection.plugin.test.ts
+packages/desktop/src/renderer/settings/McpSection.lifecycle.test.tsx
+packages/desktop/src/renderer/settings/McpSection.lifecycle.fixture.tsx
+packages/desktop/src/renderer/settings/McpSection.tsx

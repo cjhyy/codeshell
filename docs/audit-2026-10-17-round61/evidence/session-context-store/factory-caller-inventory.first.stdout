@@ -1,0 +1,7 @@
+packages/coding/src/external-runtimes/session-factory.test.ts
+packages/coding/src/external-runtimes/session-factory.ts
+packages/coding/src/external-runtimes/index.ts
+packages/coding/src/external-runtimes/session-factory.host-tools.test.ts
+packages/desktop/src/main/external-runtime-service.operations.test.ts
+packages/desktop/src/main/external-runtime-service.ts
+packages/desktop/src/main/external-runtime-service.test.ts

@@ -1,0 +1,225 @@
+{
+  "counts": {
+    "formal": 0,
+    "candidates": 1,
+    "newRelated": 0
+  },
+  "formal": [],
+  "candidates": [
+    {
+      "alias": "Root159 current dotted MCP project override (same prep155/158 item)",
+      "priorityRecommendation": "P2",
+      "newIndependentId": false,
+      "evidence": "Static ordinary producer, unchecked save and schema readback mismatch; no product execution",
+      "finalClassificationOwner": "Root"
+    }
+  ],
+  "newRelated": [],
+  "decision": "support-current-settings-readback-failure-not-merely-silent-inherit",
+  "rootFinalDecision": {
+    "id": "MCP-R61-01",
+    "priority": "P2",
+    "evidenceLevel": "static-confirmed, not runtime reproduced",
+    "countOnceByRoot": true,
+    "sameItemAsPrep155158159": true
+  },
+  "normalPreconditions": [
+    "Existing normal project with readable valid current-version settings; ordinarily configured dotted MCP name and a real project capability row, as previously source-reviewed in prep158.",
+    "Project override on/off operation completes its ordinary settings write successfully; no filesystem/lock failure is assumed or tested.",
+    "No higher-priority explicit null removal masking this subtree. Current configVersion=2 scenario is sufficient; not a claim about every migration/input."
+  ],
+  "sourceCausalChain": [
+    {
+      "path": "packages/desktop/src/renderer/settings/CapabilitiesOverviewSection.tsx",
+      "ranges": [
+        [
+          261,
+          279
+        ]
+      ],
+      "fact": "Awaits setCapabilityOverride for normal selected capability id/state, then load(); errors have a UI error path."
+    },
+    {
+      "path": "packages/desktop/src/preload/index.ts",
+      "ranges": [
+        [
+          1119,
+          1123
+        ]
+      ],
+      "fact": "Forwards target/id/state to capabilities:setOverride."
+    },
+    {
+      "path": "packages/desktop/src/main/index.ts",
+      "ranges": [
+        [
+          3840,
+          3847
+        ]
+      ],
+      "fact": "Resolves target cwd, checks id string and allowed state, then calls setCapabilityOverride; no dot-specific rejection shown."
+    },
+    {
+      "path": "packages/desktop/src/main/capabilities-service.ts",
+      "ranges": [
+        [
+          114,
+          120
+        ]
+      ],
+      "fact": "Delegates to Core project setOverride."
+    },
+    {
+      "path": "packages/core/src/capability-control/service.ts",
+      "ranges": [
+        [
+          151,
+          165
+        ]
+      ],
+      "fact": "Builds dotted capabilityOverrides.<bucket>.<token> setting path."
+    },
+    {
+      "path": "packages/core/src/settings/manager.ts",
+      "ranges": [
+        [
+          83,
+          92
+        ],
+        [
+          144,
+          155
+        ],
+        [
+          572,
+          585
+        ],
+        [
+          834,
+          844
+        ],
+        [
+          872,
+          891
+        ]
+      ],
+      "fact": "Splits the key, mutates nested properties, writes JSON and invalidates cache. No settings-shape validation in this save route."
+    },
+    {
+      "path": "packages/core/src/settings/manager.ts",
+      "ranges": [
+        [
+          94,
+          112
+        ],
+        [
+          701,
+          741
+        ],
+        [
+          793,
+          799
+        ],
+        [
+          979,
+          1002
+        ],
+        [
+          1109,
+          1139
+        ]
+      ],
+      "fact": "Ordinary valid JSON parser/sanitizer/merge preserve a nested ordinary object; getForScope calls validateSettings without a catch."
+    },
+    {
+      "path": "packages/core/src/settings/schema.ts",
+      "ranges": [
+        [
+          57,
+          78
+        ],
+        [
+          477,
+          477
+        ],
+        [
+          729,
+          731
+        ]
+      ],
+      "fact": "mcp is a Record of enum strings inherit/on/off, and outer SettingsSchema.parse is called; generated object value is outside that declared contract."
+    },
+    {
+      "path": "packages/desktop/src/main/capabilities-service.ts",
+      "ranges": [
+        [
+          51,
+          80
+        ]
+      ],
+      "fact": "Next normal capability listing constructs a manager and calls settings.get before Core overlay fallback."
+    },
+    {
+      "path": "packages/core/src/settings/manager.ts",
+      "ranges": [
+        [
+          261,
+          310
+        ],
+        [
+          325,
+          348
+        ],
+        [
+          375,
+          393
+        ],
+        [
+          442,
+          452
+        ],
+        [
+          501,
+          502
+        ],
+        [
+          921,
+          934
+        ]
+      ],
+      "fact": "Ordinary load merges project layer and validates; cached merged value is absent after invalidation/new manager."
+    }
+  ],
+  "counterevidenceAndLimits": [
+    {
+      "counterevidence": "Merge might clean invalid values.",
+      "result": "It filters forbidden property names/nulls, otherwise recursively preserves object values; team/docs ordinary keys survive."
+    },
+    {
+      "counterevidence": "Corrupt-file parser might skip the layer.",
+      "result": "Generated JSON is syntactically valid and an object. Schema validation is later than JSON parsing, so this is not a parseConfigFile corrupt-JSON fallback."
+    },
+    {
+      "counterevidence": "The save path might validate before write.",
+      "result": "saveProjectSetting→mutateSettingsFile→atomicWriteJson has ordinary bounded-target/JSON serialization checks, not SettingsSchema validation. No actual write observed."
+    },
+    {
+      "counterevidence": "effectiveProjectOverrides catches read errors.",
+      "result": "Yes, the helper catches; but Desktop makeService loads settings first and Core list directly calls getForScope at107–109 outside that helper catch. Do not claim every caller throws."
+    },
+    {
+      "counterevidence": "Migrations might clean the generated object.",
+      "result": "For current configVersion=2, registered migration steps0→1→2 have no from2 step, preserve the original fields, and manager applyConfigMigration exits when unchanged. Only this normal current-version scenario is certified statically."
+    },
+    {
+      "counterevidence": "Untrusted project stripping could remove the malformed subtree.",
+      "result": "The selected dangerous-field list does not include capabilityOverrides; this is an ordinary field-retention observation, not trust/authority certification."
+    }
+  ],
+  "runtimeLimits": [
+    "No Zod parse, merge, settings manager, renderer/IPC, filesystem write/read of user data, test/fixture, native or network operation executed.",
+    "No exact runtime exception text/stack or app crash/restart failure observed. Impact is statically rejected current project settings/readback, not all projects/global config or irrecoverable data loss.",
+    "Old archive/fix-scope decision is left in frozen prep158 and not rescanned or altered here.",
+    "No prep159 report/raw method read; parent supplied file/range navigation only."
+  ]
+}

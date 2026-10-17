@@ -1,0 +1,15 @@
+packages/core/src/composition/types.ts:80:  readonly privateService?: AgentModulePrivateServiceContribution;
+packages/core/src/engine/runtime.ts:33:  readonly lifetime = new LifetimeScope("host", "runtime");
+packages/core/src/engine/engine.ts:143:import { activateEngineModules, createPrivateServices } from "../composition/activation.js";
+packages/core/src/engine/engine.ts:358:  private readonly sessionLifetimes = new Map<
+packages/core/src/engine/engine.ts:648:      config.lifetimeScope ?? this.runtime?.lifetime ?? new LifetimeScope("host", "standalone");
+packages/core/src/engine/engine.ts:820:      this.moduleReady = createPrivateServices(
+packages/core/src/engine/engine.ts:827:        .then(() => activateEngineModules(this.composition, this.lifetime, serviceHost))
+packages/core/src/engine/engine.ts:868:    const current = this.sessionLifetimes.get(sessionId);
+packages/core/src/engine/engine.ts:871:    this.sessionLifetimes.set(sessionId, record);
+packages/core/src/engine/engine.ts:873:      this.sessionLifetimes.delete(sessionId);
+packages/core/src/engine/engine.ts:875:    await createPrivateServices(
+packages/core/src/engine/engine.ts:1796:    const sessionLifetime = await this.openSessionLifetime(
+packages/core/src/engine/engine.ts:1800:    this.activeRunScope = sessionLifetime.scope.child("run", runId);
+packages/core/src/engine/engine.ts:1804:      ...sessionLifetime.services,
+packages/core/src/engine/engine.ts:1886:      sessionLifetime.scope.own(() => {

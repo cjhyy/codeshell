@@ -1,0 +1,73 @@
+2: * Pure tri-state overlay math for project-scoped capability control.
+5: *   - "on"      → force enabled (even if globally disabled)
+6: *   - "off"     → force disabled (even if globally enabled)
+8: *                 absence of a key === inherit)
+10: * every capability vanish (spec §9).
+14:import type { CapabilityOverride, CapabilityOverrides } from "../settings/schema.js";
+15:import type { SettingsManager } from "../settings/manager.js";
+18:/** Buckets in capabilityOverrides. */
+19:export type OverrideBucket = keyof NonNullable<CapabilityOverrides>;
+23:  if (override === "on") return true;
+24:  if (override === "off") return false;
+25:  return globalEnabled;
+28:/** Which capabilityOverrides bucket a descriptor kind writes to. */
+34:      return "skills";
+36:      return "plugins";
+37:    case "mcp":
+38:      return "mcp";
+40:      return "agents";
+42:      return "builtin";
+44:      return undefined;
+48:/** Strip the leading "<kind>:" prefix from a capability id to get its token. */
+51:  return colon >= 0 ? id.slice(colon + 1) : id;
+58:  token: string,
+61:  if (!bucket || !overrides) return undefined;
+62:  const v = overrides[bucket]?.[token];
+63:  return v === "on" || v === "off" ? v : undefined;
+74:  bucket: Record<string, CapabilityOverride> | undefined,
+78:    for (const [token, state] of Object.entries(bucket)) {
+79:      if (state === "on") disabled.delete(token);
+80:      else if (state === "off") disabled.add(token);
+83:  return [...disabled];
+90: * `"on"`. This is the opposite of the normal denylist (default-enabled) model.
+93: *   - a name explicitly `"on"`  → kept enabled (NOT in the returned list)
+96: * The returned list is the effective disabled list to feed run-time
+102:  bucket: Record<string, CapabilityOverride> | undefined,
+109:    if (bucket?.[name] === "on") continue; // explicit allow → stays enabled
+112:  return disabled;
+116: * Fold a project builtin override bucket into the global enabled/disabled
+118: * (whose effective set is `preset.builtinTools ∪ enabled − disabled`).
+123: * the token on:
+124: *   - "on"  → add to enabled, remove from disabled (force-enabled)
+125: *   - "off" → add to disabled, remove from enabled (force-disabled)
+131:  bucket: Record<string, CapabilityOverride> | undefined,
+132:): { enabledBuiltinTools: string[]; disabledBuiltinTools: string[] } {
+133:  const enabled = new Set(globalEnabled);
+136:    for (const [token, state] of Object.entries(bucket)) {
+138:        enabled.add(token);
+139:        disabled.delete(token);
+141:        disabled.add(token);
+142:        enabled.delete(token);
+146:  return {
+147:    enabledBuiltinTools: [...enabled],
+156:  "mcp",
+162: * 合并两层三态 overlay：`top`（用户手写 capabilityOverrides）按 key 赢过
+173:    if (Object.keys(combined).length > 0) merged[bucket] = combined;
+175:  if (top?.pet && Object.keys(top.pet).length > 0) merged.pet = { ...top.pet };
+176:  return Object.keys(merged).length > 0 ? merged : undefined;
+181: * 所有折叠消费方（engine / disabled-lists / capability service）必须
+182: * 经这里读，不得再直接 getForScope().capabilityOverrides。
+185:  settings: Pick<SettingsManager, "getForScope">,
+189:  if (!cwd) return undefined;
+191:    const scoped = settings.getForScope("project", cwd) as {
+192:      capabilityOverrides?: CapabilityOverrides;
+195:    const local = settings.getForScope("local", cwd) as {
+196:      capabilityOverrides?: CapabilityOverrides;
+198:    // Both project layers are direct settings, unlike portable profile
+199:    // overrides. Preserve their host visibility keys while merging per token.
+200:    const direct = mergeCapabilityOverrides(scoped.capabilityOverrides, {
+201:      ...local.capabilityOverrides,
+203:        ...scoped.capabilityOverrides?.pet,
+204:        ...local.capabilityOverrides?.pet,
+207:    return mergeCapabilityOverrides(explicitProfileOverrides ?? scoped.profile?.overrides, direct);
+209:    return undefined;

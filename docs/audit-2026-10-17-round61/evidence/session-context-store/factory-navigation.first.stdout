@@ -1,0 +1,14 @@
+15: *  3. register the session in the store BEFORE the runtime starts, so a tool call
+19: * Teardown reverses it, and unregisters before disposing the host so a late
+35:import { SessionContextStore } from "./shared/session-context-store.js";
+74:  resumeRuntimeSessionId?: string;
+75:  /** Context replayed only when resume is unavailable and a fresh thread starts. */
+77:  /** Stable host guidance applied to new and resumed runtime threads. */
+132:  const store = new SessionContextStore<BridgeToolHost>();
+147:    // Unregister BEFORE disposing: a late request must find nothing rather than a
+149:    store.unregister(pinnedThreadId);
+179:    store.register(pinnedThreadId, host);
+190:          ...(options.resumeRuntimeSessionId
+191:            ? { resumeRuntimeSessionId: options.resumeRuntimeSessionId }
+216:          ...(options.resumeRuntimeSessionId
+217:            ? { resumeRuntimeSessionId: options.resumeRuntimeSessionId }

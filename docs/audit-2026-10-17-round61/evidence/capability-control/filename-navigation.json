@@ -1,0 +1,15 @@
+{
+  "command": [
+    "rg",
+    "--files",
+    "packages"
+  ],
+  "exitCode": 0,
+  "stderr": "",
+  "selectedFilenames": [
+    "packages/core/src/capability-control/overlay.ts",
+    "packages/core/src/capability-control/service.ts",
+    "packages/core/src/capability-control/project.ts"
+  ],
+  "scope": "Filename-only exact target inventory; unrelated filenames not read semantically."
+}

@@ -1,0 +1,46 @@
+{
+  "atUTC": "2026-10-17T20:26:55.934536+00:00",
+  "firstCheck": "checks.first.json",
+  "firstSha256": "9413a995e482fd4e972900585a3e0ef332d6a9d7e17614957669a15ec37d709c",
+  "firstDifferences": [
+    {
+      "id": "A11",
+      "catalog": {
+        "id": "A11",
+        "priority": "P2",
+        "title": "[P2，静态确认] release --push 在任务分支可能推送未合入 main 的标签",
+        "sourceRound": 1,
+        "canonicalFindings": "docs/audit-2026-10-16/findings.json"
+      },
+      "MD": {
+        "id": "A11",
+        "canonicalLink": "/Users/admin/Documents/个人学习/代码学习/codeshell/docs/audit-2026-10-16/findings.json",
+        "priority": "P2",
+        "title": "release --push 在任务分支可能推送未合入 main 的标签"
+      },
+      "normalizedTarget": "docs/audit-2026-10-16/findings.json"
+    },
+    {
+      "id": "CHAT-R58-01",
+      "catalog": {
+        "id": "CHAT-R58-01",
+        "priority": "P2",
+        "title": "网关停机释放租约后仍写旧收件箱快照，覆盖新进程已确认消息",
+        "sourceRound": 58,
+        "canonicalFindings": "docs/audit-2026-10-17-round58/findings.json"
+      },
+      "MD": {
+        "id": "CHAT-R58-01",
+        "canonicalLink": "findings.json",
+        "priority": "P2",
+        "title": "网关停机释放租约后仍写旧收件箱快照，覆盖新进程已确认消息"
+      },
+      "normalizedTarget": "findings.json"
+    }
+  ],
+  "activeNormalizedMismatches": [],
+  "sourceFilesModified": false,
+  "canonicalRawTitlesPreserved": true,
+  "productExecution": 0,
+  "git": 0
+}

@@ -1,0 +1,31 @@
+docs/archive/bug-followups-2026-08-13.md
+1: # 安全加固遗留问题 — 已完成（2026-08-25）
+2: 
+3: > 来源：2026-08-12/08-13 两轮全仓安全加固（191 files, +12k）提交前的独立复查。
+4: > 2026-08-25 复核并完成余下 8 项：统一 manifest 安全读取、拒绝点号名称假成功、
+5: > undo/redo 会话与窗口校验、撤销设备防复活、browser anchor 生命周期清理、
+6: > DeliveryQueue 逐记录清理重试与锁外附件下载、user scope fail-closed。
+7: > 本文件移入 archive，以下保留修复前的问题与验收依据。
+8: 
+9: ## 共同根因
+10: 
+11: 前两轮给读取路径加了严格校验（bounded / no-follow / schema），但严格读取端的
+12: 失败模式是**破坏性**而非**隔离性**——旧写入方产生的数据遇到新校验会被
+13: 「丢弃」或「整体抛错」，而不是被隔离。已修的凭据库和 marketplace 注册表是
+14: 这个模式的两个实例。原 P1 的主题与 Panel App 注册表问题已在
+15: 0.8.10 发布前修复并补上回归测试。
+16: 
+17: 参考正确形态：`packages/core/src/plugins/installedPlugins.ts` 的 `registryOf()`
+18: ——坏条目 `continue` 跳过，不影响其余条目，也不阻塞写入。
+19: 
+20: ---
+36: ### 2. 带点号的插件/Skill 名会静默 no-op 却报告成功
+37: 
+38: - 位置：`packages/core/src/tool-system/builtin/install-capability.ts:556-560`、`791-797`
+39: - 现状：`SAFE_PLUGIN_SEGMENT_RE`(`:34`)/`SAFE_SKILL_NAME_RE`(`:35`) 允许 `.`，
+40:   名字被插进点分设置键 `capabilityOverrides.plugins.${plugin}`；
+41:   `setDottedSetting`（`settings/manager.ts:137-148`）按 `.` 拆成嵌套对象
+42:   `{plugins:{a:{b:"off"}}}`，而读取端 `capability-control/overlay.ts:22-26`
+43:   期望扁平 `Record<name,"on"|"off">`，非法结构被归一化为 inherit。
+44: - 结果：`disable plugin a.b` 返回「Disabled ...」但插件依然启用。
+45: - 建议：禁止名字中的 `.`，或改用非点分的键写入方式。

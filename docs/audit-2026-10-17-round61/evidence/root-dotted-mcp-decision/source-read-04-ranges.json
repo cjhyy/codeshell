@@ -1,0 +1,24 @@
+[
+  [
+    "packages/core/src/settings/manager.ts",
+    [
+      [
+        338,
+        445
+      ],
+      [
+        1109,
+        1139
+      ]
+    ]
+  ],
+  [
+    "packages/desktop/src/renderer/settings/CapabilitiesOverviewSection.tsx",
+    [
+      [
+        261,
+        280
+      ]
+    ]
+  ]
+]

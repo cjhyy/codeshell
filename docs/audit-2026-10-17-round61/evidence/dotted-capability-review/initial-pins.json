@@ -1,0 +1,127 @@
+{
+  "rootReportedBaseline": "659b6b2ce5888723a40ce046cbbf643382cb130b",
+  "gitCertified": false,
+  "instructionReuse": "Same-SHA previously read instructions; no new body158",
+  "files": [
+    {
+      "path": "CODESHELL.md",
+      "bytes": 17639,
+      "lineCount": 217,
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "pinnedAtUTC": "2026-10-17T20:13:28.267066+00:00",
+      "timing": "before any own prep158 body/nav"
+    },
+    {
+      "path": "AGENTS.md",
+      "bytes": 206,
+      "lineCount": 5,
+      "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "pinnedAtUTC": "2026-10-17T20:13:28.268621+00:00",
+      "timing": "before any own prep158 body/nav"
+    },
+    {
+      "path": "docs/archive/bug-followups-2026-08-13.md",
+      "bytes": 7166,
+      "lineCount": 116,
+      "sha256": "e507cbffb8bc635ced3d2db518ea02cfdfa86b196e91f721021e27996cd54241",
+      "pinnedAtUTC": "2026-10-17T20:13:28.269370+00:00",
+      "timing": "before any own prep158 body/nav"
+    },
+    {
+      "path": "packages/core/src/capability-control/service.ts",
+      "bytes": 7690,
+      "lineCount": 197,
+      "sha256": "22378bf6addc85ebdaf2aace6a85121545ecbb1481bddfc18ffc0d58545a7c4e",
+      "pinnedAtUTC": "2026-10-17T20:13:28.270146+00:00",
+      "timing": "before any own prep158 body/nav"
+    },
+    {
+      "path": "packages/core/src/capability-control/overlay.ts",
+      "bytes": 7815,
+      "lineCount": 211,
+      "sha256": "75477176f70ab8d97f7669c0929dfdbcbc549f42121d46faa95766310e99e7c5",
+      "pinnedAtUTC": "2026-10-17T20:13:28.270860+00:00",
+      "timing": "before any own prep158 body/nav"
+    },
+    {
+      "path": "packages/core/src/settings/manager.mutate-fail-closed.test.ts",
+      "bytes": 5721,
+      "lineCount": 134,
+      "sha256": "006178a65c67c99f2e3a969e0902a433a698ee5f7454447d014bb69213e52860",
+      "pinnedAtUTC": "2026-10-17T20:13:28.271621+00:00",
+      "timing": "before any own prep158 body/nav"
+    },
+    {
+      "path": "packages/core/src/settings/manager.test.ts",
+      "bytes": 28456,
+      "lineCount": 734,
+      "sha256": "e8cf9d80a5209413f5410404ad323d037851c74eb20cbab1bf4050a5464a281a",
+      "pinnedAtUTC": "2026-10-17T20:13:28.272435+00:00",
+      "timing": "before any own prep158 body/nav"
+    },
+    {
+      "path": "packages/core/src/settings/manager.ts",
+      "bytes": 46928,
+      "lineCount": 1139,
+      "sha256": "0c92e26bbbf252d1f6bbc0859d91bdae40c846aa9d9f597812a35c829ba629ec",
+      "pinnedAtUTC": "2026-10-17T20:13:28.273147+00:00",
+      "timing": "before any own prep158 body/nav"
+    },
+    {
+      "path": "packages/core/src/settings/manager-concurrency.test.ts",
+      "bytes": 4642,
+      "lineCount": 112,
+      "sha256": "7f552f8e2d83a15f6f6e1020a6a437f1f7f1487b22f99a86680f19fd34403922",
+      "pinnedAtUTC": "2026-10-17T20:13:28.273732+00:00",
+      "timing": "before any own prep158 body/nav"
+    },
+    {
+      "path": "packages/core/src/settings/manager.custom-root.test.ts",
+      "bytes": 2736,
+      "lineCount": 65,
+      "sha256": "ff00442818a8742e6702440424a7fff5672b857894634e81d96b566b4a0a36c0",
+      "pinnedAtUTC": "2026-10-17T20:13:28.274308+00:00",
+      "timing": "before any own prep158 body/nav"
+    },
+    {
+      "path": "packages/core/src/settings/manager.local-tombstones.test.ts",
+      "bytes": 3274,
+      "lineCount": 76,
+      "sha256": "d965d86d0d1dae7fbb7bafda5237e57a8ee118d04185ceb2989fb5fd143579fa",
+      "pinnedAtUTC": "2026-10-17T20:13:28.274871+00:00",
+      "timing": "before any own prep158 body/nav"
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/McpSection.plugin.test.ts",
+      "bytes": 5271,
+      "lineCount": 147,
+      "sha256": "af26bb90c77813989dc61ef8bd43a5866983c57be7efe13c2e962302a1f49a14",
+      "pinnedAtUTC": "2026-10-17T20:13:28.275623+00:00",
+      "timing": "before any own prep158 body/nav"
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/McpSection.lifecycle.test.tsx",
+      "bytes": 1519,
+      "lineCount": 54,
+      "sha256": "62a86c6e2dbb26b94739e00174eea84e5c2247b6d1e20881d88506164e07738b",
+      "pinnedAtUTC": "2026-10-17T20:13:28.276274+00:00",
+      "timing": "before any own prep158 body/nav"
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/McpSection.lifecycle.fixture.tsx",
+      "bytes": 25328,
+      "lineCount": 646,
+      "sha256": "77047e6362239b7531500bdec1a07674d3b98aeaff1b39bea52fcd326ac4c2bc",
+      "pinnedAtUTC": "2026-10-17T20:13:28.276966+00:00",
+      "timing": "before any own prep158 body/nav"
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/McpSection.tsx",
+      "bytes": 75595,
+      "lineCount": 1918,
+      "sha256": "228d18e442ddc37752407383cf311050df4409972e78ea7e029ea21665d67334",
+      "pinnedAtUTC": "2026-10-17T20:13:28.277669+00:00",
+      "timing": "before any own prep158 body/nav"
+    }
+  ]
+}

@@ -1,0 +1,33 @@
+{
+  "old55FirstFailure": {
+    "preservedOriginals": "old-first-preservation-pins.json and old-first-extra-pins.json",
+    "observedOutcome": "0 accepted of511 was normalizer bug, not valid absence of increments",
+    "rootCause": "Old normalizer removed digits sha256→sha while allowlist kept sha256. Old method not executed/modified; original first artifacts remain same bytes."
+  },
+  "ownInitialSchemaProbe": {
+    "toolChunk": "2f3edb",
+    "observation": "Generic coverage/status lookup printed None4643; actual schema is publishableCurrentCoverage.",
+    "handling": "Schema reconnaissance saved in schema-probe-diagnostic.json, then original304/168/4171 reproduced before migration. Not a migration no-increment result or product failure."
+  },
+  "ownFirstMigration": {
+    "receipt": "migration-first-exit.json",
+    "exitCode": 0,
+    "output": "migration-first.stdout",
+    "stderr": "migration-first.stderr",
+    "meaning": "509 applicable rows all bound direct sha256;495 current semantic rows accepted, oldSHA14 separately rejected. First results preserved before constraint annotation."
+  },
+  "ownPresentationTruncation": {
+    "toolChunk": "ecbc1c",
+    "originalTokens": 7185,
+    "maxOutputTokens": 4700,
+    "lines": 125,
+    "handling": "First warning retained. No missing middle counted as human read; all51 full representative purposes/pointers later displayed in complete bounded chunks5ef3cf and382646. Not a product failure/rerun."
+  },
+  "constraintAnnotation": {
+    "firstAcceptedClaims": "accepted-claims.first.json",
+    "changes": "Original row/doc purpose/limits copied, one absent direct purpose supplemented from oldCoverageLimitation/category; no classification/count changes.",
+    "record": "constraint-preservation.json"
+  },
+  "sourceProductAttempts": 0,
+  "oldMethodExecutions": 0
+}

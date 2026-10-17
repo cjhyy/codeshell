@@ -1,0 +1,18 @@
+21:import { validateSettings, type ValidatedSettings } from "./schema.js";
+502:    const validated = validateSettings(raw);
+540:    // Lock spans read → modify → write; see mutateSettingsFile for why the
+581:    this.mutateSettingsFile(path, (current) => {
+599:    this.mutateSettingsFile(path, (current) => {
+632:    this.mutateSettingsFile(path, (current) => {
+639:      validateSettings(merge({}, current));
+676:    this.mutateSettingsFile(path, (current) => {
+703:    // validateSettings applies defaults; for a scope view we want only the
+705:    const normalized = merge({}, raw);
+706:    const validated = validateSettings(normalized) as Record<string, unknown>;
+872:  private mutateSettingsFile(
+933:      result = merge(result, source.data);
+940:    // resets everything below it (the escape hatch merge() already gives
+960:      // Non-array garbage is left to merge()'s wholesale result so
+961:      // validateSettings still sees (and rejects) it unchanged.
+1109:function merge(
+1127:      result[key] = merge(

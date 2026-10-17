@@ -1,0 +1,590 @@
+{
+  "root": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell",
+  "rootReportedHead": "659b6b2ce5888723a40ce046cbbf643382cb130b",
+  "branchReported": 61,
+  "GitVerified": false,
+  "files": [
+    {
+      "path": "packages/core/src/capability-control/overlay.ts",
+      "bytes": 7815,
+      "lines": 211,
+      "sha256": "75477176f70ab8d97f7669c0929dfdbcbc549f42121d46faa95766310e99e7c5",
+      "pinAt": "2026-10-17T20:08:40.404134+00:00",
+      "coverage": "selected",
+      "pinArtifact": "initial-pins.json",
+      "sourceKind": "product",
+      "selectedLineRanges": [
+        [
+          1,
+          84
+        ],
+        [
+          115,
+          211
+        ]
+      ],
+      "semanticLineCount": 181,
+      "bodyDisplayedLineRanges": [
+        [
+          1,
+          211
+        ]
+      ],
+      "bodyDisplayedLineCount": 211,
+      "displayArtifacts": [
+        "target-source-display.json"
+      ],
+      "scope": "Ordinary tri-state token fold and profile/project/local value merging. Conversation whitelist86–113 only displayed; no authority/host visibility enforcement certification. Entire same-SHA leaf overlaps original R5 whole review.",
+      "newUniqueCoverageClaim": false,
+      "endingSha256": "75477176f70ab8d97f7669c0929dfdbcbc549f42121d46faa95766310e99e7c5",
+      "endingUnchanged": true
+    },
+    {
+      "path": "packages/core/src/capability-control/service.ts",
+      "bytes": 7690,
+      "lines": 197,
+      "sha256": "22378bf6addc85ebdaf2aace6a85121545ecbb1481bddfc18ffc0d58545a7c4e",
+      "pinAt": "2026-10-17T20:08:40.404475+00:00",
+      "coverage": "full",
+      "pinArtifact": "initial-pins.json",
+      "sourceKind": "product",
+      "selectedLineRanges": [
+        [
+          1,
+          197
+        ]
+      ],
+      "semanticLineCount": 197,
+      "bodyDisplayedLineRanges": [
+        [
+          1,
+          197
+        ]
+      ],
+      "bodyDisplayedLineCount": 197,
+      "displayArtifacts": [
+        "target-source-display.json"
+      ],
+      "scope": "Full control-layer source: projection composition and injected settings write routing only. No real loader/registry/Host/settings operation or live activation guarantee.",
+      "newUniqueCoverageClaim": false,
+      "endingSha256": "22378bf6addc85ebdaf2aace6a85121545ecbb1481bddfc18ffc0d58545a7c4e",
+      "endingUnchanged": true
+    },
+    {
+      "path": "packages/core/src/capability-control/project.ts",
+      "bytes": 5930,
+      "lines": 172,
+      "sha256": "df94303b6212824eedf24e98859fb5d955ce8fa97a21b200e2e8a524c99f5c7b",
+      "pinAt": "2026-10-17T20:08:40.404769+00:00",
+      "coverage": "full",
+      "pinArtifact": "initial-pins.json",
+      "sourceKind": "product",
+      "selectedLineRanges": [
+        [
+          1,
+          172
+        ]
+      ],
+      "semanticLineCount": 172,
+      "bodyDisplayedLineRanges": [
+        [
+          1,
+          172
+        ]
+      ],
+      "bodyDisplayedLineCount": 172,
+      "displayArtifacts": [
+        "target-source-display.json"
+      ],
+      "scope": "Full pure descriptor projection and metadata control fields. Not actual runtime registry/permission behavior.",
+      "newUniqueCoverageClaim": false,
+      "endingSha256": "df94303b6212824eedf24e98859fb5d955ce8fa97a21b200e2e8a524c99f5c7b",
+      "endingUnchanged": true
+    },
+    {
+      "path": "packages/core/src/capability-control/types.ts",
+      "bytes": 2864,
+      "lines": 76,
+      "sha256": "10cf09f7cf0f32d4ab98ae2f54be9f5c7a94c55346b6aacf9a1d42d2f58c1319",
+      "pinAt": "2026-10-17T20:10:53.935787+00:00",
+      "coverage": "full",
+      "pinArtifact": "caller-initial-pins.json",
+      "sourceKind": "product",
+      "selectedLineRanges": [
+        [
+          1,
+          76
+        ]
+      ],
+      "semanticLineCount": 76,
+      "bodyDisplayedLineRanges": [
+        [
+          1,
+          76
+        ]
+      ],
+      "bodyDisplayedLineCount": 76,
+      "displayArtifacts": [
+        "caller-storage-display.json"
+      ],
+      "scope": "Full static descriptor/write-scope/interface contracts and ordinary error type.",
+      "newUniqueCoverageClaim": false,
+      "endingSha256": "10cf09f7cf0f32d4ab98ae2f54be9f5c7a94c55346b6aacf9a1d42d2f58c1319",
+      "endingUnchanged": true
+    },
+    {
+      "path": "packages/desktop/src/main/capabilities-service.ts",
+      "bytes": 4475,
+      "lines": 120,
+      "sha256": "029af36987fe6ae5dce537e54b32ba9f64a01a2230ed6fa735d39aa1c1e55ebb",
+      "pinAt": "2026-10-17T20:10:53.934570+00:00",
+      "coverage": "selected",
+      "pinArtifact": "caller-initial-pins.json",
+      "sourceKind": "product",
+      "selectedLineRanges": [
+        [
+          1,
+          16
+        ],
+        [
+          51,
+          54
+        ],
+        [
+          59,
+          80
+        ],
+        [
+          105,
+          120
+        ]
+      ],
+      "semanticLineCount": 58,
+      "bodyDisplayedLineRanges": [
+        [
+          1,
+          120
+        ]
+      ],
+      "bodyDisplayedLineCount": 120,
+      "displayArtifacts": [
+        "caller-storage-display.json"
+      ],
+      "scope": "Actual configured-on-disk service wrapper and user/project forwarding. Composition imports/compilation/registry construction and profile plan machinery adjacent only, owned separately by Root and not certified.",
+      "newUniqueCoverageClaim": false,
+      "endingSha256": "029af36987fe6ae5dce537e54b32ba9f64a01a2230ed6fa735d39aa1c1e55ebb",
+      "endingUnchanged": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/CapabilitiesOverviewSection.tsx",
+      "bytes": 26939,
+      "lines": 623,
+      "sha256": "0bc7f4d26156dcfb5c117af4f4dc27d7898859248f64a9dcd6cff1d17113b709",
+      "pinAt": "2026-10-17T20:10:53.935264+00:00",
+      "coverage": "selected",
+      "pinArtifact": "caller-initial-pins.json",
+      "sourceKind": "product",
+      "selectedLineRanges": [
+        [
+          180,
+          186
+        ],
+        [
+          193,
+          200
+        ],
+        [
+          239,
+          271
+        ],
+        [
+          481,
+          516
+        ]
+      ],
+      "semanticLineCount": 84,
+      "bodyDisplayedLineRanges": [
+        [
+          180,
+          233
+        ],
+        [
+          239,
+          313
+        ],
+        [
+          475,
+          516
+        ]
+      ],
+      "bodyDisplayedLineCount": 171,
+      "displayArtifacts": [
+        "caller-storage-display.json",
+        "normal-token-path-display.json"
+      ],
+      "scope": "Actual descriptor list consumption, user/project controls and forwarding/reload only. Cache effects/Panel App bindings/native/permission mechanisms adjacent only.",
+      "newUniqueCoverageClaim": false,
+      "endingSha256": "0bc7f4d26156dcfb5c117af4f4dc27d7898859248f64a9dcd6cff1d17113b709",
+      "endingUnchanged": true
+    },
+    {
+      "path": "packages/core/src/settings/manager.ts",
+      "bytes": 46928,
+      "lines": 1139,
+      "sha256": "0c92e26bbbf252d1f6bbc0859d91bdae40c846aa9d9f597812a35c829ba629ec",
+      "pinAt": "2026-10-17T20:10:53.935562+00:00",
+      "coverage": "selected",
+      "pinArtifact": "caller-initial-pins.json",
+      "sourceKind": "product",
+      "selectedLineRanges": [
+        [
+          83,
+          92
+        ],
+        [
+          145,
+          155
+        ],
+        [
+          552,
+          552
+        ],
+        [
+          563,
+          564
+        ],
+        [
+          572,
+          584
+        ],
+        [
+          650,
+          653
+        ],
+        [
+          675,
+          689
+        ]
+      ],
+      "semanticLineCount": 56,
+      "bodyDisplayedLineRanges": [
+        [
+          58,
+          98
+        ],
+        [
+          145,
+          170
+        ],
+        [
+          536,
+          605
+        ],
+        [
+          650,
+          691
+        ]
+      ],
+      "bodyDisplayedLineCount": 179,
+      "displayArtifacts": [
+        "caller-storage-display.json",
+        "normal-token-path-display.json"
+      ],
+      "scope": "Dotted path parsing/field mutation and invoked project/user settings methods only. Trust-root/locks/custody/atomicity/displayed adjacent code not certified.",
+      "newUniqueCoverageClaim": false,
+      "endingSha256": "0c92e26bbbf252d1f6bbc0859d91bdae40c846aa9d9f597812a35c829ba629ec",
+      "endingUnchanged": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/McpSection.tsx",
+      "bytes": 75595,
+      "lines": 1918,
+      "sha256": "228d18e442ddc37752407383cf311050df4409972e78ea7e029ea21665d67334",
+      "pinAt": "2026-10-17T20:11:31.753340+00:00",
+      "coverage": "selected",
+      "pinArtifact": "normal-name-producer-pins.json",
+      "sourceKind": "product",
+      "selectedLineRanges": [
+        [
+          444,
+          453
+        ],
+        [
+          1320,
+          1337
+        ],
+        [
+          1393,
+          1395
+        ],
+        [
+          1459,
+          1467
+        ]
+      ],
+      "semanticLineCount": 40,
+      "bodyDisplayedLineRanges": [
+        [
+          431,
+          464
+        ],
+        [
+          1320,
+          1340
+        ],
+        [
+          1389,
+          1425
+        ],
+        [
+          1458,
+          1468
+        ]
+      ],
+      "bodyDisplayedLineCount": 103,
+      "displayArtifacts": [
+        "normal-token-path-display.json"
+      ],
+      "scope": "Normal server-name text input, validation and literal record-key producer. Credential/OAuth/connection/probe/argument parsing fields adjacent only; no actual save or transport.",
+      "newUniqueCoverageClaim": false,
+      "endingSha256": "228d18e442ddc37752407383cf311050df4409972e78ea7e029ea21665d67334",
+      "endingUnchanged": true
+    },
+    {
+      "path": "packages/core/src/settings/schema.ts",
+      "bytes": 29767,
+      "lines": 731,
+      "sha256": "2496b8aefd8ea32f7fc7ac23b26878475809be952a5fdbd8ac247cf0d40b3139",
+      "pinAt": "2026-10-17T20:11:31.755558+00:00",
+      "coverage": "selected",
+      "pinArtifact": "normal-name-producer-pins.json",
+      "sourceKind": "product",
+      "selectedLineRanges": [
+        [
+          46,
+          66
+        ],
+        [
+          349,
+          380
+        ],
+        [
+          388,
+          390
+        ]
+      ],
+      "semanticLineCount": 56,
+      "bodyDisplayedLineRanges": [
+        [
+          46,
+          79
+        ],
+        [
+          349,
+          399
+        ]
+      ],
+      "bodyDisplayedLineCount": 85,
+      "displayArtifacts": [
+        "normal-token-path-display.json"
+      ],
+      "scope": "Ordinary literal server record keys and tri-state record value shape. No SDK/auth/credential use or security schema certification.",
+      "newUniqueCoverageClaim": false,
+      "endingSha256": "2496b8aefd8ea32f7fc7ac23b26878475809be952a5fdbd8ac247cf0d40b3139",
+      "endingUnchanged": true
+    }
+  ],
+  "hashOnlyFiles": [
+    {
+      "path": "CODESHELL.md",
+      "bytes": 17639,
+      "lines": 217,
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "pinAt": "2026-10-17T20:08:40.403080+00:00",
+      "coverage": "hash-only",
+      "pinArtifact": "initial-pins.json",
+      "selectedLineRanges": [],
+      "semanticLineCount": 0,
+      "scope": "Previously read same-SHA instructions reused, no new instruction body read."
+    },
+    {
+      "path": "AGENTS.md",
+      "bytes": 206,
+      "lines": 5,
+      "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "pinAt": "2026-10-17T20:08:40.403822+00:00",
+      "coverage": "hash-only",
+      "pinArtifact": "initial-pins.json",
+      "selectedLineRanges": [],
+      "semanticLineCount": 0,
+      "scope": "Previously read same-SHA instructions reused, no new instruction body read."
+    }
+  ],
+  "historicalMetadata": [
+    {
+      "path": "docs/audit-2026-10-17-round5/evidence/profile-source-manifest.json",
+      "bytes": 8960,
+      "initialSha256": "846b73a17037299a131795cb80ce11afe04d00fa9b62bc5cc20be6c4c7640771",
+      "endingSha256": "846b73a17037299a131795cb80ce11afe04d00fa9b62bc5cc20be6c4c7640771",
+      "unchanged": true,
+      "selectionArtifact": "prior-canonical-read.json",
+      "selectedJsonPointers": [
+        "/sources/8"
+      ],
+      "displayedLineRanges": []
+    },
+    {
+      "path": "docs/audit-2026-10-17-round5/source-manifest.json",
+      "bytes": 25980,
+      "initialSha256": "10eba76ac5dcbf79a05671b6bf651765ff83aa4ac7db430a20d9acd5e4f35a55",
+      "endingSha256": "10eba76ac5dcbf79a05671b6bf651765ff83aa4ac7db430a20d9acd5e4f35a55",
+      "unchanged": true,
+      "selectionArtifact": "prior-canonical-read.json",
+      "selectedJsonPointers": [
+        "/files/31"
+      ],
+      "displayedLineRanges": []
+    },
+    {
+      "path": "bugs/2026-07-13-repo-audit.md",
+      "bytes": 60400,
+      "initialSha256": "f2bc07b459be0e653aae535af308b4aa162e33efc88b8100a8ae4d95a256d513",
+      "endingSha256": "f2bc07b459be0e653aae535af308b4aa162e33efc88b8100a8ae4d95a256d513",
+      "unchanged": true,
+      "selectionArtifact": "prior-canonical-read.json",
+      "selectedJsonPointers": [],
+      "displayedLineRanges": [
+        [
+          180,
+          194
+        ]
+      ]
+    },
+    {
+      "path": "docs/archive/review-2026-07-09/05-p2-deep-dive-and-fix-design.md",
+      "bytes": 39170,
+      "initialSha256": "6b5fede9d7a924c6be358ef8a51c84cd0b7fe37e0c7827f1308e18baece0e59a",
+      "endingSha256": "6b5fede9d7a924c6be358ef8a51c84cd0b7fe37e0c7827f1308e18baece0e59a",
+      "unchanged": true,
+      "selectionArtifact": "prior-canonical-read.json",
+      "selectedJsonPointers": [],
+      "displayedLineRanges": [
+        [
+          65,
+          108
+        ]
+      ]
+    },
+    {
+      "path": "docs/archive/bug-followups-2026-08-13.md",
+      "bytes": 7166,
+      "initialSha256": "e507cbffb8bc635ced3d2db518ea02cfdfa86b196e91f721021e27996cd54241",
+      "endingSha256": "e507cbffb8bc635ced3d2db518ea02cfdfa86b196e91f721021e27996cd54241",
+      "unchanged": true,
+      "selectionArtifact": "dotted-token-prior-cause-read.json",
+      "selectedJsonPointers": [],
+      "displayedLineRanges": [
+        [
+          25,
+          73
+        ]
+      ]
+    },
+    {
+      "path": "docs/superpowers/specs/2026-05-29-capability-control-design.md",
+      "bytes": 13804,
+      "initialSha256": "b1557dc65dccbe867d9309023f373f396c33df536a8d59045bfea073ce5b32c8",
+      "endingSha256": "b1557dc65dccbe867d9309023f373f396c33df536a8d59045bfea073ce5b32c8",
+      "unchanged": true,
+      "selectionArtifact": "dotted-token-prior-cause-read.json",
+      "selectedJsonPointers": [],
+      "displayedLineRanges": [
+        [
+          195,
+          203
+        ]
+      ]
+    }
+  ],
+  "oldCoverage": {
+    "canonical": "docs/audit-2026-10-17-round5/evidence/profile-source-manifest.json",
+    "pointer": "/sources/8",
+    "scope": "reviewedRanges=[whole] for same-SHA overlay.ts",
+    "currentReadRetainsOverlap": true,
+    "otherTargets": "Service/project SHA exact locators resolve only metadata/index records in this bounded lookup; not evidence of unread or full review."
+  },
+  "sharedHistory": {
+    "input": {
+      "path": "/tmp/codeshell-audit-round157-composition-lifetime/history-batch.json",
+      "bytes": 1654647,
+      "sha256": "97861ae2e150de7a080d891724516900d9fdbed271d790c6e59cad05ef0c03c9"
+    },
+    "snapshotAt": "2026-10-17T20:08:55.347560+00:00",
+    "historyFiles": 6244,
+    "jsonValueScalarsVisited": 4350476,
+    "excludedFormalAtOrAbove": 61,
+    "cap": 100,
+    "targets": {
+      "packages/core/src/capability-control/overlay.ts": {
+        "total": 93,
+        "saved": 93,
+        "capped": false
+      },
+      "packages/core/src/capability-control/service.ts": {
+        "total": 177,
+        "saved": 100,
+        "capped": true
+      },
+      "packages/core/src/capability-control/project.ts": {
+        "total": 132,
+        "saved": 100,
+        "capped": true
+      }
+    },
+    "allHitsSemanticallyRead": false,
+    "errors": [],
+    "scope": "Shared MD/JSON recursive-value path/SHA machine navigation includes archive. Root owns full inventory binding."
+  },
+  "focusedOldCause": {
+    "artifact": "dotted-token-focused-history.json",
+    "matchedDocuments": 2,
+    "counts": {
+      "mcp-literal-dot": 1,
+      "overlay-nested-token": 0,
+      "dot-capability": 1
+    },
+    "cap": 80,
+    "savedCounts": {
+      "mcp-literal-dot": 1,
+      "overlay-nested-token": 0,
+      "dot-capability": 1
+    },
+    "actualBoundedHitWindowsRead": 2,
+    "oldCanonicalSectionRead": "bug-followups-2026-08-13.md36–45",
+    "errors": [],
+    "scope": "Only matched frozen MD/JSON value strings traversed for focused cause, not all6244 history semantics. Current IPC token guards not read after exact prior cause gate."
+  },
+  "totals": {
+    "productFiles": 9,
+    "productSemanticLines": 920,
+    "bodyDisplayedLines": 1314,
+    "fullProductFiles": 3,
+    "selectedProductFiles": 6,
+    "testDeclarationLines": 0,
+    "hashOnlyInstructionFiles": 2,
+    "navigationOnlyFiles": 0,
+    "newUniqueCoverageClaim": false
+  },
+  "executions": {
+    "product": 0,
+    "imports": 0,
+    "helper": 0,
+    "tests": 0,
+    "fixtures": 0,
+    "realSettings": 0,
+    "HostOrPermission": 0,
+    "native": 0,
+    "network": 0,
+    "Git": 0
+  }
+}

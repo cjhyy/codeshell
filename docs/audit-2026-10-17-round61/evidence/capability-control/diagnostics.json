@@ -1,0 +1,21 @@
+{
+  "firstMetadataFailure": {
+    "artifact": "locator-display.first.observed.json",
+    "toolChunkId": "01e972",
+    "exitCodeObserved": 1,
+    "kind": "Display-only integer Markdown locator joined as string",
+    "separateRawStreamsCaptured": false,
+    "correction": "str(location) formatting only. Shared projection was saved before failure, no history rescan/product rerun."
+  },
+  "toolOutputTruncationObservedInThisPacket": false,
+  "navigationCapBoundary": "Shared service/project targets are177/132 total but only first100 each saved; overlay93/93. Exact SHA locator supplement not whole-history cause exhaustion.",
+  "incidentalDisplayExcluded": [
+    "Old canonical windows include adjacent credential/plugin manifest/IPC/security findings not audited.",
+    "Overlay conversation whitelist86–113 displayed but not reviewed as an authority/host contract.",
+    "Desktop wrapper composition compile/registry factory source only adjacent display; not Root-owned lifecycle review.",
+    "McpSection OAuth/credential/probe/args and SettingsManager trust/lock/custody/native file mechanics excluded from semantic conclusions.",
+    "Renderer Panel App binding source in adjacent267–313 not reviewed as permission behavior."
+  ],
+  "noTestsReadOrRun": true,
+  "sourcePinsBeforeBodyOrLineNavigation": true
+}

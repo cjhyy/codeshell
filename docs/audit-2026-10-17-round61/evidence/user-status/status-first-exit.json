@@ -1,0 +1,11 @@
+{
+  "startedUTC": "2026-10-17T20:25:49.987211+00:00",
+  "finishedUTC": "2026-10-17T20:25:50.140442+00:00",
+  "exitCode": 0,
+  "methodSha256": "857bde600cacbf102f15ee7da4b605a854cd1c11341eada968f36b19ec48ba39",
+  "stdoutBytes": 1909,
+  "stdoutSha256": "d2daecc892632a487914cc9e3da37c93912350fc1e22ecc7ed7a899bc1e7932a",
+  "stderrBytes": 0,
+  "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "scope": "Metadata/counts/filenames only, output saved before review; no product/test/Git execution."
+}

@@ -1,0 +1,8 @@
+{
+  "path": "packages/desktop/src/main/external-runtime-service.ts",
+  "bytes": 65714,
+  "lineCount": 1563,
+  "sha256": "1d1384b11762ccf216f6cb6447cb91c93597807a53a6757a6d43a1472ab18b37",
+  "pinnedAtUTC": "2026-10-17T20:10:34.266419+00:00",
+  "timing": "before own body/nav; filename-only factory caller inventory"
+}

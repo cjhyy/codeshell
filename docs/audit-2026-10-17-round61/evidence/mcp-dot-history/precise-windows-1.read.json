@@ -1,0 +1,177 @@
+[
+  {
+    "query": "mcp-dot-name",
+    "savedIndex": 0,
+    "documentPin": {
+      "path": "docs/audit-2026-10-17-round4/quality-coding.md",
+      "bytes": 5754,
+      "sha256": "f331d7f7db8f3106fa970a073597752e3bb8aaadafc020ae729588b60dede73f",
+      "pinAt": "2026-10-17T20:19:30.187688+00:00"
+    },
+    "hit": {
+      "document": "docs/audit-2026-10-17-round4/quality-coding.md",
+      "location": "/text",
+      "matchStart": 760,
+      "matchEnd": 856,
+      "windowStart": 610,
+      "windowEnd": 1076,
+      "wholeValueCharacters": 3294,
+      "window": "。P2 合理。 | 原 YAML 字节留存、删除生成 JSON 可恢复，报告没有称为原文件物理丢失。动态只运行 manager；`/config set → config_set → updateConfig → saveUserSetting` 在 `core-commands.ts:797`、`server.ts:3498`、`engine.ts:4679` 静态可达，未实测 TUI/Engine。 |\n| SET-02 / P3 | `Config:99` 的 `setDottedSetting` 检查 key 路径，`manager.ts:581` / `:550–558` 的单字段写入没有完整 schema 校验。真实 Config 返回成功，下一次真实 manager 加载抛错；原子 writer 在 `:639` 拒写同一非法 shape。两种单字段 writer 共用同根因，合并为一项正确。P3 是保守且适当的级别。 | 触发需要错误类型输入；合法 string 写回能恢复。报告限定 settings ",
+      "windowTruncated": true,
+      "matchStartLine": 9,
+      "windowStartLine": 9
+    },
+    "readAt": "2026-10-17T20:19:30.198264+00:00",
+    "scope": "Only this saved bounded window read; not whole giant JSON scalar or document."
+  },
+  {
+    "query": "mcp-dot-name",
+    "savedIndex": 1,
+    "documentPin": {
+      "path": "docs/superpowers/specs/2026-05-29-capability-control-design.md",
+      "bytes": 13804,
+      "sha256": "b1557dc65dccbe867d9309023f373f396c33df536a8d59045bfea073ce5b32c8",
+      "pinAt": "2026-10-17T20:19:30.198938+00:00"
+    },
+    "hit": {
+      "document": "docs/superpowers/specs/2026-05-29-capability-control-design.md",
+      "location": "/text",
+      "matchStart": 7970,
+      "matchEnd": 8117,
+      "windowStart": 7820,
+      "windowEnd": 8337,
+      "wholeValueCharacters": 10237,
+      "window": "]) break;                        // 未配置的 server 不凭空创建\n      servers[token] = { ...servers[token], enabled: on };\n      this.settings.saveUserSetting(\"mcpServers\", servers);\n      break;\n    }\n  }\n  // saveUserSetting 内部已 invalidate；无需再调。\n}\n```\n\n- `readArray(cur, \"agent.disabledBuiltinTools\")` 按点号路径从 `ValidatedSettings` 取数组（builtin key 嵌套在 `agent.` 下）。\n- 写入复用现有 `SettingsManager.saveUserSetting(key, value)`（原子 tmp+rename，支持点号路径），不新增持久化路径。\n\n## 8. 生效时机\n\n- **写入即落盘**（`saveUserSetting` 原子写）。\n- **何时影响运行中 agent**：builtin",
+      "windowTruncated": true,
+      "matchStartLine": 165,
+      "windowStartLine": 163
+    },
+    "readAt": "2026-10-17T20:19:30.206606+00:00",
+    "scope": "Only this saved bounded window read; not whole giant JSON scalar or document."
+  },
+  {
+    "query": "mcp-dot-name",
+    "savedIndex": 2,
+    "documentPin": {
+      "path": "docs/superpowers/specs/2026-05-29-capability-control-design.md",
+      "bytes": 13804,
+      "sha256": "b1557dc65dccbe867d9309023f373f396c33df536a8d59045bfea073ce5b32c8",
+      "pinAt": "2026-10-17T20:19:30.207141+00:00"
+    },
+    "hit": {
+      "document": "docs/superpowers/specs/2026-05-29-capability-control-design.md",
+      "location": "/text",
+      "matchStart": 9542,
+      "matchEnd": 9683,
+      "windowStart": 9392,
+      "windowEnd": 9903,
+      "wholeValueCharacters": 10237,
+      "window": "ig / `SkillDefinition[]` + settings，断言产出的 `CapabilityDescriptor[]`（id、enabled、control、kind）。四源各一组，含「已关掉的项仍出现且 `enabled:false`」用例（skill/plugin/builtin/mcp 各验一遍）。\n- **`setEnabled` 路由单测**（`service.ts`）：四种 mode × 开/关，断言写进 settings 的最终形状（denylist 增删、allowlist 增删、record-flag 翻转、未配置 server 不凭空建、点号路径写到 `agent.*`）。\n- **回归**：跑现有 engine / tool-system 测试，确认执行层零行为变化（本设计不碰执行路径，应全绿）。\n\n## 11. 迁移步骤（TDD）\n\n1. 新建 `packages/core/src/capability-control/`：`types.ts`、`project.ts`、`service.ts`、`index.ts`。\n2. 先写投影 + 路由单测（红），再实现（绿）。",
+      "windowTruncated": true,
+      "matchStartLine": 199,
+      "windowStartLine": 199
+    },
+    "readAt": "2026-10-17T20:19:30.211111+00:00",
+    "scope": "Only this saved bounded window read; not whole giant JSON scalar or document."
+  },
+  {
+    "query": "mcp-overlay-literal",
+    "savedIndex": 0,
+    "documentPin": {
+      "path": "docs/superpowers/plans/2026-06-01-project-scoped-capabilities.md",
+      "bytes": 69839,
+      "sha256": "7b4c870d59ccfe7d5a4fef1b7b7e3d8d32edba7016bd51b21e1b1023dc6a20a1",
+      "pinAt": "2026-10-17T20:19:30.211991+00:00"
+    },
+    "hit": {
+      "document": "docs/superpowers/plans/2026-06-01-project-scoped-capabilities.md",
+      "location": "/text",
+      "matchStart": 11344,
+      "matchEnd": 11367,
+      "windowStart": 11194,
+      "windowEnd": 11587,
+      "wholeValueCharacters": 69582,
+      "window": "  test(\"saveProjectSetting creates .code-shell dir if absent\", () => {\n    const sm = new SettingsManager(cwd, \"project\");\n    sm.saveProjectSetting(\"capabilityOverrides.mcp.playwright\", \"off\", cwd);\n    expect(existsSync(join(cwd, \".code-shell\", \"settings.json\"))).toBe(true);\n  });\n\n  test(\"deleteProjectSetting removes the leaf key (inherit)\", () => {\n    const sm = new SettingsManager(cwd",
+      "windowTruncated": true,
+      "matchStartLine": 186,
+      "windowStartLine": 184
+    },
+    "readAt": "2026-10-17T20:19:30.215827+00:00",
+    "scope": "Only this saved bounded window read; not whole giant JSON scalar or document."
+  },
+  {
+    "query": "mcp-overlay-literal",
+    "savedIndex": 1,
+    "documentPin": {
+      "path": "docs/superpowers/specs/2026-06-01-project-scoped-capabilities-and-session-isolation-design.md",
+      "bytes": 37509,
+      "sha256": "27f512cb38ed5df5985e268749f8e65561bb270c36fd8c43f58ca95817ad4671",
+      "pinAt": "2026-10-17T20:19:30.216426+00:00"
+    },
+    "hit": {
+      "document": "docs/superpowers/specs/2026-06-01-project-scoped-capabilities-and-session-isolation-design.md",
+      "location": "/text",
+      "matchStart": 11514,
+      "matchEnd": 11537,
+      "windowStart": 11364,
+      "windowEnd": 11757,
+      "wholeValueCharacters": 25610,
+      "window": "ability 层做 overlay 计算。换言之，`get()` 的 effective settings 适合普通配置读取，但不适合单独承担三态继承计算。\n\n### 6.3 MCP server 的读取语义\n\nMCP 全局字段仍为 `mcpServers[name].enabled`。项目级 `capabilityOverrides.mcp[name]` 只影响当前项目/session 的可见能力。\n\n首期可接受语义：\n\n- 如果 MCP pool 已连接但项目覆盖为 off：工具投影与 tool definitions 过滤掉该 server 的工具。\n- 不要求立即断开共享 MCP 连接。\n- 下次 `connectAll` 时可跳过 project off 的 server，但必须小心共享 `mcpPool` 不应因一个项目 off 而断开另一个项目需要的连接。\n\n",
+      "windowTruncated": true,
+      "matchStartLine": 308,
+      "windowStartLine": 304
+    },
+    "readAt": "2026-10-17T20:19:30.220071+00:00",
+    "scope": "Only this saved bounded window read; not whole giant JSON scalar or document."
+  },
+  {
+    "query": "mcp-overlay-literal",
+    "savedIndex": 2,
+    "documentPin": {
+      "path": "docs/superpowers/specs/2026-06-22-plugin-mcp-env-override-design.md",
+      "bytes": 6416,
+      "sha256": "84631b7e3e44021b7b4e925f8f539317b758d92a0b87004292cbc6af4152aae2",
+      "pinAt": "2026-10-17T20:19:30.220610+00:00"
+    },
+    "hit": {
+      "document": "docs/superpowers/specs/2026-06-22-plugin-mcp-env-override-design.md",
+      "location": "/text",
+      "matchStart": 310,
+      "matchEnd": 333,
+      "windowStart": 160,
+      "windowEnd": 553,
+      "wholeValueCharacters": 4470,
+      "window": "in manifest 的 `.mcp.json` / `mcp-servers.json`)\n当前在设置页是**纯只读**:`isEditableMcpServer` 用 `source===\"plugin\"` /\n`editable:false` 挡掉一切编辑,用户只能开关整个插件或走项目级\n`capabilityOverrides.mcp.<server>` 强制 on/off。\n\n真实痛点:插件带了一个 MCP(例如 github MCP),但连接需要的 token/环境变量得\n用户自己提供 —— 现在**完全没有入口**,用户只能放弃使用或 fork 插件。\n\n目标:让用户给插件 MCP **补充** env / credential,且这些补充值存在独立的\noverride 层,**插件更新/重装不会冲掉**。command/args/url 这类插件核心定义\n仍",
+      "windowTruncated": true,
+      "matchStartLine": 12,
+      "windowStartLine": 9
+    },
+    "readAt": "2026-10-17T20:19:30.226324+00:00",
+    "scope": "Only this saved bounded window read; not whole giant JSON scalar or document."
+  },
+  {
+    "query": "overlay-token-path",
+    "savedIndex": 0,
+    "documentPin": {
+      "path": "docs/archive/bug-followups-2026-08-13.md",
+      "bytes": 7166,
+      "sha256": "e507cbffb8bc635ced3d2db518ea02cfdfa86b196e91f721021e27996cd54241",
+      "pinAt": "2026-10-17T20:19:30.226913+00:00"
+    },
+    "hit": {
+      "document": "docs/archive/bug-followups-2026-08-13.md",
+      "location": "/text",
+      "matchStart": 1342,
+      "matchEnd": 1443,
+      "windowStart": 1192,
+      "windowEnd": 1663,
+      "wholeValueCharacters": 4426,
+      "window": "c/tool-system/builtin/install-capability.ts:556-560`、`791-797`\n- 现状：`SAFE_PLUGIN_SEGMENT_RE`(`:34`)/`SAFE_SKILL_NAME_RE`(`:35`) 允许 `.`，\n  名字被插进点分设置键 `capabilityOverrides.plugins.${plugin}`；\n  `setDottedSetting`（`settings/manager.ts:137-148`）按 `.` 拆成嵌套对象\n  `{plugins:{a:{b:\"off\"}}}`，而读取端 `capability-control/overlay.ts:22-26`\n  期望扁平 `Record<name,\"on\"|\"off\">`，非法结构被归一化为 inherit。\n- 结果：`disable plugin a.b` 返回「Disabled ...」但插件依然启用。\n- 建议：禁止名字中的 `.`，或改用非点分的键写入方式。\n\n### 3. 三个 `f",
+      "windowTruncated": true,
+      "matchStartLine": 40,
+      "windowStartLine": 38
+    },
+    "readAt": "2026-10-17T20:19:30.232756+00:00",
+    "scope": "Only this saved bounded window read; not whole giant JSON scalar or document."
+  }
+]

@@ -1,0 +1,847 @@
+{
+  "root": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell",
+  "rootReportedHead": "659b6b2ce5888723a40ce046cbbf643382cb130b",
+  "GitVerified": false,
+  "files": [],
+  "productSourceSemanticReads": 0,
+  "productSourceHashOnlyReads": 0,
+  "metadataInputs": {
+    "inventory": "history-inventory.json",
+    "inventoryBytes": 1200173,
+    "inventorySha256": "c275da9fdf3450b46d5d4adbd3b0632414513857dc9bbce3c95f4f2e7a809134",
+    "historyFiles": 6244,
+    "markdownFiles": 1555,
+    "jsonFiles": 4689,
+    "jsonValueScalarsVisited": 4350476,
+    "jsonStringValuesVisited": 2937254,
+    "excludedFormalAtOrAbove": 61,
+    "hiddenAndIgnoredHistoryIncluded": true,
+    "archiveIncluded": true,
+    "keysSearched": false,
+    "pinTiming": "Scanner read-time bytes hash computed before each query; inventory persisted at end before selected reviewer displays. Selected reader pins preserved before display. No product source opened."
+  },
+  "metadataDocumentSelections": [
+    {
+      "path": "docs/audit-2026-10-17-round4/quality-coding.md",
+      "bytes": 5754,
+      "sha256": "f331d7f7db8f3106fa970a073597752e3bb8aaadafc020ae729588b60dede73f",
+      "pinAt": "2026-10-17T20:19:30.187688+00:00"
+    },
+    {
+      "path": "docs/superpowers/specs/2026-05-29-capability-control-design.md",
+      "bytes": 13804,
+      "sha256": "b1557dc65dccbe867d9309023f373f396c33df536a8d59045bfea073ce5b32c8",
+      "pinAt": "2026-10-17T20:20:07.361309+00:00"
+    },
+    {
+      "path": "docs/superpowers/plans/2026-06-01-project-scoped-capabilities.md",
+      "bytes": 69839,
+      "sha256": "7b4c870d59ccfe7d5a4fef1b7b7e3d8d32edba7016bd51b21e1b1023dc6a20a1",
+      "pinAt": "2026-10-17T20:20:07.345375+00:00"
+    },
+    {
+      "path": "docs/superpowers/specs/2026-06-01-project-scoped-capabilities-and-session-isolation-design.md",
+      "bytes": 37509,
+      "sha256": "27f512cb38ed5df5985e268749f8e65561bb270c36fd8c43f58ca95817ad4671",
+      "pinAt": "2026-10-17T20:20:13.337165+00:00"
+    },
+    {
+      "path": "docs/superpowers/specs/2026-06-22-plugin-mcp-env-override-design.md",
+      "bytes": 6416,
+      "sha256": "84631b7e3e44021b7b4e925f8f539317b758d92a0b87004292cbc6af4152aae2",
+      "pinAt": "2026-10-17T20:19:30.220610+00:00"
+    },
+    {
+      "path": "docs/archive/bug-followups-2026-08-13.md",
+      "bytes": 7166,
+      "sha256": "e507cbffb8bc635ced3d2db518ea02cfdfa86b196e91f721021e27996cd54241",
+      "pinAt": "2026-10-17T20:18:50.789411+00:00"
+    },
+    {
+      "path": "docs/superpowers/plans/2026-07-15-workspace-profile-mvp.md",
+      "bytes": 67481,
+      "sha256": "4d1485acf87aede949a29e311f676a65f8f65e0e78d41dac73b2cb54906bd1ce",
+      "pinAt": "2026-10-17T20:19:50.218857+00:00"
+    },
+    {
+      "path": "docs/todo/claude-repository-optimization-2026-08-30.md",
+      "bytes": 52506,
+      "sha256": "21f0c339cb08e50941831e8d95bbc0fc127014b8d409d57c16c86218dc3d7acc",
+      "pinAt": "2026-10-17T20:19:50.230849+00:00"
+    },
+    {
+      "path": "docs/archive/todo/review-core-v2.md",
+      "bytes": 5400,
+      "sha256": "b293394fa8a4f8bab19ee52d69fe2018767b5c7b3c3cd5b94d7ee4efea56a4fe",
+      "pinAt": "2026-10-17T20:19:50.244407+00:00"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round10/evidence/cross-review-catalog.md",
+      "bytes": 1388,
+      "sha256": "00c992794baacc60c7ad850cbd48d510867f34e1f044b9fbd5423b4ac6349a0b",
+      "pinAt": "2026-10-17T20:19:50.249008+00:00"
+    },
+    {
+      "path": "docs/superpowers/plans/2026-05-29-capability-control.md",
+      "bytes": 25436,
+      "sha256": "e92d901d65edda5c333c126c5abf8f44f9d586225d840e3efb7e625198f01838",
+      "pinAt": "2026-10-17T20:20:07.331246+00:00"
+    },
+    {
+      "path": "docs/archive/review-2026-07-09/14-remaining-observations-verification.md",
+      "bytes": 28851,
+      "sha256": "3131a9f24c1380fdd86e4dd7fd03d6c53845978e7a6dfe4f4da0094193b0a640",
+      "pinAt": "2026-10-17T20:21:26.791983+00:00"
+    },
+    {
+      "path": "docs/archive/todo/fix-batch-3-2026-07-08.md",
+      "bytes": 4116,
+      "sha256": "6573480a1a4d7822227ed6c47539052d1a9b9f45ec2cecd4f4dc2150eb9e72c1",
+      "pinAt": "2026-10-17T20:21:26.796784+00:00"
+    },
+    {
+      "path": "docs/archive/todo/review-core-2026-07-08.md",
+      "bytes": 15808,
+      "sha256": "54c1bdfbcf5c7694239cd2d0e05abeadfed215436956ac59d401929fdceaf5dd",
+      "pinAt": "2026-10-17T20:21:26.801678+00:00"
+    },
+    {
+      "path": "docs/archive/todo/review-uncommitted-correctness-2026-07-08.md",
+      "bytes": 11426,
+      "sha256": "649b67b9aae864b096c620ae536fb4a6371c8a7d48066a7707b6f8003d98ef2a",
+      "pinAt": "2026-10-17T20:21:26.806322+00:00"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round58/recorded-findings-catalog.json",
+      "bytes": 80337,
+      "sha256": "db4370c2544acbe67b6400d3b740d95cc3b170690184be1accc00120bc4a53ac",
+      "pinAt": "2026-10-17T20:20:13.406311+00:00"
+    }
+  ],
+  "actualWindowReads": [
+    {
+      "query": "mcp-dot-name",
+      "savedIndex": 0,
+      "document": "docs/audit-2026-10-17-round4/quality-coding.md",
+      "location": "/text",
+      "windowStart": 610,
+      "windowEnd": 1076,
+      "wholeValueCharacters": 3294,
+      "windowSha256": "c44d17237e5ca6447e35cb80ad474e9fc0addea65c7c1fa67ca05346f754b33d",
+      "windowStartLine": 9,
+      "scope": "Bounded saved window only, overlaps retained; no whole document/giant scalar semantic claim."
+    },
+    {
+      "query": "mcp-dot-name",
+      "savedIndex": 1,
+      "document": "docs/superpowers/specs/2026-05-29-capability-control-design.md",
+      "location": "/text",
+      "windowStart": 7820,
+      "windowEnd": 8337,
+      "wholeValueCharacters": 10237,
+      "windowSha256": "0a9c973ba32bf5977eb74b306880ade3620285005a2655bc774fb3efdc3a99b6",
+      "windowStartLine": 163,
+      "scope": "Bounded saved window only, overlaps retained; no whole document/giant scalar semantic claim."
+    },
+    {
+      "query": "mcp-dot-name",
+      "savedIndex": 2,
+      "document": "docs/superpowers/specs/2026-05-29-capability-control-design.md",
+      "location": "/text",
+      "windowStart": 9392,
+      "windowEnd": 9903,
+      "wholeValueCharacters": 10237,
+      "windowSha256": "f0b9730b9355871fa3fefe3924699059501fe5aad87f1db7bd2fc005aadfd7fc",
+      "windowStartLine": 199,
+      "scope": "Bounded saved window only, overlaps retained; no whole document/giant scalar semantic claim."
+    },
+    {
+      "query": "mcp-overlay-literal",
+      "savedIndex": 0,
+      "document": "docs/superpowers/plans/2026-06-01-project-scoped-capabilities.md",
+      "location": "/text",
+      "windowStart": 11194,
+      "windowEnd": 11587,
+      "wholeValueCharacters": 69582,
+      "windowSha256": "2f790865f1cc078a359d7bb53ee245015afa764b36dcb0175b71f6084f41b015",
+      "windowStartLine": 184,
+      "scope": "Bounded saved window only, overlaps retained; no whole document/giant scalar semantic claim."
+    },
+    {
+      "query": "mcp-overlay-literal",
+      "savedIndex": 1,
+      "document": "docs/superpowers/specs/2026-06-01-project-scoped-capabilities-and-session-isolation-design.md",
+      "location": "/text",
+      "windowStart": 11364,
+      "windowEnd": 11757,
+      "wholeValueCharacters": 25610,
+      "windowSha256": "bc819f64a2dd4c1d33996a00a9ece81696dd8ad41a9dcdbc3e0354b8896fc68a",
+      "windowStartLine": 304,
+      "scope": "Bounded saved window only, overlaps retained; no whole document/giant scalar semantic claim."
+    },
+    {
+      "query": "mcp-overlay-literal",
+      "savedIndex": 2,
+      "document": "docs/superpowers/specs/2026-06-22-plugin-mcp-env-override-design.md",
+      "location": "/text",
+      "windowStart": 160,
+      "windowEnd": 553,
+      "wholeValueCharacters": 4470,
+      "windowSha256": "3a4a7b6d19f735655977722c4d60cf3633fe980c2ae0e51704a2ad0fd1090036",
+      "windowStartLine": 9,
+      "scope": "Bounded saved window only, overlaps retained; no whole document/giant scalar semantic claim."
+    },
+    {
+      "query": "overlay-token-path",
+      "savedIndex": 0,
+      "document": "docs/archive/bug-followups-2026-08-13.md",
+      "location": "/text",
+      "windowStart": 1192,
+      "windowEnd": 1663,
+      "wholeValueCharacters": 4426,
+      "windowSha256": "b06e1a513adf7c21d8a1cc9248eb7815b03be9494fe0da6e09fdbc5fb18604fc",
+      "windowStartLine": 38,
+      "scope": "Bounded saved window only, overlaps retained; no whole document/giant scalar semantic claim."
+    },
+    {
+      "query": "overlay-token-path",
+      "savedIndex": 1,
+      "document": "docs/superpowers/plans/2026-07-15-workspace-profile-mvp.md",
+      "location": "/text",
+      "windowStart": 19628,
+      "windowEnd": 20028,
+      "wholeValueCharacters": 60659,
+      "windowSha256": "6c76479f23f9452efd0678ae704a3ef11caf19939aed9472f7ff480a7ce28f7d",
+      "windowStartLine": 558,
+      "scope": "Bounded saved window only, overlaps retained; no whole document/giant scalar semantic claim."
+    },
+    {
+      "query": "overlay-token-path",
+      "savedIndex": 2,
+      "document": "docs/superpowers/specs/2026-06-01-project-scoped-capabilities-and-session-isolation-design.md",
+      "location": "/text",
+      "windowStart": 20446,
+      "windowEnd": 20848,
+      "wholeValueCharacters": 25610,
+      "windowSha256": "1a5c1bae37524592b6a5dcd32896aa006dacfa6b9add8552442fdc629907ae6a",
+      "windowStartLine": 545,
+      "scope": "Bounded saved window only, overlaps retained; no whole document/giant scalar semantic claim."
+    },
+    {
+      "query": "overlay-token-path",
+      "savedIndex": 3,
+      "document": "docs/todo/claude-repository-optimization-2026-08-30.md",
+      "location": "/text",
+      "windowStart": 15312,
+      "windowEnd": 15717,
+      "wholeValueCharacters": 36316,
+      "windowSha256": "73e3b9639992adee849bf67678cead8fd71f2f2cb47345dda5366559c5d2fedb",
+      "windowStartLine": 351,
+      "scope": "Bounded saved window only, overlaps retained; no whole document/giant scalar semantic claim."
+    },
+    {
+      "query": "dot-name-generic",
+      "savedIndex": 0,
+      "document": "docs/archive/bug-followups-2026-08-13.md",
+      "location": "/text",
+      "windowStart": 989,
+      "windowEnd": 1492,
+      "wholeValueCharacters": 4426,
+      "windowSha256": "33f0be070c33faf7882a8cbd123f9994bae09acd54da1672101807c47949ae8f",
+      "windowStartLine": 31,
+      "scope": "Bounded saved window only, overlaps retained; no whole document/giant scalar semantic claim."
+    },
+    {
+      "query": "dot-name-generic",
+      "savedIndex": 1,
+      "document": "docs/archive/bug-followups-2026-08-13.md",
+      "location": "/text",
+      "windowStart": 1238,
+      "windowEnd": 1709,
+      "wholeValueCharacters": 4426,
+      "windowSha256": "b1ad978cb2c8ed77a652500b1f0cbade3f5eba133f85fdbe20e27d10ccbe893c",
+      "windowStartLine": 38,
+      "scope": "Bounded saved window only, overlaps retained; no whole document/giant scalar semantic claim."
+    },
+    {
+      "query": "dot-name-generic",
+      "savedIndex": 2,
+      "document": "docs/archive/todo/review-core-v2.md",
+      "location": "/text",
+      "windowStart": 0,
+      "windowEnd": 492,
+      "wholeValueCharacters": 5400,
+      "windowSha256": "7cf6abbb1b6b88e652390f30370647ac426a265a9e88fb45d7708d7d2899233a",
+      "windowStartLine": 1,
+      "scope": "Bounded saved window only, overlaps retained; no whole document/giant scalar semantic claim."
+    },
+    {
+      "query": "dot-name-generic",
+      "savedIndex": 3,
+      "document": "docs/audit-2026-10-17-round10/evidence/cross-review-catalog.md",
+      "location": "/text",
+      "windowStart": 304,
+      "windowEnd": 762,
+      "wholeValueCharacters": 762,
+      "windowSha256": "533008bc3134e1e2d94a9450e62575cea505750e21d9e1e869534be5847d25dc",
+      "windowStartLine": 5,
+      "scope": "Bounded saved window only, overlaps retained; no whole document/giant scalar semantic claim."
+    },
+    {
+      "query": "dot-name-generic",
+      "savedIndex": 4,
+      "document": "docs/superpowers/plans/2026-05-29-capability-control.md",
+      "location": "/text",
+      "windowStart": 15041,
+      "windowEnd": 15481,
+      "wholeValueCharacters": 25379,
+      "windowSha256": "2607b5873490a503d90677ee67c390c5c2ae7e296d69d1d0f4692e5fe701e21d",
+      "windowStartLine": 400,
+      "scope": "Bounded saved window only, overlaps retained; no whole document/giant scalar semantic claim."
+    },
+    {
+      "query": "dot-name-generic",
+      "savedIndex": 5,
+      "document": "docs/superpowers/plans/2026-06-01-project-scoped-capabilities.md",
+      "location": "/text",
+      "windowStart": 10791,
+      "windowEnd": 11312,
+      "wholeValueCharacters": 69582,
+      "windowSha256": "73de4eed4aef4592bb828e1665ff2dd911674180019a933daf262613755ac877",
+      "windowStartLine": 174,
+      "scope": "Bounded saved window only, overlaps retained; no whole document/giant scalar semantic claim."
+    },
+    {
+      "query": "dot-name-generic",
+      "savedIndex": 6,
+      "document": "docs/superpowers/plans/2026-06-01-project-scoped-capabilities.md",
+      "location": "/text",
+      "windowStart": 12702,
+      "windowEnd": 13191,
+      "wholeValueCharacters": 69582,
+      "windowSha256": "9fe5bba870b3c85c601e541b2ade1f109101e0ab6c16282c017de6b5ca32e0b9",
+      "windowStartLine": 221,
+      "scope": "Bounded saved window only, overlaps retained; no whole document/giant scalar semantic claim."
+    },
+    {
+      "query": "dot-name-generic",
+      "savedIndex": 7,
+      "document": "docs/superpowers/plans/2026-06-01-project-scoped-capabilities.md",
+      "location": "/text",
+      "windowStart": 13625,
+      "windowEnd": 14141,
+      "wholeValueCharacters": 69582,
+      "windowSha256": "61dd68b971f8833cc1e3b1b384dc55c613febddd0ccb5b34cc34158c39965467",
+      "windowStartLine": 241,
+      "scope": "Bounded saved window only, overlaps retained; no whole document/giant scalar semantic claim."
+    },
+    {
+      "query": "dot-name-generic",
+      "savedIndex": 8,
+      "document": "docs/superpowers/specs/2026-05-29-capability-control-design.md",
+      "location": "/text",
+      "windowStart": 1383,
+      "windowEnd": 1899,
+      "wholeValueCharacters": 10237,
+      "windowSha256": "8369c63c4b141031ada31405573a850f8f65703402748cd45e81bfd2ccfc4f36",
+      "windowStartLine": 19,
+      "scope": "Bounded saved window only, overlaps retained; no whole document/giant scalar semantic claim."
+    },
+    {
+      "query": "dot-name-generic",
+      "savedIndex": 9,
+      "document": "docs/superpowers/specs/2026-05-29-capability-control-design.md",
+      "location": "/text",
+      "windowStart": 8095,
+      "windowEnd": 8570,
+      "wholeValueCharacters": 10237,
+      "windowSha256": "b04f3b6634fa4abaeffafddcd17450b5826df9ba1f97f4866c0211f8f0ec2ac9",
+      "windowStartLine": 173,
+      "scope": "Bounded saved window only, overlaps retained; no whole document/giant scalar semantic claim."
+    },
+    {
+      "query": "dot-name-generic",
+      "savedIndex": 10,
+      "document": "docs/superpowers/specs/2026-05-29-capability-control-design.md",
+      "location": "/text",
+      "windowStart": 9531,
+      "windowEnd": 10037,
+      "wholeValueCharacters": 10237,
+      "windowSha256": "24b65375e6c28726b0680ad568cdc2f4e99ea6c1bc1404e5d6d6e3cf0bf56642",
+      "windowStartLine": 199,
+      "scope": "Bounded saved window only, overlaps retained; no whole document/giant scalar semantic claim."
+    },
+    {
+      "query": "dot-name-generic",
+      "savedIndex": 11,
+      "document": "docs/superpowers/specs/2026-06-01-project-scoped-capabilities-and-session-isolation-design.md",
+      "location": "/text",
+      "windowStart": 20476,
+      "windowEnd": 20976,
+      "wholeValueCharacters": 25610,
+      "windowSha256": "f1ee2ae328d65b2384e9c2da23342a60b193684d3dfa9242be57ee7c6f6d1c7f",
+      "windowStartLine": 547,
+      "scope": "Bounded saved window only, overlaps retained; no whole document/giant scalar semantic claim."
+    },
+    {
+      "query": "mcp-nested-path",
+      "savedIndex": 3,
+      "document": "docs/archive/review-2026-07-09/14-remaining-observations-verification.md",
+      "location": "/text",
+      "windowStart": 5282,
+      "windowEnd": 5778,
+      "wholeValueCharacters": 23397,
+      "windowSha256": "c7c79ceb6219b6a90b1911c62399cd81a318c411c9f5b2a8f2a29aff3664ff9f",
+      "windowStartLine": 44,
+      "scope": "Bounded saved window only, overlaps retained; no whole document/giant scalar semantic claim."
+    },
+    {
+      "query": "mcp-nested-path",
+      "savedIndex": 4,
+      "document": "docs/archive/review-2026-07-09/14-remaining-observations-verification.md",
+      "location": "/text",
+      "windowStart": 5553,
+      "windowEnd": 6053,
+      "wholeValueCharacters": 23397,
+      "windowSha256": "f48ee304ca47e5e152f1e02a1e2425828e4847a66c5f105761cf4d5934c35aae",
+      "windowStartLine": 45,
+      "scope": "Bounded saved window only, overlaps retained; no whole document/giant scalar semantic claim."
+    },
+    {
+      "query": "mcp-nested-path",
+      "savedIndex": 5,
+      "document": "docs/archive/review-2026-07-09/14-remaining-observations-verification.md",
+      "location": "/text",
+      "windowStart": 6952,
+      "windowEnd": 7368,
+      "wholeValueCharacters": 23397,
+      "windowSha256": "454913f5d881c3c938e5b81251a5e73ed67d528103de4118bb296ab80c44a5cd",
+      "windowStartLine": 48,
+      "scope": "Bounded saved window only, overlaps retained; no whole document/giant scalar semantic claim."
+    },
+    {
+      "query": "mcp-nested-path",
+      "savedIndex": 7,
+      "document": "docs/archive/todo/fix-batch-3-2026-07-08.md",
+      "location": "/text",
+      "windowStart": 2117,
+      "windowEnd": 2611,
+      "wholeValueCharacters": 4116,
+      "windowSha256": "998d393c3b5ec1968640bd0a10a8f8b6c26fb95160740d66c885c9e1ec6c1b5e",
+      "windowStartLine": 16,
+      "scope": "Bounded saved window only, overlaps retained; no whole document/giant scalar semantic claim."
+    },
+    {
+      "query": "mcp-nested-path",
+      "savedIndex": 8,
+      "document": "docs/archive/todo/review-core-2026-07-08.md",
+      "location": "/text",
+      "windowStart": 11560,
+      "windowEnd": 11964,
+      "wholeValueCharacters": 15799,
+      "windowSha256": "c6723e8d40e0bfe6c9474b6c432132d70cafc496008d36876fb0e37ce9bca31e",
+      "windowStartLine": 77,
+      "scope": "Bounded saved window only, overlaps retained; no whole document/giant scalar semantic claim."
+    },
+    {
+      "query": "mcp-nested-path",
+      "savedIndex": 9,
+      "document": "docs/archive/todo/review-uncommitted-correctness-2026-07-08.md",
+      "location": "/text",
+      "windowStart": 9095,
+      "windowEnd": 9554,
+      "wholeValueCharacters": 11244,
+      "windowSha256": "9a3cae8eb4eea8a040c9dd618f680d79e47ed57e48da286dfd838ee5c5b351ec",
+      "windowStartLine": 72,
+      "scope": "Bounded saved window only, overlaps retained; no whole document/giant scalar semantic claim."
+    }
+  ],
+  "directCanonicalSelections": [
+    {
+      "path": "docs/archive/bug-followups-2026-08-13.md",
+      "sha256": "e507cbffb8bc635ced3d2db518ea02cfdfa86b196e91f721021e27996cd54241",
+      "selectedLineRanges": [
+        [
+          1,
+          20
+        ],
+        [
+          36,
+          45
+        ]
+      ],
+      "selectedTitleObjects": [],
+      "machineIdTitleRowsSeen": null,
+      "allCatalogRowsSemanticallyRead": false
+    },
+    {
+      "path": "docs/audit-2026-10-17-round58/recorded-findings-catalog.json",
+      "sha256": "db4370c2544acbe67b6400d3b740d95cc3b170690184be1accc00120bc4a53ac",
+      "selectedLineRanges": [],
+      "selectedTitleObjects": [
+        {
+          "pointer": "/findings/13",
+          "id": "C02",
+          "priority": "P2",
+          "title": "pre_tool_use 改写参数后未重复 Plan/MCP 参数权限门禁（旧报告已知，仍存在）"
+        },
+        {
+          "pointer": "/findings/52",
+          "id": "R3-02",
+          "priority": "P3",
+          "title": "Codex MCP结果与失败原因变成不可读摘要"
+        },
+        {
+          "pointer": "/findings/108",
+          "id": "MCP-R38-01",
+          "priority": "P3",
+          "title": "Reopening and saving a stdio MCP form loses structured argument boundaries"
+        },
+        {
+          "pointer": "/findings/109",
+          "id": "MCP-R39-01",
+          "priority": "P3",
+          "title": "Renaming a settings-owned MCP server drops supported non-editor fields"
+        }
+      ],
+      "machineIdTitleRowsSeen": 118,
+      "allCatalogRowsSemanticallyRead": false
+    }
+  ],
+  "actualCounts": {
+    "boundedWindowReads": 28,
+    "uniqueSelectedMetadataDocuments": 16,
+    "preciseWindowReads": 22,
+    "broaderCanonicalWindowReads": 6,
+    "directArchiveLineReads": 30,
+    "selectedCatalogTitleObjects": 4,
+    "catalogMachineIdTitleRows": 118,
+    "productAndTestReads": 0
+  },
+  "queryStats": {
+    "mcp-dot-name": {
+      "matchedValues": 2,
+      "matchOccurrences": 3,
+      "matchedDocuments": [
+        "docs/audit-2026-10-17-round4/quality-coding.md",
+        "docs/superpowers/specs/2026-05-29-capability-control-design.md"
+      ],
+      "matchedDocumentCount": 2,
+      "savedWindows": 3,
+      "capped": false
+    },
+    "dot-mcp-name": {
+      "matchedValues": 0,
+      "matchOccurrences": 0,
+      "matchedDocuments": [],
+      "matchedDocumentCount": 0,
+      "savedWindows": 0,
+      "capped": false
+    },
+    "mcp-overlay-literal": {
+      "matchedValues": 3,
+      "matchOccurrences": 3,
+      "matchedDocuments": [
+        "docs/superpowers/plans/2026-06-01-project-scoped-capabilities.md",
+        "docs/superpowers/specs/2026-06-01-project-scoped-capabilities-and-session-isolation-design.md",
+        "docs/superpowers/specs/2026-06-22-plugin-mcp-env-override-design.md"
+      ],
+      "matchedDocumentCount": 3,
+      "savedWindows": 3,
+      "capped": false
+    },
+    "mcp-nested-path": {
+      "matchedValues": 43,
+      "matchOccurrences": 51,
+      "matchedDocuments": [
+        "docs/architecture/12-package-boundaries-and-release-units.md",
+        "docs/architecture/15-codex-harness-comparison-and-roadmap.md",
+        "docs/archive/review-2026-07-09/14-remaining-observations-verification.md",
+        "docs/archive/review-2026-07-09/26-bg-completion-no-wake-root-cause.md",
+        "docs/archive/todo/fix-batch-3-2026-07-08.md",
+        "docs/archive/todo/review-core-2026-07-08.md",
+        "docs/archive/todo/review-uncommitted-correctness-2026-07-08.md",
+        "docs/audit-2026-10-17-round10/evidence/root-dedup.json",
+        "docs/audit-2026-10-17-round22/evidence/terminal-commands.json",
+        "docs/audit-2026-10-17-round23/evidence/room-data-dedup-navigation.json",
+        "docs/audit-2026-10-17-round24/evidence/browser-scenes-dedup-navigation.json",
+        "docs/audit-2026-10-17-round31/evidence/search-review-prep/history.json",
+        "docs/audit-2026-10-17-round33/evidence/plugin-input-review/history.json",
+        "docs/audit-2026-10-17-round34/evidence/semver-frontier/history.json",
+        "docs/audit-2026-10-17-round35/evidence/core-result-frontier/history-supplement.json",
+        "docs/audit-2026-10-17-round38/evidence/aggregate-review/review.md",
+        "docs/audit-2026-10-17-round38/evidence/mcp-args-review/review.md",
+        "docs/audit-2026-10-17-round38/evidence/mcp-patch-frontier/report.md",
+        "docs/audit-2026-10-17-round38/evidence/review-aggregate.md",
+        "docs/audit-2026-10-17-round38/evidence/root-mcp-frontier/review.md",
+        "docs/audit-2026-10-17-round38/evidence/root-mcp-frontier/source-excerpts.json",
+        "docs/audit-2026-10-17-round38/findings.json",
+        "docs/audit-2026-10-17-round38/mcp-args.md",
+        "docs/audit-2026-10-17-round39/evidence/history-new-frozen-delta.json",
+        "docs/audit-2026-10-17-round39/evidence/root-history.json",
+        "docs/audit-2026-10-17-round44/evidence/market-frontier/report.md",
+        "docs/audit-2026-10-17-round44/evidence/source-status-review/review.md",
+        "docs/audit-2026-10-17-round48/evidence/session-title-frontier/history-range-selected.json",
+        "docs/audit-2026-10-17-round53/evidence/glob-summary-review/history-gate.json",
+        "docs/audit-2026-10-17-round8/evidence/questions-dedup-inventory.json",
+        "docs/audit-2026-10-17-round9/evidence/attachments-dedup.json",
+        "docs/audit-2026-10-17-round9/tools.md",
+        "docs/superpowers/plans/2026-05-26-core-stabilization-followups.md",
+        "docs/superpowers/specs/2026-05-22-monorepo-split-design.md",
+        "docs/todo/codeshell-hub-iteration-design.md",
+        "docs/todo/github-link-local-first-tech-design.md",
+        "docs/todo/panel-host-integration-and-server-isolation-2026-09-18.md",
+        "docs/todo/project-cloud-panels-delivery.md",
+        "docs/todo/workspace-crossfile-query-delivery.md"
+      ],
+      "matchedDocumentCount": 39,
+      "savedWindows": 51,
+      "capped": false
+    },
+    "nested-mcp-path": {
+      "matchedValues": 145,
+      "matchOccurrences": 148,
+      "matchedDocuments": [
+        "docs/architecture/12-package-boundaries-and-release-units.md",
+        "docs/architecture/15-codex-harness-comparison-and-roadmap.md",
+        "docs/archive/architecture/14-engine-call-paths.md",
+        "docs/archive/architecture/15-current-review-and-bug-inventory.md",
+        "docs/archive/architecture/16-core-overall-design-standard.md",
+        "docs/archive/architecture/18-core-vs-cc-vs-codex.md",
+        "docs/archive/architecture/README.md",
+        "docs/archive/core-modules/lsp.md",
+        "docs/archive/review-2026-07-09/14-remaining-observations-verification.md",
+        "docs/archive/todo/fix-batch-2-2026-07-08.md",
+        "docs/archive/todo/fix-batch-3-2026-07-08.md",
+        "docs/archive/todo/fix-batch-4-2026-07-08.md",
+        "docs/archive/todo/fix-batch-5-2026-07-08.md",
+        "docs/archive/todo/fix-batch-6-2026-07-08.md",
+        "docs/archive/todo/fix-batch-7-2026-07-08.md",
+        "docs/archive/todo/fix-batch-8-2026-07-08.md",
+        "docs/archive/todo/fix-batch-9-2026-07-08.md",
+        "docs/audit-2026-10-17-round15/evidence/injection-dedup.json",
+        "docs/audit-2026-10-17-round22/evidence/terminal-commands.json",
+        "docs/audit-2026-10-17-round23/evidence/room-data-dedup-navigation.json",
+        "docs/audit-2026-10-17-round24/evidence/browser-scenes-dedup-navigation.json",
+        "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "docs/audit-2026-10-17-round31/evidence/search-review-prep/history.json",
+        "docs/audit-2026-10-17-round34/evidence/root-history.json",
+        "docs/audit-2026-10-17-round34/evidence/utf8-review/history.json",
+        "docs/audit-2026-10-17-round34/evidence/utf8-review/selected-history-contexts.json",
+        "docs/audit-2026-10-17-round36/evidence/root-history.json",
+        "docs/audit-2026-10-17-round37/evidence/history-supplement/query-results.json",
+        "docs/audit-2026-10-17-round38/evidence/mcp-args-review/review.md",
+        "docs/audit-2026-10-17-round38/evidence/mcp-patch-frontier/history.json",
+        "docs/audit-2026-10-17-round38/evidence/mcp-patch-frontier/report.md",
+        "docs/audit-2026-10-17-round38/evidence/review-aggregate.md",
+        "docs/audit-2026-10-17-round38/evidence/root-mcp-frontier/review.md",
+        "docs/audit-2026-10-17-round38/evidence/root-mcp-frontier/source-excerpts.json",
+        "docs/audit-2026-10-17-round38/evidence/root-mcp-frontier/validation.json",
+        "docs/audit-2026-10-17-round38/mcp-args.md",
+        "docs/audit-2026-10-17-round39/evidence/history-new-frozen-delta.json",
+        "docs/audit-2026-10-17-round39/evidence/mcp-rename-fields-frontier/matching-history-objects.first.json",
+        "docs/audit-2026-10-17-round39/evidence/root-history.json",
+        "docs/audit-2026-10-17-round43/evidence/draft-frontier/history-contexts.json",
+        "docs/audit-2026-10-17-round44/evidence/source-status-review/review.md",
+        "docs/audit-2026-10-17-round44/evidence/source-status-review/source-excerpts.json",
+        "docs/audit-2026-10-17-round44/evidence/source-status-root/source-diff-preserved.json",
+        "docs/audit-2026-10-17-round48/evidence/session-title-frontier/report.md",
+        "docs/audit-2026-10-17-round49/evidence/agent-definition-gate/history-contexts.json",
+        "docs/audit-2026-10-17-round49/evidence/cost-review/history-contexts.json",
+        "docs/audit-2026-10-17-round50/evidence/plugin-presentation/history-causes.json",
+        "docs/audit-2026-10-17-round53/evidence/glob-summary-review/focused-history-gate.json",
+        "docs/audit-2026-10-17-round53/evidence/glob-summary-review/history-gate.json",
+        "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+        "docs/audit-2026-10-17-round8/evidence/questions-dedup-inventory.json",
+        "docs/audit-2026-10-17-round9/tools.md",
+        "docs/nightly-2026-07-10/codeshell-capability-gap.md",
+        "docs/review-remaining-2026-10-12/coding-tui-chat.md",
+        "docs/review-remaining-2026-10-12/validation/source-reports/codeshell-remaining-cli-chat-report.md",
+        "docs/superpowers/plans/2026-07-16-optimization-sweep.md",
+        "docs/superpowers/plans/2026-09-26-optimization-lab-foundation.md",
+        "docs/superpowers/specs/2026-05-24-electron-codex-ui-full-design.md",
+        "docs/superpowers/specs/2026-05-29-capability-control-design.md",
+        "docs/superpowers/specs/2026-06-18-mcp-oauth-and-figma-integration-design.md",
+        "docs/todo/claude-repository-optimization-2026-08-30.md",
+        "docs/todo/codeshell-hub-iteration-design.md",
+        "docs/todo/external-agent-runtime-tool-bridge-design.md",
+        "docs/todo/pet-work-reliability-audit-2026-09-20.md",
+        "docs/todo/project-cloud-panels-delivery.md",
+        "docs/todo/workspace-datasource-binding-adr.md"
+      ],
+      "matchedDocumentCount": 66,
+      "savedWindows": 100,
+      "capped": true
+    },
+    "overlay-token-path": {
+      "matchedValues": 4,
+      "matchOccurrences": 4,
+      "matchedDocuments": [
+        "docs/archive/bug-followups-2026-08-13.md",
+        "docs/superpowers/plans/2026-07-15-workspace-profile-mvp.md",
+        "docs/superpowers/specs/2026-06-01-project-scoped-capabilities-and-session-isolation-design.md",
+        "docs/todo/claude-repository-optimization-2026-08-30.md"
+      ],
+      "matchedDocumentCount": 4,
+      "savedWindows": 4,
+      "capped": false
+    },
+    "dot-name-generic": {
+      "matchedValues": 7,
+      "matchOccurrences": 12,
+      "matchedDocuments": [
+        "docs/archive/bug-followups-2026-08-13.md",
+        "docs/archive/todo/review-core-v2.md",
+        "docs/audit-2026-10-17-round10/evidence/cross-review-catalog.md",
+        "docs/superpowers/plans/2026-05-29-capability-control.md",
+        "docs/superpowers/plans/2026-06-01-project-scoped-capabilities.md",
+        "docs/superpowers/specs/2026-05-29-capability-control-design.md",
+        "docs/superpowers/specs/2026-06-01-project-scoped-capabilities-and-session-isolation-design.md"
+      ],
+      "matchedDocumentCount": 7,
+      "savedWindows": 12,
+      "capped": false
+    }
+  },
+  "capPerQuery": 100,
+  "parseErrors": [],
+  "rawCommandsCaptured": [
+    {
+      "exitArtifact": "broader-original-windows.first.exit.json",
+      "exitCode": 0,
+      "stdoutArtifact": "broader-original-windows.first.stdout.txt",
+      "stderrArtifact": "broader-original-windows.first.stderr.txt",
+      "stdoutCaptured": true,
+      "stderrCaptured": true,
+      "stderrBytes": 0,
+      "disposition": "Audit metadata command; no product invocation."
+    },
+    {
+      "exitArtifact": "catalog-all-locator.first.exit.json",
+      "exitCode": 0,
+      "stdoutArtifact": "catalog-all-locator.first.stdout.txt",
+      "stderrArtifact": "catalog-all-locator.first.stderr.txt",
+      "stdoutCaptured": true,
+      "stderrCaptured": true,
+      "stderrBytes": 0,
+      "disposition": "Audit metadata command; no product invocation."
+    },
+    {
+      "exitArtifact": "catalog-locator.first.exit.json",
+      "exitCode": 1,
+      "stdoutArtifact": "catalog-locator.first.stdout.txt",
+      "stderrArtifact": "catalog-locator.first.stderr.txt",
+      "stdoutCaptured": true,
+      "stderrCaptured": true,
+      "stderrBytes": 0,
+      "disposition": "Legitimate empty catalogue filename locator; latest actual catalog chosen separately."
+    },
+    {
+      "exitArtifact": "ending-inventory.first.exit.json",
+      "exitCode": 0,
+      "stdoutArtifact": "ending-inventory.first.stdout.txt",
+      "stderrArtifact": "ending-inventory.first.stderr.txt",
+      "stdoutCaptured": true,
+      "stderrCaptured": true,
+      "stderrBytes": 0,
+      "disposition": "Audit metadata command; no product invocation."
+    },
+    {
+      "exitArtifact": "ending.first.exit.json",
+      "exitCode": 0,
+      "stdoutArtifact": "ending.first.stdout.txt",
+      "stderrArtifact": "ending.first.stderr.txt",
+      "stdoutCaptured": true,
+      "stderrCaptured": true,
+      "stderrBytes": 0,
+      "disposition": "Audit metadata command; no product invocation."
+    },
+    {
+      "exitArtifact": "formal-catalog-titles.first.exit.json",
+      "exitCode": 0,
+      "stdoutArtifact": "formal-catalog-titles.first.stdout.txt",
+      "stderrArtifact": "formal-catalog-titles.first.stderr.txt",
+      "stdoutCaptured": true,
+      "stderrCaptured": true,
+      "stderrBytes": 0,
+      "disposition": "Audit metadata command; no product invocation."
+    },
+    {
+      "exitArtifact": "inventory.first.exit.json",
+      "exitCode": 0,
+      "stdoutArtifact": "inventory.first.stdout.txt",
+      "stderrArtifact": "inventory.first.stderr.txt",
+      "stdoutCaptured": true,
+      "stderrCaptured": true,
+      "stderrBytes": 0,
+      "disposition": "Audit metadata command; no product invocation."
+    },
+    {
+      "exitArtifact": "original-and-catalog.first.exit.json",
+      "exitCode": 0,
+      "stdoutArtifact": "original-and-catalog.first.stdout.txt",
+      "stderrArtifact": "original-and-catalog.first.stderr.txt",
+      "stdoutCaptured": true,
+      "stderrCaptured": true,
+      "stderrBytes": 0,
+      "disposition": "Audit metadata command; no product invocation."
+    },
+    {
+      "exitArtifact": "precise-windows-1.first.exit.json",
+      "exitCode": 0,
+      "stdoutArtifact": "precise-windows-1.first.stdout.txt",
+      "stderrArtifact": "precise-windows-1.first.stderr.txt",
+      "stdoutCaptured": true,
+      "stderrCaptured": true,
+      "stderrBytes": 0,
+      "disposition": "Audit metadata command; no product invocation."
+    },
+    {
+      "exitArtifact": "precise-windows-2.first.exit.json",
+      "exitCode": 0,
+      "stdoutArtifact": "precise-windows-2.first.stdout.txt",
+      "stderrArtifact": "precise-windows-2.first.stderr.txt",
+      "stdoutCaptured": true,
+      "stderrCaptured": true,
+      "stderrBytes": 0,
+      "disposition": "Audit metadata command; no product invocation."
+    },
+    {
+      "exitArtifact": "precise-windows-3.first.exit.json",
+      "exitCode": 0,
+      "stdoutArtifact": "precise-windows-3.first.stdout.txt",
+      "stderrArtifact": "precise-windows-3.first.stderr.txt",
+      "stdoutCaptured": true,
+      "stderrCaptured": true,
+      "stderrBytes": 0,
+      "disposition": "Audit metadata command; no product invocation."
+    },
+    {
+      "exitArtifact": "precise-windows-4.first.exit.json",
+      "exitCode": 0,
+      "stdoutArtifact": "precise-windows-4.first.stdout.txt",
+      "stderrArtifact": "precise-windows-4.first.stderr.txt",
+      "stdoutCaptured": true,
+      "stderrCaptured": true,
+      "stderrBytes": 0,
+      "disposition": "Audit metadata command; no product invocation."
+    },
+    {
+      "exitArtifact": "scan.first.exit.json",
+      "exitCode": 0,
+      "stdoutArtifact": "scan.first.stdout.txt",
+      "stderrArtifact": "scan.first.stderr.txt",
+      "stdoutCaptured": true,
+      "stderrCaptured": true,
+      "stderrBytes": 0,
+      "disposition": "Audit metadata command; no product invocation."
+    }
+  ],
+  "endingAllInventoryUnchanged": true,
+  "limitations": [
+    "MD whole texts count as search values; JSON counts only recursive value strings/scalars. Query totals are not findings or semantic reading counts.",
+    "Broad server/nested alternatives include SDK-envelope/home-layout noise. Not every saved broad window was read; one query148 occurrences saved100.",
+    "No finding of same current MCP entrance in selected old metadata is not proof of exhaustive novelty.",
+    "This author produced155; this packet corrects an overbroad old-cause inference, not independent current product source verification."
+  ]
+}

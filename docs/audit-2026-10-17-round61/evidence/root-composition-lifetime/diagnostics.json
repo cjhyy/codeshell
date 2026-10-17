@@ -1,0 +1,16 @@
+{
+  "productAttempts": 0,
+  "metadataNonzeroCommands": [],
+  "metadataWarnings": [
+    {
+      "operation": "dispose symbol navigation wrapper",
+      "exitCode": 0,
+      "observation": "Python emitted invalid-escape SyntaxWarning for non-raw regex parenthesis; original warning is in tool transcript only, subprocess stdout/stderr files do not contain wrapper warning. No product operation or rerun."
+    }
+  ],
+  "rangeMetadata": {
+    "requested": "source-read-03-requested-ranges.json",
+    "actual": "source-read-03-ranges.json",
+    "note": "Display helper clamped runtime requested end170 to actual EOF159; actual headers already159, requested range bytes preserved before correcting actual-range metadata. No source or execution rerun."
+  }
+}

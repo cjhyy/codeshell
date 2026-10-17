@@ -1,0 +1,8 @@
+{
+  "firstToolChunk": "2f3edb",
+  "firstProbe": "coverage or status fields yielded None4643 because original schema is publishableCurrentCoverage",
+  "disposition": "Initial schema reconnaissance only, not published migration result or product failure. Correct field independently reproduced304full/168selected/4171unknown.",
+  "baseNotModified": true,
+  "oldMethodExecuted": false,
+  "productExecution": 0
+}

@@ -1,0 +1,10 @@
+packages/desktop/src/main/capabilities-service.ts:114:export function setCapabilityOverride(
+packages/desktop/src/preload/index.ts:1119:  setCapabilityOverride: (
+packages/desktop/src/preload/index.ts:1123:  ) => ipcRenderer.invoke("capabilities:setOverride", target, id, state),
+packages/desktop/src/preload/types.d.ts:1831:   * for `cwd` (on/off only — use setCapabilityOverride for "inherit").
+packages/desktop/src/preload/types.d.ts:1843:  setCapabilityOverride(
+packages/desktop/src/main/index.ts:490:  setCapabilityOverride,
+packages/desktop/src/main/index.ts:3840:  "capabilities:setOverride",
+packages/desktop/src/main/index.ts:3843:    if (typeof id !== "string") throw new Error("capabilities:setOverride requires id");
+packages/desktop/src/main/index.ts:3845:      throw new Error("capabilities:setOverride requires state inherit|on|off");
+packages/desktop/src/main/index.ts:3846:    setCapabilityOverride(cwd, id, state);

@@ -1,0 +1,33 @@
+{
+  "name": "precise-windows-1",
+  "selections": [
+    [
+      "mcp-dot-name",
+      0
+    ],
+    [
+      "mcp-dot-name",
+      1
+    ],
+    [
+      "mcp-dot-name",
+      2
+    ],
+    [
+      "mcp-overlay-literal",
+      0
+    ],
+    [
+      "mcp-overlay-literal",
+      1
+    ],
+    [
+      "mcp-overlay-literal",
+      2
+    ],
+    [
+      "overlay-token-path",
+      0
+    ]
+  ]
+}

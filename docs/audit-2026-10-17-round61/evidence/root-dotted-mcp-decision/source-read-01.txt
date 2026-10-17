@@ -1,0 +1,445 @@
+packages/core/src/capability-control/service.ts:120–180
+120:         enabled,
+121:         globalEnabled,
+122:         projectOverride: userOverride,
+123:         effectiveSource: ov ? "project" : cwd ? "default" : "user",
+124:       } as CapabilityDescriptor;
+125:     });
+126:   }
+127: 
+128:   /**
+129:    * Toggle a capability. Default scope is "user" (back-compat: old callers
+130:    * pass no opts → global write, unchanged). scope:"project" maps on/off to a
+131:    * tri-state override and writes capabilityOverrides (requires cwd).
+132:    */
+133:   setEnabled(id: string, on: boolean, opts?: { scope?: WriteScope; cwd?: string }): void {
+134:     if (opts?.scope === "project") {
+135:       this.setOverride(id, on ? "on" : "off", {
+136:         scope: "project",
+137:         cwd: opts.cwd ?? this.deps.cwd,
+138:       });
+139:       return;
+140:     }
+141:     this.writeUserScope(id, on);
+142:   }
+143: 
+144:   /**
+145:    * Write a project tri-state override. "inherit" deletes the key (we never
+146:    * persist the literal). All capability kinds — including builtin, which
+147:    * writes to capabilityOverrides.builtin.<token> — now support project
+148:    * overrides; only a kind with no bucket (bucketForKind returns undefined)
+149:    * is rejected.
+150:    */
+151:   setOverride(
+152:     id: string,
+153:     state: CapabilityOverrideState,
+154:     opts: { scope: "project"; cwd: string },
+155:   ): void {
+156:     const descriptor = this.list().find((c) => c.id === id);
+157:     if (!descriptor) throw new CapabilityNotFoundError(id);
+158:     const bucket = bucketForKind(descriptor.kind);
+159:     if (!bucket) throw new Error(`Capability kind '${descriptor.kind}' has no project override`);
+160:     if (!opts.cwd) throw new Error("project override requires cwd");
+161:     const token = overrideTokenForId(id);
+162:     const path = `capabilityOverrides.${bucket}.${token}`;
+163:     if (state === "inherit") this.deps.settings.deleteProjectSetting(path, opts.cwd);
+164:     else this.deps.settings.saveProjectSetting(path, state, opts.cwd);
+165:   }
+166: 
+167:   /** Existing global write path — unchanged behavior, refactored out of setEnabled. */
+168:   private writeUserScope(id: string, on: boolean): void {
+169:     const descriptor = this.list().find((c) => c.id === id);
+170:     if (!descriptor) throw new CapabilityNotFoundError(id);
+171:     const { settingsKey, mode, token } = descriptor.control;
+172:     const s = this.deps.settings.get() as Record<string, any>;
+173: 
+174:     if (mode === "record-flag") {
+175:       const servers = { ...(s.mcpServers ?? {}) };
+176:       // Never conjure a server that was never configured.
+177:       if (!servers[token]) return;
+178:       servers[token] = { ...servers[token], enabled: on };
+179:       this.deps.settings.saveUserSetting("mcpServers", servers);
+180:       return;
+
+packages/core/src/capability-control/overlay.ts:42–80
+42:       return "builtin";
+43:     default:
+44:       return undefined;
+45:   }
+46: }
+47: 
+48: /** Strip the leading "<kind>:" prefix from a capability id to get its token. */
+49: export function overrideTokenForId(id: string): string {
+50:   const colon = id.indexOf(":");
+51:   return colon >= 0 ? id.slice(colon + 1) : id;
+52: }
+53: 
+54: /** Read the project override for a descriptor, normalizing inherit/garbage to undefined. */
+55: export function overrideFor(
+56:   overrides: CapabilityOverrides | undefined,
+57:   kind: CapabilityDescriptor["kind"] | "agent",
+58:   token: string,
+59: ): "on" | "off" | undefined {
+60:   const bucket = bucketForKind(kind);
+61:   if (!bucket || !overrides) return undefined;
+62:   const v = overrides[bucket]?.[token];
+63:   return v === "on" || v === "off" ? v : undefined;
+64: }
+65: 
+66: /**
+67:  * Fold a project override bucket into a global "disabled" list, producing the
+68:  * effective disabled list for run-time skill/plugin filtering. "on" un-disables
+69:  * (removes from the list), "off" disables (adds to the list); inherit/absent
+70:  * leaves the baseline.
+71:  */
+72: export function effectiveDisabledList(
+73:   globalDisabled: string[],
+74:   bucket: Record<string, CapabilityOverride> | undefined,
+75: ): string[] {
+76:   const disabled = new Set(globalDisabled);
+77:   if (bucket) {
+78:     for (const [token, state] of Object.entries(bucket)) {
+79:       if (state === "on") disabled.delete(token);
+80:       else if (state === "off") disabled.add(token);
+
+packages/core/src/capability-control/project.ts:55–84
+55:  * tool counts come from the registry's connected mcp tools (0 if none).
+56:  */
+57: export function projectMcp(input: {
+58:   mcpServers: Record<string, MCPServerConfig>;
+59:   mcpTools: RegisteredTool[];
+60: }): CapabilityDescriptor[] {
+61:   const counts = new Map<string, number>();
+62:   for (const t of input.mcpTools) {
+63:     if (t.source !== "mcp" || !t.serverName) continue;
+64:     counts.set(t.serverName, (counts.get(t.serverName) ?? 0) + 1);
+65:   }
+66:   return Object.entries(input.mcpServers).map(([serverName, cfg]) => {
+67:     const toolCount = counts.get(serverName) ?? 0;
+68:     return {
+69:       id: `mcp:${serverName}`,
+70:       kind: "mcp" as const,
+71:       name: serverName,
+72:       description: `${toolCount} tools`,
+73:       enabled: cfg.enabled !== false,
+74:       control: {
+75:         settingsKey: "mcpServers" as const,
+76:         mode: "record-flag" as const,
+77:         token: serverName,
+78:       },
+79:       origin: { serverName, toolCount },
+80:     };
+81:   });
+82: }
+83: 
+84: /**
+
+packages/core/src/settings/manager.ts:70–100
+70:  */
+71: export function isProtectedSettingKey(key: string): boolean {
+72:   const root = key.split(".")[0] ?? "";
+73:   return PROTECTED_SETTING_ROOTS.has(root);
+74: }
+75: 
+76: const FORBIDDEN_SETTING_KEY_SEGMENTS = new Set(["__proto__", "prototype", "constructor"]);
+77: const MAX_SETTINGS_FILE_BYTES = 4 * 1024 * 1024;
+78: 
+79: function isForbiddenSettingKeySegment(key: string): boolean {
+80:   return FORBIDDEN_SETTING_KEY_SEGMENTS.has(key);
+81: }
+82: 
+83: function parseDottedSettingKey(key: string): string[] {
+84:   const parts = key.split(".");
+85:   if (
+86:     parts.length === 0 ||
+87:     parts.some((seg) => seg.length === 0 || isForbiddenSettingKeySegment(seg))
+88:   ) {
+89:     throw new Error(`invalid setting key: ${key}`);
+90:   }
+91:   return parts;
+92: }
+93: 
+94: function sanitizeSettingsValue(value: unknown): unknown {
+95:   if (Array.isArray(value)) {
+96:     return value.map((entry) => sanitizeSettingsValue(entry));
+97:   }
+98:   if (!value || typeof value !== "object") {
+99:     return value;
+100:   }
+
+packages/core/src/settings/manager.ts:135–185
+135:       );
+136:     }
+137:     target[key] = {};
+138:   } else if (!isOwnPlainObject(target, key)) {
+139:     target[key] = {};
+140:   }
+141:   return target[key] as Record<string, unknown>;
+142: }
+143: 
+144: export function setDottedSetting(
+145:   target: Record<string, unknown>,
+146:   key: string,
+147:   value: unknown,
+148: ): void {
+149:   const parts = parseDottedSettingKey(key);
+150:   let current: Record<string, unknown> = target;
+151:   for (let i = 0; i < parts.length - 1; i++) {
+152:     current = descendForSettingWrite(current, parts[i]!, key);
+153:   }
+154:   current[parts[parts.length - 1]!] = value;
+155: }
+156: 
+157: /**
+158:  * The fixed cwd used for "no-repo" pure-chat conversations (a chat not bound to
+159:  * any code project). Same location as desktop's `resolveNoRepoCwd`
+160:  * (`join(homedir(), ".code-shell", "no-repo")`), but built from {@link userHome}
+161:  * so tests can isolate it by overriding `$HOME`. The engine compares
+162:  * `config.cwd === noRepoDir()` to flip skill/plugin filtering to whitelist mode.
+163:  */
+164: export function noRepoDir(): string {
+165:   return join(userHome(), ".code-shell", "no-repo");
+166: }
+167: 
+168: export type SettingsSourceName = "managed" | "user" | "project" | "local" | "flag";
+169: 
+170: /**
+171:  * Top-level settings fields that can influence code execution and are therefore
+172:  * stripped from an UNTRUSTED project's disk layers (project + local) before
+173:  * merge. A repo commits these into its `.code-shell/settings.json`, so an
+174:  * untrusted clone must not have them take effect:
+175:  *   - permissions  — `rules` can self-authorize (allow Bash …); `defaultMode`
+176:  *                     can set bypassPermissions.
+177:  *   - env          — injected into Bash child env unfiltered (BASH_ENV,
+178:  *                     LD_PRELOAD, PATH → arbitrary code on next command).
+179:  *   - localEnvironment — same, as the env floor.
+180:  *   - hooks        — arbitrary commands on lifecycle events.
+181:  *   - mcpServers   — auto-connect to attacker-controlled MCP servers.
+182:  * Only project-scoped layers are filtered; user/managed/flag are trusted.
+183:  * Mirrors Claude Code's TRUSTED_SETTING_SOURCES model (project sources excluded
+184:  * from dangerous env application until trust is granted).
+185:  */
+
+packages/core/src/settings/manager.ts:560–590
+560:       release();
+561:     }
+562: 
+563:     this.invalidate();
+564:   }
+565: 
+566:   /**
+567:    * Persist a single setting (dotted key path) to the PROJECT-level config
+568:    * file at ${cwd}/.code-shell/settings.json. This is where capabilityOverrides
+569:    * live — project overlays never touch the global user file. Atomic write +
+570:    * cache invalidation mirror saveUserSetting.
+571:    */
+572:   saveProjectSetting(key: string, value: unknown, cwd: string): void {
+573:     this.clearHookOrigins();
+574:     this.validateProjectCwd(cwd, "project");
+575:     // Don't resurrect a deleted project root: atomicWriteJson's recursive mkdir
+576:     // of <cwd>/.code-shell recreates `cwd` itself as an empty shell when cwd is
+577:     // gone. A non-empty cwd that no longer exists means the project was deleted
+578:     // — skip the write rather than recreate it.
+579:     if (!existsSync(cwd)) return;
+580:     const path = this.projectSettingsPath(cwd);
+581:     this.mutateSettingsFile(path, (current) => {
+582:       setDottedSetting(current, key, value);
+583:     });
+584:     this.invalidate();
+585:   }
+586: 
+587:   /**
+588:    * Persist a machine-private setting for one project. The local layer has
+589:    * higher precedence than the shared project layer and lives at
+590:    * `${cwd}/.code-shell/settings.local.json`, matching the file already read
+
+packages/desktop/src/renderer/settings/McpSection.tsx:435–460
+435:         ...(previous?.connectTimeoutMs !== undefined
+436:           ? { connectTimeoutMs: previous.connectTimeoutMs }
+437:           : {}),
+438:         ...(previous?.connectRetries !== undefined
+439:           ? { connectRetries: previous.connectRetries }
+440:           : {}),
+441:         ...(previous?.inlineImages !== undefined ? { inlineImages: previous.inlineImages } : {}),
+442:       };
+443:       const savedNext = { ...preserved, ...next };
+444:       const record: Record<string, unknown> = {
+445:         [next.name]: {
+446:           // A new name has no previous object for the settings merge to retain.
+447:           // Transfer only supported non-editor options, then apply edits/clears.
+448:           ...(originalName && originalName !== next.name ? preserved : {}),
+449:           ...buildMcpSettingsPatch(next, previous),
+450:         },
+451:         ...(originalName && originalName !== next.name ? { [originalName]: null } : {}),
+452:       };
+453:       await updateScopedSettings(scope, { mcpServers: record }, projectPath);
+454:       if (mounted.current) {
+455:         setServers((current) => [
+456:           ...current.filter((s) => s.name !== originalName && s.name !== next.name),
+457:           savedNext,
+458:         ]);
+459:       }
+460:       if (originalName && originalName !== next.name) {
+
+packages/desktop/src/renderer/settings/McpSection.tsx:1310–1345
+1310:       await reloadCredentials();
+1311:       toast({
+1312:         message: result.remoteRevoked
+1313:           ? t("settingsX.mcp.oauthLogoutDone")
+1314:           : t("settingsX.mcp.oauthLogoutWarning"),
+1315:       });
+1316:     });
+1317:   };
+1318: 
+1319:   const submit = () => {
+1320:     if (savePending.current || oauthBusy || !editorMounted.current) return;
+1321:     const trimmedName = name.trim();
+1322:     // Override mode locks identity fields, so skip their validation — the user
+1323:     // only supplies env/credential supplements for an existing plugin server.
+1324:     if (!isOverride) {
+1325:       if (!trimmedName) return setValidationError(t("settingsX.mcp.nameEmpty"));
+1326:       if (otherNames.includes(trimmedName))
+1327:         return setValidationError(t("settingsX.mcp.nameDuplicate"));
+1328:       if (isStdio) {
+1329:         if (!command.trim()) return setValidationError(t("settingsX.mcp.stdioNeedsCommand"));
+1330:       } else {
+1331:         if (!url.trim()) return setValidationError(t("settingsX.mcp.needsUrl", { transport }));
+1332:         try {
+1333:           new URL(url.trim());
+1334:         } catch {
+1335:           return setValidationError(t("settingsX.mcp.urlInvalid"));
+1336:         }
+1337:       }
+1338:     }
+1339:     let env: Record<string, string> | undefined;
+1340:     let envVars: string[] | undefined;
+1341:     let headers: Record<string, string> | undefined;
+1342:     let envHeaders: Record<string, string> | undefined;
+1343:     let allowedTools: string[] | undefined;
+1344:     let disabledTools: string[] | undefined;
+1345:     try {
+
+packages/desktop/src/renderer/settings/McpSection.tsx:1368–1400
+1368:       includeHeaderAuth && envHeaders && Object.keys(envHeaders).length ? envHeaders : undefined;
+1369:     const nextHeaders =
+1370:       includeHeaderAuth && headers && Object.keys(headers).length ? headers : undefined;
+1371: 
+1372:     // Override mode emits ONLY the supplement fields — saveOverride writes them
+1373:     // to the global mcpServerOverrides layer; command/url stay owned by the
+1374:     // plugin. We still key by the (locked) original name + transport.
+1375:     const next: McpServer = isOverride
+1376:       ? {
+1377:           name: trimmedName,
+1378:           transport,
+1379:           enabled: initial?.enabled,
+1380:           allowedTools,
+1381:           disabledTools,
+1382:           ...(isStdio
+1383:             ? {
+1384:                 env: env && Object.keys(env).length ? env : undefined,
+1385:                 envVars: envVars && envVars.length ? envVars : undefined,
+1386:               }
+1387:             : {
+1388:                 credentialRef: nextCredentialRef,
+1389:                 bearerTokenEnvVar: nextBearerEnvVar,
+1390:                 envHeaders: nextEnvHeaders,
+1391:               }),
+1392:         }
+1393:       : {
+1394:           name: trimmedName,
+1395:           transport,
+1396:           enabled: initial?.enabled,
+1397:           allowedTools,
+1398:           disabledTools,
+1399:           ...(isStdio
+1400:             ? {
+
+packages/desktop/src/renderer/settings/CapabilitiesOverviewSection.tsx:245–280
+245:     setSavingId(cap.id);
+246:     setError(null);
+247:     try {
+248:       for (const id of ids) {
+249:         await window.codeshell.setCapabilityEnabled(null, id, next, { scope: "user" });
+250:       }
+251:     } catch (e) {
+252:       if (activeCacheKeyRef.current === mutationCacheKey) {
+253:         setCaps(prev);
+254:         setError(e instanceof Error ? e.message : String(e));
+255:       }
+256:     } finally {
+257:       if (activeCacheKeyRef.current === mutationCacheKey) setSavingId(null);
+258:     }
+259:   };
+260: 
+261:   const onProjectState = async (cap: CapabilityDescriptor, state: "inherit" | "on" | "off") => {
+262:     const mutationCacheKey = cacheKey;
+263:     setSavingId(cap.id);
+264:     setError(null);
+265:     try {
+266:       for (const id of idsFor(cap)) {
+267:         if (!configurationTarget) throw new Error("project capability target is unavailable");
+268:         await window.codeshell.setCapabilityOverride(configurationTarget, id, state);
+269:       }
+270:       // Re-fetch so the row's effective value / source reflects the new overlay.
+271:       await load();
+272:     } catch (e) {
+273:       if (activeCacheKeyRef.current === mutationCacheKey) {
+274:         setError(e instanceof Error ? e.message : String(e));
+275:       }
+276:     } finally {
+277:       if (activeCacheKeyRef.current === mutationCacheKey) setSavingId(null);
+278:     }
+279:   };
+280: 
+
+docs/archive/bug-followups-2026-08-13.md:1–50
+1: # 安全加固遗留问题 — 已完成（2026-08-25）
+2: 
+3: > 来源：2026-08-12/08-13 两轮全仓安全加固（191 files, +12k）提交前的独立复查。
+4: > 2026-08-25 复核并完成余下 8 项：统一 manifest 安全读取、拒绝点号名称假成功、
+5: > undo/redo 会话与窗口校验、撤销设备防复活、browser anchor 生命周期清理、
+6: > DeliveryQueue 逐记录清理重试与锁外附件下载、user scope fail-closed。
+7: > 本文件移入 archive，以下保留修复前的问题与验收依据。
+8: 
+9: ## 共同根因
+10: 
+11: 前两轮给读取路径加了严格校验（bounded / no-follow / schema），但严格读取端的
+12: 失败模式是**破坏性**而非**隔离性**——旧写入方产生的数据遇到新校验会被
+13: 「丢弃」或「整体抛错」，而不是被隔离。已修的凭据库和 marketplace 注册表是
+14: 这个模式的两个实例。原 P1 的主题与 Panel App 注册表问题已在
+15: 0.8.10 发布前修复并补上回归测试。
+16: 
+17: 参考正确形态：`packages/core/src/plugins/installedPlugins.ts` 的 `registryOf()`
+18: ——坏条目 `continue` 跳过，不影响其余条目，也不阻塞写入。
+19: 
+20: ---
+21: 
+22: ## P2 — 加固不一致（修复前记录）
+23: 
+24: ### 1. `pluginContent.ts` 是唯一仍在裸读 manifest 的路径
+25: 
+26: - 位置：`packages/core/src/plugins/pluginContent.ts:144`
+27: - 现状：`JSON.parse(readFileSync(join(installPath, CANONICAL_PLUGIN_MANIFEST_FILE)))`
+28:   没有 lstat / 大小上限 / `O_NOFOLLOW`，而同一文件同一 schema 的兄弟路径
+29:   `pluginCatalog.ts:65-86` 走了完整加固读取。
+30: - 影响范围（已核实）：仅 inspect/展示。实例化走的是加固后的 `pluginCatalog`
+31:   并会重新校验 `revision`（`pluginAutomationTemplates.ts:35-46`），所以**软链
+32:   manifest 无法真正被调度执行**；但运维人员在 `InstallCapability` 的 inspect
+33:   输出里看到的是未加固数据。
+34: - 建议：复用 `pluginCatalog` 的读取函数，删掉这条独立路径。
+35: 
+36: ### 2. 带点号的插件/Skill 名会静默 no-op 却报告成功
+37: 
+38: - 位置：`packages/core/src/tool-system/builtin/install-capability.ts:556-560`、`791-797`
+39: - 现状：`SAFE_PLUGIN_SEGMENT_RE`(`:34`)/`SAFE_SKILL_NAME_RE`(`:35`) 允许 `.`，
+40:   名字被插进点分设置键 `capabilityOverrides.plugins.${plugin}`；
+41:   `setDottedSetting`（`settings/manager.ts:137-148`）按 `.` 拆成嵌套对象
+42:   `{plugins:{a:{b:"off"}}}`，而读取端 `capability-control/overlay.ts:22-26`
+43:   期望扁平 `Record<name,"on"|"off">`，非法结构被归一化为 inherit。
+44: - 结果：`disable plugin a.b` 返回「Disabled ...」但插件依然启用。
+45: - 建议：禁止名字中的 `.`，或改用非点分的键写入方式。
+46: 
+47: ### 3. 三个 `files:*Turn` IPC handler 未接入统一会话校验
+48: 
+49: - 位置：`packages/desktop/src/main/index.ts:6222`、`:6228`、`:6234`
+50: - 现状：`files:turnUndoState` / `files:undoTurn` / `files:redoTurn` 仍用旧的

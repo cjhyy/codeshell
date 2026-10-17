@@ -1,0 +1,114 @@
+[
+  {
+    "path": "packages/core/src/settings/manager.ts",
+    "sha256": "0c92e26bbbf252d1f6bbc0859d91bdae40c846aa9d9f597812a35c829ba629ec",
+    "pinReference": "caller-initial-pins.json",
+    "displayAt": "2026-10-17T20:11:39.121854+00:00",
+    "displayedLineRanges": [
+      [
+        145,
+        170
+      ]
+    ],
+    "ranges": [
+      {
+        "first": 145,
+        "last": 170,
+        "text": "145:   target: Record<string, unknown>,\n146:   key: string,\n147:   value: unknown,\n148: ): void {\n149:   const parts = parseDottedSettingKey(key);\n150:   let current: Record<string, unknown> = target;\n151:   for (let i = 0; i < parts.length - 1; i++) {\n152:     current = descendForSettingWrite(current, parts[i]!, key);\n153:   }\n154:   current[parts[parts.length - 1]!] = value;\n155: }\n156: \n157: /**\n158:  * The fixed cwd used for \"no-repo\" pure-chat conversations (a chat not bound to\n159:  * any code project). Same location as desktop's `resolveNoRepoCwd`\n160:  * (`join(homedir(), \".code-shell\", \"no-repo\")`), but built from {@link userHome}\n161:  * so tests can isolate it by overriding `$HOME`. The engine compares\n162:  * `config.cwd === noRepoDir()` to flip skill/plugin filtering to whitelist mode.\n163:  */\n164: export function noRepoDir(): string {\n165:   return join(userHome(), \".code-shell\", \"no-repo\");\n166: }\n167: \n168: export type SettingsSourceName = \"managed\" | \"user\" | \"project\" | \"local\" | \"flag\";\n169: \n170: /**"
+      }
+    ]
+  },
+  {
+    "path": "packages/core/src/settings/schema.ts",
+    "sha256": "2496b8aefd8ea32f7fc7ac23b26878475809be952a5fdbd8ac247cf0d40b3139",
+    "pinReference": "normal-name-producer-pins.json",
+    "displayAt": "2026-10-17T20:11:39.124577+00:00",
+    "displayedLineRanges": [
+      [
+        46,
+        79
+      ],
+      [
+        349,
+        399
+      ]
+    ],
+    "ranges": [
+      {
+        "first": 46,
+        "last": 79,
+        "text": "46: \n47: /**\n48:  * Tri-state project capability overlay. Lives in PROJECT settings only and\n49:  * layers over the global baseline (disabledSkills / disabledPlugins /\n50:  * mcpServers.<name>.enabled / disabledAgents). NOT a second denylist:\n51:  *   - \"on\"      → force enabled (even if globally disabled)\n52:  *   - \"off\"     → force disabled (even if globally enabled)\n53:  *   - \"inherit\" → take the global baseline. We don't persist \"inherit\"; an\n54:  *                 absent key means inherit. See the project-scoped\n55:  *                 capabilities design (spec §4).\n56:  */\n57: export const CapabilityOverrideSchema = z.enum([\"inherit\", \"on\", \"off\"]);\n58: export type CapabilityOverride = z.infer<typeof CapabilityOverrideSchema>;\n59: \n60: export const CapabilityOverridesSchema = z\n61:   .object({\n62:     skills: z.record(CapabilityOverrideSchema).optional(),\n63:     plugins: z.record(CapabilityOverrideSchema).optional(),\n64:     agents: z.record(CapabilityOverrideSchema).optional(),\n65:     mcp: z.record(CapabilityOverrideSchema).optional(),\n66:     builtin: z.record(CapabilityOverrideSchema).optional(),\n67:     /** Per-project Pet capability preferences layered over the user baseline. */\n68:     pet: z.record(CapabilityOverrideSchema).optional(),\n69:     /**\n70:      * Per-hook overlay for PLUGIN-provided hooks, keyed by\n71:      * `pluginHookKey()` (`<plugin>:<RawEvent>:<command>`). Finer-grained\n72:      * than `plugins` (which kills a whole plugin): \"off\" suppresses one\n73:      * hook for this project only. Only \"off\" is meaningful today — plugin\n74:      * hooks have no global disable list to force back \"on\" from.\n75:      */\n76:     pluginHooks: z.record(CapabilityOverrideSchema).optional(),\n77:   })\n78:   .optional();\n79: export type CapabilityOverrides = z.infer<typeof CapabilityOverridesSchema>;"
+      },
+      {
+        "first": 349,
+        "last": 399,
+        "text": "349:     // field is valid, not a crash. The preprocess also tolerates a legacy\n350:     // array form (`[{name, …}]`) by re-keying it into a name → config record.\n351:     mcpServers: z\n352:       .preprocess(\n353:         (value) => {\n354:           const entries: Array<[string, unknown]> = Array.isArray(value)\n355:             ? value\n356:                 .filter((v): v is Record<string, unknown> => !!v && typeof v === \"object\")\n357:                 .map((v, i) => [String(v.name ?? i), v])\n358:             : value && typeof value === \"object\"\n359:               ? Object.entries(value as Record<string, unknown>)\n360:               : [];\n361:           return Object.fromEntries(\n362:             entries.map(([key, raw]) => [\n363:               key,\n364:               raw && typeof raw === \"object\"\n365:                 ? { ...raw, name: (raw as { name?: unknown }).name ?? key }\n366:                 : raw,\n367:             ]),\n368:           );\n369:         },\n370:         z.record(\n371:           z.object({\n372:             // Always present here: the preprocess above backfills it from the\n373:             // record key, so a stored entry that omits `name` (the common\n374:             // desktop case, which strips it) still validates.\n375:             name: z.string(),\n376:             command: z.string().optional(),\n377:             args: z.array(z.string()).optional(),\n378:             env: z.record(z.string()).optional(),\n379:             url: z.string().optional(),\n380:             transport: z.enum([\"stdio\", \"sse\", \"streamable-http\", \"inprocess\"]).optional(),\n381:             headers: z.record(z.string()).optional(),\n382:             // Codex-style env-secret handling: store env-var NAMES, read the\n383:             // secret from process.env at connect time (never plaintext here).\n384:             envVars: z.array(z.string()).optional(), // (stdio) forward these env vars\n385:             bearerTokenEnvVar: z.string().optional(), // (HTTP) → Authorization: Bearer <env value>\n386:             envHeaders: z.record(z.string()).optional(), // (HTTP) header-name → env-var-name\n387:             credentialRef: z.string().optional(), // (HTTP) id of a stored credential → Bearer, resolved at connect time\n388:             // Codex-style on/off switch. Absent or true → connected; only\n389:             // literal false disables. Filtered in MCPManager.connectAll.\n390:             enabled: z.boolean().optional(),\n391:             allowedTools: McpToolNameListSchema.optional(),\n392:             disabledTools: McpToolNameListSchema.optional(),\n393:             connectTimeoutMs: z.number().int().min(1).max(MAX_MCP_CONNECT_TIMEOUT_MS).optional(),\n394:             connectRetries: z.number().int().min(0).max(MAX_MCP_CONNECT_RETRIES).optional(),\n395:             // Opt-in: deliver MCP image content to vision models inline.\n396:             inlineImages: z.boolean().optional(),\n397:           }),\n398:         ),\n399:       )"
+      }
+    ]
+  },
+  {
+    "path": "packages/desktop/src/renderer/settings/McpSection.tsx",
+    "sha256": "228d18e442ddc37752407383cf311050df4409972e78ea7e029ea21665d67334",
+    "pinReference": "normal-name-producer-pins.json",
+    "displayAt": "2026-10-17T20:11:39.128481+00:00",
+    "displayedLineRanges": [
+      [
+        431,
+        464
+      ],
+      [
+        1320,
+        1340
+      ],
+      [
+        1389,
+        1425
+      ],
+      [
+        1458,
+        1468
+      ]
+    ],
+    "ranges": [
+      {
+        "first": 431,
+        "last": 464,
+        "text": "431:       // Patch only the edited server; replaying the loaded list could overwrite\n432:       // an unrelated server changed by another window while this editor was open.\n433:       const previous = servers.find((server) => server.name === originalName);\n434:       const preserved: Pick<McpServer, \"connectTimeoutMs\" | \"connectRetries\" | \"inlineImages\"> = {\n435:         ...(previous?.connectTimeoutMs !== undefined\n436:           ? { connectTimeoutMs: previous.connectTimeoutMs }\n437:           : {}),\n438:         ...(previous?.connectRetries !== undefined\n439:           ? { connectRetries: previous.connectRetries }\n440:           : {}),\n441:         ...(previous?.inlineImages !== undefined ? { inlineImages: previous.inlineImages } : {}),\n442:       };\n443:       const savedNext = { ...preserved, ...next };\n444:       const record: Record<string, unknown> = {\n445:         [next.name]: {\n446:           // A new name has no previous object for the settings merge to retain.\n447:           // Transfer only supported non-editor options, then apply edits/clears.\n448:           ...(originalName && originalName !== next.name ? preserved : {}),\n449:           ...buildMcpSettingsPatch(next, previous),\n450:         },\n451:         ...(originalName && originalName !== next.name ? { [originalName]: null } : {}),\n452:       };\n453:       await updateScopedSettings(scope, { mcpServers: record }, projectPath);\n454:       if (mounted.current) {\n455:         setServers((current) => [\n456:           ...current.filter((s) => s.name !== originalName && s.name !== next.name),\n457:           savedNext,\n458:         ]);\n459:       }\n460:       if (originalName && originalName !== next.name) {\n461:         await window.codeshell.invalidateMcpProbeCache(originalName);\n462:       }\n463:       await window.codeshell.invalidateMcpProbeCache(next.name);\n464:       broadcastSettingsChanged();"
+      },
+      {
+        "first": 1320,
+        "last": 1340,
+        "text": "1320:     if (savePending.current || oauthBusy || !editorMounted.current) return;\n1321:     const trimmedName = name.trim();\n1322:     // Override mode locks identity fields, so skip their validation — the user\n1323:     // only supplies env/credential supplements for an existing plugin server.\n1324:     if (!isOverride) {\n1325:       if (!trimmedName) return setValidationError(t(\"settingsX.mcp.nameEmpty\"));\n1326:       if (otherNames.includes(trimmedName))\n1327:         return setValidationError(t(\"settingsX.mcp.nameDuplicate\"));\n1328:       if (isStdio) {\n1329:         if (!command.trim()) return setValidationError(t(\"settingsX.mcp.stdioNeedsCommand\"));\n1330:       } else {\n1331:         if (!url.trim()) return setValidationError(t(\"settingsX.mcp.needsUrl\", { transport }));\n1332:         try {\n1333:           new URL(url.trim());\n1334:         } catch {\n1335:           return setValidationError(t(\"settingsX.mcp.urlInvalid\"));\n1336:         }\n1337:       }\n1338:     }\n1339:     let env: Record<string, string> | undefined;\n1340:     let envVars: string[] | undefined;"
+      },
+      {
+        "first": 1389,
+        "last": 1425,
+        "text": "1389:                 bearerTokenEnvVar: nextBearerEnvVar,\n1390:                 envHeaders: nextEnvHeaders,\n1391:               }),\n1392:         }\n1393:       : {\n1394:           name: trimmedName,\n1395:           transport,\n1396:           enabled: initial?.enabled,\n1397:           allowedTools,\n1398:           disabledTools,\n1399:           ...(isStdio\n1400:             ? {\n1401:                 command: command.trim(),\n1402:                 // The display join loses quoting. Keep the original boundaries\n1403:                 // until the user actually changes the Args field.\n1404:                 args:\n1405:                   args === initialArgsText\n1406:                     ? initial?.args?.slice()\n1407:                     : args.trim()\n1408:                       ? splitArgs(args.trim())\n1409:                       : undefined,\n1410:                 env: env && Object.keys(env).length ? env : undefined,\n1411:                 envVars: envVars && envVars.length ? envVars : undefined,\n1412:               }\n1413:             : {\n1414:                 url: url.trim(),\n1415:                 headers: nextHeaders,\n1416:                 credentialRef: nextCredentialRef,\n1417:                 bearerTokenEnvVar: nextBearerEnvVar,\n1418:                 envHeaders: nextEnvHeaders,\n1419:               }),\n1420:         };\n1421:     savePending.current = true;\n1422:     setSaving(true);\n1423:     setValidationError(null);\n1424:     void (async () => {\n1425:       try {"
+      },
+      {
+        "first": 1458,
+        "last": 1468,
+        "text": "1458: \n1459:       <div className=\"grid grid-cols-1 gap-4 md:grid-cols-2\">\n1460:         <label className=\"flex flex-col gap-1.5 text-sm [&>span]:text-muted-foreground [&_input]:rounded-sm [&_input]:border [&_input]:bg-transparent [&_input]:px-2 [&_input]:py-1.5 [&_textarea]:rounded-sm [&_textarea]:border [&_textarea]:bg-transparent [&_textarea]:px-2 [&_textarea]:py-1.5\">\n1461:           <span>{t(\"settingsX.mcp.fieldName\")}</span>\n1462:           <Input\n1463:             value={name}\n1464:             onChange={(e) => setName(e.target.value)}\n1465:             placeholder=\"my-server\"\n1466:             disabled={isOverride}\n1467:           />\n1468:         </label>"
+      }
+    ]
+  },
+  {
+    "path": "packages/desktop/src/renderer/settings/CapabilitiesOverviewSection.tsx",
+    "sha256": "0bc7f4d26156dcfb5c117af4f4dc27d7898859248f64a9dcd6cff1d17113b709",
+    "pinReference": "caller-initial-pins.json",
+    "displayAt": "2026-10-17T20:11:39.130078+00:00",
+    "displayedLineRanges": [
+      [
+        239,
+        271
+      ]
+    ],
+    "ranges": [
+      {
+        "first": 239,
+        "last": 271,
+        "text": "239:   const onUserToggle = async (cap: CapabilityDescriptor, next: boolean) => {\n240:     const mutationCacheKey = cacheKey;\n241:     const ids = idsFor(cap);\n242:     const idSet = new Set(ids);\n243:     const prev = caps;\n244:     setCaps((cs) => cs.map((c) => (idSet.has(c.id) ? { ...c, enabled: next } : c)));\n245:     setSavingId(cap.id);\n246:     setError(null);\n247:     try {\n248:       for (const id of ids) {\n249:         await window.codeshell.setCapabilityEnabled(null, id, next, { scope: \"user\" });\n250:       }\n251:     } catch (e) {\n252:       if (activeCacheKeyRef.current === mutationCacheKey) {\n253:         setCaps(prev);\n254:         setError(e instanceof Error ? e.message : String(e));\n255:       }\n256:     } finally {\n257:       if (activeCacheKeyRef.current === mutationCacheKey) setSavingId(null);\n258:     }\n259:   };\n260: \n261:   const onProjectState = async (cap: CapabilityDescriptor, state: \"inherit\" | \"on\" | \"off\") => {\n262:     const mutationCacheKey = cacheKey;\n263:     setSavingId(cap.id);\n264:     setError(null);\n265:     try {\n266:       for (const id of idsFor(cap)) {\n267:         if (!configurationTarget) throw new Error(\"project capability target is unavailable\");\n268:         await window.codeshell.setCapabilityOverride(configurationTarget, id, state);\n269:       }\n270:       // Re-fetch so the row's effective value / source reflects the new overlay.\n271:       await load();"
+      }
+    ]
+  }
+]

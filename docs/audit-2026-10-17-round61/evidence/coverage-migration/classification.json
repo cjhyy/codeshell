@@ -1,0 +1,19 @@
+{
+  "newFormalFindings": [],
+  "newCandidates": [],
+  "newRelated": [],
+  "counts": {
+    "newFormal": 0,
+    "newCandidate": 0,
+    "newRelated": 0
+  },
+  "kind": "Metadata coverage bookkeeping update, not bug discovery/fix status or new semantic source review",
+  "indexStatusCounts": {
+    "unknown": 3934,
+    "full": 355,
+    "selected": 354
+  },
+  "deferredWithinRecognizedStandardRows": 0,
+  "deferredOutsideSelectedSchemaScope": "Earlier MD-only, archived noncanonical claims and other schema classes were not reclassified. Unknown is not proof of unread or defect absence.",
+  "noNewUniqueCoverageClaim": true
+}

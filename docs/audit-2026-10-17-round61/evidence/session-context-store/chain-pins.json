@@ -1,0 +1,26 @@
+[
+  {
+    "path": "packages/coding/src/external-runtimes/index.ts",
+    "bytes": 3131,
+    "lineCount": 69,
+    "sha256": "5f3ad6676c64f497f5e2fc163f3498698dbf59f0045a9c31f1f194abc3cd1dfa",
+    "pinnedAtUTC": "2026-10-17T20:08:55.848387+00:00",
+    "timing": "before own body/nav; confirmed filename-only import/reference inventory"
+  },
+  {
+    "path": "packages/coding/src/external-runtimes/shared/mcp-bridge.ts",
+    "bytes": 17292,
+    "lineCount": 432,
+    "sha256": "854be8bf5965c9f8d87bd320d536236c22b8d1a139a0aaf59645b9d2bfcf0c36",
+    "pinnedAtUTC": "2026-10-17T20:08:55.849916+00:00",
+    "timing": "before own body/nav; confirmed filename-only import/reference inventory"
+  },
+  {
+    "path": "packages/coding/src/external-runtimes/session-factory.ts",
+    "bytes": 11004,
+    "lineCount": 263,
+    "sha256": "1ffadf1130ee90eafdf7e71846306bf27e6a0ba16d83524a0f92364f97894e69",
+    "pinnedAtUTC": "2026-10-17T20:08:55.850395+00:00",
+    "timing": "before own body/nav; confirmed filename-only import/reference inventory"
+  }
+]

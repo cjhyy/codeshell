@@ -1,0 +1,5 @@
+packages/coding/src/external-runtimes/index.ts
+packages/coding/src/external-runtimes/shared/mcp-bridge.test.ts
+packages/coding/src/external-runtimes/shared/mcp-bridge.ts
+packages/coding/src/external-runtimes/shared/session-context-store.test.ts
+packages/coding/src/external-runtimes/session-factory.ts

@@ -1,0 +1,1003 @@
+{
+  "role": "Metadata-only original row/EOF/SHA checks plus bounded manual purpose review of all51 representative full transitions; no product source reading",
+  "records": [
+    {
+      "path": "packages/chat/src/bound-session-chat.ts",
+      "currentSha256": "3cfca7ed0caa2509102548f1e47a581e4d1e53423f5682c1f33f374a8ca0f4c7",
+      "manifest": "docs/audit-2026-10-17-round58/evidence/delivery-queue/source-manifest.json",
+      "pointer": "/files/1",
+      "fullRange": [
+        [
+          1,
+          99
+        ]
+      ],
+      "purpose": "Ordinary accepted/not-bound routing and reply disposition; no actual host/session operation or enforcement certification.",
+      "testDeclarationOnly": false,
+      "originalRowConstraints": {
+        "scope": "Ordinary accepted/not-bound routing and reply disposition; no actual host/session operation or enforcement certification.",
+        "sourceKind": "product",
+        "newUniqueCoverageClaim": false
+      },
+      "sourceBodyReadByMigration": false
+    },
+    {
+      "path": "packages/coding/src/lsp/manager-lifecycle.test.ts",
+      "currentSha256": "149d77a060427e6aac3eba6250b45540220d4c480a5f0b74dc93bd85b92073b4",
+      "manifest": "docs/audit-2026-10-17-round59/evidence/lsp-root/source-manifest.json",
+      "pointer": "/files/7",
+      "fullRange": [
+        [
+          1,
+          134
+        ]
+      ],
+      "purpose": "Entire existing passive registry test declarations/setup. No FS fixture, manager, client or server invoked. These declarations do not prove real initialized-server eviction/shutdown behavior.",
+      "testDeclarationOnly": true,
+      "originalRowConstraints": {
+        "scope": "Entire existing passive registry test declarations/setup. No FS fixture, manager, client or server invoked. These declarations do not prove real initialized-server eviction/shutdown behavior.",
+        "sourceKind": "test-declaration",
+        "newUniqueCoverageClaim": false
+      },
+      "sourceBodyReadByMigration": false
+    },
+    {
+      "path": "packages/coding/src/lsp/root-path.test.ts",
+      "currentSha256": "fcc79e191c841cf4466b17b97db2d7962a0424ca550f8b25c795fef2cf611991",
+      "manifest": "docs/audit-2026-10-17-round59/evidence/lsp-root/source-manifest.json",
+      "pointer": "/files/6",
+      "fullRange": [
+        [
+          1,
+          33
+        ]
+      ],
+      "purpose": "Entire existing declaration including test data/comments. No fixture/helper/test executed; overlaps prior fixed-URI regression.",
+      "testDeclarationOnly": true,
+      "originalRowConstraints": {
+        "scope": "Entire existing declaration including test data/comments. No fixture/helper/test executed; overlaps prior fixed-URI regression.",
+        "sourceKind": "test-declaration",
+        "newUniqueCoverageClaim": false
+      },
+      "sourceBodyReadByMigration": false
+    },
+    {
+      "path": "packages/coding/src/lsp/root-path.ts",
+      "currentSha256": "11868a6f1b14f0b2a8b642ea741994784834ea9931cfd8b99910861aca415c3c",
+      "manifest": "docs/audit-2026-10-17-round59/evidence/lsp-root/source-manifest.json",
+      "pointer": "/files/0",
+      "fullRange": [
+        [
+          1,
+          13
+        ]
+      ],
+      "purpose": "Entire pure conversion helper including regression comment. Overlaps prior same-SHA R4 normal control; no platform/runtime certification.",
+      "testDeclarationOnly": false,
+      "originalRowConstraints": {
+        "scope": "Entire pure conversion helper including regression comment. Overlaps prior same-SHA R4 normal control; no platform/runtime certification.",
+        "sourceKind": "product",
+        "newUniqueCoverageClaim": false
+      },
+      "sourceBodyReadByMigration": false
+    },
+    {
+      "path": "packages/coding/src/lsp/servers.ts",
+      "currentSha256": "91f5c21df41ebc75bbbf19d21ed7f4d7971c82d850c485b9288b1c688d8ea18c",
+      "manifest": "docs/audit-2026-10-17-round59/evidence/lsp-root/source-manifest.json",
+      "pointer": "/files/1",
+      "fullRange": [
+        [
+          1,
+          71
+        ]
+      ],
+      "purpose": "Entire builtin server DTO and extension selector. Old JS/SCSS languageId candidate remains old/unpromoted; no server mode inferred.",
+      "testDeclarationOnly": false,
+      "originalRowConstraints": {
+        "scope": "Entire builtin server DTO and extension selector. Old JS/SCSS languageId candidate remains old/unpromoted; no server mode inferred.",
+        "sourceKind": "product",
+        "newUniqueCoverageClaim": false
+      },
+      "sourceBodyReadByMigration": false
+    },
+    {
+      "path": "packages/core/src/context/image-history-window.test.ts",
+      "currentSha256": "606acebf485d9b3117143b532fe5061ce90fe25ea07961d06b12de874796385a",
+      "manifest": "docs/audit-2026-10-17-round56/evidence/image-window/source-manifest.json",
+      "pointer": "/files/3",
+      "fullRange": [
+        [
+          1,
+          99
+        ]
+      ],
+      "purpose": "Entire existing99-line test source read as declarations; no Bun import/helper/Array fixture/repeat/image allocation or test execution",
+      "testDeclarationOnly": true,
+      "originalRowConstraints": {
+        "purpose": "Entire existing99-line test source read as declarations; no Bun import/helper/Array fixture/repeat/image allocation or test execution",
+        "kind": "test-declaration"
+      },
+      "sourceBodyReadByMigration": false
+    },
+    {
+      "path": "packages/core/src/cost-ledger/pricing.ts",
+      "currentSha256": "7584eb97d07fda14171917d093d16201521ba77ce7ce61cab0d08390da7e3640",
+      "manifest": "docs/audit-2026-10-17-round55/evidence/cost-ledger/source-manifest.json",
+      "pointer": "/files/0",
+      "fullRange": [
+        [
+          1,
+          48
+        ]
+      ],
+      "purpose": "Bundled internal estimate calculation/provider-model lookup for ordinary valid TokenUsage; oldR9 selected/excerpt retained, not first-ever reading or external billing validation",
+      "testDeclarationOnly": false,
+      "originalRowConstraints": {
+        "purpose": "Bundled internal estimate calculation/provider-model lookup for ordinary valid TokenUsage; oldR9 selected/excerpt retained, not first-ever reading or external billing validation",
+        "kind": "product",
+        "priorReadingOverlap": "Not an unread/first-ever source claim; original canonical scopes retained separately"
+      },
+      "sourceBodyReadByMigration": false
+    },
+    {
+      "path": "packages/core/src/cost-ledger/summary.ts",
+      "currentSha256": "4ef61d2b0803899574adbaaa98e33f3fde2ae4da0250f452d6f72997936b07d6",
+      "manifest": "docs/audit-2026-10-17-round49/evidence/root-summary-review/source-manifest.json",
+      "pointer": "/files/0",
+      "fullRange": [
+        [
+          1,
+          81
+        ]
+      ],
+      "purpose": "Full ordinary in-memory summary module source; not ledger/provider/store execution or billing validation.",
+      "testDeclarationOnly": false,
+      "originalRowConstraints": {
+        "scope": "Full ordinary in-memory summary module source; not ledger/provider/store execution or billing validation."
+      },
+      "sourceBodyReadByMigration": false
+    },
+    {
+      "path": "packages/core/src/engine/model-connections-pool.ts",
+      "currentSha256": "e5ee2a984a6d2f57eac155140873facca04d296d495af55f5f7f4edee52ce467",
+      "manifest": "docs/audit-2026-10-17-round55/evidence/root-model-pool/source-manifest.json",
+      "pointer": "/files/1",
+      "fullRange": [
+        [
+          1,
+          80
+        ]
+      ],
+      "purpose": "Whole listed file ordinary in-memory/schema/config mapping only where full. External helper/import/provider/cache/credential/SDK behavior not certified; adjacent Engine session restoration source display not semantic coverage.",
+      "testDeclarationOnly": false,
+      "originalRowConstraints": {
+        "scope": "Whole listed file ordinary in-memory/schema/config mapping only where full. External helper/import/provider/cache/credential/SDK behavior not certified; adjacent Engine session restoration source display not semantic coverage.",
+        "role": "ordinary source contract static",
+        "historicalOverlap": "Target has prior same-SHA R4/R10 pins and selected catalog question, not a first/unread claim. Other necessary consumers may overlap older reviews; not unique new whole-repository coverage."
+      },
+      "sourceBodyReadByMigration": false
+    },
+    {
+      "path": "packages/core/src/engine/resolve-llm-config.ts",
+      "currentSha256": "864b45aa4a8e41398d5191a974be7b9fb172137147109b1d2d0b05ae3335da8f",
+      "manifest": "docs/audit-2026-10-17-round55/evidence/root-model-pool/source-manifest.json",
+      "pointer": "/files/3",
+      "fullRange": [
+        [
+          1,
+          74
+        ]
+      ],
+      "purpose": "Whole listed file ordinary in-memory/schema/config mapping only where full. External helper/import/provider/cache/credential/SDK behavior not certified; adjacent Engine session restoration source display not semantic coverage.",
+      "testDeclarationOnly": false,
+      "originalRowConstraints": {
+        "scope": "Whole listed file ordinary in-memory/schema/config mapping only where full. External helper/import/provider/cache/credential/SDK behavior not certified; adjacent Engine session restoration source display not semantic coverage.",
+        "role": "ordinary source contract static",
+        "historicalOverlap": "Target has prior same-SHA R4/R10 pins and selected catalog question, not a first/unread claim. Other necessary consumers may overlap older reviews; not unique new whole-repository coverage."
+      },
+      "sourceBodyReadByMigration": false
+    },
+    {
+      "path": "packages/core/src/engine/run-state-persistence.ts",
+      "currentSha256": "1834ff88a225c3a685c9332f7d4ba92a458b7e711c2595624b01e36510badf4e",
+      "manifest": "docs/audit-2026-10-17-round59/evidence/session-usage/source-manifest.json",
+      "pointer": "/files/2",
+      "fullRange": [
+        [
+          1,
+          110
+        ]
+      ],
+      "purpose": "Ordinary captured-minus-committed merge and output fields; manager CAS/FS/locks/ownership enforcement implementation not read or certified.",
+      "testDeclarationOnly": false,
+      "originalRowConstraints": {
+        "purpose": "Ordinary captured-minus-committed merge and output fields; manager CAS/FS/locks/ownership enforcement implementation not read or certified.",
+        "sourceKind": "product",
+        "fullFileReadingClaimed": true,
+        "newUniqueCoverageClaim": false,
+        "priorCoverage": "Usage same-SHA full established; run-accounting prior selected established; other overlap not exhaustively reconstructed. No new unique coverage claim."
+      },
+      "sourceBodyReadByMigration": false
+    },
+    {
+      "path": "packages/core/src/llm/model-pool.test.ts",
+      "currentSha256": "19b494027ea63d1ca55ea489951e984f305f6d65128d537f868c37ee2ea953a7",
+      "manifest": "docs/audit-2026-10-17-round55/evidence/root-model-pool/source-manifest.json",
+      "pointer": "/files/7",
+      "fullRange": [
+        [
+          1,
+          43
+        ]
+      ],
+      "purpose": "Whole listed file ordinary in-memory/schema/config mapping only where full. External helper/import/provider/cache/credential/SDK behavior not certified; adjacent Engine session restoration source display not semantic coverage.",
+      "testDeclarationOnly": true,
+      "originalRowConstraints": {
+        "scope": "Whole listed file ordinary in-memory/schema/config mapping only where full. External helper/import/provider/cache/credential/SDK behavior not certified; adjacent Engine session restoration source display not semantic coverage.",
+        "role": "existing test declarations only, never executed",
+        "historicalOverlap": "Target has prior same-SHA R4/R10 pins and selected catalog question, not a first/unread claim. Other necessary consumers may overlap older reviews; not unique new whole-repository coverage."
+      },
+      "sourceBodyReadByMigration": false
+    },
+    {
+      "path": "packages/core/src/llm/model-pool.ts",
+      "currentSha256": "a49da3b3018aaaf92e80e488a4e9d338eb9f2b0f107919f9d521156a6c4137d3",
+      "manifest": "docs/audit-2026-10-17-round55/evidence/root-model-pool/source-manifest.json",
+      "pointer": "/files/0",
+      "fullRange": [
+        [
+          1,
+          325
+        ]
+      ],
+      "purpose": "Whole listed file ordinary in-memory/schema/config mapping only where full. External helper/import/provider/cache/credential/SDK behavior not certified; adjacent Engine session restoration source display not semantic coverage.",
+      "testDeclarationOnly": false,
+      "originalRowConstraints": {
+        "scope": "Whole listed file ordinary in-memory/schema/config mapping only where full. External helper/import/provider/cache/credential/SDK behavior not certified; adjacent Engine session restoration source display not semantic coverage.",
+        "role": "ordinary source contract static",
+        "historicalOverlap": "Target has prior same-SHA R4/R10 pins and selected catalog question, not a first/unread claim. Other necessary consumers may overlap older reviews; not unique new whole-repository coverage."
+      },
+      "sourceBodyReadByMigration": false
+    },
+    {
+      "path": "packages/core/src/llm/provider-catalog.ts",
+      "currentSha256": "ec80becdb369165c233e38f60bd242aee86170232d8209b20dd9422a6499c642",
+      "manifest": "docs/audit-2026-10-17-round55/evidence/root-model-pool/source-manifest.json",
+      "pointer": "/files/2",
+      "fullRange": [
+        [
+          1,
+          75
+        ]
+      ],
+      "purpose": "Whole listed file ordinary in-memory/schema/config mapping only where full. External helper/import/provider/cache/credential/SDK behavior not certified; adjacent Engine session restoration source display not semantic coverage.",
+      "testDeclarationOnly": false,
+      "originalRowConstraints": {
+        "scope": "Whole listed file ordinary in-memory/schema/config mapping only where full. External helper/import/provider/cache/credential/SDK behavior not certified; adjacent Engine session restoration source display not semantic coverage.",
+        "role": "ordinary source contract static",
+        "historicalOverlap": "Target has prior same-SHA R4/R10 pins and selected catalog question, not a first/unread claim. Other necessary consumers may overlap older reviews; not unique new whole-repository coverage."
+      },
+      "sourceBodyReadByMigration": false
+    },
+    {
+      "path": "packages/core/src/llm/reasoning-setting.ts",
+      "currentSha256": "a00d2dee0e430bafb8b89a50a0a71f54cff8a6ab6766221d1dcccad3d551b11f",
+      "manifest": "docs/audit-2026-10-17-round55/evidence/root-model-pool/source-manifest.json",
+      "pointer": "/files/4",
+      "fullRange": [
+        [
+          1,
+          46
+        ]
+      ],
+      "purpose": "Whole listed file ordinary in-memory/schema/config mapping only where full. External helper/import/provider/cache/credential/SDK behavior not certified; adjacent Engine session restoration source display not semantic coverage.",
+      "testDeclarationOnly": false,
+      "originalRowConstraints": {
+        "scope": "Whole listed file ordinary in-memory/schema/config mapping only where full. External helper/import/provider/cache/credential/SDK behavior not certified; adjacent Engine session restoration source display not semantic coverage.",
+        "role": "ordinary source contract static",
+        "historicalOverlap": "Target has prior same-SHA R4/R10 pins and selected catalog question, not a first/unread claim. Other necessary consumers may overlap older reviews; not unique new whole-repository coverage."
+      },
+      "sourceBodyReadByMigration": false
+    },
+    {
+      "path": "packages/core/src/llm/strip-vision.ts",
+      "currentSha256": "d4c2b0f230941c255daefc838f893c8c10137d32595e0ccf6e1d5a7b74ed50c0",
+      "manifest": "docs/audit-2026-10-17-round55/evidence/root-strip-vision/source-manifest.json",
+      "pointer": "/files/0",
+      "fullRange": [
+        [
+          1,
+          107
+        ]
+      ],
+      "purpose": "Pure ordinary direct image and immediate tool_result block replacement, identity-preserving contract and exact buildMessages call boundary. Not all provider serialization, capability resolution or runtime behavior. Test declarations only0execution.",
+      "testDeclarationOnly": false,
+      "originalRowConstraints": {
+        "scope": "Pure ordinary direct image and immediate tool_result block replacement, identity-preserving contract and exact buildMessages call boundary. Not all provider serialization, capability resolution or runtime behavior. Test declarations only0execution.",
+        "overlap": "Archive already describes normal same-function path. Current read not first/unread or unique new coverage."
+      },
+      "sourceBodyReadByMigration": false
+    },
+    {
+      "path": "packages/core/src/model-catalog/params.test.ts",
+      "currentSha256": "9bff9fc073f4101adf59ca651c57a4b8566aa154be4ca42028ab54d841081495",
+      "manifest": "docs/audit-2026-10-17-round50/evidence/param-controls/source-manifest.json",
+      "pointer": "/files/6",
+      "fullRange": [
+        [
+          1,
+          76
+        ]
+      ],
+      "purpose": "Existing test declaration read statically in full; no module imported, helper invoked, rendering or tests executed.",
+      "testDeclarationOnly": true,
+      "originalRowConstraints": {
+        "scope": "Existing test declaration read statically in full; no module imported, helper invoked, rendering or tests executed.",
+        "sourceKind": "test-declaration",
+        "firstEverReadClaim": false
+      },
+      "sourceBodyReadByMigration": false
+    },
+    {
+      "path": "packages/core/src/model-catalog/params.ts",
+      "currentSha256": "df069d199a8baafa07502cab0f4577eb523e27e4d085ce0ede8fe01b410e8391",
+      "manifest": "docs/audit-2026-10-17-round50/evidence/param-controls/source-manifest.json",
+      "pointer": "/files/5",
+      "fullRange": [
+        [
+          1,
+          55
+        ]
+      ],
+      "purpose": "Whole ordinary generic projection/documentation helper read, not executed. This is a helper contract, not proof that every text provider executes it.",
+      "testDeclarationOnly": false,
+      "originalRowConstraints": {
+        "scope": "Whole ordinary generic projection/documentation helper read, not executed. This is a helper contract, not proof that every text provider executes it.",
+        "sourceKind": "product",
+        "firstEverReadClaim": false
+      },
+      "sourceBodyReadByMigration": false
+    },
+    {
+      "path": "packages/core/src/session/subagent-continuation.ts",
+      "currentSha256": "d604ea3b2baf99c53fdf492f51797ca3b54b9975ed452de8a13d900ce035b26a",
+      "manifest": "docs/audit-2026-10-17-round59/evidence/root-subagent-continuation/source-manifest.json",
+      "pointer": "/files/0",
+      "fullRange": [
+        [
+          1,
+          63
+        ]
+      ],
+      "purpose": "Ordinary stored continuation fields from Agent creation through state snapshot and terminal AgentSendInput restore. Authority, sandbox, process, live-writer concurrency, hooks, filesystem atomicity and provider execution are outside this finite conclusion.",
+      "testDeclarationOnly": false,
+      "originalRowConstraints": {
+        "scope": "Ordinary stored continuation fields from Agent creation through state snapshot and terminal AgentSendInput restore. Authority, sandbox, process, live-writer concurrency, hooks, filesystem atomicity and provider execution are outside this finite conclusion.",
+        "overlap": "Parser leaf has same-SHA full original round19 scope. Supporting paths retain existing selected/unknown coverage metadata without inferring unread or first reading; no new unique-file coverage union."
+      },
+      "sourceBodyReadByMigration": false
+    },
+    {
+      "path": "packages/core/src/session/usage.ts",
+      "currentSha256": "cec6ea891501f12ea35686ce5b409055ce76bcf7cea231f81ab03479aacd79cd",
+      "manifest": "docs/audit-2026-10-17-round59/evidence/session-usage/source-manifest.json",
+      "pointer": "/files/0",
+      "fullRange": [
+        [
+          1,
+          149
+        ]
+      ],
+      "purpose": "Directed reread of known same-SHA R19 full leaf, not new unique coverage. Pure additive/fold/versioned foreground cache contract; no pricing/provider behavior execution.",
+      "testDeclarationOnly": false,
+      "originalRowConstraints": {
+        "purpose": "Directed reread of known same-SHA R19 full leaf, not new unique coverage. Pure additive/fold/versioned foreground cache contract; no pricing/provider behavior execution.",
+        "sourceKind": "product",
+        "fullFileReadingClaimed": true,
+        "newUniqueCoverageClaim": false,
+        "priorCoverage": "Usage same-SHA full established; run-accounting prior selected established; other overlap not exhaustively reconstructed. No new unique coverage claim."
+      },
+      "sourceBodyReadByMigration": false
+    },
+    {
+      "path": "packages/core/src/utils/toolDisplay.ts",
+      "currentSha256": "41ba468c68cb9c564e1401d3c5cd310ab60a1e61600966c45166184871e6c000",
+      "manifest": "docs/audit-2026-10-17-round53/evidence/root-tool-display/source-manifest.json",
+      "pointer": "/files/0",
+      "fullRange": [
+        [
+          1,
+          209
+        ]
+      ],
+      "purpose": "Current static text and ordinary Glob success/string presentation only. Existing R14 static helper, R7 full producer and TUI reads may overlap; no first-ever/unique coverage or FS/permission/process/actual TTY certification.",
+      "testDeclarationOnly": false,
+      "originalRowConstraints": {
+        "scope": "Current static text and ordinary Glob success/string presentation only. Existing R14 static helper, R7 full producer and TUI reads may overlap; no first-ever/unique coverage or FS/permission/process/actual TTY certification.",
+        "firstEverReadClaim": null
+      },
+      "sourceBodyReadByMigration": false
+    },
+    {
+      "path": "packages/core/test-setup.ts",
+      "currentSha256": "a153ddcf1017389aef04b587fd1fe7d348190dc8232ca2cdba3914a46dce942d",
+      "manifest": "docs/audit-2026-10-17-round57/evidence/root-static-files/source-manifest.json",
+      "pointer": "/files/10",
+      "fullRange": [
+        [
+          1,
+          44
+        ]
+      ],
+      "purpose": "Only builtins and bun:test; wrapper already pins disposable home, no Core Engine/worker runtime import.",
+      "testDeclarationOnly": false,
+      "originalRowConstraints": {
+        "scope": "Only builtins and bun:test; wrapper already pins disposable home, no Core Engine/worker runtime import.",
+        "sourceKind": "test-infrastructure"
+      },
+      "sourceBodyReadByMigration": false,
+      "testInfrastructureOnly": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/components/ui/input.tsx",
+      "currentSha256": "cdf74059418d587217b808c9bafe47cd8c830a8616f44b685766ba9e81f25394",
+      "manifest": "docs/audit-2026-10-17-round50/evidence/param-controls/source-manifest.json",
+      "pointer": "/files/11",
+      "fullRange": [
+        [
+          1,
+          21
+        ]
+      ],
+      "purpose": "Whole ordinary input wrapper; static props forwarding only.",
+      "testDeclarationOnly": false,
+      "originalRowConstraints": {
+        "scope": "Whole ordinary input wrapper; static props forwarding only.",
+        "sourceKind": "product",
+        "firstEverReadClaim": false
+      },
+      "sourceBodyReadByMigration": false
+    },
+    {
+      "path": "packages/desktop/src/renderer/messages/ContextBoundaryView.tsx",
+      "currentSha256": "bff0c43715622ace107ab48493754d34304fb013120d013e6d52768a18e24699",
+      "manifest": "docs/audit-2026-10-17-round51/evidence/context-boundary/source-manifest.json",
+      "pointer": "/files/0",
+      "fullRange": [
+        [
+          1,
+          103
+        ]
+      ],
+      "purpose": "Entire ordinary boundary render: transfer DTO branch versus compact before/after detail; no React/DOM execution.",
+      "testDeclarationOnly": false,
+      "originalRowConstraints": {
+        "purpose": "Entire ordinary boundary render: transfer DTO branch versus compact before/after detail; no React/DOM execution.",
+        "sourceKind": "product",
+        "firstEverReadingClaimed": false
+      },
+      "sourceBodyReadByMigration": false
+    },
+    {
+      "path": "packages/desktop/src/renderer/messages/GoalProgressView.tsx",
+      "currentSha256": "86d6e311e888c6eee11e3f3b38f8cdc7bc2e7f573f68579288cd2f0743cb8ffb",
+      "manifest": "docs/audit-2026-10-17-round50/evidence/goal-progress/source-manifest.json",
+      "pointer": "/files/0",
+      "fullRange": [
+        [
+          1,
+          130
+        ]
+      ],
+      "purpose": "Static ordinary rendering/data/return contract for this proposal; adjacent auth/identity/lifecycle implementation, Host/native/transport enforcement, pricing, actual layout/event ordering remain outside certification. Targeted existing consumers are not new/unread/frontier or whole-module claims.",
+      "testDeclarationOnly": false,
+      "originalRowConstraints": {
+        "scope": "Static ordinary rendering/data/return contract for this proposal; adjacent auth/identity/lifecycle implementation, Host/native/transport enforcement, pricing, actual layout/event ordering remain outside certification. Targeted existing consumers are not new/unread/frontier or whole-module claims."
+      },
+      "sourceBodyReadByMigration": false
+    },
+    {
+      "path": "packages/desktop/src/renderer/messages/LiveActivityLine.tsx",
+      "currentSha256": "433814c6c51d8deebbf17d985ca2009a6bab10930a21929e64594c7c646f21b1",
+      "manifest": "docs/audit-2026-10-17-round52/evidence/live-activity/source-manifest.json",
+      "pointer": "/files/1",
+      "fullRange": [
+        [
+          1,
+          26
+        ]
+      ],
+      "purpose": "Actual pure presentation consumes summarize+describe text only, not toolCount or turnStartedAt.",
+      "testDeclarationOnly": false,
+      "originalRowConstraints": {
+        "purpose": "Actual pure presentation consumes summarize+describe text only, not toolCount or turnStartedAt.",
+        "sourceKind": "product",
+        "firstEverReadingClaimed": false
+      },
+      "sourceBodyReadByMigration": false
+    },
+    {
+      "path": "packages/desktop/src/renderer/panels/PanelTabStrip.tsx",
+      "currentSha256": "980334fe3022d1ee8139150cb3705550263af6a2668611804fd84fd61b62a405",
+      "manifest": "docs/audit-2026-10-17-round46/evidence/panel-review/source-manifest.json",
+      "pointer": "/files/0",
+      "fullRange": [
+        [
+          1,
+          142
+        ]
+      ],
+      "purpose": "All component lines read for ordinary tabs",
+      "testDeclarationOnly": false,
+      "originalRowConstraints": {
+        "scope": "All component lines read for ordinary tabs"
+      },
+      "sourceBodyReadByMigration": false
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/ParamControls.test.tsx",
+      "currentSha256": "48d2598c43074f9da649208ea111f6730b71c16c97574176f850fc5f5e0cac2b",
+      "manifest": "docs/audit-2026-10-17-round50/evidence/param-controls/source-manifest.json",
+      "pointer": "/files/1",
+      "fullRange": [
+        [
+          1,
+          62
+        ]
+      ],
+      "purpose": "Existing test declaration read statically in full; no module imported, helper invoked, rendering or tests executed.",
+      "testDeclarationOnly": true,
+      "originalRowConstraints": {
+        "scope": "Existing test declaration read statically in full; no module imported, helper invoked, rendering or tests executed.",
+        "sourceKind": "test-declaration",
+        "firstEverReadClaim": false
+      },
+      "sourceBodyReadByMigration": false
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/ParamControls.tsx",
+      "currentSha256": "6076e25165aa527836ae31d99fe1c2c7250e12518d0a43dd7daf6572459c5c6c",
+      "manifest": "docs/audit-2026-10-17-round50/evidence/param-controls/source-manifest.json",
+      "pointer": "/files/0",
+      "fullRange": [
+        [
+          1,
+          103
+        ]
+      ],
+      "purpose": "Whole103-line source read for ordinary enum/number/toggle/text value/display/onChange contract; DOM/browser behavior and provider execution unobserved.",
+      "testDeclarationOnly": false,
+      "originalRowConstraints": {
+        "scope": "Whole103-line source read for ordinary enum/number/toggle/text value/display/onChange contract; DOM/browser behavior and provider execution unobserved.",
+        "sourceKind": "product",
+        "firstEverReadClaim": false
+      },
+      "sourceBodyReadByMigration": false
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/ShortcutsSection.test.tsx",
+      "currentSha256": "ba16076628e88e408a0b7dfcb9566b597e12949c20b89ecfcd421029f918db02",
+      "manifest": "docs/audit-2026-10-17-round51/evidence/shortcuts-reference/source-manifest.json",
+      "pointer": "/files/1",
+      "fullRange": [
+        [
+          1,
+          67
+        ]
+      ],
+      "purpose": "Existing67-line test declaration statically read; localStorage stubs/render helper/imports never executed.",
+      "testDeclarationOnly": true,
+      "originalRowConstraints": {
+        "scope": "Existing67-line test declaration statically read; localStorage stubs/render helper/imports never executed.",
+        "sourceKind": "test-declaration",
+        "firstEverReadClaim": false
+      },
+      "sourceBodyReadByMigration": false
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/ShortcutsSection.tsx",
+      "currentSha256": "ee9161604475561743cab550fe144c9f0bd8fa045fe18d1ef8664d5c851dc1a4",
+      "manifest": "docs/audit-2026-10-17-round51/evidence/shortcuts-reference/source-manifest.json",
+      "pointer": "/files/0",
+      "fullRange": [
+        [
+          1,
+          110
+        ]
+      ],
+      "purpose": "Whole readonly shortcut reference component: normal label/key/hint grouping, platform display and accessibility text. No onChange/reset/config persistence API exists here. DOM/render/native shortcut execution unobserved.",
+      "testDeclarationOnly": false,
+      "originalRowConstraints": {
+        "scope": "Whole readonly shortcut reference component: normal label/key/hint grouping, platform display and accessibility text. No onChange/reset/config persistence API exists here. DOM/render/native shortcut execution unobserved.",
+        "sourceKind": "product",
+        "firstEverReadClaim": false
+      },
+      "sourceBodyReadByMigration": false
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/ThemePackPreview.tsx",
+      "currentSha256": "650ad8738df56473178c35241bbe675753b84958db0534fb6798da633cc09ada",
+      "manifest": "docs/audit-2026-10-17-round52/evidence/theme-preview/source-manifest.json",
+      "pointer": "/files/0",
+      "fullRange": [
+        [
+          1,
+          121
+        ]
+      ],
+      "purpose": "Full current121-line static source reading of the miniature preview module: light/dark, palette overlays, foreground/accent/frame fallbacks, surface DTO-to-style/image-field mapping and ordinary markup. No physical layout, image loading/security/custody/resource/native/Host correctness inferred.",
+      "testDeclarationOnly": false,
+      "originalRowConstraints": {
+        "purpose": "Full current121-line static source reading of the miniature preview module: light/dark, palette overlays, foreground/accent/frame fallbacks, surface DTO-to-style/image-field mapping and ordinary markup. No physical layout, image loading/security/custody/resource/native/Host correctness inferred.",
+        "firstEverReadingClaimed": false
+      },
+      "sourceBodyReadByMigration": false
+    },
+    {
+      "path": "packages/desktop/src/renderer/theme-appearance.ts",
+      "currentSha256": "7a33b00e4a4b726495d638220c4eb42fa3f559d8c0d58d1b12c5bd091e071039",
+      "manifest": "docs/audit-2026-10-17-round52/evidence/theme-preview/source-manifest.json",
+      "pointer": "/files/1",
+      "fullRange": [
+        [
+          1,
+          35
+        ]
+      ],
+      "purpose": "Full current35-line ordinary surface resolver static reading. Only token/background/image DTO fallback and defaults; URI/image bytes and Host resource or policy mechanisms not validated. Necessary helper reading is not claimed first ever.",
+      "testDeclarationOnly": false,
+      "originalRowConstraints": {
+        "purpose": "Full current35-line ordinary surface resolver static reading. Only token/background/image DTO fallback and defaults; URI/image bytes and Host resource or policy mechanisms not validated. Necessary helper reading is not claimed first ever.",
+        "firstEverReadingClaimed": false
+      },
+      "sourceBodyReadByMigration": false
+    },
+    {
+      "path": "packages/desktop/src/renderer/tool-cards/ToolCardShell.test.tsx",
+      "currentSha256": "e0bf0346d69e48c3b08b99b4c6eace299550c57f091a8316954ea88b87320f0f",
+      "manifest": "docs/audit-2026-10-17-round46/evidence/tool-card-review/source-manifest.json",
+      "pointer": "/files/2",
+      "fullRange": [
+        [
+          1,
+          35
+        ]
+      ],
+      "purpose": "Two existing static-render test declarations read as intent, never imported/executed.",
+      "testDeclarationOnly": true,
+      "originalRowConstraints": {
+        "scope": "Two existing static-render test declarations read as intent, never imported/executed."
+      },
+      "sourceBodyReadByMigration": false
+    },
+    {
+      "path": "packages/desktop/src/renderer/tool-cards/ToolCardShell.tsx",
+      "currentSha256": "4a8597d1e9f055fc855f9b4a601da7e0289df3102a8309ab598e12ccb716f3ea",
+      "manifest": "docs/audit-2026-10-17-round46/evidence/tool-card-review/source-manifest.json",
+      "pointer": "/files/0",
+      "fullRange": [
+        [
+          1,
+          133
+        ]
+      ],
+      "purpose": "Complete133-line shared card; title/summary/status/details/preview/epoch and opaque UI callback interface only. Anchored scroll hook body not followed.",
+      "testDeclarationOnly": false,
+      "originalRowConstraints": {
+        "scope": "Complete133-line shared card; title/summary/status/details/preview/epoch and opaque UI callback interface only. Anchored scroll hook body not followed."
+      },
+      "sourceBodyReadByMigration": false
+    },
+    {
+      "path": "packages/desktop/src/renderer/topbar/liveActivity.ts",
+      "currentSha256": "9dc23e4bf020d6cf5d6ed3cf654f8130d6747d13750762e3c9b8bc2ffd310cab",
+      "manifest": "docs/audit-2026-10-17-round52/evidence/live-activity/source-manifest.json",
+      "pointer": "/files/0",
+      "fullRange": [
+        [
+          1,
+          183
+        ]
+      ],
+      "purpose": "Entire ordinary activity summary/agent summary/label/elapsed formatter source. Imported language/preferences and runtime helpers not invoked; no performance or clock guarantee.",
+      "testDeclarationOnly": false,
+      "originalRowConstraints": {
+        "purpose": "Entire ordinary activity summary/agent summary/label/elapsed formatter source. Imported language/preferences and runtime helpers not invoked; no performance or clock guarantee.",
+        "sourceKind": "product",
+        "firstEverReadingClaimed": false
+      },
+      "sourceBodyReadByMigration": false
+    },
+    {
+      "path": "packages/desktop/src/renderer/ui/StatusDot.tsx",
+      "currentSha256": "363fbdd51a9f07839f1e87e21c5afa08aba185e22a9cfed47ce3540b00b85ff9",
+      "manifest": "docs/audit-2026-10-17-round46/evidence/tool-card-review/source-manifest.json",
+      "pointer": "/files/1",
+      "fullRange": [
+        [
+          1,
+          22
+        ]
+      ],
+      "purpose": "Complete status-token to class/title/aria consumer. No rendered pixels or UI action observed.",
+      "testDeclarationOnly": false,
+      "originalRowConstraints": {
+        "scope": "Complete status-token to class/title/aria consumer. No rendered pixels or UI action observed."
+      },
+      "sourceBodyReadByMigration": false
+    },
+    {
+      "path": "packages/desktop/vite.mobile.config.ts",
+      "currentSha256": "69719a4c2ac93a63d9b41ed3bcbaf9b46cdc254f85ff41f3038d6f7a64ad1d51",
+      "manifest": "docs/audit-2026-10-17-round57/evidence/root-static-files/source-manifest.json",
+      "pointer": "/files/6",
+      "fullRange": [
+        [
+          1,
+          40
+        ]
+      ],
+      "purpose": "Exact base/mobile publicDir/outDir and normal dev origin. No build/Vite execution; producer validation continued independently in137.",
+      "testDeclarationOnly": false,
+      "originalRowConstraints": {
+        "scope": "Exact base/mobile publicDir/outDir and normal dev origin. No build/Vite execution; producer validation continued independently in137.",
+        "sourceKind": "product-config"
+      },
+      "sourceBodyReadByMigration": false
+    },
+    {
+      "path": "packages/pet/src/conversation-session-route.ts",
+      "currentSha256": "5c87bb342284c4a90c77fde336cc08cc0325dd79a49555dbb13e6e13c3f75f8b",
+      "manifest": "docs/audit-2026-10-17-round57/evidence/pet-topic/source-manifest.json",
+      "pointer": "/files/2",
+      "fullRange": [
+        [
+          1,
+          369
+        ]
+      ],
+      "purpose": "Complete local notify/bound/create/parse/enter/leave/suspend/inbound/expiry/stale state functions. No authority conclusion from this DTO/domain module alone.",
+      "testDeclarationOnly": false,
+      "originalRowConstraints": {
+        "scope": "Complete local notify/bound/create/parse/enter/leave/suspend/inbound/expiry/stale state functions. No authority conclusion from this DTO/domain module alone.",
+        "sourceKind": "product"
+      },
+      "sourceBodyReadByMigration": false
+    },
+    {
+      "path": "packages/pet/src/segment-closure.ts",
+      "currentSha256": "217004168aec035af4eae14bcefa5199962c01ca2238785c59259f8af64410cf",
+      "manifest": "docs/audit-2026-10-17-round57/evidence/pet-topic/source-manifest.json",
+      "pointer": "/files/1",
+      "fullRange": [
+        [
+          1,
+          154
+        ]
+      ],
+      "purpose": "Pure boundary locator/parser/prompt data primitives, all154 read; known prior full MD and supplemental same-SHA R10 /files/1 checked after current read, not retroactive pre-body timing.",
+      "testDeclarationOnly": false,
+      "originalRowConstraints": {
+        "scope": "Pure boundary locator/parser/prompt data primitives, all154 read; known prior full MD and supplemental same-SHA R10 /files/1 checked after current read, not retroactive pre-body timing.",
+        "sourceKind": "product"
+      },
+      "sourceBodyReadByMigration": false
+    },
+    {
+      "path": "packages/pet/src/topic-segment.ts",
+      "currentSha256": "bb8877ffdc0877a33e3d4702cc32bb9c173e46b9e475369b8913fa006a87287b",
+      "manifest": "docs/audit-2026-10-17-round57/evidence/pet-topic/source-manifest.json",
+      "pointer": "/files/0",
+      "fullRange": [
+        [
+          1,
+          75
+        ]
+      ],
+      "purpose": "Pure topic contract/threshold/carryover/memory primitive, all75 read; known prior same-SHA full R10 /files/0 and earlierMD retained.",
+      "testDeclarationOnly": false,
+      "originalRowConstraints": {
+        "scope": "Pure topic contract/threshold/carryover/memory primitive, all75 read; known prior same-SHA full R10 /files/0 and earlierMD retained.",
+        "sourceKind": "product"
+      },
+      "sourceBodyReadByMigration": false
+    },
+    {
+      "path": "packages/server/src/mobile-remote/pairing.test.ts",
+      "currentSha256": "76935704b1443dab971196d1e9952804a4b46b76042176f57b21acaf59d97c3f",
+      "manifest": "docs/audit-2026-10-17-round58/evidence/root-pairing/source-manifest.json",
+      "pointer": "/files/6",
+      "fullRange": [
+        [
+          1,
+          85
+        ]
+      ],
+      "purpose": "Entire declarations inspected; none executed or counted as pass.",
+      "testDeclarationOnly": true,
+      "originalRowConstraints": {
+        "purpose": "Entire declarations inspected; none executed or counted as pass.",
+        "sourceKind": "existing-test"
+      },
+      "sourceBodyReadByMigration": false
+    },
+    {
+      "path": "packages/server/src/mobile-remote/pairing.ts",
+      "currentSha256": "19777b68d1ad6297b9ea182298dd457077340dc4b1977433b60192fdc24af5ca",
+      "manifest": "docs/audit-2026-10-17-round58/evidence/root-pairing/source-manifest.json",
+      "pointer": "/files/0",
+      "fullRange": [
+        [
+          1,
+          70
+        ]
+      ],
+      "purpose": "Whole ordinary token mint/prune/consume/synchronous commit value state; cryptographic/platform/real time guarantees not runtime certified.",
+      "testDeclarationOnly": false,
+      "originalRowConstraints": {
+        "purpose": "Whole ordinary token mint/prune/consume/synchronous commit value state; cryptographic/platform/real time guarantees not runtime certified.",
+        "sourceKind": "product"
+      },
+      "sourceBodyReadByMigration": false
+    },
+    {
+      "path": "packages/server/src/mobile-remote/pending-approvals.ts",
+      "currentSha256": "1503d41f1535224c972a23ada25238644394fc2a1e696668729c0f6263b989ac",
+      "manifest": "docs/audit-2026-10-17-round58/evidence/approval-replay-review/source-manifest.json",
+      "pointer": "/files/0",
+      "fullRange": [
+        [
+          1,
+          69
+        ]
+      ],
+      "purpose": "Cache observe/resolve/replay and explicit worker setter, directed overlap with frozen author141 full69; not new unique coverage.",
+      "testDeclarationOnly": false,
+      "originalRowConstraints": {
+        "purpose": "Cache observe/resolve/replay and explicit worker setter, directed overlap with frozen author141 full69; not new unique coverage.",
+        "newUniqueCoverageClaim": false,
+        "displayCoverageComplete": false
+      },
+      "sourceBodyReadByMigration": false
+    },
+    {
+      "path": "packages/server/src/remote-relay/byte-stream.ts",
+      "currentSha256": "829b793b34e5c8046284aba433b6323f471f983c2fc9efab16eaa6cb117aa639",
+      "manifest": "docs/audit-2026-10-17-round58/evidence/relay-stream/source-manifest.json",
+      "pointer": "/files/0",
+      "fullRange": [
+        [
+          1,
+          65
+        ]
+      ],
+      "purpose": "Raw byte forwarding, serial write callback chunks, EOF/close; same-SHA full overlap with Round14.",
+      "testDeclarationOnly": false,
+      "originalRowConstraints": {
+        "purpose": "Raw byte forwarding, serial write callback chunks, EOF/close; same-SHA full overlap with Round14.",
+        "sourceKind": "product",
+        "fullFileReadingClaimed": true,
+        "priorCoverage": {
+          "sameShaFull": true,
+          "canonicalManifest": "docs/audit-2026-10-17-round14/evidence/bytes-source-manifest.json#/files/5",
+          "canonicalReport": "docs/audit-2026-10-17-round14/bytes.md:18",
+          "newUniqueReadingClaim": false
+        }
+      },
+      "sourceBodyReadByMigration": false
+    },
+    {
+      "path": "packages/server/src/static-files.ts",
+      "currentSha256": "57c8cdc35db7ffa8abe80f54a9fafe5a115dcb75108b84b2c6f2848eb940d17a",
+      "manifest": "docs/audit-2026-10-17-round57/evidence/root-static-files/source-manifest.json",
+      "pointer": "/files/0",
+      "fullRange": [
+        [
+          1,
+          27
+        ]
+      ],
+      "purpose": "All MIME mapping/lowercase/fallback logic. Prototype-looking extension not a normal extname result. Finite source reading, no all-platform correctness claim.",
+      "testDeclarationOnly": false,
+      "originalRowConstraints": {
+        "scope": "All MIME mapping/lowercase/fallback logic. Prototype-looking extension not a normal extname result. Finite source reading, no all-platform correctness claim.",
+        "sourceKind": "product"
+      },
+      "sourceBodyReadByMigration": false
+    },
+    {
+      "path": "packages/tui/src/ui/components/StatusLine.test.tsx",
+      "currentSha256": "5a3815583a7441e150ce28b9cda95f187e42890311409727690731740bfc16dc",
+      "manifest": "docs/audit-2026-10-17-round48/evidence/elapsed-frontier/source-manifest.json",
+      "pointer": "/files/2",
+      "fullRange": [
+        [
+          1,
+          23
+        ]
+      ],
+      "purpose": "Full 23-line existing test declaration text read; mounts/flush/assertions never executed. This is not a pass/result.",
+      "testDeclarationOnly": true,
+      "originalRowConstraints": {
+        "purpose": "Full 23-line existing test declaration text read; mounts/flush/assertions never executed. This is not a pass/result."
+      },
+      "sourceBodyReadByMigration": false
+    },
+    {
+      "path": "packages/web/app/useLatestMessages.test.ts",
+      "currentSha256": "52967504b00db4c8271c53d67822d9e867d8937323e97d707dff6d07a768f049",
+      "manifest": "docs/audit-2026-10-17-round49/evidence/latest-message-frontier/source-manifest.json",
+      "pointer": "/files/3",
+      "fullRange": [
+        [
+          1,
+          50
+        ]
+      ],
+      "purpose": "Full50 existing declaration text only; outputChanged, structuredClone and expect were not executed. No React or fixture run/pass.",
+      "testDeclarationOnly": true,
+      "originalRowConstraints": {
+        "purpose": "Full50 existing declaration text only; outputChanged, structuredClone and expect were not executed. No React or fixture run/pass."
+      },
+      "sourceBodyReadByMigration": false
+    },
+    {
+      "path": "packages/web/app/useLatestMessages.ts",
+      "currentSha256": "d0938a8b58bff0aaba7bc301b5f9c5a5cc4a8f306cc9ab3a3d424782e647ed71",
+      "manifest": "docs/audit-2026-10-17-round50/evidence/root-scroll-review/source-manifest.json",
+      "pointer": "/files/0",
+      "fullRange": [
+        [
+          1,
+          173
+        ]
+      ],
+      "purpose": "Full current173-line static hook module read, including output comparisons, unread transitions, follow/snap/onScroll and ResizeObserver source. Earlier83 selected97 and current85 overlap; not first-ever/unread or browser/React/layout certification.",
+      "testDeclarationOnly": false,
+      "originalRowConstraints": {
+        "purpose": "Full current173-line static hook module read, including output comparisons, unread transitions, follow/snap/onScroll and ResizeObserver source. Earlier83 selected97 and current85 overlap; not first-ever/unread or browser/React/layout certification."
+      },
+      "sourceBodyReadByMigration": false
+    },
+    {
+      "path": "scripts/package-release-audit-config.ts",
+      "currentSha256": "fa66cf447bbb63c213f848363e415ed540a2a891027ce5c6efa3b5fb28b242a2",
+      "manifest": "docs/audit-2026-10-17-round60/evidence/root-release-audit-config/source-manifest.json",
+      "pointer": "/files/0",
+      "fullRange": [
+        [
+          1,
+          297
+        ]
+      ],
+      "purpose": "Ordinary release roster/export classification and direct consumer field selection. No build, package installation, publishing, subprocess, filesystem cleanup or security mechanism certified.",
+      "testDeclarationOnly": false,
+      "originalRowConstraints": {
+        "scope": "Ordinary release roster/export classification and direct consumer field selection. No build, package installation, publishing, subprocess, filesystem cleanup or security mechanism certified.",
+        "overlap": "R6 report names this direction without explicit per-file full range; R24 config selected45–105 is retained as overlap. No first/unread/new-unique claim."
+      },
+      "sourceBodyReadByMigration": false
+    },
+    {
+      "path": "scripts/verify-release-versions.ts",
+      "currentSha256": "21307e60af60337ef90ba804e750c9b7016967d9f720c530ee6a542cdeeec609",
+      "manifest": "docs/audit-2026-10-17-round60/evidence/release-versions/source-manifest.json",
+      "pointer": "/files/2",
+      "fullRange": [
+        [
+          1,
+          189
+        ]
+      ],
+      "purpose": "R6 listed this release family as read but its source-manifest note explicitly denies a full-depth coverage claim. This packet is a bounded overlapping review, not evidence of first-ever reading.",
+      "testDeclarationOnly": false,
+      "originalRowConstraints": {
+        "category": "product-or-release-data",
+        "oldCoverageLimitation": "R6 listed this release family as read but its source-manifest note explicitly denies a full-depth coverage claim. This packet is a bounded overlapping review, not evidence of first-ever reading.",
+        "semanticFull": true
+      },
+      "sourceBodyReadByMigration": false
+    }
+  ]
+}

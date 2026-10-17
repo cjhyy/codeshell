@@ -1,0 +1,14 @@
+{
+  "name": "formal-catalog-titles",
+  "items": [
+    {
+      "path": "docs/audit-2026-10-17-round58/recorded-findings-catalog.json",
+      "titleTerms": [
+        "mcp",
+        "点号",
+        "dotted",
+        "嵌套"
+      ]
+    }
+  ]
+}
