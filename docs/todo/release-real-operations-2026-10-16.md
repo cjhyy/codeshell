@@ -157,6 +157,21 @@ Main image IPC, decoded byte equality, and collapse/reopen behavior. These add
 to the existing 18 panel operations without changing their gates. They have not
 yet run in native CI. Unit Windows UNC examples do not establish real share access.
 
+DESKTOP-R12-01 is also repaired: the shared Desktop tool-summary helper retreats
+one UTF-16 unit when its existing cutoff would split a valid surrogate pair.
+ASCII/BMP budgets and ellipsis behavior stay unchanged, and expanded content and
+original message/path/ID values remain intact. Seven original helper/actual
+Read/Generic/Agent/Bash card regressions fail before the fix; 11 normal controls
+pass. The independent task's final five-file shard passes 32 tests/91 assertions.
+The combined image/Unicode shard passes 65 tests/163 assertions across seven
+files, and Desktop build plus all 14 workspace typechecks pass again on the
+combined source. That command named a nonexistent Shell test; the actual
+`ToolCardShell.test.tsx` runs separately and is not counted in its 65. Neither
+Unicode unit checks nor the previous CI10 native screenshots are a native
+verification of this new summary change. Web and legacy Mobile use separate
+renderers and do not import this helper. Original audit rounds remain frozen;
+other recorded findings are not included in these repairs.
+
 Artifacts are downloaded as ZIPs under the private operation evidence root,
 with individual reports inspected directly. First-failure Main logs missing from
 the early Ubuntu memory artifact were a coverage gap; subsequent runs explicitly
