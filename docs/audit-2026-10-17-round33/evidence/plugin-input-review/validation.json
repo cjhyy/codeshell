@@ -1,0 +1,43 @@
+{
+  "frozenUtc": "2026-10-17T12:14:27.207685+00:00",
+  "parentReportedContext": "4be4016b8661c6a10c60f4eb0f218552b4b7c5d0",
+  "formalRound33Baseline": null,
+  "runs": [],
+  "productAttempts": 0,
+  "testsExecuted": 0,
+  "helperInvocations": 0,
+  "moduleImports": 0,
+  "languageFixturesExecuted": 0,
+  "URLConstructorCalls": 0,
+  "semverCalls": 0,
+  "installUpdateCheckActions": 0,
+  "networkRequests": 0,
+  "gitBusinessCommands": 0,
+  "realConfigurationWrites": 0,
+  "permissionAuthCustodyActions": 0,
+  "nativeActions": 0,
+  "runtimePasses": 0,
+  "runtimeExpectations": 0,
+  "metadataReaderFailures": [
+    {
+      "receipt": "source-reader.first.exit.json",
+      "exitCode": 1,
+      "kind": "range precheck assertion; not a product failure",
+      "handling": "First actual read used durable EOF208 for previously unentered range/consumers; previously printed source ranges not rerun."
+    }
+  ],
+  "metadataOutputTruncations": [
+    {
+      "toolChunkId": "085b39",
+      "selectedStored": 75,
+      "actualCountedAsInspected": 11,
+      "meaning": "Initial output truncated; no all75-read claim. Later small targeted output was complete."
+    }
+  ],
+  "limits": [
+    "Metadata source/text/hash/JSON/regex operations only.",
+    "No GitHub service behavior or successful/failed installation asserted.",
+    "No official-spec web request was made by this reviewer.",
+    "Old failed Skill/frontmatter/authority dynamics remain skipped. No build/typecheck/lint/full suite."
+  ]
+}

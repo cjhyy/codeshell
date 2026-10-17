@@ -1,0 +1,360 @@
+{
+  "copies": [
+    {
+      "source": "/tmp/codeshell-audit-round33-plugin-input-review/author-receipt.json",
+      "path": "evidence/plugin-input-review/author-receipt.json",
+      "bytes": 3087,
+      "sha256": "df78cc75727e88e510ddecd2b5fa2553686b84d10f7ee7ea3d41698f61e1a9a6"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round33-plugin-input-review/consumer-initial-pins.json",
+      "path": "evidence/plugin-input-review/consumer-initial-pins.json",
+      "bytes": 3304,
+      "sha256": "2eab4dd954d69d818d64b2bf775584d4b5c4115af9e93bc8db337f603201f40d"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round33-plugin-input-review/decisions.json",
+      "path": "evidence/plugin-input-review/decisions.json",
+      "bytes": 3431,
+      "sha256": "5d2344968041f09d8e64506ecc18b3583b7d647f10a99c07e742107d7fa77523"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round33-plugin-input-review/finish-hash-checks.json",
+      "path": "evidence/plugin-input-review/finish-hash-checks.json",
+      "bytes": 3355,
+      "sha256": "33fdf6b46172aa0ba0df8eda8fb1bac6f45ae8cf90b9183a5ecfe46a37c1700e"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round33-plugin-input-review/history.json",
+      "path": "evidence/plugin-input-review/history.json",
+      "bytes": 790761,
+      "sha256": "4532310eda13c2e7f770fb61950737eb9251092ef446e7022ad11e5f348cbacb"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round33-plugin-input-review/history.py",
+      "path": "evidence/plugin-input-review/history.py",
+      "bytes": 3173,
+      "sha256": "f62045d211fed7e3eb23ba144760906b1a56adb3648dc81fbe3c31d376267e6a"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round33-plugin-input-review/initial-pins.json",
+      "path": "evidence/plugin-input-review/initial-pins.json",
+      "bytes": 1028,
+      "sha256": "b89c225506eb9e202d429fc9618ae38adef72e2e8c2f6a5db5fde6fd9c693508"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round33-plugin-input-review/review.md",
+      "path": "evidence/plugin-input-review/review.md",
+      "bytes": 3831,
+      "sha256": "a21c7128ecff7747f3ebb77055edb01c2c3b3e45985d939b5450174d4ea6b535"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round33-plugin-input-review/selected-history-contexts.json",
+      "path": "evidence/plugin-input-review/selected-history-contexts.json",
+      "bytes": 79645,
+      "sha256": "26e6be05b4bd9d2ce8c8a15c5e6437a760ee47bace5c72ee54c4b2627408d1b9"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round33-plugin-input-review/source-manifest.json",
+      "path": "evidence/plugin-input-review/source-manifest.json",
+      "bytes": 9846,
+      "sha256": "bb800175624bb60d6ec1727a3d09bf30467f71374a397ff99c1c8c7f50b9401d"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round33-plugin-input-review/source-reader.first.exit.json",
+      "path": "evidence/plugin-input-review/source-reader.first.exit.json",
+      "bytes": 818,
+      "sha256": "509ec7a800f824b887555731d61a2aac9b2218a78e4c052f395b3647eb823f57"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round33-plugin-input-review/validation.json",
+      "path": "evidence/plugin-input-review/validation.json",
+      "bytes": 1483,
+      "sha256": "44fc178b76fef559c80bcdfe126ea8250afebdc194645b28e7c7a52608b5a099"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round33-local-install-review/author-receipt.json",
+      "path": "evidence/local-install-review/author-receipt.json",
+      "bytes": 3388,
+      "sha256": "325acb9f64543787d58f64e1c0259fc5a4ffe86916af10813536f3564c481dc0"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round33-local-install-review/decisions.json",
+      "path": "evidence/local-install-review/decisions.json",
+      "bytes": 2760,
+      "sha256": "72431770e225ed7d209b094af9d73a0672e197b712fba1f9ec9ef2bcbe57be4b"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round33-local-install-review/facade-initial-pin.json",
+      "path": "evidence/local-install-review/facade-initial-pin.json",
+      "bytes": 464,
+      "sha256": "136a094b9505ce2e318a2797f0d909a903e6c5c27c3b2173925d5b3a9f5912c6"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round33-local-install-review/finish-hash-checks.json",
+      "path": "evidence/local-install-review/finish-hash-checks.json",
+      "bytes": 1476,
+      "sha256": "b25bb3a31195c3b6cf3c324c3e59fc621064353a04bc22ad7c2b54fb1c8af4c6"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round33-local-install-review/history.json",
+      "path": "evidence/local-install-review/history.json",
+      "bytes": 856192,
+      "sha256": "9c735a815a6439f4d7f21ff9c5e03156e5bc01142042ba90efb7b36320f2f501"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round33-local-install-review/history.py",
+      "path": "evidence/local-install-review/history.py",
+      "bytes": 3085,
+      "sha256": "4f3e107e28bd6583ec7f49fd7555c5fb7a33204faed2012d73a54a7e7fc01f0f"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round33-local-install-review/initial-pins.json",
+      "path": "evidence/local-install-review/initial-pins.json",
+      "bytes": 2963,
+      "sha256": "54366b18e6696da1b472d21f3b751b51538df429bbbeb27e0fd54bd8779747a2"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round33-local-install-review/navigation.first.exit.json",
+      "path": "evidence/local-install-review/navigation.first.exit.json",
+      "bytes": 548,
+      "sha256": "f8fe4b4f2fdcf8c543ed563581ceeb9d2ad59f0a6dcc144ba6e6dc1da92b5faa"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round33-local-install-review/old-cause.json",
+      "path": "evidence/local-install-review/old-cause.json",
+      "bytes": 1648,
+      "sha256": "12187054b3b36685f658627217d2c483875e429fa99e251450ec78b5d1f4bcf7"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round33-local-install-review/review.md",
+      "path": "evidence/local-install-review/review.md",
+      "bytes": 4094,
+      "sha256": "ed6bd8e13dcfde82b8cf3b744f8abded3c7f0fa0afe1cc514a4f5cce9c53758c"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round33-local-install-review/selected-history-contexts.json",
+      "path": "evidence/local-install-review/selected-history-contexts.json",
+      "bytes": 220749,
+      "sha256": "396203b0729fe7f030e4d370ca44ba8ce88dbe8f59ce17a152aa47a9c2a93ed2"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round33-local-install-review/source-manifest.json",
+      "path": "evidence/local-install-review/source-manifest.json",
+      "bytes": 7112,
+      "sha256": "1dbb0b738708315c8d5f9dd90734d0e81288354065ed59a3d6404ede6fb1f3c1"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round33-local-install-review/validation.json",
+      "path": "evidence/local-install-review/validation.json",
+      "bytes": 1206,
+      "sha256": "422e7186e6b48a31cb074f1961e7f364c942aae11dbe482dfb0d12525e32a6f9"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round33-devtools-review/consumer-initial-pins.json",
+      "path": "evidence/devtools-review/consumer-initial-pins.json",
+      "bytes": 2693,
+      "sha256": "38a1837ab354fe0f36195c7e09f8c6b97612689db982d327eb88c9cd29747d67"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round33-devtools-review/history-initial-pins.json",
+      "path": "evidence/devtools-review/history-initial-pins.json",
+      "bytes": 876,
+      "sha256": "ca531e33bf8fca2ed6e2e1dc9fa226e842162ca863748d0dbfe316610c597cf5"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round33-devtools-review/history-method.py",
+      "path": "evidence/devtools-review/history-method.py",
+      "bytes": 3066,
+      "sha256": "7b3becfa216575940928adfe46f92efc9e2af893da3ff7c42dfea130d919c65f"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round33-devtools-review/history.json",
+      "path": "evidence/devtools-review/history.json",
+      "bytes": 618274,
+      "sha256": "33b6e91f175fdbab0615eb3906cb5d3ce5a21642c2dbe8f2da57ed615a0e787b"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round33-devtools-review/initial-pins.json",
+      "path": "evidence/devtools-review/initial-pins.json",
+      "bytes": 2405,
+      "sha256": "19a5eeec810ceeb2540e943225cfb4ad94625aacb4a4cc927583154a5457d924"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round33-devtools-review/prior-source-comparison.json",
+      "path": "evidence/devtools-review/prior-source-comparison.json",
+      "bytes": 4070,
+      "sha256": "828ffb9754001a48f7970d31281eb27fce280fac805704bd2fa5108c3894972c"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round33-devtools-review/review.md",
+      "path": "evidence/devtools-review/review.md",
+      "bytes": 4138,
+      "sha256": "42002e5a0532a9b548d72ca9300f78debfbb7220218ed40b956c891ec773a9ff"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round33-devtools-review/reviewer-receipt.json",
+      "path": "evidence/devtools-review/reviewer-receipt.json",
+      "bytes": 2060,
+      "sha256": "2e19f6b487d0cf7504391fbcd6017e01fd37078f79297e62df8d07858d6eccc2"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round33-devtools-review/source-manifest.json",
+      "path": "evidence/devtools-review/source-manifest.json",
+      "bytes": 24306,
+      "sha256": "31ac889ba43f69e428262ed12625d17c67b7d65ed0d82ad93924d61ab5b2f960"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round33-installer-input-frontier/artifact-receipt.json",
+      "path": "evidence/installer-input-frontier/artifact-receipt.json",
+      "bytes": 3577,
+      "sha256": "2afe1c6ffb3e3411b17b1945e85a41941735c7de31e4f5aaff7c6dd6560d9497"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round33-installer-input-frontier/cli-await-grouped-contexts.json",
+      "path": "evidence/installer-input-frontier/cli-await-grouped-contexts.json",
+      "bytes": 39367,
+      "sha256": "c447da900b847bbfc02c6529f4a741b0fbe7869a07e561e62ee6cec6af0de2f4"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round33-installer-input-frontier/cli-await-history.current.json",
+      "path": "evidence/installer-input-frontier/cli-await-history.current.json",
+      "bytes": 756873,
+      "sha256": "18c56c4991d8356e6608e5db3bb6ed2c11a9da9ae824e3a1c13574feefbb915b"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round33-installer-input-frontier/decisions.json",
+      "path": "evidence/installer-input-frontier/decisions.json",
+      "bytes": 2856,
+      "sha256": "00b2dd5dd92167e15d508aeee807dd1de431ed982435c721674041e4efad3a49"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round33-installer-input-frontier/history-drift.json",
+      "path": "evidence/installer-input-frontier/history-drift.json",
+      "bytes": 754,
+      "sha256": "9bab7cfcdd6aec6b94aae34ac1646afe1ef9efe19848d5c8dcec05c5134c99e4"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round33-installer-input-frontier/history-method.py",
+      "path": "evidence/installer-input-frontier/history-method.py",
+      "bytes": 3595,
+      "sha256": "921e3c7b73cb9bdc1a075e580fad1b233c0a66ec00a9c294d65d790fa97fe0d0"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round33-installer-input-frontier/history-recheck.first.json",
+      "path": "evidence/installer-input-frontier/history-recheck.first.json",
+      "bytes": 688,
+      "sha256": "95501bdb59273eec0ba7a2f5ab3c8f19b6773c9af52c1a5459472474ca3170f7"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round33-installer-input-frontier/history.json",
+      "path": "evidence/installer-input-frontier/history.json",
+      "bytes": 746971,
+      "sha256": "9a1e2fa7a75eea23bcfb58c35717897ec8379f2d025ebe5f60f0eb6b17d81e42"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round33-installer-input-frontier/initial-pins.json",
+      "path": "evidence/installer-input-frontier/initial-pins.json",
+      "bytes": 9048,
+      "sha256": "0e85110cb41328768fc38a24652d642030578de0d9039501320ca2ad9f8fe311"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round33-installer-input-frontier/legacy-cli-await-record.json",
+      "path": "evidence/installer-input-frontier/legacy-cli-await-record.json",
+      "bytes": 1425,
+      "sha256": "1776ee9d8b459f8be844ef08bdb83c041c1968a2bd43bc92bf0be4cdee5f453d"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round33-installer-input-frontier/report.md",
+      "path": "evidence/installer-input-frontier/report.md",
+      "bytes": 4907,
+      "sha256": "f0c3cdaa8ef1b09bd5b3d5ca058835c5de5cb6cbcc5a1aea41496301f635677b"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round33-installer-input-frontier/source-manifest.json",
+      "path": "evidence/installer-input-frontier/source-manifest.json",
+      "bytes": 14312,
+      "sha256": "aca3d6ade669e6755f7284053aa621b0a4268c20a6dff54ab49e16bdbae8b2cc"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round33-installer-input-frontier/validation.json",
+      "path": "evidence/installer-input-frontier/validation.json",
+      "bytes": 860,
+      "sha256": "3e79c3071a7c4fb6bb9aaeeb34b39e8efbb5639843a2b3c425e4bc1f92e9d955"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round33-plugin-input-frontier/author-receipt.json",
+      "path": "evidence/plugin-input-frontier/author-receipt.json",
+      "bytes": 816,
+      "sha256": "150d3bce6bf47fcc2aa6b339a3904577e6f4a7fb43f5e9942fda2c4a08ef04f2"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round33-plugin-input-frontier/decisions.json",
+      "path": "evidence/plugin-input-frontier/decisions.json",
+      "bytes": 203,
+      "sha256": "8330e20249fc85cee95fccb14a811ea00245ba3b6873384dfe63b81178815ba5"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round33-plugin-input-frontier/initial-pins.json",
+      "path": "evidence/plugin-input-frontier/initial-pins.json",
+      "bytes": 1151,
+      "sha256": "c667c8ec6c3e147b1a60b073fef73531a00b136fba5c74fd26bcf5af73fdebc0"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round33-plugin-input-frontier/review.md",
+      "path": "evidence/plugin-input-frontier/review.md",
+      "bytes": 1102,
+      "sha256": "a368eedb8b7ba2fe15f5016d0eec0717c314e3fd0e155ee6189dfb750104a310"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round33-plugin-input-frontier/source-manifest.json",
+      "path": "evidence/plugin-input-frontier/source-manifest.json",
+      "bytes": 2730,
+      "sha256": "10272701a2c645be4096add9e8f998b335646a253621a011f167ade78c65e0d5"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round33-plugin-input-frontier/validation.json",
+      "path": "evidence/plugin-input-frontier/validation.json",
+      "bytes": 104,
+      "sha256": "cabc6267e8a4ecfa48d593a2d21a603a2b19d3beee9c13272a1a6437e762abc9"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round33-devtools-frontier/author-receipt.json",
+      "path": "evidence/devtools-frontier/author-receipt.json",
+      "bytes": 816,
+      "sha256": "74cfdac72d28c325378518da22b542b7be58e325c26b073f9c7ed2d660614655"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round33-devtools-frontier/decisions.json",
+      "path": "evidence/devtools-frontier/decisions.json",
+      "bytes": 175,
+      "sha256": "b5276ce472b855449d138d937b9eaddafff53985e53d7bade8088b532daa76a7"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round33-devtools-frontier/initial-pins.json",
+      "path": "evidence/devtools-frontier/initial-pins.json",
+      "bytes": 1245,
+      "sha256": "a15d388ecedd6999bfb89703cfb9c65b15706b2083b5ed2ec2217380a38b7e5a"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round33-devtools-frontier/review.md",
+      "path": "evidence/devtools-frontier/review.md",
+      "bytes": 1173,
+      "sha256": "7e70005b756612241c76af8ec19367512e8254bb3528ac8a01e6d9049ef07016"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round33-devtools-frontier/source-manifest.json",
+      "path": "evidence/devtools-frontier/source-manifest.json",
+      "bytes": 3103,
+      "sha256": "865c99992a47b2b8731c8322d9abffccdce4e2492ca551088caff573105b72f4"
+    },
+    {
+      "source": "/tmp/codeshell-audit-round33-devtools-frontier/validation.json",
+      "path": "evidence/devtools-frontier/validation.json",
+      "bytes": 104,
+      "sha256": "cabc6267e8a4ecfa48d593a2d21a603a2b19d3beee9c13272a1a6437e762abc9"
+    }
+  ],
+  "sourceRootExactDirsOnly": true,
+  "productRuns": 0
+}

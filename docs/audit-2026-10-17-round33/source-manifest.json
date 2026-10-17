@@ -1,0 +1,884 @@
+{
+  "baseline": "646f9243e03b50c49878f966f18ae98b08919177",
+  "mainHead": "4ad2052b6fd697af6141d8e60df1724cff509383",
+  "files": [
+    {
+      "path": "AGENTS.md",
+      "bytes": 206,
+      "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "currentBytes": 206,
+      "currentSha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "mainBytes": 206,
+      "mainSha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true
+    },
+    {
+      "path": "CODESHELL.md",
+      "bytes": 17639,
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "currentBytes": 17639,
+      "currentSha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "mainBytes": 17639,
+      "mainSha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round10/diagnostics.md",
+      "bytes": 6661,
+      "sha256": "72dc1ee9b8b51d407051b34ec4cbd6c654f278fec4136b3c9b1e8845d6628cb3",
+      "currentBytes": 6661,
+      "currentSha256": "72dc1ee9b8b51d407051b34ec4cbd6c654f278fec4136b3c9b1e8845d6628cb3",
+      "mainBytes": 6661,
+      "mainSha256": "72dc1ee9b8b51d407051b34ec4cbd6c654f278fec4136b3c9b1e8845d6628cb3",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round10/evidence/diagnostics-source-manifest.json",
+      "bytes": 4011,
+      "sha256": "9f24b8e0b371722b0a3027f5ae84eb08d7844f519ca12c85964acc8d1a130eea",
+      "currentBytes": 4011,
+      "currentSha256": "9f24b8e0b371722b0a3027f5ae84eb08d7844f519ca12c85964acc8d1a130eea",
+      "mainBytes": 4011,
+      "mainSha256": "9f24b8e0b371722b0a3027f5ae84eb08d7844f519ca12c85964acc8d1a130eea",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/browser-devtools/README.md",
+      "bytes": 2940,
+      "sha256": "76a62792a7713734235a9f51e4f934023b6c42c354c06d9ecb3cb5e3f1e31096",
+      "currentBytes": 2940,
+      "currentSha256": "76a62792a7713734235a9f51e4f934023b6c42c354c06d9ecb3cb5e3f1e31096",
+      "mainBytes": 2940,
+      "mainSha256": "76a62792a7713734235a9f51e4f934023b6c42c354c06d9ecb3cb5e3f1e31096",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/browser-devtools/src/contracts.ts",
+      "bytes": 1183,
+      "sha256": "fd9493faf494f65e6c3a3fefe446bba458d89571127e7a97567db8169a1650c2",
+      "currentBytes": 1183,
+      "currentSha256": "fd9493faf494f65e6c3a3fefe446bba458d89571127e7a97567db8169a1650c2",
+      "mainBytes": 1183,
+      "mainSha256": "fd9493faf494f65e6c3a3fefe446bba458d89571127e7a97567db8169a1650c2",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/browser-devtools/src/index.ts",
+      "bytes": 189,
+      "sha256": "0adccda06e4bd274a2f2af1bdf70db0446722d403c35620eef4ad14739892c55",
+      "currentBytes": 189,
+      "currentSha256": "0adccda06e4bd274a2f2af1bdf70db0446722d403c35620eef4ad14739892c55",
+      "mainBytes": 189,
+      "mainSha256": "0adccda06e4bd274a2f2af1bdf70db0446722d403c35620eef4ad14739892c55",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/browser-devtools/src/inspector.test.ts",
+      "bytes": 5243,
+      "sha256": "b1fe416622c47a9e82325f8ca5a2505cd87f49b2dc167e834ac27804999bde92",
+      "currentBytes": 5243,
+      "currentSha256": "b1fe416622c47a9e82325f8ca5a2505cd87f49b2dc167e834ac27804999bde92",
+      "mainBytes": 5243,
+      "mainSha256": "b1fe416622c47a9e82325f8ca5a2505cd87f49b2dc167e834ac27804999bde92",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/browser-devtools/src/inspector.ts",
+      "bytes": 8534,
+      "sha256": "bab4ae5c83c666db5529acc5eae364c4301bfa21d0a093a96c08da5cc176c6e2",
+      "currentBytes": 8534,
+      "currentSha256": "bab4ae5c83c666db5529acc5eae364c4301bfa21d0a093a96c08da5cc176c6e2",
+      "mainBytes": 8534,
+      "mainSha256": "bab4ae5c83c666db5529acc5eae364c4301bfa21d0a093a96c08da5cc176c6e2",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/index.internal.ts",
+      "bytes": 17401,
+      "sha256": "ac63a7fbe2f7400c45cf4f400f2ba196b599cfd535b27859bad22c275cd2c0ab",
+      "currentBytes": 17401,
+      "currentSha256": "ac63a7fbe2f7400c45cf4f400f2ba196b599cfd535b27859bad22c275cd2c0ab",
+      "mainBytes": 17401,
+      "mainSha256": "ac63a7fbe2f7400c45cf4f400f2ba196b599cfd535b27859bad22c275cd2c0ab",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/plugins/gitOps.ts",
+      "bytes": 9285,
+      "sha256": "cfeb1bc1dc30b900b120bb06d197f2f6c7fb8cfe396c51d11991608c6c270e7e",
+      "currentBytes": 9285,
+      "currentSha256": "cfeb1bc1dc30b900b120bb06d197f2f6c7fb8cfe396c51d11991608c6c270e7e",
+      "mainBytes": 9285,
+      "mainSha256": "cfeb1bc1dc30b900b120bb06d197f2f6c7fb8cfe396c51d11991608c6c270e7e",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/plugins/installer/checkUpdate.test.ts",
+      "bytes": 5032,
+      "sha256": "7f65f55c9b6d34d002cd849510b4035dd323538ff5ab37864eb128b7e208fecc",
+      "currentBytes": 5032,
+      "currentSha256": "7f65f55c9b6d34d002cd849510b4035dd323538ff5ab37864eb128b7e208fecc",
+      "mainBytes": 5032,
+      "mainSha256": "7f65f55c9b6d34d002cd849510b4035dd323538ff5ab37864eb128b7e208fecc",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/plugins/installer/checkUpdate.ts",
+      "bytes": 2043,
+      "sha256": "8cc055b0081e5d8482e917c944d2d6dac85018163a741f3a9729e55a492daf08",
+      "currentBytes": 2043,
+      "currentSha256": "8cc055b0081e5d8482e917c944d2d6dac85018163a741f3a9729e55a492daf08",
+      "mainBytes": 2043,
+      "mainSha256": "8cc055b0081e5d8482e917c944d2d6dac85018163a741f3a9729e55a492daf08",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/plugins/installer/install.test.ts",
+      "bytes": 28466,
+      "sha256": "d464e5d40d00a25be860179aee278ed48a9132c37323840f857ef944fae9974b",
+      "currentBytes": 28466,
+      "currentSha256": "d464e5d40d00a25be860179aee278ed48a9132c37323840f857ef944fae9974b",
+      "mainBytes": 28466,
+      "mainSha256": "d464e5d40d00a25be860179aee278ed48a9132c37323840f857ef944fae9974b",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/plugins/installer/install.ts",
+      "bytes": 3010,
+      "sha256": "1773b85309de88bc25da1f696fa7937c3af7a0e10af732fcc6fb59ca1fbf04aa",
+      "currentBytes": 3010,
+      "currentSha256": "1773b85309de88bc25da1f696fa7937c3af7a0e10af732fcc6fb59ca1fbf04aa",
+      "mainBytes": 3010,
+      "mainSha256": "1773b85309de88bc25da1f696fa7937c3af7a0e10af732fcc6fb59ca1fbf04aa",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/plugins/installer/installFromNpm.test.ts",
+      "bytes": 7182,
+      "sha256": "029315f07077cdd3767be75e265f0b0330d28c99dfd5df6b3375584a18a6690f",
+      "currentBytes": 7182,
+      "currentSha256": "029315f07077cdd3767be75e265f0b0330d28c99dfd5df6b3375584a18a6690f",
+      "mainBytes": 7182,
+      "mainSha256": "029315f07077cdd3767be75e265f0b0330d28c99dfd5df6b3375584a18a6690f",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/plugins/installer/installFromNpm.ts",
+      "bytes": 13139,
+      "sha256": "93ff865c77221c5b0f9381cfed02ff298dfd3b844fa17a11a3f35a4df8f4411f",
+      "currentBytes": 13139,
+      "currentSha256": "93ff865c77221c5b0f9381cfed02ff298dfd3b844fa17a11a3f35a4df8f4411f",
+      "mainBytes": 13139,
+      "mainSha256": "93ff865c77221c5b0f9381cfed02ff298dfd3b844fa17a11a3f35a4df8f4411f",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/plugins/installer/installFromSource.ts",
+      "bytes": 2888,
+      "sha256": "a8fb3559239edee39dfa23a32433261e3e4fc33e680f3be605f8cfc1bd21c599",
+      "currentBytes": 2888,
+      "currentSha256": "a8fb3559239edee39dfa23a32433261e3e4fc33e680f3be605f8cfc1bd21c599",
+      "mainBytes": 2888,
+      "mainSha256": "a8fb3559239edee39dfa23a32433261e3e4fc33e680f3be605f8cfc1bd21c599",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/plugins/installer/npmTar.ts",
+      "bytes": 12952,
+      "sha256": "e5301cf85be743e88c0b99963dd1c2bc23b686c0912523944f87a5ddafee0f50",
+      "currentBytes": 12952,
+      "currentSha256": "e5301cf85be743e88c0b99963dd1c2bc23b686c0912523944f87a5ddafee0f50",
+      "mainBytes": 12952,
+      "mainSha256": "e5301cf85be743e88c0b99963dd1c2bc23b686c0912523944f87a5ddafee0f50",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/plugins/installer/parseSource.test.ts",
+      "bytes": 5287,
+      "sha256": "20130f0ddf25109086741056759e07ba5ee437c668c6baeac3f64a9aa62d3557",
+      "currentBytes": 5287,
+      "currentSha256": "20130f0ddf25109086741056759e07ba5ee437c668c6baeac3f64a9aa62d3557",
+      "mainBytes": 5287,
+      "mainSha256": "20130f0ddf25109086741056759e07ba5ee437c668c6baeac3f64a9aa62d3557",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/plugins/installer/parseSource.ts",
+      "bytes": 6234,
+      "sha256": "889811be939c6c5584c1904495d9595a663a7cda97923de93d90e543c47fa94f",
+      "currentBytes": 6234,
+      "currentSha256": "889811be939c6c5584c1904495d9595a663a7cda97923de93d90e543c47fa94f",
+      "mainBytes": 6234,
+      "mainSha256": "889811be939c6c5584c1904495d9595a663a7cda97923de93d90e543c47fa94f",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/plugins/installer/types.ts",
+      "bytes": 5106,
+      "sha256": "88165a54fded210ee1f19e326043ef2be8d8b464af5b63689f798e92bf920c05",
+      "currentBytes": 5106,
+      "currentSha256": "88165a54fded210ee1f19e326043ef2be8d8b464af5b63689f798e92bf920c05",
+      "mainBytes": 5106,
+      "mainSha256": "88165a54fded210ee1f19e326043ef2be8d8b464af5b63689f798e92bf920c05",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/plugins/installer/update.test.ts",
+      "bytes": 14322,
+      "sha256": "1f863127de9a799a36cb4460d2f979723acf51ef58dbf1aa4c76ca411ea81278",
+      "currentBytes": 14322,
+      "currentSha256": "1f863127de9a799a36cb4460d2f979723acf51ef58dbf1aa4c76ca411ea81278",
+      "mainBytes": 14322,
+      "mainSha256": "1f863127de9a799a36cb4460d2f979723acf51ef58dbf1aa4c76ca411ea81278",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/plugins/installer/update.ts",
+      "bytes": 7038,
+      "sha256": "7e16ab5d01f21bac774503cf6df4cf6e992e757374d1864a6c264deb671fd1b3",
+      "currentBytes": 7038,
+      "currentSha256": "7e16ab5d01f21bac774503cf6df4cf6e992e757374d1864a6c264deb671fd1b3",
+      "mainBytes": 7038,
+      "mainSha256": "7e16ab5d01f21bac774503cf6df4cf6e992e757374d1864a6c264deb671fd1b3",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/plugins/marketplaceManager.ts",
+      "bytes": 7940,
+      "sha256": "cdebee5c72c8ed253204c4299ed54d6c7f7806ca7768400b2d8a6b94a3846fd0",
+      "currentBytes": 7940,
+      "currentSha256": "cdebee5c72c8ed253204c4299ed54d6c7f7806ca7768400b2d8a6b94a3846fd0",
+      "mainBytes": 7940,
+      "mainSha256": "cdebee5c72c8ed253204c4299ed54d6c7f7806ca7768400b2d8a6b94a3846fd0",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/plugins/parseMarketplaceInput.test.ts",
+      "bytes": 709,
+      "sha256": "1d26b5528a4484d1780ef0ec7c8d1e27d68aad008721f8e6922bb926e68854c9",
+      "currentBytes": 709,
+      "currentSha256": "1d26b5528a4484d1780ef0ec7c8d1e27d68aad008721f8e6922bb926e68854c9",
+      "mainBytes": 709,
+      "mainSha256": "1d26b5528a4484d1780ef0ec7c8d1e27d68aad008721f8e6922bb926e68854c9",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/plugins/parseMarketplaceInput.ts",
+      "bytes": 3079,
+      "sha256": "25248f360523e9c358b7fd830ff1b0d92e886fc1f2ee96e353c5e707d98d195b",
+      "currentBytes": 3079,
+      "currentSha256": "25248f360523e9c358b7fd830ff1b0d92e886fc1f2ee96e353c5e707d98d195b",
+      "mainBytes": 3079,
+      "mainSha256": "25248f360523e9c358b7fd830ff1b0d92e886fc1f2ee96e353c5e707d98d195b",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/plugins/pluginInstaller.ts",
+      "bytes": 19962,
+      "sha256": "263ce32aaee6b062513389f93cf29c5f3b5779a160da3979f036fb38b176a30a",
+      "currentBytes": 19962,
+      "currentSha256": "263ce32aaee6b062513389f93cf29c5f3b5779a160da3979f036fb38b176a30a",
+      "mainBytes": 19962,
+      "mainSha256": "263ce32aaee6b062513389f93cf29c5f3b5779a160da3979f036fb38b176a30a",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/tool-system/browser-bridge.ts",
+      "bytes": 17657,
+      "sha256": "f1c0b6595a9be51175704468a5fa0d44675c45c74b887dc634d0cffb47db30a5",
+      "currentBytes": 17657,
+      "currentSha256": "f1c0b6595a9be51175704468a5fa0d44675c45c74b887dc634d0cffb47db30a5",
+      "mainBytes": 17657,
+      "mainSha256": "f1c0b6595a9be51175704468a5fa0d44675c45c74b887dc634d0cffb47db30a5",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/tool-system/builtin/browser-inspect.ts",
+      "bytes": 2272,
+      "sha256": "d7bf222610e1cb70dab7765a7e5571f0074adc61f43775ba679555242ed92dcd",
+      "currentBytes": 2272,
+      "currentSha256": "d7bf222610e1cb70dab7765a7e5571f0074adc61f43775ba679555242ed92dcd",
+      "mainBytes": 2272,
+      "mainSha256": "d7bf222610e1cb70dab7765a7e5571f0074adc61f43775ba679555242ed92dcd",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/desktop/src/browser-library/browser-inspector.ts",
+      "bytes": 668,
+      "sha256": "47898599f9b3fa63a5c4752205b477f1132ca4315a33b4b697198edec6dd67ac",
+      "currentBytes": 668,
+      "currentSha256": "47898599f9b3fa63a5c4752205b477f1132ca4315a33b4b697198edec6dd67ac",
+      "mainBytes": 668,
+      "mainSha256": "47898599f9b3fa63a5c4752205b477f1132ca4315a33b4b697198edec6dd67ac",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/desktop/src/browser-library/puppeteer-browser-driver.ts",
+      "bytes": 37488,
+      "sha256": "d275aaba9b2eb29a306bfb91d1ccd32499a288bf79c0f0fc08b8d90723bc080f",
+      "currentBytes": 37488,
+      "currentSha256": "d275aaba9b2eb29a306bfb91d1ccd32499a288bf79c0f0fc08b8d90723bc080f",
+      "mainBytes": 37488,
+      "mainSha256": "d275aaba9b2eb29a306bfb91d1ccd32499a288bf79c0f0fc08b8d90723bc080f",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/desktop/src/main/browser-driver/automation-host.ts",
+      "bytes": 19114,
+      "sha256": "a390ba9d3418829895c39416a8f373bf37832cf7c7517dc119ddd2d08f8e4513",
+      "currentBytes": 19114,
+      "currentSha256": "a390ba9d3418829895c39416a8f373bf37832cf7c7517dc119ddd2d08f8e4513",
+      "mainBytes": 19114,
+      "mainSha256": "a390ba9d3418829895c39416a8f373bf37832cf7c7517dc119ddd2d08f8e4513",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/desktop/src/main/browser-driver/background-runtime.ts",
+      "bytes": 29596,
+      "sha256": "5daee16c15730cee384214e27f72daa5d0143c9072f4785954131e15c025646c",
+      "currentBytes": 29596,
+      "currentSha256": "5daee16c15730cee384214e27f72daa5d0143c9072f4785954131e15c025646c",
+      "mainBytes": 29596,
+      "mainSha256": "5daee16c15730cee384214e27f72daa5d0143c9072f4785954131e15c025646c",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/desktop/src/main/browser-runtime/playwright-driver.ts",
+      "bytes": 24474,
+      "sha256": "3564d98b613003a71460477d9004c02c4dfd5bc28ba228e1d632fbdf2020f7cb",
+      "currentBytes": 24474,
+      "currentSha256": "3564d98b613003a71460477d9004c02c4dfd5bc28ba228e1d632fbdf2020f7cb",
+      "mainBytes": 24474,
+      "mainSha256": "3564d98b613003a71460477d9004c02c4dfd5bc28ba228e1d632fbdf2020f7cb",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/desktop/src/main/marketplace-service.ts",
+      "bytes": 20169,
+      "sha256": "d5f6623dccb27087bdad2f9263bdb5c514252a20a6ba8d6a7ca45cf80e0cafe6",
+      "currentBytes": 20169,
+      "currentSha256": "d5f6623dccb27087bdad2f9263bdb5c514252a20a6ba8d6a7ca45cf80e0cafe6",
+      "mainBytes": 20169,
+      "mainSha256": "d5f6623dccb27087bdad2f9263bdb5c514252a20a6ba8d6a7ca45cf80e0cafe6",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/desktop/src/main/plugins-service.ts",
+      "bytes": 11267,
+      "sha256": "acffed1af5934499848c5a46f025b5aa6d702d50e24e9f9a161edc8c7f2a72ec",
+      "currentBytes": 11267,
+      "currentSha256": "acffed1af5934499848c5a46f025b5aa6d702d50e24e9f9a161edc8c7f2a72ec",
+      "mainBytes": 11267,
+      "mainSha256": "acffed1af5934499848c5a46f025b5aa6d702d50e24e9f9a161edc8c7f2a72ec",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/tui/src/cli/commands/builtin/plugin-handler.ts",
+      "bytes": 20113,
+      "sha256": "b1ec4d4b35096dddfa73b4232403e54d1b7ff433f389293ff080ff7ca2de1a40",
+      "currentBytes": 20113,
+      "currentSha256": "b1ec4d4b35096dddfa73b4232403e54d1b7ff433f389293ff080ff7ca2de1a40",
+      "mainBytes": 20113,
+      "mainSha256": "b1ec4d4b35096dddfa73b4232403e54d1b7ff433f389293ff080ff7ca2de1a40",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/tui/src/cli/commands/plugin.ts",
+      "bytes": 3576,
+      "sha256": "f7037f55e44e0a40f81df7f4db1198b8f8c6a5cc5f2d9767fbb442bee8373b71",
+      "currentBytes": 3576,
+      "currentSha256": "f7037f55e44e0a40f81df7f4db1198b8f8c6a5cc5f2d9767fbb442bee8373b71",
+      "mainBytes": 3576,
+      "mainSha256": "f7037f55e44e0a40f81df7f4db1198b8f8c6a5cc5f2d9767fbb442bee8373b71",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/tui/src/cli/main.ts",
+      "bytes": 11626,
+      "sha256": "7a0a63bc7acbf23162480c2883bd5af26743459eff3c073fea787c7ce1e021ca",
+      "currentBytes": 11626,
+      "currentSha256": "7a0a63bc7acbf23162480c2883bd5af26743459eff3c073fea787c7ce1e021ca",
+      "mainBytes": 11626,
+      "mainSha256": "7a0a63bc7acbf23162480c2883bd5af26743459eff3c073fea787c7ce1e021ca",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true
+    }
+  ],
+  "workerSourceChecks": [
+    {
+      "manifest": "plugin-input-review/source-manifest.json",
+      "path": "packages/core/src/plugins/parseMarketplaceInput.ts",
+      "sha256": "25248f360523e9c358b7fd830ff1b0d92e886fc1f2ee96e353c5e707d98d195b",
+      "coverage": "full",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Same prep semantic read reused once; timing/null and selected ranges stay in copied source record."
+    },
+    {
+      "manifest": "plugin-input-review/source-manifest.json",
+      "path": "packages/core/src/plugins/installer/parseSource.ts",
+      "sha256": "889811be939c6c5584c1904495d9595a663a7cda97923de93d90e543c47fa94f",
+      "coverage": "full",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Same prep semantic read reused once; timing/null and selected ranges stay in copied source record."
+    },
+    {
+      "manifest": "plugin-input-review/source-manifest.json",
+      "path": "packages/core/src/plugins/parseMarketplaceInput.test.ts",
+      "sha256": "1d26b5528a4484d1780ef0ec7c8d1e27d68aad008721f8e6922bb926e68854c9",
+      "coverage": "full",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Same prep semantic read reused once; timing/null and selected ranges stay in copied source record."
+    },
+    {
+      "manifest": "plugin-input-review/source-manifest.json",
+      "path": "packages/core/src/plugins/installer/parseSource.test.ts",
+      "sha256": "20130f0ddf25109086741056759e07ba5ee437c668c6baeac3f64a9aa62d3557",
+      "coverage": "full",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Same prep semantic read reused once; timing/null and selected ranges stay in copied source record."
+    },
+    {
+      "manifest": "plugin-input-review/source-manifest.json",
+      "path": "packages/core/src/plugins/gitOps.ts",
+      "sha256": "cfeb1bc1dc30b900b120bb06d197f2f6c7fb8cfe396c51d11991608c6c270e7e",
+      "coverage": "selected",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Same prep semantic read reused once; timing/null and selected ranges stay in copied source record."
+    },
+    {
+      "manifest": "plugin-input-review/source-manifest.json",
+      "path": "packages/core/src/plugins/marketplaceManager.ts",
+      "sha256": "cdebee5c72c8ed253204c4299ed54d6c7f7806ca7768400b2d8a6b94a3846fd0",
+      "coverage": "selected",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Same prep semantic read reused once; timing/null and selected ranges stay in copied source record."
+    },
+    {
+      "manifest": "plugin-input-review/source-manifest.json",
+      "path": "packages/core/src/plugins/installer/installFromSource.ts",
+      "sha256": "a8fb3559239edee39dfa23a32433261e3e4fc33e680f3be605f8cfc1bd21c599",
+      "coverage": "selected",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Same prep semantic read reused once; timing/null and selected ranges stay in copied source record."
+    },
+    {
+      "manifest": "plugin-input-review/source-manifest.json",
+      "path": "packages/tui/src/cli/commands/builtin/plugin-handler.ts",
+      "sha256": "b1ec4d4b35096dddfa73b4232403e54d1b7ff433f389293ff080ff7ca2de1a40",
+      "coverage": "selected",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Same prep semantic read reused once; timing/null and selected ranges stay in copied source record."
+    },
+    {
+      "manifest": "plugin-input-review/source-manifest.json",
+      "path": "packages/tui/src/cli/commands/plugin.ts",
+      "sha256": "f7037f55e44e0a40f81df7f4db1198b8f8c6a5cc5f2d9767fbb442bee8373b71",
+      "coverage": "selected",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Same prep semantic read reused once; timing/null and selected ranges stay in copied source record."
+    },
+    {
+      "manifest": "plugin-input-review/source-manifest.json",
+      "path": "packages/desktop/src/main/marketplace-service.ts",
+      "sha256": "d5f6623dccb27087bdad2f9263bdb5c514252a20a6ba8d6a7ca45cf80e0cafe6",
+      "coverage": "selected",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Same prep semantic read reused once; timing/null and selected ranges stay in copied source record."
+    },
+    {
+      "manifest": "local-install-review/source-manifest.json",
+      "path": "packages/tui/src/cli/commands/plugin.ts",
+      "sha256": "f7037f55e44e0a40f81df7f4db1198b8f8c6a5cc5f2d9767fbb442bee8373b71",
+      "coverage": "full",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Same prep semantic read reused once; timing/null and selected ranges stay in copied source record."
+    },
+    {
+      "manifest": "local-install-review/source-manifest.json",
+      "path": "packages/core/src/plugins/installer/install.ts",
+      "sha256": "1773b85309de88bc25da1f696fa7937c3af7a0e10af732fcc6fb59ca1fbf04aa",
+      "coverage": "selected",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Same prep semantic read reused once; timing/null and selected ranges stay in copied source record."
+    },
+    {
+      "manifest": "local-install-review/source-manifest.json",
+      "path": "packages/core/src/index.internal.ts",
+      "sha256": "ac63a7fbe2f7400c45cf4f400f2ba196b599cfd535b27859bad22c275cd2c0ab",
+      "coverage": "selected",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Same prep semantic read reused once; timing/null and selected ranges stay in copied source record."
+    },
+    {
+      "manifest": "local-install-review/source-manifest.json",
+      "path": "packages/tui/src/cli/main.ts",
+      "sha256": "7a0a63bc7acbf23162480c2883bd5af26743459eff3c073fea787c7ce1e021ca",
+      "coverage": "selected",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Same prep semantic read reused once; timing/null and selected ranges stay in copied source record."
+    },
+    {
+      "manifest": "local-install-review/source-manifest.json",
+      "path": "packages/core/src/plugins/installer/install.test.ts",
+      "sha256": "d464e5d40d00a25be860179aee278ed48a9132c37323840f857ef944fae9974b",
+      "coverage": "selected",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Same prep semantic read reused once; timing/null and selected ranges stay in copied source record."
+    },
+    {
+      "manifest": "devtools-review/source-manifest.json",
+      "path": "packages/browser-devtools/src/inspector.ts",
+      "sha256": "bab4ae5c83c666db5529acc5eae364c4301bfa21d0a093a96c08da5cc176c6e2",
+      "coverage": "full",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Same prep semantic read reused once; timing/null and selected ranges stay in copied source record."
+    },
+    {
+      "manifest": "devtools-review/source-manifest.json",
+      "path": "packages/browser-devtools/src/contracts.ts",
+      "sha256": "fd9493faf494f65e6c3a3fefe446bba458d89571127e7a97567db8169a1650c2",
+      "coverage": "full",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Same prep semantic read reused once; timing/null and selected ranges stay in copied source record."
+    },
+    {
+      "manifest": "devtools-review/source-manifest.json",
+      "path": "packages/browser-devtools/src/index.ts",
+      "sha256": "0adccda06e4bd274a2f2af1bdf70db0446722d403c35620eef4ad14739892c55",
+      "coverage": "full",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Same prep semantic read reused once; timing/null and selected ranges stay in copied source record."
+    },
+    {
+      "manifest": "devtools-review/source-manifest.json",
+      "path": "packages/browser-devtools/src/inspector.test.ts",
+      "sha256": "b1fe416622c47a9e82325f8ca5a2505cd87f49b2dc167e834ac27804999bde92",
+      "coverage": "full",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Same prep semantic read reused once; timing/null and selected ranges stay in copied source record."
+    },
+    {
+      "manifest": "devtools-review/source-manifest.json",
+      "path": "packages/core/src/tool-system/builtin/browser-inspect.ts",
+      "sha256": "d7bf222610e1cb70dab7765a7e5571f0074adc61f43775ba679555242ed92dcd",
+      "coverage": "full",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Same prep semantic read reused once; timing/null and selected ranges stay in copied source record."
+    },
+    {
+      "manifest": "devtools-review/source-manifest.json",
+      "path": "packages/core/src/tool-system/browser-bridge.ts",
+      "sha256": "f1c0b6595a9be51175704468a5fa0d44675c45c74b887dc634d0cffb47db30a5",
+      "coverage": "selected",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Same prep semantic read reused once; timing/null and selected ranges stay in copied source record."
+    },
+    {
+      "manifest": "devtools-review/source-manifest.json",
+      "path": "packages/desktop/src/browser-library/browser-inspector.ts",
+      "sha256": "47898599f9b3fa63a5c4752205b477f1132ca4315a33b4b697198edec6dd67ac",
+      "coverage": "full",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Same prep semantic read reused once; timing/null and selected ranges stay in copied source record."
+    },
+    {
+      "manifest": "devtools-review/source-manifest.json",
+      "path": "packages/desktop/src/browser-library/puppeteer-browser-driver.ts",
+      "sha256": "d275aaba9b2eb29a306bfb91d1ccd32499a288bf79c0f0fc08b8d90723bc080f",
+      "coverage": "selected",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Same prep semantic read reused once; timing/null and selected ranges stay in copied source record."
+    },
+    {
+      "manifest": "devtools-review/source-manifest.json",
+      "path": "packages/desktop/src/main/browser-runtime/playwright-driver.ts",
+      "sha256": "3564d98b613003a71460477d9004c02c4dfd5bc28ba228e1d632fbdf2020f7cb",
+      "coverage": "selected",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Same prep semantic read reused once; timing/null and selected ranges stay in copied source record."
+    },
+    {
+      "manifest": "devtools-review/source-manifest.json",
+      "path": "packages/desktop/src/main/browser-driver/automation-host.ts",
+      "sha256": "a390ba9d3418829895c39416a8f373bf37832cf7c7517dc119ddd2d08f8e4513",
+      "coverage": "selected",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Same prep semantic read reused once; timing/null and selected ranges stay in copied source record."
+    },
+    {
+      "manifest": "devtools-review/source-manifest.json",
+      "path": "packages/desktop/src/main/browser-driver/background-runtime.ts",
+      "sha256": "5daee16c15730cee384214e27f72daa5d0143c9072f4785954131e15c025646c",
+      "coverage": "selected",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Same prep semantic read reused once; timing/null and selected ranges stay in copied source record."
+    },
+    {
+      "manifest": "devtools-review/source-manifest.json",
+      "path": "packages/browser-devtools/README.md",
+      "sha256": "76a62792a7713734235a9f51e4f934023b6c42c354c06d9ecb3cb5e3f1e31096",
+      "coverage": "full",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Same prep semantic read reused once; timing/null and selected ranges stay in copied source record."
+    },
+    {
+      "manifest": "devtools-review/source-manifest.json",
+      "path": "docs/audit-2026-10-17-round10/diagnostics.md",
+      "sha256": "72dc1ee9b8b51d407051b34ec4cbd6c654f278fec4136b3c9b1e8845d6628cb3",
+      "coverage": "full",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Same prep semantic read reused once; timing/null and selected ranges stay in copied source record."
+    },
+    {
+      "manifest": "installer-input-frontier/source-manifest.json",
+      "path": "packages/core/src/plugins/installer/parseSource.ts",
+      "sha256": "889811be939c6c5584c1904495d9595a663a7cda97923de93d90e543c47fa94f",
+      "coverage": "full",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Same prep semantic read reused once; timing/null and selected ranges stay in copied source record."
+    },
+    {
+      "manifest": "installer-input-frontier/source-manifest.json",
+      "path": "packages/core/src/plugins/installer/parseSource.test.ts",
+      "sha256": "20130f0ddf25109086741056759e07ba5ee437c668c6baeac3f64a9aa62d3557",
+      "coverage": "full",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Same prep semantic read reused once; timing/null and selected ranges stay in copied source record."
+    },
+    {
+      "manifest": "installer-input-frontier/source-manifest.json",
+      "path": "packages/core/src/plugins/installer/types.ts",
+      "sha256": "88165a54fded210ee1f19e326043ef2be8d8b464af5b63689f798e92bf920c05",
+      "coverage": "full",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Same prep semantic read reused once; timing/null and selected ranges stay in copied source record."
+    },
+    {
+      "manifest": "installer-input-frontier/source-manifest.json",
+      "path": "packages/core/src/plugins/installer/installFromNpm.ts",
+      "sha256": "93ff865c77221c5b0f9381cfed02ff298dfd3b844fa17a11a3f35a4df8f4411f",
+      "coverage": "selected",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Same prep semantic read reused once; timing/null and selected ranges stay in copied source record."
+    },
+    {
+      "manifest": "installer-input-frontier/source-manifest.json",
+      "path": "packages/core/src/plugins/installer/installFromNpm.test.ts",
+      "sha256": "029315f07077cdd3767be75e265f0b0330d28c99dfd5df6b3375584a18a6690f",
+      "coverage": "selected",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Same prep semantic read reused once; timing/null and selected ranges stay in copied source record."
+    },
+    {
+      "manifest": "installer-input-frontier/source-manifest.json",
+      "path": "packages/core/src/plugins/installer/installFromSource.ts",
+      "sha256": "a8fb3559239edee39dfa23a32433261e3e4fc33e680f3be605f8cfc1bd21c599",
+      "coverage": "full",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Same prep semantic read reused once; timing/null and selected ranges stay in copied source record."
+    },
+    {
+      "manifest": "installer-input-frontier/source-manifest.json",
+      "path": "packages/core/src/plugins/installer/install.ts",
+      "sha256": "1773b85309de88bc25da1f696fa7937c3af7a0e10af732fcc6fb59ca1fbf04aa",
+      "coverage": "full",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Same prep semantic read reused once; timing/null and selected ranges stay in copied source record."
+    },
+    {
+      "manifest": "installer-input-frontier/source-manifest.json",
+      "path": "packages/core/src/plugins/installer/checkUpdate.ts",
+      "sha256": "8cc055b0081e5d8482e917c944d2d6dac85018163a741f3a9729e55a492daf08",
+      "coverage": "full",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Same prep semantic read reused once; timing/null and selected ranges stay in copied source record."
+    },
+    {
+      "manifest": "installer-input-frontier/source-manifest.json",
+      "path": "packages/core/src/plugins/installer/update.ts",
+      "sha256": "7e16ab5d01f21bac774503cf6df4cf6e992e757374d1864a6c264deb671fd1b3",
+      "coverage": "full",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Same prep semantic read reused once; timing/null and selected ranges stay in copied source record."
+    },
+    {
+      "manifest": "installer-input-frontier/source-manifest.json",
+      "path": "packages/tui/src/cli/commands/plugin.ts",
+      "sha256": "f7037f55e44e0a40f81df7f4db1198b8f8c6a5cc5f2d9767fbb442bee8373b71",
+      "coverage": "full",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Same prep semantic read reused once; timing/null and selected ranges stay in copied source record."
+    },
+    {
+      "manifest": "installer-input-frontier/source-manifest.json",
+      "path": "packages/desktop/src/main/plugins-service.ts",
+      "sha256": "acffed1af5934499848c5a46f025b5aa6d702d50e24e9f9a161edc8c7f2a72ec",
+      "coverage": "selected",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Same prep semantic read reused once; timing/null and selected ranges stay in copied source record."
+    },
+    {
+      "manifest": "installer-input-frontier/source-manifest.json",
+      "path": "packages/tui/src/cli/main.ts",
+      "sha256": "7a0a63bc7acbf23162480c2883bd5af26743459eff3c073fea787c7ce1e021ca",
+      "coverage": "selected",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Same prep semantic read reused once; timing/null and selected ranges stay in copied source record."
+    },
+    {
+      "manifest": "installer-input-frontier/source-manifest.json",
+      "path": "packages/core/src/index.internal.ts",
+      "sha256": "ac63a7fbe2f7400c45cf4f400f2ba196b599cfd535b27859bad22c275cd2c0ab",
+      "coverage": "selected",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Same prep semantic read reused once; timing/null and selected ranges stay in copied source record."
+    },
+    {
+      "manifest": "plugin-input-frontier/source-manifest.json",
+      "path": "packages/core/src/plugins/parseMarketplaceInput.ts",
+      "sha256": "25248f360523e9c358b7fd830ff1b0d92e886fc1f2ee96e353c5e707d98d195b",
+      "coverage": "full",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Same prep semantic read reused once; timing/null and selected ranges stay in copied source record."
+    },
+    {
+      "manifest": "plugin-input-frontier/source-manifest.json",
+      "path": "packages/core/src/plugins/installer/parseSource.ts",
+      "sha256": "889811be939c6c5584c1904495d9595a663a7cda97923de93d90e543c47fa94f",
+      "coverage": "full",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Same prep semantic read reused once; timing/null and selected ranges stay in copied source record."
+    },
+    {
+      "manifest": "devtools-frontier/source-manifest.json",
+      "path": "packages/browser-devtools/src/inspector.ts",
+      "sha256": "bab4ae5c83c666db5529acc5eae364c4301bfa21d0a093a96c08da5cc176c6e2",
+      "coverage": "full",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Same prep semantic read reused once; timing/null and selected ranges stay in copied source record."
+    },
+    {
+      "manifest": "devtools-frontier/source-manifest.json",
+      "path": "packages/browser-devtools/src/contracts.ts",
+      "sha256": "fd9493faf494f65e6c3a3fefe446bba458d89571127e7a97567db8169a1650c2",
+      "coverage": "full",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Same prep semantic read reused once; timing/null and selected ranges stay in copied source record."
+    }
+  ],
+  "hashOnlyChecks": [
+    {
+      "manifest": "local-install-review/source-manifest.json",
+      "path": "packages/core/src/plugins/pluginInstaller.ts",
+      "sha256": "263ce32aaee6b062513389f93cf29c5f3b5779a160da3979f036fb38b176a30a",
+      "coverage": "hash-only",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Same prep semantic read reused once; timing/null and selected ranges stay in copied source record."
+    },
+    {
+      "manifest": "devtools-review/source-manifest.json",
+      "path": "CODESHELL.md",
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "coverage": "hash-only; no source semantic reading in this review",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Same prep semantic read reused once; timing/null and selected ranges stay in copied source record."
+    },
+    {
+      "manifest": "devtools-review/source-manifest.json",
+      "path": "AGENTS.md",
+      "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "coverage": "hash-only; no source semantic reading in this review",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Same prep semantic read reused once; timing/null and selected ranges stay in copied source record."
+    },
+    {
+      "manifest": "devtools-review/source-manifest.json",
+      "path": "docs/audit-2026-10-17-round10/evidence/diagnostics-source-manifest.json",
+      "sha256": "9f24b8e0b371722b0a3027f5ae84eb08d7844f519ca12c85964acc8d1a130eea",
+      "coverage": "hash-only; no source semantic reading in this review",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Same prep semantic read reused once; timing/null and selected ranges stay in copied source record."
+    },
+    {
+      "manifest": "installer-input-frontier/source-manifest.json",
+      "path": "packages/core/src/plugins/installer/checkUpdate.test.ts",
+      "sha256": "7f65f55c9b6d34d002cd849510b4035dd323538ff5ab37864eb128b7e208fecc",
+      "coverage": "hash-inventory-only",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Same prep semantic read reused once; timing/null and selected ranges stay in copied source record."
+    },
+    {
+      "manifest": "installer-input-frontier/source-manifest.json",
+      "path": "packages/core/src/plugins/installer/update.test.ts",
+      "sha256": "1f863127de9a799a36cb4460d2f979723acf51ef58dbf1aa4c76ca411ea81278",
+      "coverage": "hash-inventory-only",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Same prep semantic read reused once; timing/null and selected ranges stay in copied source record."
+    },
+    {
+      "manifest": "installer-input-frontier/source-manifest.json",
+      "path": "packages/core/src/plugins/installer/npmTar.ts",
+      "sha256": "e5301cf85be743e88c0b99963dd1c2bc23b686c0912523944f87a5ddafee0f50",
+      "coverage": "hash-inventory-only",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Same prep semantic read reused once; timing/null and selected ranges stay in copied source record."
+    },
+    {
+      "manifest": "devtools-frontier/source-manifest.json",
+      "path": "packages/browser-devtools/src/inspector.test.ts",
+      "sha256": "b1fe416622c47a9e82325f8ca5a2505cd87f49b2dc167e834ac27804999bde92",
+      "coverage": "hash-only",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Same prep semantic read reused once; timing/null and selected ranges stay in copied source record."
+    },
+    {
+      "manifest": "devtools-frontier/source-manifest.json",
+      "path": "packages/browser-devtools/src/index.ts",
+      "sha256": "0adccda06e4bd274a2f2af1bdf70db0446722d403c35620eef4ad14739892c55",
+      "coverage": "hash-only",
+      "rootBoundFrozenGitBlob": true,
+      "note": "Same prep semantic read reused once; timing/null and selected ranges stay in copied source record."
+    }
+  ],
+  "changedFromFrozenPaths": [],
+  "note": "Original prep parent4be is preserved; formal baseline646f binds same source bytes. Same-version review does not establish historical novelty or complete packages."
+}

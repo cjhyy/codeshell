@@ -1,0 +1,411 @@
+{
+  "priorFiles": 2988,
+  "currentFiles": 3063,
+  "addedFilesChecked": 75,
+  "inventory": [
+    {
+      "path": "docs/audit-2026-10-17-round32/README.md",
+      "bytes": 1324,
+      "sha256": "7d6cda37e0f9f82ab96fa7e9be52e128fe1bc63d38c5f91e698f17c519eec25a"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round32/candidates.json",
+      "bytes": 206,
+      "sha256": "a8bbfde4c91c58d3870b1df3643cfe4e59157aca34a61a8501818fd1e1c45c9f"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round32/coverage.json",
+      "bytes": 465,
+      "sha256": "e29447ff0ba3e85edc67dc63aa9fee9df4ca35c2efa4bd059f120be26fc28d34"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round32/evidence/freeze-checks.json",
+      "bytes": 1947,
+      "sha256": "30f9d36738160866f9f26b2c49dfccfb1a924ee8d5338a2f42b18791f03b22cf"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round32/evidence/incoming-main-delta.json",
+      "bytes": 6141,
+      "sha256": "4f23328c2711a937218bde29a6a8583c2495d6e52d028cbf18684113a2807795"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round32/evidence/integration-before.json",
+      "bytes": 1375,
+      "sha256": "88d03d6ba38291863dc13f3aec87625b4cabc3e91943930dcdd86f72fa9d0d78"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round32/evidence/integration-plan.json",
+      "bytes": 4040,
+      "sha256": "5c3abe96653a0e2ace78ef0df4df5b9d2ea8dbe8aa386d1807557e0b11ec82ed"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round32/evidence/integration-premerge.json",
+      "bytes": 1375,
+      "sha256": "a808cce058e5dc2874c1596860ab24c65d83340f950698d41176956e51789141"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round32/evidence/review-aggregate.md",
+      "bytes": 2141,
+      "sha256": "26ab362bd64b56a9764da4660c712c7c5dec27f166ae560333bafbe2f3c9b334"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round32/evidence/review-selection-copy-receipt.json",
+      "bytes": 5021,
+      "sha256": "6de7b1caf6787fbe50dc9178163509538f98d05b157b135fc7eefc459aeb51e0"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round32/evidence/review-selection-source-manifest.json",
+      "bytes": 68076,
+      "sha256": "95941a427d831da92106051aced689d442aa8eee9fbb63b113a4ffb003a19d2f"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round32/evidence/review-selection.md",
+      "bytes": 3845,
+      "sha256": "ed7eb05d54526ae867dadeb31ae30aac4e59ad1fc7f7f49d8ad1a8385daa593a"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round32/evidence/review-taskparse-artifact-receipt.json",
+      "bytes": 1405,
+      "sha256": "f0d784a166a64c3e88ea12a1b7772baa2531296c7dcb54a57ecc11e69189a6d3"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round32/evidence/review-taskparse-checks.json",
+      "bytes": 5048,
+      "sha256": "bbbdaf8dde6336a3b5f093011f4572377422772459da0625f1308cae91e28c2c"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round32/evidence/review-taskparse-initial-pins.json",
+      "bytes": 1110,
+      "sha256": "edc0c4f6b02e8aec06dad5d9b9bd7ea8ef164e9793107c8f73aa74ef7901bb56"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round32/evidence/review-taskparse-prior-pins.json",
+      "bytes": 772,
+      "sha256": "f877213ebf60f7ad3d5cf471cb4713e813fb3b5cf7a78e00538f167f625f9319"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round32/evidence/review-taskparse-source-manifest.json",
+      "bytes": 4974,
+      "sha256": "18eb33bf4cef6adaa832a56b935378a3d79507aa80e3b27bc68cda9db9bcebbf"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round32/evidence/review-taskparse-validation.json",
+      "bytes": 323,
+      "sha256": "22144f05694a2b3fe94f97b0a37680993fab1061ae5b1d11dbcd6a00660f0c42"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round32/evidence/review-taskparse.md",
+      "bytes": 2420,
+      "sha256": "b7a3d8791320f2d4db315718012dc84ff5fbcc90eafae050096253f8f27b05fa"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round32/evidence/root-receipt-checks.json",
+      "bytes": 14780,
+      "sha256": "d222069ad4de465db7e9a23eb3e647fff20f0c732140ed51742cb7e3433791ae"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round32/evidence/selection-artifact-receipt.json",
+      "bytes": 2235,
+      "sha256": "406e2745e012841d140089fec456d55ce064df8bbd4071dc5e56c4684f28e5e3"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round32/evidence/selection-candidates.json",
+      "bytes": 3,
+      "sha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round32/evidence/selection-findings.json",
+      "bytes": 3,
+      "sha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round32/evidence/selection-history-decisions.json",
+      "bytes": 2650,
+      "sha256": "f0c47228bb9988385fd0d27077d8eb09e89bcaef6ff51dcea7719c939058313d"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round32/evidence/selection-history-delta.json",
+      "bytes": 16572,
+      "sha256": "88ad2f56ee69a8b15d846aacf059a7bb100eb86877cc0f170c719e946de8cee8"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round32/evidence/selection-prep/artifact-receipt.json",
+      "bytes": 2651,
+      "sha256": "a1d29fc27477836a45d7830a561fd5423ce53dbb8b4243376c437586c33aab9e"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round32/evidence/selection-prep/decisions.json",
+      "bytes": 1975,
+      "sha256": "9f4046804c7349ceba9b344a75584ff7ca757afb8e089003b6d5de5a83fdbafd"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round32/evidence/selection-prep/history.json",
+      "bytes": 629551,
+      "sha256": "a280e31d054f0d84c2618f8011bc4e8cc8b3134a82080b2d0743471ef93ceb15"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round32/evidence/selection-prep/metadata-notes.json",
+      "bytes": 1194,
+      "sha256": "6240cc29e4568b4223a9f6fdbdfd500cd39ac2213b2a606661684a10a5f49b79"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round32/evidence/selection-prep/prior-source-comparison.json",
+      "bytes": 1377,
+      "sha256": "f533483096e0e77418d86da1348fbb8bb048b851fa6381d77b9d8e3970e42c27"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round32/evidence/selection-prep/report.md",
+      "bytes": 4169,
+      "sha256": "717095015c0470a69e31b633fd4a921c292fb6b37bcef13da2c75ee532639b1d"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round32/evidence/selection-prep/source-manifest.json",
+      "bytes": 9981,
+      "sha256": "72f679ca9159239d0c8d548fd794d02df0123af3cc372fe6645d27b44a1aa4fe"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round32/evidence/selection-prep/validation.json",
+      "bytes": 720,
+      "sha256": "e8a8c2a6e4e3925e396dd3714c07a37cabf9b6a3169cf71ead100ba422303f47"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round32/evidence/selection-prep-copy-receipt.json",
+      "bytes": 3792,
+      "sha256": "ca8dff4c6c16e9278c841907bad88f2a081c069acfb65cace8057806c2f13b07"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round32/evidence/selection-related.json",
+      "bytes": 3,
+      "sha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round32/evidence/selection-review-prep/consumer-initial-pins.json",
+      "bytes": 2463,
+      "sha256": "d9f50f0326a9553e150e67532b51f350f36dc58a63821eca83497780c34a9abe"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round32/evidence/selection-review-prep/history-initial-pins.json",
+      "bytes": 1335,
+      "sha256": "74d66d4656d49c9e6b13c0a3e08908eb46e3cb3ce7086ac56da7c1296886810a"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round32/evidence/selection-review-prep/history.json",
+      "bytes": 628116,
+      "sha256": "f77f57fcab88e23dcf7c2ef4a056d523bb23d2f26fbce3eec4fe18f3521b3f91"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round32/evidence/selection-review-prep/initial-pins.json",
+      "bytes": 1960,
+      "sha256": "0ea3048d01c1cd1126202b6ff7d0bf26dea9552dd68925354ac270b4d2ddd340"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round32/evidence/selection-review-prep/prep-finalizer.first.exit.json",
+      "bytes": 887,
+      "sha256": "b8ccafbfd84098de68046a05f771b0aff460f91dea5352628ecb7651afbe9263"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round32/evidence/selection-review-prep/raw-api-initial-pin.json",
+      "bytes": 306,
+      "sha256": "c65ff9860115c560fc359e4aa777b6f91eff5c076c26ded7fec5bc1ca3e47454"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round32/evidence/selection-review-prep/raw-ipc-initial-pin.json",
+      "bytes": 302,
+      "sha256": "44339cc627bef72ee71b5593e5bd10735ed34558cc014196e3d45ee266f66383"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round32/evidence/selection-review-prep/raw-reader-initial-pin.json",
+      "bytes": 316,
+      "sha256": "117b5737affb9dda9425d2e19421f961c590920e9d96ce4cfac74b9ff8c2ae60"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round32/evidence/selection-review-prep/review.md",
+      "bytes": 4894,
+      "sha256": "4cc019dbedc7949c72d2a8dff021322ed1cfd4a255ef8343fe8818db72a67b11"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round32/evidence/selection-review-prep/reviewer-receipt.json",
+      "bytes": 2543,
+      "sha256": "927d6318d3ad59d92c4b0eb1d921c5e418bdfb2f26ce37506cefde2f2d859473"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round32/evidence/selection-review-prep/source-manifest.json",
+      "bytes": 23427,
+      "sha256": "f893d9a0d9c2bc0f0bbc8321659ba5b015dcad7f03d09497563696092e5e1082"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round32/evidence/selection-review-prep/transcript-initial-pin.json",
+      "bytes": 303,
+      "sha256": "49f16f787a3bb803916724c5594a827d018a453b7e9e827449235b51d2109007"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round32/evidence/selection-source-manifest.json",
+      "bytes": 13953,
+      "sha256": "bcfb42d07b8d20a71a49084e896ed6a596a82f4812b73a895e2e7acea087c988"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round32/evidence/selection-validation.json",
+      "bytes": 897,
+      "sha256": "4bdf9887007275a9f5a5a3eabc3603e2ec8114159f287c54493e8f3baf0dbd91"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round32/evidence/taskparse-author-receipt.json",
+      "bytes": 2837,
+      "sha256": "ff77b4170e5d94e6031335699bc25975789c6962eb0775fb61564f11ebbdd7e0"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round32/evidence/taskparse-copy-receipt.json",
+      "bytes": 4910,
+      "sha256": "598e0c421f95a23b3e052c5fcf07c488c8ab094d69db430937603e40ef880bb2"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round32/evidence/taskparse-decisions.json",
+      "bytes": 3172,
+      "sha256": "77800dcf8fe91d9f5ea5fce737b124607ed15e00bcbbdf2f3146128176dce01f"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round32/evidence/taskparse-hash-checks.json",
+      "bytes": 7200,
+      "sha256": "61e1820b705d29ccf5523236c195e4b29b46f6f8f2ca6b538606ce2b1c2ffe28"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round32/evidence/taskparse-history.json",
+      "bytes": 817287,
+      "sha256": "5eea48937df9632c3ee627ec52c8cf637ead09a9884e1316312d7ab511cb8687"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round32/evidence/taskparse-prep/author-receipt.json",
+      "bytes": 2840,
+      "sha256": "e389abbb57ace0fcb2eea93660c7e65f2d363e32a34797c6f2a5d809080d2fba"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round32/evidence/taskparse-prep/consumer-initial-pins.json",
+      "bytes": 2190,
+      "sha256": "17a048a1c95d3c24a51c3cb12c2ee87429a36842f07322baa9f3d504558402bc"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round32/evidence/taskparse-prep/decisions.json",
+      "bytes": 2625,
+      "sha256": "c9462610113631cdb870cf8612b1278f9a7ba30f604df178e5fcfe60d781ede9"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round32/evidence/taskparse-prep/finish-hash-checks.json",
+      "bytes": 1901,
+      "sha256": "e31dd5246a63070b0c77e5e272eb81583077073f51d29c704df48f16bd52022b"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round32/evidence/taskparse-prep/history.json",
+      "bytes": 803921,
+      "sha256": "15a542501ad75d76f98a95da6f4eb9efa3e2aa647cb9d33e588221c656915e91"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round32/evidence/taskparse-prep/initial-pins.json",
+      "bytes": 722,
+      "sha256": "8d7b535ec7f41fa75436f4457be50a256bbb5c81f39ca3e48242c7ed6df5ddae"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round32/evidence/taskparse-prep/proposal.md",
+      "bytes": 3689,
+      "sha256": "d79622e2b6793a49641031a683e74002705f437e0fe5061aa190b53c33771aea"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round32/evidence/taskparse-prep/reviewed-contexts.json",
+      "bytes": 5315,
+      "sha256": "433e9efdf63d72c69242574a3de512050fbd528df3efcf36cb7da349f5c46bef"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round32/evidence/taskparse-prep/source-manifest.json",
+      "bytes": 5840,
+      "sha256": "e4530cc1718ac2a2168acfc43e0318876507567225f66df5ab7072c2e550334d"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round32/evidence/taskparse-prep/validation.json",
+      "bytes": 1018,
+      "sha256": "1563f5c3064fa1b135824e95ba6f7ab46ab21c55c5a4cbc0e53550e4fde401f9"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round32/evidence/taskparse-reviewed-contexts.json",
+      "bytes": 6939,
+      "sha256": "afd8ec8199a1b880fd7fa9c0d2eff75844791639b454ba09914c00275c393095"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round32/evidence/taskparse-source-manifest.json",
+      "bytes": 9560,
+      "sha256": "d55b22ce661ddbf88ad6110c58d7baa77483ae27c484711e4f1090aa304b1e7d"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round32/evidence/taskparse-validation.json",
+      "bytes": 1164,
+      "sha256": "9d3e29b60a0543d716911fa91242ecc1629d5f0a08904d6f54ace95794b9fc72"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round32/evidence/worktrees-before.json",
+      "bytes": 5722,
+      "sha256": "f7b8a149ae76a0ac8279e482afa6fd2c4ae2a02bb442c5ab5452ba75b637f6b2"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round32/evidence-index.json",
+      "bytes": 14013,
+      "sha256": "424c5e8e3c8c703912f17f0a3d66565bf0d0390fcaf63fc7d129dff15737a353"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round32/findings.json",
+      "bytes": 204,
+      "sha256": "a99a6b88a7832ff9f32bfc05743ae876ccce07ebcfeaa84382cf53204509b348"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round32/related.json",
+      "bytes": 203,
+      "sha256": "c23f60284e7e3464ac7acc0c745da93c888ab8702ced436a7e32637ee7f253a7"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round32/selection-report.md",
+      "bytes": 4239,
+      "sha256": "44dd3727cbb5a5a28bccdd3d7d8b5a47aa5491522e15c86accd0ba803cd1f5e8"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round32/source-manifest.json",
+      "bytes": 32450,
+      "sha256": "11379b50542a97b2240186e711569ea7dba2b09f9372c717e3fdcf065ec21157"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round32/taskparse-report.md",
+      "bytes": 4305,
+      "sha256": "b93c60e4b038c843e79f91c397c154eecdfcc3b223b065fbece56aa453c371dc"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round32/validation.json",
+      "bytes": 531,
+      "sha256": "9f54b315befa1100ad8383058ce05b8b5fc123eaa22263e84babcbdcd65018b0"
+    }
+  ],
+  "hits": {
+    "local-await": [],
+    "plugin-input": [],
+    "devtools": [
+      {
+        "path": "docs/audit-2026-10-17-round32/evidence/taskparse-history.json",
+        "at": "$[\"hits\"][\"image-text-order\"][20][\"context\"]",
+        "context": "ateway/bound-session 接线；真实本地 Adapter/Gateway + fake SDK | 真实连接/平台发送、Discord 依赖失败方向、完整第三方 SDK 验收 |\n| Browser-devtools | 本轮只读 inspector.ts 的普通 DOM/performance/record 数据流程 | 未动态验证，无新增确认项；不把读过一个文件当完整包审阅 |\n| Server、Host、Link、CDP | 本轮未作新的完整模块审阅；旧 10-16 报告保持冻结 | 需未来独立验证，不能从旧报告推断当前无缺陷 |\n| Arena、optimization-lab | 本轮未覆盖私有/实验实现 | 全部新验证待后续，默认不触发功能 |\n| 独立 Pan"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round32/evidence/taskparse-prep/history.json",
+        "at": "$[\"hits\"][\"image-text-order\"][20][\"context\"]",
+        "context": "ateway/bound-session 接线；真实本地 Adapter/Gateway + fake SDK | 真实连接/平台发送、Discord 依赖失败方向、完整第三方 SDK 验收 |\n| Browser-devtools | 本轮只读 inspector.ts 的普通 DOM/performance/record 数据流程 | 未动态验证，无新增确认项；不把读过一个文件当完整包审阅 |\n| Server、Host、Link、CDP | 本轮未作新的完整模块审阅；旧 10-16 报告保持冻结 | 需未来独立验证，不能从旧报告推断当前无缺陷 |\n| Arena、optimization-lab | 本轮未覆盖私有/实验实现 | 全部新验证待后续，默认不触发功能 |\n| 独立 Pan"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round32/evidence/taskparse-reviewed-contexts.json",
+        "at": "$[\"additionalFrozen31Matches\"][0][\"context\"]",
+        "context": "ateway/bound-session 接线；真实本地 Adapter/Gateway + fake SDK | 真实连接/平台发送、Discord 依赖失败方向、完整第三方 SDK 验收 |\n| Browser-devtools | 本轮只读 inspector.ts 的普通 DOM/performance/record 数据流程 | 未动态验证，无新增确认项；不把读过一个文件当完整包"
+      }
+    ]
+  },
+  "occurrenceCounts": {
+    "local-await": 0,
+    "plugin-input": 0,
+    "devtools": 3
+  },
+  "contextCap": null,
+  "productRuns": 0,
+  "note": "All75 newly frozen32 inventory rows rescanned, not just first80 saved full-history contexts. Independent prep retained. Changed release document dated in parent snapshot and not counted as a new Round32 document."
+}

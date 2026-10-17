@@ -1,0 +1,74 @@
+{
+  "parentReportedContext": "4be4016b8661c6a10c60f4eb0f218552b4b7c5d0",
+  "formalRound33Baseline": null,
+  "prepOnly": true,
+  "sourceRoot": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell",
+  "files": [
+    {
+      "path": "packages/tui/src/cli/commands/plugin.ts",
+      "bytes": 3576,
+      "lines": 107,
+      "sha256": "f7037f55e44e0a40f81df7f4db1198b8f8c6a5cc5f2d9767fbb442bee8373b71",
+      "captureUtc": "2026-10-17T12:17:39.203169+00:00",
+      "beforeNewDirectionRead": true,
+      "firstSemanticReadSha256": "f7037f55e44e0a40f81df7f4db1198b8f8c6a5cc5f2d9767fbb442bee8373b71",
+      "priorSemanticRead": true,
+      "firstEarlierPin": {
+        "path": "packages/tui/src/cli/commands/plugin.ts",
+        "bytes": 3576,
+        "lines": 107,
+        "sha256": "f7037f55e44e0a40f81df7f4db1198b8f8c6a5cc5f2d9767fbb442bee8373b71",
+        "firstSemanticReadSha256": "f7037f55e44e0a40f81df7f4db1198b8f8c6a5cc5f2d9767fbb442bee8373b71",
+        "pinBeforeIndependentRead": true,
+        "capturedUtc": "2026-10-17T12:11:29.042393+00:00"
+      },
+      "earlierPinProvenance": "/tmp/codeshell-audit-round33-plugin-input-review/consumer-initial-pins.json",
+      "priorReadRanges": [
+        [
+          1,
+          55
+        ]
+      ]
+    },
+    {
+      "path": "packages/core/src/plugins/installer/install.ts",
+      "bytes": 3010,
+      "lines": 74,
+      "sha256": "1773b85309de88bc25da1f696fa7937c3af7a0e10af732fcc6fb59ca1fbf04aa",
+      "captureUtc": "2026-10-17T12:17:39.204898+00:00",
+      "beforeNewDirectionRead": true,
+      "firstSemanticReadSha256": "1773b85309de88bc25da1f696fa7937c3af7a0e10af732fcc6fb59ca1fbf04aa",
+      "priorSemanticRead": false
+    },
+    {
+      "path": "packages/core/src/index.internal.ts",
+      "bytes": 17401,
+      "lines": 536,
+      "sha256": "ac63a7fbe2f7400c45cf4f400f2ba196b599cfd535b27859bad22c275cd2c0ab",
+      "captureUtc": "2026-10-17T12:17:39.205421+00:00",
+      "beforeNewDirectionRead": true,
+      "firstSemanticReadSha256": "ac63a7fbe2f7400c45cf4f400f2ba196b599cfd535b27859bad22c275cd2c0ab",
+      "priorSemanticRead": false
+    },
+    {
+      "path": "packages/tui/src/cli/main.ts",
+      "bytes": 11626,
+      "lines": 265,
+      "sha256": "7a0a63bc7acbf23162480c2883bd5af26743459eff3c073fea787c7ce1e021ca",
+      "captureUtc": "2026-10-17T12:17:39.205952+00:00",
+      "beforeNewDirectionRead": true,
+      "firstSemanticReadSha256": "7a0a63bc7acbf23162480c2883bd5af26743459eff3c073fea787c7ce1e021ca",
+      "priorSemanticRead": false
+    },
+    {
+      "path": "packages/core/src/plugins/installer/install.test.ts",
+      "bytes": 28466,
+      "lines": 670,
+      "sha256": "d464e5d40d00a25be860179aee278ed48a9132c37323840f857ef944fae9974b",
+      "captureUtc": "2026-10-17T12:17:39.206836+00:00",
+      "beforeNewDirectionRead": true,
+      "firstSemanticReadSha256": "d464e5d40d00a25be860179aee278ed48a9132c37323840f857ef944fae9974b",
+      "priorSemanticRead": false
+    }
+  ]
+}

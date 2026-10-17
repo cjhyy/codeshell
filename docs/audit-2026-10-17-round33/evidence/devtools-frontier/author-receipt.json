@@ -1,0 +1,31 @@
+{
+  "selfExcluded": true,
+  "artifacts": [
+    {
+      "path": "decisions.json",
+      "bytes": 175,
+      "sha256": "b5276ce472b855449d138d937b9eaddafff53985e53d7bade8088b532daa76a7"
+    },
+    {
+      "path": "initial-pins.json",
+      "bytes": 1245,
+      "sha256": "a15d388ecedd6999bfb89703cfb9c65b15706b2083b5ed2ec2217380a38b7e5a"
+    },
+    {
+      "path": "review.md",
+      "bytes": 1173,
+      "sha256": "7e70005b756612241c76af8ec19367512e8254bb3528ac8a01e6d9049ef07016"
+    },
+    {
+      "path": "source-manifest.json",
+      "bytes": 3103,
+      "sha256": "865c99992a47b2b8731c8322d9abffccdce4e2492ca551088caff573105b72f4"
+    },
+    {
+      "path": "validation.json",
+      "bytes": 104,
+      "sha256": "cabc6267e8a4ecfa48d593a2d21a603a2b19d3beee9c13272a1a6437e762abc9"
+    }
+  ],
+  "productRuns": 0
+}

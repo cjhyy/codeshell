@@ -1,0 +1,77 @@
+{
+  "checks": [
+    {
+      "path": "evidence/plugin-input-review/review.md",
+      "bytes": 3831,
+      "sha256": "a21c7128ecff7747f3ebb77055edb01c2c3b3e45985d939b5450174d4ea6b535",
+      "matchesWorkerFreezeMessage": true
+    },
+    {
+      "path": "evidence/plugin-input-review/source-manifest.json",
+      "bytes": 9846,
+      "sha256": "bb800175624bb60d6ec1727a3d09bf30467f71374a397ff99c1c8c7f50b9401d",
+      "matchesWorkerFreezeMessage": true
+    },
+    {
+      "path": "evidence/plugin-input-review/author-receipt.json",
+      "bytes": 3087,
+      "sha256": "df78cc75727e88e510ddecd2b5fa2553686b84d10f7ee7ea3d41698f61e1a9a6",
+      "matchesWorkerFreezeMessage": true
+    },
+    {
+      "path": "evidence/local-install-review/review.md",
+      "bytes": 4094,
+      "sha256": "ed6bd8e13dcfde82b8cf3b744f8abded3c7f0fa0afe1cc514a4f5cce9c53758c",
+      "matchesWorkerFreezeMessage": true
+    },
+    {
+      "path": "evidence/local-install-review/source-manifest.json",
+      "bytes": 7112,
+      "sha256": "1dbb0b738708315c8d5f9dd90734d0e81288354065ed59a3d6404ede6fb1f3c1",
+      "matchesWorkerFreezeMessage": true
+    },
+    {
+      "path": "evidence/local-install-review/author-receipt.json",
+      "bytes": 3388,
+      "sha256": "325acb9f64543787d58f64e1c0259fc5a4ffe86916af10813536f3564c481dc0",
+      "matchesWorkerFreezeMessage": true
+    },
+    {
+      "path": "evidence/devtools-review/review.md",
+      "bytes": 4138,
+      "sha256": "42002e5a0532a9b548d72ca9300f78debfbb7220218ed40b956c891ec773a9ff",
+      "matchesWorkerFreezeMessage": true
+    },
+    {
+      "path": "evidence/devtools-review/source-manifest.json",
+      "bytes": 24306,
+      "sha256": "31ac889ba43f69e428262ed12625d17c67b7d65ed0d82ad93924d61ab5b2f960",
+      "matchesWorkerFreezeMessage": true
+    },
+    {
+      "path": "evidence/devtools-review/reviewer-receipt.json",
+      "bytes": 2060,
+      "sha256": "2e19f6b487d0cf7504391fbcd6017e01fd37078f79297e62df8d07858d6eccc2",
+      "matchesWorkerFreezeMessage": true
+    },
+    {
+      "path": "evidence/installer-input-frontier/report.md",
+      "bytes": 4907,
+      "sha256": "f0c3cdaa8ef1b09bd5b3d5ca058835c5de5cb6cbcc5a1aea41496301f635677b",
+      "matchesWorkerFreezeMessage": true
+    },
+    {
+      "path": "evidence/installer-input-frontier/source-manifest.json",
+      "bytes": 14312,
+      "sha256": "aca3d6ade669e6755f7284053aa621b0a4268c20a6dff54ab49e16bdbae8b2cc",
+      "matchesWorkerFreezeMessage": true
+    },
+    {
+      "path": "evidence/installer-input-frontier/artifact-receipt.json",
+      "bytes": 3577,
+      "sha256": "2afe1c6ffb3e3411b17b1945e85a41941735c7de31e4f5aaff7c6dd6560d9497",
+      "matchesWorkerFreezeMessage": true
+    }
+  ],
+  "productRuns": 0
+}

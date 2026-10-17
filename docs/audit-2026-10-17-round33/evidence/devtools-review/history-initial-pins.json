@@ -1,0 +1,21 @@
+{
+  "capturedUTC": "2026-10-17T12:18:26.939225+00:00",
+  "files": [
+    {
+      "path": "docs/audit-2026-10-17-round10/diagnostics.md",
+      "bytes": 6661,
+      "lineCount": 38,
+      "sha256": "72dc1ee9b8b51d407051b34ec4cbd6c654f278fec4136b3c9b1e8845d6628cb3",
+      "initialSemanticReadSha256": null,
+      "timing": "Dedicated pin after scanner excerpt inspection, before direct old report/full metadata comparison; no pre-excerpt pin claimed"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round10/evidence/diagnostics-source-manifest.json",
+      "bytes": 4011,
+      "lineCount": 84,
+      "sha256": "9f24b8e0b371722b0a3027f5ae84eb08d7844f519ca12c85964acc8d1a130eea",
+      "initialSemanticReadSha256": null,
+      "timing": "Dedicated pin after scanner excerpt inspection, before direct old report/full metadata comparison; no pre-excerpt pin claimed"
+    }
+  ]
+}
