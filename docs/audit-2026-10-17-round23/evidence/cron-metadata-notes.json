@@ -1,0 +1,22 @@
+{
+  "base": "c1d007ed0af1eca9b56b32fabbb0ea2401037ee1",
+  "productReruns": 0,
+  "notes": [
+    {
+      "kind": "Root follow-up timing",
+      "detail": "Root preferred static0runtime if prior complete coverage was sufficient; that message arrived after this sole first guarded focused shard had completed and raw/exit had been saved, before raw inspection. Evidence retained honestly, no additional product execution. Tests are limited ordinary controls rather than new mechanism."
+    },
+    {
+      "kind": "Bounded history inspection",
+      "detail": "Saved full recursive scan; inspected primaryMD and selected primaryJSON contexts through bounded excerpts. Broad OR wording can produce irrelevant matches; no semanticexhaustion claimed."
+    },
+    {
+      "kind": "Author receipt link ordering metadata assertion",
+      "detail": "Initial receipt generator checked the report link to cron-artifact-receipt.json before creating that self-excluded receipt, causing AssertionError on evidence/cron-artifact-receipt.json. Corrected metadata-only creation order and reran only receipt validation; focused fixture/raw unchanged, no product rerun."
+    },
+    {
+      "kind": "Selected read range clipped to actual EOF",
+      "detail": "Independent review found scheduler.ts selected range1213–1300 while actual lineCount1299. 1300 was the original sed command upper bound; output ended atEOF1299. Manifest corrected to1213–1299; source bytes, fixture and raw unchanged, receipt hashes refreshed only,0product reruns."
+    }
+  ]
+}

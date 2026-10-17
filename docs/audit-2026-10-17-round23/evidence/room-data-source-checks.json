@@ -1,0 +1,84 @@
+{
+  "base": "c1d007ed0af1eca9b56b32fabbb0ea2401037ee1",
+  "commands": [
+    {
+      "argv": [
+        "git",
+        "show",
+        "c1d007ed0af1eca9b56b32fabbb0ea2401037ee1:packages/server/src/mobile-remote/codex-parse.ts"
+      ],
+      "exitCode": 0,
+      "stdoutBytes": 5410,
+      "stdoutSha256": "a7a7604e92ea7fcde75a77a52f3d9d1925ce7d4ad3a8619d910cb61508e7483c",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "show",
+        "c1d007ed0af1eca9b56b32fabbb0ea2401037ee1:packages/server/src/mobile-remote/mobile-history.ts"
+      ],
+      "exitCode": 0,
+      "stdoutBytes": 1458,
+      "stdoutSha256": "258e0810ddb54c9fb4d39f6d8bcd4140bd874b8795229047b69f1b54c6ed9b04",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "show",
+        "c1d007ed0af1eca9b56b32fabbb0ea2401037ee1:packages/server/src/mobile-remote/codex-parse.test.ts"
+      ],
+      "exitCode": 0,
+      "stdoutBytes": 6319,
+      "stdoutSha256": "544ac5d8b544c76154c53d4a517a89275b6bac6a327d41a3f149a82a0e38fd13",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "show",
+        "c1d007ed0af1eca9b56b32fabbb0ea2401037ee1:packages/server/src/mobile-remote/codex-room-agent.ts"
+      ],
+      "exitCode": 0,
+      "stdoutBytes": 9727,
+      "stdoutSha256": "afe03f9a9e3cedb2314792c45dcb52ad169e72b8d02bc6341da972aa43f64d59",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "show",
+        "c1d007ed0af1eca9b56b32fabbb0ea2401037ee1:packages/desktop/src/main/mobile-remote/handle-client-event.ts"
+      ],
+      "exitCode": 0,
+      "stdoutBytes": 25666,
+      "stdoutSha256": "ed4d8b65512f7be8f31572b9c47b86f4a4f587bd4c9fe94541bcf108108a1f71",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "show",
+        "c1d007ed0af1eca9b56b32fabbb0ea2401037ee1:packages/desktop/src/main/transcript-reader.ts"
+      ],
+      "exitCode": 0,
+      "stdoutBytes": 30529,
+      "stdoutSha256": "0d5873f4c80692ea57271a2ea689c6421c00f6ef54de741588e66e7e1ba94124",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "show",
+        "c1d007ed0af1eca9b56b32fabbb0ea2401037ee1:packages/desktop/src/main/mobile-remote/handle-room-history.test.ts"
+      ],
+      "exitCode": 0,
+      "stdoutBytes": 2438,
+      "stdoutSha256": "7c44e301d48605af4223cca7031fc0a8f0d3cd243f02935d61a326951665617f",
+      "stderr": ""
+    }
+  ],
+  "sourceChecks": 7,
+  "sourceBytesChanged": false
+}

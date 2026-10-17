@@ -1,0 +1,85 @@
+{
+  "baseline": "c1d007ed0af1eca9b56b32fabbb0ea2401037ee1",
+  "worker": "session_title_round22, assigned round23 Product",
+  "artifacts": [
+    {
+      "path": "docs/audit-2026-10-17-round23/product-report.md",
+      "bytes": 6808,
+      "sha256": "07b73adcd0a88ef89ee727db47b6f8efa70077fd4dc4eb856bfdadfb540305e4"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round23/evidence/product-candidates.json",
+      "bytes": 81,
+      "sha256": "71a78d1d694b9ab7d64139fb4961a80ea0323a2545d9fb0061c1063fa028a04a"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round23/evidence/product-cwd-dedup.json",
+      "bytes": 497921,
+      "sha256": "32bdbf1ba85b16169fbefbfa6048b93e8eaaf21841b3e8bdc9210a93ad6f83e0"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round23/evidence/product-cwd-dedup.py",
+      "bytes": 2863,
+      "sha256": "561fd2f567f34822a8bdd746530a466cca7adfdc9e56133fbf1f33894aef59f5"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round23/evidence/product-dedup-decisions.json",
+      "bytes": 2587,
+      "sha256": "da69e4b1381eaaac590ab87e04777e5f8ddce6ca105fa9f32492b4cda1854c9f"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round23/evidence/product-dedup.json",
+      "bytes": 569231,
+      "sha256": "0b2d3c002c4f1b114f13444e80b41c1304350827bc94458f29b6a60bf8a09b16"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round23/evidence/product-dedup.py",
+      "bytes": 3051,
+      "sha256": "f4a712fc4306eed5d0858fe6cf506300fdf81c4d7ca3565f4088ac6c2ab6df05"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round23/evidence/product-findings.json",
+      "bytes": 1324,
+      "sha256": "492787d7394ae0c84ae73ebb5a60c0c2ad3002bfddc370f856ed38d11facc7db"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round23/evidence/product-related.json",
+      "bytes": 593,
+      "sha256": "b1bef3617838430a3130bdc2653e71f1b51dd8910c6cb1e33c0e2f441f8440ef"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round23/evidence/product-runtime-imports.json",
+      "bytes": 2477,
+      "sha256": "5994ea292bba8f5fc8e8e004dabd80692302dbbed6ea3541e4c01963111eae60"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round23/evidence/product-selected-history.json",
+      "bytes": 11643,
+      "sha256": "828c3c40a4e7b49463defd4a2d963178a7ad004388f1e4f45868275ea04f1a2b"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round23/evidence/product-source-manifest.json",
+      "bytes": 9833,
+      "sha256": "637a2b97abe9938a762c15800449cc938e70ecc890b5910a6d6be08c09b5641f"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round23/evidence/product-validation.json",
+      "bytes": 1065,
+      "sha256": "7d85af8bb136e6e87b1239128ca026cff4dc088eaeb8dea4f80b47f35740a39b"
+    }
+  ],
+  "sourceManifest": "evidence/product-source-manifest.json",
+  "checks": {
+    "sourcePins": 19,
+    "allSourceFrozenCurrentMatch": true,
+    "artifactHashCount": 13,
+    "markdownLinks": 21,
+    "markdownLinkErrors": [],
+    "productAttempts": 0,
+    "testAttempts": 0,
+    "fixtureFiles": 0,
+    "productEdits": 0,
+    "gitWrites": 0
+  },
+  "note": "Only product-report.md and evidence/product-* authored in round23; previous /tmp frontier untouched. SHA inventory excludes this receipt. All formal/related evidence static; no product import, constructor, task or test execution."
+}

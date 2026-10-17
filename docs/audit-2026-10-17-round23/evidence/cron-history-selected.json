@@ -1,0 +1,1096 @@
+{
+  "selected": [
+    {
+      "group": "exact",
+      "path": "docs/architecture/06-long-running-orchestration.md",
+      "location": "231",
+      "excerpt": "| `packages/core/src/automation/cron-expr.ts` | Dependency-free five-field cron parser with timezone-aware next run | 207 |",
+      "wholeValueCharacters": 123
+    },
+    {
+      "group": "exact",
+      "path": "docs/architecture/06-long-running-orchestration.md",
+      "location": "261",
+      "excerpt": "restricted (`packages/core/src/automation/cron-expr.ts:93`,",
+      "wholeValueCharacters": 59
+    },
+    {
+      "group": "exact",
+      "path": "docs/architecture/06-long-running-orchestration.md",
+      "location": "262",
+      "excerpt": "`packages/core/src/automation/cron-expr.ts:167`). `CronStore.mutate()` wraps",
+      "wholeValueCharacters": 76
+    },
+    {
+      "group": "exact",
+      "path": "docs/archive/automation-plan-2026-05-31.md",
+      "location": "167",
+      "excerpt": "1. **日历式 cron 解析(D3)**:`automation/cron-expr.ts` — 解析 `分 时 日 月 周` 五段 + 时区,",
+      "wholeValueCharacters": 74
+    },
+    {
+      "group": "exact",
+      "path": "docs/archive/beta-prep-audit-2026-06-23.md",
+      "location": "19",
+      "excerpt": "> > **✅ 修复运行时实证(非仅单测,直接 import 跑真代码)**:全部安全/footgun 类修复逐个跑通确认真生效——`parseSchedule`(`30s/5m/1h`→ms,`0s/0m/0/5mn/\"\"`→throw)·`clampPtyDim`(`NaN/∞/0/-5`→1,`120.7`→120)·`cdp scroll(NaN)`→deltaY 600 finite·`cdp waitForLoad(NaN)`→ok 不挂·`secretHint`(短\"ab\"→`****` 不泄漏,长→`****alue` 末4位)·`TrustedDeviceStore.authenticate` timingSafeEqual(正确过/错同长拒/**错异长拒不抛**/空拒)·`GenerateImage/Video` pathPolicy 声明已注册(referenceImages/images/image)·`FileRunStore.list`(offset:-1→钳0全列/limit:-1→空页)·`read_file`(limit:-3→空不丢尾)·**executor 数组 path arg**(out-of-ws 元素 →asked:1 走审批门拒,path-traversal 强制端到端真生效)。·`roomHistoryToEvents`(WS 非数组 messages:undefined/null/123/str/类数组 →[] 不抛,合法数组映射)。**12 修除 MCP-signal(结构性,tsc+",
+      "wholeValueCharacters": 1783
+    },
+    {
+      "group": "exact",
+      "path": "docs/archive/beta-prep-audit-2026-06-23.md",
+      "location": "21",
+      "excerpt": "can 近全仓 + 逐个亲自复核(证伪优先)**,修 **11 个孤立可测真 bug**(全 TDD·worktree→cherry-pick→main 验·core build):timingSafeEqual 设备认证(HIGH)·waitForLoad NaN 无穷循环(HIGH)·GenerateImage/Video path-traversal·parseSchedule 零间隔自旋·FileRunStore/read_file 分页 slice footgun·secretHint 短 secret 泄漏·scroll/ptyResize/transcript-round NaN·MCP listResources/readResource 转 signal。另**驳回 ~5 个误报**(RunQueue concurrency:0 有意/credentials-login listener 随窗销毁/cdp scroll 等)。CHANGELOG 已补全这批。**期间还顺手修了 desktop 测试因 predist 物化 core 导致的环境 breakage(bun install 恢复,记忆已存)**。详见下方「续 D/E/F」。**最终全量基线:core 1751 · cdp 27 · tui 69 · desktop 988 全 0 fail · 三包 tsc 0 · 工作树净 · 领先 origin ~361,仍未 push**。**打包已由你完成(见顶部 📦 段),剩 §1.2 真机冒烟 + push。**",
+      "wholeValueCharacters": 789
+    },
+    {
+      "group": "exact",
+      "path": "docs/archive/beta-prep-audit-2026-06-23.md",
+      "location": "43",
+      "excerpt": "> - `04ff5156` **`parseSchedule` 拒绝零间隔**(`\"0s\"`/`\"0m\"`→0ms→`setInterval(fn,0)` 自旋;单位路径漏 `>0` 守卫,raw-ms 路径本有;+4 测·导出供测)。",
+      "wholeValueCharacters": 119
+    },
+    {
+      "group": "exact",
+      "path": "docs/archive/beta-prep-audit-2026-06-23.md",
+      "location": "45",
+      "excerpt": "钳 offset≥0/非正 limit 空页+isFinite,+5 测);#2 `RunQueue` concurrency≤0→**核验判误报不修**(RunQueue.test 故意用 `concurrency:0` 当「never drains」测试模式,是有意行为非 bug,加守卫反破坏既有测试)。范围其余(JSON.parse/timer 清理/parseSchedule)均已妥善防卫。",
+      "wholeValueCharacters": 335
+    },
+    {
+      "group": "exact",
+      "path": "docs/archive/core-complete-review.md",
+      "location": "2226",
+      "excerpt": "- `cron-expr.ts`：cron 表达式解析/nextRun 计算。",
+      "wholeValueCharacters": 39
+    },
+    {
+      "group": "exact",
+      "path": "docs/archive/core-complete-review.md",
+      "location": "3196",
+      "excerpt": "- `automation/cron-expr.ts`",
+      "wholeValueCharacters": 27
+    },
+    {
+      "group": "exact",
+      "path": "docs/archive/core-modules/automation.md",
+      "location": "16",
+      "excerpt": "| `cron-expr.ts` | Dependency-free 5-field cron parser + timezone-aware `nextCronTime` (uses `Intl.DateTimeFormat`, correct across DST, bounded ~2-year search). |",
+      "wholeValueCharacters": 162
+    },
+    {
+      "group": "exact",
+      "path": "docs/archive/core-modules/automation.md",
+      "location": "16",
+      "excerpt": "| `cron-expr.ts` | Dependency-free 5-field cron parser + timezone-aware `nextCronTime` (uses `Intl.DateTimeFormat`, correct across DST, bounded ~2-year search). |",
+      "wholeValueCharacters": 162
+    },
+    {
+      "group": "exact",
+      "path": "docs/archive/core-modules/automation.md",
+      "location": "74",
+      "excerpt": "// cron-expr.ts",
+      "wholeValueCharacters": 15
+    },
+    {
+      "group": "exact",
+      "path": "docs/archive/core-modules/automation.md",
+      "location": "75",
+      "excerpt": "function isCronExpression(s: string): boolean;",
+      "wholeValueCharacters": 46
+    },
+    {
+      "group": "exact",
+      "path": "docs/archive/core-modules/automation.md",
+      "location": "76",
+      "excerpt": "function parseCronExpression(expr: string): ParsedCron;",
+      "wholeValueCharacters": 55
+    },
+    {
+      "group": "exact",
+      "path": "docs/archive/core-modules/automation.md",
+      "location": "77",
+      "excerpt": "function nextCronTime(cron: ParsedCron, timeZone: string, fromMs: number): number | null;",
+      "wholeValueCharacters": 89
+    },
+    {
+      "group": "exact",
+      "path": "docs/archive/core-modules/cron.md",
+      "location": "9",
+      "excerpt": "Note: despite the \"cron expression helpers\" framing, the actual cron-expression parser (`parseCronExpression`, `nextCronTime`, `isCronExpression`) lives in `automation/cron-expr.ts` and is **not** re-exported through this directory.",
+      "wholeValueCharacters": 232
+    },
+    {
+      "group": "exact",
+      "path": "docs/archive/core-modules/cron.md",
+      "location": "9",
+      "excerpt": "Note: despite the \"cron expression helpers\" framing, the actual cron-expression parser (`parseCronExpression`, `nextCronTime`, `isCronExpression`) lives in `automation/cron-expr.ts` and is **not** re-exported through this directory.",
+      "wholeValueCharacters": 232
+    },
+    {
+      "group": "exact",
+      "path": "docs/archive/core-modules/cron.md",
+      "location": "9",
+      "excerpt": "Note: despite the \"cron expression helpers\" framing, the actual cron-expression parser (`parseCronExpression`, `nextCronTime`, `isCronExpression`) lives in `automation/cron-expr.ts` and is **not** re-exported through this directory.",
+      "wholeValueCharacters": 232
+    },
+    {
+      "group": "exact",
+      "path": "docs/archive/core-modules/cron.md",
+      "location": "9",
+      "excerpt": "Note: despite the \"cron expression helpers\" framing, the actual cron-expression parser (`parseCronExpression`, `nextCronTime`, `isCronExpression`) lives in `automation/cron-expr.ts` and is **not** re-exported through this directory.",
+      "wholeValueCharacters": 232
+    },
+    {
+      "group": "exact",
+      "path": "docs/archive/core-risk-signal-index.md",
+      "location": "38",
+      "excerpt": "| `automation/cron-expr.ts` | `throw new Error`×4 |",
+      "wholeValueCharacters": 51
+    },
+    {
+      "group": "exact",
+      "path": "docs/audit-2026-10-17/scheduling-data.md",
+      "location": "7",
+      "excerpt": "- 读取当前 `automation/cron-expr.ts`、`scheduler.ts`、`store.ts`、`index.ts`；相关 field/range、timezone/calendar、absolute one-shot、reload/interval-phase 既有测试；普通 CronCreate/CronList 时间投影与 Sleep 参数路径。",
+      "wholeValueCharacters": 188
+    },
+    {
+      "group": "exact",
+      "path": "docs/audit-2026-10-17/scheduling-data.md",
+      "location": "16",
+      "excerpt": "- 位置：`packages/core/src/automation/cron-expr.ts:60–61,72–74`；`scheduler.ts:1238–1240` 的 validation 调用。",
+      "wholeValueCharacters": 102
+    },
+    {
+      "group": "exact",
+      "path": "docs/audit-2026-10-17/scheduling-data.md",
+      "location": "36",
+      "excerpt": "- `node scripts/run-bun-test-shard.mjs --timeout 30000 packages/core/src/automation/parse-schedule.test.ts packages/core/src/automation/cron-expr.test.ts packages/core/src/automation/scheduler-timer-overflow.test.ts packages/core/src/automation/scheduler-absolute-once.test.ts`。",
+      "wholeValueCharacters": 278
+    },
+    {
+      "group": "exact",
+      "path": "docs/audit-2026-10-17/scheduling-data.md",
+      "location": "43",
+      "excerpt": "- `nextCronTime` 明确限定约两年搜索，leap-day 等合法但下一次更远的表达式可能返回 null；这是已记录能力范围，未用其直接计缺陷。",
+      "wholeValueCharacters": 78
+    },
+    {
+      "group": "exact",
+      "path": "docs/audit-2026-10-17-round12/schedule-display.md",
+      "location": "26",
+      "excerpt": "s` Markdown and parsed JSON, including archives: **1,060 Markdown + 598 JSON = 1,658 files; 152,326 JSON string leaves; 0 parse errors**. Current round excluded. Hits on old Core `parseSchedule` fallback/zero-interval defects concern a different parser and are not repeated. ScheduleModel/timezone hits were chiefly inventory, old test manifests, and implementation plans; no new finding was inferred from a test filename or archived assertion alone.",
+      "wholeValueCharacters": 524
+    },
+    {
+      "group": "exact",
+      "path": "docs/core-deep-dive/07-run-automation-goal.md",
+      "location": "88",
+      "excerpt": "3. `automation/scheduler.ts` + `cron-expr.ts` 看调度与错过宽限。",
+      "wholeValueCharacters": 55
+    },
+    {
+      "group": "exact",
+      "path": "docs/nightly-2026-07-10/large-feature-breakdown.md",
+      "location": "257",
+      "excerpt": "| AD-16 | **cron parser DST/闰日/不可能日期表测**：覆盖春季跳时、秋季重复时、Feb 29、Feb 30、DOM/DOW OR 和无效 timezone；固定时区和 timestamp。 | 无 | S | `packages/core/src/automation/cron-expr.ts:120`；`cron-expr.test.ts:1`；`docs/todo/architecture-debt.md:66` | **是** |",
+      "wholeValueCharacters": 234
+    },
+    {
+      "group": "exact",
+      "path": "docs/nightly-2026-07-10/large-feature-breakdown.md",
+      "location": "257",
+      "excerpt": "| AD-16 | **cron parser DST/闰日/不可能日期表测**：覆盖春季跳时、秋季重复时、Feb 29、Feb 30、DOM/DOW OR 和无效 timezone；固定时区和 timestamp。 | 无 | S | `packages/core/src/automation/cron-expr.ts:120`；`cron-expr.test.ts:1`；`docs/todo/architecture-debt.md:66` | **是** |",
+      "wholeValueCharacters": 234
+    },
+    {
+      "group": "exact",
+      "path": "docs/nightly-2026-07-10/large-feature-breakdown.md",
+      "location": "258",
+      "excerpt": "| AD-17 | **sleep/wake/misfire 集成测试**：以 fake clock 验证休眠跨多个触发点、恢复只补应补任务、不双跑，与 DST 边界联动。 | AD-16 | S | `packages/core/src/automation/scheduler-resume.test.ts`；`scheduler-cron-expr.test.ts` | 否 |",
+      "wholeValueCharacters": 192
+    },
+    {
+      "group": "exact",
+      "path": "docs/superpowers/plans/2026-05-31-automation-phase1.md",
+      "location": "28",
+      "excerpt": "- Create: `packages/core/src/automation/scheduler.ts` — moved from `cron/scheduler.ts` (CronScheduler + cronScheduler singleton + CronJob + parseSchedule).",
+      "wholeValueCharacters": 155
+    },
+    {
+      "group": "exact",
+      "path": "docs/todo/arch-debt-p1p2-plan.md",
+      "location": "412",
+      "excerpt": "- `automation/cron-expr.test.ts` 当前只覆盖 UTC/上海、weekday 和 DOM/DOW OR",
+      "wholeValueCharacters": 66
+    },
+    {
+      "group": "exact",
+      "path": "docs/todo/architecture-debt.md",
+      "location": "87",
+      "excerpt": "`automation/cron-expr.ts` 手写 5 字段 parser + DST/时区(零依赖,已踩过一次 Mac 睡眠唤醒 misfire)。**不替换**,补 DST / 闰 / 睡眠唤醒边界测试即可。",
+      "wholeValueCharacters": 109
+    },
+    {
+      "group": "cronMechanism",
+      "path": "docs/architecture/00-overview.md",
+      "location": "71",
+      "excerpt": "          settings · sessions · transcripts · runs · cron · memory · plugins",
+      "wholeValueCharacters": 76
+    },
+    {
+      "group": "cronMechanism",
+      "path": "docs/architecture/00-overview.md",
+      "location": "90",
+      "excerpt": "- **Long-running work is explicit state plus notifications.** Runs and cron have durable stores, persistent goals live in session state, background shells keep bounded output and orphan cleanup, and `AgentServer` forwards completion notifications so idle sessions can be woken when needed (`packages/core/src/run/RunManager.ts:1`, `packages/core/src/run/FileRunStore.ts:1`, `packages/core/src/automation/store.ts:1`, `packages/core/src/session/session-manager.ts:193`, `packages/core/src/runtime/background-shell.ts:1`, `packages/core/src/protocol/server.ts:195`).",
+      "wholeValueCharacters": 564
+    },
+    {
+      "group": "cronMechanism",
+      "path": "docs/architecture/00-overview.md",
+      "location": "135",
+      "excerpt": " `CODE_SHELL_HOME` before `~/.code-shell` and separates `user`, `dream`, and `pending` scopes (`packages/core/src/session/memory.ts:1`, `packages/core/src/session/memory.ts:112`); cron and runs have their own filesystem stores (`packages/core/src/automation/store.ts:1`, `packages/core/src/run/FileRunStore.ts:1`); plugins root at `~/.code-shell/plugins` (`packages/core/src/plugins/installer/paths.ts:19`); auto-dream state uses the memory base dir (`packages/core/src/services/auto-dream.ts:36`).",
+      "wholeValueCharacters": 1160
+    },
+    {
+      "group": "cronMechanism",
+      "path": "docs/architecture/01-engine-and-turn-loop.md",
+      "location": "183",
+      "excerpt": "- Persistent goals, background work, automation, and cron: [06](06-long-running-orchestration.md)",
+      "wholeValueCharacters": 97
+    },
+    {
+      "group": "cronMechanism",
+      "path": "docs/architecture/02-tool-system.md",
+      "location": "140",
+      "excerpt": "- **Automation/memory**: `CronCreate`, `CronDelete`, `CronList`, `MemoryList`, `MemoryRead`, `MemorySave`, `MemoryDelete`",
+      "wholeValueCharacters": 121
+    },
+    {
+      "group": "cronMechanism",
+      "path": "docs/architecture/06-long-running-orchestration.md",
+      "location": "218",
+      "excerpt": "## 4. Automation and cron (`packages/core/src/automation/`)",
+      "wholeValueCharacters": 59
+    },
+    {
+      "group": "cronMechanism",
+      "path": "docs/architecture/06-long-running-orchestration.md",
+      "location": "232",
+      "excerpt": "| `packages/core/src/automation/store.ts` | Single-file `~/.code-shell/cron.json` store with directory lock | 134 |",
+      "wholeValueCharacters": 115
+    },
+    {
+      "group": "cronMechanism",
+      "path": "docs/architecture/06-long-running-orchestration.md",
+      "location": "237",
+      "excerpt": "`CronJob` records schedule, prompt, cwd, timezone, permission tier, one-shot",
+      "wholeValueCharacters": 76
+    },
+    {
+      "group": "cronMechanism",
+      "path": "docs/architecture/06-long-running-orchestration.md",
+      "location": "253",
+      "excerpt": "timezone-aware cron expressions, skips cron misfires that arrive more than 90",
+      "wholeValueCharacters": 77
+    },
+    {
+      "group": "cronMechanism",
+      "path": "docs/architecture/06-long-running-orchestration.md",
+      "location": "262",
+      "excerpt": "`packages/core/src/automation/cron-expr.ts:167`). `CronStore.mutate()` wraps",
+      "wholeValueCharacters": 76
+    },
+    {
+      "group": "cronMechanism",
+      "path": "docs/architecture/06-long-running-orchestration.md",
+      "location": "274",
+      "excerpt": "`packages/core/src/cron/` re-export the automation modules for older imports",
+      "wholeValueCharacters": 76
+    },
+    {
+      "group": "cronMechanism",
+      "path": "docs/architecture/08-arena-and-integrations.md",
+      "location": "60",
+      "excerpt": "/src/tool-system/builtin/drive-claude-code.ts:176`). The tool description is intentionally strict: no time/scheduling loop lives in DriveAgent; recurring/deferred work should use `CronCreate`, whose prompt can call DriveAgent for one turn (`packages/core/src/tool-system/builtin/drive-claude-code.ts:27`).",
+      "wholeValueCharacters": 671
+    },
+    {
+      "group": "cronMechanism",
+      "path": "docs/architecture/08-arena-and-integrations.md",
+      "location": "105",
+      "excerpt": "- Engine wakeups, background work notifications, cron, and goals that DriveAgent background completions feed into: [06 · Long-Running Orchestration](06-long-running-orchestration.md)",
+      "wholeValueCharacters": 182
+    },
+    {
+      "group": "cronMechanism",
+      "path": "docs/architecture/09-tui.md",
+      "location": "48",
+      "excerpt": "REPL-only cron is also wired from `repl.ts`: the singleton scheduler gets a `CronStore`, restores jobs, and binds execution to a fresh read-only headless `Engine` per fired job (`packages/tui/src/cli/commands/repl.ts:237`, `packages/tui/src/cli/commands/repl.ts:243`, `packages/tui/src/cli/commands/repl.ts:245`, `packages/tui/src/cli/commands/repl.ts:246`, `packages/tui/src/cli/commands/repl.ts:253`).",
+      "wholeValueCharacters": 403
+    },
+    {
+      "group": "cronMechanism",
+      "path": "docs/architecture/09-tui.md",
+      "location": "112",
+      "excerpt": "- Long-running background agents, cron, and goals: [06 · Long-running orchestration](06-long-running-orchestration.md)",
+      "wholeValueCharacters": 118
+    },
+    {
+      "group": "cronMechanism",
+      "path": "docs/architecture/15-codex-harness-comparison-and-roadmap.md",
+      "location": "30",
+      "excerpt": "- Goal、Cron、Sub-agent、Background Work 和长期 Run；",
+      "wholeValueCharacters": 46
+    },
+    {
+      "group": "cronMechanism",
+      "path": "docs/architecture/16-platform-consolidation.md",
+      "location": "185",
+      "excerpt": "  sharedLock: CrossProcessLock; // 复用现有 CronStore 目录锁，所有共享文件写入经过它",
+      "wholeValueCharacters": 65
+    },
+    {
+      "group": "cronMechanism",
+      "path": "docs/archive/architecture/03-module-map.md",
+      "location": "49",
+      "excerpt": "| [`src/cron`](../../src/cron) | Scheduler support used by cron tools |",
+      "wholeValueCharacters": 71
+    },
+    {
+      "group": "cronMechanism",
+      "path": "docs/archive/architecture/19-core-chain-review-beta.md",
+      "location": "259",
+      "excerpt": "- config/memory/automation: `config.ts`、`memory.ts`、`cron.ts`、`update-automation-memory.ts`。",
+      "wholeValueCharacters": 92
+    },
+    {
+      "group": "cronMechanism",
+      "path": "docs/archive/automation/2026-06-02-permission-and-guard-survey.md",
+      "location": "20",
+      "excerpt": "       └─ bindCronToRunManager()   runner.ts:90-103   ✗ 根本不读 permissionLevel（桌面走这条）",
+      "wholeValueCharacters": 83
+    },
+    {
+      "group": "cronMechanism",
+      "path": "docs/archive/automation/2026-06-02-permission-and-guard-survey.md",
+      "location": "24",
+      "excerpt": "- `bindCronToRunManager()` runner.ts:90-103：连权限参数都不构造，submit 只传 objective/cwd/metadata。",
+      "wholeValueCharacters": 87
+    },
+    {
+      "group": "cronMechanism",
+      "path": "docs/archive/automation/2026-06-02-permission-and-guard-survey.md",
+      "location": "33",
+      "excerpt": "- `CronPermissionLevel = \"read-only\" | \"workspace-write\" | \"full\"`（write-policy.ts:23 / scheduler.ts:12）。",
+      "wholeValueCharacters": 105
+    },
+    {
+      "group": "cronMechanism",
+      "path": "docs/archive/automation/2026-06-02-unattended-loop-survey.md",
+      "location": "57",
+      "excerpt": "1. `runner.ts` 的 `bindCronToRunManager()` / `bindCronToEngine()` 读 `job.permissionLevel`，不再硬编码 `approve-read-only`。",
+      "wholeValueCharacters": 115
+    },
+    {
+      "group": "cronMechanism",
+      "path": "docs/archive/automation/2026-06-02-unattended-loop-survey.md",
+      "location": "84",
+      "excerpt": "- 调度：`packages/core/src/automation/scheduler.ts`",
+      "wholeValueCharacters": 48
+    },
+    {
+      "group": "cronMechanism",
+      "path": "docs/archive/automation-plan-2026-05-31.md",
+      "location": "47",
+      "excerpt": "- 配置 / 数据走文件(`~/.code-shell/cron.json` + RunStore),两个宿主读同一套,语义一致。",
+      "wholeValueCharacters": 65
+    },
+    {
+      "group": "cronMechanism",
+      "path": "docs/archive/automation-plan-2026-05-31.md",
+      "location": "100",
+      "excerpt": "| `CronScheduler`(间隔调度 + 重入守卫 + 持久化) | `packages/core/src/cron/scheduler.ts` | ✅ 已有(本会话补了执行器+持久化) | **保留,挪进 `automation/` 并扩日历式调度** |",
+      "wholeValueCharacters": 133
+    },
+    {
+      "group": "cronMechanism",
+      "path": "docs/archive/automation-plan-2026-05-31.md",
+      "location": "101",
+      "excerpt": "| `CronStore` 持久化(`~/.code-shell/cron.json`) | `packages/core/src/cron/cron-store.ts` | ✅ 已有(本会话新增) | 复用,扩 cwd/权限字段 |",
+      "wholeValueCharacters": 117
+    },
+    {
+      "group": "cronMechanism",
+      "path": "docs/archive/automation-plan-2026-05-31.md",
+      "location": "102",
+      "excerpt": "| `bindCronToEngine` 执行器接线 | `packages/core/src/cron/cron-runtime.ts` | ✅ 已有(本会话新增,直跑 Engine) | **改走 RunManager.submit()**(D4) |",
+      "wholeValueCharacters": 128
+    },
+    {
+      "group": "cronMechanism",
+      "path": "docs/archive/automation-plan-2026-05-31.md",
+      "location": "138",
+      "excerpt": "**目标**:把调度/执行/存储抽成 core 的零环境依赖模块,Electron main 进程内启动,只读任务能定时跑通。",
+      "wholeValueCharacters": 63
+    },
+    {
+      "group": "cronMechanism",
+      "path": "docs/archive/automation-plan-2026-05-31.md",
+      "location": "144",
+      "excerpt": "   - `store.ts` — 由现有 `cron/cron-store.ts` 挪入。",
+      "wholeValueCharacters": 46
+    },
+    {
+      "group": "cronMechanism",
+      "path": "docs/archive/automation-plan-2026-05-31.md",
+      "location": "172",
+      "excerpt": "3. **CronJob 扩字段(D5)**:`cwd`、`permissionLevel`、`lastRunId`(指向 RunStore)。",
+      "wholeValueCharacters": 72
+    },
+    {
+      "group": "cronMechanism",
+      "path": "docs/archive/automation-plan-2026-05-31.md",
+      "location": "235",
+      "excerpt": "1. **权限分级(D6)**:`CronJob.permissionLevel`(read-only/workspace-write/full)贯通到 approvalBackend",
+      "wholeValueCharacters": 92
+    },
+    {
+      "group": "cronMechanism",
+      "path": "docs/archive/automation-plan-2026-05-31.md",
+      "location": "275",
+      "excerpt": "故**撤销该删除**:`CronScheduler`/`CronStore`/`bindCronToEngine`(本会话已实现)**保留并挪进 `automation/`**。",
+      "wholeValueCharacters": 89
+    },
+    {
+      "group": "cronMechanism",
+      "path": "docs/archive/automation-plan-2026-05-31.md",
+      "location": "284",
+      "excerpt": "- **远程定时 agent**(CC 的 CCR Triggers)、`codex cloud-tasks` 云任务 —— 无对应后端,范围外。",
+      "wholeValueCharacters": 73
+    },
+    {
+      "group": "cronMechanism",
+      "path": "docs/archive/automation-plan-2026-05-31.md",
+      "location": "303",
+      "excerpt": "| 主路径 | 无状态 CLI `exec` | 内置 cron + 后台 agent | server + HTTP/SSE API | **core 内 automation 模块 + 多宿主** |",
+      "wholeValueCharacters": 102
+    },
+    {
+      "group": "cronMechanism",
+      "path": "docs/archive/automation-plan-2026-05-31.md",
+      "location": "306",
+      "excerpt": "| 调度逻辑位置 | OS | 内置进程 | server | **core 零依赖模块,宿主加载** |",
+      "wholeValueCharacters": 53
+    },
+    {
+      "group": "cronMechanism",
+      "path": "docs/archive/automation-plan-2026-05-31.md",
+      "location": "319",
+      "excerpt": "  `cron/{scheduler,cron-store,cron-runtime}.ts`(本会话实现)、`RunManager.ts:65`、`App.tsx:1360-1371`、",
+      "wholeValueCharacters": 94
+    },
+    {
+      "group": "cronMechanism",
+      "path": "docs/archive/automation-plan-2026-05-31.md",
+      "location": "335",
+      "excerpt": "三个进程各跑一个 `CronScheduler` 各读同一个 `cron.json` → ① 谁活着谁触发、谁死谁停；② 多进程同时开会抢跑同一 job（cron-store 是 v1 单进程，并发写 lost-update）。",
+      "wholeValueCharacters": 114
+    },
+    {
+      "group": "cronMechanism",
+      "path": "docs/archive/automation-plan-2026-05-31.md",
+      "location": "350",
+      "excerpt": "- `CronScheduler` **代码**已在 core（`automation/`），这是对的，不用动。",
+      "wholeValueCharacters": 56
+    },
+    {
+      "group": "cronMechanism",
+      "path": "docs/archive/automation-plan-2026-05-31.md",
+      "location": "364",
+      "excerpt": "收敛点：「自动化调度」与「UI 连后端」用**同一套 Transport 解耦机制**（Phase 6 已有 `SocketTransport`/`listenTcp`）。`startAutomation` 将来**只在 server 调用一次**，Electron/TUI 删掉各自那份，改成下发 cron 增删查 + 订阅运行结果。",
+      "wholeValueCharacters": 168
+    },
+    {
+      "group": "cronMechanism",
+      "path": "docs/archive/automation-plan-2026-05-31.md",
+      "location": "368",
+      "excerpt": "每次运行起一个全新 session（`new-chat` 模型）—— 已与 core 的 `bindCronToRunManager`（每次一次性 Engine）一致，方向对，保留。",
+      "wholeValueCharacters": 91
+    },
+    {
+      "group": "cronMechanism",
+      "path": "docs/archive/automation-plan-2026-05-31.md",
+      "location": "372",
+      "excerpt": "| A | CronJob 加 `runtime` 字段（`electron`\\|`server`，默认 electron）+ store 持久化 —— 数据模型先立住，将来接常驻零改动 | 否 | 待办（铺垫） |",
+      "wholeValueCharacters": 108
+    },
+    {
+      "group": "cronMechanism",
+      "path": "docs/archive/beta-prep-audit-2026-06-23.md",
+      "location": "569",
+      "excerpt": "| cron 调度睡眠唤醒(**解决旧 memory 未修项**) | 干净:`isCronMisfire` 90s grace——醒来 timer 超 90s 过点=misfire→跳过+重 arm 到下个正确 occurrence,不补跑(project_automation_kkg28 的「06:56 乱跑」**已修**);nextRun forward-recompute 不 catch-up。74 automation 测含 06:56 回归 |",
+      "wholeValueCharacters": 230
+    },
+    {
+      "group": "cronMechanism",
+      "path": "docs/archive/beta-prep-audit-2026-06-23.md",
+      "location": "596",
+      "excerpt": "size).toBe(0)` 是同一脆弱模式(共享单例精确计数)。**已改 `expect(fileCache.has(abs)).toBe(false)`**(新增 `fileCache.has()` 纯 Map.has 不 self-heal),测精确契约+并发安全(b1777367)。其余 `.size).toBe`(pendingApprovals/cron/FileRunStore/mergeTranscripts 等)都是**本地对象**确定性,无此风险。剩 sleep 那个(getEventListeners 时序)留用户(见上)。",
+      "wholeValueCharacters": 368
+    },
+    {
+      "group": "cronMechanism",
+      "path": "docs/archive/core-complete-review.md",
+      "location": "1037",
+      "excerpt": "`isMutatingTool()` 也偏窄，只列 Bash/Edit/Write/NotebookEdit/AskUserQuestion，不包括 ApplyPatch、Config、CronCreate/Delete、MemorySave/Delete、GenerateImage 等，会影响 guard 统计准确性。",
+      "wholeValueCharacters": 161
+    },
+    {
+      "group": "cronMechanism",
+      "path": "docs/archive/core-complete-review.md",
+      "location": "2222",
+      "excerpt": "- `store.ts`：`CronStore`，持久化 jobs。",
+      "wholeValueCharacters": 34
+    },
+    {
+      "group": "cronMechanism",
+      "path": "docs/archive/core-complete-review.md",
+      "location": "2650",
+      "excerpt": "| `automation` | 7 | 26, 30 | CronScheduler、CronStore、runner、write policy、cron expr |",
+      "wholeValueCharacters": 85
+    },
+    {
+      "group": "cronMechanism",
+      "path": "docs/archive/core-complete-review.md",
+      "location": "2654",
+      "excerpt": "| `cron` | 3 | 26 | runtime/store/scheduler 支撑 cron automation |",
+      "wholeValueCharacters": 64
+    },
+    {
+      "group": "cronMechanism",
+      "path": "docs/archive/core-complete-review.md",
+      "location": "3058",
+      "excerpt": "- MCP/LSP/Skill/Memory/Config/Cron：`mcp-tools.ts`、`lsp.ts`、`skill.ts`、`memory.ts`、`config.ts`、`cron.ts`",
+      "wholeValueCharacters": 103
+    },
+    {
+      "group": "cronMechanism",
+      "path": "docs/archive/core-complete-review.md",
+      "location": "3205",
+      "excerpt": "- `CronStore.load/save`",
+      "wholeValueCharacters": 23
+    },
+    {
+      "group": "cronMechanism",
+      "path": "docs/archive/core-complete-review.md",
+      "location": "3212",
+      "excerpt": "  → CronStore persists job",
+      "wholeValueCharacters": 26
+    },
+    {
+      "group": "cronMechanism",
+      "path": "docs/archive/core-modules/README.md",
+      "location": "27",
+      "excerpt": "- **[automation](./automation.md)** — cron scheduler + store for scheduled/headless tasks",
+      "wholeValueCharacters": 89
+    },
+    {
+      "group": "cronMechanism",
+      "path": "docs/archive/core-modules/automation.md",
+      "location": "3",
+      "excerpt": "**One-line role.** A zero-environment-dependency cron scheduler plus JSON store for recurring/headless agent jobs — schedules prompts, persists them, and fires them through a host-injected run backend.",
+      "wholeValueCharacters": 201
+    },
+    {
+      "group": "cronMechanism",
+      "path": "docs/archive/core-modules/automation.md",
+      "location": "7",
+      "excerpt": "pplies. It deliberately imports nothing from Electron/Ink/TTY and never picks a storage path or run backend itself — hosts (Electron main, the CLI agent server, the TUI) inject a `CronStore` and either a one-shot `runner` or a `RunManager` submitter. Its boundaries stop at \"what to run, when, and under which permission tier\"; the actual LLM/Engine execution, IPC, and git/PR plumbing all live in the host.",
+      "wholeValueCharacters": 640
+    },
+    {
+      "group": "cronMechanism",
+      "path": "docs/archive/core-modules/automation.md",
+      "location": "14",
+      "excerpt": "| `scheduler.ts` | `CronScheduler` class + shared `cronScheduler` singleton. Owns the job map, timers, re-entrancy guard, abort controllers, create/update/delete/pause/resume/runNow, misfire (sleep-wake) guard, and persistence via the store. Defines `CronJob`. |",
+      "wholeValueCharacters": 262
+    },
+    {
+      "group": "cronMechanism",
+      "path": "docs/archive/core-modules/automation.md",
+      "location": "15",
+      "excerpt": "| `store.ts` | `CronStore` — atomic single-file JSON persistence at `~/.code-shell/cron.json`, with a directory lock and `mutate()` for safe cross-process read-modify-write. |",
+      "wholeValueCharacters": 175
+    },
+    {
+      "group": "cronMechanism",
+      "path": "docs/archive/core-modules/automation.md",
+      "location": "16",
+      "excerpt": "| `cron-expr.ts` | Dependency-free 5-field cron parser + timezone-aware `nextCronTime` (uses `Intl.DateTimeFormat`, correct across DST, bounded ~2-year search). |",
+      "wholeValueCharacters": 162
+    },
+    {
+      "group": "cronMechanism",
+      "path": "docs/archive/core-modules/automation.md",
+      "location": "17",
+      "excerpt": "| `runner.ts` | The pluggable execution backends: `bindCronToEngine` (one-shot run) and `bindCronToRunManager` (submit into a RunManager for history). Resolves each job's permission tier via write-policy. |",
+      "wholeValueCharacters": 206
+    },
+    {
+      "group": "cronMechanism",
+      "path": "docs/archive/core-modules/automation.md",
+      "location": "27",
+      "excerpt": "  store: CronStore;",
+      "wholeValueCharacters": 19
+    },
+    {
+      "group": "cronMechanism",
+      "path": "docs/archive/core-modules/automation.md",
+      "location": "38",
+      "excerpt": "  constructor(store?: CronStore);",
+      "wholeValueCharacters": 33
+    },
+    {
+      "group": "cronMechanism",
+      "path": "docs/archive/core-modules/automation.md",
+      "location": "39",
+      "excerpt": "  setStore(store: CronStore): void;",
+      "wholeValueCharacters": 35
+    },
+    {
+      "group": "cronMechanism",
+      "path": "docs/archive/core-modules/automation.md",
+      "location": "40",
+      "excerpt": "  setExecutor(fn: (job: CronJob, signal: AbortSignal) => Promise<void>): void;",
+      "wholeValueCharacters": 78
+    },
+    {
+      "group": "cronMechanism",
+      "path": "docs/archive/core-modules/automation.md",
+      "location": "56",
+      "excerpt": "type CronPermissionLevel = \"read-only\" | \"workspace-write\" | \"full\";",
+      "wholeValueCharacters": 68
+    },
+    {
+      "group": "cronMechanism",
+      "path": "docs/archive/core-modules/automation.md",
+      "location": "61",
+      "excerpt": "class CronStore {",
+      "wholeValueCharacters": 17
+    },
+    {
+      "group": "cronMechanism",
+      "path": "docs/archive/core-modules/automation.md",
+      "location": "62",
+      "excerpt": "  constructor(file?: string);                    // defaults to defaultCronStorePath()",
+      "wholeValueCharacters": 86
+    },
+    {
+      "group": "cronMechanism",
+      "path": "docs/archive/core-modules/automation.md",
+      "location": "67",
+      "excerpt": "function defaultCronStorePath(): string;         // ~/.code-shell/cron.json",
+      "wholeValueCharacters": 75
+    },
+    {
+      "group": "cronMechanism",
+      "path": "docs/archive/core-modules/automation.md",
+      "location": "72",
+      "excerpt": "function bindCronToRunManager(scheduler: CronScheduler, runManager: RunSubmitter): void;",
+      "wholeValueCharacters": 88
+    },
+    {
+      "group": "cronMechanism",
+      "path": "docs/archive/core-modules/automation.md",
+      "location": "77",
+      "excerpt": "function nextCronTime(cron: ParsedCron, timeZone: string, fromMs: number): number | null;",
+      "wholeValueCharacters": 89
+    },
+    {
+      "group": "cronMechanism",
+      "path": "docs/archive/core-modules/automation.md",
+      "location": "92",
+      "excerpt": "import { startAutomation, CronStore, defaultCronStorePath } from \"@code-shell/core\";",
+      "wholeValueCharacters": 84
+    },
+    {
+      "group": "cronMechanism",
+      "path": "docs/archive/core-modules/automation.md",
+      "location": "102",
+      "excerpt": "  store: new CronStore(defaultCronStorePath()),",
+      "wholeValueCharacters": 47
+    },
+    {
+      "group": "cronMechanism",
+      "path": "docs/archive/core-modules/automation.md",
+      "location": "114",
+      "excerpt": "import { cronScheduler, CronStore, defaultCronStorePath } from \"@code-shell/core\";",
+      "wholeValueCharacters": 82
+    },
+    {
+      "group": "cronMechanism",
+      "path": "docs/archive/core-modules/automation.md",
+      "location": "116",
+      "excerpt": "cronScheduler.setStore(new CronStore(defaultCronStorePath()));",
+      "wholeValueCharacters": 62
+    },
+    {
+      "group": "cronMechanism",
+      "path": "docs/archive/core-modules/automation.md",
+      "location": "124",
+      "excerpt": "import { bindCronToEngine, type CronRunResult } from \"@code-shell/core\";",
+      "wholeValueCharacters": 72
+    },
+    {
+      "group": "cronMechanism",
+      "path": "docs/archive/core-modules/automation.md",
+      "location": "143",
+      "excerpt": "st be armed in exactly one process. Any sibling process sharing the store must call `setExecutionEnabled(false)` before `loadJobs()`, or jobs fire twice. All mutations go through `CronStore.mutate()` (directory-locked) so concurrent processes don't clobber each other.",
+      "wholeValueCharacters": 310
+    },
+    {
+      "group": "cronMechanism",
+      "path": "docs/archive/core-modules/automation.md",
+      "location": "149",
+      "excerpt": "- **Schedules validate at create/update time.** Both intervals (`30s`/`5m`/`1h`/`1d` or raw positive ms) and 5-field cron expressions throw on a bad string up front rather than silently mis-scheduling; an invalid schedule in `update` leaves the job untouched.",
+      "wholeValueCharacters": 259
+    },
+    {
+      "group": "cronMechanism",
+      "path": "docs/archive/core-modules/automation.md",
+      "location": "150",
+      "excerpt": "- **`cron-expr` has no third-party dep** — it steps minute-by-minute via `Intl.DateTimeFormat`, bounded to ~2 years, returning `null` for unsatisfiable expressions (e.g. Feb 30). Timezone defaults to `\"UTC\"`.",
+      "wholeValueCharacters": 208
+    },
+    {
+      "group": "cronMechanism",
+      "path": "docs/archive/core-modules/cli.md",
+      "location": "13",
+      "excerpt": "`agent-server-stdio.ts` | Electron worker entry. Bootstraps the shared runtime and serves `AgentServer` over `StdioTransport` (NDJSON). Re-reads settings per new session; persists cron jobs only (execution disabled); reaps orphaned background shells on boot. Exports `resolveSessionAgentConfig`. |",
+      "wholeValueCharacters": 299
+    },
+    {
+      "group": "cronMechanism",
+      "path": "docs/archive/core-modules/cli.md",
+      "location": "87",
+      "excerpt": "- **Cron split-brain (stdio only).** The stdio worker sets `cronScheduler.setExecutionEnabled(false)` — it persists chat-created jobs to the shared `~/.code-shell/cron.json` but must NOT run them; the Electron main process owns execution. TCP, by contrast, *does* run jobs via `startAutomation`. Don't arm timers in the stdio worker or jobs double-run and corrupt run stats.",
+      "wholeValueCharacters": 374
+    },
+    {
+      "group": "cronMechanism",
+      "path": "docs/archive/core-modules/cron.md",
+      "location": "7",
+      "excerpt": "This directory is **not** an independent implementation — every file here is a one-line `export * from \"../automation/...\"` shim. The real cron scheduling code (`CronScheduler`, `CronStore`, `bindCronToEngine`) moved into `packages/core/src/automation/` per `docs/automation-plan-2026-05-31.md`. These shims exist only so older importers using `../cron/scheduler.js`, `../cron/cron-store.js`, and `../cron/cron-runtime.js` keep compiling. New code should import from `../automation/*` directly.",
+      "wholeValueCharacters": 494
+    },
+    {
+      "group": "cronMechanism",
+      "path": "docs/archive/core-modules/cron.md",
+      "location": "7",
+      "excerpt": "heduler`, `CronStore`, `bindCronToEngine`) moved into `packages/core/src/automation/` per `docs/automation-plan-2026-05-31.md`. These shims exist only so older importers using `../cron/scheduler.js`, `../cron/cron-store.js`, and `../cron/cron-runtime.js` keep compiling. New code should import from `../automation/*` directly.",
+      "wholeValueCharacters": 494
+    },
+    {
+      "group": "cronMechanism",
+      "path": "docs/archive/core-modules/cron.md",
+      "location": "9",
+      "excerpt": "Note: despite the \"cron expression helpers\" framing, the actual cron-expression parser (`parseCronExpression`, `nextCronTime`, `isCronExpression`) lives in `automation/cron-expr.ts` and is **not** re-exported through this directory.",
+      "wholeValueCharacters": 232
+    },
+    {
+      "group": "cronMechanism",
+      "path": "docs/archive/core-modules/cron.md",
+      "location": "16",
+      "excerpt": "| `cron-store.ts` | Shim → `../automation/store.js`. Surfaces `CronStore`, `defaultCronStorePath`. |",
+      "wholeValueCharacters": 100
+    },
+    {
+      "group": "cronMechanism",
+      "path": "docs/archive/core-modules/cron.md",
+      "location": "19",
+      "excerpt": "| `cron-store.test.ts` | Round-trip / corrupt-file / atomic-write tests for `CronStore`. |",
+      "wholeValueCharacters": 90
+    },
+    {
+      "group": "cronMechanism",
+      "path": "docs/archive/core-modules/cron.md",
+      "location": "20",
+      "excerpt": "| `cron-runtime.test.ts` | `bindCronToEngine` executor wiring + read-only permission backend tests. |",
+      "wholeValueCharacters": 101
+    },
+    {
+      "group": "cronMechanism",
+      "path": "docs/archive/core-modules/cron.md",
+      "location": "31",
+      "excerpt": "  schedule: string;            // cron expr \"0 9 * * 1-5\" OR interval \"30s\"/\"5m\"/\"1h\"/\"1d\"/raw-ms \"1500\"",
+      "wholeValueCharacters": 104
+    },
+    {
+      "group": "cronMechanism",
+      "path": "docs/archive/core-modules/cron.md",
+      "location": "38",
+      "excerpt": "type CronPermissionLevel = \"read-only\" | \"workspace-write\" | \"full\";",
+      "wholeValueCharacters": 68
+    },
+    {
+      "group": "cronMechanism",
+      "path": "docs/archive/core-modules/cron.md",
+      "location": "41",
+      "excerpt": "  constructor(store?: CronStore);",
+      "wholeValueCharacters": 33
+    },
+    {
+      "group": "cronMechanism",
+      "path": "docs/archive/core-modules/cron.md",
+      "location": "42",
+      "excerpt": "  setExecutor(fn: (job: CronJob, signal: AbortSignal) => Promise<void>): void;",
+      "wholeValueCharacters": 78
+    },
+    {
+      "group": "cronMechanism",
+      "path": "docs/archive/core-modules/cron.md",
+      "location": "43",
+      "excerpt": "  setStore(store: CronStore): void;",
+      "wholeValueCharacters": 35
+    },
+    {
+      "group": "cronMechanism",
+      "path": "docs/archive/core-modules/cron.md",
+      "location": "57",
+      "excerpt": "const cronScheduler: CronScheduler;               // shared singleton (no store until setStore)",
+      "wholeValueCharacters": 95
+    },
+    {
+      "group": "cronMechanism",
+      "path": "docs/archive/core-modules/cron.md",
+      "location": "59",
+      "excerpt": "// from ./cron-store.js  (→ automation/store.ts)",
+      "wholeValueCharacters": 48
+    },
+    {
+      "group": "cronMechanism",
+      "path": "docs/archive/core-modules/cron.md",
+      "location": "60",
+      "excerpt": "class CronStore {",
+      "wholeValueCharacters": 17
+    },
+    {
+      "group": "cronMechanism",
+      "path": "docs/archive/core-modules/cron.md",
+      "location": "62",
+      "excerpt": "  load(): CronJob[];                               // [] when absent/corrupt",
+      "wholeValueCharacters": 76
+    },
+    {
+      "group": "cronMechanism",
+      "path": "docs/archive/core-modules/cron.md",
+      "location": "66",
+      "excerpt": "function defaultCronStorePath(): string;",
+      "wholeValueCharacters": 40
+    },
+    {
+      "group": "cronMechanism",
+      "path": "docs/archive/core-modules/cron.md",
+      "location": "101",
+      "excerpt": "Persist jobs across restarts by giving the scheduler a store (mirrors `cron-store.test.ts` + `scheduler.ts`):",
+      "wholeValueCharacters": 109
+    },
+    {
+      "group": "cronMechanism",
+      "path": "docs/archive/core-modules/cron.md",
+      "location": "105",
+      "excerpt": "import { CronStore, defaultCronStorePath } from \"../cron/cron-store.js\";",
+      "wholeValueCharacters": 72
+    },
+    {
+      "group": "cronMechanism",
+      "path": "docs/archive/core-modules/cron.md",
+      "location": "107",
+      "excerpt": "const store = new CronStore(defaultCronStorePath());   // ~/.code-shell/cron.json",
+      "wholeValueCharacters": 81
+    },
+    {
+      "group": "cronMechanism",
+      "path": "docs/archive/core-modules/cron.md",
+      "location": "108",
+      "excerpt": "const sched = new CronScheduler(store);",
+      "wholeValueCharacters": 39
+    },
+    {
+      "group": "cronMechanism",
+      "path": "docs/archive/core-modules/cron.md",
+      "location": "116",
+      "excerpt": "t the source.** Read/edit the real code in `automation/scheduler.ts`, `automation/store.ts`, `automation/runner.ts`. New code should import from `../automation/*`; only legacy `../cron/*` importers justify these.",
+      "wholeValueCharacters": 241
+    },
+    {
+      "group": "cronMechanism",
+      "path": "docs/archive/core-modules/cron.md",
+      "location": "121",
+      "excerpt": "- **Persistence is best-effort.** Store write failures are swallowed (logged) so an unwritable disk never breaks the in-memory scheduler. `CronStore.load()` returns `[]` for an absent or corrupt file rather than throwing.",
+      "wholeValueCharacters": 221
+    },
+    {
+      "group": "cronMechanism",
+      "path": "docs/archive/core-modules/cron.md",
+      "location": "122",
+      "excerpt": "- **Cross-process safety:** use `CronStore.mutate()` for read-modify-write (create/update/delete/pause/resume) so load+save happen under one directory lock; a raw `save()` of a stale snapshot can clobber another process's new job.",
+      "wholeValueCharacters": 230
+    },
+    {
+      "group": "cronMechanism",
+      "path": "docs/archive/core-modules/cron.md",
+      "location": "123",
+      "excerpt": "- **Unattended security tier:** a job with no `permissionLevel` resolves to read-only — `permissionMode \"default\"` plus a backend that approves reads, denies writes (`bindCronToEngine` via `resolveWritePolicy`). The host runner must forward `req.sandboxMode` into `Engine({ sandbox })` as defense in depth.",
+      "wholeValueCharacters": 306
+    },
+    {
+      "group": "cronMechanism",
+      "path": "docs/archive/core-modules/cron.md",
+      "location": "125",
+      "excerpt": "- The `cronScheduler` singleton starts with **no store**; call `setStore()` + `loadJobs()` at host startup to enable persistence.",
+      "wholeValueCharacters": 129
+    },
+    {
+      "group": "cronMechanism",
+      "path": "docs/archive/core-modules/engine.md",
+      "location": "7",
+      "excerpt": "ndaries: it does *not* implement the LLM clients, the tool bodies, MCP transport, or the protocol/RPC layer — it composes those lower-level pieces. UI/host concerns (sidebar, RPC, cron) live above it; persistence of cost state is delegated to an injected `CostStateStore`.",
+      "wholeValueCharacters": 776
+    },
+    {
+      "group": "cronMechanism",
+      "path": "docs/archive/core-risk-signal-index.md",
+      "location": "38",
+      "excerpt": "| `automation/cron-expr.ts` | `throw new Error`×4 |",
+      "wholeValueCharacters": 51
+    },
+    {
+      "group": "cronMechanism",
+      "path": "docs/archive/review-2026-05-30/round2_section.md",
+      "location": "13",
+      "excerpt": "| ⬜ | 🟡 中 | 正确性 | `core/cron/scheduler.ts:131-136` | Silent default fallback masks invalid schedule configuration | Throw an Error or log a warning when schedule parsing falls back to the default, or valida… |",
+      "wholeValueCharacters": 209
+    },
+    {
+      "group": "cronMechanism",
+      "path": "docs/archive/review-2026-07-09/01-core-engine-structure.md",
+      "location": "111",
+      "excerpt": "内建工具按族可以归纳为：文件类 Read/Write/Edit/ApplyPatch/NotebookEdit，执行类 Bash/PowerShell/background shell，检索类 Glob/Grep/WebSearch/WebFetch，编排类 Agent/DriveAgent/Cron/Todo/Skill/MCP/Memory，生成类 GenerateImage/GenerateVideo，浏览器和凭证桥接类 browser_* / UseCredential / InjectCredential。注册 metadata 声明 `permissionDefault`、`isReadOnly`、`isConcurrencySafe`、`timeoutMs`、`pathPolicy`，例如 Read/Write/GenerateImage 见 `packages/core/src/tool-system/builtin/index.ts:159`、`packages/core/src/tool-system/builtin/index.ts:171`、`packages/core/src/tool-system/builtin/index.ts:192`。preset whitelist 把实际可见 builtin 集限定在 `GENERAL_BUILTIN_TOOLS` / `TERMINAL_CODING_EXTRA_TOOLS`，见 `packages/core/src/preset/index.ts:34`。",
+      "wholeValueCharacters": 676
+    },
+    {
+      "group": "cronMechanism",
+      "path": "docs/archive/review-2026-07-09/01-core-engine-structure.md",
+      "location": "209",
+      "excerpt": "多会话审批不能回退到 legacy map，是 fail-closed 的隔离要求：错 session 的 UI response 不能解开另一个 session 的 pending prompt，见 `packages/core/src/protocol/server.ts:655`。`requireExisting` 是为 cron “继续这个会话” 场景设计：目标 session 被用户删除时必须显式失败，避免在空白上下文里静默执行，见 `packages/core/src/protocol/server.ts:424`。Background work 的 auto-wakeup 是为了 interactive session 不再由 Engine 长时间 park，而是在后台完成事件到达时唤醒 idle session 继续总结/判断 goal，见 `packages/core/src/protocol/server.ts:220`、`packages/core/src/protocol/server.ts:512`。",
+      "wholeValueCharacters": 470
+    },
+    {
+      "group": "cronMechanism",
+      "path": "docs/archive/review-2026-07-09/02-desktop-stream-walkthrough.md",
+      "location": "139",
+      "excerpt": "- 为什么需要：切点只取最后一个空行边界，且不能切在未闭合 fenced code block 中；不确定时宁可推入 tail。这样避免 setext/list/paragraph 等 Markdown 块因下一行到来回头改结构，也避免未闭合 code fence 被丢给解析/高亮造成抖动（`packages/desktop/src/renderer/markdown/splitStreamingMarkdown.ts:8`、`docs/archive/todo/desktop-streaming-markdown-autoscroll-plan.md:615`）。",
+      "wholeValueCharacters": 286
+    },
+    {
+      "group": "cronMechanism",
+      "path": "docs/audit-2026-10-16/core.md",
+      "location": "62",
+      "excerpt": "state merge、HostRuntime 请求分发/rollback、Pet follow-up 校验/manager tools/session projection/IM route/visit receipt、Core composition activation/lifetime、FileHistory hook/undo/redo、Core Cron scheduler/parser/runner、AuxiliaryPipeline。动态覆盖为六个聚焦测试与上述 135 个既有 baseline 测试，不能视为所有 Core/Host/Pet 测试已过。",
+      "wholeValueCharacters": 469
+    },
+    {
+      "group": "cronMechanism",
+      "path": "docs/audit-2026-10-17/scheduling-data.md",
+      "location": "1",
+      "excerpt": "# Core 定时 / 任务日期普通数据审查",
+      "wholeValueCharacters": 22
+    },
+    {
+      "group": "cronMechanism",
+      "path": "docs/audit-2026-10-17/scheduling-data.md",
+      "location": "7",
+      "excerpt": "- 读取当前 `automation/cron-expr.ts`、`scheduler.ts`、`store.ts`、`index.ts`；相关 field/range、timezone/calendar、absolute one-shot、reload/interval-phase 既有测试；普通 CronCreate/CronList 时间投影与 Sleep 参数路径。",
+      "wholeValueCharacters": 188
+    },
+    {
+      "group": "cronMechanism",
+      "path": "docs/audit-2026-10-17/scheduling-data.md",
+      "location": "17",
+      "excerpt": "- 触发：普通 cron 字符串 `0-1-59 9 * * *`（多一个 range 端点）或 `*/5/0 9 * * *`（多一个 step）；不是合法文档语法，理应报配置错误。",
+      "wholeValueCharacters": 92
+    },
+    {
+      "group": "cronMechanism",
+      "path": "docs/audit-2026-10-17/scheduling-data.md",
+      "location": "18",
+      "excerpt": "- 预期/契约：parser 注释列的 field 语法为 star、star/n、a、a-b、a-b/n 及 comma-list；`CronScheduler.create` 的前置校验注释 `:557–558` 和 update 文档 `:797–799` 要求坏输入在修改前抛错、保持原 job。`validateSchedule` 也注明 invalid 应抛错。",
+      "wholeValueCharacters": 187
+    },
+    {
+      "group": "cronMechanism",
+      "path": "docs/audit-2026-10-17/scheduling-data.md",
+      "location": "31",
+      "excerpt": "- 证据：首次 `time-cron-data-round1` 第二项为周期输出；独立 `evidence/time-cron-once-display.test.ts` / `.log` 为一次性输出 **1 pass / 0 fail / 3 expect / Completed**。都用真实 Intl 本地 formatter 与真实 CronCreate 字符串，动态选择与 Host 不同的 job timezone，避免绑定审查机器所在地；Date.now fake、executionDisabled，不跑任务。",
+      "wholeValueCharacters": 264
+    },
+    {
+      "group": "cronMechanism",
+      "path": "docs/audit-2026-10-17/scheduling-data.md",
+      "location": "36",
+      "excerpt": "- `node scripts/run-bun-test-shard.mjs --timeout 30000 packages/core/src/automation/parse-schedule.test.ts packages/core/src/automation/cron-expr.test.ts packages/core/src/automation/scheduler-timer-overflow.test.ts packages/core/src/automation/scheduler-absolute-once.test.ts`。",
+      "wholeValueCharacters": 278
+    },
+    {
+      "group": "cronMechanism",
+      "path": "docs/audit-2026-10-17/scheduling-data.md",
+      "location": "37",
+      "excerpt": "- `evidence/time-scheduling-baseline.log`：**44 pass / 0 fail / 143 expect / Completed**。interval parser 和 cron parser/nextTime 是纯函数；timer ceiling/absolute one-shot 是 Bun fake timers、fake Date.now、自有 temp CronStore、内存 fake executor。覆盖DST跳时/重复分钟、闰日、DOM/DOW OR、长 timer 切片和 absolute catch-up 边界。没有真实等待/进程/网络/模型。",
+      "wholeValueCharacters": 307
+    },
+    {
+      "group": "cronMechanism",
+      "path": "docs/audit-2026-10-17/scheduling-data.md",
+      "location": "43",
+      "excerpt": "- `nextCronTime` 明确限定约两年搜索，leap-day 等合法但下一次更远的表达式可能返回 null；这是已记录能力范围，未用其直接计缺陷。",
+      "wholeValueCharacters": 78
+    },
+    {
+      "group": "cronMechanism",
+      "path": "docs/audit-2026-10-17-round12/README.md",
+      "location": "18",
+      "excerpt": "TUI 文本 shard 在首次运行前把 Core barrel 的 grapheme helper 映射到实际冻结 intl.ts，OSC native helper 是抛错且调用数为零的边界；没有验证整个 Core barrel。调度模型只读源码，实际只运行 relativeTime/timezones 既有纯函数测试，没有恢复旧 i18n 失败方向或执行真实调度。Core cron 猜路径、各处元数据参考/正则/文档补丁错误分别保存为明确工具响应转录；metadata 更正未触发产品重跑。",
+      "wholeValueCharacters": 250
+    },
+    {
+      "group": "cronMechanism",
+      "path": "docs/audit-2026-10-17-round12/schedule-display.md",
+      "location": "19",
+      "excerpt": "- `scheduleModel.ts:69–73` maps any digit-hour interval into `hourly`, and `:115–116` builds that model as a wall-clock cron expression. For example the source maps `5h` to the model that would build `0 */5 * * *`; `AutomationView.tsx:62` only offers `[1,2,3,4,6,8,12]`. There is a possible imported non-option schedule/editing boundary. Backend semantics are unvalidated in this batch and no ordinary unintended save was demonstrated, so this is a **source-only observation**, not a new bug or formal candidate. Opening the detail only parses local state (`:633–641`); saving requires a schedule edit (`:657–662`). Changing timezone saves only timezone (`:1038–1040`). Do not claim that merely opening a job or changing timezone rewrites its schedule.",
+      "wholeValueCharacters": 752
+    },
+    {
+      "group": "cronMechanism",
+      "path": "docs/audit-2026-10-17-round12/schedule-display.md",
+      "location": "28",
+      "excerpt": "[Initial navigation diagnostic](evidence/root-navigation-skip.md) preserves the failed guessed Core cron-folder inventory as a labeled tool-response transcription. That direction is skipped; no backend validation or alternative product test was used to recover it. The existing full scheduleModel test was intentionally not executed because it includes localization; this batch has no scheduleModel runtime result.",
+      "wholeValueCharacters": 414
+    }
+  ],
+  "jsonPrimaryExact": [
+    {
+      "path": "docs/archive/review-2026-05-30/findings.json",
+      "location": "$[34][\"detail\"]",
+      "excerpt": "parseSchedule returns a hardcoded 10-minute interval (line 136) for any schedule string that doesn't match the expected formats or a valid millisecond number. This silently masks misconfiguration (e.g., typos like '5mn' instead of '5m') without logging or raising an error, making it hard to debug incorrect scheduling.",
+      "wholeValueCharacters": 319
+    },
+    {
+      "path": "docs/audit-2026-10-17/findings.json",
+      "location": "$[\"findings\"][22][\"source\"]",
+      "excerpt": "packages/core/src/automation/cron-expr.ts",
+      "wholeValueCharacters": 41
+    }
+  ]
+}

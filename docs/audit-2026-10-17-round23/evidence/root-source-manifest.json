@@ -1,0 +1,303 @@
+{
+  "baseline": "c1d007ed0af1eca9b56b32fabbb0ea2401037ee1",
+  "files": [
+    {
+      "path": "packages/server/src/session-http-responses.ts",
+      "bytes": 1369,
+      "sha256": "f8ba777989842fcf5eaef61294ed1fc635aa4ef7ae8e719234ef5eefcd48e602",
+      "scope": "Full exploratory static only; no response tracking/cancellation/revocation experiment.",
+      "lineCount": 39,
+      "frozenBlobVerified": true,
+      "currentMatchesFrozen": true
+    },
+    {
+      "path": "packages/chat/src/protocol.ts",
+      "bytes": 3521,
+      "sha256": "ac7e097c07b4d4ffbca59a7958e2cf71fa68b2ccc9833f8f07043ef6d9afb65a",
+      "scope": "Full exploratory static types only; no IPC/credentials/origin experiment.",
+      "lineCount": 122,
+      "frozenBlobVerified": true,
+      "currentMatchesFrozen": true
+    },
+    {
+      "path": "packages/core/src/product/define.ts",
+      "bytes": 6752,
+      "sha256": "a6c80d1da8413b86d9baa954aad66d9892718ac49b86b3dea827bbe503aa09e1",
+      "scope": "Full initial static; Product agent owns deeper source contract review; no constructor/call by Root.",
+      "lineCount": 186,
+      "frozenBlobVerified": true,
+      "currentMatchesFrozen": true
+    },
+    {
+      "path": "packages/server/src/mobile-remote/mobile-limits.ts",
+      "bytes": 368,
+      "sha256": "3b5bd28cd731d5569062096279974b4ef6fba9b592d8d313027b7b2fea067ce8",
+      "scope": "Full exploratory static constants only.",
+      "lineCount": 6,
+      "frozenBlobVerified": true,
+      "currentMatchesFrozen": true
+    },
+    {
+      "path": "packages/server/src/panels/agent-task-models.ts",
+      "bytes": 2710,
+      "sha256": "3c283a536c10b62e68cae91cade6492d05819875481c4cfa77539e2270345dc1",
+      "scope": "Full exploratory static only, prior round17 catalog/default observations not recovered or runtime.",
+      "lineCount": 83,
+      "frozenBlobVerified": true,
+      "currentMatchesFrozen": true
+    },
+    {
+      "path": "packages/core/src/automation/cron-expr.ts",
+      "bytes": 7034,
+      "sha256": "5a5fcfd813afb00e42b32cbaa19f9be68918fed0608a30a33cb494ce7f2c3da0",
+      "scope": "Full initial static only by Root; Cron lane owns its separate limited runtime.",
+      "lineCount": 207,
+      "frozenBlobVerified": true,
+      "currentMatchesFrozen": true
+    },
+    {
+      "path": "packages/core/src/speech/resolve-speech.ts",
+      "bytes": 5132,
+      "sha256": "f8a7b7feace1847f0adb304607507dcce4383f266067a76d18a88d29ee3c8515",
+      "scope": "Full exploratory static only; no resolver/settings/secrets/endpoints/identity/runtime import.",
+      "lineCount": 150,
+      "frozenBlobVerified": true,
+      "currentMatchesFrozen": true
+    },
+    {
+      "path": "packages/chat/src/media.ts",
+      "bytes": 9244,
+      "sha256": "9cd43efac474d03615408fd8ab094c3136ef1972d399b72fc30c362487dabe14",
+      "scope": "Full exploratory static only; round20 mediaKind controls known, no download/network/attachment/security/queue experiment.",
+      "lineCount": 272,
+      "frozenBlobVerified": true,
+      "currentMatchesFrozen": true
+    },
+    {
+      "path": "packages/chat/src/platform-canary.ts",
+      "bytes": 3062,
+      "sha256": "550768e0488aee5cf52c50f18aa7e7491078bf87908c9a81dd1a875f13177a99",
+      "scope": "Full exploratory static only; no adapters/ingress/canary/random identity/timer/message/runtime.",
+      "lineCount": 86,
+      "frozenBlobVerified": true,
+      "currentMatchesFrozen": true
+    },
+    {
+      "path": "packages/link/src/recipes.ts",
+      "bytes": 4162,
+      "sha256": "fa330115b25373afc293fb12d91e6929de4119cfe87db54db09bedce0537c676",
+      "scope": "Full exploratory static only; no auth recipe/host boundary execution.",
+      "lineCount": 122,
+      "frozenBlobVerified": true,
+      "currentMatchesFrozen": true
+    },
+    {
+      "path": "packages/server/src/mobile-remote/codex-parse.ts",
+      "bytes": 5410,
+      "sha256": "a7a7604e92ea7fcde75a77a52f3d9d1925ce7d4ad3a8619d910cb61508e7483c",
+      "scope": "Full initial static by Root; Room lane owns dedup/selected pure leaf verification.",
+      "lineCount": 137,
+      "frozenBlobVerified": true,
+      "currentMatchesFrozen": true
+    },
+    {
+      "path": "packages/server/src/mobile-remote/room-history.ts",
+      "bytes": 13558,
+      "sha256": "2ec32f4ccdecc3f0f713e8dd4f0e907271ac9ef6950005007e72b4270ffa2937",
+      "scope": "Full exploratory static only; no room FS/crypto/manifest/cursor/identity/revocation experiment.",
+      "lineCount": 378,
+      "frozenBlobVerified": true,
+      "currentMatchesFrozen": true
+    },
+    {
+      "path": "packages/server/src/mobile-remote/mobile-history.ts",
+      "bytes": 1458,
+      "sha256": "258e0810ddb54c9fb4d39f6d8bcd4140bd874b8795229047b69f1b54c6ed9b04",
+      "scope": "Full initial static by Root; Room lane owns ordinary reader projection controls.",
+      "lineCount": 41,
+      "frozenBlobVerified": true,
+      "currentMatchesFrozen": true
+    },
+    {
+      "path": "packages/core/src/run/RunQueue.ts",
+      "bytes": 2732,
+      "sha256": "673a493f1b377a387154d41f155d481f42b111ee3574ac88347bee64c62a1be2",
+      "scope": "Full static only; round10/priorRunQueue baselines acknowledged, no queue/callback/timer runtime.",
+      "lineCount": 101,
+      "frozenBlobVerified": true,
+      "currentMatchesFrozen": true
+    },
+    {
+      "path": "packages/core/src/run/RunQueue.test.ts",
+      "bytes": 2451,
+      "sha256": "27d3d24cdfed51b1f5333014531f9519fc80686674215ddf92b317bcf2c31a58",
+      "scope": "Full static existing4tests, unexecuted; prior FIFO/dedup/sync throw/pending baseline not repeated.",
+      "lineCount": 79,
+      "frozenBlobVerified": true,
+      "currentMatchesFrozen": true
+    },
+    {
+      "path": "packages/tui/src/cli/input/read-stdin.ts",
+      "bytes": 1336,
+      "sha256": "b2c5a2dd3b35621c7a3faf3f7a4120049433ac65cc80cf3305677ad38ec205a1",
+      "scope": "Full static only; old CLI data/read-stdin failed direction discovered in dedup and excluded before any test.",
+      "lineCount": 34,
+      "frozenBlobVerified": true,
+      "currentMatchesFrozen": true
+    },
+    {
+      "path": "packages/tui/src/cli/input/read-stdin.test.ts",
+      "bytes": 1582,
+      "sha256": "553f47d02b7c396b1380aa43909862c4b27d248bc432be6ac054c95b2309f9b4",
+      "scope": "Full static existing5tests only; not run, no owned stdin substitute to recover skipped direction.",
+      "lineCount": 42,
+      "frozenBlobVerified": true,
+      "currentMatchesFrozen": true
+    },
+    {
+      "path": "packages/tui/src/cli/commands/builtin/export-md.ts",
+      "bytes": 5002,
+      "sha256": "0b14df8ae14acc0222afe076c509090eb8a35b666d957c1ce718169ee81bd5db",
+      "scope": "Full exploratory static only; old fixed-fence/UTF16/bytes mechanisms not rerun; no export/filesystem/ID experiment.",
+      "lineCount": 170,
+      "frozenBlobVerified": true,
+      "currentMatchesFrozen": true
+    },
+    {
+      "path": "packages/core/src/hooks/inject.ts",
+      "bytes": 1252,
+      "sha256": "55b7d22c9e1a478d896d211b8500d08139f8be4d26073f9cb3d8eb283178b9d4",
+      "scope": "Full exploratory static only; no hook callback/wrapper/injection/security experiment.",
+      "lineCount": 30,
+      "frozenBlobVerified": true,
+      "currentMatchesFrozen": true
+    },
+    {
+      "path": "packages/core/src/runtime/output-clean.ts",
+      "bytes": 1722,
+      "sha256": "e1f7e179003f57dcf3c07da35f76860151e6703de989b0f04db58acbe99bb86a",
+      "scope": "Full exploratory static only; prior ANSI/redraw families not reopened.",
+      "lineCount": 45,
+      "frozenBlobVerified": true,
+      "currentMatchesFrozen": true
+    },
+    {
+      "path": "packages/core/src/runtime/truncate-output.ts",
+      "bytes": 2483,
+      "sha256": "a94f2f0f728faf03956ba1ec710fb0adea233f0a40997f3460512c3b9ec58b2f",
+      "scope": "Full exploratory static only; no Unicode/truncation old-family runtime.",
+      "lineCount": 60,
+      "frozenBlobVerified": true,
+      "currentMatchesFrozen": true
+    },
+    {
+      "path": "packages/core/src/model-catalog/params.ts",
+      "bytes": 2112,
+      "sha256": "df069d199a8baafa07502cab0f4577eb523e27e4d085ce0ede8fe01b410e8391",
+      "scope": "Full static only; prior round10 wire parent/child observation and normal controls known, no parameter/prototype/security runtime.",
+      "lineCount": 55,
+      "frozenBlobVerified": true,
+      "currentMatchesFrozen": true
+    },
+    {
+      "path": "packages/core/src/automation/write-policy.ts",
+      "bytes": 5386,
+      "sha256": "6468a92ac0545fe393f440b90263932ff050595cb38927e1cd2511d8d1f53c11",
+      "scope": "Full exploratory static only; no approval/backend/sandbox/injection/security runtime.",
+      "lineCount": 129,
+      "frozenBlobVerified": true,
+      "currentMatchesFrozen": true
+    },
+    {
+      "path": "packages/tui/src/cli/commands/max-context-tokens.ts",
+      "bytes": 288,
+      "sha256": "2141c44ae2aa4696c32f7afaff1a78fc7ba4a5acb38009f6965d8949ce00f825",
+      "scope": "Full exploratory static only; no config/CLI/model experiment.",
+      "lineCount": 8,
+      "frozenBlobVerified": true,
+      "currentMatchesFrozen": true
+    },
+    {
+      "path": "packages/web/src/lib/outputCoverage.ts",
+      "bytes": 5644,
+      "sha256": "34493ef24963c7c78b75ca13e38d25c1f63186f6f0246c9caedcd03034219fa5",
+      "scope": "Full exploratory static only; no cursor/identity/recovery authority/runtime experiment.",
+      "lineCount": 168,
+      "frozenBlobVerified": true,
+      "currentMatchesFrozen": true
+    },
+    {
+      "path": "packages/tui/src/cli/main.ts",
+      "bytes": 11626,
+      "sha256": "7a0a63bc7acbf23162480c2883bd5af26743459eff3c073fea787c7ce1e021ca",
+      "scope": "Selected88-116 positional/piped caller only; no CLI import/run/process.stdin.",
+      "lineCount": 265,
+      "frozenBlobVerified": true,
+      "currentMatchesFrozen": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round10/runs.md",
+      "bytes": 4747,
+      "sha256": "6ee8acbe8e1834a68fb0a113dd58926fce803335f363e576e53a25fe93b13f8e",
+      "scope": "Full prior report read by1-85 command; no old queue/data tests rerun.",
+      "lineCount": 25,
+      "frozenBlobVerified": true,
+      "currentMatchesFrozen": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round10/catalog.md",
+      "bytes": 4690,
+      "sha256": "f7f958a8b13d27694c8b61c81330fa1d8ef695f54a797b973ca72a90e813399d",
+      "scope": "Full prior report read by1-75 command; no old catalog/cache/parser recovery.",
+      "lineCount": 35,
+      "frozenBlobVerified": true,
+      "currentMatchesFrozen": true
+    },
+    {
+      "path": "docs/audit-2026-10-17/operations-memory.md",
+      "bytes": 13007,
+      "sha256": "40b575c42f9ac53e995ebf441482ab65524fdf71bed70ba418f86530540de466",
+      "scope": "Selected1-70 prior findings/failure receipt only; no old ops/memory/queue runtime.",
+      "lineCount": 91,
+      "frozenBlobVerified": true,
+      "currentMatchesFrozen": true
+    },
+    {
+      "path": "packages/core/src/run/factory.ts",
+      "bytes": 4062,
+      "sha256": "a9b8b1cc6c211c344bbba61e77c88f4dd6696dd6c3ac44b84ef9480c1a930ab9",
+      "scope": "Full additional static default-cwd forwarding check; no factory call/import/constructor.",
+      "lineCount": 125,
+      "frozenBlobVerified": true,
+      "currentMatchesFrozen": true
+    },
+    {
+      "path": "packages/core/src/run/RunManager.ts",
+      "bytes": 38404,
+      "sha256": "77f5186c21785a7a2777629a89bf5fad1d83dc9eb5c1d9e874195696c96e7e8d",
+      "scope": "Selected80-175 Root static config/constructor/submit snapshot only; no Manager/queue/store/identity/timer runtime.",
+      "lineCount": 999,
+      "frozenBlobVerified": true,
+      "currentMatchesFrozen": true
+    },
+    {
+      "path": "packages/core/src/run/EngineRunner.ts",
+      "bytes": 11428,
+      "sha256": "515527f9c1855c97e97b692036b095ae88d768a10e42ffecb89df372cb1e1b24",
+      "scope": "Selected1-145 Root static configuration header only; no Engine/permission/backend execution.",
+      "lineCount": 268,
+      "frozenBlobVerified": true,
+      "currentMatchesFrozen": true
+    },
+    {
+      "path": "packages/core/src/product/types.ts",
+      "bytes": 4091,
+      "sha256": "df7cfd80072fb9e5942eb6d1d4608e1c2ed30570920fa37d46424d693f3bc6fa",
+      "scope": "Full additional static public Product contract only; no runtime.",
+      "lineCount": 135,
+      "frozenBlobVerified": true,
+      "currentMatchesFrozen": true
+    }
+  ],
+  "note": "Exploratory selection reads explicitly separated from runtime and full audit. Prep10pins only revalidated outside this author reading manifest."
+}

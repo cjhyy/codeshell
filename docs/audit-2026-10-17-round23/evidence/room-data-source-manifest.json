@@ -1,0 +1,131 @@
+{
+  "base": "c1d007ed0af1eca9b56b32fabbb0ea2401037ee1",
+  "files": [
+    {
+      "path": "packages/server/src/mobile-remote/codex-parse.ts",
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          137
+        ]
+      ],
+      "lineCount": 137,
+      "bytes": 5410,
+      "sha256": "a7a7604e92ea7fcde75a77a52f3d9d1925ce7d4ad3a8619d910cb61508e7483c",
+      "frozenSha256": "a7a7604e92ea7fcde75a77a52f3d9d1925ce7d4ad3a8619d910cb61508e7483c",
+      "matchesFrozen": true,
+      "note": "Static only; old format issues and baseline excluded; no current CLI producer contract established."
+    },
+    {
+      "path": "packages/server/src/mobile-remote/mobile-history.ts",
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          41
+        ]
+      ],
+      "lineCount": 41,
+      "bytes": 1458,
+      "sha256": "258e0810ddb54c9fb4d39f6d8bcd4140bd874b8795229047b69f1b54c6ed9b04",
+      "frozenSha256": "258e0810ddb54c9fb4d39f6d8bcd4140bd874b8795229047b69f1b54c6ed9b04",
+      "matchesFrozen": true,
+      "note": "Actual zero-runtime-import leaf under owned callbacks only."
+    },
+    {
+      "path": "packages/server/src/mobile-remote/codex-parse.test.ts",
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          133
+        ]
+      ],
+      "lineCount": 133,
+      "bytes": 6319,
+      "sha256": "544ac5d8b544c76154c53d4a517a89275b6bac6a327d41a3f149a82a0e38fd13",
+      "frozenSha256": "544ac5d8b544c76154c53d4a517a89275b6bac6a327d41a3f149a82a0e38fd13",
+      "matchesFrozen": true,
+      "note": "Static only; entire existing mixed ordinary/approval suite not executed; old baseline not repeated."
+    },
+    {
+      "path": "packages/server/src/mobile-remote/codex-room-agent.ts",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          1,
+          9
+        ],
+        [
+          131,
+          160
+        ]
+      ],
+      "lineCount": 231,
+      "bytes": 9727,
+      "sha256": "afe03f9a9e3cedb2314792c45dcb52ad169e72b8d02bc6341da972aa43f64d59",
+      "frozenSha256": "afe03f9a9e3cedb2314792c45dcb52ad169e72b8d02bc6341da972aa43f64d59",
+      "matchesFrozen": true,
+      "note": "Static stdout consumer; no import/constructor/CLI/process."
+    },
+    {
+      "path": "packages/desktop/src/main/mobile-remote/handle-client-event.ts",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          1,
+          22
+        ],
+        [
+          547,
+          568
+        ]
+      ],
+      "lineCount": 666,
+      "bytes": 25666,
+      "sha256": "ed4d8b65512f7be8f31572b9c47b86f4a4f587bd4c9fe94541bcf108108a1f71",
+      "frozenSha256": "ed4d8b65512f7be8f31572b9c47b86f4a4f587bd4c9fe94541bcf108108a1f71",
+      "matchesFrozen": true,
+      "note": "Static builder/reader call and response/error handling only; no handler or authority runtime."
+    },
+    {
+      "path": "packages/desktop/src/main/transcript-reader.ts",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          219,
+          365
+        ],
+        [
+          613,
+          677
+        ]
+      ],
+      "lineCount": 792,
+      "bytes": 30529,
+      "sha256": "0d5873f4c80692ea57271a2ea689c6421c00f6ef54de741588e66e7e1ba94124",
+      "frozenSha256": "0d5873f4c80692ea57271a2ea689c6421c00f6ef54de741588e66e7e1ba94124",
+      "matchesFrozen": true,
+      "note": "Static actual getSessionTranscript/page return and fold producer only; no FS/reader import or runtime."
+    },
+    {
+      "path": "packages/desktop/src/main/mobile-remote/handle-room-history.test.ts",
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          86
+        ]
+      ],
+      "lineCount": 86,
+      "bytes": 2438,
+      "sha256": "7c44e301d48605af4223cca7031fc0a8f0d3cd243f02935d61a326951665617f",
+      "frozenSha256": "7c44e301d48605af4223cca7031fc0a8f0d3cd243f02935d61a326951665617f",
+      "matchesFrozen": true,
+      "note": "Static exclusion review only: RoomManager/temp FS/viewer dependencies, not a direct builder test; not run."
+    }
+  ],
+  "productChanges": false,
+  "gitWrites": false
+}
