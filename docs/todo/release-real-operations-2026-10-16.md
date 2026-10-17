@@ -2945,8 +2945,9 @@ but that does not substitute for the required normal exit. Both the inner HOME a
 outer launcher scratch remain retained. Two first-JS guard rows belong to this one
 Main, with seven probes; there is no returned packaged identity or rendered UI.
 The SDK's fixed launch-wait error alone does not locate the native fault point.
-Its two debugger-attached observations belong to the SDK's two-inspector-client
-design and are not themselves a defect. SDK call-log arrival is not a kernel event
+The two debugger-attached observations are consistent with the SDK connection plus
+the owned first-instruction inspector; they do not by themselves establish a fault.
+SDK call-log arrival is not a kernel event
 timeline, so its cleanup intent and the abnormal native exit are not assigned a
 causal order. No installer success, OS restoration or cause fix is inferred.
 
