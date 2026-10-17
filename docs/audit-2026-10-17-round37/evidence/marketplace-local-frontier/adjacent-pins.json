@@ -1,0 +1,37 @@
+{
+  "capturedUTC": "2026-10-17T12:44:16.230661+00:00",
+  "files": [
+    {
+      "path": "packages/core/src/plugins/pluginInstaller.ts",
+      "bytes": 19962,
+      "sha256": "263ce32aaee6b062513389f93cf29c5f3b5779a160da3979f036fb38b176a30a",
+      "lineCount": 487,
+      "initialSemanticReadSha256": null,
+      "timingNote": "Dedicated pin after rg locator excerpts; selected body reading is after this pin. Do not backfill initial semantic SHA."
+    },
+    {
+      "path": "packages/core/src/plugins/installer/paths.ts",
+      "bytes": 994,
+      "sha256": "323f660b827a86eff5ffaa0b87d60e04b18ae907406ac8d74f123e96239fbbb2",
+      "lineCount": 30,
+      "initialSemanticReadSha256": null,
+      "timingNote": "Dedicated pin after rg locator excerpts; selected body reading is after this pin. Do not backfill initial semantic SHA."
+    },
+    {
+      "path": "packages/core/src/plugins/installer/uninstall.ts",
+      "bytes": 907,
+      "sha256": "8eddb1a62908cc8eb4b86495c2ffcfabc3c2cca6fe36dd10d579b8f9dbaa5bc0",
+      "lineCount": 19,
+      "initialSemanticReadSha256": null,
+      "timingNote": "Dedicated pin after rg locator excerpts; selected body reading is after this pin. Do not backfill initial semantic SHA."
+    },
+    {
+      "path": "packages/core/src/plugins/installedPlugins.ts",
+      "bytes": 9314,
+      "sha256": "e3b7527fd42f9b47555599ed868ca9db04e86b03a055999cd2ac53eb7afd0208",
+      "lineCount": 265,
+      "initialSemanticReadSha256": null,
+      "timingNote": "Dedicated pin after rg locator excerpts; selected body reading is after this pin. Do not backfill initial semantic SHA."
+    }
+  ]
+}

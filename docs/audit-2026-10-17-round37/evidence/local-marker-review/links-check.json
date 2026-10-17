@@ -1,0 +1,70 @@
+{
+  "checkedAtUTC": "2026-10-17T12:54:25.713200+00:00",
+  "files": [
+    {
+      "target": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/packages/core/src/plugins/knownMarketplaces.ts:14",
+      "exists": true
+    },
+    {
+      "target": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/packages/core/src/plugins/marketplaceManager.ts:37",
+      "exists": true
+    },
+    {
+      "target": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/packages/core/src/plugins/installer/paths.ts:10",
+      "exists": true
+    },
+    {
+      "target": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/packages/core/src/plugins/pluginInstaller.ts:334",
+      "exists": true
+    },
+    {
+      "target": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/packages/core/src/plugins/installedPlugins.ts:263",
+      "exists": true
+    },
+    {
+      "target": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/packages/core/src/plugins/installer/install.ts:58",
+      "exists": true
+    },
+    {
+      "target": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/packages/core/src/plugins/pluginCatalog.ts:93",
+      "exists": true
+    },
+    {
+      "target": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/packages/desktop/src/main/plugins-service.ts:134",
+      "exists": true
+    },
+    {
+      "target": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/packages/desktop/src/renderer/extensions/uninstallTarget.ts:29",
+      "exists": true
+    },
+    {
+      "target": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/packages/desktop/src/renderer/extensions/PluginsTab.tsx:149",
+      "exists": true
+    },
+    {
+      "target": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/packages/core/src/plugins/installer/uninstall.ts:8",
+      "exists": true
+    },
+    {
+      "target": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17-round5/profile.md:7",
+      "exists": true
+    },
+    {
+      "target": "/tmp/codeshell-audit-round37-local-marker-review/history-decisions.json",
+      "exists": true
+    },
+    {
+      "target": "/tmp/codeshell-audit-round37-local-marker-review/prior-source-claims.json",
+      "exists": true
+    },
+    {
+      "target": "/tmp/codeshell-audit-round37-local-marker-review/source-manifest.json",
+      "exists": true
+    },
+    {
+      "target": "/tmp/codeshell-audit-round37-local-marker-review/validation.json",
+      "exists": true
+    }
+  ],
+  "existenceOnly": true
+}

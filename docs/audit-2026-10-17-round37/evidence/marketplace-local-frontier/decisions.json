@@ -1,0 +1,119 @@
+{
+  "createdUTC": "2026-10-17T12:57:48.462808+00:00",
+  "prepOnly": true,
+  "parentContextSupplied": "Root frozen Round34 abbreviation99e9; no Git verification; future formal baseline not set.",
+  "classification": {
+    "formal": 0,
+    "candidate": 1,
+    "related": 0
+  },
+  "candidates": [
+    {
+      "id": "MARKETPLACE-LOCAL-R37-C1",
+      "proposedSeverity": "P3",
+      "assessment": "Static wrong-route under ordinary admitted marketplace registry name local. Root final formal/candidate strength is separate.",
+      "ordinaryProducerGate": true,
+      "manualSourceDerivedExample": "A valid ordinary marketplace repo whose tail is local produces registry name local; successful ordinary relative-path-source plugin demo installation produces demo@local pointing into cache/local/demo/local. No helper/language fixture evaluated.",
+      "narrowEffect": "With no direct-local plugin directory for demo, Extensions uninstall routes to local directory lookup and throws no plugin named before intended cached marketplace uninstall. This is conditional static inference, not an observed current-user operation.",
+      "noClaims": [
+        "No actual install/uninstall outcome, deletion, corruption, permission bypass or arbitrary DTO experiment.",
+        "No update/other literal-local consumer is added as another finding."
+      ],
+      "evidence": [
+        {
+          "path": "packages/core/src/plugins/parseMarketplaceInput.ts",
+          "ranges": [
+            [
+              60,
+              89
+            ]
+          ]
+        },
+        {
+          "path": "packages/core/src/plugins/knownMarketplaces.ts",
+          "ranges": [
+            [
+              14,
+              25
+            ],
+            [
+              145,
+              148
+            ]
+          ]
+        },
+        {
+          "path": "packages/core/src/plugins/pluginInstaller.ts",
+          "ranges": [
+            [
+              238,
+              273
+            ],
+            [
+              334,
+              423
+            ]
+          ]
+        },
+        {
+          "path": "packages/core/src/plugins/pluginCatalog.ts",
+          "ranges": [
+            [
+              93,
+              138
+            ]
+          ]
+        },
+        {
+          "path": "packages/desktop/src/main/plugins-service.ts",
+          "ranges": [
+            [
+              43,
+              72
+            ],
+            [
+              134,
+              161
+            ]
+          ]
+        },
+        {
+          "path": "packages/desktop/src/renderer/extensions/uninstallTarget.ts",
+          "ranges": [
+            [
+              29,
+              38
+            ]
+          ]
+        },
+        {
+          "path": "packages/desktop/src/renderer/extensions/PluginsTab.tsx",
+          "ranges": [
+            [
+              131,
+              164
+            ]
+          ]
+        },
+        {
+          "path": "packages/core/src/plugins/installer/uninstall.ts",
+          "ranges": [
+            [
+              8,
+              15
+            ]
+          ]
+        }
+      ]
+    }
+  ],
+  "oldExclusions": [
+    "Missing-null local uninstall UI branch",
+    "Opposite truthy-local branch wrongly routed direct-local installs to marketplace",
+    "R52 constant cache version local update failure"
+  ],
+  "dedupeStrength": "Full corpus mechanical MD/recursiveJSON-values scans plus bounded selected contexts; no exact old same-cause found, not semantic exhaustion.",
+  "securityAuthorityCustody": "Not reviewed; static ordinary name/DTO/dispatch contract only.",
+  "productAttempts": 0,
+  "gitCommands": 0
+}

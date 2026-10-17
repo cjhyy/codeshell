@@ -1,0 +1,37 @@
+{
+  "mode": "pure static independent contract review",
+  "productHelperSchemaCatalogExecutions": 0,
+  "productImports": 0,
+  "testsExecuted": 0,
+  "existingTestDeclarationsRead": 9,
+  "reactBrowserDOMFixtures": 0,
+  "installUninstallUpdateCheckCLIHTTPGitBusinessOperations": 0,
+  "nativeNetworkModelPermissionExperiments": 0,
+  "gitCommands": 0,
+  "repoWrites": 0,
+  "writesOnlyExactOwnedTmp": "/tmp/codeshell-audit-round37-local-marker-review",
+  "oldFailedDirectionsReopened": false,
+  "priorPassCountsBorrowed": false,
+  "metadataScans": [
+    {
+      "scan": "initial full history",
+      "shellExitCode": 0,
+      "sessionId": 34582
+    },
+    {
+      "scan": "focused exact history/delta",
+      "shellExitCode": 0,
+      "sessionId": 83434
+    },
+    {
+      "scan": "prior source object rows",
+      "shellExitCode": 0,
+      "sessionId": 28095
+    }
+  ],
+  "sourceBeforeFinishStable": true,
+  "limits": [
+    "Source inference of wrong dispatch and absent-local-directory rejection only; no effect was observed.",
+    "No automated product verifier, parser, synthetic namespace fixture, installer source function, local directory check or real user state was executed."
+  ]
+}

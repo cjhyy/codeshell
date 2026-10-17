@@ -1,0 +1,13 @@
+{
+  "files": [
+    {
+      "path": "docs/audit-2026-10-17-round5/profile.md",
+      "bytes": 10402,
+      "sha256": "05f479af313df97df33f391d86d393ad3d851ba1f23615366482ef8d07fe59d4",
+      "totalLines": 65,
+      "pinTimeUTC": "2026-10-17T12:49:09.672936+00:00",
+      "initialBeforeSemanticRead": null,
+      "purpose": "dedicated historical pin after focused title/context; full source report read next to distinguish old collision"
+    }
+  ]
+}

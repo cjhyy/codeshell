@@ -1,0 +1,87 @@
+{
+  "prepOnly": true,
+  "rootSuppliedFrozenContextShort": "99e9",
+  "formalBaseline": null,
+  "files": [
+    {
+      "path": "packages/core/src/plugins/pluginCatalog.ts",
+      "bytes": 5601,
+      "sha256": "12215732b14c92e6ef447e83cc74b581f7e72e1ce1467f08badb304544d818e7",
+      "totalLines": 157,
+      "pinTimeUTC": "2026-10-17T12:43:49.161374+00:00",
+      "purpose": "before source content read for this independent namespace-contract review"
+    },
+    {
+      "path": "packages/core/src/plugins/pluginCatalog.test.ts",
+      "bytes": 5530,
+      "sha256": "ba7383c30272aca56cf9090d375f1c5ec2d17f997dcebfd56bcaeb934e4c321d",
+      "totalLines": 157,
+      "pinTimeUTC": "2026-10-17T12:43:49.162739+00:00",
+      "purpose": "before source content read for this independent namespace-contract review"
+    },
+    {
+      "path": "packages/core/src/plugins/installedPlugins.ts",
+      "bytes": 9314,
+      "sha256": "e3b7527fd42f9b47555599ed868ca9db04e86b03a055999cd2ac53eb7afd0208",
+      "totalLines": 265,
+      "pinTimeUTC": "2026-10-17T12:43:49.163247+00:00",
+      "purpose": "before source content read for this independent namespace-contract review"
+    },
+    {
+      "path": "packages/core/src/plugins/installer/types.ts",
+      "bytes": 5106,
+      "sha256": "88165a54fded210ee1f19e326043ef2be8d8b464af5b63689f798e92bf920c05",
+      "totalLines": 154,
+      "pinTimeUTC": "2026-10-17T12:43:49.163817+00:00",
+      "purpose": "before source content read for this independent namespace-contract review"
+    },
+    {
+      "path": "packages/core/src/plugins/pluginInstaller.ts",
+      "bytes": 19962,
+      "sha256": "263ce32aaee6b062513389f93cf29c5f3b5779a160da3979f036fb38b176a30a",
+      "totalLines": 487,
+      "pinTimeUTC": "2026-10-17T12:43:49.164323+00:00",
+      "purpose": "before source content read for this independent namespace-contract review"
+    },
+    {
+      "path": "packages/desktop/src/main/plugins-service.ts",
+      "bytes": 11267,
+      "sha256": "acffed1af5934499848c5a46f025b5aa6d702d50e24e9f9a161edc8c7f2a72ec",
+      "totalLines": 323,
+      "pinTimeUTC": "2026-10-17T12:43:49.164730+00:00",
+      "purpose": "before source content read for this independent namespace-contract review"
+    },
+    {
+      "path": "packages/desktop/src/renderer/extensions/uninstallTarget.ts",
+      "bytes": 1840,
+      "sha256": "90ae9788efe607e159e1c6163a849ef903ee6faee38e4552e484a71a4cb3cc50",
+      "totalLines": 39,
+      "pinTimeUTC": "2026-10-17T12:43:49.165041+00:00",
+      "purpose": "before source content read for this independent namespace-contract review"
+    },
+    {
+      "path": "packages/desktop/src/renderer/extensions/uninstallTarget.test.ts",
+      "bytes": 2011,
+      "sha256": "69e4a1b52a22085f3f7af7c903bee76948f4055ff3791ee0c5f17a0cd022a6ea",
+      "totalLines": 39,
+      "pinTimeUTC": "2026-10-17T12:43:49.165317+00:00",
+      "purpose": "before source content read for this independent namespace-contract review"
+    },
+    {
+      "path": "packages/desktop/src/renderer/extensions/PluginsTab.tsx",
+      "bytes": 18987,
+      "sha256": "347d6e15c50e20beb4699852bcf6773f017585039996d91c4d781ac6824fc045",
+      "totalLines": 530,
+      "pinTimeUTC": "2026-10-17T12:43:49.165661+00:00",
+      "purpose": "before source content read for this independent namespace-contract review"
+    },
+    {
+      "path": "packages/desktop/src/preload/types.d.ts",
+      "bytes": 102234,
+      "sha256": "cd152ddf606dac52a88370b05808ce5c9eafe9d968b5162a5fb4211161a546ba",
+      "totalLines": 2982,
+      "pinTimeUTC": "2026-10-17T12:43:49.166704+00:00",
+      "purpose": "before source content read for this independent namespace-contract review"
+    }
+  ]
+}

@@ -1,0 +1,10 @@
+{
+  "path": "packages/core/src/plugins/installedPlugins.ts",
+  "bytes": 9314,
+  "lineCount": 265,
+  "sha256": "e3b7527fd42f9b47555599ed868ca9db04e86b03a055999cd2ac53eb7afd0208",
+  "beforeDirectRead": true,
+  "initialSemanticReadSha256": null,
+  "atUTC": "2026-10-17T12:54:05.181021+00:00",
+  "limit": "Peer exact key-constructor excerpts precede dedicated Root pin; no backdated first semantic hash."
+}

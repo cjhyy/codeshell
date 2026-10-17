@@ -1,0 +1,20 @@
+{
+  "files": [
+    {
+      "path": "packages/core/src/plugins/knownMarketplaces.ts",
+      "bytes": 6280,
+      "sha256": "ac87a4867d5f47361a4df42ced438c69c00ce9150aa25367ddc4592b8c17fcd8",
+      "totalLines": 161,
+      "pinTimeUTC": "2026-10-17T12:46:15.707584+00:00",
+      "purpose": "before selected plain name/registry admission read; no schema execution"
+    },
+    {
+      "path": "packages/core/src/plugins/schemas.ts",
+      "bytes": 6630,
+      "sha256": "26adcd6c186962520f5027d9c9bfd48c15e06916b5ccb214359c3c5b7b6ab142",
+      "totalLines": 183,
+      "pinTimeUTC": "2026-10-17T12:46:15.708510+00:00",
+      "purpose": "before selected plain name/registry admission read; no schema execution"
+    }
+  ]
+}

@@ -1,0 +1,20 @@
+{
+  "files": [
+    {
+      "path": "packages/core/src/plugins/marketplaceManager.ts",
+      "bytes": 7940,
+      "sha256": "cdebee5c72c8ed253204c4299ed54d6c7f7806ca7768400b2d8a6b94a3846fd0",
+      "totalLines": 236,
+      "pinTimeUTC": "2026-10-17T12:45:39.107243+00:00",
+      "purpose": "before narrow independent ordinary name admission / path-layout declaration read; no filesystem authority experiment"
+    },
+    {
+      "path": "packages/core/src/plugins/installer/paths.ts",
+      "bytes": 994,
+      "sha256": "323f660b827a86eff5ffaa0b87d60e04b18ae907406ac8d74f123e96239fbbb2",
+      "totalLines": 30,
+      "pinTimeUTC": "2026-10-17T12:45:39.108724+00:00",
+      "purpose": "before narrow independent ordinary name admission / path-layout declaration read; no filesystem authority experiment"
+    }
+  ]
+}

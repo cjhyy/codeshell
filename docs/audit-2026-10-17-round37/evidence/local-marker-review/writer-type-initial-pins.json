@@ -1,0 +1,28 @@
+{
+  "files": [
+    {
+      "path": "packages/core/src/plugins/types.ts",
+      "bytes": 3237,
+      "sha256": "18660a4e2dbecdddd517356c6d62bf709b48fc1bcadb173441d92739d66c238a",
+      "totalLines": 98,
+      "pinTimeUTC": "2026-10-17T12:44:49.856653+00:00",
+      "purpose": "before selected ordinary key/schema writer and local marker record read; execution prohibited"
+    },
+    {
+      "path": "packages/core/src/plugins/installer/install.ts",
+      "bytes": 3010,
+      "sha256": "1773b85309de88bc25da1f696fa7937c3af7a0e10af732fcc6fb59ca1fbf04aa",
+      "totalLines": 74,
+      "pinTimeUTC": "2026-10-17T12:44:49.857355+00:00",
+      "purpose": "before selected ordinary key/schema writer and local marker record read; execution prohibited"
+    },
+    {
+      "path": "packages/core/src/plugins/installer/uninstall.ts",
+      "bytes": 907,
+      "sha256": "8eddb1a62908cc8eb4b86495c2ffcfabc3c2cca6fe36dd10d579b8f9dbaa5bc0",
+      "totalLines": 19,
+      "pinTimeUTC": "2026-10-17T12:44:49.857598+00:00",
+      "purpose": "before selected ordinary key/schema writer and local marker record read; execution prohibited"
+    }
+  ]
+}

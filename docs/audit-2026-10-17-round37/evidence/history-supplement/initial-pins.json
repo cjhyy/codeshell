@@ -1,0 +1,31 @@
+{
+  "capturedUTC": "2026-10-17T13:13:26.903917+00:00",
+  "sourceRoot": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell",
+  "scope": "metadata-only historical corpus supplement; no product source read",
+  "files": [
+    {
+      "path": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17-round37/evidence/root-history.json",
+      "bytes": 827111,
+      "sha256": "fcd8b542a2b4cb5ea122f5809ba62b191b7124d90062d6ba680c7fba29db8151",
+      "timing": "before JSON semantic inventory inspection"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round37-marketplace-local-frontier/history-peer/history.json",
+      "bytes": 814642,
+      "sha256": "fb926c10eca5cdcdda525b2d65fedf76f0bf469ec5bb32c475478a5bd0edd63d",
+      "timing": "before JSON semantic inventory inspection"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round37-marketplace-local-frontier/history-corrected-initial-pins.json",
+      "bytes": 708024,
+      "sha256": "85f89fedaa4b1bb10564f1daab7021bf6dc21ddc315fe7bb44b3f495f4e303ea",
+      "timing": "before JSON semantic inventory inspection"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round37-local-marker-review/history.json",
+      "bytes": 717288,
+      "sha256": "8576d62f35c680f16bc9a3ac5f25f4480e28bc85d964e5e0d2d57de67bf20fb2",
+      "timing": "before JSON semantic inventory inspection"
+    }
+  ]
+}

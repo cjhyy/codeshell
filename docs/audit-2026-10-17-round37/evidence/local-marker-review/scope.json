@@ -1,0 +1,17 @@
+{
+  "role": "independent static producer/consumer review, no standalone global finding ID",
+  "ownedOutput": "/tmp/codeshell-audit-round37-local-marker-review",
+  "rootSuppliedFrozenContextShort": "99e9",
+  "formalBaseline": null,
+  "reviewedContract": "Allowed marketplace registry name local and direct-install local marker share installed key/catalog/summary encoding; assess actual ordinary consumer dispatch.",
+  "sourceManifest": "source-manifest.json",
+  "history": "history.json",
+  "excludedMutableOrFutureHistory": [
+    "docs/audit-2026-10-17-round35/**",
+    "docs/audit-2026-10-17-round36/**",
+    "docs/audit-2026-10-17-round37/**"
+  ],
+  "sourceOperations": "read-only byte pins/source selected text; no product/native/catalog/installer/uninstaller/helper/schema execution",
+  "reportClassificationOwner": "Root",
+  "ownPreviousFrozenPrepUnchanged": true
+}

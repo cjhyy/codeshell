@@ -1,0 +1,29 @@
+{
+  "capturedUTC": "2026-10-17T12:44:26.461033+00:00",
+  "files": [
+    {
+      "path": "packages/desktop/src/preload/types.d.ts",
+      "bytes": 102234,
+      "sha256": "cd152ddf606dac52a88370b05808ce5c9eafe9d968b5162a5fb4211161a546ba",
+      "lineCount": 2982,
+      "initialSemanticReadSha256": "cd152ddf606dac52a88370b05808ce5c9eafe9d968b5162a5fb4211161a546ba",
+      "timingNote": "Path-only rg inventory before this pin; no content read."
+    },
+    {
+      "path": "packages/desktop/src/preload/index.ts",
+      "bytes": 86436,
+      "sha256": "05dbc9b534bdc68c30f255f53a96617e50fb0c445ce2fc1bde4be31e3f8a6901",
+      "lineCount": 1892,
+      "initialSemanticReadSha256": "05dbc9b534bdc68c30f255f53a96617e50fb0c445ce2fc1bde4be31e3f8a6901",
+      "timingNote": "Path-only rg inventory before this pin; no content read."
+    },
+    {
+      "path": "packages/desktop/src/main/index.ts",
+      "bytes": 299337,
+      "sha256": "105b2b49a28e0a7ef10980ac5feaa3a07ff81e7197f5acbefd95feb2498224c0",
+      "lineCount": 7330,
+      "initialSemanticReadSha256": "105b2b49a28e0a7ef10980ac5feaa3a07ff81e7197f5acbefd95feb2498224c0",
+      "timingNote": "Path-only rg inventory before this pin; no content read."
+    }
+  ]
+}

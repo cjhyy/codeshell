@@ -1,0 +1,36 @@
+{
+  "baseline": "ee5c1a90050ce3cdddd3f2ebee2f9a2c0d8824d8",
+  "count": 1,
+  "findings": [
+    {
+      "id": "MARKETPLACE-R37-01",
+      "severity": "P3",
+      "status": "confirmed-statically",
+      "title": "A legal marketplace named local is routed to direct-local plugin uninstall",
+      "location": {
+        "path": "packages/desktop/src/renderer/extensions/uninstallTarget.ts",
+        "start": 29,
+        "end": 34
+      },
+      "trigger": "A valid marketplace has registry name local and a plugin is successfully installed from it; the ordinary state has no direct-local directory for that plugin name.",
+      "expected": "Use the marketplace uninstall route for its cached installation.",
+      "actual": "The catalog suffix is local, so resolver returns kind local and the UI calls uninstallLocalPlugin. Its direct-directory guard rejects rather than uninstalling the marketplace cache entry.",
+      "cause": "Allowed marketplace names and the direct-local origin marker share the same namespace and plugin@local identity, while the routing DTO/helper lacks a discriminating origin.",
+      "evidence": [
+        "evidence/marketplace-local-frontier/proposal.md",
+        "evidence/local-marker-review/report.md",
+        "evidence/root-frontier/proposal.md",
+        "evidence/aggregate-review/review.md"
+      ],
+      "counterevidence": [
+        "Actual direct-local marker behavior is intentional and must be preserved.",
+        "CSMeta/source and installPath exist, but the inspected catalog/helper routing does not use them to distinguish these origins.",
+        "Old truthy-local missing branch is the reverse-origin failure; R52 local version cache and PROFILE-R5-01 repo-key folding are separate causes."
+      ],
+      "validation": "Three attributed static source scopes plus metadata review; no product/helper/fixture/test, install/uninstall/catalog/existsSync/HTTP/native execution. No runtime observation or deletion/damage claim.",
+      "remediation": "Preserve an explicit installation origin through the producer/summary/helper contract, or consistently reserve/migrate the name; do not simply remove actual local-marker support.",
+      "provenanceCandidateAlias": "MARKETPLACE-LOCAL-R37-C1",
+      "classificationNote": "Root promotes this same candidate to one static P3 finding after supported ordinary input/entry and deterministic branch/callee proof. Original candidate/support records are unchanged; alias is not a second item."
+    }
+  ]
+}
