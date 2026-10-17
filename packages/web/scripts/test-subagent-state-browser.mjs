@@ -774,7 +774,9 @@ try {
     deniedAttempts.length === 0 &&
     browserDenied.length === 0 &&
     unexpected.length === 0;
-  if (clean) {
+  const operationsPassed =
+    cases.length === 8 && cases.every((item) => item.status === "passed") && failures.length === 0;
+  if (clean && operationsPassed) {
     await rm(homeRoot, { recursive: true, force: true });
     report.privateHomeRemoved = true;
   }
@@ -783,13 +785,7 @@ try {
       name: "settled ledgers",
       message: "Runtime error, forbidden attempt, fixture error or custody remains unproven",
     });
-  report.status =
-    clean &&
-    cases.length === 8 &&
-    cases.every((v) => v.status === "passed") &&
-    failures.length === 0
-      ? "passed"
-      : "failed";
+  report.status = clean && operationsPassed ? "passed" : "failed";
   await write("receipt.json", report);
 }
 console.log(
