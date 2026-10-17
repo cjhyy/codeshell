@@ -458,6 +458,7 @@ export function MessageStream({
           sessionId={localRuntime ? engineSessionId : undefined}
           sessionMainRootId={rootId}
           rootStatus={rootStatus}
+          onExtendGoal={onExtendGoal}
         />
       );
     }

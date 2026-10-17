@@ -5,7 +5,7 @@ import { ToolGroupCard } from "./ToolGroupCard";
 import { ThinkingMessageView } from "./ThinkingMessageView";
 import { AgentMessageView } from "./AgentMessageView";
 import { ContextBoundaryView } from "./ContextBoundaryView";
-import { GoalProgressView } from "./GoalProgressView";
+import { GoalProgressView, type GoalExtendOpts } from "./GoalProgressView";
 import { StreamingMarkdown } from "./StreamingMarkdown";
 import { processGroupDuration, type RenderedTurnProcessGroup } from "./streamGroups";
 import { AgentGroupCard } from "./AgentGroupCard";
@@ -25,6 +25,7 @@ interface Props {
   sessionId?: string | null;
   sessionMainRootId?: string | null;
   rootStatus?: MarkdownRootStatus;
+  onExtendGoal?: (opts: GoalExtendOpts) => void;
 }
 
 /**
@@ -60,6 +61,7 @@ function TurnProcessGroupCardImpl({
   sessionId,
   sessionMainRootId,
   rootStatus,
+  onExtendGoal,
 }: Props) {
   const [open, setOpen] = useState(group.isLive);
   const detailsId = useId();
@@ -188,7 +190,7 @@ function TurnProcessGroupCardImpl({
       return <ContextBoundaryView key={m.id} message={m} />;
     }
     if (m.kind === "goal_progress") {
-      return <GoalProgressView key={m.id} message={m} />;
+      return <GoalProgressView key={m.id} message={m} onExtend={onExtendGoal} />;
     }
     return null;
   };
