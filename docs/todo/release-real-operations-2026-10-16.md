@@ -8,11 +8,13 @@ The release target is macOS, Windows, Linux Desktop and Web. Authorized native C
 has now executed; its passing and incomplete boundaries are recorded below.
 Cross-platform fixture tests alone are not native acceptance.
 
-The latest completed run, CI15, is failed overall: Web and Linux pass their
-independently audited scopes, while macOS and Windows fail before their remaining
-native suites. CI14 remains the latest fully passing matrix. See the
-[CI15 record](#ci15--completed-with-macos-and-windows-failures) below; neither the
-partial successes nor later diagnostic changes replace those failures.
+The latest completed run, CI16, is failed overall: Web, Linux and macOS pass
+their independently audited scopes, while Windows stops in a newly added test's
+CRLF source extraction before any native application launch. That fixture defect
+has a reviewed test-only correction; its native acceptance still awaits the next
+full run. CI14 remains the latest fully passing matrix. The
+[CI16 record](#ci16--windows-fixture-portability-failure) and earlier CI15 failures
+remain separate source-bound evidence.
 
 ## Reproduced and repaired
 
@@ -103,6 +105,7 @@ main, tags and publication remain outside that authorization. The branch is
 | [39015578143](https://github.com/cjhyy/codeshell/actions/runs/39015578143), source `ed07a8db9`                     | All four jobs and independent artifact audits pass. Each native platform verifies 83 behavior checks and 12 actual Main launches, including Review 11 and Panel 20. New mode-only/binary titles and the actual mode-only Files preview pass; bounded Panel diagnostics agree with the original report and normal Main/controller exits. AppImage updater and both DMG UI copies pass again. Web passes nine image unit regressions plus 31 browser behaviors. Earlier unknown failures remain unresolved historical evidence.                                                                                                                                                                                                                                                                                       |
 | [39016494715](https://github.com/cjhyy/codeshell/actions/runs/39016494715), source `67e09d1f6`                     | All four jobs and independent artifact audits pass again. Each native platform verifies 83 real UI operations/12 Main launches and separately 11 Write-card React tests/38 assertions with no failures or skips. Current package integrity, Panel diagnostics, AppImage sandbox/update checks and both DMG UI copies pass. Web verifies nine image regressions, 31 browser behaviors and 88 recorded source hashes. No new blocker is found in this acceptance; earlier unknown failures remain separately preserved.                                                                                                                                                                                                                                                                                               |
 | [39020679310](https://github.com/cjhyy/codeshell/actions/runs/39020679310), source `7e5570210`                     | Overall failed. Web passes 31 actual behaviors, nine image/45 assertions, 64 pure Node contracts and a separate expected-negative retention run. Linux passes 83 operations/12 Main and actual AppImage ten GETs. macOS first-cycle Pet IPCs return successfully, then its post-close Keychain identity check refuses; later native suites/DMG are skipped. Windows startup seven/three Main pass, then Review identity RPC rejects with PromiseGC before any Review operation; six later suites/NSIS are skipped. Both native causes remain unknown.                                                                                                                                                                                                                                                               |
+| [39022606881](https://github.com/cjhyy/codeshell/actions/runs/39022606881), source `e7543a568`                     | Overall failed in Windows' new Review pure Node fixture (8 pass/four CRLF extraction failures), before native launch; 22 NSIS contracts pass but all Windows runtime/install stages are skipped. Web passes 31 browser behaviors, nine image/45 assertions and 64 lifecycle contracts. Linux and macOS each independently pass 83 native operations/12 Main, separate Write 11/38 and Review 12 pure contracts; AppImage ten GETs and both DMG 13-operation UI rounds pass. The fixture-only CRLF correction is reviewed with 13 passing contracts and awaits a new full run. Earlier native unknowns remain preserved.                                                                                                                                                                                             |
 
 The CI12 Windows failure is frozen at
 `ci-39013381607-windows-20261017/verified-summary.json` (SHA256
@@ -1060,6 +1063,92 @@ HOME criteria. Root's combined source-only proof at `e88ab5c8d` binds six files,
 This is local source/pure Node evidence only. No CI16 push/dispatch or native
 result is claimed here; the unchanged 64 Web/22 NSIS groups were not rerun in
 that follow-up. Earlier unknown GC/metadata failures remain separate evidence.
+
+## CI16 — Windows fixture portability failure
+
+[Run 39022606881](https://github.com/cjhyy/codeshell/actions/runs/39022606881)
+executes source `e7543a56805d992dec936b9c8df07e4ce7e2a709`. Windows fails in the
+new Review pure Node contracts before any native application launch; its later
+package, Write-card, native UI and NSIS runtime stages are unexecuted. The overall
+matrix cannot be accepted from the other platforms' passing evidence.
+
+Web independently passes the same **31 browser behaviors**, nine image tests/45
+assertions, 64 pure Node contracts and 106 source hashes. The separate expected
+old-reducer failure again gives two passing controls and six known UI failures,
+with runner-verified retained HOME/profile after normal Chromium exit and cleaned
+observed custody. All 33 PNGs pass structural/CRC checks; Root directly views the
+logout/fresh-draft and 390px multiline annotation samples. This Web result does
+not supply any Windows native evidence.
+
+Linux independently passes **83 native operations/12 Main**, separate Write-card
+React 11/38 and all 12 new Review pure Node contracts. Actual Review diagnostics
+agree with its original 11 cases: Main PID 5103 exits 0/no signal, controller exits
+0, 56 journal events have no truncation/recording error, firstError is null and
+signals are empty. Complete raw stdout 212 bytes/four chunks and stderr 818
+bytes/nine chunks match contiguous recorded byte ranges. These order controller
+observations, rather than native generation times. Original success and custody
+criteria still apply. Actual AppImage checks pass ten GETs, first-JavaScript
+seven negative probes, sandbox and separate source/cache byte/07777 inventories;
+75 exact extraction mode normalizations remain. Inner fixture HOMEs are removed;
+outer launcher scratch remains retained by its existing policy. Six agent-viewed
+PNG samples and two Root samples show readable Chinese, complete generated-image
+paths and Review titles.
+
+macOS independently passes **83 native operations/12 Main**, plus both actual
+DMG copied-app UI rounds (**13 operations/one Main each**). Write React 11/38 and
+Review's 12 pure Node contracts pass separately. All three startup cycles record
+the post-exit Keychain phase and successful restoration of the final gates.
+Review's 11 case names/results agree with the durable journal, raw-byte metadata,
+normal Main/controller exits and final report, without recording failure or
+truncation. Four packaged watchdog request ledgers are empty/nontruncated.
+
+The DMG has an APFS payload in UDZO format; its owned attached volume is readonly,
+both exact attachments are detached, and mounted/copied inventories, production
+hooks and local ad-hoc signing checks agree. Same-build manual replacement
+preserves the synthetic outside-app marker. Each copied app uses a fresh private
+HOME, so this is not a real-user migration or official updater-install result.
+Observed Main/custody and inner private HOME gates pass; launcher scratch and
+DMG evidence roots remain retained by policy. Six actual PNGs were viewed by the
+independent auditor; Root separately views and ZIP-matches the installed/replaced
+390px dark Settings samples. Neither this successful job nor the diagnostic-only
+phase change explains CI15's inode difference or earlier PromiseGC.
+
+Windows' **12 Review contracts give eight passes and four failures**, all four
+inside `actualFinalTail` with `SyntaxError: Unexpected identifier 'console'`.
+The test reads the actual driver source, then searches a fixed LF-only closing
+marker. With a Windows CRLF checkout the marker index is -1, so the extracted
+slice wrongly includes the outer console/final assertion. The original 11-case/
+29-assertion/Git-guard AST contract itself passes. The 22 NSIS pure contracts pass
+separately. No Main, native PNG, packaged build, actual installer or Write-card
+React run is reached. CI15's native PromiseGC cause remains unknown; this is a
+separate, established portability defect in the new test.
+
+Root independently reproduces LF syntax success and the same CRLF syntax error
+by compiling the actual extracted source without executing it. The frozen proof
+`ci16-root-crlf-source-parse-reproduction-20261017.json` has SHA256
+`c6f910a3fb059c38e4c682b71ee8d8736eac3a713abb095c95864f4960f1cb36`.
+Reviewed test-only fix `7d99da1d4` normalizes only in-memory tail-test input and
+adds actual LF/CRLF executions of the same six final-tail scenarios. The original
+12 test bodies, driver/helper/product bytes, guards, deadlines and original
+operations remain unchanged. The negative control fails only the new CRLF case
+(12 pass/one fail); the corrected suite passes all 13, including owned temporary
+HOME retention/removal and truthful post-removal final-IO failures. Root reruns
+13 guarded Node tests with zero failures/skips; locked lint/format checks pass.
+`ci17-root-reviewed-crlf-gate-proof-20261017.json` has SHA256
+`6871971a8bfadcb918e998bb77a94b93cb713b7c8ff1feeeed39f60e50ce0c01`.
+This is source/pure Node evidence; native acceptance of the correction remains
+pending the next authorized full run.
+
+Frozen summaries under `/private/tmp/codeshell-real-operation-cycles-20261016`:
+
+- Web `ci-39022606881-web-independent-audit.json`, SHA256
+  `7edd44d8d5417775bb1120ce843ad6018b71a58bf8dd045dd355af621132b0f7`.
+- Linux `ci-39022606881-linux-independent-audit.json`, SHA256
+  `8a106889c71e954cc162e98a0d880e7a5924230452ec81ba5a831ac270cc62b6`.
+- Windows `ci-39022606881-windows-independent-20261017/verified-failed-summary.json`, SHA256
+  `3ff48639340ba08f8ff6acf613360647385daf99023c07f5a519da6cf87464e3`.
+- macOS `ci-39022606881-mac-independent-20261017/verified-summary.json`, SHA256
+  `e52604cb16eb921cb17cd8565c042bfb67410cf8f8ddd7afe58d839aa3bd2c71`.
 
 ## Remaining acceptance work
 
