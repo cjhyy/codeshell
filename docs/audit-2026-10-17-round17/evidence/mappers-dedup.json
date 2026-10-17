@@ -1,0 +1,318 @@
+{
+  "baseCommit": "d86db33012dffd5d1849e76b869fa15eb260324f",
+  "scope": "All prior docs/bugs .md and recursively parsed JSON value leaves including archive/_archive; current batch excluded. Keys are not JSON string leaves. No source/semantic exhaustive claim.",
+  "files": 1938,
+  "counts": {
+    "md": 1134,
+    "json": 804,
+    "stringLeaves": 239449,
+    "scalarLeaves": 335081
+  },
+  "parseErrors": [],
+  "patterns": {
+    "mapper_functions": "messageMappers|ccHistoryToEvents|roomHistoryToEvents|roomMsgToEvent",
+    "history_ids": "(?:cc-hist-|HistoryMessage.{0,160}(?:tool.?id|toolId)|(?:snapshot|history|backlog).{0,100}(?:tool.{0,20}id|paired|unmatched))",
+    "turn_boundaries": "(?:ccHistory|messageMappers|历史映射|history mapping).{0,180}(?:turn_complete|completed|turn.{0,10}bound|边界)",
+    "history_mixed": "(?:HistoryMessage|ccHistoryToEvents).{0,160}(?:mixed|顺序|order|丢|loss|tools)"
+  },
+  "contextCapPerPattern": 40,
+  "matches": {
+    "mapper_functions": {
+      "matches": 83,
+      "contexts": [
+        {
+          "location": "docs/archive/beta-prep-audit-2026-06-23.md:18",
+          "context": "iver·scheduler·store·FileRunStore·executor·mcp-manager/tools·builtin/index·context-tools·pty-service·transcript-reader·trusted-device-store·messageMappers/useRemoteApp),无越界。push / A 节交互真机冒烟仍待你。"
+        },
+        {
+          "location": "docs/archive/beta-prep-audit-2026-06-23.md:19",
+          "context": "ist`(offset:-1→钳0全列/limit:-1→空页)·`read_file`(limit:-3→空不丢尾)·**executor 数组 path arg**(out-of-ws 元素 →asked:1 走审批门拒,path-traversal 强制端到端真生效)。·`roomHistoryToEvents`(WS 非数组 messages:undefined/null/123/str/类数组 →[] 不抛,合法数组映射)。**12 修除 MCP-signal(结构性,tsc+33测覆盖)外全运行时跑通。** + CLI 端到端 `run \"say hi\"` 真跑通一轮(续 G)+ **headless 多路径验**:`echo task | run -o json --output-last-message f` → 合法 JSON(`"
+        },
+        {
+          "location": "docs/archive/beta-prep-audit-2026-06-23.md:47",
+          "context": "`(event.messages ?? []).map` ——**复核认定为真 robustness bug 并修**(`a37d1f76`):messages 来自 WS 不可信 host,`??` 只挡 null/undefined,非数组→`.map` 抛→手机白屏。抽 `roomHistoryToEvents` 守 Array.isArray,+1 测(同审计三轮 mobile 加固一脉)。其余(access-passcode 锁定/pairing 边界/JSON try-catch/reducer)均干净或已守。**这是第 12 个真 bug;7 批扫完,孤立面确已尽。**"
+        },
+        {
+          "location": "docs/archive/review-2026-07-09/07-new-observations-verification.md:183",
+          "context": "rg -n \"type:\\s*\\\"turn_complete\\\"|\\{\\s*type:\\s*\\\"turn_complete\\\"|turn_complete\\\"|turn_end\\\"|turn_boundary|appendTurnBoundary|messageMappers|roomMsgToEvent\" packages/core/src packages/desktop/src packages/tui/src --glob '!**/*.test.ts' --glob '!**/*.test.tsx'"
+        },
+        {
+          "location": "docs/archive/review-2026-07-09/07-new-observations-verification.md:183",
+          "context": "rg -n \"type:\\s*\\\"turn_complete\\\"|\\{\\s*type:\\s*\\\"turn_complete\\\"|turn_complete\\\"|turn_end\\\"|turn_boundary|appendTurnBoundary|messageMappers|roomMsgToEvent\" packages/core/src packages/desktop/src packages/tui/src --glob '!**/*.test.ts' --glob '!**/*.test.tsx'"
+        },
+        {
+          "location": "docs/archive/review-2026-07-09/07-new-observations-verification.md:204",
+          "context": "- `packages/desktop/src/renderer/lib/messageMappers.ts:58`：room `turn_end` 映射成 `turn_complete`。"
+        },
+        {
+          "location": "docs/archive/review-2026-07-09/07-new-observations-verification.md:205",
+          "context": "- `packages/desktop/src/renderer/lib/messageMappers.ts:117`：CC history replay 为 assistant message 补 `turn_complete(completed)`。"
+        },
+        {
+          "location": "docs/archive/review-2026-07-09/08-N03-fix-design.md:452",
+          "context": "- `bun test packages/desktop/src/renderer/lib/messageMappers.test.ts`"
+        },
+        {
+          "location": "docs/archive/review-2026-07-09/17-fix-execution-plan.md:48",
+          "context": "- Desktop stream/fold 护栏绿：`types.test.ts`、`streamReducer.test.ts`、`streamGroups.test.ts`、`streamCoalescer.test.ts`、`messageMappers.test.ts`、`transcript-reader.test.ts`、`foldTranscript.test.ts`，见 `docs/archive/review-2026-07-09/08-N03-fix-design.md:444` 到 `docs/archive/review-2026-07-09/08-N03-fix-design.md:474`。"
+        },
+        {
+          "location": "docs/archive/review-2026-07-09/17-fix-execution-plan.md:130",
+          "context": "esktop/src/renderer/lib/streamReducer.test.ts packages/desktop/src/renderer/messages/streamGroups.test.ts packages/desktop/src/renderer/lib/messageMappers.test.ts` 绿。`streamGroups.test.ts` 是 stream grouping 护栏，文件结构见 `packages/desktop/src/renderer/messages/streamGroups.test.ts:1` 到 `packages/desktop/src/renderer/messages/streamGroups.test.ts:120`。"
+        },
+        {
+          "location": "docs/archive/review-2026-07-09/17-fix-execution-plan.md:174",
+          "context": "| `packages/desktop/src/renderer/lib/messageMappers.test.ts` | 回归护栏 | B1/B5 | snapshot/message shape 兼容 |"
+        },
+        {
+          "location": "docs/archive/review-2026-07-09/17-fix-execution-plan.md:216",
+          "context": "sktop event contract 跨层；旧 snapshot 缺 `toolCallIds`；子代理 summary 错挂 | optional 字段兼容；desktop reducer 对找不到 agent/tool 不 fallback；跑 streamGroups/messageMappers/transcript 护栏 | 独立 commit/PR；若错挂严重，回滚 B5 不影响 B1/B2 |"
+        },
+        {
+          "location": "docs/audit-2026-10-16/inventory.json#/source_inventory/2400",
+          "context": "packages/web/src/lib/messageMappers.ts"
+        },
+        {
+          "location": "docs/audit-2026-10-17-round10/evidence/root-dedup.json#/hits/run_store/19/context",
+          "context": "iver·scheduler·store·FileRunStore·executor·mcp-manager/tools·builtin/index·context-tools·pty-service·transcript-reader·trusted-device-store·messageMappers/useRemoteApp),无越界。push / A 节交互真机冒烟仍待你。\n> > **✅ 修复运行时实证(非仅单测,直接 import 跑真代码)**:全部安全/footgun 类修复逐个跑通确认真生效——`parseSchedule`(`30s/5m/1h`→ms,`0s/0m/0/5mn/\"\"`→throw"
+        },
+        {
+          "location": "docs/audit-2026-10-17-round10/evidence/root-dedup.json#/hits/run_store/20/context",
+          "context": "ist`(offset:-1→钳0全列/limit:-1→空页)·`read_file`(limit:-3→空不丢尾)·**executor 数组 path arg**(out-of-ws 元素 →asked:1 走审批门拒,path-traversal 强制端到端真生效)。·`roomHistoryToEvents`(WS 非数组 messages:undefined/null/123/str/类数组 →[] 不抛,合法数组映射)。**12 修除 MCP-signal(结构性,tsc+33测覆盖)外全运行时跑通。** + CLI 端到端 `run "
+        },
+        {
+          "location": "docs/audit-2026-10-17-round11/evidence/host-dedup.json#/matches/52/text",
+          "context": "相邻已读：messageMappers、transcriptReplay、userMessageDisplay、roomHistory、format、outputCoverage、mobileAttachments、environment、storage、remoteAppSync、service worker/register，以及 useRemoteApp/chat/DesktopApp/Mobile App 的相关调用段。没有把旧 POSIX cwd 小写合并、旧 l"
+        },
+        {
+          "location": "docs/audit-2026-10-17-round11/evidence/host-dedup.json#/matches/65/text",
+          "context": "相邻已读：messageMappers、transcriptReplay、userMessageDisplay、roomHistory、format、outputCoverage、mobileAttachments、environment、storage、remoteAppSync、service worker/register，以及 useRemoteApp/chat/DesktopApp/Mobile App 的相关调用段。没有把旧 POSIX cwd 小写合并、旧 l"
+        },
+        {
+          "location": "docs/audit-2026-10-17-round12/evidence/root-dedup.json#/hits/schedule_model/1/context",
+          "context": "usted-device-store·messageMappers/useRemoteApp),无越界。push / A 节交互真机冒烟仍待你。\n> > **✅ 修复运行时实证(非仅单测,直接 import 跑真代码)**:全部安全/footgun 类修复逐个跑通确认真生效——`parseSchedule`(`30s/5m/1h`→ms,`0s/0m/0/5mn/\"\"`→throw)·`clampPtyDim`(`NaN/∞/0/-5`→1,`120.7`→120)·`cdp scroll(NaN)`"
+        },
+        {
+          "location": "docs/audit-2026-10-17-round12/evidence/root-dedup.json#/hits/schedule_model/12/context",
+          "context": "usted-device-store·messageMappers/useRemoteApp),无越界。push / A 节交互真机冒烟仍待你。\n> > **✅ 修复运行时实证(非仅单测,直接 import 跑真代码)**:全部安全/footgun 类修复逐个跑通确认真生效——`parseSchedule`(`30s/5m/1h`→ms,`0s/0m/0/5mn/\"\"`→throw"
+        },
+        {
+          "location": "docs/audit-2026-10-17-round13/evidence/groups-dedup.json#/hits/35/text",
+          "context": "- Desktop stream/fold 护栏绿：`types.test.ts`、`streamReducer.test.ts`、`streamGroups.test.ts`、`streamCoalescer.test.ts`、`messageMappers.test.ts`、`transcript-reader.test.ts`、`foldTranscript.test.ts`，见 `docs/archive/review-2026-07-09/08-N03-fix-design.md:444` 到 `docs/archive/review-2026-07-09/08-N03-fix-design.md:474`。"
+        },
+        {
+          "location": "docs/audit-2026-10-17-round13/evidence/groups-dedup.json#/hits/37/text",
+          "context": "esktop/src/renderer/lib/streamReducer.test.ts packages/desktop/src/renderer/messages/streamGroups.test.ts packages/desktop/src/renderer/lib/messageMappers.test.ts` 绿。`streamGroups.test.ts` 是 stream grouping 护栏，文件结构见 `packages/desktop/src/renderer/messages/streamGroups.test.ts:1` 到 `packages/desktop/src/renderer/messages/streamGroups.test.ts:120`。"
+        },
+        {
+          "location": "docs/audit-2026-10-17-round13/evidence/groups-dedup.json#/hits/40/text",
+          "context": "sktop event contract 跨层；旧 snapshot 缺 `toolCallIds`；子代理 summary 错挂 | optional 字段兼容；desktop reducer 对找不到 agent/tool 不 fallback；跑 streamGroups/messageMappers/transcript 护栏 | 独立 commit/PR；若错挂严重，回滚 B5 不影响 B1/B2 |"
+        },
+        {
+          "location": "docs/audit-2026-10-17-round13/evidence/groups-dedup.json#/hits/71/text",
+          "context": "- Desktop stream/fold 护栏绿：`types.test.ts`、`streamReducer.test.ts`、`streamGroups.test.ts`、`streamCoalescer.test.ts`、`messageMappers.test.ts`、`transcript-reader.test.ts`、`foldTranscript.test.ts`，见 `docs/archive/review-2026-07-09/08-N03-fix-design.md:444` 到 `docs/archive/review-2026-07-09/08-N03-fix-design.md:474`。"
+        },
+        {
+          "location": "docs/audit-2026-10-17-round13/evidence/groups-dedup.json#/hits/73/text",
+          "context": "sktop event contract 跨层；旧 snapshot 缺 `toolCallIds`；子代理 summary 错挂 | optional 字段兼容；desktop reducer 对找不到 agent/tool 不 fallback；跑 streamGroups/messageMappers/transcript 护栏 | 独立 commit/PR；若错挂严重，回滚 B5 不影响 B1/B2 |"
+        },
+        {
+          "location": "docs/audit-2026-10-17-round13/evidence/groups-dedup.json#/hits/215/text",
+          "context": "- `packages/desktop/src/renderer/lib/streamReducer.ts`、`packages/desktop/src/renderer/lib/messageMappers.ts` 被 mobile 复用，也可能被桌面 renderer/lib 相关测试覆盖；本次 loading/unread 不建议改 reducer 语义，优先在 `useRemoteApp` 外围派生状态，避免影响消息折叠/完成态。"
+        },
+        {
+          "location": "docs/audit-2026-10-17-round13/evidence/root-dedup.json#/hits/transcript_projection/5/context",
+          "context": "pes.test.ts`、`streamReducer.test.ts`、`streamGroups.test.ts`、`streamCoalescer.test.ts`、`messageMappers.test.ts`、`transcript-reader.test.ts`、`foldTranscript.test.ts`，见 `docs/archive/review-2026-07-09/08-N03-fix-design.md:444` 到 `docs/archive/review-2026-07-09/08-N03-fix-design.md:474`。\n\n预计改动半径：小。核心实现一处 emit 删除；测试新增/扩展中等。若"
+        },
+        {
+          "location": "docs/audit-2026-10-17-round13/evidence/root-dedup.json#/hits/transcript_projection/43/context",
+          "context": "pes.test.ts`、`streamReducer.test.ts`、`streamGroups.test.ts`、`streamCoalescer.test.ts`、`messageMappers.test.ts`、`transcript-reader.test.ts`、`foldTranscript.test.ts`，见 `docs/archive/review-2026-07-09/08-N03-fix-design.md:444` 到 `docs/archive/review-2026-07-09/08-N03-fix-design.md:474`。"
+        },
+        {
+          "location": "docs/audit-2026-10-17-round14/evidence/bytes-dedup.json#/hits/codex_parse/28/snippet",
+          "context": "ersationView(roomId)       → ccRoom.send / history / onMessage\n        → RoomManager 持久化 codex 事件（经 parseCodexJsonLine 归一）\n        → messageMappers → streamReducer（与 claude 同一套，零改）\n```\n\n## 错误处理\n\n- codex 未装：门控显示「未检测到 Codex CLI，请安装 codex 并确保在 PATH」+ 重新检测按钮（复用现有门控 UI，文案按 kind）。\n- rollout 文件坏行/空文件/无 session_meta：发现器逐文件 try/catch 跳过，不整体崩。\n- resume 失败（codex 报 `n"
+        },
+        {
+          "location": "docs/audit-2026-10-17-round14/evidence/web-dedup.json#/matches/projection/1/text",
+          "context": "相邻已读：messageMappers、transcriptReplay、userMessageDisplay、roomHistory、format、outputCoverage、mobileAttachments、environment、storage、remoteAppSync、service worker/register，以及 useRemoteApp/chat/DesktopApp/Mobile App 的相关调用段。没有把旧 POSIX cwd 小写合并、旧 l"
+        },
+        {
+          "location": "docs/audit-2026-10-17-round14/evidence/web-dedup.json#/matches/projection/20/text",
+          "context": "相邻已读：messageMappers、transcriptReplay、userMessageDisplay、roomHistory、format、outputCoverage、mobileAttachments、environment、storage、remoteAppSync、service worker/register，以及 useRemoteApp/chat/DesktopApp/Mobile App 的相关调用段。没有把旧 POSIX cwd 小写合并、旧 l"
+        },
+        {
+          "location": "docs/audit-2026-10-17-round14/evidence/web-dedup.json#/matches/projection/21/text",
+          "context": "相邻已读：messageMappers、transcriptReplay、userMessageDisplay、roomHistory、format、outputCoverage、mobileAttachments、environment、storage、remoteAppSync、service worker/register，以及 useRemoteApp/chat/DesktopApp/Mobile App 的相关调用段。没有把旧 POSIX cwd 小写合并、旧 l"
+        },
+        {
+          "location": "docs/audit-2026-10-17-round14/evidence/web-dedup.json#/matches/projection/24/text",
+          "context": "相邻已读：messageMappers、transcriptReplay、userMessageDisplay、roomHistory、format、outputCoverage、mobileAttachments、environment、storage、remoteAppSync、service worker/register，以及 useRemoteApp/chat/DesktopApp/Mobile App 的相关调用段。没有把旧 POSIX cwd 小写合并、旧 l"
+        },
+        {
+          "location": "docs/audit-2026-10-17-round14/evidence/web-source-manifest.json#/files/6/path",
+          "context": "packages/web/src/lib/messageMappers.ts"
+        },
+        {
+          "location": "docs/audit-2026-10-17-round14/source-manifest.json#/files/53/path",
+          "context": "packages/web/src/lib/messageMappers.ts"
+        },
+        {
+          "location": "docs/audit-2026-10-17-round14/source-manifest.json#/workerSourceChecks/6/path",
+          "context": "packages/web/src/lib/messageMappers.ts"
+        },
+        {
+          "location": "docs/audit-2026-10-17-round3/root.md:22",
+          "context": "- 接线：`codex-room-agent.ts:156-165` 在 stdout line callback 分派 parser 事件；`room-manager.ts:1178-1187` 直接存 summary；Web `lib/messageMappers.ts:59-65` 直接映射为 reducer result。后段 UI 为静态接线，不作为额外动态实验。"
+        },
+        {
+          "location": "docs/audit-2026-10-17-round5/evidence/root-web-source-manifest.json#/sources/1/path",
+          "context": "packages/web/src/lib/messageMappers.ts"
+        },
+        {
+          "location": "docs/audit-2026-10-17-round5/root-web.md:31",
+          "context": "相邻已读：messageMappers、transcriptReplay、userMessageDisplay、roomHistory、format、outputCoverage、mobileAttachments、environment、storage、remoteAppSync、service worker/register，以及 useRemoteApp/chat/DesktopApp/Mobile App 的相关调用段。没有把旧 POSIX cwd 小写合并、旧 l"
+        },
+        {
+          "location": "docs/audit-2026-10-17-round5/source-manifest.json#/files/89/path",
+          "context": "packages/web/src/lib/messageMappers.ts"
+        },
+        {
+          "location": "docs/audit-2026-10-17-round8/evidence/cross-review-plugins.md:17",
+          "context": "The first focused shard agrees with source/fixture on **6 pass / 21 expect / 0 fail/skip / Completed**; the independent existing format/messageMappers/mobileAttachments shard agrees on **25 pass / 83 expect**. Total **31 tests / 104 expect**, not 31 new defect tests. All eight fixture/log/exit hashes in validation matched on review. After the author's disposition upda"
+        }
+      ]
+    },
+    "history_ids": {
+      "matches": 26,
+      "contexts": [
+        {
+          "location": "docs/archive/review-2026-07-09/05-p2-deep-dive-and-fix-design.md:203",
+          "context": "1. `StreamEvent` 类型扩展需要兼容旧 snapshot / 老 worker：`toolCallIds` 和 `agentId` 应保持可选；无 id 时保留 legacy fallback。"
+        },
+        {
+          "location": "docs/archive/review-2026-07-09/17-fix-execution-plan.md:216",
+          "context": "| B5 | core/desktop event contract 跨层；旧 snapshot 缺 `toolCallIds`；子代理 summary 错挂 | optional 字段兼容；desktop reducer 对找不到 agent/tool 不 fallback；跑 streamGroups/messageMappers/transcript 护栏 | 独立 commit/PR；若错挂严重，回滚 B5 不影响 B1/B2 |"
+        },
+        {
+          "location": "docs/archive/review-2026-07-09/17-fix-execution-plan.md:253",
+          "context": "8. F-08 old snapshot compatibility：旧 `tool_summary` 没有 `toolCallIds` 时必须保留 legacy fallback；但有 `agentId` 或 id miss 时不得错挂到顶层，见 `docs/archive/review-2026-07-09/15-p2-fix-checklist.md:23` 到 `docs/archive/review-2026-07-09/15-p2-fix-checklist.md:30`。"
+        },
+        {
+          "location": "docs/audit-2026-10-17-round10/evidence/root-dedup.json#/hits/history_identity/99/context",
+          "context": "ult.test.ts` for loop-top abort, confirmed `cancel_goal` with a same-batch sensitive result, max-turns final summary with pending sensitive history, multiple sensitive results keyed by tool id, and model-error after a sensitive result. Tests assert secret plaintext is absent from returned history and transcript inputs, and that max-turns skips context management while still allowing the final no-tools model c"
+        },
+        {
+          "location": "docs/audit-2026-10-17-round11/evidence/chat-dedup.json#/matches/13/hits/3/text",
+          "context": "识别新 Main epoch，或首次从 legacy 游标升级为带 epoch 后，会等待该代次完整前缀，再接续实时流；Main 已淘汰新代次 seq 1 时，保留可见内容并提示重新打开会话读取已保存记录。后台先发现新代次、再切回会话时，`useRemoteApp.ts` 的 `historyUnpaired` 分支仅展示 durable history，拒绝直接叠加可能重复的 full snapshot，并提示“已恢复保存的聊天记录。当前回复的实时部分暂时无法接续，请稍后重新打开会话。”；focus/reconnect 可以重读 durable history，历史返回后的全新顶层 `stream_request_start` 才恢复实时接收，迟到 history/snapshot 不得覆盖该新回合。让 `session.history`"
+        },
+        {
+          "location": "docs/audit-2026-10-17-round12/evidence/patch-dedup.json#/hits/85/excerpt",
+          "context": "ult.test.ts` for loop-top abort, confirmed `cancel_goal` with a same-batch sensitive result, max-turns final summary with pending sensitive history, multiple sensitive results keyed by tool id, and model-error after a sensitive result. Tests assert secret plaintext is absent from returned history and transcript inputs, and that max-turns skips context management while still allowing the final no-tools model c"
+        },
+        {
+          "location": "docs/audit-2026-10-17-round12/evidence/patch-dedup.json#/hits/134/excerpt",
+          "context": "ult.test.ts` for loop-top abort, confirmed `cancel_goal` with a same-batch sensitive result, max-turns final summary with pending sensitive history, multiple sensitive results keyed by tool id, and model-error after a sensitive result. Tests assert secret plaintext is absent from returned history and transcript inputs, and that max-turns skips context management while still allowing the final no-tools model c"
+        },
+        {
+          "location": "docs/audit-2026-10-17-round13/evidence/groups-dedup.json#/hits/40/text",
+          "context": "| B5 | core/desktop event contract 跨层；旧 snapshot 缺 `toolCallIds`；子代理 summary 错挂 | optional 字段兼容；desktop reducer 对找不到 agent/tool 不 fallback；跑 streamGroups/messageMappers/transcript 护栏 | 独立 commit/PR；若错挂严重，回滚 B5 不影响 B1/B2 |"
+        },
+        {
+          "location": "docs/audit-2026-10-17-round13/evidence/groups-dedup.json#/hits/73/text",
+          "context": "| B5 | core/desktop event contract 跨层；旧 snapshot 缺 `toolCallIds`；子代理 summary 错挂 | optional 字段兼容；desktop reducer 对找不到 agent/tool 不 fallback；跑 streamGroups/messageMappers/transcript 护栏 | 独立 commit/PR；若错挂严重，回滚 B5 不影响 B1/B2 |"
+        },
+        {
+          "location": "docs/audit-2026-10-17-round15/evidence/docinput-navigation-skip.md:3",
+          "context": "ed `docs/bugs` path is skipped. A separate repository-wide `rg --files -g '*.md' -g '*.json'` inventory identifies real `docs/` and `bugs/` history for deduplication. No runtime test was run or repaired."
+        },
+        {
+          "location": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json#/hits/55/matches/5/text",
+          "context": "| B5 | core/desktop event contract 跨层；旧 snapshot 缺 `toolCallIds`；子代理 summary 错挂 | optional 字段兼容；desktop reducer 对找不到 agent/tool 不 fallback；跑 streamGroups/messageMappers/transcript 护栏 | 独立 commit/PR；若错挂严重，回滚 B5 不影响 B1/B2 |"
+        },
+        {
+          "location": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json#/hits/184/matches/1/text",
+          "context": "not retain their old text. mergeHistoryIntoLive/replayBase handling starts at342, in the no-outputCursor branch. The actual tokened hydrate_history reducer reaches replay at550–555. Hence a cold paired Session, or a successfully hydrated modern journal after confirmed cache replacement, is not protected by a stale "
+        },
+        {
+          "location": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json#/hits/279/matches/1/text",
+          "context": "not retain their old text. mergeHistoryIntoLive/replayBase handling starts at342, in the no-outputCursor branch. The actual tokened hydrate_history reducer reaches replay at550–555. Hence a cold paired Session, or a successfully hydrated modern journal after confirmed cache replacement, is not protected by a stale "
+        },
+        {
+          "location": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json#/hits/280/matches/1/text",
+          "context": "not retain their old text. mergeHistoryIntoLive/replayBase handling starts at342, in the no-outputCursor branch. The actual tokened hydrate_history reducer reaches replay at550–555. Hence a cold paired Session, or a successfully hydrated modern journal after confirmed cache replacement, is not protected by a stale "
+        },
+        {
+          "location": "docs/plan-2026-07-09-security-M3-M2-IMPL-NOTES.md:118",
+          "context": "ult.test.ts` for loop-top abort, confirmed `cancel_goal` with a same-batch sensitive result, max-turns final summary with pending sensitive history, multiple sensitive results keyed by tool id, and model-error after a sensitive result. Tests assert secret plaintext is absent from returned history and transcript inputs, and that max-turns skips context management while still allowing the final no-tools model c"
+        },
+        {
+          "location": "docs/refactor/_archive/goal-judge-context-refactor-FINAL.md:101",
+          "context": "- shell stdin snapshot 的字段集合和序列化形状与旧契约相同，无 V1 DTO/digest/tool evidence；fixture 可保留 goal/final 中原有的代码或路径；"
+        },
+        {
+          "location": "docs/review-2026-10-12/README.md:340",
+          "context": "第二十四轮[旧原生图片历史](legacy-history-round24.md)新增R84/F24-1/P3：从未发布journal的有效paired-native会话走正常history兼容恢复，内部路径块和模型提示被显示为正文、没有安全附件summary；普通文字、assistant和68-byte原件完整。现代首次journal发布后hook投影正常，不是公开修复入口，未再次SSR。主审两个冻结基线各guarded新1文件1测试17个Bun expect/Completed，作者latest另1/17分账、首轮fixture CRC拒绝单独保留，没有打印expect总数。动态a"
+        },
+        {
+          "location": "docs/review-2026-10-12/connection-recovery-round15.md:29",
+          "context": "5–70`) and retires lagging peers while keeping healthy peers. `hub-outbound-control.test.ts` verifies this policy with an explicitly mocked backlog and transports; it is not a second native measurement. Thus the issue is narrowed to the paired Desktop RemoteHost live/device send methods, not the Hub outbound implementation."
+        },
+        {
+          "location": "docs/review-2026-10-12/flow-coverage.md:13",
+          "context": "| 重新打开旧图片会话 | [兼容history与现代journal控制](legacy-history-round24.md)：真实producer/reader/hook及旧状态Workbench SSR，auth/authority/WS替身 | R84/P3从未发布journal的旧paired-native消息显示内部路径和模型提示、缺安全附件摘要；文字/原件保留，现代hook投影正常 |"
+        },
+        {
+          "location": "docs/review-2026-10-12/modern-desktop-image-quality-round25.md:26",
+          "context": "not retain their old text. mergeHistoryIntoLive/replayBase handling starts at342, in the no-outputCursor branch. The actual tokened hydrate_history reducer reaches replay at550–555. Hence a cold paired Session, or a successfully hydrated modern journal after confirmed cache replacement, is not protected by a stale inline optimistic bubble. Conversely, useTranscriptBuckets179–184 deliberately skips a bucket already hyd"
+        },
+        {
+          "location": "docs/review-2026-10-12/validation/original-connection-recovery-round15/report.md:29",
+          "context": "5–70`) and retires lagging peers while keeping healthy peers. `hub-outbound-control.test.ts` verifies this policy with an explicitly mocked backlog and transports; it is not a second native measurement. Thus the issue is narrowed to the paired Desktop RemoteHost live/device send methods, not the Hub outbound implementation."
+        },
+        {
+          "location": "docs/review-2026-10-12/validation/original-modern-desktop-image-round25/independent-quality-history.raw.md:22",
+          "context": "not retain their old text. mergeHistoryIntoLive/replayBase handling starts at342, in the no-outputCursor branch. The actual tokened hydrate_history reducer reaches replay at550–555. Hence a cold paired Session, or a successfully hydrated modern journal after confirmed cache replacement, is not protected by a stale inline optimistic bubble. Conversely, useTranscriptBuckets179–184 deliberately skips a bucket already hyd"
+        },
+        {
+          "location": "docs/review-2026-10-12/validation/original-modern-desktop-image-round25/independent-quality-static-initial.raw.md:22",
+          "context": "not retain their old text. mergeHistoryIntoLive/replayBase handling starts at342, in the no-outputCursor branch. The actual tokened hydrate_history reducer reaches replay at550–555. Hence a cold paired Session, or a successfully hydrated modern journal after confirmed cache replacement, is not protected by a stale inline optimistic bubble. Conversely, useTranscriptBuckets179–184 deliberately skips a bucket already hyd"
+        },
+        {
+          "location": "docs/todo/2026-09-11-overnight-todo-audit.md:129",
+          "context": "识别新 Main epoch，或首次从 legacy 游标升级为带 epoch 后，会等待该代次完整前缀，再接续实时流；Main 已淘汰新代次 seq 1 时，保留可见内容并提示重新打开会话读取已保存记录。后台先发现新代次、再切回会话时，`useRemoteApp.ts` 的 `historyUnpaired` 分支仅展示 durable history，拒绝直接叠加可能重复的 full snapshot，并提示“已恢复保存的聊天记录。当前回复的实时部分暂时无法接续，请稍后重新打开会话。”；focus/reconnect 可以重读 durable history，历史返回后的全新顶层 `stream_request_start` 才恢复实时接收，迟到 history/snapshot 不得覆盖该新回合。让 `session.history`"
+        },
+        {
+          "location": "docs/todo/2026-09-11-overnight-todo-audit.md:141",
+          "context": "epoch-combined-final.log`，与上一条为重叠集合。真实 hook 回归覆盖活跃会话跨 Main 重启、首次 legacy 升级、snapshot/live 两种顺序、旧 socket 消息、复用工具 ID、被淘汰前缀，以及后台新代次切回后的 durable/snapshot 重叠。独立审查再修复第三个 epoch 错误清除 `historyUnpaired` 的情况：已经进入仅历史模式后，即使再次重启也继续保留屏障，直到历史返回后的新顶层 start。该分支是有提示的受限恢复，当前不宣称历史与实时内容在所有场景中无缝合并；最终全量构建与 Electron 验收另由主任务记录。"
+        },
+        {
+          "location": "docs/todo/small-features-2026-07-10/PIPELINE-SUMMARY-CORE.md:27",
+          "context": "Decision/deviation: creating an empty or duplicate commit would have falsified the requested TDD history. Task 2 subsequently removed the obsolete V1 single-tool evidence projection and its projection-specific tests as required by its plan."
+        }
+      ]
+    },
+    "turn_boundaries": {
+      "matches": 2,
+      "contexts": [
+        {
+          "location": "docs/archive/review-2026-07-09/07-new-observations-verification.md:204",
+          "context": "- `packages/desktop/src/renderer/lib/messageMappers.ts:58`：room `turn_end` 映射成 `turn_complete`。"
+        },
+        {
+          "location": "docs/archive/review-2026-07-09/07-new-observations-verification.md:205",
+          "context": "- `packages/desktop/src/renderer/lib/messageMappers.ts:117`：CC history replay 为 assistant message 补 `turn_complete(completed)`。"
+        }
+      ]
+    },
+    "history_mixed": {
+      "matches": 1,
+      "contexts": [
+        {
+          "location": "docs/superpowers/plans/2026-06-24-cc-room-conversation-view.md:464",
+          "context": "interface HistoryMessage { role: \"user\"|\"assistant\"; text: string; tools?: {name:string;summary:string}[]; }"
+        }
+      ]
+    }
+  },
+  "inventorySha256": "a3210e0a76ca01cc0c2e4fa77805056cd623f029a74af92c16d13106efe5bcbf"
+}

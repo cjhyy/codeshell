@@ -1,0 +1,37 @@
+{
+  "scope": "same full prior docs/bugs MD + parsed JSON string-value corpus; current batch excluded; MD searched with bounded cross-line regex, contexts capped at 20, match counts uncapped; not semantic exhaustiveness",
+  "files": 1938,
+  "stringLeaves": 239449,
+  "errors": [],
+  "patterns": {
+    "synthetic_history_id": "cc-hist-",
+    "snapshot_live_tool_candidate": "(?:snapshot|快照|history|历史).{0,80}(?:toolId|tool.?id|工具.{0,10}(?:id|标识)).{0,80}(?:live|实时|结果|result)"
+  },
+  "hits": {
+    "synthetic_history_id": {
+      "matches": 0,
+      "contexts": []
+    },
+    "snapshot_live_tool_candidate": {
+      "matches": 4,
+      "contexts": [
+        {
+          "location": "docs/audit-2026-10-17-round10/evidence/root-dedup.json#/hits/history_identity/99/context",
+          "context": "ed `cancel_goal` with a same-batch sensitive result, max-turns final summary with pending sensitive history, multiple sensitive results keyed by tool id, and model-error after a sensitive result. Tests assert secret plaintext is absent from returned history and transcript inputs, and that max-turns skips context management while still allowin"
+        },
+        {
+          "location": "docs/audit-2026-10-17-round12/evidence/patch-dedup.json#/hits/85/excerpt",
+          "context": "ed `cancel_goal` with a same-batch sensitive result, max-turns final summary with pending sensitive history, multiple sensitive results keyed by tool id, and model-error after a sensitive result. Tests assert secret plaintext is absent from returned history and transcript inputs, and that max-turns skips context management while still allowin"
+        },
+        {
+          "location": "docs/audit-2026-10-17-round12/evidence/patch-dedup.json#/hits/134/excerpt",
+          "context": "ed `cancel_goal` with a same-batch sensitive result, max-turns final summary with pending sensitive history, multiple sensitive results keyed by tool id, and model-error after a sensitive result. Tests assert secret plaintext is absent from returned history and transcript inputs, and that max-turns skips context management while still allowin"
+        },
+        {
+          "location": "docs/plan-2026-07-09-security-M3-M2-IMPL-NOTES.md",
+          "context": "ed `cancel_goal` with a same-batch sensitive result, max-turns final summary with pending sensitive history, multiple sensitive results keyed by tool id, and model-error after a sensitive result. Tests assert secret plaintext is absent from returned history and transcript inputs, and that max-turns skips context management while still allowin"
+        }
+      ]
+    }
+  }
+}

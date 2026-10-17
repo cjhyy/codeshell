@@ -1,0 +1,144 @@
+{
+  "base": "d86db33012dffd5d1849e76b869fa15eb260324f",
+  "files": [
+    {
+      "path": "CODESHELL.md",
+      "frozenSha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "currentSha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "matchesFrozen": true,
+      "bytes": 17639,
+      "lines": 217,
+      "scope": "完整工作流说明。"
+    },
+    {
+      "path": "AGENTS.md",
+      "frozenSha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "currentSha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "matchesFrozen": true,
+      "bytes": 206,
+      "lines": 5,
+      "scope": "当前根兼容指令入口。"
+    },
+    {
+      "path": "packages/chat/src/ingress.ts",
+      "frozenSha256": "311d22304a4772f464589bc27822cabe9d6ed0af6f137c5b451a6852d5b5f333",
+      "currentSha256": "311d22304a4772f464589bc27822cabe9d6ed0af6f137c5b451a6852d5b5f333",
+      "matchesFrozen": true,
+      "bytes": 1947,
+      "lines": 73,
+      "scope": "完整源码；唯一动态产品 import。"
+    },
+    {
+      "path": "packages/chat/src/ingress.test.ts",
+      "frozenSha256": "0eb6c02fdf3317970344599b38da351185ecf163984b62fc867f9f74311ba029",
+      "currentSha256": "0eb6c02fdf3317970344599b38da351185ecf163984b62fc867f9f74311ba029",
+      "matchesFrozen": true,
+      "bytes": 1038,
+      "lines": 30,
+      "scope": "完整既有测试静态读取；未执行（有安全边界相关测试，本轮仅 ordinary endpoint 纯生成器聚焦）。"
+    },
+    {
+      "path": "packages/chat/src/channel.ts",
+      "frozenSha256": "645c32c69b3a8d76de60b85783a765f96133b93a5c183100bfef20794380e0ce",
+      "currentSha256": "645c32c69b3a8d76de60b85783a765f96133b93a5c183100bfef20794380e0ce",
+      "matchesFrozen": true,
+      "bytes": 7027,
+      "lines": 193,
+      "scope": "完整源码静态数据投影阅读；无动态执行。"
+    },
+    {
+      "path": "packages/chat/src/channel.test.ts",
+      "frozenSha256": "a9b9a177ebf0b8dff33b66c22642d06704fc57cdd3d6ecf9847dde7befa2fd1b",
+      "currentSha256": "a9b9a177ebf0b8dff33b66c22642d06704fc57cdd3d6ecf9847dde7befa2fd1b",
+      "matchesFrozen": true,
+      "bytes": 3090,
+      "lines": 93,
+      "scope": "完整静态读取；旧轮11 baseline，不重跑。"
+    },
+    {
+      "path": "packages/chat/src/cli.ts",
+      "frozenSha256": "4a4c052a8433836583cd9300669f4c400f394d780645c75156c38b78d6e1d9ed",
+      "currentSha256": "4a4c052a8433836583cd9300669f4c400f394d780645c75156c38b78d6e1d9ed",
+      "matchesFrozen": true,
+      "bytes": 11645,
+      "lines": 320,
+      "scope": "选段 1–65、203–234；printIngress 普通参数接线，仅静态，没有 import。"
+    },
+    {
+      "path": "packages/chat/README.md",
+      "frozenSha256": "2cbd36412abaaf5bb1ec97c48c5f4c29b62afd1efbbc990eed510de9aefa0148",
+      "currentSha256": "2cbd36412abaaf5bb1ec97c48c5f4c29b62afd1efbbc990eed510de9aefa0148",
+      "matchesFrozen": true,
+      "bytes": 24150,
+      "lines": 416,
+      "scope": "选段 352–377；ingress 配置生成合同，不代表完整 README 覆盖。"
+    },
+    {
+      "path": "packages/chat/src/bound-session-chat.ts",
+      "frozenSha256": "3cfca7ed0caa2509102548f1e47a581e4d1e53423f5682c1f33f374a8ca0f4c7",
+      "currentSha256": "3cfca7ed0caa2509102548f1e47a581e4d1e53423f5682c1f33f374a8ca0f4c7",
+      "matchesFrozen": true,
+      "bytes": 3817,
+      "lines": 99,
+      "scope": "完整源码静态选择阅读；附件限制按旧合同排除，无动态验证。"
+    },
+    {
+      "path": "packages/chat/src/bound-session-chat.test.ts",
+      "frozenSha256": "51fb1b92c9506431403e0883582a8c6e1be940a26deb3b9aeb567a774cd4e081",
+      "currentSha256": "51fb1b92c9506431403e0883582a8c6e1be940a26deb3b9aeb567a774cd4e081",
+      "matchesFrozen": true,
+      "bytes": 4481,
+      "lines": 126,
+      "scope": "完整测试静态选择阅读；未执行。"
+    },
+    {
+      "path": "docs/audit-2026-10-17/chat-data.md",
+      "frozenSha256": "1c9fcfb4606c4c3721f9e3d22459cff65604a0b24995a362f05108445207f773",
+      "currentSha256": "1c9fcfb4606c4c3721f9e3d22459cff65604a0b24995a362f05108445207f773",
+      "matchesFrozen": true,
+      "bytes": 8500,
+      "lines": 52,
+      "scope": "旧附件限制 finding 排除依据（选段/搜索命中）。"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round11/chat.md",
+      "frozenSha256": "868b6144211200a116626e400f17d224442041188a9871335ae7796da99104b2",
+      "currentSha256": "868b6144211200a116626e400f17d224442041188a9871335ae7796da99104b2",
+      "matchesFrozen": true,
+      "bytes": 6965,
+      "lines": 38,
+      "scope": "旧 channel baseline/notification/Markdown 报告完整只读，避免重复和失败方向。"
+    },
+    {
+      "path": "docs/todo/mimi-chat-replay-2026-09-06.md",
+      "frozenSha256": "5f4ce25adb3966e2b1c96e57b53731ce58d38f74d3dcbc9d82040e17206b9026",
+      "currentSha256": "5f4ce25adb3966e2b1c96e57b53731ce58d38f74d3dcbc9d82040e17206b9026",
+      "matchesFrozen": true,
+      "bytes": 8522,
+      "lines": 77,
+      "scope": "第77行选段/搜索命中，已知 Bound Session 附件交付限制。"
+    },
+    {
+      "path": "scripts/run-bun-test-shard.mjs",
+      "frozenSha256": "dd2b245afbcb5aa7c798c8674d34edb8e02bb42be0be320050adf9be5ed2fd7d",
+      "currentSha256": "dd2b245afbcb5aa7c798c8674d34edb8e02bb42be0be320050adf9be5ed2fd7d",
+      "matchesFrozen": true,
+      "bytes": 233,
+      "lines": 8,
+      "scope": "guarded runner 版本 pin 与实际执行；不宣称本方向完整 runner 审查。"
+    },
+    {
+      "path": "packages/chat/src/config.ts",
+      "frozenSha256": "f002a45bda4bffa7c222f039487ddfa74e4d0c22230075a97f7036acaffb01e7",
+      "currentSha256": "f002a45bda4bffa7c222f039487ddfa74e4d0c22230075a97f7036acaffb01e7",
+      "matchesFrozen": true,
+      "bytes": 28057,
+      "lines": 870,
+      "scope": "选段325–343、848–867及port关键词定位；readPort允许整数1–65,535，只静态读取，不执行配置加载/用户目录/native启动。"
+    }
+  ],
+  "productRuntimeImports": [
+    "packages/chat/src/ingress.ts"
+  ],
+  "limitations": "SHA only identifies bytes; selected source/contract pins are not full-file/transitive coverage. No product imports besides the zero-import ingress leaf."
+}

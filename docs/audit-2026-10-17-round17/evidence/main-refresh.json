@@ -1,0 +1,29 @@
+{
+  "frozenBase": "d86db33012dffd5d1849e76b869fa15eb260324f",
+  "mainHead": "ed07a8db9fe2682b67faf9e06f8461e906f880db",
+  "originMain": "02d5d9a9ecbbb206d5f3d8a1d367e7081d937101",
+  "commits": [
+    "ed07a8db9 Merge commit 'd86db33012dffd5d1849e76b869fa15eb260324f' into codex/desktop/real-operation-cycles-20261016",
+    "7594eee99 docs: record reviewed Review and panel diagnostic acceptance gates",
+    "bb310d3a5 Merge commit 'a71af2f653780d6e090f8bdb0528203ee65e51a4' into codex/desktop/real-operation-cycles-20261016",
+    "95b55bcba Merge commit 'd8f9a2fad5815fb67aa2d4f915746b96d6185f4d' into codex/desktop/real-operation-cycles-20261016",
+    "a71af2f65 test(desktop): cover header-only Review operations",
+    "26dbb9a7f Merge commit '9d757724916c2cf0ff491677a1434568d599b0da' into codex/desktop/real-operation-cycles-20261016",
+    "d8f9a2fad test(desktop): persist bounded panel operation diagnostics",
+    "9d7577249 fix(desktop): retain paths in header-only review diffs"
+  ],
+  "changedPaths": [
+    "docs/todo/release-real-operations-2026-10-16.md",
+    "packages/desktop/scripts/e2e-panel-operation-cycles.mjs",
+    "packages/desktop/scripts/e2e-review-diff-path-operations.mjs",
+    "packages/desktop/scripts/electron-harness.mjs",
+    "packages/desktop/scripts/panel-operation-diagnostics.mjs",
+    "packages/desktop/scripts/panel-operation-diagnostics.test.mjs",
+    "packages/desktop/src/renderer/diff/UnifiedDiffViewer.header-only.test.tsx",
+    "packages/desktop/src/renderer/diff/headerOnlyGit.fixture.ts",
+    "packages/desktop/src/renderer/diff/parseUnifiedDiff.header-only.test.ts",
+    "packages/desktop/src/renderer/diff/parseUnifiedDiff.ts"
+  ],
+  "primaryDirtyPreserved": true,
+  "productReruns": false
+}

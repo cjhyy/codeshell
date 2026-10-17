@@ -1,0 +1,42 @@
+{
+  "baseCommit": "d86db33012dffd5d1849e76b869fa15eb260324f",
+  "formalCount": 0,
+  "candidateCount": 1,
+  "relatedCount": 0,
+  "firstExecutions": [
+    {
+      "command": [
+        "node",
+        "scripts/run-bun-test-shard.mjs",
+        "--timeout",
+        "30000",
+        "docs/audit-2026-10-17-round17/evidence/mappers-pure.test.ts"
+      ],
+      "cwd": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell",
+      "exitReceipt": "evidence/mappers-pure.first.exit.json",
+      "rawLog": "evidence/mappers-pure.first.raw.log",
+      "fixture": "evidence/mappers-pure.test.ts",
+      "exitCode": 0,
+      "pass": 9,
+      "expect": 33,
+      "fail": 0,
+      "skip": 0,
+      "guardCompleted": true,
+      "existingTests": 0,
+      "focusedTests": 9,
+      "rawLogSha256": "29b48cc6c9468a4407798a723bd65bfd94cc8f8360258067a55850b3b943d840",
+      "fixtureSha256": "38c1391e498b50c865f41867b467e9027c1f0181a9caa3fa4dc950589527fd20",
+      "firstOutputSavedBeforeInspection": true
+    }
+  ],
+  "cleanShards": 1,
+  "failedBunShards": 0,
+  "successfulTests": 9,
+  "expectations": 33,
+  "existingTests": 0,
+  "focusedTests": 9,
+  "productReruns": 0,
+  "metadataPreflight": "evidence/mappers-preflight.json",
+  "navigationFailures": [],
+  "scopeLimit": "Only direct leaf mapper functions on owned ordinary objects; no reducer, AskUser, hooks/UI, history parser, actual transcript, RoomManager, transport, CLI, native host or model execution."
+}

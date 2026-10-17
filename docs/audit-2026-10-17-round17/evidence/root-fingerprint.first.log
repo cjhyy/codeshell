@@ -1,0 +1,16 @@
+bun test v1.3.11 (af24e281)
+
+docs/audit-2026-10-17-round17/evidence/root-fingerprint.test.ts:
+(pass) actual server prompt fingerprint; no identity consumer or desktop import > empty prompt has stable base36 hash and zero length suffix [1.63ms]
+(pass) actual server prompt fingerprint; no identity consumer or desktop import > ordinary prompts remain deterministic and include UTF16 length [0.19ms]
+(pass) actual server prompt fingerprint; no identity consumer or desktop import > complete Unicode strings use the existing UTF16 suffix convention [0.06ms]
+(pass) actual server prompt fingerprint; no identity consumer or desktop import > hashing preserves caller whitespace rather than silently trimming [0.01ms]
+(pass) actual server prompt fingerprint; no identity consumer or desktop import > different line endings remain distinct caller strings [0.02ms]
+(pass) actual server prompt fingerprint; no identity consumer or desktop import > ordinary multi-paragraph input remains deterministic [1.49ms]
+(pass) actual server prompt fingerprint; no identity consumer or desktop import > desktop counterpart source matches the server body without importing desktop [3.18ms]
+
+ 7 pass
+ 0 fail
+ 34 expect() calls
+Ran 7 tests across 1 file. [177.00ms]
+Completed Bun shard: 7 tests, 0 skipped; 0 failures.

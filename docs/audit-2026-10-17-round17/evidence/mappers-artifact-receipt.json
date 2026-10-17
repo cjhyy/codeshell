@@ -1,0 +1,81 @@
+{
+  "baseCommit": "d86db33012dffd5d1849e76b869fa15eb260324f",
+  "pathBase": "docs/audit-2026-10-17-round17",
+  "formalCount": 0,
+  "candidateCount": 1,
+  "relatedCount": 0,
+  "artifacts": [
+    {
+      "path": "mappers.md",
+      "bytes": 7050,
+      "sha256": "d359413d2ed2b1ae694dd19686e584384d84bd489c8085cd34f240cf794e1dcf"
+    },
+    {
+      "path": "evidence/mappers-candidates.json",
+      "bytes": 2444,
+      "sha256": "6bccadb4b60214a610511033abe12525384b836ec9d6a2e17606e1c341626974"
+    },
+    {
+      "path": "evidence/mappers-dedup-supplement.json",
+      "bytes": 2632,
+      "sha256": "ac673f6dddc6ae2ee4822cd541cdd85c79c4ca2195e48856ac09a9dc5c8e8c75"
+    },
+    {
+      "path": "evidence/mappers-dedup.json",
+      "bytes": 32149,
+      "sha256": "148b0c2547cddfa5d181d4af182a2938cc79baed75de66c982a51351a772ee15"
+    },
+    {
+      "path": "evidence/mappers-dedup.py",
+      "bytes": 2653,
+      "sha256": "4ddaf13dc825303499e148186d9d916ebaeb5d2e7772c14f862833c170e9c398"
+    },
+    {
+      "path": "evidence/mappers-findings.json",
+      "bytes": 3,
+      "sha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570"
+    },
+    {
+      "path": "evidence/mappers-preflight.json",
+      "bytes": 869,
+      "sha256": "dfdeb3d590ad2ae3d07fe7df66747f833b243c5b3a498057adacc54c55a9880b"
+    },
+    {
+      "path": "evidence/mappers-pure.first.exit.json",
+      "bytes": 490,
+      "sha256": "5d425765ec9229245fd184a14a436aee553fa4706ea686ced83ef861d7f6cb7c"
+    },
+    {
+      "path": "evidence/mappers-pure.first.raw.log",
+      "bytes": 1088,
+      "sha256": "29b48cc6c9468a4407798a723bd65bfd94cc8f8360258067a55850b3b943d840"
+    },
+    {
+      "path": "evidence/mappers-pure.test.ts",
+      "bytes": 7662,
+      "sha256": "38c1391e498b50c865f41867b467e9027c1f0181a9caa3fa4dc950589527fd20"
+    },
+    {
+      "path": "evidence/mappers-related.json",
+      "bytes": 3,
+      "sha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570"
+    },
+    {
+      "path": "evidence/mappers-source-manifest.json",
+      "bytes": 6469,
+      "sha256": "a6b13065fa749e1e33ca44265d90c31d32c06d04b6fb32953683a651d1fec5a1"
+    },
+    {
+      "path": "evidence/mappers-validation.json",
+      "bytes": 1453,
+      "sha256": "ed7450f26fb63726d069b93527e579ab8d2a7d9731fc465433599412eab60967"
+    }
+  ],
+  "artifactCountExcludingSelf": 13,
+  "sourcePinCount": 14,
+  "notes": [
+    "No product edits or Git writes; own documentation/evidence only.",
+    "Raw first output preserved verbatim; no reruns.",
+    "No navigation failures."
+  ]
+}

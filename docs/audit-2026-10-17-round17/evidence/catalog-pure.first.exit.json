@@ -1,0 +1,20 @@
+{
+  "frozenBase": "d86db33012dffd5d1849e76b869fa15eb260324f",
+  "cwd": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell",
+  "command": [
+    "node",
+    "scripts/run-bun-test-shard.mjs",
+    "--timeout",
+    "30000",
+    "docs/audit-2026-10-17-round17/evidence/catalog-pure.test.ts"
+  ],
+  "startedAt": "2026-10-17T07:58:45.632065+00:00",
+  "finishedAt": "2026-10-17T07:58:45.786046+00:00",
+  "exitCode": 0,
+  "rawLog": "docs/audit-2026-10-17-round17/evidence/catalog-pure.first.raw.log",
+  "rawBytes": 1792,
+  "rawSha256": "cfa1d3f04a5aa20618958528a948e388f984c8a28494d97650ecadd847239b0b",
+  "firstAttempt": true,
+  "productReruns": 0,
+  "outputSavedBeforeInspection": true
+}

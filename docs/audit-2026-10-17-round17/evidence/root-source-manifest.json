@@ -1,0 +1,70 @@
+{
+  "baseline": "d86db33012dffd5d1849e76b869fa15eb260324f",
+  "files": [
+    {
+      "path": "CODESHELL.md",
+      "bytes": 17639,
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "frozenBlobVerified": true,
+      "currentMatchesFrozen": true,
+      "scope": "instruction digest revalidated unchanged from previous full read"
+    },
+    {
+      "path": "AGENTS.md",
+      "bytes": 206,
+      "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "frozenBlobVerified": true,
+      "currentMatchesFrozen": true,
+      "scope": "instruction digest revalidated unchanged from previous full read"
+    },
+    {
+      "path": "packages/server/src/client-message-id.ts",
+      "bytes": 257,
+      "sha256": "ed31c575dd7ee8c5b5cfa98d9476f39efa98b44bafc0df047e7aabc88f552f17",
+      "frozenBlobVerified": true,
+      "currentMatchesFrozen": true,
+      "scope": "full source read; six actual pure helper tests in one first shard"
+    },
+    {
+      "path": "packages/desktop/src/renderer/app/appUtils.ts",
+      "bytes": 4377,
+      "sha256": "75f111826e39d3c333937641e291aaf9cff12e987e6369c85d3800d6dda4f91b",
+      "frozenBlobVerified": true,
+      "currentMatchesFrozen": true,
+      "scope": "static selected1-100; one source-body comparison only, Desktop module not imported/compiled"
+    },
+    {
+      "path": "packages/desktop/src/main/automation-host.ts",
+      "bytes": 18787,
+      "sha256": "73cadc5d313d93a1072409c7b273beadc38291ab96d22e87f499162c151c1742",
+      "frozenBlobVerified": true,
+      "currentMatchesFrozen": true,
+      "scope": "static selected320-388 and stablePromptHash/clientMessageId references; not imported or run"
+    },
+    {
+      "path": "packages/desktop/src/renderer/app/useHostSubscriptions.ts",
+      "bytes": 51155,
+      "sha256": "8b20a7a96f7d89ae000f3ebde79aeae3bba506683940dae6c8e2150444a0eddc",
+      "frozenBlobVerified": true,
+      "currentMatchesFrozen": true,
+      "scope": "static selected536-558,635-656 and identity references; hooks/renderer not imported or run"
+    },
+    {
+      "path": "packages/server/src/mobile-remote/mobile-chat-turn.ts",
+      "bytes": 4911,
+      "sha256": "4816593eeae2d7d3a56ab5afbe61bca1dc713afdded3519f0c7155ed59330739",
+      "frozenBlobVerified": true,
+      "currentMatchesFrozen": true,
+      "scope": "static selected72-114 and identity references/import line2; not imported or run"
+    },
+    {
+      "path": "scripts/run-bun-test-shard.mjs",
+      "bytes": 233,
+      "sha256": "dd2b245afbcb5aa7c798c8674d34edb8e02bb42be0be320050adf9be5ed2fd7d",
+      "frozenBlobVerified": true,
+      "currentMatchesFrozen": true,
+      "scope": "prescribed guard wrapper pin; actual guarded command executed"
+    }
+  ],
+  "note": "Selected source pins and scope only, not full consumer/transitive/renderer/storage/identity runtime coverage."
+}

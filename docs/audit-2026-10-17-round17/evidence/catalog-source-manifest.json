@@ -1,0 +1,238 @@
+{
+  "frozenBase": "d86db33012dffd5d1849e76b869fa15eb260324f",
+  "sourceCount": 25,
+  "sources": [
+    {
+      "path": "CODESHELL.md",
+      "bytes": 17639,
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "currentSha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "currentMatchesFrozen": true,
+      "kind": "instruction-read",
+      "coverage": "full"
+    },
+    {
+      "path": "AGENTS.md",
+      "bytes": 206,
+      "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "currentSha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "currentMatchesFrozen": true,
+      "kind": "instruction-read",
+      "coverage": "primary alias supplied in user context; file bytes pinned"
+    },
+    {
+      "path": "packages/server/src/panels/agent-task-models.ts",
+      "bytes": 2710,
+      "sha256": "3c283a536c10b62e68cae91cade6492d05819875481c4cfa77539e2270345dc1",
+      "currentSha256": "3c283a536c10b62e68cae91cade6492d05819875481c4cfa77539e2270345dc1",
+      "currentMatchesFrozen": true,
+      "kind": "runtime-import",
+      "coverage": "full 1–83; actual buildPanelAgentTaskModelCatalog"
+    },
+    {
+      "path": "packages/desktop/src/main/panel-app-agent-task-models.ts",
+      "bytes": 136,
+      "sha256": "65f6d152557ad3a231a3fb6d8dee3e0dbf3a9b7e1c6463078750aa5e8fb04760",
+      "currentSha256": "65f6d152557ad3a231a3fb6d8dee3e0dbf3a9b7e1c6463078750aa5e8fb04760",
+      "currentMatchesFrozen": true,
+      "kind": "static-read",
+      "coverage": "full 1–2; broad server re-export not imported"
+    },
+    {
+      "path": "packages/desktop/src/main/panel-app-agent-task-models.test.ts",
+      "bytes": 2044,
+      "sha256": "6a00876119f98c87b3fe762d9aeea0937a102b0580f36b165cfec63a1ca65ac6",
+      "currentSha256": "6a00876119f98c87b3fe762d9aeea0937a102b0580f36b165cfec63a1ca65ac6",
+      "currentMatchesFrozen": true,
+      "kind": "static-read",
+      "coverage": "full 1–63; existing tests not executed"
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/textConnections.ts",
+      "bytes": 8807,
+      "sha256": "4a9a67e24e0c6dbbb3aceb9f9f94493a4150de80c8f01a815715f5e50730979e",
+      "currentSha256": "4a9a67e24e0c6dbbb3aceb9f9f94493a4150de80c8f01a815715f5e50730979e",
+      "currentMatchesFrozen": true,
+      "kind": "runtime-import and static-read",
+      "coverage": "1–108,155–184; actual buildInstance/catalogModelOptions only"
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/catalogEditor.ts",
+      "bytes": 1918,
+      "sha256": "c6534a82262d07576f1f561a2e04aa3c6d0049539c6216d81ce1baf4ad24d9ed",
+      "currentSha256": "c6534a82262d07576f1f561a2e04aa3c6d0049539c6216d81ce1baf4ad24d9ed",
+      "currentMatchesFrozen": true,
+      "kind": "runtime-import",
+      "coverage": "full 1–60; actual validateEntry only"
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/ModelCatalogPanel.tsx",
+      "bytes": 31558,
+      "sha256": "a506326be9a24d85f924e58b96a0b57196d99956cb6fcb95337b2f51f76a24af",
+      "currentSha256": "a506326be9a24d85f924e58b96a0b57196d99956cb6fcb95337b2f51f76a24af",
+      "currentMatchesFrozen": true,
+      "kind": "static-read",
+      "coverage": "189–235,545–589,711–743; raw editor input and save path"
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/ConnectionInstanceCard.tsx",
+      "bytes": 7376,
+      "sha256": "05320244bcb035a92c23e7fa9699edff74b8d9dc84f4c8e2f6265c13bdb4c466",
+      "currentSha256": "05320244bcb035a92c23e7fa9699edff74b8d9dc84f4c8e2f6265c13bdb4c466",
+      "currentMatchesFrozen": true,
+      "kind": "static-read",
+      "coverage": "86–105; picker inputs"
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/useModelConnections.ts",
+      "bytes": 14636,
+      "sha256": "f755da3b4a41f1511d9ec0684f820784eedbb8addee8842e289abd0af183b1cd",
+      "currentSha256": "f755da3b4a41f1511d9ec0684f820784eedbb8addee8842e289abd0af183b1cd",
+      "currentMatchesFrozen": true,
+      "kind": "static-read",
+      "coverage": "149–167,215–229; ordinary helper caller and default producer"
+    },
+    {
+      "path": "packages/core/src/settings/schema.ts",
+      "bytes": 29767,
+      "sha256": "2496b8aefd8ea32f7fc7ac23b26878475809be952a5fdbd8ac247cf0d40b3139",
+      "currentSha256": "2496b8aefd8ea32f7fc7ac23b26878475809be952a5fdbd8ac247cf0d40b3139",
+      "currentMatchesFrozen": true,
+      "kind": "static-read",
+      "coverage": "235–282; connection/default fields"
+    },
+    {
+      "path": "packages/core/src/model-catalog/types.ts",
+      "bytes": 5401,
+      "sha256": "5e587cf05befb277ad46060de5e5fb885f7b59208b98f41b10d0b62375a39fa1",
+      "currentSha256": "5e587cf05befb277ad46060de5e5fb885f7b59208b98f41b10d0b62375a39fa1",
+      "currentMatchesFrozen": true,
+      "kind": "static-read",
+      "coverage": "1–19,62–121; id/preset/catalog schema"
+    },
+    {
+      "path": "packages/core/src/model-catalog/index.ts",
+      "bytes": 4933,
+      "sha256": "ecf52ac27efcd35cccda428ce4b7c59d0baceedbcba4eb0728fcca75992a15eb",
+      "currentSha256": "ecf52ac27efcd35cccda428ce4b7c59d0baceedbcba4eb0728fcca75992a15eb",
+      "currentMatchesFrozen": true,
+      "kind": "static-read",
+      "coverage": "63–111; merge/exact lookup"
+    },
+    {
+      "path": "packages/core/src/model-catalog/save-entry.ts",
+      "bytes": 6541,
+      "sha256": "b51ec5761c71f2f1c140210f9b6b5d1c50c4cae20f0d21e803bf0dcfb3e86328",
+      "currentSha256": "b51ec5761c71f2f1c140210f9b6b5d1c50c4cae20f0d21e803bf0dcfb3e86328",
+      "currentMatchesFrozen": true,
+      "kind": "static-read",
+      "coverage": "118–145; validation/persistence, not executed"
+    },
+    {
+      "path": "packages/core/src/model-catalog/resolve.ts",
+      "bytes": 4284,
+      "sha256": "9d955240b7e33f2da3dc3f9162d68ead625565b5a75bcf7aff3ccc775052e140",
+      "currentSha256": "9d955240b7e33f2da3dc3f9162d68ead625565b5a75bcf7aff3ccc775052e140",
+      "currentMatchesFrozen": true,
+      "kind": "static-read",
+      "coverage": "80–113; raw model and exact preset lookup, not executed"
+    },
+    {
+      "path": "packages/core/src/engine/model-connections-pool.ts",
+      "bytes": 3655,
+      "sha256": "e5ee2a984a6d2f57eac155140873facca04d296d495af55f5f7f4edee52ce467",
+      "currentSha256": "e5ee2a984a6d2f57eac155140873facca04d296d495af55f5f7f4edee52ce467",
+      "currentMatchesFrozen": true,
+      "kind": "static-read",
+      "coverage": "full 1–80; pool keys, not executed"
+    },
+    {
+      "path": "packages/core/src/engine/engine.ts",
+      "bytes": 210013,
+      "sha256": "43ed9545f9c4ea2930b2855d58bf9b48ff2584cc6bba397daaa9c99ad0833307",
+      "currentSha256": "43ed9545f9c4ea2930b2855d58bf9b48ff2584cc6bba397daaa9c99ad0833307",
+      "currentMatchesFrozen": true,
+      "kind": "static-read",
+      "coverage": "910–950; default fallback, not imported"
+    },
+    {
+      "path": "packages/core/src/engine/runtime.ts",
+      "bytes": 6215,
+      "sha256": "9f04d688231ba7603e402f8b032ba94a24c82ec4705bdb59abc81460e1ad64ce",
+      "currentSha256": "9f04d688231ba7603e402f8b032ba94a24c82ec4705bdb59abc81460e1ad64ce",
+      "currentMatchesFrozen": true,
+      "kind": "static-read",
+      "coverage": "80–100; default fallback, not imported"
+    },
+    {
+      "path": "packages/core/src/engine/resolve-llm-config.ts",
+      "bytes": 3687,
+      "sha256": "864b45aa4a8e41398d5191a974be7b9fb172137147109b1d2d0b05ae3335da8f",
+      "currentSha256": "864b45aa4a8e41398d5191a974be7b9fb172137147109b1d2d0b05ae3335da8f",
+      "currentMatchesFrozen": true,
+      "kind": "static-read",
+      "coverage": "20–62; default fallback, not imported"
+    },
+    {
+      "path": "packages/server/src/panels/agent-task-host.ts",
+      "bytes": 21797,
+      "sha256": "b21b444ea6ea0cdbcdf45aa4f00f769beefdb565a2780d351b4b2cc42308ee08",
+      "currentSha256": "b21b444ea6ea0cdbcdf45aa4f00f769beefdb565a2780d351b4b2cc42308ee08",
+      "currentMatchesFrozen": true,
+      "kind": "static-read",
+      "coverage": "130–145,330–350,428–444,504–519; catalog consumers, not imported"
+    },
+    {
+      "path": "packages/server/src/panels/agent-task-service.ts",
+      "bytes": 13694,
+      "sha256": "f979a5a7363d3441dd61858da2d566ab0e78d00814bb0a85ffcdf83c3562c550",
+      "currentSha256": "f979a5a7363d3441dd61858da2d566ab0e78d00814bb0a85ffcdf83c3562c550",
+      "currentMatchesFrozen": true,
+      "kind": "static-read",
+      "coverage": "175–193; input model trim, not imported"
+    },
+    {
+      "path": "packages/desktop/src/main/index.ts",
+      "bytes": 299077,
+      "sha256": "77c8f9dcbd0ecf7000fd0c923d28b078f5fc187aebbd1b28830af18960233c4f",
+      "currentSha256": "77c8f9dcbd0ecf7000fd0c923d28b078f5fc187aebbd1b28830af18960233c4f",
+      "currentMatchesFrozen": true,
+      "kind": "static-read",
+      "coverage": "690–703,5555–5564; catalog callback and save IPC, not imported"
+    },
+    {
+      "path": "packages/desktop/src/main/panel-app-bridge.ts",
+      "bytes": 158473,
+      "sha256": "f95785abfb8f593626d38c20b0205de7347ab0777afb05edb97103ce23afe974",
+      "currentSha256": "f95785abfb8f593626d38c20b0205de7347ab0777afb05edb97103ce23afe974",
+      "currentMatchesFrozen": true,
+      "kind": "static-read",
+      "coverage": "2100–2114; catalog bridge, not imported"
+    },
+    {
+      "path": "docs/panel-apps.md",
+      "bytes": 38827,
+      "sha256": "030d34577fcd5dbcd88c57c61fcb66711851dba8893d453f93d751c000a1ddf0",
+      "currentSha256": "030d34577fcd5dbcd88c57c61fcb66711851dba8893d453f93d751c000a1ddf0",
+      "currentMatchesFrozen": true,
+      "kind": "contract-read",
+      "coverage": "363–378; documented models/default contract"
+    },
+    {
+      "path": "scripts/run-bun-test-shard.mjs",
+      "bytes": 233,
+      "sha256": "dd2b245afbcb5aa7c798c8674d34edb8e02bb42be0be320050adf9be5ed2fd7d",
+      "currentSha256": "dd2b245afbcb5aa7c798c8674d34edb8e02bb42be0be320050adf9be5ed2fd7d",
+      "currentMatchesFrozen": true,
+      "kind": "test-runner",
+      "coverage": "invoked once; frozen bytes pinned, not a full independent guard audit"
+    }
+  ],
+  "pinMeaning": "Frozen bytes plus explicit selected reading/runtime coverage, not full repository or transitive coverage.",
+  "skippedGuessedReferences": [
+    {
+      "pathGlob": "packages/core/src/browser/panel-app*",
+      "reason": "Shell navigation glob did not match; rg never executed; see catalog-navigation-skip.md."
+    }
+  ]
+}
