@@ -126,7 +126,11 @@ async function closeApp() {
   }
   if (child.exitCode === null && child.signalCode === null)
     errors.push(Error("Captured packaged UI Main still alive; HOME retained"));
-  else app = undefined;
+  else {
+    app = undefined;
+    if (child.exitCode !== 0 || child.signalCode !== null)
+      errors.push(Error("Packaged UI Main did not exit normally with code 0 and no signal"));
+  }
   if (errors.length) throw new AggregateError(errors, "Owned packaged UI close failed");
 }
 function png() {
@@ -394,7 +398,10 @@ try {
 }
 const result = await settlePackagedPet({
   failures,
-  closeApp,
+  closeApp: async () => {
+    await closeApp();
+    assert.equal(rendererErrors.flat().length, 0, "Packaged UI emitted an error during close");
+  },
   closeModel: async () => {
     await model?.close();
   },
