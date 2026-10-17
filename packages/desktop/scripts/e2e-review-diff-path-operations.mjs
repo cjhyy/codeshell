@@ -20,6 +20,7 @@ import {
 } from "./electron-harness.mjs";
 import { prepareConfinedElectronFixture } from "./confined-electron-fixture.mjs";
 import { watchElectronTestProcess } from "./electron-test-watchdog.mjs";
+import { createReviewOperationDiagnostics } from "./review-operation-diagnostics.mjs";
 
 assert.equal(process.env.NODE_ENV, "test");
 assert.equal(process.env.CODE_SHELL_TEST_HOME, join(process.env.HOME, ".code-shell"));
@@ -41,7 +42,12 @@ assert.ok(
   "Evidence must be outside the outer HOME",
 );
 await mkdir(evidence, { mode: 0o700 });
-const isolated = await makeIsolatedElectronHome("codeshell-review-diff-native-");
+const diagnostics = createReviewOperationDiagnostics({ evidence, ownedRoots: [repo, evidence] });
+diagnostics.phase("review-fixture-init");
+const isolated = await makeIsolatedElectronHome("codeshell-review-diff-native-").catch((error) => {
+  diagnostics.error(error);
+  throw error;
+});
 const privateRelative = relative(outerHome, isolated.home);
 assert.ok(
   privateRelative === ".." || privateRelative.startsWith(`..${sep}`) || isAbsolute(privateRelative),
@@ -73,7 +79,6 @@ const report = {
     "Actual compiled Main, session-authorized Review service, preload, diff parser and file panel; catalog:list seeded only. Owned Git/files only; no model, worker, native crypto, OS open or account use. Not an OS socket sandbox.",
 };
 let app, win, monitor, captured, processClosed, fixture;
-const logs = { stdout: "", stderr: "" };
 const git = (...args) =>
   children.execFileSync(
     "git",
@@ -135,6 +140,7 @@ async function bounded(promise, ms, label) {
   }
 }
 try {
+  diagnostics.phase("review-git-setup");
   await mkdir(projectPath, { mode: 0o700 });
   git("init", "--quiet", "-b", "main");
   git("config", "user.name", "Owned Review fixture");
@@ -178,6 +184,7 @@ try {
   await put(join(isolated.codeShellHome, "desktop/recents.json"), [
     { path: projectPath, name: "Owned Review repository", lastOpenedAt: Date.now() },
   ]);
+  diagnostics.phase("review-guard-setup");
   const guard = join(isolated.home, "review-guard.mjs");
   await put(
     guard,
@@ -230,6 +237,12 @@ ipcMain.on=(channel,listener)=>on(channel,channel!=="agent:msg"?listener:(event,
     preloadSHA256: hash(await readFile(join(appDir, "out/preload/index.cjs"))),
     rendererHTMLSHA256: hash(await readFile(join(appDir, "out/renderer/index.html"))),
   };
+  diagnostics.provenance({
+    ...report.build,
+    platform: process.platform,
+    arch: process.arch,
+    privateHome: isolated.home,
+  });
   const executable = await realpath(createRequire(import.meta.url)("electron"));
   const originalSpawn = children.spawn;
   children.spawn = function (command, args, options) {
@@ -237,27 +250,35 @@ ipcMain.on=(channel,listener)=>on(channel,channel!=="agent:msg"?listener:(event,
     if (command === executable && options?.env?.HOME === isolated.home) {
       assert.equal(captured, undefined);
       captured = child;
+      diagnostics.observeChild(child);
       processClosed = new Promise((done) =>
         child.once("close", (code, signal) => done({ code, signal })),
       );
-      child.once("error", () => observerFailures.push("Owned Electron spawn error"));
-      for (const stream of ["stdout", "stderr"])
-        child[stream]?.on(
-          "data",
-          (chunk) => (logs[stream] = (logs[stream] + chunk).slice(-1024 * 1024)),
-        );
+      child.once("error", (error) => {
+        diagnostics.error(error, child);
+        observerFailures.push("Owned Electron spawn error");
+      });
       monitor = watchElectronTestProcess(child, {
         timeoutMs: 120000,
-        reportFailure: (message) => observerFailures.push(message),
+        reportFailure: (message) => {
+          diagnostics.error(new Error(message), child);
+          observerFailures.push(message);
+        },
+        signalProcess: (pid, signal) => {
+          diagnostics.signal(pid, signal);
+          process.kill(pid, signal);
+        },
       });
     }
     return child;
   };
   syncBuiltinESMExports();
   try {
+    diagnostics.phase("review-launch");
     app = await launchCodeShellElectron(
       { appDir, ...isolated, mainEntry: fixture.mainEntry, env: fixture.env },
       {
+        diagnostics,
         reportFailure: (message) => observerFailures.push(message),
         watch: (child) => {
           assert.equal(child, captured, "Harness must reuse this exact early Main custody");
@@ -270,6 +291,7 @@ ipcMain.on=(channel,listener)=>on(channel,channel!=="agent:msg"?listener:(event,
     syncBuiltinESMExports();
   }
   assert.equal(captured, app.process());
+  diagnostics.phase("review-find-renderer");
   win = await findCodeShellWindow(app);
   win.setDefaultTimeout(10000);
   rendererErrors.push(captureRendererErrors(win));
@@ -277,6 +299,7 @@ ipcMain.on=(channel,listener)=>on(channel,channel!=="agent:msg"?listener:(event,
   await dismissTrust();
   await win.getByText("Owned Review repository", { exact: true }).first().click();
   await dismissTrust();
+  diagnostics.phase("review-session-seed");
   const project = await win.evaluate(
     async (path) =>
       (await window.codeshell.projectRegistry.list()).find((project) =>
@@ -327,6 +350,7 @@ ipcMain.on=(channel,listener)=>on(channel,channel!=="agent:msg"?listener:(event,
   await dismissTrust();
   report.confinement = await fixture.assertWorker(app, { requireWorker: false });
   assert.equal(report.confinement.workerCreated, false);
+  diagnostics.phase("review-ui-operations");
   let review = await openPanel("review");
   await review.getByRole("button", { name: /^(选择审查范围|Choose review scope)$/ }).click();
   await win.getByRole("menuitem", { name: /^(已暂存|Staged)$/ }).click();
@@ -357,6 +381,7 @@ ipcMain.on=(channel,listener)=>on(channel,channel!=="agent:msg"?listener:(event,
       correct,
       card: card ?? null,
     });
+    diagnostics.caseCompleted(operations.at(-1).action, operations.length);
     if (!correct) failures.push({ message: `Review did not preserve ${name}` });
   }
   const sample = report.cards.find((card) => card.title === "sample.txt");
@@ -407,6 +432,7 @@ ipcMain.on=(channel,listener)=>on(channel,channel!=="agent:msg"?listener:(event,
       previewLines,
       actualBytesSHA256: hash(await readFile(join(projectPath, name))),
     });
+    diagnostics.caseCompleted(operations.at(-1).action, operations.length);
   }
   for (const name of [modeFile, binaryFile]) {
     const card = report.cards.find((card) => card.title === name);
@@ -417,6 +443,7 @@ ipcMain.on=(channel,listener)=>on(channel,channel!=="agent:msg"?listener:(event,
       correct,
       card: card ?? null,
     });
+    diagnostics.caseCompleted(operations.at(-1).action, operations.length);
     if (!correct) failures.push({ message: `Header-only Review did not preserve ${name}` });
   }
   review = await openPanel("review");
@@ -444,6 +471,7 @@ ipcMain.on=(channel,listener)=>on(channel,channel!=="agent:msg"?listener:(event,
     previewLines: modePreviewLines,
     actualBytesSHA256: hash(modeBytes),
   });
+  diagnostics.caseCompleted(operations.at(-1).action, operations.length);
   report.reviewCalls = await app.evaluate(() => globalThis.__ownedReviewCalls);
   assert.ok(
     report.reviewCalls.some(
@@ -476,22 +504,37 @@ ipcMain.on=(channel,listener)=>on(channel,channel!=="agent:msg"?listener:(event,
   );
   assert.equal(operations.length, 11);
 } catch (error) {
+  diagnostics.error(error, captured);
   failures.push({ message: error.message, stack: error.stack });
   await win?.screenshot({ path: join(evidence, "failure.png"), timeout: 2000 }).catch(() => {});
 } finally {
+  if (failures.length) diagnostics.error(new Error(failures[0].message), captured);
+  const cleanup = diagnostics.cleanup(failures.length ? "cycle-error" : "cycle-complete", captured);
   try {
-    if (app && monitor) await bounded(app.close(), 8000, "Owned Review close timed out");
+    if (app && monitor) {
+      diagnostics.phase("review-graceful-close");
+      diagnostics.request(cleanup, "application.close", captured);
+      await bounded(app.close(), 8000, "Owned Review close timed out");
+      diagnostics.closeReturned(captured);
+    }
   } catch (error) {
+    diagnostics.error(error, captured);
     failures.push({ stage: "close", message: error.message });
   }
   try {
+    diagnostics.phase("review-custody");
     assert.ok(monitor, "Owned Main custody missing");
+    diagnostics.request(cleanup, "monitor.terminate", captured);
     report.settlement = await monitor.terminate();
+    diagnostics.settled(cleanup, captured);
     assert.equal(report.settlement.status, "cleaned");
+    diagnostics.phase("review-main-close");
     report.mainExit = await bounded(processClosed, 3000, "Owned Main exit unavailable");
     assert.deepEqual(report.mainExit, { code: 0, signal: null });
+    diagnostics.phase("review-transport");
     report.windowsTransport = assertSourceElectronTransportSettled(captured);
   } catch (error) {
+    diagnostics.error(error, captured);
     failures.push({ stage: "custody", message: error.message });
     captured?.unref();
     captured?.stdout?.unref?.();
@@ -501,6 +544,7 @@ ipcMain.on=(channel,listener)=>on(channel,channel!=="agent:msg"?listener:(event,
   if (report.rendererErrors.length) failures.push({ message: "Renderer errors observed" });
   if (observerFailures.length)
     failures.push({ message: "Custody observer errors", observerFailures });
+  diagnostics.phase("review-final-ledgers");
   for (const name of [
     "denied-attempts.jsonl",
     "spawned-workers.jsonl",
@@ -515,14 +559,32 @@ ipcMain.on=(channel,listener)=>on(channel,channel!=="agent:msg"?listener:(event,
     if (["denied-attempts.jsonl", "spawned-workers.jsonl"].includes(name) && content.trim())
       failures.push({ message: `Forbidden runtime side effect: ${name}` });
   }
-  for (const stream of ["stdout", "stderr"])
-    await put(join(evidence, `main.${stream}.log`), logs[stream]);
+  diagnostics.phase("review-home-cleanup");
+  if (diagnostics.hasRecordingFailure())
+    failures.push({ message: "Review diagnostic recording failed/truncated" });
   if (!failures.length && report.settlement?.status === "cleaned" && report.mainExit?.code === 0) {
     await isolated.cleanup();
     report.privateHomeRemoved = true;
     report.status = "passed";
   }
-  await put(join(evidence, "receipt.json"), report);
+  diagnostics.homeRemoved(report.privateHomeRemoved);
+  diagnostics.phase("review-final-report");
+  if (diagnostics.hasRecordingFailure()) {
+    report.status = "failed";
+    if (!failures.some((row) => row.message === "Review diagnostic recording failed/truncated"))
+      failures.push({ message: "Review diagnostic recording failed/truncated" });
+  }
+  await put(join(evidence, "receipt.json"), report).catch((error) => {
+    diagnostics.error(error, captured);
+    throw error;
+  });
+  diagnostics.finalReportWritten(report.status);
+  if (diagnostics.hasRecordingFailure() && report.status === "passed") {
+    report.status = "failed";
+    failures.push({ message: "Review diagnostic recording failed/truncated" });
+    await put(join(evidence, "receipt.json"), report);
+    diagnostics.finalReportWritten(report.status);
+  }
 }
 console.log(
   JSON.stringify({ status: report.status, evidence, operations: operations.length, failures }),
