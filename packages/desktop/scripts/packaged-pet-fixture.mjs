@@ -18,6 +18,7 @@ import { canCleanupPackagedProcesses } from "./packaged-process-exits.mjs";
 import { describePackagedAppLayout } from "./packaged-app-layout.mjs";
 import { readPackagedLinuxEnvironment } from "./packaged-linux-environment.mjs";
 import { installWindowsElectronDirectTransport } from "./windows-electron-direct-transport.mjs";
+import { createPackagedStartupObservation } from "./packaged-startup-observation.mjs";
 
 const hash = (value) => createHash("sha256").update(value).digest("hex");
 
@@ -128,6 +129,7 @@ export async function preparePackagedPetFixture({
   const mainBirthByChild = new Map();
   const windowsTransports = [];
   const transportFailures = [];
+  const startupObservation = createPackagedStartupObservation();
   let launchFailed = false;
   const terminateChild = async (child) => {
     const monitor = monitorsByChild.get(child);
@@ -165,6 +167,7 @@ export async function preparePackagedPetFixture({
       let captured;
       let preload;
       let preloadFailure;
+      let startupRecord;
       let windowsTransport;
       const launchArgs = ["--inspect-brk=0", `--user-data-dir=${isolated.userDataDir}`];
       const captureMain = (child) => {
@@ -189,6 +192,7 @@ export async function preparePackagedPetFixture({
         });
         processMonitors.push(monitor);
         monitorsByChild.set(child, monitor);
+        startupRecord = startupObservation.captured(child.pid);
         for (const stream of ["stdout", "stderr"])
           child[stream].on("data", (chunk) =>
             appendFileSync(join(isolated.home, `official-main-${child.pid}.${stream}`), chunk, {
@@ -229,14 +233,18 @@ export async function preparePackagedPetFixture({
             return { ...identity, chromiumSandboxRequested: true };
           },
         }).then(async (receipt) => {
+          startupObservation.preloadReturned(startupRecord, receipt);
+          startupObservation.privateWriteStarted(startupRecord);
           await writeFile(
             join(isolated.home, `startup-pause-${child.pid}.json`),
             JSON.stringify(receipt),
             { mode: 0o600 },
           );
+          startupObservation.privateWriteFulfilled(startupRecord);
           return receipt;
         });
         preload.catch((error) => {
+          startupObservation.preloadRejected(startupRecord);
           preloadFailure = error;
         });
         return monitor;
@@ -275,10 +283,12 @@ export async function preparePackagedPetFixture({
           timeout: 30_000,
         });
         launchPhase = "startup-barrier";
+        startupObservation.sdkReturned(startupRecord);
         const startupPause = await preload;
         assert.equal(captured, app.process(), "packaged executable was not captured at spawn");
         if (windowsTransport) assert.deepEqual(windowsTransport.receipt().failures, []);
         launchPhase = "identity-read";
+        startupObservation.identityRead(startupRecord);
         const identity = await app.evaluate(({ app }) => ({
           packaged: app.isPackaged,
           appPath: app.getAppPath(),
@@ -338,6 +348,7 @@ export async function preparePackagedPetFixture({
         verifiedMains.add(mainPid);
         app.__packagedIdentity = identity;
         app.__startupPause = startupPause;
+        startupObservation.ready(startupRecord);
       } catch (error) {
         launchFailed = true;
         let diagnosticError;
@@ -346,6 +357,7 @@ export async function preparePackagedPetFixture({
         } catch (failure) {
           diagnosticError = failure;
         }
+        startupObservation.failed(startupRecord, launchPhase);
         if (preload)
           await preload.catch((failure) => {
             preloadFailure = failure;
@@ -476,6 +488,9 @@ export async function preparePackagedPetFixture({
         verifiedWorkerMains,
         workers,
         mainPidByChild,
+      }).then((allowed) => {
+        if (allowed) startupObservation.assertComplete(children.length);
+        return allowed;
       });
     },
     async verifyUnchanged() {
@@ -487,6 +502,7 @@ export async function preparePackagedPetFixture({
       const runtime = appImageRuntime && (await appImageRuntime.verifyUnchanged());
       return {
         ...after,
+        startupObservation: startupObservation.snapshot(),
         beforeAppTreeSHA256: before.appTreeSHA256,
         unchangedAfterRuntime: true,
         ...(runtime ? { appImageRuntime: runtime } : {}),
