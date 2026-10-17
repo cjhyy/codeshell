@@ -8,6 +8,12 @@ The release target is macOS, Windows, Linux Desktop and Web. Authorized native C
 has now executed; its passing and incomplete boundaries are recorded below.
 Cross-platform fixture tests alone are not native acceptance.
 
+The latest completed run, CI15, is failed overall: Web and Linux pass their
+independently audited scopes, while macOS and Windows fail before their remaining
+native suites. CI14 remains the latest fully passing matrix. See the
+[CI15 record](#ci15--completed-with-macos-and-windows-failures) below; neither the
+partial successes nor later diagnostic changes replace those failures.
+
 ## Reproduced and repaired
 
 | Area                                       | Real trigger and failure                                                                                                                                                                                                                                           | Repair and regression                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
@@ -96,6 +102,7 @@ main, tags and publication remain outside that authorization. The branch is
 | [39013381607](https://github.com/cjhyy/codeshell/actions/runs/39013381607), source `3466cad1e`                     | Web's nine image unit regressions and 31 browser behavior checks pass. Linux completes all eight native suites and actual AppImage update checks; before/after font metadata plus five actual screenshots confirm Chinese glyphs in those samples. macOS completes native suites, updater and DMG again. Windows passes startup seven and Review eight with four normal Main exits, then fails the panel driver before its final report is written; the outer driver code is 1, not an observed Main exit. Later suites are skipped. Original panel error/stack, Main exit, custody and HOME outcome are unknown. Overall matrix is failed.                                                                                                                                                                         |
 | [39015578143](https://github.com/cjhyy/codeshell/actions/runs/39015578143), source `ed07a8db9`                     | All four jobs and independent artifact audits pass. Each native platform verifies 83 behavior checks and 12 actual Main launches, including Review 11 and Panel 20. New mode-only/binary titles and the actual mode-only Files preview pass; bounded Panel diagnostics agree with the original report and normal Main/controller exits. AppImage updater and both DMG UI copies pass again. Web passes nine image unit regressions plus 31 browser behaviors. Earlier unknown failures remain unresolved historical evidence.                                                                                                                                                                                                                                                                                       |
 | [39016494715](https://github.com/cjhyy/codeshell/actions/runs/39016494715), source `67e09d1f6`                     | All four jobs and independent artifact audits pass again. Each native platform verifies 83 real UI operations/12 Main launches and separately 11 Write-card React tests/38 assertions with no failures or skips. Current package integrity, Panel diagnostics, AppImage sandbox/update checks and both DMG UI copies pass. Web verifies nine image regressions, 31 browser behaviors and 88 recorded source hashes. No new blocker is found in this acceptance; earlier unknown failures remain separately preserved.                                                                                                                                                                                                                                                                                               |
+| [39020679310](https://github.com/cjhyy/codeshell/actions/runs/39020679310), source `7e5570210`                     | Overall failed. Web passes 31 actual behaviors, nine image/45 assertions, 64 pure Node contracts and a separate expected-negative retention run. Linux passes 83 operations/12 Main and actual AppImage ten GETs. macOS first-cycle Pet IPCs return successfully, then its post-close Keychain identity check refuses; later native suites/DMG are skipped. Windows startup seven/three Main pass, then Review identity RPC rejects with PromiseGC before any Review operation; six later suites/NSIS are skipped. Both native causes remain unknown.                                                                                                                                                                                                                                                               |
 
 The CI12 Windows failure is frozen at
 `ci-39013381607-windows-20261017/verified-summary.json` (SHA256
@@ -246,6 +253,11 @@ retains a dropdown exit-animation remnant; actual titles, paths and preview byte
 are independently verified through DOM/Main receipts. SW/Auth lifecycle receipt
 limits remain as previously recorded. No local native launch, provider request,
 real account operation, tag or publication was added for these two matrices.
+
+### CI15 preparation recorded before execution
+
+The following pending statements record preparation before CI15; the actual
+completed-run evidence is recorded separately below.
 
 The next operation cycle closes lifecycle and installation coverage gaps; CI14
 remains the latest completed matrix and does not cover these subsequent changes.
@@ -935,6 +947,119 @@ tests, 39 Node process/package contract tests, 18 Web controller tests, producti
 script lint and Shell syntax. Package verification still passes 10 tarballs and
 48 typed entries; all 14 workspace typechecks passed again after the final
 package was sealed and development workspace links were restored.
+
+## CI15 — completed with macOS and Windows failures
+
+[Run 39020679310](https://github.com/cjhyy/codeshell/actions/runs/39020679310)
+executes source `7e5570210d7e9336cbe9d6a90ed375832e7e3329`. Its overall result is
+**failed**, with successful Web/Linux jobs and failed macOS/Windows jobs. CI14's
+full matrix success remains evidence only for its own source; it does not cover
+this run's unexecuted operations or diagnose these new failures.
+
+Web independently verifies **31 actual browser behaviors**: SW 11, Auth four,
+child eight and annotations eight. Nine image tests/45 assertions and **64 pure
+Node lifecycle contracts** pass separately, with zero failures/skips. Auth/SW now
+retain actual early exact-executable/HOME/profile capture before handshake,
+normal Chromium exit 0/no signal, cleaned observed births (Auth 20→0, SW 7→0),
+empty late ledgers and private HOME removal. Their blank persistent owner remains
+separate from the original incognito operations; original trusted native focus,
+HTTP/WS/proxy guards and deadlines remain intact. All 106 recorded source hashes
+verify. These are owned browser/Hub fixtures, without Core/Engine/provider or real
+accounts, and are not an OS sandbox or all-process proof.
+
+The separate old-reducer retention run returns the expected **two passing Send
+controls and six known UI assertion failures**. The pipeline requires Node=1 and
+tee=0; its pinned verifier then checks normal Chrome exit, cleaned custody,
+source fingerprints and a physically retained owned HOME/profile on the runner.
+Those eight expected-negative cases are not added to the 31 passing behaviors.
+The private profile is not uploaded; the artifact reader verifies the runner's
+receipt, not its current existence after VM disposal. The known final-report
+write failure after successful HOME removal still cannot restore that HOME.
+
+Linux independently verifies **83 native operations/12 Main processes**, including
+Review 11 (the three header-only title/path/actual-preview cases) and Panel 20.
+The four Panel diagnostic files agree with the formal report: all 20 names,
+71 journal events, normal Main/controller exits, null firstError, no recording
+failure/truncation, and complete 212-byte stdout/16,276-byte stderr. Write-card
+React **11 tests/38 assertions** pass separately; no actual Write-tool execution
+is claimed. The actual AppImage Main is PID 8112, distinct from launcher 8109,
+with runtime-set APPIMAGE/APPDIR, first-JavaScript guard/seven negative probes,
+requested sandbox and no `--no-sandbox` switch. Five manifest modes plus five
+healthy retries make exactly **ten GETs** to `/latest-linux.yml`, with no asset
+download/install, Worker/model/native-storage call. ASAR and managed-Node manifest
+hashes remain source-bound and unchanged; complete 07777 source/cache inventories
+retain all bytes and only the same 75 exact extraction mode normalizations.
+Both new packaged signal ledgers record zero requests and no truncation; this is
+not an OS-wide signal audit or proof of delivery. All inner fixture HOMEs are
+removed and observed custody is cleaned. The two outer launcher scratch roots
+remain retained by the launcher's explicit success/failure policy; their process
+settlements are cleaned 19→0 and 20→0, not proof of scratch deletion.
+
+All six inspected Linux PNG samples show readable Chinese glyphs, including the
+complete space-containing generated-image path/thumbnail, Review's Chinese/binary
+titles, 390px dark Settings and updater failure/retry. Font metadata matches
+Noto Sans CJK SC with `zh-cn`; the images, not metadata alone, support that sample
+conclusion. Root also directly viewed the generated-image and 390px samples;
+`ci-39020679310-linux-root-visual-audit.json` has SHA256
+`720754e90f661df99d4bde2725c413458c0b418816110d6fe60aacfa43d750a6`.
+The translucent Review menu-closing frame is not classified as a persistent
+product bug from one screenshot. Raw AppImage/executable/ASAR bytes are not
+uploaded; integrity is runner-observed before/after evidence, not independent
+publisher/signature verification.
+
+macOS's first Main returns all **three Pet IPC actions** successfully, then exits
+0/no signal; all 13 observed incarnations settle cleaned with zero remaining and
+no recorded signal request. The first cycle nevertheless **fails** its post-close
+metadata check: `CODESHELL_KEYCHAIN_PREFLIGHT_IDENTITY_CHANGED`, helper stage
+`account-before`, `sameInode:false`, while the other reported identity booleans
+match. `launchStarted:false` is that helper's field at the post-close check,
+not evidence that this Main never launched. Raw before/after inode values are not included in the uploaded evidence;
+the artifact cannot establish that the actual default file was
+replaced, identify an actor or explain the mismatch. No startup cycle is accepted,
+HOME remains retained, and the seven later native suites plus DMG are skipped.
+Its independent Write React 11/38 unit pass and successful directory build do not
+establish packaged runtime or DMG acceptance.
+
+Windows completes **startup seven/three normally exited Main processes** with
+cleaned observed custody and no recorded signal requests. Review then rejects
+`verifyElectronMainIdentity` with
+`electronApplication.evaluate: Resulting promise was garbage collected.` before
+identity returns or any of its 11 operations executes. The captured process
+ultimately closes with **code 1/no signal** and observed custody 30→0; its HOME
+is retained according to the receipt/failure gate, without uploaded private
+HOME bytes. There is no retained Review rejection/cleanup/signal timeline to
+order that exit against the RPC failure or cleanup. Network-service restart and
+GPU-process exit messages merely coexist in stderr; neither is established as
+the cause. Six later native suites and NSIS are skipped. The **22 pure NSIS
+contracts** and separate Write React 11/38 pass; actual NSIS build/install/replace/
+uninstall and both installed-copy UI runs remain unexecuted.
+
+Frozen independent summaries are under
+`/private/tmp/codeshell-real-operation-cycles-20261016`:
+
+- Web `ci-39020679310-web-independent-audit.json`, SHA256
+  `3d1711c9b4d7d62110ec09dc4df0dedcd860cf36d32a2debff31a5416482925a`.
+- Linux `ci-39020679310-linux-independent-audit.json`, SHA256
+  `d3895655d0d581c2fb44cd7e311c752611d07d3e43fd8fdebc5eaf1cdb039364`.
+- macOS `ci-39020679310-mac-independent-20261017/verified-failed-summary.json`, SHA256
+  `1ec4a2bc0e6e5cdbb8b98afe7dd081ac7f41423ff28b33c51e7d7684e8f588dd`.
+- Windows `ci-39020679310-windows-independent-20261017/verified-failed-summary.json`, SHA256
+  `85550eed87dd9d22713659e06e9fbb56e1706bc77c3e49423426ebd6e80140a0`.
+
+Post-run diagnostic source changes do not repair or explain either native cause.
+`cd991ca96` clarifies the macOS post-close phase and safe metadata wording without
+relaxing identity pins. Independently reviewed Review task `c133a6615`, integrated
+as `815ef2389`, adds bounded durable first-error/phase/raw-log observations while
+preserving all 11 operations/29 assertions, Git/guard syntax trees, deadlines and
+HOME criteria. Root's combined source-only proof at `e88ab5c8d` binds six files,
+47 startup/fake-Keychain plus 25 Review guarded Node passes, zero failures/skips,
+39 Bash/five inline Node syntax checks, six exit-code counterexamples and all
+33 literal JS/TS workflow paths. Its receipt is
+`ci16-reviewed-diagnostic-gates-proof-20261017.json`, SHA256
+`8358f483b60506f8fce34f75b1758cb9ff175404590d01b3049ca69923fde158`.
+This is local source/pure Node evidence only. No CI16 push/dispatch or native
+result is claimed here; the unchanged 64 Web/22 NSIS groups were not rerun in
+that follow-up. Earlier unknown GC/metadata failures remain separate evidence.
 
 ## Remaining acceptance work
 
