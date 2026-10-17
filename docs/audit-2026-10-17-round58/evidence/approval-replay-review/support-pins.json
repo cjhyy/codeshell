@@ -1,0 +1,26 @@
+{
+  "atUTC": "2026-10-17T19:22:51.764727+00:00",
+  "files": [
+    {
+      "path": "packages/desktop/src/main/pet/pet-im-decisions.ts",
+      "bytes": 12417,
+      "lines": 332,
+      "sha256": "a8e8009b08ad0e07666714c795fdc0c3bfda7bc1db460195fa8bd1f89c1756ef",
+      "beforeBodyOrLineNavigation": true
+    },
+    {
+      "path": "packages/desktop/src/main/mobile-remote/output-recovery.ts",
+      "bytes": 10821,
+      "lines": 279,
+      "sha256": "1f8fafdb6d3a1fb0de0d9a5908e38c50ba1deb0e635622503739ab0c54ab35f9",
+      "beforeBodyOrLineNavigation": true
+    },
+    {
+      "path": "packages/desktop/src/main/mobile-remote/external-runtime-commands.ts",
+      "bytes": 10924,
+      "lines": 267,
+      "sha256": "7188cabf3ae2de925cb2caa26e345df97dc8d3037102635849abedf1d1c9ceff",
+      "beforeBodyOrLineNavigation": true
+    }
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "path": "packages/server/src/environment-identity.ts",
+  "bytes": 2584,
+  "sha256": "e15810d73ed7a91cfdc8d1416e8536036208ba087d0e98d799d95f2887127e7f",
+  "lineCount": 69,
+  "pinnedAtUTC": "2026-10-17T19:18:45.856577+00:00",
+  "timing": "before body/nav; actual filename confirmed ffe49a",
+  "scopeIntent": "Only ordinary descriptor.name producer length; environment identity/FS authority mechanism not activated or certified."
+}

@@ -1,0 +1,675 @@
+{
+  "atUTC": "2026-10-17T19:21:14.776580+00:00",
+  "role": "Independent ordinary stream source reviewer; not runtime verifier",
+  "rootReportedBaselineOnly": "f31a847f45e4805bce34aeb9e6db7efb503cfcb0",
+  "ownGitOperations": 0,
+  "files": [
+    {
+      "path": "packages/server/src/remote-relay/byte-stream.ts",
+      "bytes": 2440,
+      "lines": 65,
+      "sha256": "829b793b34e5c8046284aba433b6323f471f983c2fc9efab16eaa6cb117aa639",
+      "beforeBodyOrLineNavigation": true,
+      "coverage": "full",
+      "sourceKind": "product",
+      "selectedLineRanges": [
+        [
+          1,
+          65
+        ]
+      ],
+      "semanticLines": 65,
+      "displayedLineRanges": [
+        [
+          1,
+          65
+        ]
+      ],
+      "additionalNavigationSnippetLines": [],
+      "uniqueDisplayedLines": 65,
+      "navigationOnlyDisplayedLineRanges": [],
+      "purpose": "Raw byte forwarding, serial write callback chunks, EOF/close; same-SHA full overlap with Round14.",
+      "fullFileReadingClaimed": true,
+      "finishSha256": "829b793b34e5c8046284aba433b6323f471f983c2fc9efab16eaa6cb117aa639",
+      "finishMatchesInitial": true,
+      "initialSemanticReadSha256": "829b793b34e5c8046284aba433b6323f471f983c2fc9efab16eaa6cb117aa639",
+      "priorCoverage": {
+        "sameShaFull": true,
+        "canonicalManifest": "docs/audit-2026-10-17-round14/evidence/bytes-source-manifest.json#/files/5",
+        "canonicalReport": "docs/audit-2026-10-17-round14/bytes.md:18",
+        "newUniqueReadingClaim": false
+      }
+    },
+    {
+      "path": "packages/server/src/remote-relay/local-stream.ts",
+      "bytes": 4119,
+      "lines": 125,
+      "sha256": "b0842c3047f6e5d3fe36fa9e89a5287889cfe2be49ef4a1db0d971eb9672d718",
+      "beforeBodyOrLineNavigation": true,
+      "coverage": "selected",
+      "sourceKind": "product",
+      "selectedLineRanges": [
+        [
+          13,
+          87
+        ],
+        [
+          97,
+          125
+        ]
+      ],
+      "semanticLines": 104,
+      "displayedLineRanges": [
+        [
+          1,
+          125
+        ]
+      ],
+      "additionalNavigationSnippetLines": [],
+      "uniqueDisplayedLines": 125,
+      "navigationOnlyDisplayedLineRanges": [
+        [
+          1,
+          12
+        ],
+        [
+          88,
+          96
+        ]
+      ],
+      "purpose": "Ordinary connect/pipe/close/done settlement and bounded early-response drain; URL/header/authority construction excluded.",
+      "fullFileReadingClaimed": false,
+      "finishSha256": "b0842c3047f6e5d3fe36fa9e89a5287889cfe2be49ef4a1db0d971eb9672d718",
+      "finishMatchesInitial": true,
+      "initialSemanticReadSha256": "b0842c3047f6e5d3fe36fa9e89a5287889cfe2be49ef4a1db0d971eb9672d718",
+      "priorCoverage": {
+        "currentReadNotClaimedAsNewUniqueCoverage": true,
+        "reason": "No exhaustive semantic reconstruction of all historical coverage for dependencies; explicit overlap retained; unknown is not unread."
+      }
+    },
+    {
+      "path": "packages/server/src/remote-relay/protocol.ts",
+      "bytes": 2805,
+      "lines": 70,
+      "sha256": "75273db331577ffa448e057134f2897593065b1d62efd9291cf9324d42244672",
+      "beforeBodyOrLineNavigation": true,
+      "coverage": "selected",
+      "sourceKind": "product",
+      "selectedLineRanges": [
+        [
+          2,
+          17
+        ],
+        [
+          38,
+          70
+        ]
+      ],
+      "semanticLines": 49,
+      "displayedLineRanges": [
+        [
+          1,
+          70
+        ]
+      ],
+      "additionalNavigationSnippetLines": [],
+      "uniqueDisplayedLines": 70,
+      "navigationOnlyDisplayedLineRanges": [
+        [
+          1,
+          1
+        ],
+        [
+          18,
+          37
+        ]
+      ],
+      "purpose": "Constants, control DTO projection/switch and recognized directions. Token/host/origin enforcement bodies excluded; no protocol/authority certification.",
+      "fullFileReadingClaimed": false,
+      "finishSha256": "75273db331577ffa448e057134f2897593065b1d62efd9291cf9324d42244672",
+      "finishMatchesInitial": true,
+      "initialSemanticReadSha256": "75273db331577ffa448e057134f2897593065b1d62efd9291cf9324d42244672",
+      "priorCoverage": {
+        "currentReadNotClaimedAsNewUniqueCoverage": true,
+        "reason": "No exhaustive semantic reconstruction of all historical coverage for dependencies; explicit overlap retained; unknown is not unread."
+      }
+    },
+    {
+      "path": "packages/server/src/remote-relay/connector.ts",
+      "bytes": 10024,
+      "lines": 280,
+      "sha256": "1ba87d2d8e966bd53556307c86e326be4d6353ed20154597a70816eeecce12a9",
+      "beforeBodyOrLineNavigation": true,
+      "coverage": "selected",
+      "sourceKind": "product",
+      "selectedLineRanges": [
+        [
+          1,
+          3
+        ],
+        [
+          17,
+          24
+        ],
+        [
+          37,
+          44
+        ],
+        [
+          153,
+          153
+        ],
+        [
+          159,
+          164
+        ],
+        [
+          192,
+          203
+        ],
+        [
+          214,
+          240
+        ],
+        [
+          254,
+          256
+        ],
+        [
+          261,
+          275
+        ]
+      ],
+      "semanticLines": 83,
+      "displayedLineRanges": [
+        [
+          1,
+          44
+        ],
+        [
+          149,
+          175
+        ],
+        [
+          190,
+          247
+        ],
+        [
+          254,
+          280
+        ]
+      ],
+      "additionalNavigationSnippetLines": [
+        145,
+        177
+      ],
+      "uniqueDisplayedLines": 158,
+      "navigationOnlyDisplayedLineRanges": [
+        [
+          4,
+          16
+        ],
+        [
+          25,
+          36
+        ],
+        [
+          145,
+          145
+        ],
+        [
+          149,
+          152
+        ],
+        [
+          154,
+          158
+        ],
+        [
+          165,
+          175
+        ],
+        [
+          177,
+          177
+        ],
+        [
+          190,
+          191
+        ],
+        [
+          204,
+          213
+        ],
+        [
+          241,
+          247
+        ],
+        [
+          257,
+          260
+        ],
+        [
+          276,
+          280
+        ]
+      ],
+      "purpose": "Actual text control receiver/JSON responses, stream ownership completion/removal, closure waiting. Credential acquisition/authority/generation enforcement not certified.",
+      "fullFileReadingClaimed": false,
+      "finishSha256": "1ba87d2d8e966bd53556307c86e326be4d6353ed20154597a70816eeecce12a9",
+      "finishMatchesInitial": true,
+      "initialSemanticReadSha256": "1ba87d2d8e966bd53556307c86e326be4d6353ed20154597a70816eeecce12a9",
+      "priorCoverage": {
+        "currentReadNotClaimedAsNewUniqueCoverage": true,
+        "reason": "No exhaustive semantic reconstruction of all historical coverage for dependencies; explicit overlap retained; unknown is not unread."
+      }
+    },
+    {
+      "path": "docs/device-relay.md",
+      "bytes": 9706,
+      "lines": 163,
+      "sha256": "d6f7d5db6fd6d8299fd51560e6fee0e57bd6e376a2aa622a1a477e92f50c2ebd",
+      "beforeBodyOrLineNavigation": true,
+      "coverage": "selected",
+      "sourceKind": "contract-document",
+      "selectedLineRanges": [
+        [
+          90,
+          110
+        ]
+      ],
+      "semanticLines": 21,
+      "displayedLineRanges": [
+        [
+          86,
+          113
+        ]
+      ],
+      "additionalNavigationSnippetLines": [
+        49,
+        50,
+        59,
+        61,
+        76,
+        77,
+        120,
+        140,
+        145
+      ],
+      "uniqueDisplayedLines": 37,
+      "navigationOnlyDisplayedLineRanges": [
+        [
+          49,
+          50
+        ],
+        [
+          59,
+          59
+        ],
+        [
+          61,
+          61
+        ],
+        [
+          76,
+          77
+        ],
+        [
+          86,
+          89
+        ],
+        [
+          111,
+          113
+        ],
+        [
+          120,
+          120
+        ],
+        [
+          140,
+          140
+        ],
+        [
+          145,
+          145
+        ]
+      ],
+      "purpose": "Declared binary chunk limits, HTTP framing vs whole-connection EOF and drain/cancel contract, not externally verified.",
+      "fullFileReadingClaimed": false,
+      "finishSha256": "d6f7d5db6fd6d8299fd51560e6fee0e57bd6e376a2aa622a1a477e92f50c2ebd",
+      "finishMatchesInitial": true,
+      "initialSemanticReadSha256": "d6f7d5db6fd6d8299fd51560e6fee0e57bd6e376a2aa622a1a477e92f50c2ebd",
+      "priorCoverage": {
+        "currentReadNotClaimedAsNewUniqueCoverage": true,
+        "reason": "No exhaustive semantic reconstruction of all historical coverage for dependencies; explicit overlap retained; unknown is not unread."
+      }
+    },
+    {
+      "path": "tests/fixtures/device-relay/runner.mjs",
+      "bytes": 18299,
+      "lines": 501,
+      "sha256": "60047181a7031cae6143bdcfab52f873ddb6f67229de617e55e94142e12c707f",
+      "beforeBodyOrLineNavigation": true,
+      "coverage": "selected",
+      "sourceKind": "test-declaration",
+      "selectedLineRanges": [
+        [
+          73,
+          104
+        ],
+        [
+          272,
+          300
+        ],
+        [
+          330,
+          354
+        ],
+        [
+          376,
+          385
+        ]
+      ],
+      "semanticLines": 96,
+      "displayedLineRanges": [
+        [
+          73,
+          104
+        ],
+        [
+          272,
+          309
+        ],
+        [
+          330,
+          356
+        ],
+        [
+          376,
+          385
+        ]
+      ],
+      "additionalNavigationSnippetLines": [
+        11,
+        69,
+        107,
+        109,
+        117,
+        231,
+        236,
+        245,
+        246,
+        256,
+        266,
+        268,
+        315,
+        316,
+        326,
+        327,
+        328,
+        361,
+        362,
+        363,
+        365,
+        366,
+        367,
+        368,
+        370,
+        371,
+        373,
+        393,
+        394,
+        396,
+        399,
+        400,
+        401,
+        404,
+        405,
+        416,
+        435,
+        463,
+        480,
+        481,
+        494,
+        497,
+        500
+      ],
+      "uniqueDisplayedLines": 150,
+      "navigationOnlyDisplayedLineRanges": [
+        [
+          11,
+          11
+        ],
+        [
+          69,
+          69
+        ],
+        [
+          107,
+          107
+        ],
+        [
+          109,
+          109
+        ],
+        [
+          117,
+          117
+        ],
+        [
+          231,
+          231
+        ],
+        [
+          236,
+          236
+        ],
+        [
+          245,
+          246
+        ],
+        [
+          256,
+          256
+        ],
+        [
+          266,
+          266
+        ],
+        [
+          268,
+          268
+        ],
+        [
+          301,
+          309
+        ],
+        [
+          315,
+          316
+        ],
+        [
+          326,
+          328
+        ],
+        [
+          355,
+          356
+        ],
+        [
+          361,
+          363
+        ],
+        [
+          365,
+          368
+        ],
+        [
+          370,
+          371
+        ],
+        [
+          373,
+          373
+        ],
+        [
+          393,
+          394
+        ],
+        [
+          396,
+          396
+        ],
+        [
+          399,
+          401
+        ],
+        [
+          404,
+          405
+        ],
+        [
+          416,
+          416
+        ],
+        [
+          435,
+          435
+        ],
+        [
+          463,
+          463
+        ],
+        [
+          480,
+          481
+        ],
+        [
+          494,
+          494
+        ],
+        [
+          497,
+          497
+        ],
+        [
+          500,
+          500
+        ]
+      ],
+      "purpose": "Existing HTTP request-end vs connection lifetime, early response/truncation, large/Range/backpressure/cancel and invalid-frame declarations; no native/network execution.",
+      "fullFileReadingClaimed": false,
+      "finishSha256": "60047181a7031cae6143bdcfab52f873ddb6f67229de617e55e94142e12c707f",
+      "finishMatchesInitial": true,
+      "initialSemanticReadSha256": "60047181a7031cae6143bdcfab52f873ddb6f67229de617e55e94142e12c707f",
+      "priorCoverage": {
+        "currentReadNotClaimedAsNewUniqueCoverage": true,
+        "reason": "No exhaustive semantic reconstruction of all historical coverage for dependencies; explicit overlap retained; unknown is not unread."
+      }
+    },
+    {
+      "path": "tests/fixtures/device-relay/byte-stream.mjs",
+      "bytes": 2678,
+      "lines": 69,
+      "sha256": "508b00d7d44ae5acdfb72e46e047571d1465f01eab8fbe4e5a7be9c745eea82e",
+      "beforeBodyOrLineNavigation": true,
+      "coverage": "selected",
+      "sourceKind": "test-declaration",
+      "selectedLineRanges": [
+        [
+          27,
+          43
+        ],
+        [
+          51,
+          62
+        ]
+      ],
+      "semanticLines": 29,
+      "displayedLineRanges": [
+        [
+          1,
+          69
+        ]
+      ],
+      "additionalNavigationSnippetLines": [],
+      "uniqueDisplayedLines": 69,
+      "navigationOnlyDisplayedLineRanges": [
+        [
+          1,
+          26
+        ],
+        [
+          44,
+          50
+        ],
+        [
+          63,
+          69
+        ]
+      ],
+      "purpose": "Five delayed-reader payload lengths plus abrupt disconnect declaration; no fixture/function/timer/stream executed.",
+      "fullFileReadingClaimed": false,
+      "finishSha256": "508b00d7d44ae5acdfb72e46e047571d1465f01eab8fbe4e5a7be9c745eea82e",
+      "finishMatchesInitial": true,
+      "initialSemanticReadSha256": "508b00d7d44ae5acdfb72e46e047571d1465f01eab8fbe4e5a7be9c745eea82e",
+      "priorCoverage": {
+        "currentReadNotClaimedAsNewUniqueCoverage": true,
+        "reason": "No exhaustive semantic reconstruction of all historical coverage for dependencies; explicit overlap retained; unknown is not unread."
+      }
+    }
+  ],
+  "navigationOnly": [
+    {
+      "path": "packages/server/src/remote-relay/relay.native.test.ts",
+      "bytes": 2068,
+      "lines": 51,
+      "sha256": "fe16ab39620c81de8702e46f48859dae020067a0f260cb7a0f60b57a751b2899",
+      "beforeBodyOrLineNavigation": true,
+      "displayedLineRanges": [
+        [
+          1,
+          51
+        ]
+      ],
+      "additionalNavigationSnippetLines": [],
+      "uniqueDisplayedLines": 51,
+      "semanticLines": 0,
+      "coverage": "navigation-only",
+      "purpose": "One existing native test launcher declaration observed, full launcher displayed; build/subprocess/native behavior not audited or executed."
+    }
+  ],
+  "instructionHashOnly": [
+    {
+      "path": "AGENTS.md",
+      "bytes": 206,
+      "lines": 5,
+      "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "beforeBodyOrLineNavigation": true
+    },
+    {
+      "path": "CODESHELL.md",
+      "bytes": 17639,
+      "lines": 217,
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "beforeBodyOrLineNavigation": true
+    }
+  ],
+  "instructionsCarried": "Prior actual AGENTS5/CODESHELL217 read under same SHA, not repeated semantic reading.",
+  "counts": {
+    "semanticFiles": 7,
+    "full": 1,
+    "selected": 6,
+    "semanticLines": 447,
+    "productSemanticLines": 301,
+    "testDeclarationSemanticLines": 125,
+    "contractDocumentSemanticLines": 21,
+    "uniqueDisplayedLines": 725,
+    "displayCoverageComplete": true,
+    "navigationOnlyFiles": 1,
+    "instructionHashOnly": 2
+  },
+  "noUniqueNewCoverageClaim": true,
+  "authorityScope": "Neither selected DTO parsing nor displayed guards certify whole handshake, identity, credential, authority, native or external relay behavior."
+}

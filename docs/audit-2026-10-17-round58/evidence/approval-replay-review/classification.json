@@ -1,0 +1,15 @@
+{
+  "newFormalFindings": [],
+  "activeCandidates": [],
+  "newRelated": [],
+  "counts": {
+    "newFormal": 0,
+    "newCandidate": 0,
+    "newRelated": 0
+  },
+  "existingCandidateUpdate": {
+    "id": "APPROVAL-R141-C1",
+    "opinion": "Withdraw original unbounded/no-other-read rationale on actual scheduled-reader counterevidence; no source-established defect in this bounded review."
+  },
+  "oldCause": "R19 alive-worker approval delivery timeout and error-local lost card is a separate known cause, neither repeated nor cleared."
+}

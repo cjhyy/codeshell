@@ -1,0 +1,40 @@
+{
+  "files": [
+    {
+      "path": "packages/chat/src/delivery-queue.ts",
+      "sha256": "e1f4f384af3dee66030bed6cd9a51bc7c3585e4aa320501d3e336686e0321393",
+      "sameAtEndRefresh": true
+    },
+    {
+      "path": "packages/chat/src/cli.ts",
+      "sha256": "4a4c052a8433836583cd9300669f4c400f394d780645c75156c38b78d6e1d9ed",
+      "sameAtEndRefresh": true
+    },
+    {
+      "path": "packages/chat/src/chat-gateway.ts",
+      "sha256": "7032acecac774cc3c6bea6bb1b5f3b90ddf93c7234a8bded97112483300c311d",
+      "sameAtEndRefresh": true
+    },
+    {
+      "path": "packages/chat/src/gateway.ts",
+      "sha256": "d73ad84b43ef1b2e705323cb3ed63c5102fbb0d31f51dc5ffc10fc45862a1b13",
+      "sameAtEndRefresh": true
+    },
+    {
+      "path": "packages/chat/src/desktop-control-client.ts",
+      "sha256": "8647ab741d9b91ee5e043d8d8a02224598b42273f585e02bb5aef81ddc3541d1",
+      "sameAtEndRefresh": true
+    },
+    {
+      "path": "packages/chat/src/instance-lock.ts",
+      "sha256": "91f03a718482656bf0f0e82087865ec70dffcd8e619d330ff31fcded54bca742",
+      "sameAtEndRefresh": true
+    },
+    {
+      "path": "packages/chat/src/config.ts",
+      "sha256": "f002a45bda4bffa7c222f039487ddfa74e4d0c22230075a97f7036acaffb01e7",
+      "sameAtEndRefresh": true
+    }
+  ],
+  "scope": "Directed Root source crosscheck overlapping author/reviewer, no unique coverage or runtime claim."
+}

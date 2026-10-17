@@ -1,0 +1,29 @@
+{
+  "path": "packages/chat/src/desktop-control-client.ts",
+  "bytes": 15174,
+  "sha256": "8647ab741d9b91ee5e043d8d8a02224598b42273f585e02bb5aef81ddc3541d1",
+  "pinReference": "inflight-lifecycle-pins-navigation.json",
+  "displayAt": "2026-10-17T19:31:09.358895+00:00",
+  "displayedLineRanges": [
+    [
+      165,
+      190
+    ],
+    [
+      208,
+      218
+    ]
+  ],
+  "ranges": [
+    {
+      "first": 165,
+      "last": 190,
+      "text": "165:     signal: AbortSignal,\n166:     handle: (event: DesktopControlEvent, context: DesktopEventContext) => Promise<void>,\n167:     options: DesktopEventWatchOptions = {},\n168:   ): Promise<void> {\n169:     const saved = options.checkpointPath\n170:       ? await readEventCheckpoint(options.checkpointPath)\n171:       : undefined;\n172:     let streamId = saved?.streamId;\n173:     let cursor = saved?.cursor ?? 0;\n174:     let retryMs = options.retryBaseMs ?? 1_000;\n175:     const retryMaxMs = options.retryMaxMs ?? 30_000;\n176:     let recovering = false;\n177:     while (!signal.aborted) {\n178:       try {\n179:         const page = await this.events(cursor, 25_000, signal);\n180:         if ((streamId !== undefined && streamId !== page.streamId) || page.resetCursor === true) {\n181:           // Reset before reading a replacement/rolled-back outbox or a high old\n182:           // cursor could mask new events forever.\n183:           streamId = page.streamId;\n184:           cursor = 0;\n185:           continue;\n186:         }\n187:         streamId = page.streamId;\n188:         for (const event of page.events) {\n189:           if (signal.aborted) return;\n190:           await handle(event, { streamId });"
+    },
+    {
+      "first": 208,
+      "last": 218,
+      "text": "208:           options.onRecovered?.();\n209:         }\n210:         retryMs = options.retryBaseMs ?? 1_000;\n211:       } catch (error) {\n212:         if (signal.aborted) return;\n213:         recovering = true;\n214:         options.onError?.(error);\n215:         await Promise.race([this.sleepFn(retryMs), waitForAbort(signal)]);\n216:         retryMs = Math.min(retryMaxMs, retryMs * 2);\n217:       }\n218:     }"
+    }
+  ]
+}

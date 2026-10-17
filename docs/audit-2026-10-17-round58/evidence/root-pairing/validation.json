@@ -1,0 +1,9 @@
+{
+  "productAttempts": 0,
+  "helperImports": 0,
+  "testsRun": 0,
+  "passedTests": 0,
+  "expectations": 0,
+  "gitOperationsByPacket": 0,
+  "scope": "Static only. No worker crash/spawn, models, real sessions/accounts/files/clock/network/native/browser experiments. Existing declarations are not passes."
+}

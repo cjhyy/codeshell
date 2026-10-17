@@ -1,0 +1,45 @@
+{
+  "baseline": "f31a847f45e4805bce34aeb9e6db7efb503cfcb0",
+  "count": 1,
+  "findings": [
+    {
+      "id": "CHAT-R58-01",
+      "severity": "P2",
+      "title": "网关停机释放租约后仍写旧收件箱快照，覆盖新进程已确认消息",
+      "location": {
+        "path": "packages/chat/src/chat-gateway.ts",
+        "line": 182,
+        "endLine": 185
+      },
+      "secondaryLocation": {
+        "path": "packages/chat/src/cli.ts",
+        "line": 139,
+        "endLine": 143
+      },
+      "proposalAlias": "CHAT-R138-C1",
+      "aliasDisposition": "One author138 shutdown hypothesis, independently source-reviewed143 and old-cause compared144; Root promotes once. Original candidate packets unchanged.",
+      "runtimeValidated": false,
+      "validation": "Static Node CLI→gateway→durable queue→actual Mimi petChat/result→instance lease/persist path, independently reviewed. No product/helper/test/process/socket/worker/account/model/native/clock experiments.",
+      "condition": "CLI process A using a normal durable inbox has accepted a plain persistent message and is awaiting an ordinary Mimi DesktopControlClient petChat result. SIGTERM/SIGINT stops adapters/watchers; a second normal CLI B starts with the same configuration after A releases its lock, before A delivery settles. B persists and acknowledges a distinct new message while A still has its older queue snapshot.",
+      "expected": "The exclusive inbox lease covers every task that can still write it, so a retired owner cannot replace the new owner’s durable accepted state.",
+      "actual": "ChatGateway.run waits ingress runners, but pump detached process(entry) promises. queue.stop sets flags and clears timers without waiting those consumers/writes. CLI finally removes its lock marker. Mimi petChat/result does not receive CLI shutdown signal and retains its own request timer, so A can remain alive. B acquires the absent marker and writes its new entry. A process still runs withMutation→persist after await deliver, despite stopped, and atomically renames an old instance pending/completed snapshot over the same inbox without reload/CAS/lease fence.",
+      "impact": "B’s acknowledged item can disappear from the on-disk inbox; B still retains it in memory and a later B persist can restore it. If B exits/crashes before that restoring write, a restart cannot recover the removed item. This is a durable-state overwrite window, not a claim every overlap loses a message or that duplicate delivery alone violates at-least-once.",
+      "counterevidence": [
+        "No trigger if all A consumers and writes have settled before release, or if B starts only after A can no longer write.",
+        "Different inbox/lock configurations are outside the trigger.",
+        "This does not require repeatedly stop/start the same queue object or a malformed thrown value. B is a fresh ordinary CLI instance.",
+        "Enqueue persists a plain message before queued/adapter ACK; in-flight work is detached from the ingress handler, so waiting adapter shutdown does not imply waiting delivery.",
+        "Process B memory is not erased by A’s disk rename, and a later B write can repair the snapshot. Crash/restart before repair is required for the stated durable recovery loss.",
+        "Per-instance withMutation and atomic rename serialize local writes/avoid partial files; they do not merge a second process’s accepted state or fence a released lease."
+      ],
+      "deduplication": "Independent144 read original C8/N22 retry order, SWC account/dedupe/spool acceptance, CHAT-R11 notification-progress rejected-load cache, archive cleanup and slow-load notes. They do not establish this exact stop→release→retired consumer snapshot overwrite cause. One bounded compound query over original5850 MD/recursive JSON-value inventory also found no exact prior in read windows; lexical/window limits retained, no exhaustive novelty claim.",
+      "fixDirection": "Keep inbox ownership until accepted in-flight operations and all their persistence are settled, or fence retired writers while retaining replayable state; release the single-instance lease only after that boundary.",
+      "evidence": [
+        "evidence/delivery-queue/report.md",
+        "evidence/delivery-shutdown-review/report.md",
+        "evidence/delivery-history/report.md",
+        "evidence/review-aggregate.md"
+      ]
+    }
+  ]
+}

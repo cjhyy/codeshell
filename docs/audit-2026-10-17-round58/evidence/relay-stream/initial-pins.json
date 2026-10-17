@@ -1,0 +1,44 @@
+{
+  "capturedUTC": "2026-10-17T19:16:40.190389+00:00",
+  "files": [
+    {
+      "path": "AGENTS.md",
+      "bytes": 206,
+      "lines": 5,
+      "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "beforeBodyOrLineNavigation": true
+    },
+    {
+      "path": "CODESHELL.md",
+      "bytes": 17639,
+      "lines": 217,
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "beforeBodyOrLineNavigation": true
+    },
+    {
+      "path": "packages/server/src/remote-relay/byte-stream.ts",
+      "bytes": 2440,
+      "lines": 65,
+      "sha256": "829b793b34e5c8046284aba433b6323f471f983c2fc9efab16eaa6cb117aa639",
+      "beforeBodyOrLineNavigation": true
+    },
+    {
+      "path": "packages/server/src/remote-relay/local-stream.ts",
+      "bytes": 4119,
+      "lines": 125,
+      "sha256": "b0842c3047f6e5d3fe36fa9e89a5287889cfe2be49ef4a1db0d971eb9672d718",
+      "beforeBodyOrLineNavigation": true
+    },
+    {
+      "path": "packages/server/src/remote-relay/protocol.ts",
+      "bytes": 2805,
+      "lines": 70,
+      "sha256": "75273db331577ffa448e057134f2897593065b1d62efd9291cf9324d42244672",
+      "beforeBodyOrLineNavigation": true
+    }
+  ],
+  "rootReportedBaselineOnly": "f31a847f45e4805bce34aeb9e6db7efb503cfcb0",
+  "ownGitOperations": 0,
+  "instructionStatus": "Prior AGENTS5/CODESHELL217 actual read carried under unchanged SHA; repeated hash not new reading.",
+  "role": "Independent directed ordinary remote-relay stream source review, not runtime verifier"
+}

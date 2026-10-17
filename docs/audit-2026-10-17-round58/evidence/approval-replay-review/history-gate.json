@@ -1,0 +1,355 @@
+{
+  "atUTC": "2026-10-17T19:22:29.833088+00:00",
+  "canonicalPin": {
+    "path": "docs/review-2026-10-12/approval-quality-round10.md",
+    "bytes": 15328,
+    "sha256": "f525ea372cfcc72d9b78fb365d10e9b0d91713f7735bae848cd48eb6a6ac76f0",
+    "beforeRead": true
+  },
+  "sharedBatch": {
+    "path": "/tmp/codeshell-audit-round141-pairing/history-batch.json",
+    "bytes": 1396813,
+    "sha256": "1b3bad36a3243d8acd7a887bddac56e3fe66ccae57d2dfb3fddc14e46c88887b"
+  },
+  "scope": {
+    "atUTC": "2026-10-17T19:16:56.757474+00:00",
+    "excludedFormalAtOrAbove": 58,
+    "historyFiles": 5850,
+    "jsonValueScalarsVisited": 4251467,
+    "capPerTarget": 100,
+    "errors": [],
+    "note": "Shared machine path/SHA navigation only, all traversed scalar values not semantically read; JSON keys excluded, archives included; exact shown values capped; source byte hashing not product semantic reading."
+  },
+  "counts": {
+    "packages/server/src/mobile-remote/pending-approvals.ts": 36
+  },
+  "hits": {
+    "packages/server/src/mobile-remote/pending-approvals.ts": [
+      {
+        "document": "docs/audit-2026-10-16/inventory.json",
+        "location": "/source_inventory/2016",
+        "matched": [
+          "packages/server/src/mobile-remote/pending-approvals.ts"
+        ],
+        "value": "packages/server/src/mobile-remote/pending-approvals.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+        "location": "/matches/285/text",
+        "matched": [
+          "packages/server/src/mobile-remote/pending-approvals.ts"
+        ],
+        "value": "- 错误若只是 No pending approval / session 已关闭 / worker 已退出，不能再声称后端继续等待。`packages/server/src/mobile-remote/pending-approvals.ts:14-17` 在 worker generation 变化 / dead 时清空缓存，防止继任者接受前任请求。严格 session/request 路由拒绝是保护，也不应当作为无需条件的失败。",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round23/evidence/room-data-navigation.json",
+        "location": "/commands/3/stdout",
+        "matched": [
+          "packages/server/src/mobile-remote/pending-approvals.ts"
+        ],
+        "value": "packages/server/src/mobile-remote/mobile-chat-turn.ts\npackages/server/src/mobile-remote/mobile-history.ts\npackages/server/src/mobile-remote/mobile-run-dispatch.ts\npackages/server/src/mobile-remote/access-passcode.test.ts\npackages/server/src/mobile-remote/remote-host-manager.ts\npackages/server/src/mobile-remote/room-manager.test.ts\npackages/server/src/mobile-remote/trusted-device-store.ts\npackages/server/src/mobile-remote/mobile-chat-turn.test.ts\npackages/server/src/mobile-remote/mobile-run-dispatch.test.ts\npackages/server/src/mobile-remote/mobile-limits.ts\npackages/server/src/mobile-remote/resident-agent.test.ts\npackages/server/src/mobile-remote/mobile-client-event-validator.test.ts\npackages/server/src/mobile-remote/pairing.test.ts\npackages/server/src/mobile-remote/tunnel-manager.ts\npackages/server/src/mobile-remote/viewer-identity.ts\npackages/server/src/mobile-remote/resident-agent.ts\npackages/server/src/mobile-remote/remote-host-manager.native.test.ts\npackages/server/src/mobile-remote/pending-approvals.ts\npackages/server/src/mobile-remote/codex-parse.ts\npackages/server/src/mobile-remote/codex-room-agent.ts\npackages/server/src/mobile-remote/room-manager.append-scaling.test.ts\npackages/server/src/mobile-remote/room-manager.ts\npackages/server/src/mobile-remote/mobile-attachments.test.ts\npackages/server/src/mobile-remote/trusted-device-store.test.ts\npackages/server/src/mobile-remote/codex-room-agent.test.ts\npackages/server/src/mobile-remote/types.ts\npackages/server/src/mobile-remote/cloudflared-binary.ts\npackages/server/src/mobile-remote/room-history.test.ts\npackages/server/src/mobile-remote/room-history.ts\npackages/server/src/mobile-remote/codex-parse.test.ts\npackages/server/src/mobile-remote/mobile-static.test.ts\npackages/server/src/mobile-remote/room-manager.rejected-s",
+        "truncatedValue": true
+      },
+      {
+        "document": "docs/audit-2026-10-17-round25/evidence/data-prep/inventory.json",
+        "location": "/files/24",
+        "matched": [
+          "packages/server/src/mobile-remote/pending-approvals.ts"
+        ],
+        "value": "packages/server/src/mobile-remote/pending-approvals.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-ranking.json",
+        "location": "/rankedCandidates/116/path",
+        "matched": [
+          "packages/server/src/mobile-remote/pending-approvals.ts"
+        ],
+        "value": "packages/server/src/mobile-remote/pending-approvals.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-ranking.json",
+        "location": "/rankedCandidates/116/sha256",
+        "matched": [
+          "1503d41f1535224c972a23ada25238644394fc2a1e696668729c0f6263b989ac"
+        ],
+        "value": "1503d41f1535224c972a23ada25238644394fc2a1e696668729c0f6263b989ac",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+        "location": "/files/3523/path",
+        "matched": [
+          "packages/server/src/mobile-remote/pending-approvals.ts"
+        ],
+        "value": "packages/server/src/mobile-remote/pending-approvals.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+        "location": "/files/3523/sha256",
+        "matched": [
+          "1503d41f1535224c972a23ada25238644394fc2a1e696668729c0f6263b989ac"
+        ],
+        "value": "1503d41f1535224c972a23ada25238644394fc2a1e696668729c0f6263b989ac",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round42/evidence/transcript-frontier/history-contexts.json",
+        "location": "/codex-parse/62/text",
+        "matched": [
+          "packages/server/src/mobile-remote/pending-approvals.ts"
+        ],
+        "value": "kages/server/src/mobile-remote/mobile-client-event-validator.test.ts\npackages/server/src/mobile-remote/pairing.test.ts\npackages/server/src/mobile-remote/tunnel-manager.ts\npackages/server/src/mobile-remote/viewer-identity.ts\npackages/server/src/mobile-remote/resident-agent.ts\npackages/server/src/mobile-remote/remote-host-manager.native.test.ts\npackages/server/src/mobile-remote/pending-approvals.ts\npackages/server/src/mobile-remote/codex-parse.ts\npackages/server/src/mobile-remote/codex-room-agent.ts\npackages/server/src/mobile-remote/room-manager.append-scaling.test.ts\npackages/server/src/mobile-remote/room-manager.ts\npackages/server/src/mobile-remote/mobile-attachments.test.ts\npackages/server/src/mobile-remote/trusted-device-store.test.ts\npackages/server/src/mobile-remote/codex-room-agent.test.ts\npackages/server/src/mobile-remote/types.ts\npackages/server/src/mobile-remote/cloudflared-binary.ts\npackages/server/src/mobile-remote/room-history.test.ts\npackages/server/src/mobile-remote/room-history.ts\npackages/server/src/mobile-remote/codex-parse.test.ts\npackages/server/src/mobile-remote/mobile-static.test.ts\npackages/server/src/mobile-remote/room-manager.rejected-send.test.ts\npackages/server/src/mobile-remote/room-model-tracing.test.ts\n",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "location": "/claims/14179/path",
+        "matched": [
+          "packages/server/src/mobile-remote/pending-approvals.ts"
+        ],
+        "value": "packages/server/src/mobile-remote/pending-approvals.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "location": "/claims/14179/directSourcePathsInObject/0",
+        "matched": [
+          "packages/server/src/mobile-remote/pending-approvals.ts"
+        ],
+        "value": "packages/server/src/mobile-remote/pending-approvals.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "location": "/claims/14180/path",
+        "matched": [
+          "packages/server/src/mobile-remote/pending-approvals.ts"
+        ],
+        "value": "packages/server/src/mobile-remote/pending-approvals.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "location": "/claims/14180/sourceHashFields/sha256",
+        "matched": [
+          "1503d41f1535224c972a23ada25238644394fc2a1e696668729c0f6263b989ac"
+        ],
+        "value": "1503d41f1535224c972a23ada25238644394fc2a1e696668729c0f6263b989ac",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "location": "/claims/14180/directSourcePathsInObject/0",
+        "matched": [
+          "packages/server/src/mobile-remote/pending-approvals.ts"
+        ],
+        "value": "packages/server/src/mobile-remote/pending-approvals.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-index.json",
+        "location": "/files/3845/path",
+        "matched": [
+          "packages/server/src/mobile-remote/pending-approvals.ts"
+        ],
+        "value": "packages/server/src/mobile-remote/pending-approvals.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-index.json",
+        "location": "/files/3845/sha256",
+        "matched": [
+          "1503d41f1535224c972a23ada25238644394fc2a1e696668729c0f6263b989ac"
+        ],
+        "value": "1503d41f1535224c972a23ada25238644394fc2a1e696668729c0f6263b989ac",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/package-inventory.json",
+        "location": "/files/3845/path",
+        "matched": [
+          "packages/server/src/mobile-remote/pending-approvals.ts"
+        ],
+        "value": "packages/server/src/mobile-remote/pending-approvals.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/package-inventory.json",
+        "location": "/files/3845/sha256",
+        "matched": [
+          "1503d41f1535224c972a23ada25238644394fc2a1e696668729c0f6263b989ac"
+        ],
+        "value": "1503d41f1535224c972a23ada25238644394fc2a1e696668729c0f6263b989ac",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-status/comparison.json",
+        "location": "/unknownPaths/3497",
+        "matched": [
+          "packages/server/src/mobile-remote/pending-approvals.ts"
+        ],
+        "value": "packages/server/src/mobile-remote/pending-approvals.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-status/current-inventory.json",
+        "location": "/files/3846/path",
+        "matched": [
+          "packages/server/src/mobile-remote/pending-approvals.ts"
+        ],
+        "value": "packages/server/src/mobile-remote/pending-approvals.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-status/current-inventory.json",
+        "location": "/files/3846/sha256",
+        "matched": [
+          "1503d41f1535224c972a23ada25238644394fc2a1e696668729c0f6263b989ac"
+        ],
+        "value": "1503d41f1535224c972a23ada25238644394fc2a1e696668729c0f6263b989ac",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round55/evidence/coverage-current/current-source-inventory.json",
+        "location": "/files/3846/path",
+        "matched": [
+          "packages/server/src/mobile-remote/pending-approvals.ts"
+        ],
+        "value": "packages/server/src/mobile-remote/pending-approvals.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round55/evidence/coverage-current/current-source-inventory.json",
+        "location": "/files/3846/sha256",
+        "matched": [
+          "1503d41f1535224c972a23ada25238644394fc2a1e696668729c0f6263b989ac"
+        ],
+        "value": "1503d41f1535224c972a23ada25238644394fc2a1e696668729c0f6263b989ac",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round55/evidence/coverage-current/current-source-inventory.json",
+        "location": "/files/3846/oldSha256",
+        "matched": [
+          "1503d41f1535224c972a23ada25238644394fc2a1e696668729c0f6263b989ac"
+        ],
+        "value": "1503d41f1535224c972a23ada25238644394fc2a1e696668729c0f6263b989ac",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round55/evidence/coverage-current/unified-current-index.first.json",
+        "location": "/files/3846/path",
+        "matched": [
+          "packages/server/src/mobile-remote/pending-approvals.ts"
+        ],
+        "value": "packages/server/src/mobile-remote/pending-approvals.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round55/evidence/coverage-current/unified-current-index.first.json",
+        "location": "/files/3846/sha256",
+        "matched": [
+          "1503d41f1535224c972a23ada25238644394fc2a1e696668729c0f6263b989ac"
+        ],
+        "value": "1503d41f1535224c972a23ada25238644394fc2a1e696668729c0f6263b989ac",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round55/evidence/coverage-current/unified-current-index.first.json",
+        "location": "/files/3846/oldSha256",
+        "matched": [
+          "1503d41f1535224c972a23ada25238644394fc2a1e696668729c0f6263b989ac"
+        ],
+        "value": "1503d41f1535224c972a23ada25238644394fc2a1e696668729c0f6263b989ac",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round55/evidence/coverage-current/unified-current-index.json",
+        "location": "/files/3846/path",
+        "matched": [
+          "packages/server/src/mobile-remote/pending-approvals.ts"
+        ],
+        "value": "packages/server/src/mobile-remote/pending-approvals.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round55/evidence/coverage-current/unified-current-index.json",
+        "location": "/files/3846/sha256",
+        "matched": [
+          "1503d41f1535224c972a23ada25238644394fc2a1e696668729c0f6263b989ac"
+        ],
+        "value": "1503d41f1535224c972a23ada25238644394fc2a1e696668729c0f6263b989ac",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round55/evidence/coverage-current/unified-current-index.json",
+        "location": "/files/3846/oldSha256",
+        "matched": [
+          "1503d41f1535224c972a23ada25238644394fc2a1e696668729c0f6263b989ac"
+        ],
+        "value": "1503d41f1535224c972a23ada25238644394fc2a1e696668729c0f6263b989ac",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round57/evidence/mobile-path-review/shared-history-targets.json",
+        "location": "/targets/packages~1server~1src~1mobile-remote~1mobile-static.ts/retainedHits/1/value",
+        "matched": [
+          "packages/server/src/mobile-remote/pending-approvals.ts"
+        ],
+        "value": "packages/server/src/mobile-remote/mobile-chat-turn.ts\npackages/server/src/mobile-remote/mobile-history.ts\npackages/server/src/mobile-remote/mobile-run-dispatch.ts\npackages/server/src/mobile-remote/access-passcode.test.ts\npackages/server/src/mobile-remote/remote-host-manager.ts\npackages/server/src/mobile-remote/room-manager.test.ts\npackages/server/src/mobile-remote/trusted-device-store.ts\npackages/server/src/mobile-remote/mobile-chat-turn.test.ts\npackages/server/src/mobile-remote/mobile-run-dispatch.test.ts\npackages/server/src/mobile-remote/mobile-limits.ts\npackages/server/src/mobile-remote/resident-agent.test.ts\npackages/server/src/mobile-remote/mobile-client-event-validator.test.ts\npackages/server/src/mobile-remote/pairing.test.ts\npackages/server/src/mobile-remote/tunnel-manager.ts\npackages/server/src/mobile-remote/viewer-identity.ts\npackages/server/src/mobile-remote/resident-agent.ts\npackages/server/src/mobile-remote/remote-host-manager.native.test.ts\npackages/server/src/mobile-remote/pending-approvals.ts\npackages/server/src/mobile-remote/codex-parse.ts\npackages/server/src/mobile-remote/codex-room-agent.ts\npackages/server/src/mobile-remote/room-manager.append-scaling.test.ts\npackages/server/src/mobile-remote/room-manager.ts\npackages/server/src/mobile-remote/mobile-attachments.test.ts\npackages/server/src/mobile-remote/trusted-device-store.test.ts\npackages/server/src/mobile-remote/codex-room-agent.test.ts\npackages/server/src/mobile-remote/types.ts\npackages/server/src/mobile-remote/cloudflared-binary.ts\npackages/server/src/mobile-remote/room-history.test.ts\npackages/server/src/mobile-remote/room-history.ts\npackages/server/src/mobile-remote/codex-parse.test.ts\npackages/server/src/mobile-remote/mobile-static.test.ts\npackages/server/src/mobile-remote/room-manager.rejected-s",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round57/evidence/root-static-files/history-batch.json",
+        "location": "/hits/packages~1server~1src~1mobile-remote~1mobile-static.ts/1/value",
+        "matched": [
+          "packages/server/src/mobile-remote/pending-approvals.ts"
+        ],
+        "value": "packages/server/src/mobile-remote/mobile-chat-turn.ts\npackages/server/src/mobile-remote/mobile-history.ts\npackages/server/src/mobile-remote/mobile-run-dispatch.ts\npackages/server/src/mobile-remote/access-passcode.test.ts\npackages/server/src/mobile-remote/remote-host-manager.ts\npackages/server/src/mobile-remote/room-manager.test.ts\npackages/server/src/mobile-remote/trusted-device-store.ts\npackages/server/src/mobile-remote/mobile-chat-turn.test.ts\npackages/server/src/mobile-remote/mobile-run-dispatch.test.ts\npackages/server/src/mobile-remote/mobile-limits.ts\npackages/server/src/mobile-remote/resident-agent.test.ts\npackages/server/src/mobile-remote/mobile-client-event-validator.test.ts\npackages/server/src/mobile-remote/pairing.test.ts\npackages/server/src/mobile-remote/tunnel-manager.ts\npackages/server/src/mobile-remote/viewer-identity.ts\npackages/server/src/mobile-remote/resident-agent.ts\npackages/server/src/mobile-remote/remote-host-manager.native.test.ts\npackages/server/src/mobile-remote/pending-approvals.ts\npackages/server/src/mobile-remote/codex-parse.ts\npackages/server/src/mobile-remote/codex-room-agent.ts\npackages/server/src/mobile-remote/room-manager.append-scaling.test.ts\npackages/server/src/mobile-remote/room-manager.ts\npackages/server/src/mobile-remote/mobile-attachments.test.ts\npackages/server/src/mobile-remote/trusted-device-store.test.ts\npackages/server/src/mobile-remote/codex-room-agent.test.ts\npackages/server/src/mobile-remote/types.ts\npackages/server/src/mobile-remote/cloudflared-binary.ts\npackages/server/src/mobile-remote/room-history.test.ts\npackages/server/src/mobile-remote/room-history.ts\npackages/server/src/mobile-remote/codex-parse.test.ts\npackages/server/src/mobile-remote/mobile-static.test.ts\npackages/server/src/mobile-remote/room-manager.rejected-s",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/review-2026-10-12/approval-quality-round10.md",
+        "location": 76,
+        "matched": [
+          "packages/server/src/mobile-remote/pending-approvals.ts"
+        ],
+        "value": "- 错误若只是 No pending approval / session 已关闭 / worker 已退出，不能再声称后端继续等待。`packages/server/src/mobile-remote/pending-approvals.ts:14-17` 在 worker generation 变化 / dead 时清空缓存，防止继任者接受前任请求。严格 session/request 路由拒绝是保护，也不应当作为无需条件的失败。",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/review-2026-10-12/validation/postdelivery-report-review/audit-a.raw.json",
+        "location": "/module_inventory/84740d56/paths/53",
+        "matched": [
+          "packages/server/src/mobile-remote/pending-approvals.ts"
+        ],
+        "value": "packages/server/src/mobile-remote/pending-approvals.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/review-2026-10-12/validation/postdelivery-report-review/audit-a.raw.json",
+        "location": "/module_inventory/a66f4ef2/paths/53",
+        "matched": [
+          "packages/server/src/mobile-remote/pending-approvals.ts"
+        ],
+        "value": "packages/server/src/mobile-remote/pending-approvals.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/todo/claude-repository-optimization-2026-08-30.md",
+        "location": 607,
+        "matched": [
+          "packages/server/src/mobile-remote/pending-approvals.ts"
+        ],
+        "value": "  服务端 `packages/server/src/mobile-remote/pending-approvals.ts:49` 提供 `replayLines`；",
+        "truncatedValue": false
+      }
+    ]
+  },
+  "note": "Machine navigation projection; actual canonical window below is human scope; not a new full historical cause scan"
+}

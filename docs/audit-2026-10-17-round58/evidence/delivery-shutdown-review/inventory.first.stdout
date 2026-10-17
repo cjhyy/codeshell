@@ -1,0 +1,11 @@
+packages/chat/src/bound-session-chat.ts
+packages/chat/src/bound-session-chat.test.ts
+packages/chat/src/cli.ts
+packages/chat/src/chat-gateway.test.ts
+packages/chat/src/desktop-control-client.ts
+packages/chat/src/gateway.test.ts
+packages/chat/src/desktop-control-client.test.ts
+packages/chat/src/delivery-queue.ts
+packages/chat/src/gateway.ts
+packages/chat/src/delivery-queue.test.ts
+packages/chat/src/chat-gateway.ts

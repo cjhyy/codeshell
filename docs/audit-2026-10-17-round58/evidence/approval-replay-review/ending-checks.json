@@ -1,0 +1,178 @@
+{
+  "atUTC": "2026-10-17T19:25:55.385691+00:00",
+  "sourceAndInstructionPins": [
+    {
+      "path": "AGENTS.md",
+      "initialBytes": 206,
+      "initialSha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "endingBytes": 206,
+      "endingSha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "sameBytesAndSha256": true
+    },
+    {
+      "path": "CODESHELL.md",
+      "initialBytes": 17639,
+      "initialSha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "endingBytes": 17639,
+      "endingSha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "sameBytesAndSha256": true
+    },
+    {
+      "path": "packages/server/src/mobile-remote/pending-approvals.ts",
+      "initialBytes": 2448,
+      "initialSha256": "1503d41f1535224c972a23ada25238644394fc2a1e696668729c0f6263b989ac",
+      "endingBytes": 2448,
+      "endingSha256": "1503d41f1535224c972a23ada25238644394fc2a1e696668729c0f6263b989ac",
+      "sameBytesAndSha256": true
+    },
+    {
+      "path": "packages/desktop/src/main/index.ts",
+      "initialBytes": 299337,
+      "initialSha256": "105b2b49a28e0a7ef10980ac5feaa3a07ff81e7197f5acbefd95feb2498224c0",
+      "endingBytes": 299337,
+      "endingSha256": "105b2b49a28e0a7ef10980ac5feaa3a07ff81e7197f5acbefd95feb2498224c0",
+      "sameBytesAndSha256": true
+    },
+    {
+      "path": "packages/desktop/src/main/mobile-remote-orchestrator.ts",
+      "initialBytes": 18225,
+      "initialSha256": "40b62b4c9b912fd472d65d7077971e638a64109927a574ae8337cbc0f837e099",
+      "endingBytes": 18225,
+      "endingSha256": "40b62b4c9b912fd472d65d7077971e638a64109927a574ae8337cbc0f837e099",
+      "sameBytesAndSha256": true
+    },
+    {
+      "path": "packages/desktop/src/main/mobile-remote/handle-client-event.ts",
+      "initialBytes": 25666,
+      "initialSha256": "ed4d8b65512f7be8f31572b9c47b86f4a4f587bd4c9fe94541bcf108108a1f71",
+      "endingBytes": 25666,
+      "endingSha256": "ed4d8b65512f7be8f31572b9c47b86f4a4f587bd4c9fe94541bcf108108a1f71",
+      "sameBytesAndSha256": true
+    },
+    {
+      "path": "packages/desktop/src/main/agent-bridge.ts",
+      "initialBytes": 102778,
+      "initialSha256": "2ba6a48296c36b207ac799b4beaf0a1b9335d8711859245e3f246d6b88906d47",
+      "endingBytes": 102778,
+      "endingSha256": "2ba6a48296c36b207ac799b4beaf0a1b9335d8711859245e3f246d6b88906d47",
+      "sameBytesAndSha256": true
+    },
+    {
+      "path": "packages/web/src/hooks/useRemoteSocket.ts",
+      "initialBytes": 12268,
+      "initialSha256": "a7f990a72bb8e103297542e5e3534ffeb874737d4126b04ac848b2a3260d4259",
+      "endingBytes": 12268,
+      "endingSha256": "a7f990a72bb8e103297542e5e3534ffeb874737d4126b04ac848b2a3260d4259",
+      "sameBytesAndSha256": true
+    },
+    {
+      "path": "packages/web/src/hooks/useRemoteApp.ts",
+      "initialBytes": 73050,
+      "initialSha256": "ddead03238578425c81c94ee148496b4e1264ee9ffbfe20418af137eb1f3624d",
+      "endingBytes": 73050,
+      "endingSha256": "ddead03238578425c81c94ee148496b4e1264ee9ffbfe20418af137eb1f3624d",
+      "sameBytesAndSha256": true
+    },
+    {
+      "path": "packages/desktop/src/main/mobile-remote/output-recovery-authority.ts",
+      "initialBytes": 5632,
+      "initialSha256": "9e0af19016596a3a43390aa07a16e77daca1b301fb7e6c8892e60ee3d2fb86ce",
+      "endingBytes": 5632,
+      "endingSha256": "9e0af19016596a3a43390aa07a16e77daca1b301fb7e6c8892e60ee3d2fb86ce",
+      "sameBytesAndSha256": true
+    },
+    {
+      "path": "packages/desktop/src/main/main-output-publisher.ts",
+      "initialBytes": 5900,
+      "initialSha256": "1a6a7e7c1135664ed157305a66f7949e24589e1a86d4f19ae8db0431eb6ff737",
+      "endingBytes": 5900,
+      "endingSha256": "1a6a7e7c1135664ed157305a66f7949e24589e1a86d4f19ae8db0431eb6ff737",
+      "sameBytesAndSha256": true
+    },
+    {
+      "path": "packages/desktop/src/main/pet/pet-im-decisions.ts",
+      "initialBytes": 12417,
+      "initialSha256": "a8e8009b08ad0e07666714c795fdc0c3bfda7bc1db460195fa8bd1f89c1756ef",
+      "endingBytes": 12417,
+      "endingSha256": "a8e8009b08ad0e07666714c795fdc0c3bfda7bc1db460195fa8bd1f89c1756ef",
+      "sameBytesAndSha256": true
+    },
+    {
+      "path": "packages/desktop/src/main/mobile-remote/output-recovery.ts",
+      "initialBytes": 10821,
+      "initialSha256": "1f8fafdb6d3a1fb0de0d9a5908e38c50ba1deb0e635622503739ab0c54ab35f9",
+      "endingBytes": 10821,
+      "endingSha256": "1f8fafdb6d3a1fb0de0d9a5908e38c50ba1deb0e635622503739ab0c54ab35f9",
+      "sameBytesAndSha256": true
+    },
+    {
+      "path": "packages/desktop/src/main/mobile-remote/external-runtime-commands.ts",
+      "initialBytes": 10924,
+      "initialSha256": "7188cabf3ae2de925cb2caa26e345df97dc8d3037102635849abedf1d1c9ceff",
+      "endingBytes": 10924,
+      "endingSha256": "7188cabf3ae2de925cb2caa26e345df97dc8d3037102635849abedf1d1c9ceff",
+      "sameBytesAndSha256": true
+    },
+    {
+      "path": "packages/desktop/src/main/SessionSnapshotStore.ts",
+      "initialBytes": 9305,
+      "initialSha256": "d4b3f3841058ef82c1d4320a0cbd7ee29fc4816a68cde667e264713fd6680dca",
+      "endingBytes": 9305,
+      "endingSha256": "d4b3f3841058ef82c1d4320a0cbd7ee29fc4816a68cde667e264713fd6680dca",
+      "sameBytesAndSha256": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/app/useHostSubscriptions.ts",
+      "initialBytes": 51155,
+      "initialSha256": "8b20a7a96f7d89ae000f3ebde79aeae3bba506683940dae6c8e2150444a0eddc",
+      "endingBytes": 51155,
+      "endingSha256": "8b20a7a96f7d89ae000f3ebde79aeae3bba506683940dae6c8e2150444a0eddc",
+      "sameBytesAndSha256": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/pet/PetStateProvider.tsx",
+      "initialBytes": 39246,
+      "initialSha256": "f12a0eefbebbcf8923940e0d3025d983023ca9a4a8b7d49b852ae5bc578c5c35",
+      "endingBytes": 39246,
+      "endingSha256": "f12a0eefbebbcf8923940e0d3025d983023ca9a4a8b7d49b852ae5bc578c5c35",
+      "sameBytesAndSha256": true
+    }
+  ],
+  "all17SourceAndInstructionPinsSame": true,
+  "canonicalAndAuthorInputs": [
+    {
+      "path": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/review-2026-10-12/approval-quality-round10.md",
+      "initialSha256": "f525ea372cfcc72d9b78fb365d10e9b0d91713f7735bae848cd48eb6a6ac76f0",
+      "finishSha256": "f525ea372cfcc72d9b78fb365d10e9b0d91713f7735bae848cd48eb6a6ac76f0",
+      "sameBytesAndSha256": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round141-pairing/report.md",
+      "initialSha256": "b5332cbb37616d44e0caf1687703998aa510f8d7ff8f51e626880b6bcf6eb831",
+      "finishSha256": "b5332cbb37616d44e0caf1687703998aa510f8d7ff8f51e626880b6bcf6eb831",
+      "sameBytesAndSha256": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round141-pairing/source-manifest.json",
+      "initialSha256": "ce135a5eea258e4a0909d285eac3c352be9b893f7804edbc54fe7459c5e9a42d",
+      "finishSha256": "ce135a5eea258e4a0909d285eac3c352be9b893f7804edbc54fe7459c5e9a42d",
+      "sameBytesAndSha256": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round141-pairing/candidate.json",
+      "initialSha256": "b3bf2b20f02b03ed5bc35de0ba91d4c56c70e8089b34dffd3dbefcabd832bb80",
+      "finishSha256": "b3bf2b20f02b03ed5bc35de0ba91d4c56c70e8089b34dffd3dbefcabd832bb80",
+      "sameBytesAndSha256": true
+    }
+  ],
+  "allCanonicalAndAuthorInputsSame": true,
+  "sharedBatch": {
+    "path": "/tmp/codeshell-audit-round141-pairing/history-batch.json",
+    "bytes": 1396813,
+    "sha256": "1b3bad36a3243d8acd7a887bddac56e3fe66ccae57d2dfb3fddc14e46c88887b",
+    "endingBytes": 1396813,
+    "endingSha256": "1b3bad36a3243d8acd7a887bddac56e3fe66ccae57d2dfb3fddc14e46c88887b",
+    "sameBytesAndSha256": true
+  },
+  "limits": "No own whole-history ending inventory or Git verification; shared batch byte equality is not verification of all 5850 members."
+}

@@ -1,0 +1,11 @@
+{
+  "command": [
+    "rg",
+    "-n",
+    "\"bin\"|code-shell-chat|dist/cli",
+    "packages/chat/package.json"
+  ],
+  "exitCode": 0,
+  "stdout": "2:  \"name\": \"@cjhyy/code-shell-chat\",\n70:  \"bin\": {\n71:    \"code-shell-chat\": \"./dist/cli.js\"\n",
+  "stderr": ""
+}

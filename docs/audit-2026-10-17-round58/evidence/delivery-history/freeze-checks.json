@@ -1,0 +1,103 @@
+{
+  "role": "Author metadata finalization only",
+  "checks": {
+    "files": []
+  },
+  "metadataDocuments": 9,
+  "productFiles": [],
+  "links": [
+    {
+      "target": "canonical-excerpts.json",
+      "insideOwnedDir": true,
+      "existsOrPlannedSelfGenerated": true
+    },
+    {
+      "target": "cause-comparison.json",
+      "insideOwnedDir": true,
+      "existsOrPlannedSelfGenerated": true
+    },
+    {
+      "target": "shared-history-projection.json",
+      "insideOwnedDir": true,
+      "existsOrPlannedSelfGenerated": true
+    },
+    {
+      "target": "shutdown-lease-history.py",
+      "insideOwnedDir": true,
+      "existsOrPlannedSelfGenerated": true
+    },
+    {
+      "target": "history-first.stdout",
+      "insideOwnedDir": true,
+      "existsOrPlannedSelfGenerated": true
+    },
+    {
+      "target": "history-first.stderr",
+      "insideOwnedDir": true,
+      "existsOrPlannedSelfGenerated": true
+    },
+    {
+      "target": "history-first-exit.json",
+      "insideOwnedDir": true,
+      "existsOrPlannedSelfGenerated": true
+    },
+    {
+      "target": "shutdown-lease-history.json",
+      "insideOwnedDir": true,
+      "existsOrPlannedSelfGenerated": true
+    },
+    {
+      "target": "metadata-manifest.json",
+      "insideOwnedDir": true,
+      "existsOrPlannedSelfGenerated": true
+    },
+    {
+      "target": "diagnostics.json",
+      "insideOwnedDir": true,
+      "existsOrPlannedSelfGenerated": true
+    },
+    {
+      "target": "ending-checks.json",
+      "insideOwnedDir": true,
+      "existsOrPlannedSelfGenerated": true
+    },
+    {
+      "target": "metadata-before-pins.json",
+      "insideOwnedDir": true,
+      "existsOrPlannedSelfGenerated": true
+    },
+    {
+      "target": "round11-before-pins.json",
+      "insideOwnedDir": true,
+      "existsOrPlannedSelfGenerated": true
+    },
+    {
+      "target": "chat-canonical-pins.json",
+      "insideOwnedDir": true,
+      "existsOrPlannedSelfGenerated": true
+    },
+    {
+      "target": "validation.json",
+      "insideOwnedDir": true,
+      "existsOrPlannedSelfGenerated": true
+    },
+    {
+      "target": "freeze-checks.json",
+      "insideOwnedDir": true,
+      "existsOrPlannedSelfGenerated": true
+    },
+    {
+      "target": "reviewer-receipt.json",
+      "insideOwnedDir": true,
+      "existsOrPlannedSelfGenerated": true
+    }
+  ],
+  "plannedSelfGenerated": [
+    "freeze-checks.json",
+    "reviewer-receipt.json"
+  ],
+  "allPinnedMetadataSame": true,
+  "compoundFirstAttemptExit": 0,
+  "productExecution": 0,
+  "git": 0
+}

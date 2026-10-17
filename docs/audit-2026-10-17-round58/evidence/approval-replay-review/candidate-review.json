@@ -1,0 +1,77 @@
+{
+  "id": "APPROVAL-R141-C1",
+  "reviewRole": "Independent nonblind directed source review",
+  "opinion": "Withdraw original persistent-cache trigger; source defect not established, 0 active candidate in this review",
+  "confirmedFormal": false,
+  "decisiveCounterevidence": [
+    {
+      "source": "packages/desktop/src/main/index.ts",
+      "ranges": [
+        [
+          2094,
+          2107
+        ],
+        [
+          2127,
+          2127
+        ]
+      ],
+      "meaning": "Normal Main setup unconditionally starts PetImDecisions whose read samples worker alive/generation and clears cache."
+    },
+    {
+      "source": "packages/desktop/src/main/pet/pet-im-decisions.ts",
+      "ranges": [
+        [
+          139,
+          143
+        ],
+        [
+          156,
+          160
+        ]
+      ],
+      "meaning": "start schedules immediate tick plus 5000ms interval; tick calls options.read before decisions."
+    }
+  ],
+  "residualSourceFacts": [
+    {
+      "source": "packages/desktop/src/main/SessionSnapshotStore.ts",
+      "ranges": [
+        [
+          68,
+          68
+        ],
+        [
+          207,
+          217
+        ]
+      ],
+      "meaning": "Main snapshot epoch is stable across one worker exit, onWorkerExit only sets run idle."
+    },
+    {
+      "source": "packages/web/src/hooks/useRemoteApp.ts",
+      "ranges": [
+        [
+          735,
+          753
+        ],
+        [
+          1251,
+          1289
+        ]
+      ],
+      "meaning": "Selected epoch reset and raw callback do not independently prove all stale requests are filtered; called helper/reducer internals and complete timing not certified."
+    }
+  ],
+  "limits": [
+    "A possible replay before next poll is not promoted as a new timing bug. No immediate consistency requirement and complete deterministic ordinary stale-card trigger established in this bounded read.",
+    "5000ms interval registration is not an observed or guaranteed cleanup deadline. No real worker crash, timer, socket, React or approval experiment.",
+    "No proof or claim of permission bypass, successor accepting predecessor requests, successful stale decisions, or all-client lifecycle correctness."
+  ],
+  "formalCounts": {
+    "newFormal": 0,
+    "activeCandidate": 0,
+    "newRelated": 0
+  },
+  "rootFinalDisposition": "Root decides archival disposition separately; frozen author141 candidate remains unchanged."
+}

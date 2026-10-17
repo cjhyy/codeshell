@@ -1,0 +1,19 @@
+{
+  "atUTC": "2026-10-17T19:18:35.649447+00:00",
+  "files": [
+    {
+      "path": "packages/server/src/mobile-remote/trusted-device-store.ts",
+      "bytes": 10474,
+      "lines": 293,
+      "sha256": "6cdee911aba2713e2d8fa8f058018687577e3dc8b070fdefae9a169aa1cb2ef1",
+      "beforeBodyOrLineNavigation": true
+    },
+    {
+      "path": "packages/desktop/src/main/index.ts",
+      "bytes": 299337,
+      "lines": 7330,
+      "sha256": "105b2b49a28e0a7ef10980ac5feaa3a07ff81e7197f5acbefd95feb2498224c0",
+      "beforeBodyOrLineNavigation": true
+    }
+  ]
+}

@@ -1,0 +1,17 @@
+{
+  "metadataFailures": [],
+  "productFailures": [],
+  "toolOutputTruncations": [],
+  "normalNoMatchResults": [],
+  "firstInventoryRaw": "inventory.first.stdout/stderr/exit.json are original bytes, exit0.",
+  "productExecutionAttempts": 0,
+  "helperImports": 0,
+  "testsExecuted": 0,
+  "gitCalls": 0,
+  "networkCalls": 0,
+  "nativeCalls": 0,
+  "realProcessControl": 0,
+  "scopeTiming": "Independent initial read predated138 path reply and any author report. No mutable138/144 reports read. Final same-pinned gateway155–196 filled normal messageId cache-miss connection after preliminary source-ended notice; no new module, before metadata finalization.",
+  "historyScope": "Shared5850 MD/JSON/frozen57 exclude58+, recursive4251467 value scalars+archives machine navigation only. delivery79/bound68 retained all undercap100; own provenance preview260characters per hit. Original bounded3MD+R11 row and3old source objects personally read, not semantic traversal of all hits. Root144 broader cause work not counted as reviewer source read.",
+  "oldRuntimeLimits": "Old report snippets contain commands/pass descriptions only as historical prose, none executed or borrowed as current validation. Permanent failed CLI/mobile/channel directions not retried."
+}

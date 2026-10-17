@@ -1,0 +1,10 @@
+{
+  "baseline": "f31a847f45e4805bce34aeb9e6db7efb503cfcb0",
+  "main": "35565881e8422b1d001a31ac10730ca3866f5229",
+  "frozenHistoryFiles": 5850,
+  "changed": [
+    "docs/todo/release-real-operations-2026-10-16.md"
+  ],
+  "missing": [],
+  "scope": "Ending byte inventory, no semantic reading or batch backfill."
+}

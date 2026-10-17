@@ -1,0 +1,30 @@
+{
+  "firstToolFailures": [],
+  "knownMetadataErrors": [],
+  "toolOutputTruncationObserved": false,
+  "legitimateNavigationNoMatch": [
+    {
+      "artifact": "consumer-test-navigation.json",
+      "note": "deliverBoundSessionChat query did not match; actual middleware is createBoundSessionChat. Raw command statuses retained."
+    }
+  ],
+  "incidentalDisplayExcluded": [
+    "cli.ts250–306 includes WeChat login/service option code, not semantically reviewed or executed; adjacent cli146–213 is also excluded.",
+    "delivery-queue.ts353–480 attachment spool/security helpers displayed; old issues not reopened.",
+    "gateway.ts149–197 and205–218 cached-reply/sendTask details displayed but excluded from new semantic cache review.",
+    "desktop-control-client descriptor/credential startup lines adjacent to request were displayed but excluded; no actual descriptor or credentials read.",
+    "channel capability table1–105 displayed but not treated as whole-file semantic review."
+  ],
+  "wordingCorrections": [
+    {
+      "first": "Earlier message informally called petChat chat.",
+      "correct": "Actual gateway.ts231 invokes options.desktop.petChat; desktop-control-client.ts101 defines petChat."
+    },
+    {
+      "first": "Earlier navigation discussion confused Root mention of CHAT-R11 first Promise-cache failure with a failed validation and tentatively associated it with Mimi cache code.",
+      "correct": "Canonical round11/chat.md1–17 and both findings/0 objects show confirmed CHAT-R11-01 in notification-progress.ensureLoaded. Its old validation is not a failed fixture. This author did not execute or rerun any old or new fixture."
+    }
+  ],
+  "permanentSkip": "Discord import failure and other previously failed dynamic directions were not reopened. Old formal notification-progress cause is excluded without changing its status.",
+  "rawOutputCaution": "Early display JSONs record exact SHA/ranges/time, not verbatim stdout; actual tool outputs remain in conversation. Later candidate excerpt materialization is labeled as archival and is not substituted for first output."
+}

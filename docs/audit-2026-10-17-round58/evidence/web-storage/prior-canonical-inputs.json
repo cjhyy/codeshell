@@ -1,0 +1,53 @@
+{
+  "files": [
+    {
+      "path": "docs/audit-2026-10-17-round5/evidence/root-web-source-manifest.json",
+      "bytes": 5677,
+      "sha256": "a58f1b00f628f3304ad3cfca03b95bc287d061b15b9402a3ef9f8d8181abb07a",
+      "lineCount": 137,
+      "selected": [
+        "/sources/8",
+        "/sources/9"
+      ],
+      "recordedAtUTC": "2026-10-17T19:17:42.144706+00:00"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round18/evidence/root-source-manifest.json",
+      "bytes": 3609,
+      "sha256": "283c5c3c83919752d3db07444b1c93f9684b4c59067bf1a151be2e59d7e58379",
+      "lineCount": 86,
+      "selected": [
+        "/files/2"
+      ],
+      "recordedAtUTC": "2026-10-17T19:17:42.146570+00:00"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round18/environment.md",
+      "bytes": 3278,
+      "sha256": "5bfc06172d0da78cb6a6de29104134d704133bbcebf4587379cfe4775e278468",
+      "lineCount": 21,
+      "selected": [
+        [
+          1,
+          12
+        ]
+      ],
+      "recordedAtUTC": "2026-10-17T19:17:42.147585+00:00"
+    },
+    {
+      "path": "docs/review-2026-10-12/web-round3.md",
+      "bytes": 15751,
+      "sha256": "c96980d8023f4d2556fead8c049a16903d9ebffccf8d496e46d0b6b9f72eaec0",
+      "lineCount": 74,
+      "selected": [
+        [
+          9,
+          20
+        ]
+      ],
+      "recordedAtUTC": "2026-10-17T19:17:42.148246+00:00"
+    }
+  ],
+  "timing": "Metadata byte SHA calculated before bounded original object/MD output, before this packet product bodies.",
+  "rawMethodExecuted": false
+}

@@ -1,0 +1,16 @@
+{
+  "role": "Metadata historical cause reviewer only",
+  "checks": {
+    "files": []
+  },
+  "productSourceReads": 0,
+  "productSourceHashing": 0,
+  "productHelperImportsExecution": 0,
+  "testOrFixtureReads": 0,
+  "testsRun": 0,
+  "networkNativeWorkerGit": 0,
+  "authorMutableInputsRead": [],
+  "author143SourceMechanismVerification": false,
+  "ownMetadataExecution": "One independent Python standard-library compound history query; metadata range/object/hash/link/receipt processing only. Author scan method not run.",
+  "oldDynamicClaims": "Only attributed historical metadata claims. No old tests/logs rerun or borrowed to validate current candidate."
+}

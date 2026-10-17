@@ -1,0 +1,26 @@
+{
+  "atUTC": "2026-10-17T19:23:27.810390+00:00",
+  "files": [
+    {
+      "path": "packages/desktop/src/main/SessionSnapshotStore.ts",
+      "bytes": 9305,
+      "lines": 234,
+      "sha256": "d4b3f3841058ef82c1d4320a0cbd7ee29fc4816a68cde667e264713fd6680dca",
+      "beforeBodyOrLineNavigation": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/app/useHostSubscriptions.ts",
+      "bytes": 51155,
+      "lines": 1175,
+      "sha256": "8b20a7a96f7d89ae000f3ebde79aeae3bba506683940dae6c8e2150444a0eddc",
+      "beforeBodyOrLineNavigation": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/pet/PetStateProvider.tsx",
+      "bytes": 39246,
+      "lines": 1070,
+      "sha256": "f12a0eefbebbcf8923940e0d3025d983023ca9a4a8b7d49b852ae5bc578c5c35",
+      "beforeBodyOrLineNavigation": true
+    }
+  ]
+}

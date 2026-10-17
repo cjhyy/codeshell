@@ -1,0 +1,1414 @@
+{
+  "capturedUTC": "2026-10-17T19:18:13.043841+00:00",
+  "sharedBatch": {
+    "path": "/tmp/codeshell-audit-round141-pairing/history-batch.json",
+    "bytes": 1396813,
+    "sha256": "1b3bad36a3243d8acd7a887bddac56e3fe66ccae57d2dfb3fddc14e46c88887b"
+  },
+  "scope": {
+    "atUTC": "2026-10-17T19:16:56.757474+00:00",
+    "excludedFormalAtOrAbove": 58,
+    "historyFiles": 5850,
+    "jsonValueScalarsVisited": 4251467,
+    "capPerTarget": 100,
+    "errors": [],
+    "note": "Shared machine path/SHA navigation only, all traversed scalar values not semantically read; JSON keys excluded, archives included; exact shown values capped; source byte hashing not product semantic reading.",
+    "productExecution": 0
+  },
+  "queries": {
+    "packages/server/src/remote-relay/byte-stream.ts": [
+      "packages/server/src/remote-relay/byte-stream.ts",
+      "829b793b34e5c8046284aba433b6323f471f983c2fc9efab16eaa6cb117aa639"
+    ],
+    "packages/server/src/remote-relay/local-stream.ts": [
+      "packages/server/src/remote-relay/local-stream.ts",
+      "b0842c3047f6e5d3fe36fa9e89a5287889cfe2be49ef4a1db0d971eb9672d718"
+    ],
+    "packages/server/src/remote-relay/protocol.ts": [
+      "packages/server/src/remote-relay/protocol.ts",
+      "75273db331577ffa448e057134f2897593065b1d62efd9291cf9324d42244672"
+    ]
+  },
+  "counts": {
+    "packages/server/src/remote-relay/byte-stream.ts": 54,
+    "packages/server/src/remote-relay/local-stream.ts": 38,
+    "packages/server/src/remote-relay/protocol.ts": 60
+  },
+  "hits": {
+    "packages/server/src/remote-relay/byte-stream.ts": [
+      {
+        "document": "docs/audit-2026-10-16/inventory.json",
+        "location": "/source_inventory/2092",
+        "matched": [
+          "packages/server/src/remote-relay/byte-stream.ts"
+        ],
+        "value": "packages/server/src/remote-relay/byte-stream.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round14/evidence/bytes-dedup.json",
+        "location": "/hits/relay_stream/0/snippet",
+        "matched": [
+          "packages/server/src/remote-relay/byte-stream.ts"
+        ],
+        "value": "packages/server/src/remote-relay/byte-stream.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round14/evidence/bytes-dedup.json",
+        "location": "/hits/relay_stream/6/snippet",
+        "matched": [
+          "packages/server/src/remote-relay/byte-stream.ts"
+        ],
+        "value": "idate先同步fence，不按相同症状另报。\n- R67是LAN成功启动缺另一个挂载设置的状态广播；本轮不评估该UI投影。\n- R68是配对 Host直播输出的 ws backlog gate缺失；Relay byte-stream写回调分片/backpressure与此独立，见 [byte-stream.ts:22](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/server/src/remote-relay/byte-stream.ts:22)。本轮没有用该保护推翻 R68，也不声称实际公网慢读安全。\n- R80/R81针对浏览器 grant/parent操作，与relay设备凭据/数据隧道无共同缺陷根因。\n- 第7轮 auth正常路径及",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round14/evidence/bytes-dedup.json",
+        "location": "/hits/relay_stream/7/snippet",
+        "matched": [
+          "packages/server/src/remote-relay/byte-stream.ts"
+        ],
+        "value": "设置的状态广播；本轮不评估该UI投影。\n- R68是配对 Host直播输出的 ws backlog gate缺失；Relay byte-stream写回调分片/backpressure与此独立，见 [byte-stream.ts:22](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/server/src/remote-relay/byte-stream.ts:22)。本轮没有用该保护推翻 R68，也不声称实际公网慢读安全。\n- R80/R81针对浏览器 grant/parent操作，与relay设备凭据/数据隧道无共同缺陷根因。\n- 第7轮 auth正常路径及第15轮 connector一般关闭清理已读",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round14/evidence/bytes-dedup.json",
+        "location": "/hits/relay_stream/8/snippet",
+        "matched": [
+          "packages/server/src/remote-relay/byte-stream.ts"
+        ],
+        "value": "am.ts:22](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/server/src/remote-relay/byte-stream.ts:22)。本轮没有用该保护推翻 R68，也不声称实际公网慢读安全。\n- R80/R81针对浏览器 grant/parent操作，与relay设备凭据/数据隧道无共同缺陷根因。\n- 第7轮 auth正常路径及第15轮 connector一般关闭清理已读；本轮的价值限于补齐账号 refresh与transport cancellation组合的静态反证，没有发现可列入正式报告的新根因。\n\n没有验证真实 Relay cloud对 credential TTL、rotation",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round14/evidence/bytes-dedup.json",
+        "location": "/hits/relay_stream/12/snippet",
+        "matched": [
+          "packages/server/src/remote-relay/byte-stream.ts"
+        ],
+        "value": "idate先同步fence，不按相同症状另报。\n- R67是LAN成功启动缺另一个挂载设置的状态广播；本轮不评估该UI投影。\n- R68是配对 Host直播输出的 ws backlog gate缺失；Relay byte-stream写回调分片/backpressure与此独立，见 [byte-stream.ts:22](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/server/src/remote-relay/byte-stream.ts:22)。本轮没有用该保护推翻 R68，也不声称实际公网慢读安全。\n- R80/R81针对浏览器 grant/parent操作，与relay设备凭据/数据隧道无共同缺陷根因。\n- 第7轮 auth正常路径及",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round14/evidence/bytes-dedup.json",
+        "location": "/hits/relay_stream/13/snippet",
+        "matched": [
+          "packages/server/src/remote-relay/byte-stream.ts"
+        ],
+        "value": "设置的状态广播；本轮不评估该UI投影。\n- R68是配对 Host直播输出的 ws backlog gate缺失；Relay byte-stream写回调分片/backpressure与此独立，见 [byte-stream.ts:22](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/server/src/remote-relay/byte-stream.ts:22)。本轮没有用该保护推翻 R68，也不声称实际公网慢读安全。\n- R80/R81针对浏览器 grant/parent操作，与relay设备凭据/数据隧道无共同缺陷根因。\n- 第7轮 auth正常路径及第15轮 connector一般关闭清理已读",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round14/evidence/bytes-dedup.json",
+        "location": "/hits/relay_stream/14/snippet",
+        "matched": [
+          "packages/server/src/remote-relay/byte-stream.ts"
+        ],
+        "value": "am.ts:22](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/server/src/remote-relay/byte-stream.ts:22)。本轮没有用该保护推翻 R68，也不声称实际公网慢读安全。\n- R80/R81针对浏览器 grant/parent操作，与relay设备凭据/数据隧道无共同缺陷根因。\n- 第7轮 auth正常路径及第15轮 connector一般关闭清理已读；本轮的价值限于补齐账号 refresh与transport cancellation组合的静态反证，没有发现可列入正式报告的新根因。\n\n没有验证真实 Relay cloud对 credential TTL、rotation",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round14/evidence/bytes-dedup.json",
+        "location": "/hits/relay_stream/15/snippet",
+        "matched": [
+          "packages/server/src/remote-relay/byte-stream.ts"
+        ],
+        "value": "packages/server/src/remote-relay/byte-stream.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round14/evidence/bytes-dedup.json",
+        "location": "/hits/relay_stream/17/snippet",
+        "matched": [
+          "packages/server/src/remote-relay/byte-stream.ts"
+        ],
+        "value": "packages/server/src/remote-relay/byte-stream.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round14/evidence/bytes-source-manifest.json",
+        "location": "/files/5/path",
+        "matched": [
+          "packages/server/src/remote-relay/byte-stream.ts"
+        ],
+        "value": "packages/server/src/remote-relay/byte-stream.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round14/evidence/bytes-source-manifest.json",
+        "location": "/files/5/frozenSha256",
+        "matched": [
+          "829b793b34e5c8046284aba433b6323f471f983c2fc9efab16eaa6cb117aa639"
+        ],
+        "value": "829b793b34e5c8046284aba433b6323f471f983c2fc9efab16eaa6cb117aa639",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round14/evidence/bytes-source-manifest.json",
+        "location": "/files/5/sha256",
+        "matched": [
+          "829b793b34e5c8046284aba433b6323f471f983c2fc9efab16eaa6cb117aa639"
+        ],
+        "value": "829b793b34e5c8046284aba433b6323f471f983c2fc9efab16eaa6cb117aa639",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round14/source-manifest.json",
+        "location": "/files/42/path",
+        "matched": [
+          "packages/server/src/remote-relay/byte-stream.ts"
+        ],
+        "value": "packages/server/src/remote-relay/byte-stream.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round14/source-manifest.json",
+        "location": "/files/42/sha256",
+        "matched": [
+          "829b793b34e5c8046284aba433b6323f471f983c2fc9efab16eaa6cb117aa639"
+        ],
+        "value": "829b793b34e5c8046284aba433b6323f471f983c2fc9efab16eaa6cb117aa639",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round14/source-manifest.json",
+        "location": "/workerSourceChecks/27/path",
+        "matched": [
+          "packages/server/src/remote-relay/byte-stream.ts"
+        ],
+        "value": "packages/server/src/remote-relay/byte-stream.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round14/source-manifest.json",
+        "location": "/workerSourceChecks/27/sha256",
+        "matched": [
+          "829b793b34e5c8046284aba433b6323f471f983c2fc9efab16eaa6cb117aa639"
+        ],
+        "value": "829b793b34e5c8046284aba433b6323f471f983c2fc9efab16eaa6cb117aa639",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round25/evidence/data-prep/inventory.json",
+        "location": "/files/687",
+        "matched": [
+          "packages/server/src/remote-relay/byte-stream.ts"
+        ],
+        "value": "packages/server/src/remote-relay/byte-stream.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+        "location": "/files/890/path",
+        "matched": [
+          "packages/server/src/remote-relay/byte-stream.ts"
+        ],
+        "value": "packages/server/src/remote-relay/byte-stream.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+        "location": "/files/890/sha256",
+        "matched": [
+          "829b793b34e5c8046284aba433b6323f471f983c2fc9efab16eaa6cb117aa639"
+        ],
+        "value": "829b793b34e5c8046284aba433b6323f471f983c2fc9efab16eaa6cb117aa639",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+        "location": "/files/890/claims/0/sourceSha256",
+        "matched": [
+          "829b793b34e5c8046284aba433b6323f471f983c2fc9efab16eaa6cb117aa639"
+        ],
+        "value": "829b793b34e5c8046284aba433b6323f471f983c2fc9efab16eaa6cb117aa639",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+        "location": "/files/3660/path",
+        "matched": [
+          "packages/server/src/remote-relay/byte-stream.ts"
+        ],
+        "value": "packages/server/src/remote-relay/byte-stream.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+        "location": "/files/3660/sha256",
+        "matched": [
+          "829b793b34e5c8046284aba433b6323f471f983c2fc9efab16eaa6cb117aa639"
+        ],
+        "value": "829b793b34e5c8046284aba433b6323f471f983c2fc9efab16eaa6cb117aa639",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "location": "/claims/14613/path",
+        "matched": [
+          "packages/server/src/remote-relay/byte-stream.ts"
+        ],
+        "value": "packages/server/src/remote-relay/byte-stream.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "location": "/claims/14613/directSourcePathsInObject/0",
+        "matched": [
+          "packages/server/src/remote-relay/byte-stream.ts"
+        ],
+        "value": "packages/server/src/remote-relay/byte-stream.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "location": "/claims/14614/path",
+        "matched": [
+          "packages/server/src/remote-relay/byte-stream.ts"
+        ],
+        "value": "packages/server/src/remote-relay/byte-stream.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "location": "/claims/14614/directSourcePathsInObject/0",
+        "matched": [
+          "packages/server/src/remote-relay/byte-stream.ts"
+        ],
+        "value": "packages/server/src/remote-relay/byte-stream.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "location": "/claims/14615/path",
+        "matched": [
+          "packages/server/src/remote-relay/byte-stream.ts"
+        ],
+        "value": "packages/server/src/remote-relay/byte-stream.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "location": "/claims/14615/sourceHashFields/frozenSha256",
+        "matched": [
+          "829b793b34e5c8046284aba433b6323f471f983c2fc9efab16eaa6cb117aa639"
+        ],
+        "value": "829b793b34e5c8046284aba433b6323f471f983c2fc9efab16eaa6cb117aa639",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "location": "/claims/14615/sourceHashFields/sha256",
+        "matched": [
+          "829b793b34e5c8046284aba433b6323f471f983c2fc9efab16eaa6cb117aa639"
+        ],
+        "value": "829b793b34e5c8046284aba433b6323f471f983c2fc9efab16eaa6cb117aa639",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "location": "/claims/14615/directSourcePathsInObject/0",
+        "matched": [
+          "packages/server/src/remote-relay/byte-stream.ts"
+        ],
+        "value": "packages/server/src/remote-relay/byte-stream.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "location": "/claims/14616/path",
+        "matched": [
+          "packages/server/src/remote-relay/byte-stream.ts"
+        ],
+        "value": "packages/server/src/remote-relay/byte-stream.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "location": "/claims/14616/sourceHashFields/sha256",
+        "matched": [
+          "829b793b34e5c8046284aba433b6323f471f983c2fc9efab16eaa6cb117aa639"
+        ],
+        "value": "829b793b34e5c8046284aba433b6323f471f983c2fc9efab16eaa6cb117aa639",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "location": "/claims/14616/directSourcePathsInObject/0",
+        "matched": [
+          "packages/server/src/remote-relay/byte-stream.ts"
+        ],
+        "value": "packages/server/src/remote-relay/byte-stream.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-index.json",
+        "location": "/files/3982/path",
+        "matched": [
+          "packages/server/src/remote-relay/byte-stream.ts"
+        ],
+        "value": "packages/server/src/remote-relay/byte-stream.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-index.json",
+        "location": "/files/3982/sha256",
+        "matched": [
+          "829b793b34e5c8046284aba433b6323f471f983c2fc9efab16eaa6cb117aa639"
+        ],
+        "value": "829b793b34e5c8046284aba433b6323f471f983c2fc9efab16eaa6cb117aa639",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/package-inventory.json",
+        "location": "/files/3982/path",
+        "matched": [
+          "packages/server/src/remote-relay/byte-stream.ts"
+        ],
+        "value": "packages/server/src/remote-relay/byte-stream.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/package-inventory.json",
+        "location": "/files/3982/sha256",
+        "matched": [
+          "829b793b34e5c8046284aba433b6323f471f983c2fc9efab16eaa6cb117aa639"
+        ],
+        "value": "829b793b34e5c8046284aba433b6323f471f983c2fc9efab16eaa6cb117aa639",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-status/comparison.json",
+        "location": "/unknownPaths/3630",
+        "matched": [
+          "packages/server/src/remote-relay/byte-stream.ts"
+        ],
+        "value": "packages/server/src/remote-relay/byte-stream.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-status/current-inventory.json",
+        "location": "/files/3983/path",
+        "matched": [
+          "packages/server/src/remote-relay/byte-stream.ts"
+        ],
+        "value": "packages/server/src/remote-relay/byte-stream.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-status/current-inventory.json",
+        "location": "/files/3983/sha256",
+        "matched": [
+          "829b793b34e5c8046284aba433b6323f471f983c2fc9efab16eaa6cb117aa639"
+        ],
+        "value": "829b793b34e5c8046284aba433b6323f471f983c2fc9efab16eaa6cb117aa639",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round55/evidence/coverage-current/current-source-inventory.json",
+        "location": "/files/3983/path",
+        "matched": [
+          "packages/server/src/remote-relay/byte-stream.ts"
+        ],
+        "value": "packages/server/src/remote-relay/byte-stream.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round55/evidence/coverage-current/current-source-inventory.json",
+        "location": "/files/3983/sha256",
+        "matched": [
+          "829b793b34e5c8046284aba433b6323f471f983c2fc9efab16eaa6cb117aa639"
+        ],
+        "value": "829b793b34e5c8046284aba433b6323f471f983c2fc9efab16eaa6cb117aa639",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round55/evidence/coverage-current/current-source-inventory.json",
+        "location": "/files/3983/oldSha256",
+        "matched": [
+          "829b793b34e5c8046284aba433b6323f471f983c2fc9efab16eaa6cb117aa639"
+        ],
+        "value": "829b793b34e5c8046284aba433b6323f471f983c2fc9efab16eaa6cb117aa639",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round55/evidence/coverage-current/unified-current-index.first.json",
+        "location": "/files/3983/path",
+        "matched": [
+          "packages/server/src/remote-relay/byte-stream.ts"
+        ],
+        "value": "packages/server/src/remote-relay/byte-stream.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round55/evidence/coverage-current/unified-current-index.first.json",
+        "location": "/files/3983/sha256",
+        "matched": [
+          "829b793b34e5c8046284aba433b6323f471f983c2fc9efab16eaa6cb117aa639"
+        ],
+        "value": "829b793b34e5c8046284aba433b6323f471f983c2fc9efab16eaa6cb117aa639",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round55/evidence/coverage-current/unified-current-index.first.json",
+        "location": "/files/3983/oldSha256",
+        "matched": [
+          "829b793b34e5c8046284aba433b6323f471f983c2fc9efab16eaa6cb117aa639"
+        ],
+        "value": "829b793b34e5c8046284aba433b6323f471f983c2fc9efab16eaa6cb117aa639",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round55/evidence/coverage-current/unified-current-index.json",
+        "location": "/files/3983/path",
+        "matched": [
+          "packages/server/src/remote-relay/byte-stream.ts"
+        ],
+        "value": "packages/server/src/remote-relay/byte-stream.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round55/evidence/coverage-current/unified-current-index.json",
+        "location": "/files/3983/sha256",
+        "matched": [
+          "829b793b34e5c8046284aba433b6323f471f983c2fc9efab16eaa6cb117aa639"
+        ],
+        "value": "829b793b34e5c8046284aba433b6323f471f983c2fc9efab16eaa6cb117aa639",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round55/evidence/coverage-current/unified-current-index.json",
+        "location": "/files/3983/oldSha256",
+        "matched": [
+          "829b793b34e5c8046284aba433b6323f471f983c2fc9efab16eaa6cb117aa639"
+        ],
+        "value": "829b793b34e5c8046284aba433b6323f471f983c2fc9efab16eaa6cb117aa639",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/review-2026-10-12/server-preflight-round23.md",
+        "location": 41,
+        "matched": [
+          "packages/server/src/remote-relay/byte-stream.ts"
+        ],
+        "value": "- R68是配对 Host直播输出的 ws backlog gate缺失；Relay byte-stream写回调分片/backpressure与此独立，见 [byte-stream.ts:22](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/server/src/remote-relay/byte-stream.ts:22)。本轮没有用该保护推翻 R68，也不声称实际公网慢读安全。",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/review-2026-10-12/validation/original-preflight-round23/server-preflight-round23.md",
+        "location": 39,
+        "matched": [
+          "packages/server/src/remote-relay/byte-stream.ts"
+        ],
+        "value": "- R68是配对 Host直播输出的 ws backlog gate缺失；Relay byte-stream写回调分片/backpressure与此独立，见 [byte-stream.ts:22](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/server/src/remote-relay/byte-stream.ts:22)。本轮没有用该保护推翻 R68，也不声称实际公网慢读安全。",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/review-2026-10-12/validation/postdelivery-report-review/audit-a.raw.json",
+        "location": "/module_inventory/84740d56/paths/109",
+        "matched": [
+          "packages/server/src/remote-relay/byte-stream.ts"
+        ],
+        "value": "packages/server/src/remote-relay/byte-stream.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/review-2026-10-12/validation/postdelivery-report-review/audit-a.raw.json",
+        "location": "/module_inventory/a66f4ef2/paths/110",
+        "matched": [
+          "packages/server/src/remote-relay/byte-stream.ts"
+        ],
+        "value": "packages/server/src/remote-relay/byte-stream.ts",
+        "truncatedValue": false
+      }
+    ],
+    "packages/server/src/remote-relay/local-stream.ts": [
+      {
+        "document": "docs/audit-2026-10-16/inventory.json",
+        "location": "/source_inventory/2094",
+        "matched": [
+          "packages/server/src/remote-relay/local-stream.ts"
+        ],
+        "value": "packages/server/src/remote-relay/local-stream.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round14/evidence/bytes-dedup.json",
+        "location": "/hits/relay_stream/1/snippet",
+        "matched": [
+          "packages/server/src/remote-relay/local-stream.ts"
+        ],
+        "value": "packages/server/src/remote-relay/local-stream.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round14/evidence/bytes-dedup.json",
+        "location": "/hits/relay_stream/4/snippet",
+        "matched": [
+          "packages/server/src/remote-relay/local-stream.ts"
+        ],
+        "value": "ctor:221](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/server/src/remote-relay/connector.ts:221)、[local-stream:88](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/server/src/remote-relay/local-stream.ts:88)。 |\n| 旧 Host 停止并再次创建本地 listener，旧 welcome/open 晚到 | `relayTarget()` 固定 port 和 Host lifetime，setter同时检查 signal 与 started ",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round14/evidence/bytes-dedup.json",
+        "location": "/hits/relay_stream/5/snippet",
+        "matched": [
+          "packages/server/src/remote-relay/local-stream.ts"
+        ],
+        "value": "tream:88](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/server/src/remote-relay/local-stream.ts:88)。 |\n| 旧 Host 停止并再次创建本地 listener，旧 welcome/open 晚到 | `relayTarget()` 固定 port 和 Host lifetime，setter同时检查 signal 与 started 对象身份；Host stop 在 await 前 abort lifetime，connector close 在 await 前 fenced generation/abort acquisition/清 reconnect",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round14/evidence/bytes-dedup.json",
+        "location": "/hits/relay_stream/10/snippet",
+        "matched": [
+          "packages/server/src/remote-relay/local-stream.ts"
+        ],
+        "value": "ctor:221](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/server/src/remote-relay/connector.ts:221)、[local-stream:88](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/server/src/remote-relay/local-stream.ts:88)。 |\n| 旧 Host 停止并再次创建本地 listener，旧 welcome/open 晚到 | `relayTarget()` 固定 port 和 Host lifetime，setter同时检查 signal 与 started ",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round14/evidence/bytes-dedup.json",
+        "location": "/hits/relay_stream/11/snippet",
+        "matched": [
+          "packages/server/src/remote-relay/local-stream.ts"
+        ],
+        "value": "tream:88](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/server/src/remote-relay/local-stream.ts:88)。 |\n| 旧 Host 停止并再次创建本地 listener，旧 welcome/open 晚到 | `relayTarget()` 固定 port 和 Host lifetime，setter同时检查 signal 与 started 对象身份；Host stop 在 await 前 abort lifetime，connector close 在 await 前 fenced generation/abort acquisition/清 reconnect",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round14/evidence/bytes-dedup.json",
+        "location": "/hits/relay_stream/16/snippet",
+        "matched": [
+          "packages/server/src/remote-relay/local-stream.ts"
+        ],
+        "value": "packages/server/src/remote-relay/local-stream.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round14/evidence/bytes-dedup.json",
+        "location": "/hits/relay_stream/18/snippet",
+        "matched": [
+          "packages/server/src/remote-relay/local-stream.ts"
+        ],
+        "value": "packages/server/src/remote-relay/local-stream.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round25/evidence/data-prep/inventory.json",
+        "location": "/files/686",
+        "matched": [
+          "packages/server/src/remote-relay/local-stream.ts"
+        ],
+        "value": "packages/server/src/remote-relay/local-stream.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+        "location": "/files/3662/path",
+        "matched": [
+          "packages/server/src/remote-relay/local-stream.ts"
+        ],
+        "value": "packages/server/src/remote-relay/local-stream.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+        "location": "/files/3662/sha256",
+        "matched": [
+          "b0842c3047f6e5d3fe36fa9e89a5287889cfe2be49ef4a1db0d971eb9672d718"
+        ],
+        "value": "b0842c3047f6e5d3fe36fa9e89a5287889cfe2be49ef4a1db0d971eb9672d718",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "location": "/claims/14619/path",
+        "matched": [
+          "packages/server/src/remote-relay/local-stream.ts"
+        ],
+        "value": "packages/server/src/remote-relay/local-stream.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "location": "/claims/14619/directSourcePathsInObject/0",
+        "matched": [
+          "packages/server/src/remote-relay/local-stream.ts"
+        ],
+        "value": "packages/server/src/remote-relay/local-stream.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "location": "/claims/14620/path",
+        "matched": [
+          "packages/server/src/remote-relay/local-stream.ts"
+        ],
+        "value": "packages/server/src/remote-relay/local-stream.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "location": "/claims/14620/directSourcePathsInObject/0",
+        "matched": [
+          "packages/server/src/remote-relay/local-stream.ts"
+        ],
+        "value": "packages/server/src/remote-relay/local-stream.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "location": "/claims/14621/path",
+        "matched": [
+          "packages/server/src/remote-relay/local-stream.ts"
+        ],
+        "value": "packages/server/src/remote-relay/local-stream.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "location": "/claims/14621/sourceHashFields/sha256",
+        "matched": [
+          "b0842c3047f6e5d3fe36fa9e89a5287889cfe2be49ef4a1db0d971eb9672d718"
+        ],
+        "value": "b0842c3047f6e5d3fe36fa9e89a5287889cfe2be49ef4a1db0d971eb9672d718",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "location": "/claims/14621/directSourcePathsInObject/0",
+        "matched": [
+          "packages/server/src/remote-relay/local-stream.ts"
+        ],
+        "value": "packages/server/src/remote-relay/local-stream.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-index.json",
+        "location": "/files/3984/path",
+        "matched": [
+          "packages/server/src/remote-relay/local-stream.ts"
+        ],
+        "value": "packages/server/src/remote-relay/local-stream.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-index.json",
+        "location": "/files/3984/sha256",
+        "matched": [
+          "b0842c3047f6e5d3fe36fa9e89a5287889cfe2be49ef4a1db0d971eb9672d718"
+        ],
+        "value": "b0842c3047f6e5d3fe36fa9e89a5287889cfe2be49ef4a1db0d971eb9672d718",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/package-inventory.json",
+        "location": "/files/3984/path",
+        "matched": [
+          "packages/server/src/remote-relay/local-stream.ts"
+        ],
+        "value": "packages/server/src/remote-relay/local-stream.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/package-inventory.json",
+        "location": "/files/3984/sha256",
+        "matched": [
+          "b0842c3047f6e5d3fe36fa9e89a5287889cfe2be49ef4a1db0d971eb9672d718"
+        ],
+        "value": "b0842c3047f6e5d3fe36fa9e89a5287889cfe2be49ef4a1db0d971eb9672d718",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-status/comparison.json",
+        "location": "/unknownPaths/3632",
+        "matched": [
+          "packages/server/src/remote-relay/local-stream.ts"
+        ],
+        "value": "packages/server/src/remote-relay/local-stream.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-status/current-inventory.json",
+        "location": "/files/3985/path",
+        "matched": [
+          "packages/server/src/remote-relay/local-stream.ts"
+        ],
+        "value": "packages/server/src/remote-relay/local-stream.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-status/current-inventory.json",
+        "location": "/files/3985/sha256",
+        "matched": [
+          "b0842c3047f6e5d3fe36fa9e89a5287889cfe2be49ef4a1db0d971eb9672d718"
+        ],
+        "value": "b0842c3047f6e5d3fe36fa9e89a5287889cfe2be49ef4a1db0d971eb9672d718",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round55/evidence/coverage-current/current-source-inventory.json",
+        "location": "/files/3985/path",
+        "matched": [
+          "packages/server/src/remote-relay/local-stream.ts"
+        ],
+        "value": "packages/server/src/remote-relay/local-stream.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round55/evidence/coverage-current/current-source-inventory.json",
+        "location": "/files/3985/sha256",
+        "matched": [
+          "b0842c3047f6e5d3fe36fa9e89a5287889cfe2be49ef4a1db0d971eb9672d718"
+        ],
+        "value": "b0842c3047f6e5d3fe36fa9e89a5287889cfe2be49ef4a1db0d971eb9672d718",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round55/evidence/coverage-current/current-source-inventory.json",
+        "location": "/files/3985/oldSha256",
+        "matched": [
+          "b0842c3047f6e5d3fe36fa9e89a5287889cfe2be49ef4a1db0d971eb9672d718"
+        ],
+        "value": "b0842c3047f6e5d3fe36fa9e89a5287889cfe2be49ef4a1db0d971eb9672d718",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round55/evidence/coverage-current/unified-current-index.first.json",
+        "location": "/files/3985/path",
+        "matched": [
+          "packages/server/src/remote-relay/local-stream.ts"
+        ],
+        "value": "packages/server/src/remote-relay/local-stream.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round55/evidence/coverage-current/unified-current-index.first.json",
+        "location": "/files/3985/sha256",
+        "matched": [
+          "b0842c3047f6e5d3fe36fa9e89a5287889cfe2be49ef4a1db0d971eb9672d718"
+        ],
+        "value": "b0842c3047f6e5d3fe36fa9e89a5287889cfe2be49ef4a1db0d971eb9672d718",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round55/evidence/coverage-current/unified-current-index.first.json",
+        "location": "/files/3985/oldSha256",
+        "matched": [
+          "b0842c3047f6e5d3fe36fa9e89a5287889cfe2be49ef4a1db0d971eb9672d718"
+        ],
+        "value": "b0842c3047f6e5d3fe36fa9e89a5287889cfe2be49ef4a1db0d971eb9672d718",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round55/evidence/coverage-current/unified-current-index.json",
+        "location": "/files/3985/path",
+        "matched": [
+          "packages/server/src/remote-relay/local-stream.ts"
+        ],
+        "value": "packages/server/src/remote-relay/local-stream.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round55/evidence/coverage-current/unified-current-index.json",
+        "location": "/files/3985/sha256",
+        "matched": [
+          "b0842c3047f6e5d3fe36fa9e89a5287889cfe2be49ef4a1db0d971eb9672d718"
+        ],
+        "value": "b0842c3047f6e5d3fe36fa9e89a5287889cfe2be49ef4a1db0d971eb9672d718",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round55/evidence/coverage-current/unified-current-index.json",
+        "location": "/files/3985/oldSha256",
+        "matched": [
+          "b0842c3047f6e5d3fe36fa9e89a5287889cfe2be49ef4a1db0d971eb9672d718"
+        ],
+        "value": "b0842c3047f6e5d3fe36fa9e89a5287889cfe2be49ef4a1db0d971eb9672d718",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/review-2026-10-12/server-preflight-round23.md",
+        "location": 23,
+        "matched": [
+          "packages/server/src/remote-relay/local-stream.ts"
+        ],
+        "value": "| 控制连接断线后凭据轮换，新旧数据流交叉 | 每次 connect 获取凭据，回调要求 running、同 generation、同 control socket及未撤销的 Host；每个控制连接有自己的 lease/owned streams，data stream 使用该控制连接捕获的 credential。旧 control close 关闭自己的 streams；错误 lease 或重复 streamId 终止 control。这里没有发现从可变“最新凭据”给旧 lease 数据连接重新授权的路径。 [connector:149](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/server/src/remote-relay/connector.ts:149)、[connector:221](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/server/src/remote-relay/connector.ts:221)、[local-stream:88](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/server/src/remote-relay/local-stream.ts:88)。 |",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/review-2026-10-12/validation/original-preflight-round23/server-preflight-round23.md",
+        "location": 21,
+        "matched": [
+          "packages/server/src/remote-relay/local-stream.ts"
+        ],
+        "value": "| 控制连接断线后凭据轮换，新旧数据流交叉 | 每次 connect 获取凭据，回调要求 running、同 generation、同 control socket及未撤销的 Host；每个控制连接有自己的 lease/owned streams，data stream 使用该控制连接捕获的 credential。旧 control close 关闭自己的 streams；错误 lease 或重复 streamId 终止 control。这里没有发现从可变“最新凭据”给旧 lease 数据连接重新授权的路径。 [connector:149](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/server/src/remote-relay/connector.ts:149)、[connector:221](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/server/src/remote-relay/connector.ts:221)、[local-stream:88](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/server/src/remote-relay/local-stream.ts:88)。 |",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/review-2026-10-12/validation/postdelivery-report-review/audit-a.raw.json",
+        "location": "/module_inventory/84740d56/paths/111",
+        "matched": [
+          "packages/server/src/remote-relay/local-stream.ts"
+        ],
+        "value": "packages/server/src/remote-relay/local-stream.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/review-2026-10-12/validation/postdelivery-report-review/audit-a.raw.json",
+        "location": "/module_inventory/a66f4ef2/paths/112",
+        "matched": [
+          "packages/server/src/remote-relay/local-stream.ts"
+        ],
+        "value": "packages/server/src/remote-relay/local-stream.ts",
+        "truncatedValue": false
+      }
+    ],
+    "packages/server/src/remote-relay/protocol.ts": [
+      {
+        "document": "docs/audit-2026-10-16/inventory.json",
+        "location": "/source_inventory/2095",
+        "matched": [
+          "packages/server/src/remote-relay/protocol.ts"
+        ],
+        "value": "packages/server/src/remote-relay/protocol.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round14/evidence/bytes-source-manifest.json",
+        "location": "/files/6/path",
+        "matched": [
+          "packages/server/src/remote-relay/protocol.ts"
+        ],
+        "value": "packages/server/src/remote-relay/protocol.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round14/evidence/bytes-source-manifest.json",
+        "location": "/files/6/frozenSha256",
+        "matched": [
+          "75273db331577ffa448e057134f2897593065b1d62efd9291cf9324d42244672"
+        ],
+        "value": "75273db331577ffa448e057134f2897593065b1d62efd9291cf9324d42244672",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round14/evidence/bytes-source-manifest.json",
+        "location": "/files/6/sha256",
+        "matched": [
+          "75273db331577ffa448e057134f2897593065b1d62efd9291cf9324d42244672"
+        ],
+        "value": "75273db331577ffa448e057134f2897593065b1d62efd9291cf9324d42244672",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round14/source-manifest.json",
+        "location": "/files/43/path",
+        "matched": [
+          "packages/server/src/remote-relay/protocol.ts"
+        ],
+        "value": "packages/server/src/remote-relay/protocol.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round14/source-manifest.json",
+        "location": "/files/43/sha256",
+        "matched": [
+          "75273db331577ffa448e057134f2897593065b1d62efd9291cf9324d42244672"
+        ],
+        "value": "75273db331577ffa448e057134f2897593065b1d62efd9291cf9324d42244672",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round14/source-manifest.json",
+        "location": "/workerSourceChecks/28/path",
+        "matched": [
+          "packages/server/src/remote-relay/protocol.ts"
+        ],
+        "value": "packages/server/src/remote-relay/protocol.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round14/source-manifest.json",
+        "location": "/workerSourceChecks/28/sha256",
+        "matched": [
+          "75273db331577ffa448e057134f2897593065b1d62efd9291cf9324d42244672"
+        ],
+        "value": "75273db331577ffa448e057134f2897593065b1d62efd9291cf9324d42244672",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round25/evidence/data-prep/inventory.json",
+        "location": "/files/683",
+        "matched": [
+          "packages/server/src/remote-relay/protocol.ts"
+        ],
+        "value": "packages/server/src/remote-relay/protocol.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+        "location": "/files/891/path",
+        "matched": [
+          "packages/server/src/remote-relay/protocol.ts"
+        ],
+        "value": "packages/server/src/remote-relay/protocol.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+        "location": "/files/891/sha256",
+        "matched": [
+          "75273db331577ffa448e057134f2897593065b1d62efd9291cf9324d42244672"
+        ],
+        "value": "75273db331577ffa448e057134f2897593065b1d62efd9291cf9324d42244672",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+        "location": "/files/891/claims/0/sourceSha256",
+        "matched": [
+          "75273db331577ffa448e057134f2897593065b1d62efd9291cf9324d42244672"
+        ],
+        "value": "75273db331577ffa448e057134f2897593065b1d62efd9291cf9324d42244672",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-ranking.json",
+        "location": "/rankedCandidates/189/path",
+        "matched": [
+          "packages/server/src/remote-relay/protocol.ts"
+        ],
+        "value": "packages/server/src/remote-relay/protocol.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-ranking.json",
+        "location": "/rankedCandidates/189/sha256",
+        "matched": [
+          "75273db331577ffa448e057134f2897593065b1d62efd9291cf9324d42244672"
+        ],
+        "value": "75273db331577ffa448e057134f2897593065b1d62efd9291cf9324d42244672",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+        "location": "/files/3663/path",
+        "matched": [
+          "packages/server/src/remote-relay/protocol.ts"
+        ],
+        "value": "packages/server/src/remote-relay/protocol.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+        "location": "/files/3663/sha256",
+        "matched": [
+          "75273db331577ffa448e057134f2897593065b1d62efd9291cf9324d42244672"
+        ],
+        "value": "75273db331577ffa448e057134f2897593065b1d62efd9291cf9324d42244672",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round41/evidence/root-history.json",
+        "location": "/hits/process-state/16/context",
+        "matched": [
+          "packages/server/src/remote-relay/protocol.ts"
+        ],
+        "value": "`packages/server/src/panels/bridge-contract.ts`，第 1 行之后加导入，第 3 行改为：\n\n```ts\nimport { CONTRACTS } from \"@cjhyy/code-shell-core\";\nimport { processLimits } from \"./process-state.js\";\n\nexport const panelRuntimeApiVersion = CONTRACTS.panelApi;\n```\n\n`packages/server/src/remote-relay/protocol.ts` 第 2 行改为（文件顶部加导入）：\n\n```ts\nimport { CONTRACTS } from \"@cjhyy/code-shell-core\";\nexport const RELAY_PROTOCOL_VERSION = CONTRACTS.relayProtocol;\n```\n\n`packages/server/src/project-runtime/cloud-account-auth.ts`：\n\n```ts\nexport const CLOUD_MANAGEMENT_AUTHORITY_VERSION = CONTRACTS.cloudManagementAuthority;\n```\n\n`packages/server/src/project-runtime/cloud-browser-auth.ts`：\n\n```ts\nexport const CLOUD_BROWSER_AUTHORITY_VERSION = CONTRACTS.cloudBrowserAu",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round43/evidence/dataset-frontier/data-selection-history.json",
+        "location": "/hits/packages~1chat~1src~1protocol.ts/8/excerpt",
+        "matched": [
+          "packages/server/src/remote-relay/protocol.ts"
+        ],
+        "value": "packages/server/src/remote-relay/protocol.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round43/evidence/dataset-frontier/data-selection-history.json",
+        "location": "/hits/packages~1chat~1src~1protocol.ts/25/excerpt",
+        "matched": [
+          "packages/server/src/remote-relay/protocol.ts"
+        ],
+        "value": "packages/server/src/remote-relay/protocol.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round43/evidence/dataset-frontier/data-selection-history.json",
+        "location": "/hits/packages~1chat~1src~1protocol.ts/26/excerpt",
+        "matched": [
+          "packages/server/src/remote-relay/protocol.ts"
+        ],
+        "value": "packages/server/src/remote-relay/protocol.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round43/evidence/dataset-frontier/data-selection-history.json",
+        "location": "/hits/packages~1chat~1src~1protocol.ts/27/excerpt",
+        "matched": [
+          "packages/server/src/remote-relay/protocol.ts"
+        ],
+        "value": "packages/server/src/remote-relay/protocol.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round43/evidence/dataset-frontier/data-selection-history.json",
+        "location": "/hits/packages~1chat~1src~1protocol.ts/50/excerpt",
+        "matched": [
+          "packages/server/src/remote-relay/protocol.ts"
+        ],
+        "value": "packages/server/src/remote-relay/protocol.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round43/evidence/dataset-frontier/data-selection-history.json",
+        "location": "/hits/packages~1chat~1src~1protocol.ts/56/excerpt",
+        "matched": [
+          "packages/server/src/remote-relay/protocol.ts"
+        ],
+        "value": "packages/server/src/remote-relay/protocol.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round43/evidence/dataset-frontier/data-selection-history.json",
+        "location": "/hits/packages~1chat~1src~1protocol.ts/57/excerpt",
+        "matched": [
+          "packages/server/src/remote-relay/protocol.ts"
+        ],
+        "value": "packages/server/src/remote-relay/protocol.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round43/evidence/dataset-frontier/data-selection-history.json",
+        "location": "/hits/packages~1chat~1src~1protocol.ts/66/excerpt",
+        "matched": [
+          "packages/server/src/remote-relay/protocol.ts"
+        ],
+        "value": "packages/server/src/remote-relay/protocol.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round43/evidence/dataset-frontier/data-selection-history.json",
+        "location": "/hits/packages~1chat~1src~1protocol.ts/79/excerpt",
+        "matched": [
+          "packages/server/src/remote-relay/protocol.ts"
+        ],
+        "value": "| 凭据请求或 handshake 失败，担心无限保持 connecting | 生产 credential HTTP transport 有15秒 deadline，controller 首次 ready 等待也有15秒失败反馈；connector setup 10秒、ping20秒/pong60秒、网络失败有界 backoff。401/403明确进入 unauthorized并由 controller 移除本机登记/停止 Host，要求重新登记，不自动无限重试无效身份。没有使用任意自定义 provider 永不 settle 的设想报生产缺陷。 [cloud-account-http:73](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/desktop/src/main/cloud-account-http.ts:73)、[controller:259](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/desktop/src/main/mobile-remote-controller.ts:259)、[connector:117](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/server/src/remote-relay/connector.ts:117)、[connector:179](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/server/src/remote-relay/connector.ts:179)、[protocol:9](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/server/src/remote-relay/protocol.ts:9)。 |",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "location": "/claims/14622/path",
+        "matched": [
+          "packages/server/src/remote-relay/protocol.ts"
+        ],
+        "value": "packages/server/src/remote-relay/protocol.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "location": "/claims/14622/directSourcePathsInObject/0",
+        "matched": [
+          "packages/server/src/remote-relay/protocol.ts"
+        ],
+        "value": "packages/server/src/remote-relay/protocol.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "location": "/claims/14623/path",
+        "matched": [
+          "packages/server/src/remote-relay/protocol.ts"
+        ],
+        "value": "packages/server/src/remote-relay/protocol.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "location": "/claims/14623/sourceHashFields/frozenSha256",
+        "matched": [
+          "75273db331577ffa448e057134f2897593065b1d62efd9291cf9324d42244672"
+        ],
+        "value": "75273db331577ffa448e057134f2897593065b1d62efd9291cf9324d42244672",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "location": "/claims/14623/sourceHashFields/sha256",
+        "matched": [
+          "75273db331577ffa448e057134f2897593065b1d62efd9291cf9324d42244672"
+        ],
+        "value": "75273db331577ffa448e057134f2897593065b1d62efd9291cf9324d42244672",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "location": "/claims/14623/directSourcePathsInObject/0",
+        "matched": [
+          "packages/server/src/remote-relay/protocol.ts"
+        ],
+        "value": "packages/server/src/remote-relay/protocol.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "location": "/claims/14624/path",
+        "matched": [
+          "packages/server/src/remote-relay/protocol.ts"
+        ],
+        "value": "packages/server/src/remote-relay/protocol.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "location": "/claims/14624/sourceHashFields/sha256",
+        "matched": [
+          "75273db331577ffa448e057134f2897593065b1d62efd9291cf9324d42244672"
+        ],
+        "value": "75273db331577ffa448e057134f2897593065b1d62efd9291cf9324d42244672",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "location": "/claims/14624/directSourcePathsInObject/0",
+        "matched": [
+          "packages/server/src/remote-relay/protocol.ts"
+        ],
+        "value": "packages/server/src/remote-relay/protocol.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-index.json",
+        "location": "/files/3985/path",
+        "matched": [
+          "packages/server/src/remote-relay/protocol.ts"
+        ],
+        "value": "packages/server/src/remote-relay/protocol.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-index.json",
+        "location": "/files/3985/sha256",
+        "matched": [
+          "75273db331577ffa448e057134f2897593065b1d62efd9291cf9324d42244672"
+        ],
+        "value": "75273db331577ffa448e057134f2897593065b1d62efd9291cf9324d42244672",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/package-inventory.json",
+        "location": "/files/3985/path",
+        "matched": [
+          "packages/server/src/remote-relay/protocol.ts"
+        ],
+        "value": "packages/server/src/remote-relay/protocol.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/package-inventory.json",
+        "location": "/files/3985/sha256",
+        "matched": [
+          "75273db331577ffa448e057134f2897593065b1d62efd9291cf9324d42244672"
+        ],
+        "value": "75273db331577ffa448e057134f2897593065b1d62efd9291cf9324d42244672",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-status/comparison.json",
+        "location": "/unknownPaths/3633",
+        "matched": [
+          "packages/server/src/remote-relay/protocol.ts"
+        ],
+        "value": "packages/server/src/remote-relay/protocol.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-status/current-inventory.json",
+        "location": "/files/3986/path",
+        "matched": [
+          "packages/server/src/remote-relay/protocol.ts"
+        ],
+        "value": "packages/server/src/remote-relay/protocol.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round44/evidence/coverage-status/current-inventory.json",
+        "location": "/files/3986/sha256",
+        "matched": [
+          "75273db331577ffa448e057134f2897593065b1d62efd9291cf9324d42244672"
+        ],
+        "value": "75273db331577ffa448e057134f2897593065b1d62efd9291cf9324d42244672",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round55/evidence/coverage-current/current-source-inventory.json",
+        "location": "/files/3986/path",
+        "matched": [
+          "packages/server/src/remote-relay/protocol.ts"
+        ],
+        "value": "packages/server/src/remote-relay/protocol.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round55/evidence/coverage-current/current-source-inventory.json",
+        "location": "/files/3986/sha256",
+        "matched": [
+          "75273db331577ffa448e057134f2897593065b1d62efd9291cf9324d42244672"
+        ],
+        "value": "75273db331577ffa448e057134f2897593065b1d62efd9291cf9324d42244672",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round55/evidence/coverage-current/current-source-inventory.json",
+        "location": "/files/3986/oldSha256",
+        "matched": [
+          "75273db331577ffa448e057134f2897593065b1d62efd9291cf9324d42244672"
+        ],
+        "value": "75273db331577ffa448e057134f2897593065b1d62efd9291cf9324d42244672",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round55/evidence/coverage-current/unified-current-index.first.json",
+        "location": "/files/3986/path",
+        "matched": [
+          "packages/server/src/remote-relay/protocol.ts"
+        ],
+        "value": "packages/server/src/remote-relay/protocol.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round55/evidence/coverage-current/unified-current-index.first.json",
+        "location": "/files/3986/sha256",
+        "matched": [
+          "75273db331577ffa448e057134f2897593065b1d62efd9291cf9324d42244672"
+        ],
+        "value": "75273db331577ffa448e057134f2897593065b1d62efd9291cf9324d42244672",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round55/evidence/coverage-current/unified-current-index.first.json",
+        "location": "/files/3986/oldSha256",
+        "matched": [
+          "75273db331577ffa448e057134f2897593065b1d62efd9291cf9324d42244672"
+        ],
+        "value": "75273db331577ffa448e057134f2897593065b1d62efd9291cf9324d42244672",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round55/evidence/coverage-current/unified-current-index.json",
+        "location": "/files/3986/path",
+        "matched": [
+          "packages/server/src/remote-relay/protocol.ts"
+        ],
+        "value": "packages/server/src/remote-relay/protocol.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round55/evidence/coverage-current/unified-current-index.json",
+        "location": "/files/3986/sha256",
+        "matched": [
+          "75273db331577ffa448e057134f2897593065b1d62efd9291cf9324d42244672"
+        ],
+        "value": "75273db331577ffa448e057134f2897593065b1d62efd9291cf9324d42244672",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/audit-2026-10-17-round55/evidence/coverage-current/unified-current-index.json",
+        "location": "/files/3986/oldSha256",
+        "matched": [
+          "75273db331577ffa448e057134f2897593065b1d62efd9291cf9324d42244672"
+        ],
+        "value": "75273db331577ffa448e057134f2897593065b1d62efd9291cf9324d42244672",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/review-2026-10-12/server-preflight-round23.md",
+        "location": 25,
+        "matched": [
+          "packages/server/src/remote-relay/protocol.ts"
+        ],
+        "value": "| 凭据请求或 handshake 失败，担心无限保持 connecting | 生产 credential HTTP transport 有15秒 deadline，controller 首次 ready 等待也有15秒失败反馈；connector setup 10秒、ping20秒/pong60秒、网络失败有界 backoff。401/403明确进入 unauthorized并由 controller 移除本机登记/停止 Host，要求重新登记，不自动无限重试无效身份。没有使用任意自定义 provider 永不 settle 的设想报生产缺陷。 [cloud-account-http:73](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/desktop/src/main/cloud-account-http.ts:73)、[controller:259](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/desktop/src/main/mobile-remote-controller.ts:259)、[connector:117](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/server/src/remote-relay/connector.ts:117)、[connector:179](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/server/src/remote-relay/connector.ts:179)、[protocol:9](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/server/src/remote-relay/protocol.ts:9)。 |",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/review-2026-10-12/validation/original-preflight-round23/server-preflight-round23.md",
+        "location": 23,
+        "matched": [
+          "packages/server/src/remote-relay/protocol.ts"
+        ],
+        "value": "| 凭据请求或 handshake 失败，担心无限保持 connecting | 生产 credential HTTP transport 有15秒 deadline，controller 首次 ready 等待也有15秒失败反馈；connector setup 10秒、ping20秒/pong60秒、网络失败有界 backoff。401/403明确进入 unauthorized并由 controller 移除本机登记/停止 Host，要求重新登记，不自动无限重试无效身份。没有使用任意自定义 provider 永不 settle 的设想报生产缺陷。 [cloud-account-http:73](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/desktop/src/main/cloud-account-http.ts:73)、[controller:259](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/desktop/src/main/mobile-remote-controller.ts:259)、[connector:117](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/server/src/remote-relay/connector.ts:117)、[connector:179](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/server/src/remote-relay/connector.ts:179)、[protocol:9](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/server/src/remote-relay/protocol.ts:9)。 |",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/review-2026-10-12/validation/postdelivery-report-review/audit-a.raw.json",
+        "location": "/module_inventory/84740d56/paths/112",
+        "matched": [
+          "packages/server/src/remote-relay/protocol.ts"
+        ],
+        "value": "packages/server/src/remote-relay/protocol.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/review-2026-10-12/validation/postdelivery-report-review/audit-a.raw.json",
+        "location": "/module_inventory/a66f4ef2/paths/113",
+        "matched": [
+          "packages/server/src/remote-relay/protocol.ts"
+        ],
+        "value": "packages/server/src/remote-relay/protocol.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/todo/platform-s0-quick-fixes-plan.md",
+        "location": 39,
+        "matched": [
+          "packages/server/src/remote-relay/protocol.ts"
+        ],
+        "value": "| `packages/server/src/remote-relay/protocol.ts`                       | 修改 | `RELAY_PROTOCOL_VERSION` 引用契约表                         |",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/todo/platform-s0-quick-fixes-plan.md",
+        "location": 273,
+        "matched": [
+          "packages/server/src/remote-relay/protocol.ts"
+        ],
+        "value": "- Modify: `packages/server/src/remote-relay/protocol.ts:2`",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/todo/platform-s0-quick-fixes-plan.md",
+        "location": 333,
+        "matched": [
+          "packages/server/src/remote-relay/protocol.ts"
+        ],
+        "value": "`packages/server/src/remote-relay/protocol.ts` 第 2 行改为（文件顶部加导入）：",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/todo/platform-s0-quick-fixes-plan.md",
+        "location": 379,
+        "matched": [
+          "packages/server/src/remote-relay/protocol.ts"
+        ],
+        "value": "npx prettier --write packages/server/src/panels/bridge-contract.ts packages/server/src/remote-relay/protocol.ts packages/server/src/project-runtime/cloud-account-auth.ts packages/server/src/project-runtime/cloud-browser-auth.ts packages/desktop/src/main/im-gateway-control-server.ts packages/desktop/src/main/contract-versions.test.ts",
+        "truncatedValue": false
+      },
+      {
+        "document": "docs/todo/platform-s0-quick-fixes-plan.md",
+        "location": 380,
+        "matched": [
+          "packages/server/src/remote-relay/protocol.ts"
+        ],
+        "value": "git add packages/server/src/panels/bridge-contract.ts packages/server/src/remote-relay/protocol.ts packages/server/src/project-runtime/cloud-account-auth.ts packages/server/src/project-runtime/cloud-browser-auth.ts packages/desktop/src/main/im-gateway-control-server.ts packages/desktop/src/main/contract-versions.test.ts",
+        "truncatedValue": false
+      }
+    ]
+  },
+  "meaning": "Machine projection only; actual canonical windows separately recorded; no full-history semantic read"
+}

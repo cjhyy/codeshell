@@ -1,0 +1,21 @@
+{
+  "firstNavigationTruncation": {
+    "chunk": "719cab",
+    "nestedExitCode": 0,
+    "originalTokenCount": 4092,
+    "maxOutputTokens": 2700,
+    "outputLines": 58,
+    "disposition": "Original tool warning retained/transcribed. Missing middle rg snippets not claimed read. Later bounded chat.md and selected canonical objects were fully displayed; no product rerun."
+  },
+  "firstCompoundMetadataQuery": {
+    "receipt": "history-first-exit.json",
+    "exitCode": 0,
+    "stdout": "history-first.stdout",
+    "stderr": "history-first.stderr",
+    "method": "shutdown-lease-history.py",
+    "readOrder": "Method/stdout/stderr/exit persisted before results were opened."
+  },
+  "productAttempts": 0,
+  "productFailures": 0,
+  "metadataErrors": []
+}

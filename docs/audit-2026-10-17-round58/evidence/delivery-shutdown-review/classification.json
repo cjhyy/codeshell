@@ -1,0 +1,38 @@
+{
+  "formalFindings": [],
+  "candidateReviews": [
+    {
+      "authorAlias": "CHAT-R138-C1 (author pending/frozen separately)",
+      "rootPlannedFormalAlias": "CHAT-R58-01",
+      "sameItemOnly": true,
+      "priorityOpinion": "P2 static; causal support, final dedup/promotion owned by Root including144",
+      "reviewDisposition": "Supports late durable snapshot overwrite across legitimate lease handoff; not merely at-least-once duplicate delivery.",
+      "normalConditions": [
+        "Old process P1 with same normal config/inbox and persistent plain-text A already accepted, delivery awaits actual Mimi start/result or reply.",
+        "Shutdown reaches gateway/watch completion: e.g. polling adapter returns on abort and notification watcher idle in cancellable poll, no active notification handler delaying it.",
+        "P1 releases explicit file lease while old detached process(A)/persistence is still outstanding; new P2 starts using same valid lease/inbox, no same Queue stop/start.",
+        "P2 accepts/persists valid B not already durably completed. P1 later writes its stale whole snapshot lacking B."
+      ],
+      "timeline": [
+        "P1 queue.stop sets stopped and clears timers, but process(A) was detached and await deliver is not cancelled or joined.",
+        "CLI Promise.all does not include process(A); finally releases token lock. Only exitCode setter exists in CLI, no forced process.exit; independent client timeout/poll callbacks remain a source path for late settlement.",
+        "P2 acquires absent lease file using wx, loads same inbox once, enqueues persistent B and resolves accepted handler after persist.",
+        "P1 late success OR failure reaches process withMutation and persist regardless stopped. Serialized snapshot excludes new P2 B; no reload/CAS/lease check protects rename.",
+        "B can remain in P2 memory and a later P2 persist can repair disk. Only exit before repair causes next inbox load to lack B; external platform replay may still recover and is untested."
+      ],
+      "impact": "Already-accepted durable inbox state can be withdrawn across a supposedly single-owner handoff. Conditional local restart recovery loss, not every B necessarily lost, not proof of permanent end-to-end delivery loss.",
+      "scopeExclusions": [
+        "Not reporting duplicate A or allowed at-least-once replay.",
+        "No invalid DTO, account mismatch, spool materialization failure or artificial same-instance stop/start used.",
+        "No actual process/OS/network/FS/SDK/ACK/clock execution; no claim of empirically observed timer/event-loop lifetime.",
+        "Underlying native lock/FS security correctness and platform redelivery semantics not certified."
+      ]
+    }
+  ],
+  "counts": {
+    "formal": 0,
+    "reviewedCandidateSameItem": 1,
+    "newRelated": 0
+  },
+  "oldCauseDecision": "Selected SWC02/03, C8, CHAT-R11-01 are different exact causes. Root144 broader shutdown dedup is separate; reviewer does not claim exhaustive newness or duplicate all history machine visits."
+}

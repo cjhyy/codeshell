@@ -1,0 +1,30 @@
+{
+  "formal": 0,
+  "candidate": 1,
+  "newRelated": 0,
+  "candidates": [
+    {
+      "id": "APPROVAL-R141-C1",
+      "classification": "candidate",
+      "proposedPriority": "P3",
+      "title": "Mobile pending replay may retain requests after worker exit without refreshing worker state",
+      "directEvidence": [
+        "PendingMobileApprovals clears on setWorkerState dead/newgen but replayLines alone is state-independent.",
+        "Main outbound subscription refreshes worker state only when a line arrives; native pending IPC and Pet decision read also refresh.",
+        "Mobile session.select/sync call orchestrator replay directly, whose current read does not refresh worker state.",
+        "Bridge onExit shown callback handles snapshots and renderer lifecycle; getSnapshot is local and does not start/sample worker."
+      ],
+      "unresolved": [
+        "Whether other always-running lifecycle/Pet callbacks necessarily clear the cache before an ordinary mobile replay.",
+        "Whether actual externalCommands/output-recovery selection or client generation handling prevents stale requests becoming visible.",
+        "Full generation/exit event production and old cause history need independent verification."
+      ],
+      "notClaimed": [
+        "No authority bypass or successful stale approval execution claimed.",
+        "No real worker crash, phone, renderer, model or file/clock experiment.",
+        "No current formal count; do not report missing setWorkerState call alone as proven lifecycle bug."
+      ]
+    }
+  ],
+  "negativeScope": "Ordinary mint/expiry/one-use/sync commit and explicit cache setWorkerState reset/JSON replay/resolve contracts show no new defect. Not full pairing/auth/custody/runtime proof."
+}

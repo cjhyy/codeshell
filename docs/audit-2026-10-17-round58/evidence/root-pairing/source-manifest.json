@@ -1,0 +1,456 @@
+{
+  "prep": 141,
+  "rootReportedBaseline": "f31a847f45e4805bce34aeb9e6db7efb503cfcb0",
+  "files": [
+    {
+      "path": "packages/server/src/mobile-remote/pairing.ts",
+      "bytes": 2298,
+      "lines": 70,
+      "sha256": "19777b68d1ad6297b9ea182298dd457077340dc4b1977433b60192fdc24af5ca",
+      "coverage": "full",
+      "sourceKind": "product",
+      "selectedLineRanges": [
+        [
+          1,
+          70
+        ]
+      ],
+      "displayedLineRanges": [
+        [
+          1,
+          70
+        ]
+      ],
+      "semanticLines": 70,
+      "uniqueDisplayedLines": 70,
+      "purpose": "Whole ordinary token mint/prune/consume/synchronous commit value state; cryptographic/platform/real time guarantees not runtime certified.",
+      "initialPinBeforeBodyOrLineNavigation": true,
+      "endingSha256": "19777b68d1ad6297b9ea182298dd457077340dc4b1977433b60192fdc24af5ca",
+      "endingMatchesInitial": true
+    },
+    {
+      "path": "packages/server/src/mobile-remote/pending-approvals.ts",
+      "bytes": 2448,
+      "lines": 69,
+      "sha256": "1503d41f1535224c972a23ada25238644394fc2a1e696668729c0f6263b989ac",
+      "coverage": "full",
+      "sourceKind": "product",
+      "selectedLineRanges": [
+        [
+          1,
+          69
+        ]
+      ],
+      "displayedLineRanges": [
+        [
+          1,
+          69
+        ]
+      ],
+      "semanticLines": 69,
+      "uniqueDisplayedLines": 69,
+      "purpose": "Whole cache JSON observation/session replay/resolve and explicit generation reset; correctness of caller sampling separately selected, not all worker/native lifecycle certified.",
+      "initialPinBeforeBodyOrLineNavigation": true,
+      "endingSha256": "1503d41f1535224c972a23ada25238644394fc2a1e696668729c0f6263b989ac",
+      "endingMatchesInitial": true
+    },
+    {
+      "path": "packages/server/src/mobile-remote/remote-host-manager.ts",
+      "bytes": 25828,
+      "lines": 649,
+      "sha256": "e7956da57e9d9b1581909a78492dd3834a0cf916af26131f6c8cfdba31e005ca",
+      "coverage": "selected",
+      "sourceKind": "product",
+      "selectedLineRanges": [
+        [
+          421,
+          433
+        ],
+        [
+          439,
+          466
+        ]
+      ],
+      "displayedLineRanges": [
+        [
+          416,
+          433
+        ],
+        [
+          423,
+          483
+        ]
+      ],
+      "semanticLines": 41,
+      "uniqueDisplayedLines": 68,
+      "purpose": "Actual default mint URL and sync trusted-device commit; auth/handshake/authority policies not full.",
+      "initialPinBeforeBodyOrLineNavigation": true,
+      "endingSha256": "e7956da57e9d9b1581909a78492dd3834a0cf916af26131f6c8cfdba31e005ca",
+      "endingMatchesInitial": true
+    },
+    {
+      "path": "packages/desktop/src/main/mobile-remote-orchestrator.ts",
+      "bytes": 18225,
+      "lines": 434,
+      "sha256": "40b62b4c9b912fd472d65d7077971e638a64109927a574ae8337cbc0f837e099",
+      "coverage": "selected",
+      "sourceKind": "product",
+      "selectedLineRanges": [
+        [
+          245,
+          268
+        ],
+        [
+          340,
+          368
+        ],
+        [
+          380,
+          386
+        ]
+      ],
+      "displayedLineRanges": [
+        [
+          235,
+          268
+        ],
+        [
+          340,
+          388
+        ]
+      ],
+      "semanticLines": 60,
+      "uniqueDisplayedLines": 83,
+      "purpose": "Actual replay and resolve plus ctx/handler wiring. Other orchestrator policies not read.",
+      "initialPinBeforeBodyOrLineNavigation": true,
+      "endingSha256": "40b62b4c9b912fd472d65d7077971e638a64109927a574ae8337cbc0f837e099",
+      "endingMatchesInitial": true
+    },
+    {
+      "path": "packages/desktop/src/main/mobile-remote/handle-client-event.ts",
+      "bytes": 25666,
+      "lines": 666,
+      "sha256": "ed4d8b65512f7be8f31572b9c47b86f4a4f587bd4c9fe94541bcf108108a1f71",
+      "coverage": "selected",
+      "sourceKind": "product",
+      "selectedLineRanges": [
+        [
+          245,
+          319
+        ],
+        [
+          567,
+          590
+        ]
+      ],
+      "displayedLineRanges": [
+        [
+          90,
+          165
+        ],
+        [
+          185,
+          319
+        ],
+        [
+          567,
+          590
+        ]
+      ],
+      "semanticLines": 99,
+      "uniqueDisplayedLines": 235,
+      "purpose": "Actual native session.select/sync replay branch and common setup. Earlier broad displayed helper/CWD branches not semantic permission or request-await certification.",
+      "initialPinBeforeBodyOrLineNavigation": true,
+      "endingSha256": "ed4d8b65512f7be8f31572b9c47b86f4a4f587bd4c9fe94541bcf108108a1f71",
+      "endingMatchesInitial": true
+    },
+    {
+      "path": "packages/core/src/protocol/server.ts",
+      "bytes": 195050,
+      "lines": 4949,
+      "sha256": "1dcf2cba50bdedefb7ff04ce5c26565f59fdef275e8b74e2c5fb35d95af826d5",
+      "coverage": "selected",
+      "sourceKind": "product",
+      "selectedLineRanges": [
+        [
+          3877,
+          3883
+        ],
+        [
+          3979,
+          3987
+        ],
+        [
+          4089,
+          4095
+        ],
+        [
+          4217,
+          4224
+        ],
+        [
+          4283,
+          4290
+        ],
+        [
+          4418,
+          4425
+        ],
+        [
+          4513,
+          4520
+        ],
+        [
+          4576,
+          4580
+        ]
+      ],
+      "displayedLineRanges": [
+        [
+          3866,
+          3889
+        ],
+        [
+          3972,
+          3994
+        ],
+        [
+          4082,
+          4095
+        ],
+        [
+          4208,
+          4224
+        ],
+        [
+          4275,
+          4290
+        ],
+        [
+          4410,
+          4425
+        ],
+        [
+          4505,
+          4520
+        ],
+        [
+          4568,
+          4595
+        ]
+      ],
+      "semanticLines": 60,
+      "uniqueDisplayedLines": 154,
+      "purpose": "Normal approval request IDs are independently nanoid12 minted; no manufactured colliding-ID DTO used as cross-session bug. Full protocol/cancel/permissions excluded.",
+      "initialPinBeforeBodyOrLineNavigation": true,
+      "endingSha256": "1dcf2cba50bdedefb7ff04ce5c26565f59fdef275e8b74e2c5fb35d95af826d5",
+      "endingMatchesInitial": true
+    },
+    {
+      "path": "packages/server/src/mobile-remote/pairing.test.ts",
+      "bytes": 3169,
+      "lines": 85,
+      "sha256": "76935704b1443dab971196d1e9952804a4b46b76042176f57b21acaf59d97c3f",
+      "coverage": "full-existing-test-declaration",
+      "sourceKind": "existing-test",
+      "selectedLineRanges": [
+        [
+          1,
+          85
+        ]
+      ],
+      "displayedLineRanges": [
+        [
+          1,
+          85
+        ]
+      ],
+      "semanticLines": 85,
+      "uniqueDisplayedLines": 85,
+      "purpose": "Entire declarations inspected; none executed or counted as pass.",
+      "initialPinBeforeBodyOrLineNavigation": true,
+      "endingSha256": "76935704b1443dab971196d1e9952804a4b46b76042176f57b21acaf59d97c3f",
+      "endingMatchesInitial": true
+    },
+    {
+      "path": "packages/server/src/mobile-remote/pending-approvals.test.ts",
+      "bytes": 5224,
+      "lines": 147,
+      "sha256": "a5ccceb55dfdcf39f9132b0624de40d11a2a5d2f18ec311dd72f459fcc1055e6",
+      "coverage": "selected",
+      "sourceKind": "existing-test",
+      "selectedLineRanges": [
+        [
+          84,
+          147
+        ]
+      ],
+      "displayedLineRanges": [
+        [
+          82,
+          147
+        ]
+      ],
+      "semanticLines": 64,
+      "uniqueDisplayedLines": 66,
+      "purpose": "Generation/dead/malformed/replay/resolve declarations only, no execution.",
+      "initialPinBeforeBodyOrLineNavigation": true,
+      "endingSha256": "a5ccceb55dfdcf39f9132b0624de40d11a2a5d2f18ec311dd72f459fcc1055e6",
+      "endingMatchesInitial": true
+    },
+    {
+      "path": "packages/server/src/mobile-remote/trusted-device-store.ts",
+      "bytes": 10474,
+      "lines": 293,
+      "sha256": "6cdee911aba2713e2d8fa8f058018687577e3dc8b070fdefae9a169aa1cb2ef1",
+      "coverage": "selected",
+      "sourceKind": "product",
+      "selectedLineRanges": [
+        [
+          43,
+          74
+        ],
+        [
+          133,
+          147
+        ]
+      ],
+      "displayedLineRanges": [
+        [
+          25,
+          104
+        ],
+        [
+          130,
+          161
+        ]
+      ],
+      "semanticLines": 47,
+      "uniqueDisplayedLines": 112,
+      "purpose": "addDevice→synchronous mutate/write-return sequence; no full lock/atomic custody/authentication or FS failure experiment.",
+      "initialPinBeforeBodyOrLineNavigation": true,
+      "endingSha256": "6cdee911aba2713e2d8fa8f058018687577e3dc8b070fdefae9a169aa1cb2ef1",
+      "endingMatchesInitial": true
+    },
+    {
+      "path": "packages/desktop/src/main/index.ts",
+      "bytes": 299337,
+      "lines": 7330,
+      "sha256": "105b2b49a28e0a7ef10980ac5feaa3a07ff81e7197f5acbefd95feb2498224c0",
+      "coverage": "selected",
+      "sourceKind": "product",
+      "selectedLineRanges": [
+        [
+          1823,
+          1833
+        ],
+        [
+          2097,
+          2107
+        ],
+        [
+          6914,
+          6914
+        ],
+        [
+          6957,
+          6966
+        ]
+      ],
+      "displayedLineRanges": [
+        [
+          1814,
+          1840
+        ],
+        [
+          2084,
+          2115
+        ],
+        [
+          6907,
+          6918
+        ],
+        [
+          6953,
+          6970
+        ]
+      ],
+      "semanticLines": 33,
+      "uniqueDisplayedLines": 89,
+      "purpose": "Actual outbound/native pending/Pet decision sampling and deletion, not all Main observers/time behavior.",
+      "initialPinBeforeBodyOrLineNavigation": true,
+      "endingSha256": "105b2b49a28e0a7ef10980ac5feaa3a07ff81e7197f5acbefd95feb2498224c0",
+      "endingMatchesInitial": true
+    },
+    {
+      "path": "packages/desktop/src/main/agent-bridge.ts",
+      "bytes": 102778,
+      "lines": 2648,
+      "sha256": "2ba6a48296c36b207ac799b4beaf0a1b9335d8711859245e3f246d6b88906d47",
+      "coverage": "selected",
+      "sourceKind": "product",
+      "selectedLineRanges": [
+        [
+          435,
+          480
+        ],
+        [
+          2019,
+          2021
+        ],
+        [
+          2317,
+          2325
+        ],
+        [
+          2335,
+          2337
+        ]
+      ],
+      "displayedLineRanges": [
+        [
+          417,
+          485
+        ],
+        [
+          2015,
+          2035
+        ],
+        [
+          2305,
+          2345
+        ]
+      ],
+      "semanticLines": 61,
+      "uniqueDisplayedLines": 131,
+      "purpose": "Explicit worker lifecycle callbacks, local snapshot/context and raw line tap registration. Full Core worker death/respawn and every lifecycle subscriber not certified.",
+      "initialPinBeforeBodyOrLineNavigation": true,
+      "endingSha256": "2ba6a48296c36b207ac799b4beaf0a1b9335d8711859245e3f246d6b88906d47",
+      "endingMatchesInitial": true
+    }
+  ],
+  "instructionHashOnlyFiles": [
+    {
+      "path": "AGENTS.md",
+      "bytes": 206,
+      "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "coverage": "hash-only carry-forward of previously actually read instructions",
+      "newSemanticReadLines": 0
+    },
+    {
+      "path": "CODESHELL.md",
+      "bytes": 17639,
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "coverage": "hash-only carry-forward of previously actually read instructions",
+      "newSemanticReadLines": 0
+    }
+  ],
+  "totals": {
+    "productSemanticLines": 540,
+    "existingTestDeclarationLines": 149,
+    "fullProductFiles": 2,
+    "selectedProductFiles": 7,
+    "productAttempts": 0
+  },
+  "overlap": "Old45 unknown was only index state; no historical unread/first claim. Old approval-quality R19 and earlier replay fix explicitly retained; real worker/source lifecycle question remains candidate."
+}

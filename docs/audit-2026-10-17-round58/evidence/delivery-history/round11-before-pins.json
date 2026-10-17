@@ -1,0 +1,20 @@
+{
+  "atUTC": "2026-10-17T19:27:43.456403+00:00",
+  "files": [
+    {
+      "path": "docs/audit-2026-10-17-round11/chat.md",
+      "bytes": 6965,
+      "lines": 38,
+      "sha256": "868b6144211200a116626e400f17d224442041188a9871335ae7796da99104b2",
+      "beforeRead": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round11/evidence/cross-review-chat.md",
+      "bytes": 8905,
+      "lines": 46,
+      "sha256": "7e927445bee654e5f3177c066ec3f14271e21b87322c3ffda2bc134b926f21dc",
+      "beforeRead": true
+    }
+  ],
+  "productFiles": []
+}

@@ -1,0 +1,57 @@
+{
+  "candidateHypothesisFromRootOnly": "queue.stop does not drain; CLI releases lease; old already-running consumer can continue persist and overwrite a new process snapshot",
+  "sourceMechanismReviewedHere": false,
+  "comparisons": [
+    {
+      "oldId": "C8 (canonical N22/originalId C8)",
+      "canonical": "docs/review-remaining-2026-10-12/findings.json#/issues/21",
+      "report": "docs/review-remaining-2026-10-12/coding-tui-chat.md:142–150",
+      "actualOldCause": "maxPerTarget=1 permits a later same-target record while earlier record waits retry backoff; controls [a,b] vs [a,b,a].",
+      "difference": "No stop, lease release, concurrent owner snapshot or old writer continuation in this finding."
+    },
+    {
+      "oldId": "SWC-01",
+      "report": "docs/audit-2026-10-16/server-web-chat.md:7–15",
+      "actualOldCause": "Persisted adapter route uses account list ordinal; reorder assigns old pending to wrong account.",
+      "difference": "Reboot/recovery is shared symptom only; missing stable account routing is distinct from writer lease lifetime."
+    },
+    {
+      "oldId": "SWC-02",
+      "canonical": "docs/audit-2026-10-16/findings.json#/issues/20",
+      "report": "docs/audit-2026-10-16/server-web-chat.md:17–25",
+      "actualOldCause": "Dedupe/completed key omits adapter identity; legal second account input incorrectly accepted as duplicate.",
+      "difference": "No concurrent process writer/stop/drain or lease release."
+    },
+    {
+      "oldId": "SWC-03",
+      "canonical": "docs/audit-2026-10-16/findings.json#/issues/21",
+      "report": "docs/audit-2026-10-16/server-web-chat.md:27–35",
+      "actualOldCause": "Small valid attachment spool I/O error silently becomes memory-only queued acceptance, so restart cannot restore it.",
+      "difference": "Spool materialization/error/ACK policy, not old terminal consumer snapshot overwriting a new owner."
+    },
+    {
+      "oldId": "CHAT-R11-01",
+      "canonical": [
+        "docs/audit-2026-10-17-round11/findings.json#/findings/0",
+        "docs/audit-2026-10-17-round11/evidence/chat-findings.json#/findings/0"
+      ],
+      "report": "docs/audit-2026-10-17-round11/chat.md:5–15",
+      "actualOldCause": "Initial store.load rejected Promise remains cached in long-lived notification progress handler; watcher retries never reload.",
+      "difference": "Same-handler initialization recovery, not durable queue stop/CLI lease/new process concurrent snapshot."
+    },
+    {
+      "oldId": "Archive spool retry cleanup note (no promoted ID inferred)",
+      "report": "docs/archive/bug-followups-2026-08-13.md:83–100",
+      "actualOldCause": "One global persist retry closure captures only record X cleanup, Y spool cleanup not retried; slow attachment load holds queue mutation mutex.",
+      "difference": "Neither note names stop without drain→lease release→old in-flight consumer terminal snapshot overwrite."
+    },
+    {
+      "oldId": "Previously unconfirmed cancellation capacity risk",
+      "report": "docs/review-remaining-2026-10-12/coding-tui-chat.md:228–229",
+      "actualOldCause": "Unbounded attachment.load signal/cancellation may retain preparation capacity; memory-only fallback restart risk separately stated.",
+      "difference": "Scope is preparation/spool behavior. Not an exact prior report of the proposed old in-flight writer/new owner snapshot chain."
+    }
+  ],
+  "conclusion": "No exact prior cause established in read canonical windows; listed old findings are not adequate duplicate evidence for the proposed full chain.",
+  "limits": "Not proof no history record exists; not proof source hypothesis is valid/new/formal. Severity and normal trigger belong source reviewers 138/143 and Root."
+}

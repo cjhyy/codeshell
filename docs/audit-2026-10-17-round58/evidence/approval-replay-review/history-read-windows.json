@@ -1,0 +1,44 @@
+{
+  "sharedHistoryScope": {
+    "atUTC": "2026-10-17T19:16:56.757474+00:00",
+    "excludedFormalAtOrAbove": 58,
+    "historyFiles": 5850,
+    "jsonValueScalarsVisited": 4251467,
+    "capPerTarget": 100,
+    "errors": [],
+    "note": "Shared machine path/SHA navigation only, all traversed scalar values not semantically read; JSON keys excluded, archives included; exact shown values capped; source byte hashing not product semantic reading."
+  },
+  "pendingPathMatches": 36,
+  "cap": 100,
+  "all36Retained": true,
+  "actualCanonical": {
+    "path": "docs/review-2026-10-12/approval-quality-round10.md",
+    "lineRanges": [
+      [
+        55,
+        81
+      ]
+    ],
+    "decisiveLines": [
+      67,
+      69,
+      71,
+      76,
+      77,
+      79,
+      81
+    ],
+    "meaning": "R10 R19 is same alive worker still pending after delivery failure; dead/newgen setter protection is conditional on actual callers and does not itself prove all sampling coverage."
+  },
+  "authorMetadata": {
+    "directory": "/tmp/codeshell-audit-round141-pairing/",
+    "read": [
+      "report.md whole",
+      "candidate.json whole",
+      "source-manifest.json selected row fields for all files and keys, not excerpts/body"
+    ]
+  },
+  "notRead": "No new whole-corpus semantic scan; no author source-excerpts/test/runtime log; no raw output expanded from derived coverage claims.",
+  "directedOverlap": "Older R10 selected setter/resync discussion and current frozen141 full69/selected caller overlap retained; no claim these source bytes were previously unread.",
+  "permanentFailedDirections": "All old failed dynamic directions remain skipped; no worker crash/native/approval replay fixture attempted."
+}

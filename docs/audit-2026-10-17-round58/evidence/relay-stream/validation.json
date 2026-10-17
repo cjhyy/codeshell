@@ -1,0 +1,16 @@
+{
+  "ownProductExecution": 0,
+  "ownHelperExecution": 0,
+  "imports": 0,
+  "fixturesRun": 0,
+  "testsRun": 0,
+  "nativeOrNetwork": 0,
+  "ownGitOperations": 0,
+  "sourceOnlyEvidence": true,
+  "existingDeclarations": "Native launcher test title observed but not run. Selected acceptance fixture declares 5 delayed-reader lengths, abrupt disconnect, HTTP early/final/truncated response, cancellation, binary/size checks; declarations/PASS strings are not observed results.",
+  "sdkLimits": "ws/Node runtime semantics, event ordering, buffered final EOF, close settlement, OS sockets and actual external relay peer are not revalidated.",
+  "metadataOnlyFinalization": {
+    "checks.files": [],
+    "method": "Python standard-library source byte capture, JSON/range/count/link/receipt processing; no product import/evaluation."
+  }
+}

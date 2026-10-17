@@ -1,0 +1,22 @@
+{
+  "atUTC": "2026-10-17T19:33:37.007435+00:00",
+  "kind": "Own stdlib metadata checks, not product validation",
+  "selectedSubsetOfDisplayedAndWithinEOF": true,
+  "canonicalDisplayUnion": true,
+  "sourcePins": 11,
+  "oldInputs": 8,
+  "allEndingSameSHA": true,
+  "reportLinks": [
+    "source-manifest.json",
+    "source-excerpts.txt",
+    "classification.json",
+    "prior-cause-inputs.json",
+    "prior-source-objects.json",
+    "history-projection.json",
+    "diagnostics.json",
+    "ending.json",
+    "artifact-receipt.json"
+  ],
+  "reportLinkCount": 9,
+  "receiptSelfLinkWillExist": true
+}

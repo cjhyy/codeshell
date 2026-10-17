@@ -1,0 +1,36 @@
+{
+  "files": [
+    {
+      "path": "packages/chat/src/cli.ts",
+      "bytes": 11645,
+      "lineCount": 320,
+      "sha256": "4a4c052a8433836583cd9300669f4c400f394d780645c75156c38b78d6e1d9ed",
+      "pinnedAtUTC": "2026-10-17T19:27:19.317194+00:00",
+      "timing": "before any own body/nav; exact filename initialinventory"
+    },
+    {
+      "path": "packages/chat/src/chat-gateway.ts",
+      "bytes": 10429,
+      "lineCount": 301,
+      "sha256": "7032acecac774cc3c6bea6bb1b5f3b90ddf93c7234a8bded97112483300c311d",
+      "pinnedAtUTC": "2026-10-17T19:27:19.319219+00:00",
+      "timing": "before any own body/nav; exact filename initialinventory"
+    },
+    {
+      "path": "packages/chat/src/gateway.ts",
+      "bytes": 12984,
+      "lineCount": 347,
+      "sha256": "d73ad84b43ef1b2e705323cb3ed63c5102fbb0d31f51dc5ffc10fc45862a1b13",
+      "pinnedAtUTC": "2026-10-17T19:27:19.319934+00:00",
+      "timing": "before any own body/nav; exact filename initialinventory"
+    },
+    {
+      "path": "packages/chat/src/desktop-control-client.ts",
+      "bytes": 15174,
+      "lineCount": 446,
+      "sha256": "8647ab741d9b91ee5e043d8d8a02224598b42273f585e02bb5aef81ddc3541d1",
+      "pinnedAtUTC": "2026-10-17T19:27:19.320685+00:00",
+      "timing": "before any own body/nav; exact filename initialinventory"
+    }
+  ]
+}

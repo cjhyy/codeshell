@@ -1,0 +1,9 @@
+{
+  "byteStreamSameShaOldFull": true,
+  "byteStreamEvidence": "Round14 bytes-source-manifest/files/5 same SHA + bytes.md18 explicitly whole file",
+  "protocolPriorScope": "Related protocol contract only; manifest alone does not imply whole-file semantic read.",
+  "localPriorScope": "Preflight links and selected lifecycle/lease discussion, no explicit same-SHA full proof from read canonical windows.",
+  "decision": "Directed normal send/close/message-boundary contract review with explicit prior overlap; not newly-unread frontier coverage.",
+  "unknownIsUnread": false,
+  "fullCoverageIsCorrectnessProof": false
+}

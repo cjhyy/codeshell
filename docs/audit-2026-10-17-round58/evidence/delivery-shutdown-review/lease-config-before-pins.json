@@ -1,0 +1,20 @@
+{
+  "files": [
+    {
+      "path": "packages/chat/src/instance-lock.ts",
+      "bytes": 4712,
+      "lineCount": 159,
+      "sha256": "91f03a718482656bf0f0e82087865ec70dffcd8e619d330ff31fcded54bca742",
+      "pinnedAtUTC": "2026-10-17T19:28:08.821691+00:00",
+      "timing": "before own body/nav; filename b1f57b"
+    },
+    {
+      "path": "packages/chat/src/config.ts",
+      "bytes": 28057,
+      "lineCount": 870,
+      "sha256": "f002a45bda4bffa7c222f039487ddfa74e4d0c22230075a97f7036acaffb01e7",
+      "pinnedAtUTC": "2026-10-17T19:28:08.824639+00:00",
+      "timing": "before own body/nav; filename b1f57b"
+    }
+  ]
+}

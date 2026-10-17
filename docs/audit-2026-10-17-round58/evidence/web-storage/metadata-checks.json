@@ -1,0 +1,21 @@
+{
+  "kind": "Own stdlib metadata consistency only; not product/tests validation",
+  "atUTC": "2026-10-17T19:22:23.487341+00:00",
+  "sourceRows": 17,
+  "sourceInstructionPins": 17,
+  "canonicalDisplayUnion": true,
+  "selectedSubsetOfDisplayedAndWithinEOF": true,
+  "endingAllComparedSameSHA": true,
+  "reportLinks": [
+    "source-manifest.json",
+    "source-excerpts.txt",
+    "prior-canonical-decisions.json",
+    "prior-canonical-inputs.json",
+    "history-projection.json",
+    "diagnostics.json",
+    "ending.json",
+    "artifact-receipt.json"
+  ],
+  "reportLinkCount": 8,
+  "receiptSelfLinkWillExist": true
+}

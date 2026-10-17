@@ -1,0 +1,83 @@
+{
+  "scope": {
+    "atUTC": "2026-10-17T19:16:56.757474+00:00",
+    "excludedFormalAtOrAbove": 58,
+    "historyFiles": 5850,
+    "jsonValueScalarsVisited": 4251467,
+    "capPerTarget": 100,
+    "errors": [],
+    "note": "Shared machine path/SHA navigation only, all traversed scalar values not semantically read; JSON keys excluded, archives included; exact shown values capped; source byte hashing not product semantic reading.",
+    "productExecution": 0
+  },
+  "counts": {
+    "packages/server/src/remote-relay/byte-stream.ts": 54,
+    "packages/server/src/remote-relay/local-stream.ts": 38,
+    "packages/server/src/remote-relay/protocol.ts": 60
+  },
+  "retainedHits": {
+    "packages/server/src/remote-relay/byte-stream.ts": 54,
+    "packages/server/src/remote-relay/local-stream.ts": 38,
+    "packages/server/src/remote-relay/protocol.ts": 60
+  },
+  "cap": 100,
+  "actualCanonicalWindows": [
+    {
+      "path": "docs/audit-2026-10-17-round14/evidence/bytes-source-manifest.json",
+      "jsonPointers": [
+        "/files/5",
+        "/files/6",
+        "/scope"
+      ],
+      "displayed": "Whole 3322-byte metadata file; actual coverage decision uses these original objects and scope."
+    },
+    {
+      "path": "docs/audit-2026-10-17-round14/bytes.md",
+      "readLineRanges": [
+        [
+          1,
+          32
+        ]
+      ],
+      "decisiveLine": 18
+    },
+    {
+      "path": "docs/review-2026-10-12/server-preflight-round23.md",
+      "displayedLineRanges": [
+        [
+          14,
+          26
+        ],
+        [
+          37,
+          42
+        ]
+      ],
+      "decisiveOrdinaryOverlapLines": [
+        23,
+        25,
+        41
+      ],
+      "limits": "Historical authority claims contextual only, not independently reaffirmed."
+    },
+    {
+      "path": "docs/todo/platform-s0-quick-fixes-plan.md",
+      "navigationLines": [
+        39,
+        273,
+        333,
+        379,
+        380
+      ],
+      "limits": "Plan/proposed contract-version edits are not current implementation or semantic coverage proof."
+    }
+  ],
+  "projectionRead": "Filtered MD and canonical Round14 hit contexts displayed, not all 152 hits semantically read. Derived inventories/claims/hash rows and copied original alias are not independent semantic evidence.",
+  "ownTargetedRawNavigation": "22 raw path/SHA hit files pinned, not a second full recursive-scalar scan.",
+  "causeDecision": "No new candidate to deduplicate. Existing R68 backlog issue belongs paired Host live output; canonical preflight line41 explicitly distinguishes relay write-callback/backpressure. It is not invalidated, retested, or newly reported.",
+  "permanentSkip": [
+    "ChromeNative failures",
+    "old UTF8 candidates/failed directions",
+    "failed NDJSON timer direction"
+  ],
+  "noFullHistorySemanticExhaustivenessClaim": true
+}

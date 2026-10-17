@@ -1,0 +1,23 @@
+{
+  "path": "docs/audit-2026-10-17-round24/evidence/root-shutdown-dedup.json",
+  "bytes": 548101,
+  "sha256": "8a45f86146eabcfcbd2a9d3d3c4b1eb2e6238c107c2cb03c62c5748a33d91c3e",
+  "readAt": "2026-10-17T19:25:09.668351+00:00",
+  "machineHitCount": 2,
+  "savedHits": [
+    {
+      "pointer": "/hits/retention_context/3/context",
+      "query": "delivery-queue",
+      "text": "persist 重试会漏掉其他记录的 spool 清理\n\n- 位置：`packages/chat/src/delivery-queue.ts:279`\n- 现状：`schedulePersistRetry` 用 `if (this.persistRetryTimer) return` 保证全局\n  只有一个待重试，且 cleanup 闭包按记录捕获。若记录 X 失败已排程、记录 Y 随后\n  失败，则 Y 的 `discardSpool` 永不重试；Y 此时已从内存 `pending` 摘除（`:252-253`），\n  只能等下次 `start()` 的 `sweepOrphanedSpool`(`:116`) 回收。\n- 非消息丢失（终态文件整体写入，恢复语义仍是 at-least-once），但长驻网关在\n  一次瞬时磁盘错误后 spool 目录会持续增长。\n- 建议：改为按记录排队重试，而非单一全局定时器。\n\n### 7. 附件下载在全局互斥锁内进行\n\n- 位置：`packages/chat/src/delivery-queue.ts:160`（`spoolAttachments` 在 `withMutation` 内）、`:322`\n- 现状：`attachment.load()` 是无界网络拉取，却持有与 `process()` 记录终态",
+      "length": 584
+    },
+    {
+      "pointer": "/hits/retention_context/29/context",
+      "query": "in.flight",
+      "text": ": fix onStream callback return type in new tests`\n- `9374e3c5` `fix(desktop): report cleanup branch delete failures`\n- `adade780` `test(desktop): cover compact in-flight UI`\n- `689e3376` `fix(desktop): make mobile announce fallback ids unique`\n- `bed1df43` `fix(desktop): group detached worktrees as external`\n- `a59a86af` `chore(desktop): clarify background work panel scope`\n\n## 1. 总体结论\n\n这 6 个修复可以合入/push。上一轮 2 个 🔴 typecheck、4 个 🟡、2 个 🟢 对应修复方向正确，未发现修复本身引入的新阻塞问题或明显回归。\n\n阻塞项数：0 个 🔴。建议项：0 个 🟡。可选项：0 个 🟢。\n\n## 2. Comm",
+      "length": 589
+    }
+  ],
+  "cap": 35,
+  "scope": "Exact old metadata JSON recursion only; compact locators not whole windows yet."
+}

@@ -1,0 +1,1062 @@
+{
+  "files": [
+    {
+      "path": "packages/server/src/mobile-remote/pending-approvals.ts",
+      "sha256": "1503d41f1535224c972a23ada25238644394fc2a1e696668729c0f6263b989ac",
+      "atUTC": "2026-10-17T19:25:55.385691+00:00",
+      "captureTiming": "After actual bounded display; evidence reproduction only, not new semantic read or executable fixture",
+      "ranges": [
+        {
+          "start": 1,
+          "end": 69,
+          "lines": [
+            "/**",
+            " * Tracks currently pending core approval requests for mobile clients.",
+            " *",
+            " * Session snapshots intentionally contain only stream events. Approval requests",
+            " * are stateful: keep the latest unresolved raw JSON-RPC request here and replay",
+            " * it to a phone when that phone binds to the matching session.",
+            " */",
+            "export class PendingMobileApprovals {",
+            "  private readonly bySession = new Map<string, Map<string, string>>();",
+            "  private workerGeneration: number | undefined;",
+            "",
+            "  /** Requests belong to the worker that can answer them, never its successor. */",
+            "  setWorkerState(generation: number, alive: boolean): void {",
+            "    if (!alive || this.workerGeneration !== generation) this.bySession.clear();",
+            "    this.workerGeneration = generation;",
+            "  }",
+            "",
+            "  observeOutboundLine(line: string): void {",
+            "    let msg: { method?: unknown; params?: unknown };",
+            "    try {",
+            "      msg = JSON.parse(line) as { method?: unknown; params?: unknown };",
+            "    } catch {",
+            "      return;",
+            "    }",
+            "    if (!msg || typeof msg !== \"object\" || Array.isArray(msg)) return;",
+            "",
+            "    if (msg.method === \"agent/approvalRequest\") {",
+            "      const params = msg.params as Record<string, unknown> | null;",
+            "      const sessionId = params?.sessionId;",
+            "      const requestId = params?.requestId;",
+            "      if (typeof sessionId !== \"string\" || !sessionId) return;",
+            "      if (typeof requestId !== \"string\" || !requestId) return;",
+            "",
+            "      let pending = this.bySession.get(sessionId);",
+            "      if (!pending) {",
+            "        pending = new Map<string, string>();",
+            "        this.bySession.set(sessionId, pending);",
+            "      }",
+            "      pending.set(requestId, line);",
+            "      return;",
+            "    }",
+            "",
+            "    if (msg.method === \"agent/approvalResolved\") {",
+            "      const params = msg.params as Record<string, unknown> | null;",
+            "      const requestId = params?.requestId;",
+            "      if (typeof requestId === \"string\" && requestId) this.resolve(requestId);",
+            "    }",
+            "  }",
+            "",
+            "  resolve(requestId: string): void {",
+            "    for (const [sessionId, pending] of this.bySession) {",
+            "      pending.delete(requestId);",
+            "      if (pending.size === 0) this.bySession.delete(sessionId);",
+            "    }",
+            "  }",
+            "",
+            "  replayLines(sessionId: string): string[] {",
+            "    return [...(this.bySession.get(sessionId)?.values() ?? [])];",
+            "  }",
+            "",
+            "  /** The desktop has a queue across sessions; return only its current pending requests. */",
+            "  replayAllLines(): string[] {",
+            "    return [...this.bySession.values()].flatMap((pending) => [...pending.values()]);",
+            "  }",
+            "",
+            "  forgetSession(sessionId: string): void {",
+            "    this.bySession.delete(sessionId);",
+            "  }",
+            "}"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "packages/desktop/src/main/index.ts",
+      "sha256": "105b2b49a28e0a7ef10980ac5feaa3a07ff81e7197f5acbefd95feb2498224c0",
+      "atUTC": "2026-10-17T19:25:55.385691+00:00",
+      "captureTiming": "After actual bounded display; evidence reproduction only, not new semantic read or executable fixture",
+      "ranges": [
+        {
+          "start": 1824,
+          "end": 1843,
+          "lines": [
+            "    // Mirror every worker→renderer line onto any connected mobile clients, so",
+            "    // the phone sees the same stream (messages, tool summaries, approvals).",
+            "    bridge.subscribeOutbound((line, snapshotEntry) => {",
+            "      pendingMobileApprovals.setWorkerState(",
+            "        externalBridge.workerGeneration(),",
+            "        externalBridge.hasLiveWorker(),",
+            "      );",
+            "      pendingMobileApprovals.observeOutboundLine(line);",
+            "      if (snapshotEntry) {",
+            "        mobileRemote.broadcast({",
+            "          type: \"session.stream\",",
+            "          sessionId: snapshotEntry.sessionId,",
+            "          seq: snapshotEntry.seq,",
+            "          epoch: snapshotEntry.epoch,",
+            "          event: snapshotEntry.event,",
+            "        });",
+            "      } else {",
+            "        mobileRemote.broadcastRaw(line);",
+            "      }",
+            "    });"
+          ]
+        },
+        {
+          "start": 2094,
+          "end": 2107,
+          "lines": [
+            "    petLongTaskCoordinator = longTaskCoordinator;",
+            "    const decisionBridge = bridge;",
+            "    petImDecisions = new PetImDecisions({",
+            "      read: () => {",
+            "        pendingMobileApprovals.setWorkerState(",
+            "          decisionBridge.workerGeneration(),",
+            "          decisionBridge.hasLiveWorker(),",
+            "        );",
+            "        return collectImDecisions(",
+            "          aggregator.getSnapshot(),",
+            "          longTaskStore.getSnapshot().tasks,",
+            "          pendingMobileApprovals.replayAllLines(),",
+            "        );",
+            "      },"
+          ]
+        },
+        {
+          "start": 2127,
+          "end": 2133,
+          "lines": [
+            "    petImDecisions.start();",
+            "    unsubscribePetLongTaskStream = bridge.subscribeOutbound((_line, snapshotEntry) => {",
+            "      if (!snapshotEntry) return;",
+            "      void longTaskCoordinator",
+            "        .observeSessionEvent(snapshotEntry.sessionId, snapshotEntry.event)",
+            "        .catch((error) => dlog(\"main\", \"pet.longTask.stream.failed\", { error: String(error) }));",
+            "    });"
+          ]
+        },
+        {
+          "start": 6957,
+          "end": 6967,
+          "lines": [
+            "ipcMain.handle(\"agent:pendingApprovals\", (event) => {",
+            "  // Native approval events already reach all main windows. Preserve that queue",
+            "  // and its session envelopes, without replaying resolved historical requests.",
+            "  pendingMobileApprovals.setWorkerState(",
+            "    bridge?.workerGeneration() ?? 0,",
+            "    bridge?.hasLiveWorker() ?? false,",
+            "  );",
+            "  return [",
+            "    ...pendingMobileApprovals.replayAllLines().map((line) => JSON.parse(line).params),",
+            "    ...(externalRuntimeApprovals?.pendingForWindow(event.sender.id) ?? []),",
+            "  ];"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "packages/desktop/src/main/mobile-remote-orchestrator.ts",
+      "sha256": "40b62b4c9b912fd472d65d7077971e638a64109927a574ae8337cbc0f837e099",
+      "atUTC": "2026-10-17T19:25:55.385691+00:00",
+      "captureTiming": "After actual bounded display; evidence reproduction only, not new semantic read or executable fixture",
+      "ranges": [
+        {
+          "start": 124,
+          "end": 125,
+          "lines": [
+            "      snapshot: (id, sinceSeq = 0) => this.deps.getBridge()?.getSnapshot(id, sinceSeq),",
+            "      reply: (viewer, event) => this.deps.remote.sendToViewer(viewer, event),"
+          ]
+        },
+        {
+          "start": 245,
+          "end": 268,
+          "lines": [
+            "  private replayPendingMobileApprovals(sessionId: string, deviceId?: string): void {",
+            "    for (const line of this.deps.pendingApprovals.replayLines(sessionId)) {",
+            "      if (deviceId) this.deps.remote.sendRawToDevice(deviceId, line);",
+            "      else this.deps.remote.broadcastRaw(line);",
+            "    }",
+            "  }",
+            "",
+            "  broadcastApprovalResolved(params: {",
+            "    requestId: string;",
+            "    sessionId?: string;",
+            "    approved?: boolean;",
+            "    answer?: string;",
+            "  }): void {",
+            "    this.deps.pendingApprovals.resolve(params.requestId);",
+            "    const line = JSON.stringify({",
+            "      jsonrpc: \"2.0\",",
+            "      method: Methods.ApprovalResolved,",
+            "      params,",
+            "    });",
+            "    this.deps.broadcastToWindows(\"agent:msg\", line);",
+            "    this.deps.remote.broadcast({",
+            "      type: \"approval.resolved\",",
+            "      approvalId: params.requestId,",
+            "      ...(params.sessionId ? { sessionId: params.sessionId } : {}),"
+          ]
+        },
+        {
+          "start": 332,
+          "end": 344,
+          "lines": [
+            "  private ctx(): OrchestratorCtx {",
+            "    return {",
+            "      remote: this.deps.remote,",
+            "      outputRecovery: this.outputRecovery,",
+            "      externalCommands: this.externalCommands,",
+            "      uploads: this.deps.uploads,",
+            "      roomManager: this.deps.roomManager,",
+            "      approvalBridge: this.deps.approvalBridge,",
+            "      transcriptSubscriptions: this.deps.transcriptSubscriptions,",
+            "      getBridge: () => this.deps.getBridge(),",
+            "      mobileSessionCwds: this.mobileSessionCwds,",
+            "      mobilePermissionModes: this.mobilePermissionModes,",
+            "      deviceState: (deviceId) => this.deviceState(deviceId),"
+          ]
+        },
+        {
+          "start": 366,
+          "end": 367,
+          "lines": [
+            "      replayPendingMobileApprovals: (sessionId, deviceId) =>",
+            "        this.replayPendingMobileApprovals(sessionId, deviceId),"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "packages/desktop/src/main/mobile-remote/handle-client-event.ts",
+      "sha256": "ed4d8b65512f7be8f31572b9c47b86f4a4f587bd4c9fe94541bcf108108a1f71",
+      "atUTC": "2026-10-17T19:25:55.385691+00:00",
+      "captureTiming": "After actual bounded display; evidence reproduction only, not new semantic read or executable fixture",
+      "ranges": [
+        {
+          "start": 236,
+          "end": 250,
+          "lines": [
+            "export async function handleClientEvent(",
+            "  ctx: OrchestratorCtx,",
+            "  event: AuthenticatedMobileClientEvent,",
+            "): Promise<void> {",
+            "  const commandSelection = ctx.externalCommands?.observe(event);",
+            "  if (ctx.outputRecovery) {",
+            "    const recovery = ctx.outputRecovery.handle(event);",
+            "    if (event.type === \"session.select\" && event.recoveryId) {",
+            "      // A later selection/create/room transition can revoke this grant while",
+            "      // authority awaits. It must not write the retired device selection back.",
+            "      if (!(await recovery)) return;",
+            "    } else if (event.type === \"session.outputJournal\") await recovery;",
+            "    else void recovery;",
+            "  }",
+            "  if (event.type === \"session.outputJournal\" || event.type === \"session.recovery.cancel\") return;"
+          ]
+        },
+        {
+          "start": 282,
+          "end": 315,
+          "lines": [
+            "  const bridge = ctx.getBridge();",
+            "  if (!bridge) return;",
+            "  const runContext = bridge.getLastRunContext();",
+            "  // Per-device state: the remote host tags every authenticated event with the",
+            "  // device id (see onClientEvent wiring). Replies that are device-specific go",
+            "  // back to ONLY that device via sendToDevice; the agent output stream is",
+            "  // still broadcast (each front-end filters to its bound session).",
+            "  const deviceId = event.deviceId;",
+            "  const st = deviceId ? ctx.deviceState(deviceId) : {};",
+            "  const reply = (e: MobileServerEvent): void => {",
+            "    if (deviceId) ctx.remote.sendToDevice(deviceId, e);",
+            "    else ctx.remote.broadcast(e);",
+            "  };",
+            "  // session selection priority: explicit per-event → this device's selection →",
+            "  // desktop's current run → a stable minted per-device session.",
+            "  const resolveSessionId = (explicit?: string): string =>",
+            "    explicit ?? st.selectedSessionId ?? runContext.sessionId ?? ctx.ensureMobileSessionId(st);",
+            "  if (event.type === \"session.select\") {",
+            "    await commandSelection;",
+            "    st.selectedSessionId = event.sessionId;",
+            "    st.selectedProjectId = undefined;",
+            "    st.selectedRootId = undefined;",
+            "    const cwd = await ctx.lookupDiskSessionCwd(event.sessionId);",
+            "    if (cwd !== undefined) st.selectedCwd = cwd;",
+            "    if (deviceId) ctx.sendMobilePermissionMode(deviceId, event.sessionId);",
+            "    else {",
+            "      reply({",
+            "        type: \"permission.mode\",",
+            "        sessionId: event.sessionId,",
+            "        mode: ctx.mobilePermissionModes.get(event.sessionId) ?? \"default\",",
+            "      });",
+            "    }",
+            "    ctx.replayPendingMobileApprovals(event.sessionId, deviceId);",
+            "    return;"
+          ]
+        },
+        {
+          "start": 567,
+          "end": 590,
+          "lines": [
+            "  if (event.type === \"session.sync\") {",
+            "    // External output is sent only through the selected per-socket authority;",
+            "    // negotiated peers already receive its head on their bounded journal pages.",
+            "    if (ctx.externalCommands?.isExternal(event.sessionId, event.viewerId)) return;",
+            "    let snapshot = bridge.getSnapshot(",
+            "      event.sessionId,",
+            "      typeof event.sinceSeq === \"number\" ? event.sinceSeq : 0,",
+            "    );",
+            "    // A cursor from an earlier Main lifetime cannot filter this process's log.",
+            "    // Legacy peers omit epochs and retain the original incremental contract.",
+            "    if (event.epoch && snapshot.epoch && event.epoch !== snapshot.epoch) {",
+            "      snapshot = bridge.getSnapshot(event.sessionId, 0);",
+            "    }",
+            "    reply({",
+            "      type: \"session.snapshot\",",
+            "      sessionId: event.sessionId,",
+            "      entries: snapshot.events,",
+            "      nextSeq: snapshot.nextSeq,",
+            "      ...(snapshot.outputCursor ? { outputCursor: snapshot.outputCursor } : {}),",
+            "      ...(snapshot.epoch ? { epoch: snapshot.epoch } : {}),",
+            "    });",
+            "    ctx.replayPendingMobileApprovals(event.sessionId, deviceId);",
+            "    return;",
+            "  }"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "packages/desktop/src/main/agent-bridge.ts",
+      "sha256": "2ba6a48296c36b207ac799b4beaf0a1b9335d8711859245e3f246d6b88906d47",
+      "atUTC": "2026-10-17T19:25:55.385691+00:00",
+      "captureTiming": "After actual bounded display; evidence reproduction only, not new semantic read or executable fixture",
+      "ranges": [
+        {
+          "start": 435,
+          "end": 476,
+          "lines": [
+            "      onWorkerStarted: () => {",
+            "        this.workerRuns.beginWorker();",
+            "        this.petWorkerGeneration.beginWorker();",
+            "        this.emitPetProjection({ kind: \"lifecycle\", state: \"active\" });",
+            "      },",
+            "      onSpawnFailed: () => {",
+            "        this.emitPetProjection({ kind: \"lifecycle\", state: \"disconnected\" });",
+            "        this.safeSend(\"agent:lifecycle\", {",
+            "          type: \"gave_up\",",
+            "          sessionIds: this.workerRuns.endWorker(),",
+            "        });",
+            "      },",
+            "      onSpawnError: () => {",
+            "        const sessionIds = this.workerRuns.endWorker();",
+            "        this.abortLocalOAuthLinkActions();",
+            "        this.webConfiguration.workerExited();",
+            "        this.childBrowserLifetime.close();",
+            "        this.evictPendingTentativeRuns();",
+            "        this.failPendingQuickChatForks();",
+            "        // Snapshots intentionally survive worker exit — a respawn may resume",
+            "        // the same session, and a remounted renderer still needs to replay.",
+            "        this.snapshots.onWorkerExit(sessionIds);",
+            "        this.emitPetProjection({ kind: \"lifecycle\", state: \"disconnected\" });",
+            "        this.safeSend(\"agent:lifecycle\", { type: \"gave_up\", sessionIds });",
+            "      },",
+            "      onExit: ({ code, clean, gaveUp }) => {",
+            "        const sessionIds = this.workerRuns.endWorker();",
+            "        this.abortLocalOAuthLinkActions();",
+            "        this.webConfiguration.workerExited();",
+            "        this.childBrowserLifetime.close();",
+            "        this.evictPendingTentativeRuns();",
+            "        this.failPendingQuickChatForks();",
+            "        this.snapshots.onWorkerExit(sessionIds);",
+            "        if (clean) {",
+            "          this.emitPetProjection({ kind: \"lifecycle\", state: \"reclaimed\" });",
+            "          this.safeSend(\"agent:lifecycle\", { type: \"exited\", code, sessionIds });",
+            "          return;",
+            "        }",
+            "        this.emitPetProjection({ kind: \"lifecycle\", state: \"disconnected\" });",
+            "        if (gaveUp) this.safeSend(\"agent:lifecycle\", { type: \"gave_up\", sessionIds });",
+            "        else this.safeSend(\"agent:lifecycle\", { type: \"exited\", code, sessionIds });",
+            "      },"
+          ]
+        },
+        {
+          "start": 478,
+          "end": 479,
+          "lines": [
+            "    this.core.subscribeLines((line) => this.handleWorkerLine(line));",
+            "    this.registerWindow(window);"
+          ]
+        },
+        {
+          "start": 1145,
+          "end": 1166,
+          "lines": [
+            "  private safeSend(channel: string, payload: unknown): void {",
+            "    for (const w of this.windows) {",
+            "      if (w.isDestroyed()) {",
+            "        this.windows.delete(w);",
+            "        this.panelHostWindowRoutes.releaseWindow(w.webContents.id);",
+            "        continue;",
+            "      }",
+            "      try {",
+            "        w.webContents.send(channel, payload);",
+            "      } catch (error) {",
+            "        dlog(\"bridge\", \"renderer.send_failed\", {",
+            "          channel,",
+            "          windowId: w.id,",
+            "          error: String(error),",
+            "        });",
+            "        if (w.isDestroyed()) {",
+            "          this.windows.delete(w);",
+            "          this.panelHostWindowRoutes.releaseWindow(w.webContents.id);",
+            "        }",
+            "      }",
+            "    }",
+            "  }"
+          ]
+        },
+        {
+          "start": 1738,
+          "end": 1748,
+          "lines": [
+            "  private emitPetProjection(event: AgentBridgePetEvent): void {",
+            "    for (const observer of this.petProjectionObservers) {",
+            "      try {",
+            "        void Promise.resolve(observer(event)).catch((error) =>",
+            "          dlog(\"bridge\", \"pet_projection.observer_failed\", { error: String(error) }),",
+            "        );",
+            "      } catch (error) {",
+            "        dlog(\"bridge\", \"pet_projection.observer_failed\", { error: String(error) });",
+            "      }",
+            "    }",
+            "  }"
+          ]
+        },
+        {
+          "start": 1781,
+          "end": 1783,
+          "lines": [
+            "  hasLiveWorker(): boolean {",
+            "    return this.core.hasLiveWorker();",
+            "  }"
+          ]
+        },
+        {
+          "start": 1816,
+          "end": 1818,
+          "lines": [
+            "  workerGeneration(): number {",
+            "    return this.core.workerGeneration();",
+            "  }"
+          ]
+        },
+        {
+          "start": 2014,
+          "end": 2021,
+          "lines": [
+            "  /**",
+            "   * Snapshot of a session's events for a (re)subscribing renderer. With",
+            "   * `sinceSeq`, returns only the events the renderer is missing past that",
+            "   * cursor; the renderer aligns them against its live stream by seq.",
+            "   */",
+            "  getSnapshot(sessionId: string, sinceSeq = 0): Snapshot {",
+            "    return this.snapshots.get(sessionId, sinceSeq);",
+            "  }"
+          ]
+        },
+        {
+          "start": 2312,
+          "end": 2325,
+          "lines": [
+            "  /**",
+            "   * Observe every worker→renderer line (e.g. to mirror onto the Mobile Web",
+            "   * Remote). Returns an unsubscribe. Taps are read-only and isolated: a",
+            "   * throwing tap never disrupts the renderer stream.",
+            "   */",
+            "  subscribeOutbound(",
+            "    tap: (",
+            "      line: string,",
+            "      snapshotEntry?: SnapshotEntry & { sessionId: string; epoch: string },",
+            "    ) => void,",
+            "  ): () => void {",
+            "    this.outboundTaps.add(tap);",
+            "    return () => this.outboundTaps.delete(tap);",
+            "  }"
+          ]
+        },
+        {
+          "start": 2333,
+          "end": 2337,
+          "lines": [
+            "  /** cwd/sessionId of the most recent run — the default context for a mobile",
+            "   *  client that didn't specify one. */",
+            "  getLastRunContext(): { cwd?: string; sessionId?: string } {",
+            "    return this.lastRunContext;",
+            "  }"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "packages/web/src/hooks/useRemoteSocket.ts",
+      "sha256": "a7f990a72bb8e103297542e5e3534ffeb874737d4126b04ac848b2a3260d4259",
+      "atUTC": "2026-10-17T19:25:55.385691+00:00",
+      "captureTiming": "After actual bounded display; evidence reproduction only, not new semantic read or executable fixture",
+      "ranges": [
+        {
+          "start": 189,
+          "end": 198,
+          "lines": [
+            "      ws.onmessage = (e) => {",
+            "        if (wsRef.current !== ws || closedByUs.current) return;",
+            "        let msg: unknown;",
+            "        try {",
+            "          msg = JSON.parse(String(e.data));",
+            "        } catch {",
+            "          return;",
+            "        }",
+            "        if (!msg || typeof msg !== \"object\" || Array.isArray(msg)) return;",
+            "        const obj = msg as Record<string, unknown>;"
+          ]
+        },
+        {
+          "start": 245,
+          "end": 253,
+          "lines": [
+            "        // Typed server events carry a string `type`; raw worker lines carry a",
+            "        // `method` (agent/streamEvent, agent/approvalRequest, …). Route both.",
+            "        if (typeof obj.type === \"string\") {",
+            "          handlersRef.current.onServerEvent?.(msg as MobileServerEvent);",
+            "        }",
+            "        if (typeof obj.method === \"string\") {",
+            "          handlersRef.current.onRawLine?.(msg);",
+            "        }",
+            "      };"
+          ]
+        },
+        {
+          "start": 272,
+          "end": 280,
+          "lines": [
+            "    // Reconnect proactively when the OS reports the network is back or the tab",
+            "    // becomes visible again (phones suspend the socket in the background — the",
+            "    // close event often doesn't fire until the user returns).",
+            "    const resyncOrReconnect = (reason: ResyncReason): void => {",
+            "      if (closedByUs.current || connectionPageHidden()) return;",
+            "      const ws = wsRef.current;",
+            "      if (ws && ws.readyState === WebSocket.OPEN && statusRef.current === \"online\") {",
+            "        health?.resume();",
+            "        handlersRef.current.onResyncNeeded?.(reason);"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "packages/web/src/hooks/useRemoteApp.ts",
+      "sha256": "ddead03238578425c81c94ee148496b4e1264ee9ffbfe20418af137eb1f3624d",
+      "atUTC": "2026-10-17T19:25:55.385691+00:00",
+      "captureTiming": "After actual bounded display; evidence reproduction only, not new semantic read or executable fixture",
+      "ranges": [
+        {
+          "start": 521,
+          "end": 533,
+          "lines": [
+            "  const clearApprovalsIfTerminal = useCallback((events: unknown[]) => {",
+            "    if (",
+            "      events.some((event) => {",
+            "        const type = (event as { type?: unknown } | null)?.type;",
+            "        return type === \"turn_complete\" || type === \"error\";",
+            "      })",
+            "    ) {",
+            "      // Asynchronous questions outlive the current run. Only a resolution",
+            "      // notification (or a new worker epoch) makes their answer stale.",
+            "      approvalsRef.current = approvalsRef.current.filter((approval) => approval.asynchronous);",
+            "      setApprovals((prev) => prev.filter((approval) => approval.asynchronous));",
+            "    }",
+            "  }, []);"
+          ]
+        },
+        {
+          "start": 735,
+          "end": 753,
+          "lines": [
+            "        case \"session.snapshot\": {",
+            "          if (outputClient.owns(event.sessionId)) {",
+            "            outputClient.advanceSnapshot(event.sessionId, event.outputCursor);",
+            "            break;",
+            "          }",
+            "          if (event.sessionId !== boundSessionRef.current || activeRoomIdRef.current) break;",
+            "          if (epochHistorySessionRef.current === event.sessionId) break;",
+            "          const session = sessionCursor(event.sessionId);",
+            "          if (event.outputCursor && outputClient.begin(event.sessionId)) {",
+            "            session.awaitingSnapshot = true;",
+            "            break;",
+            "          }",
+            "          const changed = alignSessionEpoch(session, event.epoch);",
+            "          if (session.historyUnpaired) break;",
+            "          if (changed) {",
+            "            dispatchChat({ kind: \"stream_epoch_changed\" });",
+            "            setApprovals([]);",
+            "            session.awaitingSnapshot = true;",
+            "          }"
+          ]
+        },
+        {
+          "start": 1251,
+          "end": 1289,
+          "lines": [
+            "  const onRawLine = useCallback(",
+            "    (raw: unknown) => {",
+            "      const obj = raw as Record<string, unknown>;",
+            "      if (typeof obj.method === \"string\") {",
+            "        optionsRef.current.onNotification?.(",
+            "          obj.method,",
+            "          obj.params && typeof obj.params === \"object\"",
+            "            ? (obj.params as Record<string, unknown>)",
+            "            : {},",
+            "        );",
+            "      }",
+            "      // Permission requests arrive as agent/approvalRequest worker lines.",
+            "      if (obj.method === \"agent/approvalRequest\" && obj.params) {",
+            "        const params = obj.params as Record<string, unknown>;",
+            "        const rq = params.request as",
+            "          | {",
+            "              toolName?: string;",
+            "              description?: string;",
+            "              args?: Record<string, unknown>;",
+            "              riskLevel?: string;",
+            "            }",
+            "          | undefined;",
+            "        if (rq) {",
+            "          const { summary, risk } = summarizeApproval(rq.args, rq.riskLevel, rq.toolName);",
+            "          const askOptions = extractAskUserOptions(rq.args);",
+            "          addApproval({",
+            "            requestId: String(params.requestId),",
+            "            sessionId: typeof params.sessionId === \"string\" ? params.sessionId : undefined,",
+            "            toolName: rq.toolName ?? t(\"mobile.tool.fallbackName\"),",
+            "            description: rq.description ?? \"\",",
+            "            summary: askOptions ? (rq.description ?? summary) : summary,",
+            "            risk,",
+            "            options: askOptions?.options,",
+            "            optionsOnly: askOptions?.optionsOnly,",
+            "            asynchronous: rq.toolName === \"__ask_user__\" && rq.args?.asynchronous === true,",
+            "            pathScoped: PATH_SCOPED.has(rq.toolName ?? \"\"),",
+            "          });",
+            "        }",
+            "        return;"
+          ]
+        },
+        {
+          "start": 1291,
+          "end": 1295,
+          "lines": [
+            "      const resolvedRequestId = rawApprovalResolvedRequestId(raw);",
+            "      if (resolvedRequestId) {",
+            "        clearApproval(resolvedRequestId);",
+            "        return;",
+            "      }"
+          ]
+        },
+        {
+          "start": 1349,
+          "end": 1378,
+          "lines": [
+            "    const sessionId = boundSessionRef.current;",
+            "    if (!sessionId) return;",
+            "    const cursor = sessionCursor(sessionId);",
+            "    if (outputClient.begin(sessionId)) {",
+            "      cursor.awaitingSnapshot = true;",
+            "      setLoadingKey(\"sessionHistory\", true);",
+            "      return;",
+            "    }",
+            "    if (epochHistorySessionRef.current === sessionId || cursor.historyUnpaired) {",
+            "      epochHistorySessionRef.current = sessionId;",
+            "      setLoadingKey(\"sessionHistory\", true);",
+            "      sendRef.current?.({ type: \"session.history\", sessionId });",
+            "      return;",
+            "    }",
+            "    sendRef.current?.({",
+            "      type: \"session.sync\",",
+            "      sessionId,",
+            "      sinceSeq: cursor.awaitingSnapshot ? 0 : cursor.appliedSeq,",
+            "      ...(cursor.epoch ? { epoch: cursor.epoch } : {}),",
+            "    });",
+            "  }, [setLoadingKey, sessionCursor, requestRoomCatchup]);",
+            "",
+            "  const socket = useRemoteSocket({",
+            "    onServerEvent,",
+            "    onRawLine,",
+            "    onResyncNeeded: requestActiveResync,",
+            "  });",
+            "  sendRef.current = socket.send;",
+            "  connectionGenerationRef.current = socket.connectionGeneration;",
+            ""
+          ]
+        }
+      ]
+    },
+    {
+      "path": "packages/desktop/src/main/pet/pet-im-decisions.ts",
+      "sha256": "a8e8009b08ad0e07666714c795fdc0c3bfda7bc1db460195fa8bd1f89c1756ef",
+      "atUTC": "2026-10-17T19:25:55.385691+00:00",
+      "captureTiming": "After actual bounded display; evidence reproduction only, not new semantic read or executable fixture",
+      "ranges": [
+        {
+          "start": 121,
+          "end": 148,
+          "lines": [
+            "export class PetImDecisions {",
+            "  private timer?: ReturnType<typeof setInterval>;",
+            "  private ticking = false;",
+            "  private readonly sent = new Set<string>();",
+            "  private readonly submitting = new Set<string>();",
+            "  private readonly notices = new Map<string, GatewayControlEventInput>();",
+            "  constructor(",
+            "    private readonly options: {",
+            "      read: () => ImDecision[];",
+            "      approve: (entry: ImDecision, decision: Decision) => Promise<void>;",
+            "      publish: (event: GatewayControlEventInput) => Promise<void>;",
+            "      onError: (error: unknown) => void;",
+            "      now?: () => number;",
+            "      graceMs?: number;",
+            "      timeoutMs?: number;",
+            "    },",
+            "  ) {}",
+            "",
+            "  start(): void {",
+            "    if (this.timer) return;",
+            "    this.timer = setInterval(() => void this.tick(), 5_000);",
+            "    this.timer.unref?.();",
+            "    void this.tick();",
+            "  }",
+            "  stop(): void {",
+            "    if (this.timer) clearInterval(this.timer);",
+            "    this.timer = undefined;",
+            "  }"
+          ]
+        },
+        {
+          "start": 156,
+          "end": 163,
+          "lines": [
+            "  async tick(): Promise<void> {",
+            "    if (this.ticking) return;",
+            "    this.ticking = true;",
+            "    try {",
+            "      const entries = this.options.read();",
+            "      const live = new Set(entries.map((entry) => entry.code));",
+            "      for (const code of this.sent) if (!live.has(code)) this.sent.delete(code);",
+            "      for (const entry of entries) {"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "packages/desktop/src/main/mobile-remote/output-recovery.ts",
+      "sha256": "1f8fafdb6d3a1fb0de0d9a5908e38c50ba1deb0e635622503739ab0c54ab35f9",
+      "atUTC": "2026-10-17T19:25:55.385691+00:00",
+      "captureTiming": "After actual bounded display; evidence reproduction only, not new semantic read or executable fixture",
+      "ranges": [
+        {
+          "start": 138,
+          "end": 154,
+          "lines": [
+            "  async handle(event: AuthenticatedMobileClientEvent): Promise<boolean> {",
+            "    const viewer = event.viewerId;",
+            "    if (!viewer || !event.deviceId) return false;",
+            "    if (",
+            "      event.type === \"session.recovery.cancel\" ||",
+            "      event.type === \"session.create\" ||",
+            "      event.type === \"ccRoom.openSession\" ||",
+            "      event.type === \"room.open\" ||",
+            "      event.type === \"room.create\" ||",
+            "      event.type === \"room.send\"",
+            "    ) {",
+            "      this.revoke(viewer);",
+            "      return true;",
+            "    }",
+            "    if (event.type === \"session.select\") {",
+            "      this.revoke(viewer);",
+            "      if (!event.recoveryId) return true;"
+          ]
+        },
+        {
+          "start": 174,
+          "end": 185,
+          "lines": [
+            "        this.deps.reply(viewer, {",
+            "          type: \"session.recovery.ready\",",
+            "          sessionId: event.sessionId,",
+            "          recoveryId: event.recoveryId,",
+            "          ok: true,",
+            "          ...(this.deps.journalRequired?.(event.sessionId) ? { journalRequired: true } : {}),",
+            "        });",
+            "        if (binding.pending) {",
+            "          this.pendingMirrors.add(binding);",
+            "          this.pumpMirrors();",
+            "        }",
+            "        return true;"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "packages/desktop/src/main/mobile-remote/external-runtime-commands.ts",
+      "sha256": "7188cabf3ae2de925cb2caa26e345df97dc8d3037102635849abedf1d1c9ceff",
+      "atUTC": "2026-10-17T19:25:55.385691+00:00",
+      "captureTiming": "After actual bounded display; evidence reproduction only, not new semantic read or executable fixture",
+      "ranges": [
+        {
+          "start": 9,
+          "end": 18,
+          "lines": [
+            "/** Persisted provider identity survives a missing/invalid model key. */",
+            "export function isPersistedExternalRuntime(",
+            "  state: { provider?: string; model?: string } | undefined,",
+            "): boolean {",
+            "  return (",
+            "    state?.provider === \"codex\" ||",
+            "    state?.provider === \"claude-code\" ||",
+            "    !!parseExternalRuntimeModelKey(state?.model)",
+            "  );",
+            "}"
+          ]
+        },
+        {
+          "start": 56,
+          "end": 87,
+          "lines": [
+            "  isExternal(sessionId: string, viewer?: string, newlyMintedNative = false): boolean {",
+            "    const selection = viewer ? this.selections.get(viewer) : undefined;",
+            "    const exists = this.deps.exists(sessionId);",
+            "    const freshNative = newlyMintedNative && !exists;",
+            "    return (",
+            "      (!freshNative && !exists) ||",
+            "      this.deps.isExternal(sessionId) ||",
+            "      (!!viewer && this.externalRoutes.get(viewer) === sessionId) ||",
+            "      // An evicted/refused/unselected viewer has no proof that an explicit",
+            "      // Session still uses its native producer. Never fall through to Core.",
+            "      (!!viewer &&",
+            "        !freshNative &&",
+            "        (!selection || selection.sessionId !== sessionId || selection.external))",
+            "    );",
+            "  }",
+            "",
+            "  async observe(",
+            "    event: MobileClientEvent & { viewerId?: string; deviceId?: string },",
+            "  ): Promise<void> {",
+            "    const viewer = event.viewerId,",
+            "      device = event.deviceId;",
+            "    if (!viewer || !device) return;",
+            "    if (event.type !== \"session.select\") {",
+            "      if (",
+            "        event.type === \"session.create\" ||",
+            "        event.type === \"session.recovery.cancel\" ||",
+            "        [\"room.open\", \"room.create\", \"room.send\", \"ccRoom.openSession\"].includes(event.type)",
+            "      )",
+            "        this.revoke(viewer, event.type === \"session.create\");",
+            "      return;",
+            "    }",
+            "    this.revoke(viewer);"
+          ]
+        },
+        {
+          "start": 91,
+          "end": 102,
+          "lines": [
+            "    // Initial classification uses persisted producer identity. The command",
+            "    // routing guard above separately requires a current accepted selection.",
+            "    const external =",
+            "      this.deps.isExternal(event.sessionId) ||",
+            "      this.externalRoutes.get(viewer) === event.sessionId ||",
+            "      !this.deps.exists(event.sessionId);",
+            "    if (external) {",
+            "      if (!this.externalRoutes.has(viewer) && this.externalRoutes.size >= 128) return;",
+            "      this.externalRoutes.set(viewer, event.sessionId);",
+            "    }",
+            "    const selection: Selection = { sessionId: event.sessionId, deviceId: device, external };",
+            "    this.selections.set(viewer, selection);"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "packages/desktop/src/main/SessionSnapshotStore.ts",
+      "sha256": "d4b3f3841058ef82c1d4320a0cbd7ee29fc4816a68cde667e264713fd6680dca",
+      "atUTC": "2026-10-17T19:25:55.385691+00:00",
+      "captureTiming": "After actual bounded display; evidence reproduction only, not new semantic read or executable fixture",
+      "ranges": [
+        {
+          "start": 68,
+          "end": 68,
+          "lines": [
+            "  readonly epoch = randomUUID();"
+          ]
+        },
+        {
+          "start": 179,
+          "end": 205,
+          "lines": [
+            "  get(sessionId: string, sinceSeq = 0): Snapshot {",
+            "    const proof = this.persistence?.read(sessionId);",
+            "    const coverage = {",
+            "      ...(proof?.unpaired ? { outputUnpaired: true } : {}),",
+            "      ...(proof?.inputIds.length ? { outputInputIds: proof.inputIds } : {}),",
+            "      ...(proof?.incarnation ? { outputCoverageIdentity: proof.incarnation } : {}),",
+            "      ...(proof?.journalIdentity ? { outputJournalIdentity: proof.journalIdentity } : {}),",
+            "    };",
+            "    const log = this.logs.get(sessionId);",
+            "    if (!log)",
+            "      return { epoch: this.epoch, events: [], nextSeq: 1, topLevelRunning: false, ...coverage };",
+            "    const events = sinceSeq > 0 ? log.events.filter((e) => e.seq > sinceSeq) : log.events.slice();",
+            "    return {",
+            "      epoch: this.epoch,",
+            "      events,",
+            "      nextSeq: log.nextSeq,",
+            "      topLevelRunning: log.topLevelRun.running,",
+            "      ...(log.outputCursor ? { outputCursor: log.outputCursor } : {}),",
+            "      ...coverage,",
+            "      ...(log.coverage.incomplete || log.publicationFailed || proof?.unpaired",
+            "        ? { outputUnpaired: true }",
+            "        : {}),",
+            "      ...([...(proof?.inputIds ?? []), ...log.coverage.inputIds].length",
+            "        ? { outputInputIds: [...new Set([...(proof?.inputIds ?? []), ...log.coverage.inputIds])] }",
+            "        : {}),",
+            "    };",
+            "  }"
+          ]
+        },
+        {
+          "start": 207,
+          "end": 217,
+          "lines": [
+            "  /**",
+            "   * A worker exited. Retain replay events, but mark only sessions owned by",
+            "   * that worker idle. Other producers (for example in-main automation) share",
+            "   * this store and must keep their independent run state.",
+            "   */",
+            "  onWorkerExit(ownedSessionIds: Iterable<string>): void {",
+            "    for (const sessionId of ownedSessionIds) {",
+            "      const log = this.logs.get(sessionId);",
+            "      if (log) log.topLevelRun = { ...log.topLevelRun, running: false };",
+            "    }",
+            "  }"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "packages/desktop/src/renderer/app/useHostSubscriptions.ts",
+      "sha256": "8b20a7a96f7d89ae000f3ebde79aeae3bba506683940dae6c8e2150444a0eddc",
+      "atUTC": "2026-10-17T19:25:55.385691+00:00",
+      "captureTiming": "After actual bounded display; evidence reproduction only, not new semantic read or executable fixture",
+      "ranges": [
+        {
+          "start": 966,
+          "end": 989,
+          "lines": [
+            "    const offApprovalResolved = window.codeshell.onApprovalResolved(handleApprovalResolved);",
+            "    // Subscribe first so a decision made while the read is in flight wins over",
+            "    // an older snapshot. Use the same routing and permission path as live events.",
+            "    const pendingApprovals = window.codeshell.getPendingApprovals?.();",
+            "    if (pendingApprovals) {",
+            "      void pendingApprovals",
+            "        .then((pending) => {",
+            "          if (!approvalHandlingActive) return;",
+            "          const external = externalApprovalsRef.current;",
+            "          external.pending = new Set(externalRequestsDuringRestore);",
+            "          for (const env of pending) {",
+            "            // A Core worker exit invalidates only its own snapshot entries.",
+            "            if (approvalRestoreActive || env.source === \"external-runtime\")",
+            "              handleApproval(env, true);",
+            "          }",
+            "          external.ready = true;",
+            "          refreshExternalApprovals((version) => version + 1);",
+            "        })",
+            "        .catch((error) => window.codeshell.log(\"approval.restore_failed\", { error: String(error) }))",
+            "        .finally(() => {",
+            "          restoringApprovals = false;",
+            "          resolvedDuringRestore.clear();",
+            "        });",
+            "    } else restoringApprovals = false;"
+          ]
+        },
+        {
+          "start": 1054,
+          "end": 1083,
+          "lines": [
+            "    const offLifecycle = window.codeshell.onAgentLifecycle((evt: AgentLifecycleEvent) => {",
+            "      window.codeshell.log(\"lifecycle\", evt as Record<string, unknown>);",
+            "      if (evt.type === \"exited\" || evt.type === \"gave_up\") {",
+            "        // A snapshot from the old worker cannot restore actionable requests.",
+            "        approvalRestoreActive = false;",
+            "        for (const requestId of [...coreApprovalIdsRef.current])",
+            "          handleApprovalResolved({ requestId });",
+            "        // Main knows the exact in-flight worker owners. Shared routes also",
+            "        // contain independent Main and external runs, which survive this exit.",
+            "        // Older bridges lack the list; retain their native cleanup while",
+            "        // excluding runtimes recovered by the external state subscription.",
+            "        const sessionIds =",
+            "          evt.sessionIds ??",
+            "          [...engineToBucketRef.current.keys()].filter(",
+            "            (id) => !externalRuntimeSessionIdsRef.current.has(id),",
+            "          );",
+            "        const affected = new Set<string>();",
+            "        for (const id of sessionIds) {",
+            "          const bucket = resolveBucket(",
+            "            id,",
+            "            engineToBucketRef.current,",
+            "            sessionIndicesRef.current,",
+            "            null,",
+            "          );",
+            "          if (bucket) affected.add(bucket);",
+            "        }",
+            "        for (const bucket of affected) setBusyForKey(bucket, false);",
+            "        if (runningBucketRef.current && affected.has(runningBucketRef.current))",
+            "          runningBucketRef.current = null;",
+            "      }"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "packages/desktop/src/renderer/pet/PetStateProvider.tsx",
+      "sha256": "f12a0eefbebbcf8923940e0d3025d983023ca9a4a8b7d49b852ae5bc578c5c35",
+      "atUTC": "2026-10-17T19:25:55.385691+00:00",
+      "captureTiming": "After actual bounded display; evidence reproduction only, not new semantic read or executable fixture",
+      "ranges": [
+        {
+          "start": 523,
+          "end": 532,
+          "lines": [
+            "    const unsubscribeStream = shell?.onStreamEvent?.(receiveStream);",
+            "    const unsubscribeLifecycle = shell?.onAgentLifecycle?.((event) => {",
+            "      if (!active || (event.type !== \"exited\" && event.type !== \"gave_up\")) return;",
+            "      if (!knownPetSessionId || !transcriptHydrated) {",
+            "        // Preserve ordering with buffered starts: history loading after a",
+            "        // crash must not resurrect the dead worker's busy indicator.",
+            "        pushBoundedPetEvent(bufferedStream, { workerExited: true }, PET_STREAM_BUFFER_LIMIT);",
+            "      }",
+            "      applyWorkerExit();",
+            "    });"
+          ]
+        }
+      ]
+    }
+  ],
+  "productExecution": 0
+}

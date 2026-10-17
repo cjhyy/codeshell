@@ -1,0 +1,2835 @@
+[
+  {
+    "path": "packages/server/src/mobile-remote/pairing.ts",
+    "sha256": "19777b68d1ad6297b9ea182298dd457077340dc4b1977433b60192fdc24af5ca",
+    "scope": "Copied after actual display and current hash check, not pre-read raw transcript.",
+    "lines": [
+      {
+        "number": 1,
+        "text": "import { randomBytes } from \"node:crypto\";"
+      },
+      {
+        "number": 2,
+        "text": "import type { PairingToken } from \"./types.js\";"
+      },
+      {
+        "number": 3,
+        "text": ""
+      },
+      {
+        "number": 4,
+        "text": "export const MAX_PENDING_PAIRING_TOKENS = 256;"
+      },
+      {
+        "number": 5,
+        "text": ""
+      },
+      {
+        "number": 6,
+        "text": "export class PairingTokenManager {"
+      },
+      {
+        "number": 7,
+        "text": "  private tokens = new Map<string, PairingToken>();"
+      },
+      {
+        "number": 8,
+        "text": ""
+      },
+      {
+        "number": 9,
+        "text": "  constructor(private readonly now: () => number = () => Date.now()) {}"
+      },
+      {
+        "number": 10,
+        "text": ""
+      },
+      {
+        "number": 11,
+        "text": "  createToken(ttlMs = 10 * 60 * 1000): PairingToken {"
+      },
+      {
+        "number": 12,
+        "text": "    if (!Number.isSafeInteger(ttlMs) || ttlMs <= 0) {"
+      },
+      {
+        "number": 13,
+        "text": "      throw new Error(\"Pairing token TTL must be a positive safe integer\");"
+      },
+      {
+        "number": 14,
+        "text": "    }"
+      },
+      {
+        "number": 15,
+        "text": "    const now = this.now();"
+      },
+      {
+        "number": 16,
+        "text": "    if (!Number.isSafeInteger(now) || now < 0 || now > Number.MAX_SAFE_INTEGER - ttlMs) {"
+      },
+      {
+        "number": 17,
+        "text": "      throw new Error(\"Pairing token clock is invalid\");"
+      },
+      {
+        "number": 18,
+        "text": "    }"
+      },
+      {
+        "number": 19,
+        "text": "    this.prune(now);"
+      },
+      {
+        "number": 20,
+        "text": "    while (this.tokens.size >= MAX_PENDING_PAIRING_TOKENS) {"
+      },
+      {
+        "number": 21,
+        "text": "      const oldest = this.tokens.keys().next().value as string | undefined;"
+      },
+      {
+        "number": 22,
+        "text": "      if (oldest === undefined) break;"
+      },
+      {
+        "number": 23,
+        "text": "      this.tokens.delete(oldest);"
+      },
+      {
+        "number": 24,
+        "text": "    }"
+      },
+      {
+        "number": 25,
+        "text": "    const token = {"
+      },
+      {
+        "number": 26,
+        "text": "      value: randomBytes(32).toString(\"base64url\"),"
+      },
+      {
+        "number": 27,
+        "text": "      expiresAt: now + ttlMs,"
+      },
+      {
+        "number": 28,
+        "text": "    };"
+      },
+      {
+        "number": 29,
+        "text": "    this.tokens.set(token.value, token);"
+      },
+      {
+        "number": 30,
+        "text": "    return token;"
+      },
+      {
+        "number": 31,
+        "text": "  }"
+      },
+      {
+        "number": 32,
+        "text": ""
+      },
+      {
+        "number": 33,
+        "text": "  consume(value: string): boolean {"
+      },
+      {
+        "number": 34,
+        "text": "    const token = this.tokens.get(value);"
+      },
+      {
+        "number": 35,
+        "text": "    if (!token) return false;"
+      },
+      {
+        "number": 36,
+        "text": "    this.tokens.delete(value);"
+      },
+      {
+        "number": 37,
+        "text": "    const now = this.now();"
+      },
+      {
+        "number": 38,
+        "text": "    return Number.isSafeInteger(now) && now >= 0 && token.expiresAt >= now;"
+      },
+      {
+        "number": 39,
+        "text": "  }"
+      },
+      {
+        "number": 40,
+        "text": ""
+      },
+      {
+        "number": 41,
+        "text": "  /**"
+      },
+      {
+        "number": 42,
+        "text": "   * Run a synchronous commit while the token is valid, consuming it only when"
+      },
+      {
+        "number": 43,
+        "text": "   * that commit succeeds. The validity timestamp is sampled once, so a commit"
+      },
+      {
+        "number": 44,
+        "text": "   * that crosses the expiry millisecond cannot create a device yet report a"
+      },
+      {
+        "number": 45,
+        "text": "   * false pairing failure."
+      },
+      {
+        "number": 46,
+        "text": "   */"
+      },
+      {
+        "number": 47,
+        "text": "  commit<T>(value: string, action: () => T): T | undefined {"
+      },
+      {
+        "number": 48,
+        "text": "    const token = this.tokens.get(value);"
+      },
+      {
+        "number": 49,
+        "text": "    if (!token) return undefined;"
+      },
+      {
+        "number": 50,
+        "text": "    const now = this.now();"
+      },
+      {
+        "number": 51,
+        "text": "    if (!Number.isSafeInteger(now) || now < 0 || token.expiresAt < now) {"
+      },
+      {
+        "number": 52,
+        "text": "      this.tokens.delete(value);"
+      },
+      {
+        "number": 53,
+        "text": "      return undefined;"
+      },
+      {
+        "number": 54,
+        "text": "    }"
+      },
+      {
+        "number": 55,
+        "text": "    const result = action();"
+      },
+      {
+        "number": 56,
+        "text": "    this.tokens.delete(value);"
+      },
+      {
+        "number": 57,
+        "text": "    return result;"
+      },
+      {
+        "number": 58,
+        "text": "  }"
+      },
+      {
+        "number": 59,
+        "text": ""
+      },
+      {
+        "number": 60,
+        "text": "  /** Live token count for diagnostics/tests; expired entries are pruned on mint. */"
+      },
+      {
+        "number": 61,
+        "text": "  get pendingCount(): number {"
+      },
+      {
+        "number": 62,
+        "text": "    return this.tokens.size;"
+      },
+      {
+        "number": 63,
+        "text": "  }"
+      },
+      {
+        "number": 64,
+        "text": ""
+      },
+      {
+        "number": 65,
+        "text": "  private prune(now: number): void {"
+      },
+      {
+        "number": 66,
+        "text": "    for (const [value, token] of this.tokens) {"
+      },
+      {
+        "number": 67,
+        "text": "      if (token.expiresAt < now) this.tokens.delete(value);"
+      },
+      {
+        "number": 68,
+        "text": "    }"
+      },
+      {
+        "number": 69,
+        "text": "  }"
+      },
+      {
+        "number": 70,
+        "text": "}"
+      }
+    ]
+  },
+  {
+    "path": "packages/server/src/mobile-remote/pending-approvals.ts",
+    "sha256": "1503d41f1535224c972a23ada25238644394fc2a1e696668729c0f6263b989ac",
+    "scope": "Copied after actual display and current hash check, not pre-read raw transcript.",
+    "lines": [
+      {
+        "number": 1,
+        "text": "/**"
+      },
+      {
+        "number": 2,
+        "text": " * Tracks currently pending core approval requests for mobile clients."
+      },
+      {
+        "number": 3,
+        "text": " *"
+      },
+      {
+        "number": 4,
+        "text": " * Session snapshots intentionally contain only stream events. Approval requests"
+      },
+      {
+        "number": 5,
+        "text": " * are stateful: keep the latest unresolved raw JSON-RPC request here and replay"
+      },
+      {
+        "number": 6,
+        "text": " * it to a phone when that phone binds to the matching session."
+      },
+      {
+        "number": 7,
+        "text": " */"
+      },
+      {
+        "number": 8,
+        "text": "export class PendingMobileApprovals {"
+      },
+      {
+        "number": 9,
+        "text": "  private readonly bySession = new Map<string, Map<string, string>>();"
+      },
+      {
+        "number": 10,
+        "text": "  private workerGeneration: number | undefined;"
+      },
+      {
+        "number": 11,
+        "text": ""
+      },
+      {
+        "number": 12,
+        "text": "  /** Requests belong to the worker that can answer them, never its successor. */"
+      },
+      {
+        "number": 13,
+        "text": "  setWorkerState(generation: number, alive: boolean): void {"
+      },
+      {
+        "number": 14,
+        "text": "    if (!alive || this.workerGeneration !== generation) this.bySession.clear();"
+      },
+      {
+        "number": 15,
+        "text": "    this.workerGeneration = generation;"
+      },
+      {
+        "number": 16,
+        "text": "  }"
+      },
+      {
+        "number": 17,
+        "text": ""
+      },
+      {
+        "number": 18,
+        "text": "  observeOutboundLine(line: string): void {"
+      },
+      {
+        "number": 19,
+        "text": "    let msg: { method?: unknown; params?: unknown };"
+      },
+      {
+        "number": 20,
+        "text": "    try {"
+      },
+      {
+        "number": 21,
+        "text": "      msg = JSON.parse(line) as { method?: unknown; params?: unknown };"
+      },
+      {
+        "number": 22,
+        "text": "    } catch {"
+      },
+      {
+        "number": 23,
+        "text": "      return;"
+      },
+      {
+        "number": 24,
+        "text": "    }"
+      },
+      {
+        "number": 25,
+        "text": "    if (!msg || typeof msg !== \"object\" || Array.isArray(msg)) return;"
+      },
+      {
+        "number": 26,
+        "text": ""
+      },
+      {
+        "number": 27,
+        "text": "    if (msg.method === \"agent/approvalRequest\") {"
+      },
+      {
+        "number": 28,
+        "text": "      const params = msg.params as Record<string, unknown> | null;"
+      },
+      {
+        "number": 29,
+        "text": "      const sessionId = params?.sessionId;"
+      },
+      {
+        "number": 30,
+        "text": "      const requestId = params?.requestId;"
+      },
+      {
+        "number": 31,
+        "text": "      if (typeof sessionId !== \"string\" || !sessionId) return;"
+      },
+      {
+        "number": 32,
+        "text": "      if (typeof requestId !== \"string\" || !requestId) return;"
+      },
+      {
+        "number": 33,
+        "text": ""
+      },
+      {
+        "number": 34,
+        "text": "      let pending = this.bySession.get(sessionId);"
+      },
+      {
+        "number": 35,
+        "text": "      if (!pending) {"
+      },
+      {
+        "number": 36,
+        "text": "        pending = new Map<string, string>();"
+      },
+      {
+        "number": 37,
+        "text": "        this.bySession.set(sessionId, pending);"
+      },
+      {
+        "number": 38,
+        "text": "      }"
+      },
+      {
+        "number": 39,
+        "text": "      pending.set(requestId, line);"
+      },
+      {
+        "number": 40,
+        "text": "      return;"
+      },
+      {
+        "number": 41,
+        "text": "    }"
+      },
+      {
+        "number": 42,
+        "text": ""
+      },
+      {
+        "number": 43,
+        "text": "    if (msg.method === \"agent/approvalResolved\") {"
+      },
+      {
+        "number": 44,
+        "text": "      const params = msg.params as Record<string, unknown> | null;"
+      },
+      {
+        "number": 45,
+        "text": "      const requestId = params?.requestId;"
+      },
+      {
+        "number": 46,
+        "text": "      if (typeof requestId === \"string\" && requestId) this.resolve(requestId);"
+      },
+      {
+        "number": 47,
+        "text": "    }"
+      },
+      {
+        "number": 48,
+        "text": "  }"
+      },
+      {
+        "number": 49,
+        "text": ""
+      },
+      {
+        "number": 50,
+        "text": "  resolve(requestId: string): void {"
+      },
+      {
+        "number": 51,
+        "text": "    for (const [sessionId, pending] of this.bySession) {"
+      },
+      {
+        "number": 52,
+        "text": "      pending.delete(requestId);"
+      },
+      {
+        "number": 53,
+        "text": "      if (pending.size === 0) this.bySession.delete(sessionId);"
+      },
+      {
+        "number": 54,
+        "text": "    }"
+      },
+      {
+        "number": 55,
+        "text": "  }"
+      },
+      {
+        "number": 56,
+        "text": ""
+      },
+      {
+        "number": 57,
+        "text": "  replayLines(sessionId: string): string[] {"
+      },
+      {
+        "number": 58,
+        "text": "    return [...(this.bySession.get(sessionId)?.values() ?? [])];"
+      },
+      {
+        "number": 59,
+        "text": "  }"
+      },
+      {
+        "number": 60,
+        "text": ""
+      },
+      {
+        "number": 61,
+        "text": "  /** The desktop has a queue across sessions; return only its current pending requests. */"
+      },
+      {
+        "number": 62,
+        "text": "  replayAllLines(): string[] {"
+      },
+      {
+        "number": 63,
+        "text": "    return [...this.bySession.values()].flatMap((pending) => [...pending.values()]);"
+      },
+      {
+        "number": 64,
+        "text": "  }"
+      },
+      {
+        "number": 65,
+        "text": ""
+      },
+      {
+        "number": 66,
+        "text": "  forgetSession(sessionId: string): void {"
+      },
+      {
+        "number": 67,
+        "text": "    this.bySession.delete(sessionId);"
+      },
+      {
+        "number": 68,
+        "text": "  }"
+      },
+      {
+        "number": 69,
+        "text": "}"
+      }
+    ]
+  },
+  {
+    "path": "packages/server/src/mobile-remote/remote-host-manager.ts",
+    "sha256": "e7956da57e9d9b1581909a78492dd3834a0cf916af26131f6c8cfdba31e005ca",
+    "scope": "Copied after actual display and current hash check, not pre-read raw transcript.",
+    "lines": [
+      {
+        "number": 421,
+        "text": "  createPairingUrl(): { token: string; url: string; expiresAt: number } {"
+      },
+      {
+        "number": 422,
+        "text": "    if (!this.started) throw new Error(\"Remote host is not running\");"
+      },
+      {
+        "number": 423,
+        "text": "    if (this.started.mode === \"relay\" && !this.publicBaseUrl) {"
+      },
+      {
+        "number": 424,
+        "text": "      throw new Error(\"Relay public origin is not configured\");"
+      },
+      {
+        "number": 425,
+        "text": "    }"
+      },
+      {
+        "number": 426,
+        "text": "    const token = this.pairing.createToken();"
+      },
+      {
+        "number": 427,
+        "text": "    const base = this.publicBaseUrl ?? this.started.url;"
+      },
+      {
+        "number": 428,
+        "text": "    return {"
+      },
+      {
+        "number": 429,
+        "text": "      token: token.value,"
+      },
+      {
+        "number": 430,
+        "text": "      expiresAt: token.expiresAt,"
+      },
+      {
+        "number": 431,
+        "text": "      url: `${base}/mobile?pairing=${token.value}`,"
+      },
+      {
+        "number": 432,
+        "text": "    };"
+      },
+      {
+        "number": 433,
+        "text": "  }"
+      },
+      {
+        "number": 439,
+        "text": "   * trusted-device store (which rejects revoked devices), so the remote host"
+      },
+      {
+        "number": 440,
+        "text": "   * never executes tools itself — it only gates transport."
+      },
+      {
+        "number": 441,
+        "text": "   */"
+      },
+      {
+        "number": 442,
+        "text": "  handleClientEvent(input: unknown): MobileServerEvent | undefined {"
+      },
+      {
+        "number": 443,
+        "text": "    const event = parseMobileClientEvent(input);"
+      },
+      {
+        "number": 444,
+        "text": "    if (!event) return { type: \"error\", message: \"Invalid client event\" };"
+      },
+      {
+        "number": 445,
+        "text": "    if (event.type === \"pair.complete\") {"
+      },
+      {
+        "number": 446,
+        "text": "      let device;"
+      },
+      {
+        "number": 447,
+        "text": "      try {"
+      },
+      {
+        "number": 448,
+        "text": "        device = this.pairing.commit(event.token, () =>"
+      },
+      {
+        "number": 449,
+        "text": "          this.opts.devices.addDevice({"
+      },
+      {
+        "number": 450,
+        "text": "            name: event.name,"
+      },
+      {
+        "number": 451,
+        "text": "            secretHash: event.secretHash,"
+      },
+      {
+        "number": 452,
+        "text": "          }),"
+      },
+      {
+        "number": 453,
+        "text": "        );"
+      },
+      {
+        "number": 454,
+        "text": "      } catch {"
+      },
+      {
+        "number": 455,
+        "text": "        return { type: \"pair.failed\", message: \"Trusted device store is unavailable\" };"
+      },
+      {
+        "number": 456,
+        "text": "      }"
+      },
+      {
+        "number": 457,
+        "text": "      if (!device) {"
+      },
+      {
+        "number": 458,
+        "text": "        return { type: \"pair.failed\", message: \"Pairing token expired or invalid\" };"
+      },
+      {
+        "number": 459,
+        "text": "      }"
+      },
+      {
+        "number": 460,
+        "text": "      return {"
+      },
+      {
+        "number": 461,
+        "text": "        type: \"pair.ok\","
+      },
+      {
+        "number": 462,
+        "text": "        device,"
+      },
+      {
+        "number": 463,
+        "text": "        ...(this.opts.outputJournal ? { capabilities: { outputJournal: 1 as const } } : {}),"
+      },
+      {
+        "number": 464,
+        "text": "      };"
+      },
+      {
+        "number": 465,
+        "text": "    }"
+      },
+      {
+        "number": 466,
+        "text": "    if (event.type === \"auth.device\") {"
+      }
+    ]
+  },
+  {
+    "path": "packages/desktop/src/main/mobile-remote-orchestrator.ts",
+    "sha256": "40b62b4c9b912fd472d65d7077971e638a64109927a574ae8337cbc0f837e099",
+    "scope": "Copied after actual display and current hash check, not pre-read raw transcript.",
+    "lines": [
+      {
+        "number": 245,
+        "text": "  private replayPendingMobileApprovals(sessionId: string, deviceId?: string): void {"
+      },
+      {
+        "number": 246,
+        "text": "    for (const line of this.deps.pendingApprovals.replayLines(sessionId)) {"
+      },
+      {
+        "number": 247,
+        "text": "      if (deviceId) this.deps.remote.sendRawToDevice(deviceId, line);"
+      },
+      {
+        "number": 248,
+        "text": "      else this.deps.remote.broadcastRaw(line);"
+      },
+      {
+        "number": 249,
+        "text": "    }"
+      },
+      {
+        "number": 250,
+        "text": "  }"
+      },
+      {
+        "number": 251,
+        "text": ""
+      },
+      {
+        "number": 252,
+        "text": "  broadcastApprovalResolved(params: {"
+      },
+      {
+        "number": 253,
+        "text": "    requestId: string;"
+      },
+      {
+        "number": 254,
+        "text": "    sessionId?: string;"
+      },
+      {
+        "number": 255,
+        "text": "    approved?: boolean;"
+      },
+      {
+        "number": 256,
+        "text": "    answer?: string;"
+      },
+      {
+        "number": 257,
+        "text": "  }): void {"
+      },
+      {
+        "number": 258,
+        "text": "    this.deps.pendingApprovals.resolve(params.requestId);"
+      },
+      {
+        "number": 259,
+        "text": "    const line = JSON.stringify({"
+      },
+      {
+        "number": 260,
+        "text": "      jsonrpc: \"2.0\","
+      },
+      {
+        "number": 261,
+        "text": "      method: Methods.ApprovalResolved,"
+      },
+      {
+        "number": 262,
+        "text": "      params,"
+      },
+      {
+        "number": 263,
+        "text": "    });"
+      },
+      {
+        "number": 264,
+        "text": "    this.deps.broadcastToWindows(\"agent:msg\", line);"
+      },
+      {
+        "number": 265,
+        "text": "    this.deps.remote.broadcast({"
+      },
+      {
+        "number": 266,
+        "text": "      type: \"approval.resolved\","
+      },
+      {
+        "number": 267,
+        "text": "      approvalId: params.requestId,"
+      },
+      {
+        "number": 268,
+        "text": "      ...(params.sessionId ? { sessionId: params.sessionId } : {}),"
+      },
+      {
+        "number": 340,
+        "text": "      transcriptSubscriptions: this.deps.transcriptSubscriptions,"
+      },
+      {
+        "number": 341,
+        "text": "      getBridge: () => this.deps.getBridge(),"
+      },
+      {
+        "number": 342,
+        "text": "      mobileSessionCwds: this.mobileSessionCwds,"
+      },
+      {
+        "number": 343,
+        "text": "      mobilePermissionModes: this.mobilePermissionModes,"
+      },
+      {
+        "number": 344,
+        "text": "      deviceState: (deviceId) => this.deviceState(deviceId),"
+      },
+      {
+        "number": 345,
+        "text": "      ensureMobileSessionId: (state) => this.ensureMobileSessionId(state),"
+      },
+      {
+        "number": 346,
+        "text": "      lookupDiskSessionCwd: (sessionId) => this.lookupDiskSessionCwd(sessionId),"
+      },
+      {
+        "number": 347,
+        "text": "      effectiveMobileRunCwd: (state) => this.effectiveMobileRunCwd(state),"
+      },
+      {
+        "number": 348,
+        "text": "      resolveMobileProjectRoot: (projectId, rootId) => {"
+      },
+      {
+        "number": 349,
+        "text": "        const resolved = getProjectStore().resolveProjectRootByIdSync(projectId, rootId);"
+      },
+      {
+        "number": 350,
+        "text": "        return {"
+      },
+      {
+        "number": 351,
+        "text": "          projectId: resolved.project.id,"
+      },
+      {
+        "number": 352,
+        "text": "          rootId: resolved.mainRoot.id,"
+      },
+      {
+        "number": 353,
+        "text": "          cwd: resolved.cwd,"
+      },
+      {
+        "number": 354,
+        "text": "        };"
+      },
+      {
+        "number": 355,
+        "text": "      },"
+      },
+      {
+        "number": 356,
+        "text": "      validateMobileSessionCwd: async (cwd) =>"
+      },
+      {
+        "number": 357,
+        "text": "        getProjectStore().isNoRepoCwd(cwd) ||"
+      },
+      {
+        "number": 358,
+        "text": "        getProjectStore().resolveExactRootSync(cwd) !== undefined,"
+      },
+      {
+        "number": 359,
+        "text": "      resolveSessionWorkspaceRoot: (sessionId, fallbackCwd) =>"
+      },
+      {
+        "number": 360,
+        "text": "        getSessionWorkspaceForUi(sessionId, fallbackCwd)"
+      },
+      {
+        "number": 361,
+        "text": "          .then((workspace) => workspace.root)"
+      },
+      {
+        "number": 362,
+        "text": "          .catch(() => fallbackCwd),"
+      },
+      {
+        "number": 363,
+        "text": "      sendMobilePermissionMode: (deviceId, sessionId) =>"
+      },
+      {
+        "number": 364,
+        "text": "        this.sendMobilePermissionMode(deviceId, sessionId),"
+      },
+      {
+        "number": 365,
+        "text": "      sendSelectedMobilePermissionModes: () => this.sendSelectedMobilePermissionModes(),"
+      },
+      {
+        "number": 366,
+        "text": "      replayPendingMobileApprovals: (sessionId, deviceId) =>"
+      },
+      {
+        "number": 367,
+        "text": "        this.replayPendingMobileApprovals(sessionId, deviceId),"
+      },
+      {
+        "number": 368,
+        "text": "      broadcastDesktopPermissionMode: (params) => this.broadcastDesktopPermissionMode(params),"
+      },
+      {
+        "number": 380,
+        "text": "  /**"
+      },
+      {
+        "number": 381,
+        "text": "   * Route an authenticated mobile client event into the SAME run/permission"
+      },
+      {
+        "number": 382,
+        "text": "   * path the renderer uses, via AgentBridge.injectWorkerMessage."
+      },
+      {
+        "number": 383,
+        "text": "   */"
+      },
+      {
+        "number": 384,
+        "text": "  async handleMobileClientEvent(event: AuthenticatedMobileClientEvent): Promise<void> {"
+      },
+      {
+        "number": 385,
+        "text": "    return handleClientEvent(this.ctx(), event);"
+      },
+      {
+        "number": 386,
+        "text": "  }"
+      }
+    ]
+  },
+  {
+    "path": "packages/desktop/src/main/mobile-remote/handle-client-event.ts",
+    "sha256": "ed4d8b65512f7be8f31572b9c47b86f4a4f587bd4c9fe94541bcf108108a1f71",
+    "scope": "Copied after actual display and current hash check, not pre-read raw transcript.",
+    "lines": [
+      {
+        "number": 245,
+        "text": "      // authority awaits. It must not write the retired device selection back."
+      },
+      {
+        "number": 246,
+        "text": "      if (!(await recovery)) return;"
+      },
+      {
+        "number": 247,
+        "text": "    } else if (event.type === \"session.outputJournal\") await recovery;"
+      },
+      {
+        "number": 248,
+        "text": "    else void recovery;"
+      },
+      {
+        "number": 249,
+        "text": "  }"
+      },
+      {
+        "number": 250,
+        "text": "  if (event.type === \"session.outputJournal\" || event.type === \"session.recovery.cancel\") return;"
+      },
+      {
+        "number": 251,
+        "text": "  if (event.type === \"attachment.upload.begin\") {"
+      },
+      {
+        "number": 252,
+        "text": "    const deviceId = event.deviceId;"
+      },
+      {
+        "number": 253,
+        "text": "    if (!deviceId) return;"
+      },
+      {
+        "number": 254,
+        "text": "    try {"
+      },
+      {
+        "number": 255,
+        "text": "      const ticket = ctx.uploads.begin(deviceId, {"
+      },
+      {
+        "number": 256,
+        "text": "        clientId: event.clientId,"
+      },
+      {
+        "number": 257,
+        "text": "        name: event.name,"
+      },
+      {
+        "number": 258,
+        "text": "        mime: event.mime,"
+      },
+      {
+        "number": 259,
+        "text": "        size: event.size,"
+      },
+      {
+        "number": 260,
+        "text": "      });"
+      },
+      {
+        "number": 261,
+        "text": "      ctx.remote.sendToDevice(deviceId, { type: \"attachment.upload.ready\", ...ticket });"
+      },
+      {
+        "number": 262,
+        "text": "    } catch (error) {"
+      },
+      {
+        "number": 263,
+        "text": "      ctx.remote.sendToDevice(deviceId, {"
+      },
+      {
+        "number": 264,
+        "text": "        type: \"attachment.upload.failed\","
+      },
+      {
+        "number": 265,
+        "text": "        clientId: event.clientId,"
+      },
+      {
+        "number": 266,
+        "text": "        message: error instanceof Error ? error.message : String(error),"
+      },
+      {
+        "number": 267,
+        "text": "      });"
+      },
+      {
+        "number": 268,
+        "text": "    }"
+      },
+      {
+        "number": 269,
+        "text": "    return;"
+      },
+      {
+        "number": 270,
+        "text": "  }"
+      },
+      {
+        "number": 271,
+        "text": "  // ── CC Room (external claude CLI sessions) — checked first so \"ccRoom.*\""
+      },
+      {
+        "number": 272,
+        "text": "  // never gets misrouted by the \"room.\" prefix check below ───────────────"
+      },
+      {
+        "number": 273,
+        "text": "  if (event.type.startsWith(\"ccRoom.\")) {"
+      },
+      {
+        "number": 274,
+        "text": "    await handleCcRoomEvent(ctx, event);"
+      },
+      {
+        "number": 275,
+        "text": "    return;"
+      },
+      {
+        "number": 276,
+        "text": "  }"
+      },
+      {
+        "number": 277,
+        "text": "  // ── Rooms (independent of the chat worker bridge) ─────────────────────"
+      },
+      {
+        "number": 278,
+        "text": "  if (event.type.startsWith(\"room.\")) {"
+      },
+      {
+        "number": 279,
+        "text": "    await handleRoomEvent(ctx, event);"
+      },
+      {
+        "number": 280,
+        "text": "    return;"
+      },
+      {
+        "number": 281,
+        "text": "  }"
+      },
+      {
+        "number": 282,
+        "text": "  const bridge = ctx.getBridge();"
+      },
+      {
+        "number": 283,
+        "text": "  if (!bridge) return;"
+      },
+      {
+        "number": 284,
+        "text": "  const runContext = bridge.getLastRunContext();"
+      },
+      {
+        "number": 285,
+        "text": "  // Per-device state: the remote host tags every authenticated event with the"
+      },
+      {
+        "number": 286,
+        "text": "  // device id (see onClientEvent wiring). Replies that are device-specific go"
+      },
+      {
+        "number": 287,
+        "text": "  // back to ONLY that device via sendToDevice; the agent output stream is"
+      },
+      {
+        "number": 288,
+        "text": "  // still broadcast (each front-end filters to its bound session)."
+      },
+      {
+        "number": 289,
+        "text": "  const deviceId = event.deviceId;"
+      },
+      {
+        "number": 290,
+        "text": "  const st = deviceId ? ctx.deviceState(deviceId) : {};"
+      },
+      {
+        "number": 291,
+        "text": "  const reply = (e: MobileServerEvent): void => {"
+      },
+      {
+        "number": 292,
+        "text": "    if (deviceId) ctx.remote.sendToDevice(deviceId, e);"
+      },
+      {
+        "number": 293,
+        "text": "    else ctx.remote.broadcast(e);"
+      },
+      {
+        "number": 294,
+        "text": "  };"
+      },
+      {
+        "number": 295,
+        "text": "  // session selection priority: explicit per-event → this device's selection →"
+      },
+      {
+        "number": 296,
+        "text": "  // desktop's current run → a stable minted per-device session."
+      },
+      {
+        "number": 297,
+        "text": "  const resolveSessionId = (explicit?: string): string =>"
+      },
+      {
+        "number": 298,
+        "text": "    explicit ?? st.selectedSessionId ?? runContext.sessionId ?? ctx.ensureMobileSessionId(st);"
+      },
+      {
+        "number": 299,
+        "text": "  if (event.type === \"session.select\") {"
+      },
+      {
+        "number": 300,
+        "text": "    await commandSelection;"
+      },
+      {
+        "number": 301,
+        "text": "    st.selectedSessionId = event.sessionId;"
+      },
+      {
+        "number": 302,
+        "text": "    st.selectedProjectId = undefined;"
+      },
+      {
+        "number": 303,
+        "text": "    st.selectedRootId = undefined;"
+      },
+      {
+        "number": 304,
+        "text": "    const cwd = await ctx.lookupDiskSessionCwd(event.sessionId);"
+      },
+      {
+        "number": 305,
+        "text": "    if (cwd !== undefined) st.selectedCwd = cwd;"
+      },
+      {
+        "number": 306,
+        "text": "    if (deviceId) ctx.sendMobilePermissionMode(deviceId, event.sessionId);"
+      },
+      {
+        "number": 307,
+        "text": "    else {"
+      },
+      {
+        "number": 308,
+        "text": "      reply({"
+      },
+      {
+        "number": 309,
+        "text": "        type: \"permission.mode\","
+      },
+      {
+        "number": 310,
+        "text": "        sessionId: event.sessionId,"
+      },
+      {
+        "number": 311,
+        "text": "        mode: ctx.mobilePermissionModes.get(event.sessionId) ?? \"default\","
+      },
+      {
+        "number": 312,
+        "text": "      });"
+      },
+      {
+        "number": 313,
+        "text": "    }"
+      },
+      {
+        "number": 314,
+        "text": "    ctx.replayPendingMobileApprovals(event.sessionId, deviceId);"
+      },
+      {
+        "number": 315,
+        "text": "    return;"
+      },
+      {
+        "number": 316,
+        "text": "  }"
+      },
+      {
+        "number": 317,
+        "text": "  if (event.type === \"session.create\") {"
+      },
+      {
+        "number": 318,
+        "text": "    let selection: MobileSessionCreateResolution;"
+      },
+      {
+        "number": 319,
+        "text": "    try {"
+      },
+      {
+        "number": 567,
+        "text": "  if (event.type === \"session.sync\") {"
+      },
+      {
+        "number": 568,
+        "text": "    // External output is sent only through the selected per-socket authority;"
+      },
+      {
+        "number": 569,
+        "text": "    // negotiated peers already receive its head on their bounded journal pages."
+      },
+      {
+        "number": 570,
+        "text": "    if (ctx.externalCommands?.isExternal(event.sessionId, event.viewerId)) return;"
+      },
+      {
+        "number": 571,
+        "text": "    let snapshot = bridge.getSnapshot("
+      },
+      {
+        "number": 572,
+        "text": "      event.sessionId,"
+      },
+      {
+        "number": 573,
+        "text": "      typeof event.sinceSeq === \"number\" ? event.sinceSeq : 0,"
+      },
+      {
+        "number": 574,
+        "text": "    );"
+      },
+      {
+        "number": 575,
+        "text": "    // A cursor from an earlier Main lifetime cannot filter this process's log."
+      },
+      {
+        "number": 576,
+        "text": "    // Legacy peers omit epochs and retain the original incremental contract."
+      },
+      {
+        "number": 577,
+        "text": "    if (event.epoch && snapshot.epoch && event.epoch !== snapshot.epoch) {"
+      },
+      {
+        "number": 578,
+        "text": "      snapshot = bridge.getSnapshot(event.sessionId, 0);"
+      },
+      {
+        "number": 579,
+        "text": "    }"
+      },
+      {
+        "number": 580,
+        "text": "    reply({"
+      },
+      {
+        "number": 581,
+        "text": "      type: \"session.snapshot\","
+      },
+      {
+        "number": 582,
+        "text": "      sessionId: event.sessionId,"
+      },
+      {
+        "number": 583,
+        "text": "      entries: snapshot.events,"
+      },
+      {
+        "number": 584,
+        "text": "      nextSeq: snapshot.nextSeq,"
+      },
+      {
+        "number": 585,
+        "text": "      ...(snapshot.outputCursor ? { outputCursor: snapshot.outputCursor } : {}),"
+      },
+      {
+        "number": 586,
+        "text": "      ...(snapshot.epoch ? { epoch: snapshot.epoch } : {}),"
+      },
+      {
+        "number": 587,
+        "text": "    });"
+      },
+      {
+        "number": 588,
+        "text": "    ctx.replayPendingMobileApprovals(event.sessionId, deviceId);"
+      },
+      {
+        "number": 589,
+        "text": "    return;"
+      },
+      {
+        "number": 590,
+        "text": "  }"
+      }
+    ]
+  },
+  {
+    "path": "packages/core/src/protocol/server.ts",
+    "sha256": "1dcf2cba50bdedefb7ff04ce5c26565f59fdef275e8b74e2c5fb35d95af826d5",
+    "scope": "Copied after actual display and current hash check, not pre-read raw transcript.",
+    "lines": [
+      {
+        "number": 3877,
+        "text": "      const requestId = nanoid(12);"
+      },
+      {
+        "number": 3878,
+        "text": "      const effectiveRoute = route ?? {"
+      },
+      {
+        "number": 3879,
+        "text": "        connectionId: this.connectionId,"
+      },
+      {
+        "number": 3880,
+        "text": "        sessionId: request.sessionId ?? \"\","
+      },
+      {
+        "number": 3881,
+        "text": "        generation: 0,"
+      },
+      {
+        "number": 3882,
+        "text": "      };"
+      },
+      {
+        "number": 3883,
+        "text": "      const sessionId = effectiveRoute.sessionId;"
+      },
+      {
+        "number": 3979,
+        "text": "    const requestId = nanoid(12);"
+      },
+      {
+        "number": 3980,
+        "text": "    const routeEnvelope = this.approvalRouteEnvelope(sessionId, requestId);"
+      },
+      {
+        "number": 3981,
+        "text": "    const continuation = session.captureFollowUpOptions();"
+      },
+      {
+        "number": 3982,
+        "text": "    const requestingRun = session.settled;"
+      },
+      {
+        "number": 3983,
+        "text": "    session.lastActivityAt = Date.now();"
+      },
+      {
+        "number": 3984,
+        "text": "    this.registerSessionApproval("
+      },
+      {
+        "number": 3985,
+        "text": "      session,"
+      },
+      {
+        "number": 3986,
+        "text": "      {"
+      },
+      {
+        "number": 3987,
+        "text": "        sessionId,"
+      },
+      {
+        "number": 4089,
+        "text": "      const requestId = nanoid(12);"
+      },
+      {
+        "number": 4090,
+        "text": "      const routeEnvelope = this.approvalRouteEnvelope(sessionId, requestId);"
+      },
+      {
+        "number": 4091,
+        "text": "      this.registerSessionApproval("
+      },
+      {
+        "number": 4092,
+        "text": "        session,"
+      },
+      {
+        "number": 4093,
+        "text": "        {"
+      },
+      {
+        "number": 4094,
+        "text": "          sessionId,"
+      },
+      {
+        "number": 4095,
+        "text": "          requestId,"
+      },
+      {
+        "number": 4217,
+        "text": "      const requestId = nanoid(12);"
+      },
+      {
+        "number": 4218,
+        "text": "      const routeEnvelope = this.approvalRouteEnvelope(sessionId, requestId);"
+      },
+      {
+        "number": 4219,
+        "text": "      this.registerSessionApproval("
+      },
+      {
+        "number": 4220,
+        "text": "        session,"
+      },
+      {
+        "number": 4221,
+        "text": "        this.internalPendingMetadata(sessionId, requestId, routeEnvelope, \"__browser_action__\"),"
+      },
+      {
+        "number": 4222,
+        "text": "        (decision: unknown) => {"
+      },
+      {
+        "number": 4223,
+        "text": "          this.clearApprovalTimer(requestId);"
+      },
+      {
+        "number": 4224,
+        "text": "          // Main replies with { approved:true, answer:<json string> } (reusing the"
+      },
+      {
+        "number": 4283,
+        "text": "      const requestId = nanoid(12);"
+      },
+      {
+        "number": 4284,
+        "text": "      const routeEnvelope = this.approvalRouteEnvelope(sessionId, requestId);"
+      },
+      {
+        "number": 4285,
+        "text": "      this.registerSessionApproval("
+      },
+      {
+        "number": 4286,
+        "text": "        session,"
+      },
+      {
+        "number": 4287,
+        "text": "        this.internalPendingMetadata(sessionId, requestId, routeEnvelope, \"__credential_action__\"),"
+      },
+      {
+        "number": 4288,
+        "text": "        (decision: unknown) => {"
+      },
+      {
+        "number": 4289,
+        "text": "          this.clearApprovalTimer(requestId);"
+      },
+      {
+        "number": 4290,
+        "text": "          const parsed = parseHostLoopbackDecision(decision, \"credential inject\");"
+      },
+      {
+        "number": 4418,
+        "text": "      const requestId = nanoid(12);"
+      },
+      {
+        "number": 4419,
+        "text": "      const routeEnvelope = this.approvalRouteEnvelope(sessionId, requestId);"
+      },
+      {
+        "number": 4420,
+        "text": "      this.registerSessionApproval("
+      },
+      {
+        "number": 4421,
+        "text": "        session,"
+      },
+      {
+        "number": 4422,
+        "text": "        this.internalPendingMetadata(sessionId, requestId, routeEnvelope, \"__panel_action__\"),"
+      },
+      {
+        "number": 4423,
+        "text": "        (decision: unknown) => {"
+      },
+      {
+        "number": 4424,
+        "text": "          this.clearApprovalTimer(requestId);"
+      },
+      {
+        "number": 4425,
+        "text": "          const parsed = parseHostLoopbackDecision(decision, \"panel action\");"
+      },
+      {
+        "number": 4513,
+        "text": "      const requestId = nanoid(12);"
+      },
+      {
+        "number": 4514,
+        "text": "      const routeEnvelope = this.approvalRouteEnvelope(sessionId, requestId);"
+      },
+      {
+        "number": 4515,
+        "text": "      this.registerSessionApproval("
+      },
+      {
+        "number": 4516,
+        "text": "        session,"
+      },
+      {
+        "number": 4517,
+        "text": "        this.internalPendingMetadata(sessionId, requestId, routeEnvelope, \"__workspace_action__\"),"
+      },
+      {
+        "number": 4518,
+        "text": "        (decision: unknown) => {"
+      },
+      {
+        "number": 4519,
+        "text": "          this.clearApprovalTimer(requestId);"
+      },
+      {
+        "number": 4520,
+        "text": "          const outcome = parseHostLoopbackDecision(decision, label);"
+      },
+      {
+        "number": 4576,
+        "text": "      const requestId = nanoid(12);"
+      },
+      {
+        "number": 4577,
+        "text": "      this.pendingApprovals.set(requestId, (result: ApprovalResult) => {"
+      },
+      {
+        "number": 4578,
+        "text": "        this.clearApprovalTimer(requestId);"
+      },
+      {
+        "number": 4579,
+        "text": "        if (result.approved) {"
+      },
+      {
+        "number": 4580,
+        "text": "          resolve(result.answer ?? \"\");"
+      }
+    ]
+  },
+  {
+    "path": "packages/server/src/mobile-remote/pairing.test.ts",
+    "sha256": "76935704b1443dab971196d1e9952804a4b46b76042176f57b21acaf59d97c3f",
+    "scope": "Copied after actual display and current hash check, not pre-read raw transcript.",
+    "lines": [
+      {
+        "number": 1,
+        "text": "import { describe, expect, test } from \"bun:test\";"
+      },
+      {
+        "number": 2,
+        "text": "import { MAX_PENDING_PAIRING_TOKENS, PairingTokenManager } from \"./pairing.js\";"
+      },
+      {
+        "number": 3,
+        "text": ""
+      },
+      {
+        "number": 4,
+        "text": "describe(\"PairingTokenManager\", () => {"
+      },
+      {
+        "number": 5,
+        "text": "  test(\"creates one-use token\", () => {"
+      },
+      {
+        "number": 6,
+        "text": "    const mgr = new PairingTokenManager(() => 1000);"
+      },
+      {
+        "number": 7,
+        "text": "    const token = mgr.createToken(10_000);"
+      },
+      {
+        "number": 8,
+        "text": "    expect(mgr.consume(token.value)).toBe(true);"
+      },
+      {
+        "number": 9,
+        "text": "    expect(mgr.consume(token.value)).toBe(false);"
+      },
+      {
+        "number": 10,
+        "text": "  });"
+      },
+      {
+        "number": 11,
+        "text": ""
+      },
+      {
+        "number": 12,
+        "text": "  test(\"rejects expired token\", () => {"
+      },
+      {
+        "number": 13,
+        "text": "    let now = 1000;"
+      },
+      {
+        "number": 14,
+        "text": "    const mgr = new PairingTokenManager(() => now);"
+      },
+      {
+        "number": 15,
+        "text": "    const token = mgr.createToken(10);"
+      },
+      {
+        "number": 16,
+        "text": "    now = 2000;"
+      },
+      {
+        "number": 17,
+        "text": "    expect(mgr.consume(token.value)).toBe(false);"
+      },
+      {
+        "number": 18,
+        "text": "  });"
+      },
+      {
+        "number": 19,
+        "text": ""
+      },
+      {
+        "number": 20,
+        "text": "  test(\"rejects invalid TTLs and clock values instead of minting immortal tokens\", () => {"
+      },
+      {
+        "number": 21,
+        "text": "    const mgr = new PairingTokenManager(() => 1000);"
+      },
+      {
+        "number": 22,
+        "text": "    expect(() => mgr.createToken(Number.NaN)).toThrow(\"positive safe integer\");"
+      },
+      {
+        "number": 23,
+        "text": "    expect(() => mgr.createToken(0)).toThrow(\"positive safe integer\");"
+      },
+      {
+        "number": 24,
+        "text": "    expect(() => mgr.createToken(Number.POSITIVE_INFINITY)).toThrow(\"positive safe integer\");"
+      },
+      {
+        "number": 25,
+        "text": "    expect(() => new PairingTokenManager(() => Number.NaN).createToken()).toThrow("
+      },
+      {
+        "number": 26,
+        "text": "      \"clock is invalid\","
+      },
+      {
+        "number": 27,
+        "text": "    );"
+      },
+      {
+        "number": 28,
+        "text": "    expect(() =>"
+      },
+      {
+        "number": 29,
+        "text": "      new PairingTokenManager(() => Number.MAX_SAFE_INTEGER).createToken(1),"
+      },
+      {
+        "number": 30,
+        "text": "    ).toThrow(\"clock is invalid\");"
+      },
+      {
+        "number": 31,
+        "text": "  });"
+      },
+      {
+        "number": 32,
+        "text": ""
+      },
+      {
+        "number": 33,
+        "text": "  test(\"a broken clock fails closed when consuming an existing token\", () => {"
+      },
+      {
+        "number": 34,
+        "text": "    let now = 1000;"
+      },
+      {
+        "number": 35,
+        "text": "    const mgr = new PairingTokenManager(() => now);"
+      },
+      {
+        "number": 36,
+        "text": "    const token = mgr.createToken(1000);"
+      },
+      {
+        "number": 37,
+        "text": "    now = Number.NaN;"
+      },
+      {
+        "number": 38,
+        "text": "    expect(mgr.consume(token.value)).toBe(false);"
+      },
+      {
+        "number": 39,
+        "text": "  });"
+      },
+      {
+        "number": 40,
+        "text": ""
+      },
+      {
+        "number": 41,
+        "text": "  test(\"failed commit keeps the token retryable\", () => {"
+      },
+      {
+        "number": 42,
+        "text": "    const mgr = new PairingTokenManager(() => 1000);"
+      },
+      {
+        "number": 43,
+        "text": "    const token = mgr.createToken(10_000);"
+      },
+      {
+        "number": 44,
+        "text": "    expect(() =>"
+      },
+      {
+        "number": 45,
+        "text": "      mgr.commit(token.value, () => {"
+      },
+      {
+        "number": 46,
+        "text": "        throw new Error(\"disk failed\");"
+      },
+      {
+        "number": 47,
+        "text": "      }),"
+      },
+      {
+        "number": 48,
+        "text": "    ).toThrow(\"disk failed\");"
+      },
+      {
+        "number": 49,
+        "text": "    expect(mgr.commit(token.value, () => \"ok\")).toBe(\"ok\");"
+      },
+      {
+        "number": 50,
+        "text": "    expect(mgr.commit(token.value, () => \"again\")).toBeUndefined();"
+      },
+      {
+        "number": 51,
+        "text": "  });"
+      },
+      {
+        "number": 52,
+        "text": ""
+      },
+      {
+        "number": 53,
+        "text": "  test(\"successful commit samples expiry once and consumes exactly once\", () => {"
+      },
+      {
+        "number": 54,
+        "text": "    let now = 1000;"
+      },
+      {
+        "number": 55,
+        "text": "    const mgr = new PairingTokenManager(() => now);"
+      },
+      {
+        "number": 56,
+        "text": "    const token = mgr.createToken(10);"
+      },
+      {
+        "number": 57,
+        "text": "    const result = mgr.commit(token.value, () => {"
+      },
+      {
+        "number": 58,
+        "text": "      now = 2000;"
+      },
+      {
+        "number": 59,
+        "text": "      return \"stored\";"
+      },
+      {
+        "number": 60,
+        "text": "    });"
+      },
+      {
+        "number": 61,
+        "text": "    expect(result).toBe(\"stored\");"
+      },
+      {
+        "number": 62,
+        "text": "    expect(mgr.commit(token.value, () => \"again\")).toBeUndefined();"
+      },
+      {
+        "number": 63,
+        "text": "  });"
+      },
+      {
+        "number": 64,
+        "text": ""
+      },
+      {
+        "number": 65,
+        "text": "  test(\"minting prunes expired tokens and caps abandoned QR codes\", () => {"
+      },
+      {
+        "number": 66,
+        "text": "    let now = 1_000;"
+      },
+      {
+        "number": 67,
+        "text": "    const mgr = new PairingTokenManager(() => now);"
+      },
+      {
+        "number": 68,
+        "text": "    mgr.createToken(1);"
+      },
+      {
+        "number": 69,
+        "text": "    now = 1_002;"
+      },
+      {
+        "number": 70,
+        "text": "    mgr.createToken(10_000);"
+      },
+      {
+        "number": 71,
+        "text": "    expect(mgr.pendingCount).toBe(1);"
+      },
+      {
+        "number": 72,
+        "text": ""
+      },
+      {
+        "number": 73,
+        "text": "    let oldest = \"\";"
+      },
+      {
+        "number": 74,
+        "text": "    for (let index = 0; index < MAX_PENDING_PAIRING_TOKENS; index += 1) {"
+      },
+      {
+        "number": 75,
+        "text": "      const token = mgr.createToken(10_000);"
+      },
+      {
+        "number": 76,
+        "text": "      if (index === 0) oldest = token.value;"
+      },
+      {
+        "number": 77,
+        "text": "    }"
+      },
+      {
+        "number": 78,
+        "text": "    expect(mgr.pendingCount).toBe(MAX_PENDING_PAIRING_TOKENS);"
+      },
+      {
+        "number": 79,
+        "text": "    // The previous live token and then the oldest loop token are evicted in"
+      },
+      {
+        "number": 80,
+        "text": "    // insertion order as newer QR codes reach the cap."
+      },
+      {
+        "number": 81,
+        "text": "    mgr.createToken(10_000);"
+      },
+      {
+        "number": 82,
+        "text": "    expect(mgr.pendingCount).toBe(MAX_PENDING_PAIRING_TOKENS);"
+      },
+      {
+        "number": 83,
+        "text": "    expect(mgr.consume(oldest)).toBe(false);"
+      },
+      {
+        "number": 84,
+        "text": "  });"
+      },
+      {
+        "number": 85,
+        "text": "});"
+      }
+    ]
+  },
+  {
+    "path": "packages/server/src/mobile-remote/pending-approvals.test.ts",
+    "sha256": "a5ccceb55dfdcf39f9132b0624de40d11a2a5d2f18ec311dd72f459fcc1055e6",
+    "scope": "Copied after actual display and current hash check, not pre-read raw transcript.",
+    "lines": [
+      {
+        "number": 84,
+        "text": "  test(\"a dead worker or a new generation cannot replay the previous worker's approvals\", () => {"
+      },
+      {
+        "number": 85,
+        "text": "    const pending = new PendingMobileApprovals();"
+      },
+      {
+        "number": 86,
+        "text": "    const old = approvalRequestLine(\"same-session\", \"reused-id\");"
+      },
+      {
+        "number": 87,
+        "text": "    pending.setWorkerState(1, true);"
+      },
+      {
+        "number": 88,
+        "text": "    pending.observeOutboundLine(old);"
+      },
+      {
+        "number": 89,
+        "text": "    pending.setWorkerState(1, true);"
+      },
+      {
+        "number": 90,
+        "text": "    expect(pending.replayAllLines()).toEqual([old]);"
+      },
+      {
+        "number": 91,
+        "text": "    pending.setWorkerState(1, false);"
+      },
+      {
+        "number": 92,
+        "text": "    expect(pending.replayAllLines()).toEqual([]);"
+      },
+      {
+        "number": 93,
+        "text": "    pending.setWorkerState(2, true);"
+      },
+      {
+        "number": 94,
+        "text": "    pending.observeOutboundLine(old);"
+      },
+      {
+        "number": 95,
+        "text": "    pending.setWorkerState(3, true);"
+      },
+      {
+        "number": 96,
+        "text": "    expect(pending.replayAllLines()).toEqual([]);"
+      },
+      {
+        "number": 97,
+        "text": "    const current = approvalRequestLine(\"current-session\", \"reused-id\");"
+      },
+      {
+        "number": 98,
+        "text": "    pending.observeOutboundLine(current);"
+      },
+      {
+        "number": 99,
+        "text": "    expect(pending.replayAllLines()).toEqual([current]);"
+      },
+      {
+        "number": 100,
+        "text": "    expect(pending.replayLines(\"same-session\")).toEqual([]);"
+      },
+      {
+        "number": 101,
+        "text": "  });"
+      },
+      {
+        "number": 102,
+        "text": ""
+      },
+      {
+        "number": 103,
+        "text": "  test(\"ignores JSON scalars and malformed records without losing a pending approval\", () => {"
+      },
+      {
+        "number": 104,
+        "text": "    const pending = new PendingMobileApprovals();"
+      },
+      {
+        "number": 105,
+        "text": "    const line = approvalRequestLine(\"session\", \"pending\");"
+      },
+      {
+        "number": 106,
+        "text": "    pending.observeOutboundLine(line);"
+      },
+      {
+        "number": 107,
+        "text": ""
+      },
+      {
+        "number": 108,
+        "text": "    for (const invalid of [\"null\", \"[]\", \"42\", '\"noise\"', \"broken\", '{\"params\":null}']) {"
+      },
+      {
+        "number": 109,
+        "text": "      expect(() => pending.observeOutboundLine(invalid)).not.toThrow();"
+      },
+      {
+        "number": 110,
+        "text": "    }"
+      },
+      {
+        "number": 111,
+        "text": "    expect(pending.replayLines(\"session\")).toEqual([line]);"
+      },
+      {
+        "number": 112,
+        "text": "  });"
+      },
+      {
+        "number": 113,
+        "text": ""
+      },
+      {
+        "number": 114,
+        "text": "  test(\"replays pending approval requests only for the selected session\", () => {"
+      },
+      {
+        "number": 115,
+        "text": "    const pending = new PendingMobileApprovals();"
+      },
+      {
+        "number": 116,
+        "text": "    const line = approvalRequestLine(\"s2\", \"ask-1\");"
+      },
+      {
+        "number": 117,
+        "text": ""
+      },
+      {
+        "number": 118,
+        "text": "    pending.observeOutboundLine(line);"
+      },
+      {
+        "number": 119,
+        "text": ""
+      },
+      {
+        "number": 120,
+        "text": "    expect(pending.replayLines(\"s1\")).toEqual([]);"
+      },
+      {
+        "number": 121,
+        "text": "    expect(pending.replayLines(\"s2\")).toEqual([line]);"
+      },
+      {
+        "number": 122,
+        "text": "  });"
+      },
+      {
+        "number": 123,
+        "text": ""
+      },
+      {
+        "number": 124,
+        "text": "  test(\"does not replay an approval after it resolves\", () => {"
+      },
+      {
+        "number": 125,
+        "text": "    const pending = new PendingMobileApprovals();"
+      },
+      {
+        "number": 126,
+        "text": "    pending.observeOutboundLine(approvalRequestLine(\"s2\", \"ask-1\"));"
+      },
+      {
+        "number": 127,
+        "text": ""
+      },
+      {
+        "number": 128,
+        "text": "    pending.observeOutboundLine("
+      },
+      {
+        "number": 129,
+        "text": "      JSON.stringify({"
+      },
+      {
+        "number": 130,
+        "text": "        jsonrpc: \"2.0\","
+      },
+      {
+        "number": 131,
+        "text": "        method: \"agent/approvalResolved\","
+      },
+      {
+        "number": 132,
+        "text": "        params: { sessionId: \"s2\", requestId: \"ask-1\", approved: true },"
+      },
+      {
+        "number": 133,
+        "text": "      }),"
+      },
+      {
+        "number": 134,
+        "text": "    );"
+      },
+      {
+        "number": 135,
+        "text": ""
+      },
+      {
+        "number": 136,
+        "text": "    expect(pending.replayLines(\"s2\")).toEqual([]);"
+      },
+      {
+        "number": 137,
+        "text": "  });"
+      },
+      {
+        "number": 138,
+        "text": ""
+      },
+      {
+        "number": 139,
+        "text": "  test(\"direct resolve clears approvals resolved through the typed mobile path\", () => {"
+      },
+      {
+        "number": 140,
+        "text": "    const pending = new PendingMobileApprovals();"
+      },
+      {
+        "number": 141,
+        "text": "    pending.observeOutboundLine(approvalRequestLine(\"s2\", \"ask-1\"));"
+      },
+      {
+        "number": 142,
+        "text": ""
+      },
+      {
+        "number": 143,
+        "text": "    pending.resolve(\"ask-1\");"
+      },
+      {
+        "number": 144,
+        "text": ""
+      },
+      {
+        "number": 145,
+        "text": "    expect(pending.replayLines(\"s2\")).toEqual([]);"
+      },
+      {
+        "number": 146,
+        "text": "  });"
+      },
+      {
+        "number": 147,
+        "text": "});"
+      }
+    ]
+  },
+  {
+    "path": "packages/server/src/mobile-remote/trusted-device-store.ts",
+    "sha256": "6cdee911aba2713e2d8fa8f058018687577e3dc8b070fdefae9a169aa1cb2ef1",
+    "scope": "Copied after actual display and current hash check, not pre-read raw transcript.",
+    "lines": [
+      {
+        "number": 43,
+        "text": "  addDevice(input: { name: string; secretHash: string }): TrustedDevicePublic {"
+      },
+      {
+        "number": 44,
+        "text": "    const name = normalizeDeviceName(input.name);"
+      },
+      {
+        "number": 45,
+        "text": "    if (!name) throw new Error(\"Invalid trusted device name\");"
+      },
+      {
+        "number": 46,
+        "text": "    if (!isBoundedOpaqueString(input.secretHash, MAX_DEVICE_SECRET_LENGTH)) {"
+      },
+      {
+        "number": 47,
+        "text": "      throw new Error(\"Invalid trusted device secret\");"
+      },
+      {
+        "number": 48,
+        "text": "    }"
+      },
+      {
+        "number": 49,
+        "text": "    return this.mutate((devices) => {"
+      },
+      {
+        "number": 50,
+        "text": "      // Get-or-create by secretHash. A phone's secret is stable per browser"
+      },
+      {
+        "number": 51,
+        "text": "      // (persisted in localStorage as cs.deviceSecret), so re-scanning the QR"
+      },
+      {
+        "number": 52,
+        "text": "      // code must reuse its live row rather than accumulating duplicates."
+      },
+      {
+        "number": 53,
+        "text": "      const existing = devices.find((d) => secretHashEquals(d.secretHash, input.secretHash));"
+      },
+      {
+        "number": 54,
+        "text": "      if (existing) {"
+      },
+      {
+        "number": 55,
+        "text": "        if (existing.revokedAt) {"
+      },
+      {
+        "number": 56,
+        "text": "          throw new Error(\"Trusted device was revoked; remove it before pairing again\");"
+      },
+      {
+        "number": 57,
+        "text": "        }"
+      },
+      {
+        "number": 58,
+        "text": "        existing.name = name;"
+      },
+      {
+        "number": 59,
+        "text": "        existing.lastSeenAt = Date.now();"
+      },
+      {
+        "number": 60,
+        "text": "        return { result: this.toPublic(existing), changed: true };"
+      },
+      {
+        "number": 61,
+        "text": "      }"
+      },
+      {
+        "number": 62,
+        "text": "      if (devices.length >= MAX_TRUSTED_DEVICE_ROWS) {"
+      },
+      {
+        "number": 63,
+        "text": "        throw new Error(\"Trusted device limit reached\");"
+      },
+      {
+        "number": 64,
+        "text": "      }"
+      },
+      {
+        "number": 65,
+        "text": "      const device: TrustedDevice = {"
+      },
+      {
+        "number": 66,
+        "text": "        id: randomUUID(),"
+      },
+      {
+        "number": 67,
+        "text": "        name,"
+      },
+      {
+        "number": 68,
+        "text": "        secretHash: input.secretHash,"
+      },
+      {
+        "number": 69,
+        "text": "        createdAt: Date.now(),"
+      },
+      {
+        "number": 70,
+        "text": "      };"
+      },
+      {
+        "number": 71,
+        "text": "      devices.push(device);"
+      },
+      {
+        "number": 72,
+        "text": "      return { result: this.toPublic(device), changed: true };"
+      },
+      {
+        "number": 73,
+        "text": "    });"
+      },
+      {
+        "number": 74,
+        "text": "  }"
+      },
+      {
+        "number": 133,
+        "text": "  private mutate<R>(mutation: (devices: TrustedDevice[]) => { result: R; changed: boolean }): R {"
+      },
+      {
+        "number": 134,
+        "text": "    this.ensurePrivateParent();"
+      },
+      {
+        "number": 135,
+        "text": "    const release = acquireFileLock(this.filePath);"
+      },
+      {
+        "number": 136,
+        "text": "    try {"
+      },
+      {
+        "number": 137,
+        "text": "      // Crucially reload INSIDE the lock; atomic rename alone cannot prevent"
+      },
+      {
+        "number": 138,
+        "text": "      // two writers that both read revision N from losing one update."
+      },
+      {
+        "number": 139,
+        "text": "      const devices = this.readAll();"
+      },
+      {
+        "number": 140,
+        "text": "      const { result, changed } = mutation(devices);"
+      },
+      {
+        "number": 141,
+        "text": "      if (changed) this.writeAll(devices);"
+      },
+      {
+        "number": 142,
+        "text": "      return result;"
+      },
+      {
+        "number": 143,
+        "text": "    } finally {"
+      },
+      {
+        "number": 144,
+        "text": "      release();"
+      },
+      {
+        "number": 145,
+        "text": "    }"
+      },
+      {
+        "number": 146,
+        "text": "  }"
+      },
+      {
+        "number": 147,
+        "text": ""
+      }
+    ]
+  },
+  {
+    "path": "packages/desktop/src/main/index.ts",
+    "sha256": "105b2b49a28e0a7ef10980ac5feaa3a07ff81e7197f5acbefd95feb2498224c0",
+    "scope": "Copied after actual display and current hash check, not pre-read raw transcript.",
+    "lines": [
+      {
+        "number": 1823,
+        "text": ""
+      },
+      {
+        "number": 1824,
+        "text": "    // Mirror every worker→renderer line onto any connected mobile clients, so"
+      },
+      {
+        "number": 1825,
+        "text": "    // the phone sees the same stream (messages, tool summaries, approvals)."
+      },
+      {
+        "number": 1826,
+        "text": "    bridge.subscribeOutbound((line, snapshotEntry) => {"
+      },
+      {
+        "number": 1827,
+        "text": "      pendingMobileApprovals.setWorkerState("
+      },
+      {
+        "number": 1828,
+        "text": "        externalBridge.workerGeneration(),"
+      },
+      {
+        "number": 1829,
+        "text": "        externalBridge.hasLiveWorker(),"
+      },
+      {
+        "number": 1830,
+        "text": "      );"
+      },
+      {
+        "number": 1831,
+        "text": "      pendingMobileApprovals.observeOutboundLine(line);"
+      },
+      {
+        "number": 1832,
+        "text": "      if (snapshotEntry) {"
+      },
+      {
+        "number": 1833,
+        "text": "        mobileRemote.broadcast({"
+      },
+      {
+        "number": 2097,
+        "text": "      read: () => {"
+      },
+      {
+        "number": 2098,
+        "text": "        pendingMobileApprovals.setWorkerState("
+      },
+      {
+        "number": 2099,
+        "text": "          decisionBridge.workerGeneration(),"
+      },
+      {
+        "number": 2100,
+        "text": "          decisionBridge.hasLiveWorker(),"
+      },
+      {
+        "number": 2101,
+        "text": "        );"
+      },
+      {
+        "number": 2102,
+        "text": "        return collectImDecisions("
+      },
+      {
+        "number": 2103,
+        "text": "          aggregator.getSnapshot(),"
+      },
+      {
+        "number": 2104,
+        "text": "          longTaskStore.getSnapshot().tasks,"
+      },
+      {
+        "number": 2105,
+        "text": "          pendingMobileApprovals.replayAllLines(),"
+      },
+      {
+        "number": 2106,
+        "text": "        );"
+      },
+      {
+        "number": 2107,
+        "text": "      },"
+      },
+      {
+        "number": 6914,
+        "text": "  pendingMobileApprovals.forgetSession(id);"
+      },
+      {
+        "number": 6957,
+        "text": "ipcMain.handle(\"agent:pendingApprovals\", (event) => {"
+      },
+      {
+        "number": 6958,
+        "text": "  // Native approval events already reach all main windows. Preserve that queue"
+      },
+      {
+        "number": 6959,
+        "text": "  // and its session envelopes, without replaying resolved historical requests."
+      },
+      {
+        "number": 6960,
+        "text": "  pendingMobileApprovals.setWorkerState("
+      },
+      {
+        "number": 6961,
+        "text": "    bridge?.workerGeneration() ?? 0,"
+      },
+      {
+        "number": 6962,
+        "text": "    bridge?.hasLiveWorker() ?? false,"
+      },
+      {
+        "number": 6963,
+        "text": "  );"
+      },
+      {
+        "number": 6964,
+        "text": "  return ["
+      },
+      {
+        "number": 6965,
+        "text": "    ...pendingMobileApprovals.replayAllLines().map((line) => JSON.parse(line).params),"
+      },
+      {
+        "number": 6966,
+        "text": "    ...(externalRuntimeApprovals?.pendingForWindow(event.sender.id) ?? []),"
+      }
+    ]
+  },
+  {
+    "path": "packages/desktop/src/main/agent-bridge.ts",
+    "sha256": "2ba6a48296c36b207ac799b4beaf0a1b9335d8711859245e3f246d6b88906d47",
+    "scope": "Copied after actual display and current hash check, not pre-read raw transcript.",
+    "lines": [
+      {
+        "number": 435,
+        "text": "      onWorkerStarted: () => {"
+      },
+      {
+        "number": 436,
+        "text": "        this.workerRuns.beginWorker();"
+      },
+      {
+        "number": 437,
+        "text": "        this.petWorkerGeneration.beginWorker();"
+      },
+      {
+        "number": 438,
+        "text": "        this.emitPetProjection({ kind: \"lifecycle\", state: \"active\" });"
+      },
+      {
+        "number": 439,
+        "text": "      },"
+      },
+      {
+        "number": 440,
+        "text": "      onSpawnFailed: () => {"
+      },
+      {
+        "number": 441,
+        "text": "        this.emitPetProjection({ kind: \"lifecycle\", state: \"disconnected\" });"
+      },
+      {
+        "number": 442,
+        "text": "        this.safeSend(\"agent:lifecycle\", {"
+      },
+      {
+        "number": 443,
+        "text": "          type: \"gave_up\","
+      },
+      {
+        "number": 444,
+        "text": "          sessionIds: this.workerRuns.endWorker(),"
+      },
+      {
+        "number": 445,
+        "text": "        });"
+      },
+      {
+        "number": 446,
+        "text": "      },"
+      },
+      {
+        "number": 447,
+        "text": "      onSpawnError: () => {"
+      },
+      {
+        "number": 448,
+        "text": "        const sessionIds = this.workerRuns.endWorker();"
+      },
+      {
+        "number": 449,
+        "text": "        this.abortLocalOAuthLinkActions();"
+      },
+      {
+        "number": 450,
+        "text": "        this.webConfiguration.workerExited();"
+      },
+      {
+        "number": 451,
+        "text": "        this.childBrowserLifetime.close();"
+      },
+      {
+        "number": 452,
+        "text": "        this.evictPendingTentativeRuns();"
+      },
+      {
+        "number": 453,
+        "text": "        this.failPendingQuickChatForks();"
+      },
+      {
+        "number": 454,
+        "text": "        // Snapshots intentionally survive worker exit — a respawn may resume"
+      },
+      {
+        "number": 455,
+        "text": "        // the same session, and a remounted renderer still needs to replay."
+      },
+      {
+        "number": 456,
+        "text": "        this.snapshots.onWorkerExit(sessionIds);"
+      },
+      {
+        "number": 457,
+        "text": "        this.emitPetProjection({ kind: \"lifecycle\", state: \"disconnected\" });"
+      },
+      {
+        "number": 458,
+        "text": "        this.safeSend(\"agent:lifecycle\", { type: \"gave_up\", sessionIds });"
+      },
+      {
+        "number": 459,
+        "text": "      },"
+      },
+      {
+        "number": 460,
+        "text": "      onExit: ({ code, clean, gaveUp }) => {"
+      },
+      {
+        "number": 461,
+        "text": "        const sessionIds = this.workerRuns.endWorker();"
+      },
+      {
+        "number": 462,
+        "text": "        this.abortLocalOAuthLinkActions();"
+      },
+      {
+        "number": 463,
+        "text": "        this.webConfiguration.workerExited();"
+      },
+      {
+        "number": 464,
+        "text": "        this.childBrowserLifetime.close();"
+      },
+      {
+        "number": 465,
+        "text": "        this.evictPendingTentativeRuns();"
+      },
+      {
+        "number": 466,
+        "text": "        this.failPendingQuickChatForks();"
+      },
+      {
+        "number": 467,
+        "text": "        this.snapshots.onWorkerExit(sessionIds);"
+      },
+      {
+        "number": 468,
+        "text": "        if (clean) {"
+      },
+      {
+        "number": 469,
+        "text": "          this.emitPetProjection({ kind: \"lifecycle\", state: \"reclaimed\" });"
+      },
+      {
+        "number": 470,
+        "text": "          this.safeSend(\"agent:lifecycle\", { type: \"exited\", code, sessionIds });"
+      },
+      {
+        "number": 471,
+        "text": "          return;"
+      },
+      {
+        "number": 472,
+        "text": "        }"
+      },
+      {
+        "number": 473,
+        "text": "        this.emitPetProjection({ kind: \"lifecycle\", state: \"disconnected\" });"
+      },
+      {
+        "number": 474,
+        "text": "        if (gaveUp) this.safeSend(\"agent:lifecycle\", { type: \"gave_up\", sessionIds });"
+      },
+      {
+        "number": 475,
+        "text": "        else this.safeSend(\"agent:lifecycle\", { type: \"exited\", code, sessionIds });"
+      },
+      {
+        "number": 476,
+        "text": "      },"
+      },
+      {
+        "number": 477,
+        "text": "    });"
+      },
+      {
+        "number": 478,
+        "text": "    this.core.subscribeLines((line) => this.handleWorkerLine(line));"
+      },
+      {
+        "number": 479,
+        "text": "    this.registerWindow(window);"
+      },
+      {
+        "number": 480,
+        "text": "    this.quickChatForkRouter = quickChatForkLifecycle"
+      },
+      {
+        "number": 2019,
+        "text": "  getSnapshot(sessionId: string, sinceSeq = 0): Snapshot {"
+      },
+      {
+        "number": 2020,
+        "text": "    return this.snapshots.get(sessionId, sinceSeq);"
+      },
+      {
+        "number": 2021,
+        "text": "  }"
+      },
+      {
+        "number": 2317,
+        "text": "  subscribeOutbound("
+      },
+      {
+        "number": 2318,
+        "text": "    tap: ("
+      },
+      {
+        "number": 2319,
+        "text": "      line: string,"
+      },
+      {
+        "number": 2320,
+        "text": "      snapshotEntry?: SnapshotEntry & { sessionId: string; epoch: string },"
+      },
+      {
+        "number": 2321,
+        "text": "    ) => void,"
+      },
+      {
+        "number": 2322,
+        "text": "  ): () => void {"
+      },
+      {
+        "number": 2323,
+        "text": "    this.outboundTaps.add(tap);"
+      },
+      {
+        "number": 2324,
+        "text": "    return () => this.outboundTaps.delete(tap);"
+      },
+      {
+        "number": 2325,
+        "text": "  }"
+      },
+      {
+        "number": 2335,
+        "text": "  getLastRunContext(): { cwd?: string; sessionId?: string } {"
+      },
+      {
+        "number": 2336,
+        "text": "    return this.lastRunContext;"
+      },
+      {
+        "number": 2337,
+        "text": "  }"
+      }
+    ]
+  }
+]

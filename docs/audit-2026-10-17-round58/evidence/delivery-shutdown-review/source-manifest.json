@@ -1,0 +1,828 @@
+{
+  "schema": "independent-static-lifecycle-review/v1",
+  "atUTC": "2026-10-17T19:33:36.989994+00:00",
+  "rootReportedBaseline": "f31a847f45e4805bce34aeb9e6db7efb503cfcb0",
+  "gitCertified": false,
+  "files": [
+    {
+      "path": "packages/chat/src/delivery-queue.ts",
+      "bytes": 28387,
+      "sha256": "e1f4f384af3dee66030bed6cd9a51bc7c3585e4aa320501d3e336686e0321393",
+      "lineCount": 769,
+      "kind": "product",
+      "coverage": "targeted-static-selected; not-new-full",
+      "selectedLineRanges": [
+        [
+          93,
+          137
+        ],
+        [
+          149,
+          239
+        ],
+        [
+          241,
+          315
+        ],
+        [
+          482,
+          535
+        ],
+        [
+          537,
+          571
+        ],
+        [
+          580,
+          592
+        ],
+        [
+          700,
+          721
+        ]
+      ],
+      "selectedLineCount": 335,
+      "bodyDisplayedLineRanges": [
+        [
+          93,
+          143
+        ],
+        [
+          149,
+          317
+        ],
+        [
+          482,
+          593
+        ],
+        [
+          700,
+          727
+        ]
+      ],
+      "bodyDisplayedLineCount": 360,
+      "additionalNavigationSnippetLines": [
+        3,
+        19,
+        30,
+        320,
+        324,
+        325,
+        326,
+        364,
+        367,
+        373,
+        427,
+        609,
+        612,
+        619,
+        738,
+        765
+      ],
+      "displayedLineRanges": [
+        [
+          3,
+          3
+        ],
+        [
+          19,
+          19
+        ],
+        [
+          30,
+          30
+        ],
+        [
+          93,
+          143
+        ],
+        [
+          149,
+          317
+        ],
+        [
+          320,
+          320
+        ],
+        [
+          324,
+          326
+        ],
+        [
+          364,
+          364
+        ],
+        [
+          367,
+          367
+        ],
+        [
+          373,
+          373
+        ],
+        [
+          427,
+          427
+        ],
+        [
+          482,
+          593
+        ],
+        [
+          609,
+          609
+        ],
+        [
+          612,
+          612
+        ],
+        [
+          619,
+          619
+        ],
+        [
+          700,
+          727
+        ],
+        [
+          738,
+          738
+        ],
+        [
+          765,
+          765
+        ]
+      ],
+      "displayedLineCount": 376,
+      "initialSha256": "e1f4f384af3dee66030bed6cd9a51bc7c3585e4aa320501d3e336686e0321393",
+      "initialPinUTC": "2026-10-17T19:26:59.757888+00:00",
+      "initialPinTiming": "before body/nav this packet; product filenames confirmed current inventory",
+      "originalPinRow": {
+        "path": "packages/chat/src/delivery-queue.ts",
+        "bytes": 28387,
+        "lineCount": 769,
+        "sha256": "e1f4f384af3dee66030bed6cd9a51bc7c3585e4aa320501d3e336686e0321393",
+        "pinnedAtUTC": "2026-10-17T19:26:59.757888+00:00",
+        "timing": "before body/nav this packet; product filenames confirmed current inventory"
+      },
+      "scope": "Existing concrete shutdown/late-write targeted review. start loads once; stop has no await; detached process writes after await deliver; ordinary text accepted persistent before enqueue resolves; persist serializes instance-wide pending/completed and renames without reload/CAS; withMutation is instance Promise only. Directory/regular-target helpers not content-generation guards; actual OS/file safety not certified."
+    },
+    {
+      "path": "packages/chat/src/bound-session-chat.ts",
+      "bytes": 3817,
+      "sha256": "3cfca7ed0caa2509102548f1e47a581e4d1e53423f5682c1f33f374a8ca0f4c7",
+      "lineCount": 99,
+      "kind": "product",
+      "coverage": "targeted-static-selected; not-new-full",
+      "selectedLineRanges": [
+        [
+          61,
+          98
+        ]
+      ],
+      "selectedLineCount": 38,
+      "bodyDisplayedLineRanges": [
+        [
+          1,
+          99
+        ]
+      ],
+      "bodyDisplayedLineCount": 99,
+      "additionalNavigationSnippetLines": [],
+      "displayedLineRanges": [
+        [
+          1,
+          99
+        ]
+      ],
+      "displayedLineCount": 99,
+      "initialSha256": "3cfca7ed0caa2509102548f1e47a581e4d1e53423f5682c1f33f374a8ca0f4c7",
+      "initialPinUTC": "2026-10-17T19:26:59.758296+00:00",
+      "initialPinTiming": "before body/nav this packet; product filenames confirmed current inventory",
+      "originalPinRow": {
+        "path": "packages/chat/src/bound-session-chat.ts",
+        "bytes": 3817,
+        "lineCount": 99,
+        "sha256": "3cfca7ed0caa2509102548f1e47a581e4d1e53423f5682c1f33f374a8ca0f4c7",
+        "pinnedAtUTC": "2026-10-17T19:26:59.758296+00:00",
+        "timing": "before body/nav this packet; product filenames confirmed current inventory"
+      },
+      "scope": "Real middleware falls through only when not-bound; accepted Work Session path returns early and is not the chosen long Mimi consumer. Existing same-SHA source overlap, no first/new full claim."
+    },
+    {
+      "path": "packages/chat/src/cli.ts",
+      "bytes": 11645,
+      "sha256": "4a4c052a8433836583cd9300669f4c400f394d780645c75156c38b78d6e1d9ed",
+      "lineCount": 320,
+      "kind": "product",
+      "coverage": "targeted-static-selected; not-new-full",
+      "selectedLineRanges": [
+        [
+          66,
+          72
+        ],
+        [
+          80,
+          96
+        ],
+        [
+          107,
+          110
+        ],
+        [
+          115,
+          144
+        ],
+        [
+          317,
+          320
+        ]
+      ],
+      "selectedLineCount": 62,
+      "bodyDisplayedLineRanges": [
+        [
+          1,
+          147
+        ],
+        [
+          286,
+          320
+        ]
+      ],
+      "bodyDisplayedLineCount": 182,
+      "additionalNavigationSnippetLines": [
+        160,
+        185,
+        186,
+        241,
+        242,
+        251,
+        266,
+        275,
+        276
+      ],
+      "displayedLineRanges": [
+        [
+          1,
+          147
+        ],
+        [
+          160,
+          160
+        ],
+        [
+          185,
+          186
+        ],
+        [
+          241,
+          242
+        ],
+        [
+          251,
+          251
+        ],
+        [
+          266,
+          266
+        ],
+        [
+          275,
+          276
+        ],
+        [
+          286,
+          320
+        ]
+      ],
+      "displayedLineCount": 191,
+      "initialSha256": "4a4c052a8433836583cd9300669f4c400f394d780645c75156c38b78d6e1d9ed",
+      "initialPinUTC": "2026-10-17T19:27:19.317194+00:00",
+      "initialPinTiming": "before any own body/nav; exact filename initialinventory",
+      "originalPinRow": {
+        "path": "packages/chat/src/cli.ts",
+        "bytes": 11645,
+        "lineCount": 320,
+        "sha256": "4a4c052a8433836583cd9300669f4c400f394d780645c75156c38b78d6e1d9ed",
+        "pinnedAtUTC": "2026-10-17T19:27:19.317194+00:00",
+        "timing": "before any own body/nav; exact filename initialinventory"
+      },
+      "scope": "Actual node CLI lease acquire, signal handler, real queue/Mimi composition, Promise.all(gateway, watcher), release in finally, exitCode only. Other command bodies not semantically audited; no claim every SDK/OS exit path keeps process alive."
+    },
+    {
+      "path": "packages/chat/src/chat-gateway.ts",
+      "bytes": 10429,
+      "sha256": "7032acecac774cc3c6bea6bb1b5f3b90ddf93c7234a8bded97112483300c311d",
+      "lineCount": 301,
+      "kind": "product",
+      "coverage": "targeted-static-selected; not-new-full",
+      "selectedLineRanges": [
+        [
+          102,
+          121
+        ],
+        [
+          123,
+          186
+        ],
+        [
+          199,
+          231
+        ]
+      ],
+      "selectedLineCount": 117,
+      "bodyDisplayedLineRanges": [
+        [
+          90,
+          265
+        ]
+      ],
+      "bodyDisplayedLineCount": 176,
+      "additionalNavigationSnippetLines": [],
+      "displayedLineRanges": [
+        [
+          90,
+          265
+        ]
+      ],
+      "displayedLineCount": 176,
+      "initialSha256": "7032acecac774cc3c6bea6bb1b5f3b90ddf93c7234a8bded97112483300c311d",
+      "initialPinUTC": "2026-10-17T19:27:19.319219+00:00",
+      "initialPinTiming": "before any own body/nav; exact filename initialinventory",
+      "originalPinRow": {
+        "path": "packages/chat/src/chat-gateway.ts",
+        "bytes": 10429,
+        "lineCount": 301,
+        "sha256": "7032acecac774cc3c6bea6bb1b5f3b90ddf93c7234a8bded97112483300c311d",
+        "pinnedAtUTC": "2026-10-17T19:27:19.319219+00:00",
+        "timing": "before any own body/nav; exact filename initialinventory"
+      },
+      "scope": "Delivery callback dispatches async middleware; adapter handler waits only enqueue. run awaits adapter/ingress runners then stop without drain; superviseAdapter can finish on abort. Allowlist/rate-limit snippets displayed boundary, not authority review."
+    },
+    {
+      "path": "packages/chat/src/gateway.ts",
+      "bytes": 12984,
+      "sha256": "d73ad84b43ef1b2e705323cb3ed63c5102fbb0d31f51dc5ffc10fc45862a1b13",
+      "lineCount": 347,
+      "kind": "product",
+      "coverage": "targeted-static-selected; not-new-full",
+      "selectedLineRanges": [
+        [
+          129,
+          185
+        ],
+        [
+          197,
+          243
+        ]
+      ],
+      "selectedLineCount": 104,
+      "bodyDisplayedLineRanges": [
+        [
+          129,
+          246
+        ]
+      ],
+      "bodyDisplayedLineCount": 118,
+      "additionalNavigationSnippetLines": [
+        27,
+        65,
+        84,
+        89
+      ],
+      "displayedLineRanges": [
+        [
+          27,
+          27
+        ],
+        [
+          65,
+          65
+        ],
+        [
+          84,
+          84
+        ],
+        [
+          89,
+          89
+        ],
+        [
+          129,
+          246
+        ]
+      ],
+      "displayedLineCount": 122,
+      "initialSha256": "d73ad84b43ef1b2e705323cb3ed63c5102fbb0d31f51dc5ffc10fc45862a1b13",
+      "initialPinUTC": "2026-10-17T19:27:19.319934+00:00",
+      "initialPinTiming": "before any own body/nav; exact filename initialinventory",
+      "originalPinRow": {
+        "path": "packages/chat/src/gateway.ts",
+        "bytes": 12984,
+        "lineCount": 347,
+        "sha256": "d73ad84b43ef1b2e705323cb3ed63c5102fbb0d31f51dc5ffc10fc45862a1b13",
+        "pinnedAtUTC": "2026-10-17T19:27:19.319934+00:00",
+        "timing": "before any own body/nav; exact filename initialinventory"
+      },
+      "scope": "Ordinary messageId cache miss/hit awaits outgoing work, then send; Mimi petChat called with input but no shutdown signal. Existing cache error code incidental, no second finding or full middleware error review."
+    },
+    {
+      "path": "packages/chat/src/desktop-control-client.ts",
+      "bytes": 15174,
+      "sha256": "8647ab741d9b91ee5e043d8d8a02224598b42273f585e02bb5aef81ddc3541d1",
+      "lineCount": 446,
+      "kind": "product",
+      "coverage": "targeted-static-selected; not-new-full",
+      "selectedLineRanges": [
+        [
+          73,
+          82
+        ],
+        [
+          101,
+          131
+        ],
+        [
+          177,
+          189
+        ],
+        [
+          211,
+          218
+        ],
+        [
+          275,
+          320
+        ]
+      ],
+      "selectedLineCount": 108,
+      "bodyDisplayedLineRanges": [
+        [
+          50,
+          133
+        ],
+        [
+          165,
+          218
+        ],
+        [
+          260,
+          321
+        ]
+      ],
+      "bodyDisplayedLineCount": 200,
+      "additionalNavigationSnippetLines": [
+        151,
+        160,
+        324,
+        325,
+        327
+      ],
+      "displayedLineRanges": [
+        [
+          50,
+          133
+        ],
+        [
+          151,
+          151
+        ],
+        [
+          160,
+          160
+        ],
+        [
+          165,
+          218
+        ],
+        [
+          260,
+          321
+        ],
+        [
+          324,
+          325
+        ],
+        [
+          327,
+          327
+        ]
+      ],
+      "displayedLineCount": 205,
+      "initialSha256": "8647ab741d9b91ee5e043d8d8a02224598b42273f585e02bb5aef81ddc3541d1",
+      "initialPinUTC": "2026-10-17T19:27:19.320685+00:00",
+      "initialPinTiming": "before any own body/nav; exact filename initialinventory",
+      "originalPinRow": {
+        "path": "packages/chat/src/desktop-control-client.ts",
+        "bytes": 15174,
+        "lineCount": 446,
+        "sha256": "8647ab741d9b91ee5e043d8d8a02224598b42273f585e02bb5aef81ddc3541d1",
+        "pinnedAtUTC": "2026-10-17T19:27:19.320685+00:00",
+        "timing": "before any own body/nav; exact filename initialinventory"
+      },
+      "scope": "Actual default fetch, start/result polling without caller signal; local request AbortController/timeout remains until settled. Idle event watcher can abort-return; active notification handlers may delay release and are excluded from chosen trigger. No descriptor/auth/spawn/network/actual event-loop runtime certification."
+    },
+    {
+      "path": "packages/chat/src/instance-lock.ts",
+      "bytes": 4712,
+      "sha256": "91f03a718482656bf0f0e82087865ec70dffcd8e619d330ff31fcded54bca742",
+      "lineCount": 159,
+      "kind": "product",
+      "coverage": "targeted-static-selected; not-new-full",
+      "selectedLineRanges": [
+        [
+          19,
+          31
+        ],
+        [
+          47,
+          110
+        ],
+        [
+          156,
+          159
+        ]
+      ],
+      "selectedLineCount": 81,
+      "bodyDisplayedLineRanges": [
+        [
+          1,
+          159
+        ]
+      ],
+      "bodyDisplayedLineCount": 159,
+      "additionalNavigationSnippetLines": [],
+      "displayedLineRanges": [
+        [
+          1,
+          159
+        ]
+      ],
+      "displayedLineCount": 159,
+      "initialSha256": "91f03a718482656bf0f0e82087865ec70dffcd8e619d330ff31fcded54bca742",
+      "initialPinUTC": "2026-10-17T19:28:08.821691+00:00",
+      "initialPinTiming": "before own body/nav; filename b1f57b",
+      "originalPinRow": {
+        "path": "packages/chat/src/instance-lock.ts",
+        "bytes": 4712,
+        "lineCount": 159,
+        "sha256": "91f03a718482656bf0f0e82087865ec70dffcd8e619d330ff31fcded54bca742",
+        "pinnedAtUTC": "2026-10-17T19:28:08.821691+00:00",
+        "timing": "before own body/nav; filename b1f57b"
+      },
+      "scope": "Explicit cross-process single-owner contract, wx then close fd, token-based explicit release removes file; live-PID check only when existing lock file. No acquisition/removal/permission/race native execution or general lock correctness claim."
+    },
+    {
+      "path": "packages/chat/src/config.ts",
+      "bytes": 28057,
+      "sha256": "f002a45bda4bffa7c222f039487ddfa74e4d0c22230075a97f7036acaffb01e7",
+      "lineCount": 870,
+      "kind": "product",
+      "coverage": "targeted-static-selected; not-new-full",
+      "selectedLineRanges": [
+        [
+          340,
+          352
+        ]
+      ],
+      "selectedLineCount": 13,
+      "bodyDisplayedLineRanges": [
+        [
+          333,
+          359
+        ]
+      ],
+      "bodyDisplayedLineCount": 27,
+      "additionalNavigationSnippetLines": [
+        150,
+        151,
+        154,
+        155,
+        288,
+        289
+      ],
+      "displayedLineRanges": [
+        [
+          150,
+          151
+        ],
+        [
+          154,
+          155
+        ],
+        [
+          288,
+          289
+        ],
+        [
+          333,
+          359
+        ]
+      ],
+      "displayedLineCount": 33,
+      "initialSha256": "f002a45bda4bffa7c222f039487ddfa74e4d0c22230075a97f7036acaffb01e7",
+      "initialPinUTC": "2026-10-17T19:28:08.824639+00:00",
+      "initialPinTiming": "before own body/nav; filename b1f57b",
+      "originalPinRow": {
+        "path": "packages/chat/src/config.ts",
+        "bytes": 28057,
+        "lineCount": 870,
+        "sha256": "f002a45bda4bffa7c222f039487ddfa74e4d0c22230075a97f7036acaffb01e7",
+        "pinnedAtUTC": "2026-10-17T19:28:08.824639+00:00",
+        "timing": "before own body/nav; filename b1f57b"
+      },
+      "scope": "Same config defaults use same HOME/im-gateway gateway.lock and inbox.json; no live HOME/config access or configuration mechanism review."
+    },
+    {
+      "path": "packages/chat/src/telegram.ts",
+      "bytes": 12790,
+      "sha256": "093491c212ceb29855f1588cc9b436315a7f05fe39c323614ad803eeef1cbc9e",
+      "lineCount": 362,
+      "kind": "product",
+      "coverage": "targeted-static-selected; not-new-full",
+      "selectedLineRanges": [
+        [
+          91,
+          124
+        ],
+        [
+          139,
+          146
+        ]
+      ],
+      "selectedLineCount": 42,
+      "bodyDisplayedLineRanges": [
+        [
+          91,
+          146
+        ]
+      ],
+      "bodyDisplayedLineCount": 56,
+      "additionalNavigationSnippetLines": [
+        61,
+        73,
+        84,
+        193,
+        198,
+        203,
+        207,
+        225,
+        229,
+        234,
+        263,
+        285,
+        312,
+        347,
+        348,
+        351,
+        354
+      ],
+      "displayedLineRanges": [
+        [
+          61,
+          61
+        ],
+        [
+          73,
+          73
+        ],
+        [
+          84,
+          84
+        ],
+        [
+          91,
+          146
+        ],
+        [
+          193,
+          193
+        ],
+        [
+          198,
+          198
+        ],
+        [
+          203,
+          203
+        ],
+        [
+          207,
+          207
+        ],
+        [
+          225,
+          225
+        ],
+        [
+          229,
+          229
+        ],
+        [
+          234,
+          234
+        ],
+        [
+          263,
+          263
+        ],
+        [
+          285,
+          285
+        ],
+        [
+          312,
+          312
+        ],
+        [
+          347,
+          348
+        ],
+        [
+          351,
+          351
+        ],
+        [
+          354,
+          354
+        ]
+      ],
+      "displayedLineCount": 73,
+      "initialSha256": "093491c212ceb29855f1588cc9b436315a7f05fe39c323614ad803eeef1cbc9e",
+      "initialPinUTC": "2026-10-17T19:30:02.912509+00:00",
+      "initialPinTiming": "before own body/nav; filenamecf65a4",
+      "originalPinRow": {
+        "path": "packages/chat/src/telegram.ts",
+        "bytes": 12790,
+        "lineCount": 362,
+        "sha256": "093491c212ceb29855f1588cc9b436315a7f05fe39c323614ad803eeef1cbc9e",
+        "pinnedAtUTC": "2026-10-17T19:30:02.912509+00:00",
+        "timing": "before own body/nav; filenamecf65a4",
+        "scopeIntent": "One normal polling adapter can return on abort after handler already only enqueued, not wait out-of-band queue consumer."
+      },
+      "scope": "One normal polling adapter awaits only handler=enqueuing and advances offset, next poll is abortable; normal gateway runner can return with queue consumer outstanding. No actual platform ACK/redelivery, send or SDK execution."
+    },
+    {
+      "path": "CODESHELL.md",
+      "bytes": 17639,
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "lineCount": 217,
+      "kind": "instruction-reuse",
+      "coverage": "hash-only-this-packet; same-SHA prior instruction read reused",
+      "selectedLineRanges": [],
+      "selectedLineCount": 0,
+      "bodyDisplayedLineRanges": [],
+      "bodyDisplayedLineCount": 0,
+      "additionalNavigationSnippetLines": [],
+      "displayedLineRanges": [],
+      "displayedLineCount": 0,
+      "initialPinUTC": "2026-10-17T19:26:59.756980+00:00",
+      "originalPinRow": {
+        "path": "CODESHELL.md",
+        "bytes": 17639,
+        "lineCount": 217,
+        "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+        "pinnedAtUTC": "2026-10-17T19:26:59.756980+00:00",
+        "timing": "before body/nav this packet; product filenames confirmed current inventory"
+      }
+    },
+    {
+      "path": "AGENTS.md",
+      "bytes": 206,
+      "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "lineCount": 5,
+      "kind": "instruction-reuse",
+      "coverage": "hash-only-this-packet; same-SHA prior instruction read reused",
+      "selectedLineRanges": [],
+      "selectedLineCount": 0,
+      "bodyDisplayedLineRanges": [],
+      "bodyDisplayedLineCount": 0,
+      "additionalNavigationSnippetLines": [],
+      "displayedLineRanges": [],
+      "displayedLineCount": 0,
+      "initialPinUTC": "2026-10-17T19:26:59.757314+00:00",
+      "originalPinRow": {
+        "path": "AGENTS.md",
+        "bytes": 206,
+        "lineCount": 5,
+        "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+        "pinnedAtUTC": "2026-10-17T19:26:59.757314+00:00",
+        "timing": "before body/nav this packet; product filenames confirmed current inventory"
+      }
+    }
+  ],
+  "counts": {
+    "productSelectedRows": 9,
+    "productSelectedLines": 900,
+    "displayedSourceLines": 1434,
+    "testDeclarationLines": 0,
+    "testBodyReadLines": 0,
+    "testsExecuted": 0,
+    "sourceInstructionPins": 11,
+    "instructionHashOnlyRows": 2,
+    "semanticFullRows": 0,
+    "runtimeAttempts": 0
+  },
+  "rangeConvention": "One-based inclusive; canonical display=body union additional navigation. Selected subset; repeats once per file. Physical full display is not new/full semantic certification or native execution.",
+  "overlap": "R17 /files8 bound sameSHA scope original完整源码静态选择阅读; R5 /sources20 version pin and Oct16 queue pin preserve exact objects without guessing semantic full from hash. R11 CLI row is directed watcher wiring, not full. Old source objects read after targeted bodies; no first-coverage claim or backdated gate."
+}

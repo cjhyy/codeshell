@@ -1,0 +1,12 @@
+{
+  "firstWideNavigation": {
+    "commandDescription": "rg snapshot/Pet references plus support pins then overly broad read/on patterns across three pinned files",
+    "warning": "Warning: truncated output (original token count: 11150); total output lines 404; max output budget 3700",
+    "nestedExitCode": "Not printed by wrapper; do not infer a captured exit code",
+    "disposition": "Preserved first diagnostic. Missing middle navigation lines are not counted as observed. Later bounded body reads were fully visible, no product rerun."
+  },
+  "productAttempts": 0,
+  "productFailures": 0,
+  "metadataGenerationErrors": [],
+  "scope": "This truncation is metadata/source navigation output, not a product failure or source behavior observation."
+}

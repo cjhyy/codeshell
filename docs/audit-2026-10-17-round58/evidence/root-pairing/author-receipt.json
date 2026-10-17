@@ -1,0 +1,106 @@
+{
+  "files": [
+    {
+      "path": "bridge-before-pin.json",
+      "bytes": 259,
+      "sha256": "81f4582dc1c63111405a4781d8811729a22418e04672990499b9e51783c7178b"
+    },
+    {
+      "path": "candidate.json",
+      "bytes": 1384,
+      "sha256": "b3bf2b20f02b03ed5bc35de0ba91d4c56c70e8089b34dffd3dbefcabd832bb80"
+    },
+    {
+      "path": "canonical-before-body-gate.json",
+      "bytes": 2282,
+      "sha256": "ff3886a583627ab75be294097391ee56bcadfc2321f7b6ff0344c76efe898be1"
+    },
+    {
+      "path": "classification.json",
+      "bytes": 1748,
+      "sha256": "f8188255dbd83cd38eaebafec72152aa37579817a7980613cf05282ee529748a"
+    },
+    {
+      "path": "consumer-before-pins.json",
+      "bytes": 1571,
+      "sha256": "35a36d4e6f85d125498ea51bbe1aa8542e4eb44440a20960c5f22eec6126b0fd"
+    },
+    {
+      "path": "ending-checks.json",
+      "bytes": 2875,
+      "sha256": "0f41d6253052a99a08fdcfef2f94a8bc1c13d97ada71f2e7c149f3a4c8975f77"
+    },
+    {
+      "path": "finalize-metadata.py",
+      "bytes": 419,
+      "sha256": "f06feaf1b5c0b24d95c829c74ca5e7c6246ef904912fa019517c4489bacacbb2"
+    },
+    {
+      "path": "history-batch.json",
+      "bytes": 1396813,
+      "sha256": "1b3bad36a3243d8acd7a887bddac56e3fe66ccae57d2dfb3fddc14e46c88887b"
+    },
+    {
+      "path": "history-batch.py",
+      "bytes": 2562,
+      "sha256": "8b702b24495bcd86a1e8fb5e1de8eb029b581741f6829038db6d560dfb49224d"
+    },
+    {
+      "path": "history-first-exit.json",
+      "bytes": 43,
+      "sha256": "c35f6a285692755e7d0d14977f6b3921c0f660bef74ccda9c267f907f578219d"
+    },
+    {
+      "path": "history-first.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "history-first.stdout",
+      "bytes": 546,
+      "sha256": "b7364e9b44471e9f03922c7873cb9699ae8969c32c3128fb9c4c5792eee727e4"
+    },
+    {
+      "path": "initial-navigation-diagnostic.json",
+      "bytes": 232,
+      "sha256": "b8465476076700fcb699fa2b0d28a1e4f3f2342fc969b32438274e8b613ea31d"
+    },
+    {
+      "path": "initial-pins.json",
+      "bytes": 557,
+      "sha256": "7efee67d2579b17244966a22f79671a699d4c90309bfe3c9789607b8ca7a38f9"
+    },
+    {
+      "path": "instruction-pins.json",
+      "bytes": 549,
+      "sha256": "f8014812a34ecd3abc8484ff26d325042beb2b7f945ab59bdbb7e7fdc5dddc4e"
+    },
+    {
+      "path": "report.md",
+      "bytes": 2279,
+      "sha256": "b5332cbb37616d44e0caf1687703998aa510f8d7ff8f51e626880b6bcf6eb831"
+    },
+    {
+      "path": "source-excerpts.json",
+      "bytes": 70474,
+      "sha256": "409566e3410cc938284f1b006f7614ccddf38f4ada13ab1f5c0075c224111033"
+    },
+    {
+      "path": "source-manifest.json",
+      "bytes": 11974,
+      "sha256": "ce135a5eea258e4a0909d285eac3c352be9b893f7804edbc54fe7459c5e9a42d"
+    },
+    {
+      "path": "validation.json",
+      "bytes": 304,
+      "sha256": "e9ad11d079f0885eea1040114a58ba99ebe7ebf2452face0026276ce82c56f6a"
+    },
+    {
+      "path": "wiring-before-pins.json",
+      "bytes": 556,
+      "sha256": "685f24b7393edbf27bd1bd3b60c907321b36bac4a89172c6c3dc9eabc87c0e26"
+    }
+  ],
+  "productAttempts": 0,
+  "selfExcluded": true
+}

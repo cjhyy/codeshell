@@ -1,0 +1,124 @@
+[
+  {
+    "path": "packages/chat/package.json",
+    "bytes": 2936,
+    "lines": 123,
+    "sha256": "4f8b4d0e4aaec6197c86b6f6da1a6f1d9cd8a00a18743efbf1aedaab4afd8ffe",
+    "pinAt": "2026-10-17T19:30:31.845169+00:00",
+    "readAt": "2026-10-17T19:30:31.846024+00:00",
+    "displayedLineRanges": [
+      [
+        70,
+        72
+      ]
+    ],
+    "ranges": [
+      {
+        "first": 70,
+        "last": 72,
+        "text": "70:   \"bin\": {\n71:     \"code-shell-chat\": \"./dist/cli.js\"\n72:   },"
+      }
+    ]
+  },
+  {
+    "path": "docs/audit-2026-10-17-round11/chat.md",
+    "bytes": 6965,
+    "lines": 38,
+    "sha256": "868b6144211200a116626e400f17d224442041188a9871335ae7796da99104b2",
+    "pinAt": "2026-10-17T19:30:31.846750+00:00",
+    "readAt": "2026-10-17T19:30:31.846769+00:00",
+    "displayedLineRanges": [
+      [
+        1,
+        17
+      ]
+    ],
+    "ranges": [
+      {
+        "first": 1,
+        "last": 17,
+        "text": "1: # Chat 普通文本、附件元数据与通知进度审查（第十一批）\n2: \n3: 冻结源码：`b8b776d56e5982e59b18de0262d5c49367746625`。本批只写报告、fixture 与证据，没有产品代码或 Git mutation。范围为 shared splitter、普通 Markdown 投影、channel 能力、附件元数据与内存通知进度；适配器只定向读取普通数据转换。未向平台或任何人发消息。\n4: \n5: ## CHAT-R11-01 — P3：通知进度首次读取失败被缓存，后续自动重试不再读取已恢复的 store\n6: \n7: **位置与正常入口。** [notification-progress.ts:187](../../packages/chat/src/notification-progress.ts#L187) 的 `ensureLoaded()` 用 `loadTask ??=` 缓存首次加载 Promise；拒绝后没有清除。每次 `begin()` 在 [116 行](../../packages/chat/src/notification-progress.ts#L116) 都先等待同一 Promise。长期存活的通知 handler 在 [notification-relay.ts:97](../../packages/chat/src/notification-relay.ts#L97) 创建一个 progress 实例、在 123 行开始事件。CLI 的 [cli.ts:116](../../packages/chat/src/cli.ts#L116) 和 Desktop [im-gateway-service.ts:565](../../packages/desktop/src/main/im-gateway-service.ts#L565) 都只构造一次 File store/handler 后交给 watcher；两处明确显示“Desktop 通知等待重试”。File store [69–71 行](../../packages/chat/src/notification-progress.ts#L69) 将非 ENOENT 读取错误上抛，正常的读取 API 失败可以进入这个分支。\n8: \n9: **契约与触发。** [DesktopControlClient.watchEvents:188](../../packages/chat/src/desktop-control-client.ts#L188) 顺序处理通知，只有 handler 成功才推进事件 cursor；[212–218 行](../../packages/chat/src/desktop-control-client.ts#L212) 在错误后等待并再次轮询。暂时读取错误消失后，该循环应能重新尝试加载进度，继续原事件。当前第一次 `store.load()` 拒绝会使后续重试一直等待那个已拒绝的 Promise，直到 handler 被重建。\n10: \n11: **实际证据。** [首次 fixture](evidence/chat-progress-load.test.ts) 执行真实 `NotificationDeliveryProgress`、`createDesktopNotificationHandler` 和 `DesktopControlClient.prototype.watchEvents` 方法，仅用内存 store、fake adapter 和 page/sleep 回调：store 的第一次 load 抛模拟暂时读取错误，之后任何实际 load 都能成功。实际 watcher 处理同一事件重试 3 次，得到同一错误对象，`load=1`、`send=0`、轮询 cursor 为 `[0,0,0]`。测试在第 3 次错误后主动 abort，不声称执行了无限重试。完全相同的 store 交给新 handler 后第二次 load 成功，原事件发送 1 次。\n12: \n13: **控制与影响边界。** 初次正常 load 的 watcher 控制只有 1 次 load/1 次 send、无 error；同一 progress 实例的 save 暂时失败可通过 `flush()` 恢复，表明问题限定首次读取 Promise。动态证据支持同一 handler 的自动恢复受阻；未诱发真实磁盘 EIO/EMFILE，不推断发生频率、OS 行为、账号平台接收或 UI。cursor 仍停在原事件，新 handler 能处理，因此不称永久丢失；同一 watcher 的后续通知会静态地排在该事件后面，未动态演练多个生产 outbox 事件。\n14: \n15: **查重。** [所有历史清单](evidence/chat-all-history-dedup.json) 枚举全部 1601 个旧 docs/bugs MD 与 parsed JSON，含 archive/_archive 和普通命名文档，35 个路径/精确 helper 相关文件，0 parse error；未找到通知首次 load rejected Promise 同根因记录。早先 [audit/review 命名子集](evidence/chat-dedup.json) 为 1111 个文件、94 个宽关键词相关文件，另有 [进度专项检索](evidence/chat-progress-dedup.json)；两次关键词范围不同，匹配数量不可相减当成新发现。新增匹配的普通设计/roadmap 只描述现有通知进度复用，没有这个初始化拒绝缓存的既有 finding。旧通知结果映射、DeliveryQueue FIFO/ACK、LINE 上限、Slack thread 与 Unicode 附件名不重复计入。检索/散列不是宣称逐行审查过全部旧文档。\n16: \n17: ## 候选与跳过"
+      }
+    ]
+  },
+  {
+    "path": "docs/audit-2026-10-17-round11/findings.json",
+    "bytes": 1542,
+    "sha256": "623dceaf7d194fb747529ffdd59994416111d78f5ba43925a505c8a7d93a1aa8",
+    "pinAt": "2026-10-17T19:30:31.847666+00:00",
+    "readAt": "2026-10-17T19:30:31.847687+00:00",
+    "selectedObjects": [
+      {
+        "pointer": "/findings/0",
+        "value": {
+          "id": "CHAT-R11-01",
+          "priority": "P3",
+          "title": "通知进度首次 load 失败的 rejected Promise 被缓存，同一 watcher 后续重试不再读取已恢复的 store",
+          "source": "packages/chat/src/notification-progress.ts",
+          "line": 187,
+          "report": "chat.md",
+          "reportLine": 5,
+          "log": "evidence/chat-progress-load.first.log",
+          "evidenceLevel": "真实 NotificationDeliveryProgress、createDesktopNotificationHandler、DesktopControlClient.prototype.watchEvents 方法；内存 store、fake adapter、page/sleep 回调替身。watcher 不构造 client，不走 request/descriptor/spawn/checkpoint。",
+          "staticScope": "CLI 和 Desktop host 生产构造接线、FileNotificationDeliveryProgressStore 的非 ENOENT 传播。",
+          "limitations": [
+            "未诱发真实磁盘/OS 读取故障，不验证具体 EIO/EMFILE 概率或平台恢复。",
+            "未运行 Desktop/CLI host、实际账号/平台/模型、网络/SDK连接、权限或 custody 行为。",
+            "未证明通知永久丢失；当前不推进 cursor，新 handler/process 重建可恢复。",
+            "结论限定初次 load 失败；已加载后的 save/flush 恢复控制通过。"
+          ],
+          "status": "confirmed-at-frozen-source-baseline",
+          "currentMainSourceDisposition": "direct-source-unchanged-at-reviewed-main",
+          "runtimeRetested": false
+        }
+      }
+    ]
+  },
+  {
+    "path": "docs/audit-2026-10-17-round11/evidence/chat-findings.json",
+    "bytes": 3130,
+    "sha256": "b5867052aeb00ce829b4ba4c2244d2abcebdf36f9acf669a6e255b5ec898f06b",
+    "pinAt": "2026-10-17T19:30:31.848362+00:00",
+    "readAt": "2026-10-17T19:30:31.848381+00:00",
+    "selectedObjects": [
+      {
+        "pointer": "/findings/0",
+        "value": {
+          "id": "CHAT-R11-01",
+          "priority": "P3",
+          "title": "通知进度首次 load 失败的 rejected Promise 被缓存，同一 watcher 后续重试不再读取已恢复的 store",
+          "source": "packages/chat/src/notification-progress.ts",
+          "line": 187,
+          "lines": [
+            186,
+            191
+          ],
+          "trigger": "长期存活的 createDesktopNotificationHandler 初次 begin() 时，progressStore.load() 暂时失败；随后 store 已能正常读取，watchEvents 重试同一通知。",
+          "actual": "ensureLoaded 的 loadTask 保留原 rejected Promise；实际 watchEvents 循环连续 3 次失败、store.load 仅 1 次、fake adapter send 0 次、cursor 始终 0。",
+          "expected": "后续通知重试应有机会重新 load 正常状态，并在成功后继续原事件；错误不能仅因 cached rejected Promise 在同一 handler 生命周期反复出现。",
+          "normalProducerAndContract": "CLI cli.ts:116-138 与 Desktop im-gateway-service.ts:565-583 长期复用一个由 FileNotificationDeliveryProgressStore 支持的 handler，并把通知异常按等待重试处理。DesktopControlClient.watchEvents:188-218 顺序调用 handler、失败后退避重试。实际 File store:69-71 对非 ENOENT 读取错误向上传播。",
+          "controls": [
+            "初次正常 load：实际 watcher/page callbacks/fake adapter，1 load、1 send、无 error。",
+            "同一故障后的 healthy store 用新 handler 处理完全相同事件，第二次 load 成功并 send 1 次。",
+            "同一 progress 对暂时 save 失败可用 flush 恢复。",
+            "共享 splitter 在最大长度 2/17/1800/8000 下完整重建 Unicode/空白并保留 UTF-16 对。"
+          ],
+          "evidence": [
+            "evidence/chat-progress-load.test.ts",
+            "evidence/chat-progress-load.first.log",
+            "evidence/chat-progress-load.first.exit.json"
+          ],
+          "dynamicScope": "真实 NotificationDeliveryProgress、createDesktopNotificationHandler、DesktopControlClient.prototype.watchEvents 方法；内存 store、fake adapter、page/sleep 回调替身。watcher 不构造 client，不走 request/descriptor/spawn/checkpoint。",
+          "staticScope": "CLI 和 Desktop host 生产构造接线、FileNotificationDeliveryProgressStore 的非 ENOENT 传播。",
+          "limitations": [
+            "未诱发真实磁盘/OS 读取故障，不验证具体 EIO/EMFILE 概率或平台恢复。",
+            "未运行 Desktop/CLI host、实际账号/平台/模型、网络/SDK连接、权限或 custody 行为。",
+            "未证明通知永久丢失；当前不推进 cursor，新 handler/process 重建可恢复。",
+            "结论限定初次 load 失败；已加载后的 save/flush 恢复控制通过。"
+          ],
+          "dedup": "All 1601 prior docs/bugs Markdown and parsed JSON including archive/_archive and ordinary filenames scanned, 35 precise path/helper matches, 0 parse error; no same-root-cause finding. Earlier 1111-file named-audit subset and broader-keyword receipt retained."
+        }
+      }
+    ]
+  }
+]

@@ -1,0 +1,8 @@
+{
+  "path": "/tmp/codeshell-audit-round141-pairing/history-batch.json",
+  "bytes": 1396813,
+  "sha256": "1b3bad36a3243d8acd7a887bddac56e3fe66ccae57d2dfb3fddc14e46c88887b",
+  "receivedRootFrozen": true,
+  "atUTC": "2026-10-17T19:17:26.280041+00:00",
+  "readPurpose": "Only own3target projection; Root archives original batch once, no shared author method execution."
+}

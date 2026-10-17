@@ -1,0 +1,19 @@
+{
+  "atUTC": "2026-10-17T19:16:46.477493+00:00",
+  "files": [
+    {
+      "path": "packages/server/src/mobile-remote/pairing.ts",
+      "bytes": 2298,
+      "lines": 70,
+      "sha256": "19777b68d1ad6297b9ea182298dd457077340dc4b1977433b60192fdc24af5ca",
+      "beforeBodyOrLineNavigation": true
+    },
+    {
+      "path": "packages/server/src/mobile-remote/pending-approvals.ts",
+      "bytes": 2448,
+      "lines": 69,
+      "sha256": "1503d41f1535224c972a23ada25238644394fc2a1e696668729c0f6263b989ac",
+      "beforeBodyOrLineNavigation": true
+    }
+  ]
+}

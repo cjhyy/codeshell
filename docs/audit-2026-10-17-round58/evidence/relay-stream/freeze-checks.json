@@ -1,0 +1,119 @@
+{
+  "atUTC": "2026-10-17T19:21:14.776580+00:00",
+  "checks": {
+    "files": []
+  },
+  "role": "Author metadata finalization only; no additional source reading",
+  "sourceRangeChecks": {
+    "semanticSubsetOfDisplayed": true,
+    "allWithinPinnedLines": true,
+    "rangeCounts": {
+      "semanticFiles": 7,
+      "full": 1,
+      "selected": 6,
+      "semanticLines": 447,
+      "productSemanticLines": 301,
+      "testDeclarationSemanticLines": 125,
+      "contractDocumentSemanticLines": 21,
+      "uniqueDisplayedLines": 725,
+      "displayCoverageComplete": true,
+      "navigationOnlyFiles": 1,
+      "instructionHashOnly": 2
+    }
+  },
+  "links": [
+    {
+      "target": "source-manifest.json",
+      "exists": true,
+      "insideOwnedDir": true
+    },
+    {
+      "target": "source-excerpts.json",
+      "exists": true,
+      "insideOwnedDir": true
+    },
+    {
+      "target": "shared-history-projection.json",
+      "exists": true,
+      "insideOwnedDir": true
+    },
+    {
+      "target": "history-read-windows.json",
+      "exists": true,
+      "insideOwnedDir": true
+    },
+    {
+      "target": "gate-decision.json",
+      "exists": true,
+      "insideOwnedDir": true
+    },
+    {
+      "target": "diagnostics.json",
+      "exists": true,
+      "insideOwnedDir": true
+    },
+    {
+      "target": "ending-checks.json",
+      "exists": true,
+      "insideOwnedDir": true
+    },
+    {
+      "target": "classification.json",
+      "exists": true,
+      "insideOwnedDir": true
+    },
+    {
+      "target": "validation.json",
+      "exists": true,
+      "insideOwnedDir": true
+    },
+    {
+      "target": "initial-pins.json",
+      "exists": true,
+      "insideOwnedDir": true
+    },
+    {
+      "target": "support-pins.json",
+      "exists": true,
+      "insideOwnedDir": true
+    },
+    {
+      "target": "test-support-pin.json",
+      "exists": true,
+      "insideOwnedDir": true
+    },
+    {
+      "target": "byte-test-support-pin.json",
+      "exists": true,
+      "insideOwnedDir": true
+    },
+    {
+      "target": "targeted-history-hits.json",
+      "exists": true,
+      "insideOwnedDir": true
+    },
+    {
+      "target": "history-support-pins.json",
+      "exists": true,
+      "insideOwnedDir": true
+    },
+    {
+      "target": "reviewer-receipt.json",
+      "exists": false,
+      "insideOwnedDir": true
+    },
+    {
+      "target": "freeze-checks.json",
+      "exists": false,
+      "insideOwnedDir": true
+    }
+  ],
+  "futureSelfProducedLinks": [
+    "reviewer-receipt.json",
+    "freeze-checks.json"
+  ],
+  "inputsUnchanged": true,
+  "sharedBatchUnchanged": true,
+  "productExecution": 0,
+  "gitOperations": 0
+}

@@ -1,0 +1,13 @@
+{
+  "atUTC": "2026-10-17T19:18:18.048954+00:00",
+  "files": [
+    {
+      "path": "docs/audit-2026-10-17-round14/bytes.md",
+      "bytes": 5677,
+      "lines": 32,
+      "sha256": "afeaf33d0adcb75d3f266f2922ee967867d05b4bea3275bd48eab50fb0a1df01",
+      "kind": "history-metadata",
+      "beforeRead": true
+    }
+  ]
+}

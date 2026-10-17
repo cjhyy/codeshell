@@ -1,0 +1,26 @@
+{
+  "atUTC": "2026-10-17T19:22:05.864690+00:00",
+  "files": [
+    {
+      "path": "/tmp/codeshell-audit-round141-pairing/report.md",
+      "bytes": 2279,
+      "sha256": "b5332cbb37616d44e0caf1687703998aa510f8d7ff8f51e626880b6bcf6eb831",
+      "beforeRead": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round141-pairing/source-manifest.json",
+      "bytes": 11974,
+      "sha256": "ce135a5eea258e4a0909d285eac3c352be9b893f7804edbc54fe7459c5e9a42d",
+      "beforeRead": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round141-pairing/candidate.json",
+      "bytes": 1384,
+      "sha256": "b3bf2b20f02b03ed5bc35de0ba91d4c56c70e8089b34dffd3dbefcabd832bb80",
+      "beforeRead": true
+    }
+  ],
+  "role": "Independent targeted nonblind candidate source reviewer",
+  "rootReportedBaselineOnly": "f31a847f45e4805bce34aeb9e6db7efb503cfcb0",
+  "gitOperations": 0
+}

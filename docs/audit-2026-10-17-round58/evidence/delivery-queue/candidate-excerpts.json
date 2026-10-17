@@ -1,0 +1,133 @@
+{
+  "materializedAt": "2026-10-17T19:33:21.255786+00:00",
+  "purpose": "Archival copy of already-read same-SHA ranges; not a new semantic read, original first display outputs are not replaced.",
+  "files": [
+    {
+      "path": "packages/chat/src/delivery-queue.ts",
+      "sha256": "e1f4f384af3dee66030bed6cd9a51bc7c3585e4aa320501d3e336686e0321393",
+      "ranges": [
+        {
+          "first": 91,
+          "last": 94,
+          "text": "/**\n * Durable, bounded inbox. Text webhook deliveries are acknowledged only after\n * this queue has atomically recorded them; processing happens out of band with\n * per-target ordering and retry. Lazy attachment functions stay in-memory.\n"
+        },
+        {
+          "first": 121,
+          "last": 137,
+          "text": "  async start(): Promise<void> {\n    this.stopped = false;\n    if (this.config.path) {\n      await this.load();\n      // Reclaim spool files no surviving record points at.\n      await this.sweepOrphanedSpool();\n    }\n    this.pump();\n  }\n\n  stop(): void {\n    this.stopped = true;\n    if (this.retryTimer) clearTimeout(this.retryTimer);\n    this.retryTimer = undefined;\n    if (this.persistRetryTimer) clearTimeout(this.persistRetryTimer);\n    this.persistRetryTimer = undefined;\n  }\n"
+        },
+        {
+          "first": 183,
+          "last": 238,
+          "text": "    const spooled = await this.spoolAttachments(id, message);\n    await previousPreparation;\n    let record: DeliveryRecord | undefined;\n    try {\n      await this.withMutation(async () => {\n        try {\n          if (this.stopped) throw new Error(\"Chat Gateway inbox is stopped\");\n          const persistent = Boolean(\n            this.config.path && (!message.attachments?.length || spooled !== undefined),\n          );\n          const safeMessage = persistent\n            ? serializableMessage(message, this.rehydrateAttachments(spooled))\n            : message;\n          record = {\n            id,\n            ...(dedupeKey ? { dedupeKey } : {}),\n            adapterId,\n            message: safeMessage,\n            attempts: 0,\n            nextAttemptAt: Date.now(),\n            persistent,\n            ...(spooled ? { spooled } : {}),\n          };\n          this.pending.push(record);\n          if (persistent) await this.persist();\n        } catch (error) {\n          if (record) {\n            const index = this.pending.findIndex((candidate) => candidate.id === record?.id);\n            if (index >= 0) this.pending.splice(index, 1);\n          }\n          throw error;\n        } finally {\n          this.preparing.delete(id);\n        }\n      });\n    } catch (error) {\n      await this.discardSpool(\n        record ?? {\n          id,\n          adapterId,\n          message,\n          attempts: 0,\n          nextAttemptAt: 0,\n          persistent: false,\n          ...(spooled ? { spooled } : {}),\n        },\n      );\n      throw error;\n    } finally {\n      releasePreparation?.();\n      if (this.preparationByTarget.get(target) === preparation) {\n        this.preparationByTarget.delete(target);\n      }\n    }\n    this.pump();\n    return \"queued\";\n"
+        },
+        {
+          "first": 241,
+          "last": 315,
+          "text": "  private pump(): void {\n    if (this.stopped) return;\n    if (this.retryTimer) clearTimeout(this.retryTimer);\n    this.retryTimer = undefined;\n    const now = Date.now();\n    while (this.inFlight.size < this.config.maxConcurrent) {\n      const entry = this.pending.find((candidate) => {\n        if (this.inFlight.has(candidate.id) || candidate.nextAttemptAt > now) return false;\n        return (\n          (this.targetInFlight.get(targetKey(candidate.message)) ?? 0) < this.config.maxPerTarget\n        );\n      });\n      if (!entry) break;\n      this.inFlight.add(entry.id);\n      const key = targetKey(entry.message);\n      this.targetInFlight.set(key, (this.targetInFlight.get(key) ?? 0) + 1);\n      void this.process(entry);\n    }\n    const next = this.pending\n      .filter((entry) => !this.inFlight.has(entry.id) && entry.nextAttemptAt > now)\n      .reduce<\n        number | undefined\n      >((earliest, entry) => (earliest === undefined ? entry.nextAttemptAt : Math.min(earliest, entry.nextAttemptAt)), undefined);\n    if (next !== undefined) {\n      this.retryTimer = setTimeout(() => this.pump(), Math.max(1, next - Date.now()));\n      this.retryTimer.unref?.();\n    }\n  }\n\n  private async process(entry: DeliveryRecord): Promise<void> {\n    let error: unknown;\n    try {\n      await this.deliver(entry.adapterId, entry.message);\n    } catch (caught) {\n      error = caught;\n      this.onError(caught, entry.message);\n    }\n\n    const terminal = error === undefined || error instanceof UnroutableDeliveryError;\n    try {\n      await this.withMutation(async () => {\n        this.inFlight.delete(entry.id);\n        const key = targetKey(entry.message);\n        const targetCount = (this.targetInFlight.get(key) ?? 1) - 1;\n        if (targetCount <= 0) this.targetInFlight.delete(key);\n        else this.targetInFlight.set(key, targetCount);\n\n        if (terminal) {\n          // Success, or a permanently unroutable record: drop it so a message\n          // that can never be delivered does not retry (and re-log) forever.\n          const index = this.pending.findIndex((candidate) => candidate.id === entry.id);\n          if (index >= 0) this.pending.splice(index, 1);\n          if (error === undefined && entry.dedupeKey)\n            this.completed.set(entry.dedupeKey, Date.now());\n        } else {\n          entry.attempts += 1;\n          entry.nextAttemptAt =\n            Date.now() +\n            Math.min(\n              this.config.retryMaxMs,\n              this.config.retryBaseMs * 2 ** Math.min(entry.attempts - 1, 10),\n            );\n        }\n        this.pruneCompleted();\n        // Persist the terminal removal BEFORE deleting attachment bytes. If the\n        // state write fails, the durable record still has everything needed for\n        // at-least-once recovery after a crash.\n        if (entry.persistent) await this.persist();\n        if (terminal) await this.discardSpool(entry);\n      });\n    } catch (persistError) {\n      this.onError(persistError, entry.message);\n      this.schedulePersistRetry(entry.message, terminal ? entry : undefined);\n    }\n    this.pump();\n"
+        },
+        {
+          "first": 537,
+          "last": 571,
+          "text": "  private async persist(): Promise<void> {\n    const path = this.config.path;\n    if (!path) return;\n    const state: DeliveryStateFile = {\n      version: 1,\n      pending: this.pending\n        .filter((entry) => entry.persistent)\n        .map(({ persistent: _persistent, ...entry }) => {\n          // Never write live attachments: JSON drops their `load()`, leaving a\n          // record that claims attachments it cannot produce — and whose\n          // presence would stop the loader from rehydrating from the spool.\n          // `entry.spooled` is the durable representation.\n          if (!entry.message.attachments?.length) return entry;\n          const { attachments: _attachments, ...message } = entry.message;\n          return { ...entry, message };\n        }),\n      completed: Object.fromEntries(this.completed),\n    };\n    const serialized = `${JSON.stringify(state)}\\n`;\n    if (Buffer.byteLength(serialized, \"utf8\") > MAX_DELIVERY_STATE_BYTES) {\n      throw new DeliveryBackpressureError(this.config.maxPending);\n    }\n    const parent = dirname(path);\n    await ensureRealDirectory(parent);\n    await assertSafeRegularTarget(path);\n    const temporary = `${path}.${process.pid}.${randomUUID()}.tmp`;\n    try {\n      await writeFile(temporary, serialized, { encoding: \"utf-8\", mode: 0o600, flag: \"wx\" });\n      await rename(temporary, path);\n      await chmod(path, 0o600).catch(() => undefined);\n    } catch (error) {\n      await rm(temporary, { force: true }).catch(() => undefined);\n      throw error;\n    }\n  }\n"
+        },
+        {
+          "first": 580,
+          "last": 592,
+          "text": "  private async withMutation<T>(operation: () => Promise<T>): Promise<T> {\n    const previous = this.mutation;\n    let release!: () => void;\n    this.mutation = new Promise<void>((resolve) => {\n      release = resolve;\n    });\n    await previous;\n    try {\n      return await operation();\n    } finally {\n      release();\n    }\n  }\n"
+        }
+      ]
+    },
+    {
+      "path": "packages/chat/src/chat-gateway.ts",
+      "sha256": "7032acecac774cc3c6bea6bb1b5f3b90ddf93c7234a8bded97112483300c311d",
+      "ranges": [
+        {
+          "first": 144,
+          "last": 186,
+          "text": "    const queue = new DeliveryQueue(\n      this.delivery,\n      async (adapterId, message) => {\n        const adapter = adapterById.get(adapterId);\n        if (!adapter) {\n          // A durable record survived a config change that removed its adapter.\n          // Signal unroutable so the queue drops it instead of retrying forever.\n          throw new UnroutableDeliveryError(`Chat adapter no longer exists: ${adapterId}`);\n        }\n        await this.dispatch(adapter, message);\n      },\n      this.onError,\n    );\n    this.queue = queue;\n    await queue.start();\n\n    const runners: Promise<void>[] = [];\n    for (const [adapterId, adapter] of adapterById) {\n      const handler = (message: ChannelMessage) =>\n        queue.enqueue(adapterId, message).then(() => undefined);\n      if (isWebhookChannelAdapter(adapter)) webhooks.push({ adapter, handler });\n      runners.push(this.superviseAdapter(adapterId, adapter, handler, ownedAbort.signal));\n    }\n    // Only bind the ingress host:port when a channel actually needs a webhook\n    // route. A polling-only config (e.g. Telegram/Discord) must not open an\n    // HTTP listener — doing so unexpectedly exposes a port and fails startup\n    // outright when that port is already taken.\n    if (webhooks.length > 0) {\n      runners.push(\n        new WebhookIngressServer(this.webhook, webhooks, () => this.healthSnapshot()).run(\n          ownedAbort.signal,\n        ),\n      );\n    }\n    try {\n      await Promise.all(runners);\n    } finally {\n      ownedAbort.abort();\n      queue.stop();\n      this.queue = undefined;\n      this.startedAt = undefined;\n      signal.removeEventListener(\"abort\", stopOwned);\n    }\n"
+        }
+      ]
+    },
+    {
+      "path": "packages/chat/src/cli.ts",
+      "sha256": "4a4c052a8433836583cd9300669f4c400f394d780645c75156c38b78d6e1d9ed",
+      "ranges": [
+        {
+          "first": 66,
+          "last": 96,
+          "text": "  const configPath = readConfigPath(args);\n  const config = loadGatewayConfig({ configPath });\n  const lease = acquireGatewayInstanceLock(config.runtime.lockPath, \"code-shell-chat CLI\");\n  const shutdown = new AbortController();\n  const stop = () => shutdown.abort();\n  process.once(\"SIGINT\", stop);\n  process.once(\"SIGTERM\", stop);\n  try {\n    const desktop = new DesktopControlClient(config.desktop);\n    const adapters = await Promise.all(\n      config.channels.map((channel) =>\n        createChannelAdapterAsync(channel, { discordCommands: CODE_SHELL_REMOTE_COMMANDS }),\n      ),\n    );\n    const gateway = new ChatGateway({\n      adapters,\n      webhook: config.webhook,\n      delivery: {\n        path: config.runtime.inboxPath,\n        maxPending: config.runtime.maxPending,\n        maxConcurrent: config.runtime.maxConcurrent,\n        maxPerTarget: Math.max(\n          config.runtime.maxPerTarget,\n          MIMI_MIN_CONCURRENT_MESSAGES_PER_TARGET,\n        ),\n      },\n      adapterRestart: {\n        baseMs: config.runtime.adapterRestartBaseMs,\n        maxMs: config.runtime.adapterRestartMaxMs,\n      },\n    });\n"
+        },
+        {
+          "first": 115,
+          "last": 144,
+          "text": "    const gatewayTask = gateway.run(shutdown.signal);\n    const notificationTask = desktop.watchEvents(\n      shutdown.signal,\n      createDesktopNotificationHandler(adapters, config.notifications, {\n        progressStore: new FileNotificationDeliveryProgressStore(\n          notificationDeliveryProgressPath(config.runtime.eventCursorPath),\n        ),\n        authorizeTarget: ({ channel, target }) => {\n          const current = loadGatewayConfig({ configPath });\n          return current.channels.some(\n            (configured) =>\n              configured.channel === channel && configured.allowedTargetIds.includes(target),\n          );\n        },\n      }),\n      {\n        checkpointPath: config.runtime.eventCursorPath,\n        onError: (error) =>\n          console.error(\n            `[code-shell-chat] Desktop 通知等待重试：${error instanceof Error ? error.message : String(error)}`,\n          ),\n      },\n    );\n    await Promise.all([gatewayTask, notificationTask]);\n  } finally {\n    shutdown.abort();\n    process.off(\"SIGINT\", stop);\n    process.off(\"SIGTERM\", stop);\n    lease.release();\n  }\n"
+        },
+        {
+          "first": 317,
+          "last": 320,
+          "text": "main().catch((error) => {\n  console.error(`[code-shell-chat] ${error instanceof Error ? error.message : String(error)}`);\n  process.exitCode = 1;\n});\n"
+        }
+      ]
+    },
+    {
+      "path": "packages/chat/src/gateway.ts",
+      "sha256": "d73ad84b43ef1b2e705323cb3ed63c5102fbb0d31f51dc5ffc10fc45862a1b13",
+      "ranges": [
+        {
+          "first": 224,
+          "last": 244,
+          "text": "async function buildMimiOutgoingReplies(\n  options: MimiPetChatOptions,\n  message: ChannelMessage,\n  capabilities: ChannelCapabilities,\n  configuredChannels: readonly ChannelAdapter[],\n): Promise<OutgoingMessage[]> {\n  const attachments = await materializeChatAttachments(message.attachments);\n  const result = await options.desktop.petChat({\n    message: message.text,\n    ...(attachments.length > 0 ? { attachments } : {}),\n    origin: {\n      channel: message.channel,\n      target: message.target,\n      senderId: message.senderId,\n      isDirectMessage: message.isDirectMessage === true,\n      ...(message.messageId ? { messageId: message.messageId } : {}),\n      capabilities,\n      channels: gatewayChannelCatalog(message.channel, capabilities, configuredChannels),\n    },\n  });\n  if (result.suppressReply) return [];\n"
+        }
+      ]
+    },
+    {
+      "path": "packages/chat/src/desktop-control-client.ts",
+      "sha256": "8647ab741d9b91ee5e043d8d8a02224598b42273f585e02bb5aef81ddc3541d1",
+      "ranges": [
+        {
+          "first": 101,
+          "last": 118,
+          "text": "  async petChat(input: PetChatRequest): Promise<PetChatResult> {\n    await this.ensureDesktopAvailable();\n    type Pending = { pending: true; requestId: string };\n    let result = await this.request<PetChatResult | Pending>(\n      \"POST\",\n      \"/v1/pet/chat/start\",\n      30_000,\n      input,\n    );\n    while (result && typeof result === \"object\" && \"pending\" in result && result.pending === true) {\n      if (typeof result.requestId !== \"string\" || !/^[a-f0-9-]{36}$/.test(result.requestId)) {\n        throw new DesktopControlUnavailableError(\"桌面端返回了无效请求标识，消息将重试\");\n      }\n      result = await this.request<PetChatResult | Pending>(\n        \"GET\",\n        `/v1/pet/chat/result/${result.requestId}?waitMs=25000`,\n        35_000,\n      );\n"
+        },
+        {
+          "first": 275,
+          "last": 291,
+          "text": "    const controller = new AbortController();\n    const abortRequest = (): void => controller.abort();\n    if (signal?.aborted) controller.abort();\n    else signal?.addEventListener(\"abort\", abortRequest, { once: true });\n    const timer = setTimeout(() => controller.abort(), timeoutMs);\n    try {\n      const response = await this.fetchFn(`${descriptor.baseUrl}${path}`, {\n        method,\n        headers: {\n          authorization: `Bearer ${descriptor.token}`,\n          ...(payload === undefined ? {} : { \"content-type\": \"application/json\" }),\n        },\n        ...(payload === undefined ? {} : { body: JSON.stringify(payload) }),\n        signal: controller.signal,\n      });\n      // Keep the deadline and caller cancellation active until the body has\n      // arrived too. A dropped body is an ambiguous delivery, so the durable\n"
+        },
+        {
+          "first": 316,
+          "last": 321,
+          "text": "      );\n    } finally {\n      clearTimeout(timer);\n      signal?.removeEventListener(\"abort\", abortRequest);\n    }\n  }\n"
+        }
+      ]
+    },
+    {
+      "path": "packages/chat/src/instance-lock.ts",
+      "sha256": "91f03a718482656bf0f0e82087865ec70dffcd8e619d330ff31fcded54bca742",
+      "ranges": [
+        {
+          "first": 76,
+          "last": 90,
+          "text": "      fd = openSync(path, \"wx\", 0o600);\n      created = true;\n      writeFileSync(fd, `${JSON.stringify(record)}\\n`, \"utf-8\");\n      closeSync(fd);\n      fd = undefined;\n      if (process.platform !== \"win32\") chmodSync(path, 0o600);\n      let released = false;\n      return {\n        path,\n        owner,\n        release: () => {\n          if (released) return;\n          released = true;\n          removeOwnedLock(path, record.token);\n        },\n"
+        },
+        {
+          "first": 156,
+          "last": 159,
+          "text": "function removeOwnedLock(path: string, token: string): void {\n  const current = readLock(path);\n  if (current?.token === token) rmSync(path, { force: true });\n}\n"
+        }
+      ]
+    },
+    {
+      "path": "packages/chat/package.json",
+      "sha256": "4f8b4d0e4aaec6197c86b6f6da1a6f1d9cd8a00a18743efbf1aedaab4afd8ffe",
+      "ranges": [
+        {
+          "first": 70,
+          "last": 72,
+          "text": "  \"bin\": {\n    \"code-shell-chat\": \"./dist/cli.js\"\n  },\n"
+        }
+      ]
+    }
+  ]
+}

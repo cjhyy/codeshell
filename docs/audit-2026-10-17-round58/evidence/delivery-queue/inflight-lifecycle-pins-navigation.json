@@ -1,0 +1,63 @@
+{
+  "pins": [
+    {
+      "path": "packages/chat/src/gateway.ts",
+      "bytes": 12984,
+      "lines": 347,
+      "sha256": "d73ad84b43ef1b2e705323cb3ed63c5102fbb0d31f51dc5ffc10fc45862a1b13",
+      "pinAt": "2026-10-17T19:25:31.205223+00:00",
+      "coverage": "hash-only before lifecycle/source navigation"
+    },
+    {
+      "path": "packages/chat/src/desktop-control-client.ts",
+      "bytes": 15174,
+      "lines": 446,
+      "sha256": "8647ab741d9b91ee5e043d8d8a02224598b42273f585e02bb5aef81ddc3541d1",
+      "pinAt": "2026-10-17T19:25:31.212433+00:00",
+      "coverage": "hash-only before lifecycle/source navigation"
+    },
+    {
+      "path": "packages/chat/src/instance-lock.ts",
+      "bytes": 4712,
+      "lines": 159,
+      "sha256": "91f03a718482656bf0f0e82087865ec70dffcd8e619d330ff31fcded54bca742",
+      "pinAt": "2026-10-17T19:25:31.218502+00:00",
+      "coverage": "hash-only before lifecycle/source navigation"
+    }
+  ],
+  "navigation": [
+    {
+      "command": [
+        "rg",
+        "-n",
+        "dispatch|createMimiPetChat|signal|abort",
+        "packages/chat/src/gateway.ts"
+      ],
+      "exitCode": 0,
+      "stdout": "129:export function createMimiPetChat(options: MimiPetChatOptions): ChatMiddleware {\n",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "rg",
+        "-n",
+        "dispatchPet|dispatch\\(|routeBoundSessionMessage|requestControl|AbortSignal|signal|timeout",
+        "packages/chat/src/desktop-control-client.ts"
+      ],
+      "exitCode": 0,
+      "stdout": "135:   * Ask the host where one inbound message should go. Short timeout on\n139:  async routeBoundSessionMessage(input: {\n151:  events(after = 0, waitMs = 25_000, signal?: AbortSignal): Promise<DesktopControlEventPage> {\n160:      signal,\n165:    signal: AbortSignal,\n177:    while (!signal.aborted) {\n179:        const page = await this.events(cursor, 25_000, signal);\n189:          if (signal.aborted) return;\n212:        if (signal.aborted) return;\n215:        await Promise.race([this.sleepFn(retryMs), waitForAbort(signal)]);\n261:    timeoutMs: number,\n263:    signal?: AbortSignal,\n277:    if (signal?.aborted) controller.abort();\n278:    else signal?.addEventListener(\"abort\", abortRequest, { once: true });\n279:    const timer = setTimeout(() => controller.abort(), timeoutMs);\n288:        signal: controller.signal,\n319:      signal?.removeEventListener(\"abort\", abortRequest);\n324:async function waitForAbort(signal: AbortSignal): Promise<void> {\n325:  if (signal.aborted) return;\n327:    signal.addEventListener(\"abort\", () => resolve(), { once: true }),\n",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "rg",
+        "-n",
+        "release|unlink|kill|acquireGateway",
+        "packages/chat/src/instance-lock.ts"
+      ],
+      "exitCode": 0,
+      "stdout": "30:  release(): void;\n52:export function acquireGatewayInstanceLock(path: string, owner: string): GatewayInstanceLease {\n82:      let released = false;\n86:        release: () => {\n87:          if (released) return;\n88:          released = true;\n149:    process.kill(pid, 0);\n",
+      "stderr": ""
+    }
+  ]
+}

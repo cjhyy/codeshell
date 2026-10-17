@@ -1,0 +1,57 @@
+[
+  {
+    "command": [
+      "rg",
+      "-n",
+      "DeliveryQueue|async start|async stop|async dispatch|enqueue|reply:|deliveryQueue|send\\(",
+      "packages/chat/src/chat-gateway.ts"
+    ],
+    "exitCode": 0,
+    "stdout": "4:  DeliveryQueue,\n6:  type DeliveryQueueConfig,\n26:  delivery?: Partial<DeliveryQueueConfig>;\n54:const DEFAULT_DELIVERY_CONFIG: DeliveryQueueConfig = {\n71:  private readonly delivery: DeliveryQueueConfig;\n76:  private queue?: DeliveryQueue;\n102:  async dispatch(adapter: ChannelAdapter, message: ChannelMessage): Promise<void> {\n111:      reply: (outgoing) => adapter.send(message.target, outgoing),\n144:    const queue = new DeliveryQueue(\n163:        queue.enqueue(adapterId, message).then(() => undefined);\n",
+    "stderr": ""
+  },
+  {
+    "command": [
+      "rg",
+      "-n",
+      "createBoundSessionChat|new ChatGateway|gateway.start|gateway.stop|maxPerTarget",
+      "packages/chat/src/cli.ts"
+    ],
+    "exitCode": 0,
+    "stdout": "15:import { createBoundSessionChat } from \"./bound-session-chat.js\";\n80:    const gateway = new ChatGateway({\n87:        maxPerTarget: Math.max(\n88:          config.runtime.maxPerTarget,\n109:    gateway.use(createBoundSessionChat({ desktop }));\n179:        maxPerTarget: config.runtime.maxPerTarget,\n",
+    "stderr": ""
+  },
+  {
+    "command": [
+      "rg",
+      "-n",
+      "test\\(|it\\(",
+      "packages/chat/src/delivery-queue.test.ts"
+    ],
+    "exitCode": 0,
+    "stdout": "34:  test(\"persists before acknowledgement, retries, and deduplicates platform message ids\", async () => {\n59:  test(\"recovers pending records and preserves per-target ordering\", async () => {\n89:  test(\"rejects new work at the configured backpressure boundary\", async () => {\n105:  test(\"drops an unroutable record instead of retrying it forever\", async () => {\n132:  test(\"retries a failed terminal state write instead of leaving the queue stuck\", async () => {\n234:  test(\"a message with attachments is persisted, not memory-only\", async () => {\n250:  test(\"the attachment survives a restart and its bytes are readable\", async () => {\n278:  test(\"attachment metadata round-trips through the restart\", async () => {\n309:  test(\"a slow attachment load does not block another conversation\", async () => {\n338:  test(\"text cannot overtake an earlier attachment in the same conversation\", async () => {\n366:  test(\"one persist retry cleans the spool for every terminal record\", async () => {\n401:  test(\"an oversized attachment falls back to memory rather than filling the disk\", async () => {\n420:  test(\"orphaned spool files are reclaimed on startup\", async () => {\n456:  test(\"never follows persisted spool traversal or deletes unrelated files\", async () => {\n492:  test(\"rejects a linked spool directory without touching its contents\", async () => {\n512:  test(\"text-only messages are unaffected\", async () => {\n",
+    "stderr": ""
+  },
+  {
+    "command": [
+      "rg",
+      "-n",
+      "test\\(|it\\(",
+      "packages/chat/src/bound-session-chat.test.ts"
+    ],
+    "exitCode": 0,
+    "stdout": "49:  test(\"an unbound conversation reaches Mimi unchanged\", async () => {\n55:  test(\"an unaddressable message is left to Mimi without consulting the host\", async () => {\n62:  test(\"an empty message is ignored here\", async () => {\n68:  test(\"an ambiguous bridge failure escapes for inbox retry without reaching Mimi\", async () => {\n78:  test(\"an accepted message stops the chain and sends nothing yet\", async () => {\n85:  test(\"an accepted message with a stale notice sends exactly that notice\", async () => {\n95:  test(\"passes the conversation identity the host needs to resolve a route\", async () => {\n106:  test(\"reports a group chat so the host can refuse to bind it\", async () => {\n111:  test(\"an adapter without private-chat metadata never gains it from matching ids\", async () => {\n118:  test(\"leaving, status and suspension each answer immediately\", async () => {\n",
+    "stderr": ""
+  },
+  {
+    "command": [
+      "rg",
+      "-n",
+      "messageId:|lastUpdate|handler\\(|await.*handler|nextOffset|offset =",
+      "packages/chat/src/telegram.ts"
+    ],
+    "exitCode": 0,
+    "stdout": "108:          const nextOffset = Math.max(offset ?? 0, update.update_id + 1);\n110:            offset = nextOffset;\n117:            offset = nextOffset;\n121:            await handler(message);\n124:            offset = nextOffset;\n279:    ...(message.message_id === undefined ? {} : { messageId: String(message.message_id) }),\n339:  let offset = 0;\n",
+    "stderr": ""
+  }
+]

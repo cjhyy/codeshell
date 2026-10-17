@@ -1,0 +1,50 @@
+[
+  {
+    "path": "packages/chat/src/chat-gateway.ts",
+    "bytes": 10429,
+    "lines": 301,
+    "sha256": "7032acecac774cc3c6bea6bb1b5f3b90ddf93c7234a8bded97112483300c311d",
+    "pinAt": "2026-10-17T19:23:01.823875+00:00",
+    "coverage": "hash-only before source line navigation/body"
+  },
+  {
+    "path": "packages/chat/src/channel.ts",
+    "bytes": 7027,
+    "lines": 193,
+    "sha256": "645c32c69b3a8d76de60b85783a765f96133b93a5c183100bfef20794380e0ce",
+    "pinAt": "2026-10-17T19:23:01.825083+00:00",
+    "coverage": "hash-only before source line navigation/body"
+  },
+  {
+    "path": "packages/chat/src/cli.ts",
+    "bytes": 11645,
+    "lines": 320,
+    "sha256": "4a4c052a8433836583cd9300669f4c400f394d780645c75156c38b78d6e1d9ed",
+    "pinAt": "2026-10-17T19:23:01.825883+00:00",
+    "coverage": "hash-only before source line navigation/body"
+  },
+  {
+    "path": "packages/chat/src/delivery-queue.test.ts",
+    "bytes": 18029,
+    "lines": 524,
+    "sha256": "14338213d386fd4ea2ff12c6202f6c1d2bbe4b7f8694f2182830bfe2e91228ff",
+    "pinAt": "2026-10-17T19:23:01.826741+00:00",
+    "coverage": "hash-only before source line navigation/body"
+  },
+  {
+    "path": "packages/chat/src/bound-session-chat.test.ts",
+    "bytes": 4481,
+    "lines": 126,
+    "sha256": "51fb1b92c9506431403e0883582a8c6e1be940a26deb3b9aeb567a774cd4e081",
+    "pinAt": "2026-10-17T19:23:01.827311+00:00",
+    "coverage": "hash-only before source line navigation/body"
+  },
+  {
+    "path": "packages/chat/src/telegram.ts",
+    "bytes": 12790,
+    "lines": 362,
+    "sha256": "093491c212ceb29855f1588cc9b436315a7f05fe39c323614ad803eeef1cbc9e",
+    "pinAt": "2026-10-17T19:23:01.827850+00:00",
+    "coverage": "hash-only before source line navigation/body"
+  }
+]

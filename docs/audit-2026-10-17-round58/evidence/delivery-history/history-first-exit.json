@@ -1,0 +1,12 @@
+{
+  "startedUTC": "2026-10-17T19:28:47.915493+00:00",
+  "finishedUTC": "2026-10-17T19:28:57.826807+00:00",
+  "exitCode": 0,
+  "methodSha256": "f08cebd22c4942070d0e2a0dfda2e08f60bf6d84f14fcd5561396b5b7adfb95b",
+  "stdoutBytes": 229,
+  "stdoutSha256": "5c36e8614ffe503cc90084a32b92277f85b8442c9625ae416a8a7b34faea76a4",
+  "stderrBytes": 0,
+  "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "productExecution": 0,
+  "note": "First metadata query output/exit saved before review; no product import/execution."
+}

@@ -1,0 +1,13 @@
+{
+  "path": "packages/chat/src/desktop-control-client.ts",
+  "sha256": "8647ab741d9b91ee5e043d8d8a02224598b42273f585e02bb5aef81ddc3541d1",
+  "pinReference": "inflight-lifecycle-pins-navigation.json",
+  "displayAt": "2026-10-17T19:31:45.188968+00:00",
+  "displayedLineRanges": [
+    [
+      151,
+      164
+    ]
+  ],
+  "text": "151:   events(after = 0, waitMs = 25_000, signal?: AbortSignal): Promise<DesktopControlEventPage> {\n152:     if (!Number.isSafeInteger(after) || after < 0 || waitMs < 0 || waitMs > 25_000) {\n153:       throw new Error(\"invalid desktop event cursor\");\n154:     }\n155:     return this.request(\n156:       \"GET\",\n157:       `/v1/events?after=${after}&waitMs=${Math.floor(waitMs)}`,\n158:       waitMs + 5_000,\n159:       undefined,\n160:       signal,\n161:     );\n162:   }\n163: \n164:   async watchEvents("
+}

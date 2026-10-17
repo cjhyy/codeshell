@@ -1,0 +1,14 @@
+{
+  "command": [
+    "rg",
+    "--files",
+    "packages/chat/src",
+    "-g",
+    "*delivery*",
+    "-g",
+    "*bound-session*"
+  ],
+  "exitCode": 0,
+  "stdout": "packages/chat/src/bound-session-chat.test.ts\npackages/chat/src/bound-session-chat.ts\npackages/chat/src/delivery-queue.ts\npackages/chat/src/delivery-queue.test.ts\n",
+  "stderr": ""
+}
