@@ -139,6 +139,9 @@ export interface AgentMessage {
   toolCalls: ToolMessage[];
   /** Accumulating text_delta payload; flushed to `text` on turn_complete / agent_end. */
   textBuffer: string;
+  /** Current correlated child model request. The offset spans text + textBuffer
+   *  so a parent-turn flush cannot move its revocation frontier. */
+  streamingTextRequest?: { messageId: string; startOffset: number };
   /** Cheap counter for the folded header. Equals toolCalls.length. */
   toolCount: number;
 }
@@ -1233,7 +1236,25 @@ function applyStreamEventToTurn(
       // not open a main assistant slot. Top-level starts have no agentId and
       // must not be routed based on the activeAgents table, which can contain
       // stale/orphan cleanup state during replay and background handoffs.
-      if (event.agentId) return state;
+      if (event.agentId) {
+        const index = state.agentMessageIndex[event.agentId];
+        const agent = index === undefined ? undefined : state.messages[index];
+        if (agent?.kind !== "agent" || agent.done) return state;
+        if (event.messageId === agent.streamingTextRequest?.messageId) return state;
+        // Legacy starts without an id still leave displayed text untouched,
+        // but cannot let an older request claim later uncorrelated deltas.
+        const messages = [...state.messages];
+        messages[index!] = {
+          ...agent,
+          streamingTextRequest: event.messageId
+            ? {
+                messageId: event.messageId,
+                startOffset: (agent.text?.length ?? 0) + agent.textBuffer.length,
+              }
+            : undefined,
+        };
+        return { ...state, messages };
+      }
       const id = event.messageId ?? freshId("assistant");
       const startedAt = now();
       const previousId = state.streamingAssistantId;
@@ -1917,15 +1938,31 @@ function applyStreamEventToTurn(
       if (event.agentId) {
         const index = state.agentMessageIndex[event.agentId];
         const agent = index === undefined ? undefined : state.messages[index];
-        if (
-          agent?.kind !== "agent" ||
-          !agent.toolCalls.some((tool) => tool.id === event.messageId)
-        ) {
-          return state;
-        }
+        if (agent?.kind !== "agent") return state;
+        const request =
+          !agent.done &&
+          agent.streamingTextRequest &&
+          agent.streamingTextRequest.messageId === event.messageId
+            ? agent.streamingTextRequest
+            : undefined;
+        if (!request && !agent.toolCalls.some((tool) => tool.id === event.messageId)) return state;
         const messages = [...state.messages];
         const toolCalls = agent.toolCalls.filter((tool) => tool.id !== event.messageId);
-        messages[index!] = { ...agent, toolCalls, toolCount: toolCalls.length };
+        messages[index!] = {
+          ...agent,
+          toolCalls,
+          toolCount: toolCalls.length,
+          ...(request
+            ? {
+                text: agent.text?.slice(0, request.startOffset),
+                textBuffer: agent.textBuffer.slice(
+                  0,
+                  Math.max(0, request.startOffset - (agent.text?.length ?? 0)),
+                ),
+                streamingTextRequest: undefined,
+              }
+            : {}),
+        };
         return { ...state, messages };
       }
       // Find the doomed message's index so we can adjust agentMessageIndex.

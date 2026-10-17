@@ -1777,6 +1777,160 @@ test("subagent fallback revokes only its unexecuted nested tool card", () => {
   expect(s.agentMessageIndex.child).toBe(0);
 });
 
+describe("subagent request text revocation", () => {
+  test("revokes failed partial text while preserving previous completed child output", () => {
+    const s = dispatch(INITIAL_STATE, [
+      ...mainTurn(),
+      ev("text_delta", { text: "parent stays" } as any),
+      startAgent("A"),
+      ev("text_delta", { agentId: "A", text: "legacy prefix\n" } as any),
+      ev("stream_request_start", { agentId: "A", turnNumber: 1, messageId: "completed" } as any),
+      ev("text_delta", { agentId: "A", text: "completed step\n" } as any),
+      ev("assistant_message", {
+        agentId: "A",
+        messageId: "completed",
+        message: { role: "assistant", content: "completed step\n" },
+      } as any),
+      ev("stream_request_start", { agentId: "A", turnNumber: 2, messageId: "failed" } as any),
+      ev("text_delta", { agentId: "A", text: "revoked partial" } as any),
+      ev("tombstone", { agentId: "A", messageId: "failed" } as any),
+    ]);
+    expect(findAgent(s, "A").textBuffer).toBe("legacy prefix\ncompleted step\n");
+    expect(findAgent(s, "A").done).toBe(false);
+    expect(findMainAssistant(s).text).toBe("parent stays");
+  });
+
+  test("shows only the replacement before agent_end, then keeps authoritative terminal text", () => {
+    let s = dispatch(INITIAL_STATE, [
+      startAgent("A"),
+      ev("stream_request_start", { agentId: "A", turnNumber: 1, messageId: "same-request" } as any),
+      ev("text_delta", { agentId: "A", text: "failed partial" } as any),
+      ev("tombstone", { agentId: "A", messageId: "same-request" } as any),
+      ev("stream_request_start", { agentId: "A", turnNumber: 1, messageId: "same-request" } as any),
+      ev("text_delta", { agentId: "A", text: "replacement" } as any),
+      ev("assistant_message", {
+        agentId: "A",
+        messageId: "same-request",
+        message: { role: "assistant", content: "replacement" },
+      } as any),
+    ]);
+    expect(findAgent(s, "A").textBuffer).toBe("replacement");
+    s = applyStreamEvent(s, ev("agent_end", { agentId: "A", text: "canonical final" } as any));
+    s = applyStreamEvent(s, ev("tombstone", { agentId: "A", messageId: "same-request" } as any));
+    expect(findAgent(s, "A")).toMatchObject({
+      text: "canonical final",
+      textBuffer: "",
+      done: true,
+    });
+  });
+
+  test("revokes only the current request after a background parent's buffer flush", () => {
+    const s = dispatch(INITIAL_STATE, [
+      ...mainTurn(),
+      startAgent("A"),
+      ev("agent_backgrounded", { agentId: "A" } as any),
+      ev("text_delta", { agentId: "A", text: "completed prefix\n" } as any),
+      ev("stream_request_start", { agentId: "A", turnNumber: 2, messageId: "failed" } as any),
+      ev("text_delta", { agentId: "A", text: "revoked partial" } as any),
+      ev("turn_complete", { reason: "completed" } as any),
+      ev("tombstone", { agentId: "A", messageId: "failed" } as any),
+    ]);
+    expect(findAgent(s, "A")).toMatchObject({
+      text: "completed prefix\n",
+      textBuffer: "",
+      done: false,
+      backgrounded: true,
+    });
+  });
+
+  test("keeps siblings and successful tools while revoking text and unexecuted tools separately", () => {
+    let s = dispatch(INITIAL_STATE, [
+      ...mainTurn(),
+      ev("text_delta", { text: "parent" } as any),
+      startAgent("A"),
+      startAgent("B"),
+      ev("text_delta", { agentId: "B", text: "sibling" } as any),
+      ev("tool_use_start", {
+        agentId: "A",
+        toolCall: { id: "completed-tool", toolName: "Read", args: {} },
+      } as any),
+      ev("tool_result", {
+        agentId: "A",
+        result: { id: "completed-tool", toolName: "Read", result: "kept" },
+      } as any),
+      ev("stream_request_start", { agentId: "A", turnNumber: 2, messageId: "failed" } as any),
+      ev("text_delta", { agentId: "A", text: "partial" } as any),
+      ev("tool_use_start", {
+        agentId: "A",
+        toolCall: { id: "partial-tool", toolName: "Read", args: {} },
+      } as any),
+      ev("tombstone", { agentId: "A", messageId: "partial-tool" } as any),
+    ]);
+    expect(findAgent(s, "A").textBuffer).toBe("partial");
+    expect(findAgent(s, "A").toolCalls.map((tool) => tool.id)).toEqual(["completed-tool"]);
+    s = applyStreamEvent(s, ev("tombstone", { agentId: "A", messageId: "failed" } as any));
+    expect(findAgent(s, "A").textBuffer).toBe("");
+    expect(findAgent(s, "A").toolCalls.map((tool) => tool.id)).toEqual(["completed-tool"]);
+    expect(findAgent(s, "B").textBuffer).toBe("sibling");
+    expect(findMainAssistant(s).text).toBe("parent");
+  });
+
+  test("unknown or older request tombstones and no-id legacy starts do not discard text", () => {
+    let s = dispatch(INITIAL_STATE, [
+      startAgent("A"),
+      ev("stream_request_start", { agentId: "A", turnNumber: 2, messageId: "current" } as any),
+      ev("text_delta", { agentId: "A", text: "current text" } as any),
+      ev("tombstone", { agentId: "A", messageId: "older" } as any),
+      ev("tombstone", { agentId: "unknown", messageId: "current" } as any),
+    ]);
+    expect(findAgent(s, "A").textBuffer).toBe("current text");
+    s = dispatch(s, [
+      ev("stream_request_start", { agentId: "A", turnNumber: 3 } as any),
+      ev("text_delta", { agentId: "A", text: " legacy" } as any),
+      ev("tombstone", { agentId: "A", messageId: "current" } as any),
+    ]);
+    expect(findAgent(s, "A").textBuffer).toBe("current text legacy");
+  });
+
+  test("a repeated start for the same request does not move the revocation frontier", () => {
+    const s = dispatch(INITIAL_STATE, [
+      startAgent("A"),
+      ev("stream_request_start", { agentId: "A", turnNumber: 1, messageId: "request" } as any),
+      ev("text_delta", { agentId: "A", text: "first partial" } as any),
+      ev("stream_request_start", { agentId: "A", turnNumber: 1, messageId: "request" } as any),
+      ev("text_delta", { agentId: "A", text: " second partial" } as any),
+      ev("tombstone", { agentId: "A", messageId: "request" } as any),
+    ]);
+    expect(findAgent(s, "A").textBuffer).toBe("");
+  });
+
+  test("a correlated child start preserves main pointers, feed and sibling object identity", () => {
+    const before = dispatch(INITIAL_STATE, [
+      ...mainTurn(),
+      ev("text_delta", { text: "parent" } as any),
+      ev("thinking_delta", { text: "parent reasoning" } as any),
+      startAgent("A"),
+      startAgent("B"),
+      ev("text_delta", { agentId: "B", text: "sibling" } as any),
+    ]);
+    const after = applyStreamEvent(
+      before,
+      ev("stream_request_start", {
+        agentId: "A",
+        turnNumber: 1,
+        messageId: "child-request",
+      } as any),
+    );
+    expect(after.streamingAssistantId).toBe(before.streamingAssistantId);
+    expect(after.streamingThinkingId).toBe(before.streamingThinkingId);
+    expect(findMainAssistant(after)).toBe(findMainAssistant(before));
+    expect(findAgent(after, "B")).toBe(findAgent(before, "B"));
+    expect(after.activeAgents).toBe(before.activeAgents);
+    expect(after.messages).toHaveLength(before.messages.length);
+    expect(findAgent(after, "A").textBuffer).toBe(findAgent(before, "A").textBuffer);
+  });
+});
+
 describe("applyStreamEvent — interleaved file writers", () => {
   test("retains a later child Write when the agent card precedes the parent tool", () => {
     let state = appendUserMessage(INITIAL_STATE, "update shared file", 1);
