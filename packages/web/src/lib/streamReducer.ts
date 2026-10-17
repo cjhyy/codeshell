@@ -203,7 +203,7 @@ export function reduceStream(state: ChatState, raw: unknown): ChatState {
         ...s2,
         items: [...s2.items, item],
         liveByAgent: { ...s2.liveByAgent, [key]: id },
-        run: "running",
+        run: event.agentId ? s.run : "running",
       };
     }
 
@@ -215,7 +215,7 @@ export function reduceStream(state: ChatState, raw: unknown): ChatState {
       if (live) {
         return {
           ...s,
-          run: "running",
+          run: event.agentId ? s.run : "running",
           items: s.items.map((i) =>
             i.id === liveId && i.kind === "assistant" ? { ...i, text: i.text + text } : i,
           ),
@@ -236,7 +236,7 @@ export function reduceStream(state: ChatState, raw: unknown): ChatState {
         ...s2,
         items: [...s2.items, item],
         liveByAgent: { ...s2.liveByAgent, [key]: id },
-        run: "running",
+        run: event.agentId ? s.run : "running",
       };
     }
 
@@ -247,7 +247,7 @@ export function reduceStream(state: ChatState, raw: unknown): ChatState {
       if (liveId && s.items.some((i) => i.id === liveId && i.kind === "assistant")) {
         return {
           ...s,
-          run: "running",
+          run: event.agentId ? s.run : "running",
           items: s.items.map((i) =>
             i.id === liveId && i.kind === "assistant" ? { ...i, reasoning: i.reasoning + text } : i,
           ),
@@ -266,7 +266,7 @@ export function reduceStream(state: ChatState, raw: unknown): ChatState {
         ...s2,
         items: [...s2.items, item],
         liveByAgent: { ...s2.liveByAgent, [key]: id },
-        run: "running",
+        run: event.agentId ? s.run : "running",
       };
     }
 
@@ -297,7 +297,12 @@ export function reduceStream(state: ChatState, raw: unknown): ChatState {
         const { [call.id]: _used, ...restOrphans } = s.orphanResults!;
         orphanResults = Object.keys(restOrphans).length > 0 ? restOrphans : undefined;
       }
-      return { ...s, run: "running", items: [...s.items, item], orphanResults };
+      return {
+        ...s,
+        run: event.agentId ? s.run : "running",
+        items: [...s.items, item],
+        orphanResults,
+      };
     }
 
     case "tool_use_args_delta": {
@@ -334,7 +339,7 @@ export function reduceStream(state: ChatState, raw: unknown): ChatState {
           orphanResults: {
             ...(s.orphanResults ?? {}),
             [result.id]: {
-              result: result.result ?? result.error ?? "",
+              result: stripSystemReminders(result.result ?? result.error ?? ""),
               error: Boolean(result.isError || result.error),
             },
           },
@@ -630,6 +635,22 @@ export function reduceStream(state: ChatState, raw: unknown): ChatState {
 
     case "error": {
       const [id, s2] = freshId("err");
+      if (event.agentId) {
+        const key = agentKey(event);
+        const { [key]: _gone, ...rest } = s2.liveByAgent;
+        return {
+          ...s2,
+          liveByAgent: rest,
+          items: [
+            ...s2.items.map((item) =>
+              item.kind === "assistant" && !item.done && item.agentId === key
+                ? { ...item, done: true }
+                : item,
+            ),
+            { kind: "system_error", id, text: (event.error as string) || "运行出错" },
+          ],
+        };
+      }
       return {
         ...s2,
         run: "error",
