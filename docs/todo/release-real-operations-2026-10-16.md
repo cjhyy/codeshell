@@ -1869,3 +1869,54 @@ unchanged; native recovery and NSIS revalidation remain pending. Windows GC
 cause stays unknown. This is not final release-source validation: later main
 changes are outside this checkpoint. No dispatch or new runtime result is
 asserted here.
+
+## CI20 — combined candidate frozen locally
+
+The final local candidate `635bed14e717638fe756664134a0a0d94bd8c1bc`
+includes selected main `4ad2052b6fd697af6141d8e60df1724cff509383`, the two
+repairs recorded above, and the three scoped follow-ups below. The earlier
+`686a05377be77e5513a9935eb4845d4bee9c3acc` checkpoint keeps its original,
+narrower scope. The new frozen receipt
+`ci20-final-combined-source-gates-proof-20261017.json`, SHA-256
+`9826236b78e62c95618a9880d38b3f249d1a43b5a9c89cd49be69ba961fa2e99`,
+binds 33 source/workflow paths and the compiled/tested checkpoint
+`dfb153a3b53c6c56a3fdb085e3e4f07c009cacbd`; all package sources, scripts and
+build manifests remain unchanged through the final local candidate.
+
+Root's combined guarded shard passes 310 tests/2,578 assertions across twenty
+files, with zero failure/skip. Node contracts pass 69 across six files
+(31 NSIS/signal, 13 original Review, 25 draft). The safe full workspace build,
+all fourteen workspace typechecks and four Desktop static bundles
+(main/preload/renderer/mobile) pass. Thirty-two source paths lint with zero
+warnings and 33 source/workflow paths pass format. These combined tests overlap
+the author shards and prior checkpoints; their counts are not added together.
+
+- `acb288f9099b1ef95be4516ede7e601eeca132e3` retains late external-completion
+  attribution and marks snapshot coverage unresolved without an execution
+  receipt. Actual reducer events and the React notice consumer reproduce six
+  failures with twelve passing controls against selected main; the author shard
+  passes 198 tests/624 assertions across eight files. Proof
+  `codeshell-turn-diff-external-proof-uwqzyd7y/verified-summary.json` has SHA-256
+  `4408ad0f8f183947140616ba620f56236b0904f3993f2956151b5b64dffe2306`.
+- `8041caccac3903470428fd776918e6d1bd2720ac` resolves real physical case aliases
+  without lowercasing distinct files. The owned Mac filesystem establishes the
+  same device/inode for the two spellings: four original assertions fail and one
+  control passes; the fixed shard passes 29 tests/1,590 assertions. Proof
+  `codeshell-turn-diff-case-proof-r8Vle7/verified-summary.json` has SHA-256
+  `cac4490e856c6b23ddf0f82a81811163a497bd1bd89071e87211c1f8bbc21e11`.
+  This does not establish Windows filesystem execution.
+- `63447e30edad5ab9cf5f627af85afa15513843a3` preserves UTF-8 BOM bytes during
+  capture. Actual owned-file tracker results reproduce five failures with two
+  passing controls; the fixed old/new shard passes 30 tests/1,669 assertions.
+  Independent patch application preserves exact BOM, CRLF and no-final-newline
+  bytes, while malformed UTF-8 stays rejected. Proof
+  `codeshell-turn-diff-bom-proof-20261017/verified-source-summary.json` has SHA-256
+  `a9d11f6fbd6f428a754db51ef643034a03e89f4f666c5ebadf31ff970743ed02`.
+
+These are source, owned-file and compiler checks, not native recovery. The three
+new Review draft operations have never completed successfully in actual native
+acceptance. Windows Review GC and the CI17 NSIS failure causes remain unknown;
+NSIS revalidation is pending. No local browser, Electron, Keychain, PowerShell,
+installer, paid provider or external account operation is executed for these
+checks. The original native/harness blobs and acceptance gates stay frozen.
+The full CI20 run has not been dispatched; no runtime outcome is asserted.
