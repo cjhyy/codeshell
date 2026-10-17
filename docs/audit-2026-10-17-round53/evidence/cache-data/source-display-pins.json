@@ -1,0 +1,31 @@
+{
+  "pins": [
+    {
+      "path": "packages/core/src/llm/model-cache.ts",
+      "bytes": 1996,
+      "sha256": "cbe291bac5c1401864c263b860faacb7c6d1472de6fdb57c08a9f00b38488d02",
+      "beforeDisplayUTC": "2026-10-17T17:50:57.294208+00:00",
+      "displayedLineRanges": [
+        [
+          1,
+          65
+        ]
+      ]
+    },
+    {
+      "path": "packages/core/src/llm/model-fetcher.ts",
+      "sha256": "8d3ae009ba99976e30df911a58138a6923600f43dddabe8563d0418e61dc216b",
+      "beforeDisplayUTC": "2026-10-17T17:51:47.028707+00:00",
+      "displayedLineRanges": [
+        [
+          53,
+          86
+        ],
+        [
+          119,
+          128
+        ]
+      ]
+    }
+  ]
+}

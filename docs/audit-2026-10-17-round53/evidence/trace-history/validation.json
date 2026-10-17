@@ -1,0 +1,46 @@
+{
+  "role": "Independent source static recheck, not runtime verifier; substantial earlier selected-range overlap disclosed",
+  "executions": {
+    "productFunctions": 0,
+    "helpers": 0,
+    "imports": 0,
+    "fixtures": 0,
+    "tests": 0,
+    "React": 0,
+    "DOM": 0,
+    "timers": 0,
+    "model": 0,
+    "network": 0,
+    "native": 0,
+    "Git": 0,
+    "realTraceOrConfigurationData": 0
+  },
+  "allowedOperations": "Only source text reads, filename/navigation search, independent Python standard-library JSON/hash/range/metadata work; no product modules imported/evaluated.",
+  "sourceDisplayChunks": [
+    "bb8b81",
+    "a4b60c",
+    "50d7fa"
+  ],
+  "oldMetadataReadChunks": [
+    "645545",
+    "a6830a",
+    "4579c5",
+    "677501"
+  ],
+  "firstNonzeroPreserved": "first-diagnostic.json and original bb8b81 tool transcript; stderr was suppressed by the original command, not recovered or invented.",
+  "truncationsPreserved": "diagnostics.json; omitted middle is not a read claim.",
+  "oldRuntimeResults": "Not executed again or borrowed to validate current behavior.",
+  "testStatus": "Two partial existing test declarations read for intent; eight titles navigation only, zero tests executed.",
+  "scopeTotals": {
+    "semanticFiles": 5,
+    "full": 0,
+    "selected": 5,
+    "productSemanticLines": 133,
+    "testDeclarationSemanticLines": 43,
+    "semanticLines": 176,
+    "uniqueDisplayedLinesSummedAcrossFiles": 294,
+    "testTitlesNavigationOnly": 8,
+    "partialExistingTestDeclarationsRead": 2,
+    "testsExecuted": 0
+  }
+}

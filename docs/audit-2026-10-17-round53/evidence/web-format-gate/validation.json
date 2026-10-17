@@ -1,0 +1,25 @@
+{
+  "createdAt": "2026-10-17T17:51:23.863643+00:00",
+  "classification": {
+    "formal": 0,
+    "candidates": 0,
+    "newRelated": 0
+  },
+  "oldFullExclusions": 2,
+  "productSemanticLineCount": 0,
+  "productDisplayedLineCount": 0,
+  "testDeclarationLineCount": 0,
+  "productExecutions": 0,
+  "helperExecutions": 0,
+  "fixtureExecutions": 0,
+  "testExecutions": 0,
+  "reactDOMTimerNativeModelNetworkExecutions": 0,
+  "gitExecutions": 0,
+  "globalCoverageUpdates": 0,
+  "authorOldMethodsExecuted": 0,
+  "metadataOnly": true,
+  "boundaries": [
+    "No current ordinary producer/consumer contract re-review because both permitted leaves were excluded before product body.",
+    "Old R14 userMessageDisplay wrong-relative-import dynamic direction remains SKIP; it was not restored through another entry point."
+  ]
+}

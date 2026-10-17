@@ -1,0 +1,32 @@
+{
+  "createdAt": "2026-10-17T17:59:45.332747+00:00",
+  "reviewedAlias": "TUI-R111-C1",
+  "rootFormalIdentity": "TUI-R53-01",
+  "sameItemDoNotDoubleCount": true,
+  "independentOpinion": "Supports one P3 static ordinary consumer status-line-as-file count defect",
+  "newFindingIDs": [],
+  "reviewedCandidates": 1,
+  "formalCreatedByThisPacket": 0,
+  "newRelated": 0,
+  "ordinaryCases": [
+    {
+      "producer": "glob.ts84-85; ordinary valid pattern with no matches",
+      "tuiStaticConsequence": "ToolCall.tsx244-261 keeps nonnumeric status message as one file; summary1 files in default and expanded modes",
+      "cliStaticConsequence": "compactSummary145-146 also counts the sole status line as one file"
+    },
+    {
+      "producer": "glob.ts103-117; exactly one normal match within cap",
+      "cliStaticConsequence": "Header plus path line counts2 files",
+      "tuiControl": "Numeric matched header is removed, so ordinary one-match count remains1"
+    }
+  ],
+  "counterEvidence": [
+    "TUI keeps the explicit no-match body message, so the contradictory count is a display summary defect; no missing actual file/result or data loss inferred.",
+    "Empty content and error results use other component branches; no arbitrary invalid DTO/NaN/error text used.",
+    "CLI JSON/JSONL formats use other renderer classes; the claimed count applies to default/plain text.",
+    "TUI expanded mode uses the same pre-branch count, so changing expanded does not correct this zero-result count.",
+    "May30 /123 concerns producer formatting above200 and pluralization, not CLI/TUI consumer counting; R7 files/cross-review references are derivative pointers to that old item.",
+    "No new >200 finding, sorting contract finding, unused Core compactOutput reachability claim or old Slice/i18n/R7TUI/R14 dynamic retry."
+  ],
+  "runtimeValidation": false
+}

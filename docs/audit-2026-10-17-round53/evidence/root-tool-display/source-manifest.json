@@ -1,0 +1,254 @@
+{
+  "rootReportedReadBaseline": "524c0827a480132119b637aa87e16f0eab9895f3",
+  "files": [
+    {
+      "path": "packages/core/src/utils/toolDisplay.ts",
+      "bytes": 6985,
+      "lines": 209,
+      "sha256": "41ba468c68cb9c564e1401d3c5cd310ab60a1e61600966c45166184871e6c000",
+      "beforeCurrentBodyAndLineNavigation": true,
+      "firstEverReadClaim": null,
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          209
+        ]
+      ],
+      "displayedLineRanges": [
+        [
+          1,
+          209
+        ]
+      ],
+      "semanticLineCount": 209,
+      "bodyDisplayedLineCount": 209,
+      "endingSha256": "41ba468c68cb9c564e1401d3c5cd310ab60a1e61600966c45166184871e6c000",
+      "endingBytes": 6985,
+      "scope": "Current static text and ordinary Glob success/string presentation only. Existing R14 static helper, R7 full producer and TUI reads may overlap; no first-ever/unique coverage or FS/permission/process/actual TTY certification."
+    },
+    {
+      "path": "packages/tui/src/ui/components/ToolCall.tsx",
+      "bytes": 13567,
+      "lines": 407,
+      "sha256": "ad36b061a8c6856d63ce8b85169164d8df60d38da91e196e70ee9bc5120868f8",
+      "beforeCurrentBodyAndLineNavigation": true,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          19,
+          28
+        ],
+        [
+          42,
+          58
+        ],
+        [
+          98,
+          108
+        ],
+        [
+          124,
+          160
+        ],
+        [
+          195,
+          202
+        ],
+        [
+          244,
+          262
+        ]
+      ],
+      "displayedLineRanges": [
+        [
+          19,
+          60
+        ],
+        [
+          82,
+          160
+        ],
+        [
+          178,
+          263
+        ]
+      ],
+      "semanticLineCount": 102,
+      "bodyDisplayedLineCount": 207,
+      "endingSha256": "ad36b061a8c6856d63ce8b85169164d8df60d38da91e196e70ee9bc5120868f8",
+      "endingBytes": 13567,
+      "scope": "Current static text and ordinary Glob success/string presentation only. Existing R14 static helper, R7 full producer and TUI reads may overlap; no first-ever/unique coverage or FS/permission/process/actual TTY certification."
+    },
+    {
+      "path": "packages/core/src/tool-system/builtin/glob.ts",
+      "bytes": 4080,
+      "lines": 121,
+      "sha256": "8b416c156820a67e02b8101904440190235cf74d99753530526455ab5d1b18ce",
+      "beforeCurrentBodyAndLineNavigation": true,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          13,
+          27
+        ],
+        [
+          29,
+          34
+        ],
+        [
+          84,
+          86
+        ],
+        [
+          103,
+          117
+        ]
+      ],
+      "displayedLineRanges": [
+        [
+          1,
+          37
+        ],
+        [
+          82,
+          120
+        ]
+      ],
+      "semanticLineCount": 39,
+      "bodyDisplayedLineCount": 76,
+      "endingSha256": "8b416c156820a67e02b8101904440190235cf74d99753530526455ab5d1b18ce",
+      "endingBytes": 4080,
+      "scope": "Current static text and ordinary Glob success/string presentation only. Existing R14 static helper, R7 full producer and TUI reads may overlap; no first-ever/unique coverage or FS/permission/process/actual TTY certification."
+    },
+    {
+      "path": "packages/tui/src/cli/output/renderer.ts",
+      "bytes": 5744,
+      "lines": 163,
+      "sha256": "2ed6d93112ae5ab123fc2b93964b04bc37ec21b3e286ceec93ddab68c1bb22d7",
+      "beforeCurrentBodyAndLineNavigation": true,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          14,
+          29
+        ],
+        [
+          57,
+          72
+        ],
+        [
+          138,
+          162
+        ]
+      ],
+      "displayedLineRanges": [
+        [
+          1,
+          38
+        ],
+        [
+          54,
+          74
+        ],
+        [
+          138,
+          163
+        ]
+      ],
+      "semanticLineCount": 57,
+      "bodyDisplayedLineCount": 85,
+      "endingSha256": "2ed6d93112ae5ab123fc2b93964b04bc37ec21b3e286ceec93ddab68c1bb22d7",
+      "endingBytes": 5744,
+      "scope": "Current static text and ordinary Glob success/string presentation only. Existing R14 static helper, R7 full producer and TUI reads may overlap; no first-ever/unique coverage or FS/permission/process/actual TTY certification."
+    }
+  ],
+  "navigationOnlyFiles": [
+    {
+      "path": "packages/tui/src/cli/output/terminal-ui.ts",
+      "bytes": 7091,
+      "lines": 235,
+      "sha256": "f274a3b1dd282503cc6aa7ae745b76069631d062c0b7edf7965c9e5b96e308ec",
+      "beforeCurrentBodyAndLineNavigation": true,
+      "coverage": "navigation-only; local same-name formatter, not Core helper consumer",
+      "selectedLineRanges": [],
+      "semanticLineCount": 0,
+      "endingSha256": "f274a3b1dd282503cc6aa7ae745b76069631d062c0b7edf7965c9e5b96e308ec"
+    }
+  ],
+  "historicalReportReads": [
+    {
+      "path": "docs/audit-2026-10-17-round14/utils.md",
+      "bytes": 6276,
+      "sha256": "ad2dde78de997e26f5267580bbf89e3d6431706fc84a330882168887c6f5bf1d",
+      "coverage": "selected historical metadata",
+      "selectedLineRanges": [],
+      "scope": "Only relevant old full/purpose/cause paragraphs or JSON item123, not whole document semantic reading.",
+      "firstReadSha256": null,
+      "capturedAfterActualMetadataRead": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round7/files.md",
+      "bytes": 11383,
+      "sha256": "c2d83a848ed9ed729d0af966e9a585394905873f4497450f78fe8c4012dae5bd",
+      "coverage": "selected historical metadata",
+      "selectedLineRanges": [],
+      "scope": "Only relevant old full/purpose/cause paragraphs or JSON item123, not whole document semantic reading.",
+      "firstReadSha256": null,
+      "capturedAfterActualMetadataRead": true
+    },
+    {
+      "path": "docs/archive/review-2026-05-30/findings.json",
+      "bytes": 222261,
+      "sha256": "6937976e6107dbbbab93fd429900e6f236352d67ba4f287526f529a48e6a3a35",
+      "coverage": "selected historical metadata",
+      "selectedLineRanges": [],
+      "scope": "Only relevant old full/purpose/cause paragraphs or JSON item123, not whole document semantic reading.",
+      "firstReadSha256": null,
+      "capturedAfterActualMetadataRead": true
+    }
+  ],
+  "instructionHashOnly": [
+    {
+      "path": "CODESHELL.md",
+      "bytes": 17639,
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "coverage": "hash-only instruction carry-forward"
+    },
+    {
+      "path": "AGENTS.md",
+      "bytes": 206,
+      "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "coverage": "hash-only instruction carry-forward"
+    }
+  ],
+  "counts": {
+    "full": 1,
+    "selected": 3,
+    "productSemanticLines": 407,
+    "bodyDisplayedLines": 577,
+    "testDeclarationLines": 0,
+    "productRuns": 0
+  },
+  "historyReading": {
+    "machineFiles": 5150,
+    "markdownFiles": 1489,
+    "jsonFiles": 3661,
+    "stringValues": 2430509,
+    "scalarValues": 3611347,
+    "scopeRowsActuallyRead": 26,
+    "pathMatches": 266,
+    "shaMatches": 60,
+    "broadToolDisplayCauseMatches": 5024,
+    "capEach": 60,
+    "broadGlobCountMatches": 87,
+    "preciseGlobCountMatches": 15,
+    "preciseContextsActuallyRead": 15,
+    "allHistorySemanticRead": false
+  },
+  "firstMetadataErrors": [
+    "capture-first-diagnostic.json",
+    "old-source-navigation-limits.json"
+  ],
+  "globalCoverageUpdated": false
+}

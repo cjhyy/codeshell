@@ -1,0 +1,443 @@
+{
+  "objects": [
+    {
+      "document": "docs/audit-2026-10-17-round10/evidence/catalog-source-manifest.json",
+      "documentSha256": "1bb1472806c05b9756a18700ef03b8fb8fd785275d2d9bcf4f0e0fde9c971ae1",
+      "pointer": "/files/16",
+      "originalObjectKeys": [
+        "path",
+        "frozenSha256",
+        "currentSha256",
+        "currentEqualsFrozen"
+      ],
+      "metadataProjection": {
+        "path": "packages/core/src/llm/model-cache.ts"
+      },
+      "directPathBearingFields": {
+        "path": "packages/core/src/llm/model-cache.ts"
+      },
+      "ancestorLimitations": [
+        {
+          "pointer": "",
+          "metadata": {
+            "scope": "Directly inspected/read sources and executed baseline test files; not a transitive dependency or full repository coverage claim."
+          }
+        }
+      ],
+      "projectionIsNotFullObjectOrSourceRead": true
+    },
+    {
+      "document": "docs/audit-2026-10-17-round10/source-manifest.json",
+      "documentSha256": "d7cc07cd9ebfa50a4f1c6f78eda0b7ca13bb7832f88aac4076a5a7cc8f3d8e57",
+      "pointer": "/files/16",
+      "originalObjectKeys": [
+        "path",
+        "bytes",
+        "sha256",
+        "frozenBlobVerified",
+        "currentWorkingTreeMatchesFrozenBlob"
+      ],
+      "metadataProjection": {
+        "path": "packages/core/src/llm/model-cache.ts",
+        "bytes": 1996,
+        "sha256": "cbe291bac5c1401864c263b860faacb7c6d1472de6fdb57c08a9f00b38488d02"
+      },
+      "directPathBearingFields": {
+        "path": "packages/core/src/llm/model-cache.ts"
+      },
+      "ancestorLimitations": [],
+      "projectionIsNotFullObjectOrSourceRead": true
+    },
+    {
+      "document": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+      "documentSha256": "6cfb5a8d1a6c08e6fb587e339fd78a3d4f023dc65b7ccc466f4eadbb68df7d45",
+      "pointer": "/files/257",
+      "originalObjectKeys": [
+        "path",
+        "bytes",
+        "lines",
+        "sha256",
+        "status",
+        "currentFullClaimVariants",
+        "currentSelectedClaimVariants",
+        "currentSelectedUnionLines",
+        "currentSelectedUnionRanges",
+        "priorVersionClaimVariants",
+        "currentPinOnlyVariants",
+        "claimVariants",
+        "claims"
+      ],
+      "metadataProjection": {
+        "path": "packages/core/src/llm/model-cache.ts",
+        "bytes": 1996,
+        "lines": 65,
+        "sha256": "cbe291bac5c1401864c263b860faacb7c6d1472de6fdb57c08a9f00b38488d02"
+      },
+      "directPathBearingFields": {
+        "path": "packages/core/src/llm/model-cache.ts"
+      },
+      "ancestorLimitations": [],
+      "projectionIsNotFullObjectOrSourceRead": true
+    },
+    {
+      "document": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+      "documentSha256": "12c53ba7d8a17673382d352a48a8ca3afc25a4913fcc96d63d22319e7a00b1eb",
+      "pointer": "/files/669",
+      "originalObjectKeys": [
+        "path",
+        "bytes",
+        "lines",
+        "sha256"
+      ],
+      "metadataProjection": {
+        "path": "packages/core/src/llm/model-cache.ts",
+        "bytes": 1996,
+        "lines": 65,
+        "sha256": "cbe291bac5c1401864c263b860faacb7c6d1472de6fdb57c08a9f00b38488d02"
+      },
+      "directPathBearingFields": {
+        "path": "packages/core/src/llm/model-cache.ts"
+      },
+      "ancestorLimitations": [],
+      "projectionIsNotFullObjectOrSourceRead": true
+    },
+    {
+      "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "documentSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f",
+      "pointer": "/claims/2862",
+      "originalObjectKeys": [
+        "path",
+        "sourceHashFields",
+        "hashBinding",
+        "coverageKind",
+        "scopeFields",
+        "rangeFields",
+        "rangeBoundsValidForCurrent",
+        "roleBoundaryFields",
+        "sourcePathIncludesLocator",
+        "directSourcePathsInObject",
+        "origin",
+        "provenance",
+        "claimId"
+      ],
+      "metadataProjection": {
+        "path": "packages/core/src/llm/model-cache.ts"
+      },
+      "directPathBearingFields": {
+        "path": "packages/core/src/llm/model-cache.ts"
+      },
+      "ancestorLimitations": [
+        {
+          "pointer": "",
+          "metadata": {
+            "scope": "Deduplicated JSON source-row claims only; MD prose not classified. Positive full requires clear explicit scope plus unique same-object source SHA matching current filesystem. Narrow ancestor hash is pending-only. Source words never parsed."
+          }
+        }
+      ],
+      "projectionIsNotFullObjectOrSourceRead": true
+    },
+    {
+      "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "documentSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f",
+      "pointer": "/claims/2863",
+      "originalObjectKeys": [
+        "path",
+        "sourceHashFields",
+        "hashBinding",
+        "coverageKind",
+        "scopeFields",
+        "rangeFields",
+        "rangeBoundsValidForCurrent",
+        "roleBoundaryFields",
+        "sourcePathIncludesLocator",
+        "directSourcePathsInObject",
+        "origin",
+        "provenance",
+        "claimId"
+      ],
+      "metadataProjection": {
+        "path": "packages/core/src/llm/model-cache.ts"
+      },
+      "directPathBearingFields": {
+        "path": "packages/core/src/llm/model-cache.ts"
+      },
+      "ancestorLimitations": [
+        {
+          "pointer": "",
+          "metadata": {
+            "scope": "Deduplicated JSON source-row claims only; MD prose not classified. Positive full requires clear explicit scope plus unique same-object source SHA matching current filesystem. Narrow ancestor hash is pending-only. Source words never parsed."
+          }
+        }
+      ],
+      "projectionIsNotFullObjectOrSourceRead": true
+    },
+    {
+      "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "documentSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f",
+      "pointer": "/claims/2864",
+      "originalObjectKeys": [
+        "path",
+        "sourceHashFields",
+        "hashBinding",
+        "coverageKind",
+        "scopeFields",
+        "rangeFields",
+        "rangeBoundsValidForCurrent",
+        "roleBoundaryFields",
+        "sourcePathIncludesLocator",
+        "directSourcePathsInObject",
+        "origin",
+        "provenance",
+        "claimId"
+      ],
+      "metadataProjection": {
+        "path": "packages/core/src/llm/model-cache.ts"
+      },
+      "directPathBearingFields": {
+        "path": "packages/core/src/llm/model-cache.ts"
+      },
+      "ancestorLimitations": [
+        {
+          "pointer": "",
+          "metadata": {
+            "scope": "Deduplicated JSON source-row claims only; MD prose not classified. Positive full requires clear explicit scope plus unique same-object source SHA matching current filesystem. Narrow ancestor hash is pending-only. Source words never parsed."
+          }
+        }
+      ],
+      "projectionIsNotFullObjectOrSourceRead": true
+    },
+    {
+      "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "documentSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f",
+      "pointer": "/claims/2865",
+      "originalObjectKeys": [
+        "path",
+        "sourceHashFields",
+        "hashBinding",
+        "coverageKind",
+        "scopeFields",
+        "rangeFields",
+        "rangeBoundsValidForCurrent",
+        "roleBoundaryFields",
+        "sourcePathIncludesLocator",
+        "directSourcePathsInObject",
+        "origin",
+        "provenance",
+        "claimId"
+      ],
+      "metadataProjection": {
+        "path": "packages/core/src/llm/model-cache.ts"
+      },
+      "directPathBearingFields": {
+        "path": "packages/core/src/llm/model-cache.ts"
+      },
+      "ancestorLimitations": [
+        {
+          "pointer": "",
+          "metadata": {
+            "scope": "Deduplicated JSON source-row claims only; MD prose not classified. Positive full requires clear explicit scope plus unique same-object source SHA matching current filesystem. Narrow ancestor hash is pending-only. Source words never parsed."
+          }
+        }
+      ],
+      "projectionIsNotFullObjectOrSourceRead": true
+    },
+    {
+      "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "documentSha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f",
+      "pointer": "/claims/2866",
+      "originalObjectKeys": [
+        "path",
+        "sourceHashFields",
+        "hashBinding",
+        "coverageKind",
+        "scopeFields",
+        "rangeFields",
+        "rangeBoundsValidForCurrent",
+        "roleBoundaryFields",
+        "sourcePathIncludesLocator",
+        "directSourcePathsInObject",
+        "origin",
+        "provenance",
+        "claimId"
+      ],
+      "metadataProjection": {
+        "path": "packages/core/src/llm/model-cache.ts"
+      },
+      "directPathBearingFields": {
+        "path": "packages/core/src/llm/model-cache.ts"
+      },
+      "ancestorLimitations": [
+        {
+          "pointer": "",
+          "metadata": {
+            "scope": "Deduplicated JSON source-row claims only; MD prose not classified. Positive full requires clear explicit scope plus unique same-object source SHA matching current filesystem. Narrow ancestor hash is pending-only. Source words never parsed."
+          }
+        }
+      ],
+      "projectionIsNotFullObjectOrSourceRead": true
+    },
+    {
+      "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-index.json",
+      "documentSha256": "78e65550fef49fec2bd688455b17edf6de8465486cd9651634b4cd483f5aacda",
+      "pointer": "/files/981",
+      "originalObjectKeys": [
+        "path",
+        "bytes",
+        "sha256",
+        "lines",
+        "status",
+        "currentExplicitFullClaimIds",
+        "currentExplicitSelectedClaimIds",
+        "currentSelectedUnionLines",
+        "claimIds",
+        "claimKindCounts"
+      ],
+      "metadataProjection": {
+        "path": "packages/core/src/llm/model-cache.ts",
+        "bytes": 1996,
+        "sha256": "cbe291bac5c1401864c263b860faacb7c6d1472de6fdb57c08a9f00b38488d02",
+        "lines": 65
+      },
+      "directPathBearingFields": {
+        "path": "packages/core/src/llm/model-cache.ts"
+      },
+      "ancestorLimitations": [
+        {
+          "pointer": "",
+          "metadata": {
+            "scope": "Current TS/TSX filesystem bytes joined to conservative explicit historical JSON row claims. No-row is unknown, never unread. MD-only full is not exhaustive here; all later source candidates still need precise MD+JSON prior-cause/full gate. Pending tmp semantic reads are not backfilled."
+          }
+        }
+      ],
+      "projectionIsNotFullObjectOrSourceRead": true
+    },
+    {
+      "document": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/package-inventory.json",
+      "documentSha256": "862732b8c0bdc13733ead08b43c47d0854c8c12b96ea68ee5427ecf6a740d28b",
+      "pointer": "/files/981",
+      "originalObjectKeys": [
+        "path",
+        "bytes",
+        "sha256",
+        "lines"
+      ],
+      "metadataProjection": {
+        "path": "packages/core/src/llm/model-cache.ts",
+        "bytes": 1996,
+        "sha256": "cbe291bac5c1401864c263b860faacb7c6d1472de6fdb57c08a9f00b38488d02",
+        "lines": 65
+      },
+      "directPathBearingFields": {
+        "path": "packages/core/src/llm/model-cache.ts"
+      },
+      "ancestorLimitations": [
+        {
+          "pointer": "",
+          "metadata": {
+            "scope": "Current repository rg-visible TS/TSX filesystem paths, respecting normal repository ignore rules, excluding .git/node_modules. Not a Git tracked set or semantic read. All source bytes used only for SHA/length/byte-splitlines count; no source text displayed, parsed or executed."
+          }
+        }
+      ],
+      "projectionIsNotFullObjectOrSourceRead": true
+    },
+    {
+      "document": "docs/audit-2026-10-17-round44/evidence/coverage-status/current-inventory.json",
+      "documentSha256": "d1735b9e71d40ff96ad99d122d6d7fd53f2b27e6dd643a31f280c4e5a33b07dc",
+      "pointer": "/files/981",
+      "originalObjectKeys": [
+        "path",
+        "bytes",
+        "sha256",
+        "lines",
+        "initial49ShaMatches",
+        "blockedBy49EndingOverlay",
+        "coverageStatus"
+      ],
+      "metadataProjection": {
+        "path": "packages/core/src/llm/model-cache.ts",
+        "bytes": 1996,
+        "sha256": "cbe291bac5c1401864c263b860faacb7c6d1472de6fdb57c08a9f00b38488d02",
+        "lines": 65
+      },
+      "directPathBearingFields": {
+        "path": "packages/core/src/llm/model-cache.ts"
+      },
+      "ancestorLimitations": [
+        {
+          "pointer": "",
+          "metadata": {
+            "scope": "Same49 rg-visible TS/TSX filesystem filter, normal repo ignores; not Git tracked inventory. Bytes used solely for SHA/length/linecount; no source body decoded/displayed/executed."
+          }
+        }
+      ],
+      "projectionIsNotFullObjectOrSourceRead": true
+    },
+    {
+      "document": "docs/audit-2026-10-17-round9/evidence/tools-preflight.json",
+      "documentSha256": "90b3a2a45b092c15f0b8be13357916d090293f2aeedc867572e17c1ca58823ec",
+      "pointer": "/relativeImports/621",
+      "originalObjectKeys": [
+        "from",
+        "specifier",
+        "resolved"
+      ],
+      "metadataProjection": {},
+      "directPathBearingFields": {
+        "resolved": "packages/core/src/llm/model-cache.ts"
+      },
+      "ancestorLimitations": [],
+      "projectionIsNotFullObjectOrSourceRead": true
+    },
+    {
+      "document": "docs/audit-2026-10-17-round9/evidence/tools-preflight.json",
+      "documentSha256": "90b3a2a45b092c15f0b8be13357916d090293f2aeedc867572e17c1ca58823ec",
+      "pointer": "/relativeImports/623",
+      "originalObjectKeys": [
+        "from",
+        "specifier",
+        "resolved"
+      ],
+      "metadataProjection": {},
+      "directPathBearingFields": {
+        "from": "packages/core/src/llm/model-cache.ts"
+      },
+      "ancestorLimitations": [],
+      "projectionIsNotFullObjectOrSourceRead": true
+    },
+    {
+      "document": "docs/audit-2026-10-17-round9/evidence/tools-preflight.regex-draft.json",
+      "documentSha256": "1d61aad040b94de475ef3dd810096715cc5103b4a45e5d9ceec7f5bae2fa492a",
+      "pointer": "/relativeImports/707",
+      "originalObjectKeys": [
+        "from",
+        "specifier",
+        "resolved"
+      ],
+      "metadataProjection": {},
+      "directPathBearingFields": {
+        "resolved": "packages/core/src/llm/model-cache.ts"
+      },
+      "ancestorLimitations": [],
+      "projectionIsNotFullObjectOrSourceRead": true
+    },
+    {
+      "document": "docs/audit-2026-10-17-round9/evidence/tools-preflight.regex-draft.json",
+      "documentSha256": "1d61aad040b94de475ef3dd810096715cc5103b4a45e5d9ceec7f5bae2fa492a",
+      "pointer": "/relativeImports/713",
+      "originalObjectKeys": [
+        "from",
+        "specifier",
+        "resolved"
+      ],
+      "metadataProjection": {},
+      "directPathBearingFields": {
+        "from": "packages/core/src/llm/model-cache.ts"
+      },
+      "ancestorLimitations": [],
+      "projectionIsNotFullObjectOrSourceRead": true
+    }
+  ],
+  "count": 16,
+  "metadataProjectionOnly": true,
+  "notSemanticCoverageClaimsOrGuaranteedCanonical": true
+}

@@ -1,0 +1,62 @@
+{
+  "captureAfterActualDisplay": true,
+  "files": [
+    {
+      "path": "README.md",
+      "displayedLineRanges": [
+        [
+          15,
+          24
+        ]
+      ],
+      "excerpts": [
+        {
+          "start": 15,
+          "end": 24,
+          "text": "15: <p align=\"center\">\n16:   <a href=\"https://www.npmjs.com/package/%40cjhyy%2Fcode-shell\"><img src=\"https://img.shields.io/npm/v/%40cjhyy%2Fcode-shell\" alt=\"npm version\" /></a>\n17:   <a href=\"LICENSE\"><img src=\"https://img.shields.io/badge/license-MIT-blue\" alt=\"MIT license\" /></a>\n18:   <a href=\"package.json\"><img src=\"https://img.shields.io/badge/node-%3E%3D20.10-339933\" alt=\"Node.js >=20.10\" /></a>\n19:   <a href=\"tsconfig.json\"><img src=\"https://img.shields.io/badge/TypeScript-5.x-3178C6?logo=typescript&amp;logoColor=white\" alt=\"TypeScript\" /></a>\n20:   <a href=\".github/workflows/release.yml\"><img src=\"https://img.shields.io/badge/platform-macOS%20%7C%20Windows%20%7C%20Linux-555\" alt=\"macOS, Windows, and Linux\" /></a>\n21: </p>\n22: \n23: <p align=\"center\">\n24:   <img src=\"assets/codeshell-promo.png\" alt=\"CodeShell desktop AI agent orchestration promotional image\" width=\"860\" />"
+        }
+      ]
+    },
+    {
+      "path": "packages/core/src/tool-system/builtin/read.ts",
+      "displayedLineRanges": [
+        [
+          1,
+          12
+        ],
+        [
+          18,
+          55
+        ]
+      ],
+      "excerpts": [
+        {
+          "start": 1,
+          "end": 12,
+          "text": "1: /**\n2:  * Built-in Read file tool.\n3:  */\n4: \n5: import { createHash } from \"node:crypto\";\n6: import { readFile, stat, open } from \"node:fs/promises\";\n7: import { createReadStream, existsSync } from \"node:fs\";\n8: import { extname, isAbsolute, relative, resolve, sep } from \"node:path\";\n9: import type { ToolDefinition } from \"../../types.js\";\n10: import type { ToolContext } from \"../context.js\";\n11: import { fileCache } from \"./file-cache.js\";\n12: import { toLf } from \"./eol.js\";"
+        },
+        {
+          "start": 18,
+          "end": 55,
+          "text": "18:     \"By default reads up to 2000 lines from the beginning. \" +\n19:     \"Use offset and limit to read specific portions of large files. \" +\n20:     \"For images and binary files, returns path/metadata instead of raw bytes. \" +\n21:     \"For large text files, consider using Grep first to find the relevant lines.\\n\\n\" +\n22:     \"Do NOT re-read a file you just edited to verify — Edit/Write would have errored \" +\n23:     \"if the change failed.\\n\" +\n24:     \"Do NOT re-read a file (or the same range of a file) you've already read earlier in \" +\n25:     \"this conversation. The content is already in your context. If you need a different \" +\n26:     \"part of the file, read a different offset; otherwise decide with what you have.\",\n27:   inputSchema: {\n28:     type: \"object\",\n29:     properties: {\n30:       file_path: { type: \"string\", description: \"Absolute path to the file to read\" },\n31:       offset: { type: \"number\", description: \"Line number to start reading from (1-based)\" },\n32:       limit: { type: \"number\", description: \"Number of lines to read (default: 2000)\" },\n33:     },\n34:     required: [\"file_path\"],\n35:   },\n36: };\n37: \n38: const MAX_CONTENT_CHARS = 200_000;\n39: const LARGE_TEXT_BYTES = 5 * 1024 * 1024;\n40: const SAMPLE_BYTES = 8192;\n41: \n42: const IMAGE_EXT_MIME: Record<string, string> = {\n43:   \".png\": \"image/png\",\n44:   \".jpg\": \"image/jpeg\",\n45:   \".jpeg\": \"image/jpeg\",\n46:   \".gif\": \"image/gif\",\n47:   \".webp\": \"image/webp\",\n48: };\n49: \n50: export async function readTool(args: Record<string, unknown>, ctx?: ToolContext): Promise<string> {\n51:   const rawPath = args.file_path as string;\n52:   if (!rawPath) return \"Error: file_path is required\";\n53:   const cwd = ctx?.cwd ?? process.cwd();\n54:   const filePath = isAbsolute(rawPath) ? rawPath : resolve(cwd, rawPath);\n55: "
+        }
+      ]
+    },
+    {
+      "path": ".github/workflows/release.yml",
+      "displayedLineRanges": [
+        [
+          145,
+          155
+        ]
+      ],
+      "excerpts": [
+        {
+          "start": 145,
+          "end": 155,
+          "text": "145:             artifact: linux\n146:           - os: macos-latest\n147:             artifact: mac\n148:           # windows-latest now ships VS 2026. The locked electron-builder chain\n149:           # uses node-gyp 9, which recognizes VS 2022 but not VS 2026; retain the\n150:           # supported native compiler until that toolchain is upgraded together.\n151:           - os: windows-2022\n152:             artifact: windows\n153:     runs-on: ${{ matrix.os }}\n154:     steps:\n155:       - uses: actions/checkout@v7"
+        }
+      ]
+    }
+  ]
+}

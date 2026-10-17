@@ -1,0 +1,155 @@
+{
+  "sourceRow": {
+    "document": "docs/audit-2026-10-17-round14/evidence/utils-source-manifest.json",
+    "sha256": "5b9454b7fa68f96d5af1023e658c234f5b2e8edaebce1a0a656fecc43cd63be0",
+    "header": {
+      "frozenBase": "badc2262a90966f6f903977b849adf1f22b55e9f"
+    },
+    "pointer": "/sources/4",
+    "originalRow": {
+      "path": "packages/core/src/utils/toolDisplay.ts",
+      "frozenBytes": 6985,
+      "bytes": 6985,
+      "sha256": "41ba468c68cb9c564e1401d3c5cd310ab60a1e61600966c45166184871e6c000",
+      "frozenSha256": "41ba468c68cb9c564e1401d3c5cd310ab60a1e61600966c45166184871e6c000",
+      "currentSha256": "41ba468c68cb9c564e1401d3c5cd310ab60a1e61600966c45166184871e6c000",
+      "currentMatchesFrozen": true,
+      "scope": "static only; Slice source was not loaded"
+    }
+  },
+  "oldCauseWindowsActuallyRead": [
+    {
+      "index": 0,
+      "document": "docs/archive/core-complete-review.md",
+      "documentSha256": "26814d36da014eb89b7952d251f442842aaa9a2e3ef7277050100e5f8bab9cc9",
+      "pointer": "markdown-text",
+      "text": "\n\n### 18.3 Runtime safe spawn\n\n`src/runtime/safe-spawn.ts` 封装安全子进程执行。Hook runner、plugin、git、shell 工具等需要执行外部命令时应优先走这类封装，避免环境变量、cwd、stdio、信号处理不一致。\n\n### 18.4 Utils\n\n`src/utils/**` 是通用工具集合，包括：\n\n- `format.ts`\n- `theme.ts`\n- `toolDisplay.ts`\n- `debug.ts`\n- `env.ts`\n- `envUtils.ts`\n- `execFileNoThrow.ts`\n- `lockfile.ts`\n- `memoize.ts`\n- `semver.ts`\n- `sliceAnsi.ts`\n- `intl.ts`\n- `earlyInput.ts`\n- `systemTheme.ts`\n- `task-sanitizer.ts`\n\n这些工具被 CLI/UI/core 多处复用。修改时要注意它们可能是跨层依赖。\n\n## 19. 状态与成本统计模块\n\n### 19.1 `state.ts`\n\n`src/state.ts` 是 process-wide 状态兼容层，包含：\n\n- sessionId / cwd / projectRoot。\n- interactive/headless 标记。\n- model override。\n- token counters。\n- per-model usage。\n- API duration。\n- lines changed。\n- turn hook/tool/classifier duration。\n- telemetry counter stubs。\n- remote mode / sdk betas 等状态。\n\n它的设计像是从产品层抽出来的轻量全局状态，很多函数是 no-op/stub，保证 ",
+      "valueCharacters": 96025,
+      "windowStart": 39682,
+      "windowEnd": 40522,
+      "boundedWindowNotFullValue": true
+    },
+    {
+      "index": 1,
+      "document": "docs/archive/core-modules/utils.md",
+      "documentSha256": "f48c0c63c91d00dfa3e6102223f8082da5c58d35e8b02089e468b6e90ef9cdc2",
+      "pointer": "markdown-text",
+      "text": "licy (`isEnvTruthy`, `parseEnvVars`, AWS/Vertex region helpers, `isInProtectedNamespace`). |\n| `earlyInput.ts` | Capture/replay stdin typed before the UI is ready (`startCapturingEarlyInput`/`consumeEarlyInput`/…). |\n| `toolDisplay.ts` | Tool-call display helpers (`formatToolArgs`, `singleLine`, `MAX_LINE_WIDTH`, `TOOL_DOT_COLORS`). |\n| `debug.ts` | `logForDebugging` debug logging. |\n| `sliceAnsi.ts` | ANSI-aware string slicing (default export). |\n| `theme.ts` / `systemTheme.ts` / `theme-xterm` | Theme palette + OS theme detection. |\n\n## 公开接口 / Public API\n\n```ts\n// lockfile.ts — proper-lockfile, loaded lazily\nfunction lock(file: string, options?: LockOptions): Promise<() => Promise<void>>; // returns release fn\nfunction lockSync(file: string, options?: LockOptions): () => void;\nfunction unlock(file: string, options?: UnlockOptio",
+      "valueCharacters": 8186,
+      "windowStart": 2308,
+      "windowEnd": 3148,
+      "boundedWindowNotFullValue": true
+    },
+    {
+      "index": 2,
+      "document": "docs/archive/core-risk-signal-index.md",
+      "documentSha256": "316fe82e34d1c76cdbea35e8700d45132ab7b689e9b45a61f64618bf0e82ffc4",
+      "pointer": "markdown-text",
+      "text": "xecFileNoThrow.ts` | `as any`×1, `spawn`×3, `exec`×13, `timeout`×3 |\n| `utils/format.ts` | `join(`×1 |\n| `utils/intl.ts` | `catch {`×1 |\n| `utils/sliceAnsi.ts` | `exec`×1 |\n| `utils/systemTheme.ts` | `exec`×2 |\n| `utils/toolDisplay.ts` | `join(`×1 |\n",
+      "valueCharacters": 13440,
+      "windowStart": 13190,
+      "windowEnd": 13440,
+      "boundedWindowNotFullValue": true
+    },
+    {
+      "index": 5,
+      "document": "docs/audit-2026-10-17-round14/evidence/utils-skip-note.md",
+      "documentSha256": "214d35387852e40336d2e5ccede931506ce72c1aabe95bc96d479e3e82a23011",
+      "pointer": "markdown-text",
+      "text": "保持失败时字节；没有修正路径、重跑、用别的入口/运行时/自写等价算法挽救验证。所有 slice 现象只作为源码候选，不能把 fixture 内尚未执行的断言当成实际结果。\n\n`utils-cache-format-controls.test.ts` 在 Slice 首跑前一并写入，但从未执行；事后静态看到它也使用同样的错误相对 import。保留未执行材料，不修正/运行它，也不把其中预期与断言作为实证。其 memoize/semver/toolDisplay 方向没有动态结论。\n\n独立的仓库现有 `packages/core/src/utils/format.test.ts` 直接按真实库存路径首跑，是已读的叶级 format/intl 基线，不导入 Slice，也未验证/修复失败方向。6 pass / 6 expect / 0 fail / 0 skipped；只覆盖现有 sub-second duration 案例。\n",
+      "valueCharacters": 888,
+      "windowStart": 471,
+      "windowEnd": 888,
+      "boundedWindowNotFullValue": true
+    },
+    {
+      "index": 6,
+      "document": "docs/audit-2026-10-17-round14/utils.md",
+      "documentSha256": "ad2dde78de997e26f5267580bbf89e3d6431706fc84a330882168887c6f5bf1d",
+      "pointer": "markdown-text",
+      "text": "志](evidence/utils-slice-columns.first.raw.log)、[退出收据](evidence/utils-slice-columns.first.exit.json) 保留首次字节，整个 Slice 动态方向立即 SKIP，没有修 fixture、重跑、换入口或替代验证。[停止说明](evidence/utils-skip-note.md) 区分审查错误和产品问题。\n\n另一份 [cache/semver/toolDisplay fixture](evidence/utils-cache-format-controls.test.ts) 从未执行，保留了同样的错误相对 import，既未修正也未运行；不能把其中断言或预期当成观察结果。两份自写 fixture 都不是回归通过证据。\n\n## UTIL-R14-C1 — display-column 合同和 UTF-16 索引不一致（候选）\n\n[Slice 头部](../../packages/core/src/utils/sliceAnsi.ts#L2) 说按显示列截取；[25 行](../../packages/core/src/utils/sliceAnsi.ts#L25) 无 ANSI 分支却直接 `text.slice(start, end)`，[37 行](../../packages/core/src/utils/sliceAnsi.ts#L37) 有 ANSI 分支也按单个 UTF-16 code unit 增加 `visIdx`。\n\n普通调用方 [wrap-text.ts:23](../../packages/tui/src/render/wrap-text.ts#L23) 先用 `stringWidth` 计算总显示宽度，truncate-start/middle 的起止位置来自列数；[output.ts:431](../../packages/tui/sr",
+      "valueCharacters": 3752,
+      "windowStart": 581,
+      "windowEnd": 1421,
+      "boundedWindowNotFullValue": true
+    },
+    {
+      "index": 68,
+      "document": "docs/audit-2026-10-17-round43/evidence/dataset-frontier/report.md",
+      "documentSha256": "42453ea4d4e69bd87461a22b4ad90a5c5596607755cdb9618d7a5165d8cd6e49",
+      "pointer": "markdown-text",
+      "text": " 精确路径组件的归档，JSON递归值1130742 strings/1704078 scalars，0解析失败；纳已冻结40，排除当前 mutable41及未来42–46。inventory canonical SHA `47ef0e5ccf80391d9c3203990262ad79c4dafa1dba05e383572c1674ae916cb1`。每次补充按同一3696 inventory复查，0 dated drift。\n\n最初 toolDisplay/cron/budget/notes/orphan/agentGroup 候选，以及 Root 建议的 browser diagnostic/chat data 批次，都在读产品正文前由原 scope/review/full 或旧根因排除。尤其 R4 `review:\"full\"` 与 R13报告完整阅读的原始证据，优先于 R28 pin-only 分类。小文件和其他 parked 候选不算新增语义覆盖，详见 [selection/history decisions](history-decisions.json)。不把整个 repo 的旧库存当全文覆盖，也不声称“无历史匹配就是从未读”。\n\n选中的 dataset-editor 当前 path/SHA 精确 gate 仅4条路径/库存记录；[active semantic gate](active-history.json) 的 exact leaf/contract13、普通保留合同3条已完整显示阅读。另21个旧Lab边界 contexts 只读 compact identity/scope 前缀；不把全量 retained raw 等同全读。旧 LAB-R3-01 反思取首条反馈根因与 Arena 失败 fixture 仍排除，既不新编号也不重启失败方向。历史中的旧测试回执不用于证明当前行为。\n\n完整初次扫描和各次选择补充的 total/ret",
+      "valueCharacters": 3071,
+      "windowStart": 1768,
+      "windowEnd": 2608,
+      "boundedWindowNotFullValue": true
+    }
+  ],
+  "r14Report": {
+    "document": "docs/audit-2026-10-17-round14/utils.md",
+    "sha256": "ad2dde78de997e26f5267580bbf89e3d6431706fc84a330882168887c6f5bf1d",
+    "selectedLines": [
+      {
+        "line": 1,
+        "text": "# Core 普通工具函数审查（第十四批）"
+      },
+      {
+        "line": 2,
+        "text": ""
+      },
+      {
+        "line": 3,
+        "text": "冻结源码：`badc2262a90966f6f903977b849adf1f22b55e9f`。**0 项新增正式 bug，2 项静态候选，1 项旧问题关联。** 本轮只审查普通字符串、显示格式和内存缓存语义；产品文件未改。"
+      },
+      {
+        "line": 4,
+        "text": ""
+      },
+      {
+        "line": 5,
+        "text": "## 首次验证与跳过"
+      },
+      {
+        "line": 6,
+        "text": ""
+      },
+      {
+        "line": 7,
+        "text": "现有 [format.test.ts](../../packages/core/src/utils/format.test.ts) 独立首跑 **6 pass / 6 expect / 0 fail / 0 skipped**，guarded runner 完整通过。[原始日志](evidence/utils-format-existing.first.raw.log)、[退出与 SHA 收据](evidence/utils-format-existing.first.exit.json)。它只验证现有 0–1500ms 的 sub-second duration 案例，不代表全部格式器或全仓通过。"
+      },
+      {
+        "line": 8,
+        "text": ""
+      },
+      {
+        "line": 9,
+        "text": "Slice fixture **首次加载失败：0 pass / 1 fail / 1 error，exit 1**。我把 fixture 的相对 import 多写了一层，Bun 找不到目标路径，生产 Slice 模块和任何测试体都未加载/执行。[原始日志](evidence/utils-slice-columns.first.raw.log)、[退出收据](evidence/utils-slice-columns.first.exit.json) 保留首次字节，整个 Slice 动态方向立即 SKIP，没有修 fixture、重跑、换入口或替代验证。[停止说明](evidence/utils-skip-note.md) 区分审查错误和产品问题。"
+      },
+      {
+        "line": 10,
+        "text": ""
+      },
+      {
+        "line": 11,
+        "text": "另一份 [cache/semver/toolDisplay fixture](evidence/utils-cache-format-controls.test.ts) 从未执行，保留了同样的错误相对 import，既未修正也未运行；不能把其中断言或预期当成观察结果。两份自写 fixture 都不是回归通过证据。"
+      },
+      {
+        "line": 12,
+        "text": ""
+      },
+      {
+        "line": 28,
+        "text": ""
+      },
+      {
+        "line": 29,
+        "text": "- `UTIL-R14-R1`：Core [toolDisplay.ts:114](../../packages/core/src/utils/toolDisplay.ts#L114) 的摘要仍按 UTF-16 `.slice(0, max - 1)` 截断，机制与已登记 `DESKTOP-R12-01` 相同。正常 60/88 上限可用于 Unicode 命令/描述/文件名，但本轮对应 fixture 未执行，仅记静态关联，不重复增加 formal；当前 Desktop 的独立修复不能证明这个 Core helper 已修复。"
+      },
+      {
+        "line": 30,
+        "text": "- Read compact summary 用 `content.length` 配 `B/KB` 单位，与旧 Desktop 字节标签候选相近；没有新实际调用输出或计量合同，不重复新增候选。"
+      }
+    ]
+  },
+  "readUTC": "2026-10-17T17:55:35.709715+00:00"
+}

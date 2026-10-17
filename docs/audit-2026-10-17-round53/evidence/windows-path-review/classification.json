@@ -1,0 +1,18 @@
+{
+  "opinion": "SupportsameRootWindowsCWDprefixP3staticproposal",
+  "parentPlannedFormalId": "TUI-R53-02",
+  "newIndependentId": null,
+  "newStandaloneFormalFindings": 0,
+  "newStandaloneCandidates": 0,
+  "newRelated": 0,
+  "normalCondition": "OnWindowsnativeabsoluteC-drive file_path underactualprocesscwd,ordinaryRead/Write/Edit toolarguments. CwdASCIIprefixatleast60chars,withshortdifferentrelativefiles. Noactualfiles/Windows/helper/JSfixturecreatedorrun.",
+  "humanDerivation": "Drive-letter path startsC,not slash,so26–27 returnoriginalbeforecwd/sep handling. pathargmax60then114–115keepsfirst59chars+ellipsis. Ifcommoncwdprefix>=60,summaryneverreachesrelativefilepart; differentfilescanhaveidenticalsummary. Thisis humanstaticreasoning,notlanguagefixtureexecution.",
+  "inputContract": "README20 declaresWindows; release151–152WindowsDesktopartifactonly;Readschema30requiresabsolute,and51–54usesnativeNodepathisAbsolute/resolve. Thisisdeclaredsupport/dataacceptance,notactualCLIWindowscertification.",
+  "actualConsumers": [
+    "ToolCallStart43→argsStr56",
+    "TextRenderer57–60→outputtext"
+  ],
+  "scope": "Displaymissingcwdrelativizationonly; nofileoperation/permission/identityoractualTTY/frame/finalplatformcorrectnessclaim.",
+  "oldCauseDistinction": "ASCIIexampledoesnotdependonUTF16surrogateissueUTIL-R14-R1/DESKTOP-R12-01. OldduplicateformatToolArgs simplificationrecordisnotthisprefixgate. R14fixtureloadfailed/unexecutedcontrolsremainSKIP,neverpass/runtimeevidence.",
+  "fixSuggestion": "Useplatform-awareabsolutepathhandlingbeforecwdstripping;futureWindowsdrive/UNCtargetedtests. Nofix/tests writtenorexecuted."
+}

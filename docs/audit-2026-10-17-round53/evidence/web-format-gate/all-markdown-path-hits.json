@@ -1,0 +1,26 @@
+{
+  "total": 4,
+  "cap": null,
+  "hits": [
+    {
+      "document": "docs/audit-2026-10-17-round49/evidence/web-format-gate/report.md",
+      "line": 5,
+      "text": "- `packages/web/src/lib/format.ts` 当前140行/5447B，SHA c1c2d582d623ba99a738b7d43c483358e6826cae24010ef7994b5d4708310f33。R20 `evidence/root-source-manifest.json` 的 `/files/10` 同SHA明确“Full static module”；保留原“旧project matching/i18n动态预检未恢复、无import”限制。不是借旧失败方向恢复运行。"
+    },
+    {
+      "document": "docs/audit-2026-10-17-round8/web.md",
+      "line": 7,
+      "text": "- Source: `packages/web/src/lib/format.ts:20`, with normalization at `:12–14` and project/group consumers at `:39–42,62–63`."
+    },
+    {
+      "document": "docs/audit-2026-10-17/desktop-data.md",
+      "line": 32,
+      "text": "静态阅读 `packages/web/src/lib/format.ts`、`app/drafts.ts`、`app/useLatestMessages.ts`、`app/MessageContent.tsx`、`app/DesktopApp.tsx` 的 cwd→project→新会话目标接线，以及 Mobile `components/SessionList.tsx`；没有执行网络或权限流程。对项目归属与分组执行独立纯函数实验：`evidence/ui-web-project-case.test.ts`，完整首跑日志 `evidence/ui-web-project-case.log`；3 pass / 0 fail / 0 skip。"
+    },
+    {
+      "document": "docs/audit-2026-10-17/desktop-data.md",
+      "line": 36,
+      "text": "- 位置：`packages/web/src/lib/format.ts:18–20`；同长度候选只取首项 `:43–45`。"
+    }
+  ]
+}

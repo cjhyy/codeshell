@@ -1,0 +1,18 @@
+{
+  "capturedUTC": "2026-10-17T17:51:03.136726+00:00",
+  "files": [
+    {
+      "path": "packages/desktop/src/renderer/activity/ModelTracesView.tsx",
+      "bytes": 36755,
+      "lines": 925,
+      "sha256": "e0b46dbdc946fb86651fd4e5d9b710fc54862f3be040a9891f79584438af1de4",
+      "beforeBodyOrLineNavigation": true
+    }
+  ],
+  "previousUnconfirmedPathProbe": {
+    "toolChunk": "38fb73",
+    "path": "packages/desktop/src/renderer/model-traces/ModelTracesView.tsx",
+    "result": "PATH_NOT_FOUND, no source bytes/pin or source reading obtained; process exit0",
+    "actualFilenameDiscoveryToolChunk": "a4b60c"
+  }
+}

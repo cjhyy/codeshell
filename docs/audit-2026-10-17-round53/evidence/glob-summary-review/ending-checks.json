@@ -1,0 +1,95 @@
+{
+  "createdAt": "2026-10-17T17:59:45.329659+00:00",
+  "sourceAndInstructionPins": [
+    {
+      "path": "packages/tui/src/ui/components/ToolCall.tsx",
+      "bytes": 13567,
+      "sha256": "ad36b061a8c6856d63ce8b85169164d8df60d38da91e196e70ee9bc5120868f8",
+      "matchesInitial": true
+    },
+    {
+      "path": "packages/core/src/tool-system/builtin/glob.ts",
+      "bytes": 4080,
+      "sha256": "8b416c156820a67e02b8101904440190235cf74d99753530526455ab5d1b18ce",
+      "matchesInitial": true
+    },
+    {
+      "path": "packages/tui/src/cli/output/renderer.ts",
+      "bytes": 5744,
+      "sha256": "2ed6d93112ae5ab123fc2b93964b04bc37ec21b3e286ceec93ddab68c1bb22d7",
+      "matchesInitial": true
+    },
+    {
+      "path": "packages/tui/src/ui/app-helpers.tsx",
+      "bytes": 11321,
+      "sha256": "1696995a266590dc467e827df622d3f60cdbb5a57161f1015955861f212fa3e7",
+      "matchesInitial": true
+    },
+    {
+      "path": "packages/tui/src/cli/commands/run.ts",
+      "bytes": 13137,
+      "sha256": "85307d96346050e7dace213847cdc4f480cbac8e14c50fe489d9aec07f57aa9c",
+      "matchesInitial": true
+    },
+    {
+      "path": "packages/tui/src/ui/App.tsx",
+      "bytes": 90976,
+      "sha256": "f535b936c26ef217617ef42eae56f71efb5063f51a4775f8b1e201815795e6d8",
+      "matchesInitial": true
+    },
+    {
+      "path": "packages/tui/src/ui/components/VirtualMessageList.tsx",
+      "bytes": 11173,
+      "sha256": "adaddadf3e29775206cc21847a22f7ed664e2e01bee07795a7dbe4421389f5dd",
+      "matchesInitial": true
+    },
+    {
+      "path": "packages/core/src/tool-system/builtin/index.ts",
+      "bytes": 39835,
+      "sha256": "d997b1a1c499cd4130191a7886cf4b986b108cab3528c154decf23774b791844",
+      "matchesInitial": true
+    },
+    {
+      "path": "packages/core/src/tool-system/registry.ts",
+      "bytes": 10363,
+      "sha256": "215bf049bdb2ee276d2c1bc127968d48f23309e9abbb8356fbf1ed6e897471e0",
+      "matchesInitial": true
+    },
+    {
+      "path": "packages/core/src/tool-system/builtin/glob.test.ts",
+      "bytes": 4941,
+      "sha256": "23dacdfa4fa413e6230a9e3eae705440d06c1014fb523933daf9fef65ea41bb4",
+      "matchesInitial": true
+    },
+    {
+      "path": "packages/tui/src/cli/output/renderer.test.ts",
+      "bytes": 3781,
+      "sha256": "ef51ee33912b0d347ea7fdead6731bc417a9205061086c1bf1d98cd86665a1e4",
+      "matchesInitial": true
+    },
+    {
+      "path": "CODESHELL.md",
+      "bytes": 17639,
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "matchesInitial": true
+    },
+    {
+      "path": "AGENTS.md",
+      "bytes": 206,
+      "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "matchesInitial": true
+    }
+  ],
+  "historyOriginalCount": 5150,
+  "historyCurrentIncludedCount": 5150,
+  "historyChanged": [],
+  "historyMissing": [],
+  "historyAdded": [],
+  "historyRemoved": [],
+  "excludedCurrentPaths": [
+    "docs/audit-2026-10-17-round53/evidence/integration-before.json",
+    "docs/audit-2026-10-17-round53/evidence/integration-plan.json",
+    "docs/audit-2026-10-17-round53/evidence/worktrees-before.json"
+  ],
+  "gitExecuted": false
+}

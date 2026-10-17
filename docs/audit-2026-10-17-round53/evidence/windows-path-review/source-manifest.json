@@ -1,0 +1,501 @@
+{
+  "role": "IndependenttargetedWindowsdisplaysource reviewofknownRootlead;notblind/noRoot111packetread",
+  "rootReportedContextOnly": "524c0827a480132119b637aa87e16f0eab9895f3",
+  "GitVerified": false,
+  "files": [
+    {
+      "path": "packages/core/src/utils/toolDisplay.ts",
+      "bytes": 6985,
+      "lines": 209,
+      "sha256": "41ba468c68cb9c564e1401d3c5cd310ab60a1e61600966c45166184871e6c000",
+      "pinnedBeforeBodyOrNavigationUTC": "2026-10-17T17:54:58.198735+00:00",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          9,
+          9
+        ],
+        [
+          15,
+          33
+        ],
+        [
+          51,
+          54
+        ],
+        [
+          84,
+          98
+        ],
+        [
+          110,
+          116
+        ]
+      ],
+      "semanticLineCount": 46,
+      "sourceKind": "product",
+      "displayedLineRanges": [
+        [
+          1,
+          117
+        ]
+      ],
+      "bodyDisplayedLineCount": 117,
+      "navigationLineRanges": [],
+      "displayedUnionIncludingNavigationLineCount": 117,
+      "navigationOnlyDisplayedLineRanges": [
+        [
+          1,
+          8
+        ],
+        [
+          10,
+          14
+        ],
+        [
+          34,
+          50
+        ],
+        [
+          55,
+          83
+        ],
+        [
+          99,
+          109
+        ],
+        [
+          117,
+          117
+        ]
+      ],
+      "purpose": "Directed selected source review of native path prefix guard/path key mapping/60-character argument limit/truncation. Notfull/freshfull/unicodealgorithmvalidation. Othertoolresults,slice,cache,permissions/mechanisms excluded.",
+      "initialSemanticReadSha256": "41ba468c68cb9c564e1401d3c5cd310ab60a1e61600966c45166184871e6c000",
+      "initialPinBeforeBodyOrLineNavigation": true,
+      "endingSha256": "41ba468c68cb9c564e1401d3c5cd310ab60a1e61600966c45166184871e6c000",
+      "endingBytes": 6985,
+      "unchanged": true,
+      "firstEverReadingClaimed": false
+    },
+    {
+      "path": "packages/tui/src/ui/components/ToolCall.tsx",
+      "bytes": 13567,
+      "lines": 407,
+      "sha256": "ad36b061a8c6856d63ce8b85169164d8df60d38da91e196e70ee9bc5120868f8",
+      "pinnedBeforeBodyOrLineNavigationUTC": "2026-10-17T17:56:30.544049+00:00",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          36,
+          43
+        ],
+        [
+          50,
+          60
+        ]
+      ],
+      "semanticLineCount": 19,
+      "sourceKind": "product",
+      "displayedLineRanges": [
+        [
+          36,
+          60
+        ]
+      ],
+      "bodyDisplayedLineCount": 25,
+      "navigationLineRanges": [
+        [
+          22,
+          22
+        ],
+        [
+          34,
+          34
+        ],
+        [
+          36,
+          36
+        ],
+        [
+          42,
+          42
+        ],
+        [
+          43,
+          43
+        ]
+      ],
+      "displayedUnionIncludingNavigationLineCount": 27,
+      "navigationOnlyDisplayedLineRanges": [
+        [
+          22,
+          22
+        ],
+        [
+          34,
+          34
+        ],
+        [
+          44,
+          49
+        ]
+      ],
+      "purpose": "ActualRecordargs→formatToolArgs→displayedargsStr source. NoReact/Ink/TTY render oractualWindowsframe.",
+      "initialSemanticReadSha256": "ad36b061a8c6856d63ce8b85169164d8df60d38da91e196e70ee9bc5120868f8",
+      "initialPinBeforeBodyOrLineNavigation": true,
+      "endingSha256": "ad36b061a8c6856d63ce8b85169164d8df60d38da91e196e70ee9bc5120868f8",
+      "endingBytes": 13567,
+      "unchanged": true,
+      "firstEverReadingClaimed": false
+    },
+    {
+      "path": "packages/tui/src/cli/output/renderer.ts",
+      "bytes": 5744,
+      "lines": 163,
+      "sha256": "2ed6d93112ae5ab123fc2b93964b04bc37ec21b3e286ceec93ddab68c1bb22d7",
+      "pinnedBeforeBodyOrLineNavigationUTC": "2026-10-17T17:56:30.545000+00:00",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          24,
+          24
+        ],
+        [
+          57,
+          62
+        ]
+      ],
+      "semanticLineCount": 7,
+      "sourceKind": "product",
+      "displayedLineRanges": [
+        [
+          21,
+          29
+        ],
+        [
+          45,
+          64
+        ]
+      ],
+      "bodyDisplayedLineCount": 29,
+      "navigationLineRanges": [
+        [
+          8,
+          8
+        ],
+        [
+          21,
+          21
+        ],
+        [
+          59,
+          59
+        ]
+      ],
+      "displayedUnionIncludingNavigationLineCount": 30,
+      "navigationOnlyDisplayedLineRanges": [
+        [
+          8,
+          8
+        ],
+        [
+          21,
+          23
+        ],
+        [
+          25,
+          29
+        ],
+        [
+          45,
+          56
+        ],
+        [
+          63,
+          64
+        ]
+      ],
+      "purpose": "Actualtool_use_start event.toolCall→formatToolArgs→text output source. Stream/security/agent lifecycle/TTY native behavior notvalidated.",
+      "initialSemanticReadSha256": "2ed6d93112ae5ab123fc2b93964b04bc37ec21b3e286ceec93ddab68c1bb22d7",
+      "initialPinBeforeBodyOrLineNavigation": true,
+      "endingSha256": "2ed6d93112ae5ab123fc2b93964b04bc37ec21b3e286ceec93ddab68c1bb22d7",
+      "endingBytes": 5744,
+      "unchanged": true,
+      "firstEverReadingClaimed": false
+    },
+    {
+      "path": "packages/core/src/tool-system/builtin/read.ts",
+      "bytes": 8099,
+      "lines": 216,
+      "sha256": "2200440c32b2fff2f39fa7fcb808ac84bacb3a8719ab0842b56ca4017e2a9c4c",
+      "pinnedBeforeBodyOrLineNavigationUTC": "2026-10-17T17:57:01.458853+00:00",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          8,
+          8
+        ],
+        [
+          27,
+          35
+        ],
+        [
+          50,
+          54
+        ]
+      ],
+      "semanticLineCount": 15,
+      "sourceKind": "product",
+      "displayedLineRanges": [
+        [
+          20,
+          36
+        ],
+        [
+          49,
+          55
+        ]
+      ],
+      "bodyDisplayedLineCount": 24,
+      "navigationLineRanges": [
+        [
+          8,
+          8
+        ],
+        [
+          30,
+          30
+        ],
+        [
+          34,
+          34
+        ],
+        [
+          51,
+          51
+        ],
+        [
+          52,
+          52
+        ],
+        [
+          54,
+          54
+        ]
+      ],
+      "displayedUnionIncludingNavigationLineCount": 25,
+      "navigationOnlyDisplayedLineRanges": [
+        [
+          20,
+          26
+        ],
+        [
+          36,
+          36
+        ],
+        [
+          49,
+          49
+        ],
+        [
+          55,
+          55
+        ]
+      ],
+      "purpose": "Node:pathimport,requiredabsolute-file_path schema andrawPath/defaultcwd/isAbsolute selection only. NoReadFS/access/permissions/auth/realfile execution ormechanismcertification.",
+      "initialSemanticReadSha256": "2200440c32b2fff2f39fa7fcb808ac84bacb3a8719ab0842b56ca4017e2a9c4c",
+      "initialPinBeforeBodyOrLineNavigation": true,
+      "endingSha256": "2200440c32b2fff2f39fa7fcb808ac84bacb3a8719ab0842b56ca4017e2a9c4c",
+      "endingBytes": 8099,
+      "unchanged": true,
+      "firstEverReadingClaimed": false
+    }
+  ],
+  "contractMetadataFiles": [
+    {
+      "path": "README.md",
+      "bytes": 18628,
+      "lines": 331,
+      "sha256": "67ba40502c2d37e4460bef5f1600c4ca2609c2bb3bb224f60bd526691c94e1b9",
+      "pinnedBeforeBodyOrLineNavigationUTC": "2026-10-17T17:56:30.545630+00:00",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          20,
+          20
+        ]
+      ],
+      "semanticLineCount": 1,
+      "sourceKind": "contract-metadata",
+      "displayedLineRanges": [
+        [
+          15,
+          23
+        ]
+      ],
+      "bodyDisplayedLineCount": 9,
+      "navigationLineRanges": [
+        [
+          20,
+          20
+        ],
+        [
+          140,
+          140
+        ]
+      ],
+      "displayedUnionIncludingNavigationLineCount": 10,
+      "navigationOnlyDisplayedLineRanges": [
+        [
+          15,
+          19
+        ],
+        [
+          21,
+          23
+        ],
+        [
+          140,
+          140
+        ]
+      ],
+      "purpose": "Localrepository Windowsplatformsupport declaration only; nofullplatform/runtimevalidation.",
+      "initialSemanticReadSha256": "67ba40502c2d37e4460bef5f1600c4ca2609c2bb3bb224f60bd526691c94e1b9",
+      "initialPinBeforeBodyOrLineNavigation": true,
+      "endingSha256": "67ba40502c2d37e4460bef5f1600c4ca2609c2bb3bb224f60bd526691c94e1b9",
+      "endingBytes": 18628,
+      "unchanged": true,
+      "firstEverReadingClaimed": false
+    },
+    {
+      "path": ".github/workflows/release.yml",
+      "bytes": 15885,
+      "lines": 368,
+      "sha256": "64a086c5a864865daaa8431c855e89bb01fac8c3059715a56943db3ef49c96b2",
+      "pinnedBeforeBodyOrLineNavigationUTC": "2026-10-17T17:57:01.460559+00:00",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          151,
+          152
+        ]
+      ],
+      "semanticLineCount": 2,
+      "sourceKind": "contract-metadata",
+      "displayedLineRanges": [
+        [
+          137,
+          156
+        ],
+        [
+          326,
+          334
+        ]
+      ],
+      "bodyDisplayedLineCount": 29,
+      "navigationLineRanges": [
+        [
+          139,
+          139
+        ],
+        [
+          148,
+          148
+        ],
+        [
+          151,
+          151
+        ],
+        [
+          152,
+          152
+        ],
+        [
+          184,
+          184
+        ],
+        [
+          263,
+          263
+        ],
+        [
+          275,
+          275
+        ],
+        [
+          329,
+          329
+        ],
+        [
+          332,
+          332
+        ]
+      ],
+      "displayedUnionIncludingNavigationLineCount": 32,
+      "navigationOnlyDisplayedLineRanges": [
+        [
+          137,
+          150
+        ],
+        [
+          153,
+          156
+        ],
+        [
+          184,
+          184
+        ],
+        [
+          263,
+          263
+        ],
+        [
+          275,
+          275
+        ],
+        [
+          326,
+          334
+        ]
+      ],
+      "purpose": "WindowsDesktop release matrix metadata only; notCLIWindowsoractualreleasepass certification.",
+      "initialSemanticReadSha256": "64a086c5a864865daaa8431c855e89bb01fac8c3059715a56943db3ef49c96b2",
+      "initialPinBeforeBodyOrLineNavigation": true,
+      "endingSha256": "64a086c5a864865daaa8431c855e89bb01fac8c3059715a56943db3ef49c96b2",
+      "endingBytes": 15885,
+      "unchanged": true,
+      "firstEverReadingClaimed": false
+    }
+  ],
+  "instructionHashOnly": [
+    {
+      "path": "CODESHELL.md",
+      "bytes": 17639,
+      "lines": 217,
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "pinnedBeforeBodyOrNavigationUTC": "2026-10-17T17:54:58.196524+00:00"
+    },
+    {
+      "path": "AGENTS.md",
+      "bytes": 206,
+      "lines": 5,
+      "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "pinnedBeforeBodyOrNavigationUTC": "2026-10-17T17:54:58.198048+00:00"
+    }
+  ],
+  "instructionReading": "Prior94actualCODESHELL/AGENTSreadingretained; currentsameSHAhashonly,notnewbodycount.",
+  "counts": {
+    "productSelectedFiles": 4,
+    "full": 0,
+    "productSemanticLines": 87,
+    "contractMetadataFiles": 2,
+    "contractMetadataSelectedLines": 3,
+    "productBodyDisplayedLines": 195,
+    "allBodyDisplayedLines": 233,
+    "allDisplayIncludingNavigationLines": 241,
+    "testDeclarationLines": 0,
+    "testsExecuted": 0
+  },
+  "priorScopeLimit": "ExistingtoolDisplaystatic/fullclaimsnotrecounted; thisonlyknownspecificproblemselectedranges,0newfull/firstever/globaluniquecoverage.",
+  "sourceExcerptTiming": "Postreadcapture; durable initialpins precededbody/navigation."
+}

@@ -1,0 +1,19 @@
+{
+  "atUTC": "2026-10-17T17:58:32.489576+00:00",
+  "files": [
+    {
+      "path": "README.md",
+      "bytes": 18628,
+      "lines": 331,
+      "sha256": "67ba40502c2d37e4460bef5f1600c4ca2609c2bb3bb224f60bd526691c94e1b9",
+      "beforeCurrentSelectedContractRead": true
+    },
+    {
+      "path": "packages/core/src/tool-system/builtin/read.ts",
+      "bytes": 8099,
+      "lines": 216,
+      "sha256": "2200440c32b2fff2f39fa7fcb808ac84bacb3a8719ab0842b56ca4017e2a9c4c",
+      "beforeCurrentSelectedContractRead": true
+    }
+  ]
+}

@@ -1,0 +1,8 @@
+{
+  "path": "packages/tui/src/cli/output/renderer.ts",
+  "bytes": 5744,
+  "lines": 163,
+  "sha256": "2ed6d93112ae5ab123fc2b93964b04bc37ec21b3e286ceec93ddab68c1bb22d7",
+  "pinnedBeforeBodyUTC": "2026-10-17T17:52:40.119510+00:00",
+  "purpose": "Root-supplied adjacent actual CLI compactSummary consumer; not yet semantically read"
+}

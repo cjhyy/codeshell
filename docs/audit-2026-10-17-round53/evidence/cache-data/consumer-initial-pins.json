@@ -1,0 +1,12 @@
+{
+  "pins": [
+    {
+      "path": "packages/core/src/llm/model-fetcher.ts",
+      "bytes": 12186,
+      "lines": 348,
+      "sha256": "8d3ae009ba99976e30df911a58138a6923600f43dddabe8563d0418e61dc216b",
+      "pinnedBeforeBodyOrLineNavigationUTC": "2026-10-17T17:51:20.153747+00:00"
+    }
+  ],
+  "unopenedExcludedConsumer": "model-pool.ts oldcache-refresh direction remainsSKIP; notopened/hashed"
+}

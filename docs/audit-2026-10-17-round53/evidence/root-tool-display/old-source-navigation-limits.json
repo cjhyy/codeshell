@@ -1,0 +1,7 @@
+{
+  "tool": "c3d17d",
+  "outerExitCode": 0,
+  "nestedRgExitCode": null,
+  "cause": "Root guessed optional R7 files-related.json; rg reported nonexistent path but other exact MD returned relevant matches. No byte pin fabricated.",
+  "productFailure": false
+}

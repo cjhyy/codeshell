@@ -1,0 +1,964 @@
+{
+  "createdAt": "2026-10-17T17:59:43.337362+00:00",
+  "parentContext": "524c0827a480132119b637aa87e16f0eab9895f3",
+  "parentContextSource": "Root-provided; Git not queried",
+  "files": [
+    {
+      "path": "packages/tui/src/ui/components/ToolCall.tsx",
+      "bytes": 13567,
+      "sha256": "ad36b061a8c6856d63ce8b85169164d8df60d38da91e196e70ee9bc5120868f8",
+      "lineCount": 407,
+      "kind": "product",
+      "coverage": "targeted-selected ordinary DTO/display cause re-review; not first/full coverage",
+      "selectedLineRanges": [
+        [
+          32,
+          32
+        ],
+        [
+          82,
+          88
+        ],
+        [
+          98,
+          174
+        ],
+        [
+          195,
+          201
+        ],
+        [
+          244,
+          263
+        ]
+      ],
+      "semanticLineCount": 112,
+      "displayedBodyLineRanges": [
+        [
+          1,
+          12
+        ],
+        [
+          28,
+          34
+        ],
+        [
+          77,
+          201
+        ],
+        [
+          224,
+          270
+        ]
+      ],
+      "additionalNavigationSnippetLines": [
+        42,
+        69,
+        287,
+        292,
+        293,
+        306,
+        309,
+        315,
+        316,
+        317,
+        330,
+        333,
+        338,
+        339,
+        347,
+        350,
+        355,
+        356,
+        364,
+        376
+      ],
+      "displayedLineRanges": [
+        [
+          1,
+          12
+        ],
+        [
+          28,
+          34
+        ],
+        [
+          42,
+          42
+        ],
+        [
+          69,
+          69
+        ],
+        [
+          77,
+          201
+        ],
+        [
+          224,
+          270
+        ],
+        [
+          287,
+          287
+        ],
+        [
+          292,
+          293
+        ],
+        [
+          306,
+          306
+        ],
+        [
+          309,
+          309
+        ],
+        [
+          315,
+          317
+        ],
+        [
+          330,
+          330
+        ],
+        [
+          333,
+          333
+        ],
+        [
+          338,
+          339
+        ],
+        [
+          347,
+          347
+        ],
+        [
+          350,
+          350
+        ],
+        [
+          355,
+          356
+        ],
+        [
+          364,
+          364
+        ],
+        [
+          376,
+          376
+        ]
+      ],
+      "displayedLineCount": 211,
+      "firstPinUTC": "2026-10-17T17:52:26.666535+00:00",
+      "initialPinArtifact": "initial-pins.json",
+      "firstReadSha256": "ad36b061a8c6856d63ce8b85169164d8df60d38da91e196e70ee9bc5120868f8",
+      "endingSha256": "ad36b061a8c6856d63ce8b85169164d8df60d38da91e196e70ee9bc5120868f8",
+      "matchesInitial": true,
+      "purpose": "ToolCallResult success/error/empty result, default and expanded handling, Glob status-line count; no general diff/ANSI audit"
+    },
+    {
+      "path": "packages/core/src/tool-system/builtin/glob.ts",
+      "bytes": 4080,
+      "sha256": "8b416c156820a67e02b8101904440190235cf74d99753530526455ab5d1b18ce",
+      "lineCount": 121,
+      "kind": "product",
+      "coverage": "targeted-selected ordinary DTO/display cause re-review; not first/full coverage",
+      "selectedLineRanges": [
+        [
+          13,
+          16
+        ],
+        [
+          29,
+          34
+        ],
+        [
+          84,
+          86
+        ],
+        [
+          103,
+          111
+        ],
+        [
+          114,
+          117
+        ]
+      ],
+      "semanticLineCount": 26,
+      "displayedBodyLineRanges": [
+        [
+          1,
+          19
+        ],
+        [
+          24,
+          39
+        ],
+        [
+          70,
+          121
+        ]
+      ],
+      "additionalNavigationSnippetLines": [],
+      "displayedLineRanges": [
+        [
+          1,
+          19
+        ],
+        [
+          24,
+          39
+        ],
+        [
+          70,
+          121
+        ]
+      ],
+      "displayedLineCount": 87,
+      "firstPinUTC": "2026-10-17T17:52:26.667483+00:00",
+      "initialPinArtifact": "initial-pins.json",
+      "firstReadSha256": "8b416c156820a67e02b8101904440190235cf74d99753530526455ab5d1b18ce",
+      "endingSha256": "8b416c156820a67e02b8101904440190235cf74d99753530526455ab5d1b18ce",
+      "matchesInitial": true,
+      "purpose": "Ordinary Glob name, valid args/zero or small nonempty success text format; filesystem/path-policy/stat operations displayed only as boundary"
+    },
+    {
+      "path": "packages/tui/src/cli/output/renderer.ts",
+      "bytes": 5744,
+      "sha256": "2ed6d93112ae5ab123fc2b93964b04bc37ec21b3e286ceec93ddab68c1bb22d7",
+      "lineCount": 163,
+      "kind": "product",
+      "coverage": "targeted-selected ordinary DTO/display cause re-review; not first/full coverage",
+      "selectedLineRanges": [
+        [
+          6,
+          6
+        ],
+        [
+          14,
+          24
+        ],
+        [
+          64,
+          74
+        ],
+        [
+          119,
+          125
+        ],
+        [
+          138,
+          146
+        ]
+      ],
+      "semanticLineCount": 39,
+      "displayedBodyLineRanges": [
+        [
+          1,
+          77
+        ],
+        [
+          108,
+          163
+        ]
+      ],
+      "additionalNavigationSnippetLines": [],
+      "displayedLineRanges": [
+        [
+          1,
+          77
+        ],
+        [
+          108,
+          163
+        ]
+      ],
+      "displayedLineCount": 133,
+      "firstPinUTC": "2026-10-17T17:52:40.119510+00:00",
+      "initialPinArtifact": "cli-before-pin.json",
+      "firstReadSha256": "2ed6d93112ae5ab123fc2b93964b04bc37ec21b3e286ceec93ddab68c1bb22d7",
+      "endingSha256": "2ed6d93112ae5ab123fc2b93964b04bc37ec21b3e286ceec93ddab68c1bb22d7",
+      "matchesInitial": true,
+      "purpose": "TextRenderer ordinary tool_result, factory text branch, compactSummary Glob; unrelated output events/classes displayed context only"
+    },
+    {
+      "path": "packages/tui/src/ui/app-helpers.tsx",
+      "bytes": 11321,
+      "sha256": "1696995a266590dc467e827df622d3f60cdbb5a57161f1015955861f212fa3e7",
+      "lineCount": 344,
+      "kind": "product",
+      "coverage": "targeted-selected ordinary DTO/display cause re-review; not first/full coverage",
+      "selectedLineRanges": [
+        [
+          15,
+          15
+        ],
+        [
+          232,
+          235
+        ],
+        [
+          261,
+          272
+        ]
+      ],
+      "semanticLineCount": 17,
+      "displayedBodyLineRanges": [
+        [
+          232,
+          274
+        ]
+      ],
+      "additionalNavigationSnippetLines": [
+        15,
+        25,
+        29,
+        33,
+        37,
+        52,
+        59,
+        70,
+        83,
+        103,
+        114,
+        118,
+        133,
+        140,
+        168,
+        189,
+        204
+      ],
+      "displayedLineRanges": [
+        [
+          15,
+          15
+        ],
+        [
+          25,
+          25
+        ],
+        [
+          29,
+          29
+        ],
+        [
+          33,
+          33
+        ],
+        [
+          37,
+          37
+        ],
+        [
+          52,
+          52
+        ],
+        [
+          59,
+          59
+        ],
+        [
+          70,
+          70
+        ],
+        [
+          83,
+          83
+        ],
+        [
+          103,
+          103
+        ],
+        [
+          114,
+          114
+        ],
+        [
+          118,
+          118
+        ],
+        [
+          133,
+          133
+        ],
+        [
+          140,
+          140
+        ],
+        [
+          168,
+          168
+        ],
+        [
+          189,
+          189
+        ],
+        [
+          204,
+          204
+        ],
+        [
+          232,
+          274
+        ]
+      ],
+      "displayedLineCount": 60,
+      "firstPinUTC": "2026-10-17T17:53:25.580752+00:00",
+      "initialPinArtifact": "consumer-before-pins.json",
+      "firstReadSha256": "1696995a266590dc467e827df622d3f60cdbb5a57161f1015955861f212fa3e7",
+      "endingSha256": "1696995a266590dc467e827df622d3f60cdbb5a57161f1015955861f212fa3e7",
+      "matchesInitial": true,
+      "purpose": "renderEntry ordinary tool_result DTO forwarding only; other function-name matches navigation"
+    },
+    {
+      "path": "packages/tui/src/cli/commands/run.ts",
+      "bytes": 13137,
+      "sha256": "85307d96346050e7dace213847cdc4f480cbac8e14c50fe489d9aec07f57aa9c",
+      "lineCount": 314,
+      "kind": "product",
+      "coverage": "targeted-selected ordinary DTO/display cause re-review; not first/full coverage",
+      "selectedLineRanges": [
+        [
+          26,
+          26
+        ],
+        [
+          232,
+          236
+        ]
+      ],
+      "semanticLineCount": 6,
+      "displayedBodyLineRanges": [
+        [
+          1,
+          20
+        ],
+        [
+          226,
+          237
+        ]
+      ],
+      "additionalNavigationSnippetLines": [
+        26
+      ],
+      "displayedLineRanges": [
+        [
+          1,
+          20
+        ],
+        [
+          26,
+          26
+        ],
+        [
+          226,
+          237
+        ]
+      ],
+      "displayedLineCount": 33,
+      "firstPinUTC": "2026-10-17T17:53:25.582618+00:00",
+      "initialPinArtifact": "consumer-before-pins.json",
+      "firstReadSha256": "85307d96346050e7dace213847cdc4f480cbac8e14c50fe489d9aec07f57aa9c",
+      "endingSha256": "85307d96346050e7dace213847cdc4f480cbac8e14c50fe489d9aec07f57aa9c",
+      "matchesInitial": true,
+      "purpose": "Actual CLI output format default/text renderer and event forwarding only; initialization/runtime/identity mechanisms not assessed"
+    },
+    {
+      "path": "packages/tui/src/ui/App.tsx",
+      "bytes": 90976,
+      "sha256": "f535b936c26ef217617ef42eae56f71efb5063f51a4775f8b1e201815795e6d8",
+      "lineCount": 2318,
+      "kind": "product",
+      "coverage": "targeted-selected ordinary DTO/display cause re-review; not first/full coverage",
+      "selectedLineRanges": [
+        [
+          883,
+          905
+        ],
+        [
+          2166,
+          2177
+        ]
+      ],
+      "semanticLineCount": 35,
+      "displayedBodyLineRanges": [
+        [
+          883,
+          908
+        ],
+        [
+          2158,
+          2178
+        ]
+      ],
+      "additionalNavigationSnippetLines": [
+        25,
+        26,
+        27,
+        94,
+        108,
+        427,
+        430,
+        1933
+      ],
+      "displayedLineRanges": [
+        [
+          25,
+          27
+        ],
+        [
+          94,
+          94
+        ],
+        [
+          108,
+          108
+        ],
+        [
+          427,
+          427
+        ],
+        [
+          430,
+          430
+        ],
+        [
+          883,
+          908
+        ],
+        [
+          1933,
+          1933
+        ],
+        [
+          2158,
+          2178
+        ]
+      ],
+      "displayedLineCount": 55,
+      "firstPinUTC": "2026-10-17T17:54:18.977085+00:00",
+      "initialPinArtifact": "app-before-pin.json",
+      "firstReadSha256": "f535b936c26ef217617ef42eae56f71efb5063f51a4775f8b1e201815795e6d8",
+      "endingSha256": "f535b936c26ef217617ef42eae56f71efb5063f51a4775f8b1e201815795e6d8",
+      "matchesInitial": true,
+      "purpose": "Main-agent tool_result fields and actual VirtualMessageList renderEntry prop binding only"
+    },
+    {
+      "path": "packages/tui/src/ui/components/VirtualMessageList.tsx",
+      "bytes": 11173,
+      "sha256": "adaddadf3e29775206cc21847a22f7ed664e2e01bee07795a7dbe4421389f5dd",
+      "lineCount": 273,
+      "kind": "product",
+      "coverage": "targeted-selected ordinary DTO/display cause re-review; not first/full coverage",
+      "selectedLineRanges": [
+        [
+          34,
+          34
+        ],
+        [
+          41,
+          42
+        ],
+        [
+          86,
+          86
+        ],
+        [
+          166,
+          167
+        ],
+        [
+          235,
+          236
+        ]
+      ],
+      "semanticLineCount": 8,
+      "displayedBodyLineRanges": [
+        [
+          82,
+          88
+        ],
+        [
+          160,
+          168
+        ],
+        [
+          230,
+          237
+        ]
+      ],
+      "additionalNavigationSnippetLines": [
+        34,
+        41,
+        42
+      ],
+      "displayedLineRanges": [
+        [
+          34,
+          34
+        ],
+        [
+          41,
+          42
+        ],
+        [
+          82,
+          88
+        ],
+        [
+          160,
+          168
+        ],
+        [
+          230,
+          237
+        ]
+      ],
+      "displayedLineCount": 27,
+      "firstPinUTC": "2026-10-17T17:54:50.356737+00:00",
+      "initialPinArtifact": "virtual-list-before-pin.json",
+      "firstReadSha256": "adaddadf3e29775206cc21847a22f7ed664e2e01bee07795a7dbe4421389f5dd",
+      "endingSha256": "adaddadf3e29775206cc21847a22f7ed664e2e01bee07795a7dbe4421389f5dd",
+      "matchesInitial": true,
+      "purpose": "Default expanded and renderEntry prop forwarding only; no scroll/layout correctness conclusion"
+    },
+    {
+      "path": "packages/core/src/tool-system/builtin/index.ts",
+      "bytes": 39835,
+      "sha256": "d997b1a1c499cd4130191a7886cf4b986b108cab3528c154decf23774b791844",
+      "lineCount": 1233,
+      "kind": "product",
+      "coverage": "targeted-selected ordinary DTO/display cause re-review; not first/full coverage",
+      "selectedLineRanges": [
+        [
+          26,
+          26
+        ],
+        [
+          196,
+          197
+        ],
+        [
+          206,
+          209
+        ],
+        [
+          403,
+          404
+        ],
+        [
+          413,
+          413
+        ]
+      ],
+      "semanticLineCount": 10,
+      "displayedBodyLineRanges": [
+        [
+          196,
+          198
+        ],
+        [
+          206,
+          210
+        ],
+        [
+          398,
+          415
+        ]
+      ],
+      "additionalNavigationSnippetLines": [
+        26,
+        145,
+        200,
+        201,
+        224,
+        225,
+        1142
+      ],
+      "displayedLineRanges": [
+        [
+          26,
+          26
+        ],
+        [
+          145,
+          145
+        ],
+        [
+          196,
+          198
+        ],
+        [
+          200,
+          201
+        ],
+        [
+          206,
+          210
+        ],
+        [
+          224,
+          225
+        ],
+        [
+          398,
+          415
+        ],
+        [
+          1142,
+          1142
+        ]
+      ],
+      "displayedLineCount": 33,
+      "firstPinUTC": "2026-10-17T17:55:37.800459+00:00",
+      "initialPinArtifact": "registry-before-pins.json",
+      "firstReadSha256": "d997b1a1c499cd4130191a7886cf4b986b108cab3528c154decf23774b791844",
+      "endingSha256": "d997b1a1c499cd4130191a7886cf4b986b108cab3528c154decf23774b791844",
+      "matchesInitial": true,
+      "purpose": "Builtin Glob binding and ordinary success-string conversion; permission/path-policy mechanism displayed but not semantically audited"
+    },
+    {
+      "path": "packages/core/src/tool-system/registry.ts",
+      "bytes": 10363,
+      "sha256": "215bf049bdb2ee276d2c1bc127968d48f23309e9abbb8356fbf1ed6e897471e0",
+      "lineCount": 296,
+      "kind": "product",
+      "coverage": "targeted-selected ordinary DTO/display cause re-review; not first/full coverage",
+      "selectedLineRanges": [
+        [
+          17,
+          17
+        ],
+        [
+          243,
+          244
+        ],
+        [
+          251,
+          267
+        ]
+      ],
+      "semanticLineCount": 20,
+      "displayedBodyLineRanges": [
+        [
+          238,
+          267
+        ]
+      ],
+      "additionalNavigationSnippetLines": [
+        17,
+        94
+      ],
+      "displayedLineRanges": [
+        [
+          17,
+          17
+        ],
+        [
+          94,
+          94
+        ],
+        [
+          238,
+          267
+        ]
+      ],
+      "displayedLineCount": 32,
+      "firstPinUTC": "2026-10-17T17:55:37.801737+00:00",
+      "initialPinArtifact": "registry-before-pins.json",
+      "firstReadSha256": "215bf049bdb2ee276d2c1bc127968d48f23309e9abbb8356fbf1ed6e897471e0",
+      "endingSha256": "215bf049bdb2ee276d2c1bc127968d48f23309e9abbb8356fbf1ed6e897471e0",
+      "matchesInitial": true,
+      "purpose": "Ordinary result DTO field preservation; cancellation/cleanup mechanisms boundary only"
+    },
+    {
+      "path": "packages/core/src/tool-system/builtin/glob.test.ts",
+      "bytes": 4941,
+      "sha256": "23dacdfa4fa413e6230a9e3eae705440d06c1014fb523933daf9fef65ea41bb4",
+      "lineCount": 119,
+      "kind": "test-declaration",
+      "coverage": "targeted-selected ordinary DTO/display cause re-review; not first/full coverage",
+      "selectedLineRanges": [
+        [
+          24,
+          34
+        ],
+        [
+          88,
+          91
+        ]
+      ],
+      "semanticLineCount": 15,
+      "displayedBodyLineRanges": [
+        [
+          19,
+          35
+        ],
+        [
+          88,
+          92
+        ]
+      ],
+      "additionalNavigationSnippetLines": [
+        36,
+        42,
+        52,
+        65,
+        80,
+        93,
+        104,
+        111
+      ],
+      "displayedLineRanges": [
+        [
+          19,
+          36
+        ],
+        [
+          42,
+          42
+        ],
+        [
+          52,
+          52
+        ],
+        [
+          65,
+          65
+        ],
+        [
+          80,
+          80
+        ],
+        [
+          88,
+          93
+        ],
+        [
+          104,
+          104
+        ],
+        [
+          111,
+          111
+        ]
+      ],
+      "displayedLineCount": 30,
+      "firstPinUTC": "2026-10-17T17:52:26.668173+00:00",
+      "initialPinArtifact": "initial-pins.json",
+      "firstReadSha256": "23dacdfa4fa413e6230a9e3eae705440d06c1014fb523933daf9fef65ea41bb4",
+      "endingSha256": "23dacdfa4fa413e6230a9e3eae705440d06c1014fb523933daf9fef65ea41bb4",
+      "matchesInitial": true,
+      "purpose": "Existing ordinary positive header/empty result test declarations only; test functions and filesystem fixtures never executed",
+      "testDeclarationLineCount": 15
+    },
+    {
+      "path": "packages/tui/src/cli/output/renderer.test.ts",
+      "bytes": 3781,
+      "sha256": "ef51ee33912b0d347ea7fdead6731bc417a9205061086c1bf1d98cd86665a1e4",
+      "lineCount": 111,
+      "kind": "test-declaration",
+      "coverage": "targeted-selected ordinary DTO/display cause re-review; not first/full coverage",
+      "selectedLineRanges": [
+        [
+          86,
+          93
+        ],
+        [
+          95,
+          110
+        ]
+      ],
+      "semanticLineCount": 24,
+      "displayedBodyLineRanges": [
+        [
+          86,
+          111
+        ]
+      ],
+      "additionalNavigationSnippetLines": [
+        2,
+        35,
+        36,
+        37,
+        48,
+        49,
+        63,
+        64,
+        65
+      ],
+      "displayedLineRanges": [
+        [
+          2,
+          2
+        ],
+        [
+          35,
+          37
+        ],
+        [
+          48,
+          49
+        ],
+        [
+          63,
+          65
+        ],
+        [
+          86,
+          111
+        ]
+      ],
+      "displayedLineCount": 35,
+      "firstPinUTC": "2026-10-17T17:53:25.583105+00:00",
+      "initialPinArtifact": "consumer-before-pins.json",
+      "firstReadSha256": "ef51ee33912b0d347ea7fdead6731bc417a9205061086c1bf1d98cd86665a1e4",
+      "endingSha256": "ef51ee33912b0d347ea7fdead6731bc417a9205061086c1bf1d98cd86665a1e4",
+      "matchesInitial": true,
+      "purpose": "Existing text/view_image and format test declarations only; no Glob assertion found in this file search, no execution",
+      "testDeclarationLineCount": 24
+    }
+  ],
+  "hashOnlyFiles": [
+    {
+      "path": "CODESHELL.md",
+      "bytes": 17639,
+      "lines": 217,
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "pinnedBeforeBodyUTC": "2026-10-17T17:52:26.663621+00:00",
+      "initialPinArtifact": "initial-pins.json",
+      "coverage": "hash-only this packet; prior full instruction reading reused unchanged",
+      "selectedLineRanges": [],
+      "displayedLineRanges": [],
+      "semanticLineCount": 0,
+      "displayedLineCount": 0
+    },
+    {
+      "path": "AGENTS.md",
+      "bytes": 206,
+      "lines": 5,
+      "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "pinnedBeforeBodyUTC": "2026-10-17T17:52:26.665649+00:00",
+      "initialPinArtifact": "initial-pins.json",
+      "coverage": "hash-only this packet; prior full instruction reading reused unchanged",
+      "selectedLineRanges": [],
+      "displayedLineRanges": [],
+      "semanticLineCount": 0,
+      "displayedLineCount": 0
+    }
+  ],
+  "productSemanticLineCount": 273,
+  "testDeclarationLineCount": 39,
+  "semanticLineCount": 312,
+  "displayedLineCount": 736,
+  "coverageNotes": [
+    "All file counts use per-file unique line union; selected includes only ordinary DTO/display purpose, not every displayed line. Shared producer/consumer and prior author/reviewer readings must not be summed into new global coverage.",
+    "Original same-SHA R7 source/test full and R21 renderer full-source declarations retained in canonical-history-decisions.json. This packet is a concrete-cause targeted re-review, never a first/full new coverage claim.",
+    "All initial source pins precede their first body/navigation snippet in this packet. CLI additional historical canonical lookup was performed after its pinned selected body read; see focused-history-gate.json.",
+    "Core path-policy/permission/runtime abort/identity/native mechanisms displayed at the boundary are not correctness conclusions; no real tool execution or user data used."
+  ]
+}

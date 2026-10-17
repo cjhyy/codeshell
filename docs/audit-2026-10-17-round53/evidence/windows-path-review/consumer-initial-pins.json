@@ -1,0 +1,25 @@
+{
+  "pins": [
+    {
+      "path": "packages/tui/src/ui/components/ToolCall.tsx",
+      "bytes": 13567,
+      "lines": 407,
+      "sha256": "ad36b061a8c6856d63ce8b85169164d8df60d38da91e196e70ee9bc5120868f8",
+      "pinnedBeforeBodyOrLineNavigationUTC": "2026-10-17T17:56:30.544049+00:00"
+    },
+    {
+      "path": "packages/tui/src/cli/output/renderer.ts",
+      "bytes": 5744,
+      "lines": 163,
+      "sha256": "2ed6d93112ae5ab123fc2b93964b04bc37ec21b3e286ceec93ddab68c1bb22d7",
+      "pinnedBeforeBodyOrLineNavigationUTC": "2026-10-17T17:56:30.545000+00:00"
+    },
+    {
+      "path": "README.md",
+      "bytes": 18628,
+      "lines": 331,
+      "sha256": "67ba40502c2d37e4460bef5f1600c4ca2609c2bb3bb224f60bd526691c94e1b9",
+      "pinnedBeforeBodyOrLineNavigationUTC": "2026-10-17T17:56:30.545630+00:00"
+    }
+  ]
+}

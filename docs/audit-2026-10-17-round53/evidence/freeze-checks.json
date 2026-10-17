@@ -1,0 +1,126 @@
+{
+  "expectedCount": 24,
+  "checks": [
+    {
+      "path": "evidence/trace-history/report.md",
+      "bytes": 5996,
+      "sha256": "39dc729934f4377d4e7acb04224efa1fe0168a8cde639d33582ffc2236464015"
+    },
+    {
+      "path": "evidence/trace-history/source-manifest.json",
+      "bytes": 11040,
+      "sha256": "665b3ed432568948338fb341f3b7cf311631668a9c95cb99b25492adc1fbca57"
+    },
+    {
+      "path": "evidence/trace-history/reviewer-receipt.json",
+      "bytes": 3098,
+      "sha256": "1fe50a1a423b0d8c1b67a3d68edc09e488526d2475ee21a4add959824065f8ef"
+    },
+    {
+      "path": "evidence/cache-data/report.md",
+      "bytes": 5232,
+      "sha256": "9e56208d2bb147c16e1c20af937bc7ebd43f8fc73b055eb59d48500414f081e4"
+    },
+    {
+      "path": "evidence/cache-data/source-manifest.json",
+      "bytes": 7611,
+      "sha256": "e3cd3d0f89d92b858095c7329670d933c0a14b6890e5848b31acd44c95079094"
+    },
+    {
+      "path": "evidence/cache-data/reviewer-receipt.json",
+      "bytes": 4369,
+      "sha256": "4266294889f43764fd35b79f9256efd26a2c986a28b9de097038532baf65724c"
+    },
+    {
+      "path": "evidence/web-format-gate/report.md",
+      "bytes": 3001,
+      "sha256": "50a126cd73b8dedd46d45905eaeec12200b76487c0c407839dfca3cc1118e82d"
+    },
+    {
+      "path": "evidence/web-format-gate/source-manifest.json",
+      "bytes": 14251,
+      "sha256": "2f287fe507017db71c047864effb40d057b975ec6d1df5e5e90c71c8963f7892"
+    },
+    {
+      "path": "evidence/web-format-gate/artifact-receipt.json",
+      "bytes": 2498,
+      "sha256": "33000f03e99ab3188a7a3f08d82c5c295fc9090cab0a5ae8db414abac8a06f49"
+    },
+    {
+      "path": "evidence/root-task-parse-gate/report.md",
+      "bytes": 1435,
+      "sha256": "126b0d2fc2d72b550ea2021fa7a7af633d452379cba557eef201c5329c23a720"
+    },
+    {
+      "path": "evidence/root-task-parse-gate/source-manifest.json",
+      "bytes": 1599,
+      "sha256": "01d55931a5789610f77407c0f9d01f61a4a731c0a23dfced1e81e3d78d90a159"
+    },
+    {
+      "path": "evidence/root-task-parse-gate/author-receipt.json",
+      "bytes": 1953,
+      "sha256": "78091ad38806cc050563ecd5767c17d90a280ae03b5fcb230b2b9f18828b151f"
+    },
+    {
+      "path": "evidence/root-tool-display/report.md",
+      "bytes": 3533,
+      "sha256": "50f7f89bdf4daafe7e8d1e6d969cb80b1da2c3eb5cf2aa19be0c126224c429c8"
+    },
+    {
+      "path": "evidence/root-tool-display/source-manifest.json",
+      "bytes": 7482,
+      "sha256": "c6e5492e7af68ff6e5a55653e2e12f8b17914e4a0ce6f8f3fc2709ec9e8ba05c"
+    },
+    {
+      "path": "evidence/root-tool-display/author-receipt.json",
+      "bytes": 4792,
+      "sha256": "a26b9908ea52649782008b3777197c0adc6fbaee2e082564503c4149007b7e65"
+    },
+    {
+      "path": "evidence/glob-summary-review/review.md",
+      "bytes": 4717,
+      "sha256": "140819dd56f7eaed3636bfec495d3cc9642a269374f6fa30c282dfe9ce7f0822"
+    },
+    {
+      "path": "evidence/glob-summary-review/source-manifest.json",
+      "bytes": 21594,
+      "sha256": "20171ef2e40630cdd7172fb01adc0a71b68d9a696f4f5f666a98a53c39026bd4"
+    },
+    {
+      "path": "evidence/glob-summary-review/reviewer-receipt.json",
+      "bytes": 3805,
+      "sha256": "f173b0d84c7794e797c4663dd7cd9f108568321195c803b70a7e9f4f71883395"
+    },
+    {
+      "path": "evidence/windows-path-review/review.md",
+      "bytes": 5476,
+      "sha256": "dc894fb86f9747eeaa02d1fda5f7f22e249be2a7d619e42ef33b3d261964ca8a"
+    },
+    {
+      "path": "evidence/windows-path-review/source-manifest.json",
+      "bytes": 11836,
+      "sha256": "7c990c22a7ce21c445390b859c589c06d6316ead5de02e6661a6bcf865b2a182"
+    },
+    {
+      "path": "evidence/windows-path-review/reviewer-receipt.json",
+      "bytes": 4149,
+      "sha256": "499c8c1c29369a54f302b72fb1801259b63e8a3d3726f6a22fce00e5186b6f9f"
+    },
+    {
+      "path": "evidence/root-windows-contract/report.md",
+      "bytes": 1774,
+      "sha256": "1acff1f3bb1d9da605720502eae9862f3238be71e0872275688f6deadf069f7a"
+    },
+    {
+      "path": "evidence/root-windows-contract/source-manifest.json",
+      "bytes": 2588,
+      "sha256": "fb65e678bfc332092c6f7f911c202f3da949c2e7fd600d778c78d7d34b2d1ecd"
+    },
+    {
+      "path": "evidence/root-windows-contract/author-receipt.json",
+      "bytes": 1022,
+      "sha256": "7a8dcb60a1093d0f8501f8e390ab157a6ca9c6008fa99f07e447c1309215e805"
+    }
+  ],
+  "scope": "Eight frozen packet report/manifest/receipt anchors; Root111/114 same author explicitly,112/113 separate authors with targeted purpose."
+}

@@ -1,0 +1,51 @@
+{
+  "readUTC": "2026-10-17T18:00:22.230500+00:00",
+  "windowsActuallyRead": [
+    {
+      "index": 0,
+      "document": "docs/archive/core-complete-review.md",
+      "documentSha256": "26814d36da014eb89b7952d251f442842aaa9a2e3ef7277050100e5f8bab9cc9",
+      "pointer": "markdown-text",
+      "text": "ime/safe-spawn.ts` 封装安全子进程执行。Hook runner、plugin、git、shell 工具等需要执行外部命令时应优先走这类封装，避免环境变量、cwd、stdio、信号处理不一致。\n\n### 18.4 Utils\n\n`src/utils/**` 是通用工具集合，包括：\n\n- `format.ts`\n- `theme.ts`\n- `toolDisplay.ts`\n- `debug.ts`\n- `env.ts`\n- `envUtils.ts`\n- `execFileNoThrow.ts`\n- `lockfile.ts`\n- `memoize.ts`\n- `semver.ts`\n- `sliceAnsi.ts`\n- `intl.ts`\n- `earlyInput.ts`\n- `systemTheme.ts`\n- `task-sanitizer.ts`\n\n这些工具被 CLI/UI/core 多处复用。修改时要注意它们可能是跨层依赖。\n\n## 19. 状态与成本统计模块\n\n### 19.1 `state.ts`\n\n`src/state.ts` 是 process-wide 状态兼容层，包含：\n\n- sessionId / cwd / projectRoot。\n- interactive/headless 标记。\n- model override。\n- token counters。\n- per-model usage。\n- API duration。\n- lines changed。\n- turn hook/tool/classifier duration。\n- telemetry counter stubs。\n- remote mode",
+      "valueCharacters": 96025,
+      "windowStart": 39722,
+      "windowEnd": 40462,
+      "boundedWindowNotWholeValue": true
+    },
+    {
+      "index": 1,
+      "document": "docs/archive/core-modules/utils.md",
+      "documentSha256": "f48c0c63c91d00dfa3e6102223f8082da5c58d35e8b02089e468b6e90ef9cdc2",
+      "pointer": "markdown-text",
+      "text": "/Vertex region helpers, `isInProtectedNamespace`). |\n| `earlyInput.ts` | Capture/replay stdin typed before the UI is ready (`startCapturingEarlyInput`/`consumeEarlyInput`/…). |\n| `toolDisplay.ts` | Tool-call display helpers (`formatToolArgs`, `singleLine`, `MAX_LINE_WIDTH`, `TOOL_DOT_COLORS`). |\n| `debug.ts` | `logForDebugging` debug logging. |\n| `sliceAnsi.ts` | ANSI-aware string slicing (default export). |\n| `theme.ts` / `systemTheme.ts` / `theme-xterm` | Theme palette + OS theme detection. |\n\n## 公开接口 / Public API\n\n```ts\n// lockfile.ts — proper-lockfile, loaded lazily\nfunction lock(file: string, options?: LockOptions): Promise<() => Promise<void>>; // returns release fn\nfunction lockSync(file: string, options?: LockOptions): () ",
+      "valueCharacters": 8186,
+      "windowStart": 2348,
+      "windowEnd": 3088,
+      "boundedWindowNotWholeValue": true
+    },
+    {
+      "index": 2,
+      "document": "docs/audit-2026-10-17-round15/evidence/docinput-prefix-dedup-context.json",
+      "documentSha256": "57ebf62304d32d43e0f4f3bbd2811a4aa390436662168c8cd24b121b1eb0dcf3",
+      "pointer": "/records/5/matches/0/match",
+      "text": " any` assertions.\"}, {\"file\": \"packages/tui/src/cli/output/terminal-ui.ts\", \"line\": \"157-178\", \"category\": \"simplify\", \"severity\": \"low\", \"confidence\": \"high\", \"title\": \"Duplicate formatToolArgs function definition\", \"detail\": \"terminal-ui.ts defines its own formatToolArgs() function (lines 157-178), but renderer.ts imports the same function from '@cjhyy/code-shell-core' (line 8). This creates two separate implementations that could diverge, leading to maintenance issues and inconsistent behavior.\", \"fix\": \"Remove the duplicate function definition from terminal-ui.ts and import it from the core library or the renderer module.\"}, {\"file\": \"packages/tui/src/index.ts\", \"line\": \"2-5\", \"category\": \"correctness\", \"severity\": \"medium\", \"",
+      "valueCharacters": 146567,
+      "windowStart": 46467,
+      "windowEnd": 47207,
+      "boundedWindowNotWholeValue": true
+    },
+    {
+      "index": 17,
+      "document": "docs/audit-2026-10-17-round38/evidence/mcp-patch-frontier/history.json",
+      "documentSha256": "e1df88faea5ddfab99837cc14fdb489d897021b65ebe7c2da4d358be5d1f0e36",
+      "pointer": "/hits/targets/49/excerpt",
+      "text": " any` assertions.\"}, {\"file\": \"packages/tui/src/cli/output/terminal-ui.ts\", \"line\": \"157-178\", \"category\": \"simplify\", \"severity\": \"low\", \"confidence\": \"high\", \"title\": \"Duplicate formatToolArgs function definition\", \"detail\": \"terminal-ui.ts defines its own formatToolArgs() function (lines 157-178), but renderer.ts imports the same function from '@cjhyy/code-shell-core' (line 8). This creates two separate implementations that could diverge, leading to maintenance issues and inconsistent behavior.\", \"fix\": \"Remove the duplicate function definition from terminal-ui.ts and import it from the core library or the renderer module.\"}, {\"file\": \"packages/tui/src/index.ts\", \"line\": \"2-5\", \"category\": \"correctness\", \"severity\": \"medium\", \"",
+      "valueCharacters": 116543,
+      "windowStart": 103803,
+      "windowEnd": 104543,
+      "boundedWindowNotWholeValue": true
+    }
+  ],
+  "query42Cap40NotAllWindowsRead": true,
+  "limit": "Windows/formatting terms may occur farapart inlongMD or nestedcopy. Genericutils inventory and copiedcontexts notexactsame-causeproof/noveltyguarantee; other36retainedcontextsnotclaimedread."
+}

@@ -1,0 +1,2626 @@
+{
+  "targetPath": [
+    {
+      "path": "docs/audit-2026-10-16/inventory.json",
+      "pointer": "/source_inventory/2026",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/server/src/model-trace-history.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round10/evidence/root-dedup.json",
+      "pointer": "/hits/history_identity/24/context",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/server/src/model-trace-history.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round25/evidence/data-prep/inventory.json",
+      "pointer": "/files/133",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/server/src/model-trace-history.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+      "pointer": "/files/3545/path",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/server/src/model-trace-history.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/14249/path",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/server/src/model-trace-history.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/14249/directSourcePathsInObject/0",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/server/src/model-trace-history.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/14250/path",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/server/src/model-trace-history.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/14250/directSourcePathsInObject/0",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/server/src/model-trace-history.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/14251/path",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/server/src/model-trace-history.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/14251/directSourcePathsInObject/0",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/server/src/model-trace-history.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-index.json",
+      "pointer": "/files/3867/path",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/server/src/model-trace-history.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/package-inventory.json",
+      "pointer": "/files/3867/path",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/server/src/model-trace-history.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-status/comparison.json",
+      "pointer": "/unknownPaths/3519",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/server/src/model-trace-history.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-status/current-inventory.json",
+      "pointer": "/files/3868/path",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/server/src/model-trace-history.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/packet-review/checks.json",
+      "pointer": "/packetChecks/3/sourceRowMetadata/7/path",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/server/src/model-trace-history.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/packet-review/checks.json",
+      "pointer": "/packetChecks/4/sourceRowMetadata/0/path",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/server/src/model-trace-history.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/root-summary-review/coverage-rows.json",
+      "pointer": "/9/row/path",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/server/src/model-trace-history.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/root-summary-review/coverage-rows.json",
+      "pointer": "/41/row/path",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/server/src/model-trace-history.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/root-summary-review/coverage-rows.json",
+      "pointer": "/41/row/directSourcePathsInObject/0",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/server/src/model-trace-history.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/root-summary-review/coverage-rows.json",
+      "pointer": "/42/row/path",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/server/src/model-trace-history.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/root-summary-review/coverage-rows.json",
+      "pointer": "/42/row/directSourcePathsInObject/0",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/server/src/model-trace-history.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/root-summary-review/coverage-rows.json",
+      "pointer": "/43/row/path",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/server/src/model-trace-history.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/root-summary-review/coverage-rows.json",
+      "pointer": "/43/row/directSourcePathsInObject/0",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/server/src/model-trace-history.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/root-summary-review/coverage-rows.json",
+      "pointer": "/47/row/path",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/server/src/model-trace-history.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/root-summary-review/coverage-rows.json",
+      "pointer": "/51/row/path",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/server/src/model-trace-history.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/root-summary-review/coverage-rows.json",
+      "pointer": "/55/row/path",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/server/src/model-trace-history.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/root-summary-review/history.json",
+      "pointer": "/hits/1-path/0/context",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/server/src/model-trace-history.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/root-summary-review/history.json",
+      "pointer": "/hits/1-path/1/context",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/server/src/model-trace-history.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/root-summary-review/history.json",
+      "pointer": "/hits/1-path/2/context",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/server/src/model-trace-history.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/root-summary-review/history.json",
+      "pointer": "/hits/1-path/3/context",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/server/src/model-trace-history.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/root-summary-review/history.json",
+      "pointer": "/hits/1-path/4/context",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/server/src/model-trace-history.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/root-summary-review/history.json",
+      "pointer": "/hits/1-path/5/context",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/server/src/model-trace-history.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/root-summary-review/history.json",
+      "pointer": "/hits/1-path/6/context",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/server/src/model-trace-history.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/root-summary-review/history.json",
+      "pointer": "/hits/1-path/7/context",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/server/src/model-trace-history.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/root-summary-review/history.json",
+      "pointer": "/hits/1-path/8/context",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/server/src/model-trace-history.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/root-summary-review/history.json",
+      "pointer": "/hits/1-path/9/context",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/server/src/model-trace-history.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/root-summary-review/history.json",
+      "pointer": "/hits/1-path/10/context",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/server/src/model-trace-history.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/root-summary-review/history.json",
+      "pointer": "/hits/1-path/11/context",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/server/src/model-trace-history.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/root-summary-review/history.json",
+      "pointer": "/hits/1-path/12/context",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/server/src/model-trace-history.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/root-summary-review/history.json",
+      "pointer": "/hits/1-path/13/context",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/server/src/model-trace-history.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/root-summary-review/history.json",
+      "pointer": "/hits/summary-contract/1/context",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/server/src/model-trace-history.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/root-summary-review/history.json",
+      "pointer": "/hits/summary-contract/2/context",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/server/src/model-trace-history.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/root-summary-review/history.json",
+      "pointer": "/hits/summary-contract/14/context",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/server/src/model-trace-history.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/root-summary-review/history.json",
+      "pointer": "/hits/summary-contract/19/context",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/server/src/model-trace-history.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/root-summary-review/history.json",
+      "pointer": "/hits/summary-contract/35/context",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/server/src/model-trace-history.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/root-summary-review/history.json",
+      "pointer": "/hits/summary-contract/36/context",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/server/src/model-trace-history.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/root-summary-review/history.json",
+      "pointer": "/hits/summary-contract/37/context",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/server/src/model-trace-history.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/root-summary-review/history.json",
+      "pointer": "/hits/summary-contract/38/context",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/server/src/model-trace-history.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/root-summary-review/history.json",
+      "pointer": "/hits/summary-contract/39/context",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/server/src/model-trace-history.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/root-summary-review/history.json",
+      "pointer": "/hits/summary-contract/40/context",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/server/src/model-trace-history.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/root-summary-review/history.json",
+      "pointer": "/hits/summary-contract/42/context",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/server/src/model-trace-history.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/root-summary-review/history.json",
+      "pointer": "/hits/summary-contract/44/context",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/server/src/model-trace-history.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/root-summary-review/history.json",
+      "pointer": "/hits/summary-contract/46/context",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/server/src/model-trace-history.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/root-summary-review/history.json",
+      "pointer": "/hits/summary-contract/48/context",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/server/src/model-trace-history.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/root-summary-review/selection-decisions.json",
+      "pointer": "/decisions/1/path",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/server/src/model-trace-history.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/root-summary-review/selection-initial-pins.json",
+      "pointer": "/files/1/path",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/server/src/model-trace-history.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/root-summary-review/source-manifest.json",
+      "pointer": "/hashOnlyFiles/0/path",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/server/src/model-trace-history.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/trace-history-frontier/coverage-gate-rows.json",
+      "pointer": "/rows/1/row/path",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/server/src/model-trace-history.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/trace-history-frontier/coverage-gate-rows.json",
+      "pointer": "/rows/2/row/path",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/server/src/model-trace-history.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/trace-history-frontier/coverage-gate-rows.json",
+      "pointer": "/rows/3/row/path",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/server/src/model-trace-history.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/trace-history-frontier/coverage-gate-rows.json",
+      "pointer": "/rows/4/row/path",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/server/src/model-trace-history.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/trace-history-frontier/coverage-gate-rows.json",
+      "pointer": "/rows/5/row/path",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/server/src/model-trace-history.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/trace-history-frontier/coverage-gate-rows.json",
+      "pointer": "/rows/6/row/path",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/server/src/model-trace-history.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/trace-history-frontier/coverage-gate-rows.json",
+      "pointer": "/rows/7/row/path",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/server/src/model-trace-history.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/trace-history-frontier/history-contexts.json",
+      "pointer": "/trace-history/0/text",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/server/src/model-trace-history.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/trace-history-frontier/history-contexts.json",
+      "pointer": "/trace-history/1/text",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/server/src/model-trace-history.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/trace-history-frontier/history-contexts.json",
+      "pointer": "/trace-history/2/text",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/server/src/model-trace-history.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/trace-history-frontier/history-contexts.json",
+      "pointer": "/trace-history/3/text",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/server/src/model-trace-history.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/trace-history-frontier/history-contexts.json",
+      "pointer": "/trace-history/4/text",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/server/src/model-trace-history.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/trace-history-frontier/history-contexts.json",
+      "pointer": "/trace-history/5/text",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/server/src/model-trace-history.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/trace-history-frontier/history-contexts.json",
+      "pointer": "/trace-history/6/text",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/server/src/model-trace-history.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/trace-history-frontier/history-contexts.json",
+      "pointer": "/trace-history/7/text",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/server/src/model-trace-history.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/trace-history-frontier/history-contexts.json",
+      "pointer": "/trace-history/8/text",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/server/src/model-trace-history.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/trace-history-frontier/history-contexts.json",
+      "pointer": "/trace-history/9/text",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/server/src/model-trace-history.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/trace-history-frontier/history-contexts.json",
+      "pointer": "/trace-history/10/text",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/server/src/model-trace-history.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/trace-history-frontier/history-contexts.json",
+      "pointer": "/trace-history/11/text",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/server/src/model-trace-history.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/trace-history-frontier/history-contexts.json",
+      "pointer": "/trace-history/12/text",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/server/src/model-trace-history.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/trace-history-frontier/history-contexts.json",
+      "pointer": "/trace-history/13/text",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/server/src/model-trace-history.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/trace-history-frontier/initial-pins.json",
+      "pointer": "/files/0/path",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/server/src/model-trace-history.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/trace-history-frontier/report.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 130,
+      "context": "# Model trace history 普通DTO静态前置\n\n结果 **0正式 / 0候选 / 0新增关联**。这是有限ordinary query/list DTO负向结论，不是整个model trace系统、排序/裁剪或存储机制正确性认证。\n\n目标 `packages/server/src/model-trace-history.ts` 当前242行/9402B，SHA2bf60f9f830be0d04e9e96b20dfc86f7f24ed5a8d5d0f44e8c8115b2206c7dfb；[初始pin](initial-pins.json)在正文前。own [fresh history](history.json)纳冻结48、排49+，2026-10-17 16:19:42–46 UTC为4492=1442MD+3050JSON、1953735string/2921270scalar、169archive/_archive路径、0parse错误。值机器扫描不等于语义全文。path14/SHA5、cap100全保存；本轮确实读了[19个短窗口](history-contexts.json)与[8个简表对象](coverage-gate-rows.json)，均为库存/派生incidental记录，未建立同SHA明确full。unknown/no-row不当从未读过。Root74原说法与其更正另在[parent上下文](parent-context-notes.json)，Root的机器14/5命中不冒充其读全19窗口。\n\n## 普通合同与反证\n\n目标所读query字段/校验把正常limit1–200、withoutSession布尔、有限非负且顺序正确的since/until和有界字符串保留到新DTO；list/sessions在validated spread后转交store，session cursor错误有400映射。未用任意坏DTO、NaN或真实文件造反例。HTTP20–38仅普通query值解码，73–74直接调history list/sessions；Web API普通querySuffix以String编码、跳undefined并转交注入requester。false与正常0时间值未被truthy条件丢弃。这里只是静态值流，未构造或执行语言fixture/URL/网络请求。\n\n真实Desktop ModelTracesView250–258请求sessions limit50并",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/trace-history-frontier/source-display-pins.json",
+      "pointer": "/files/0/path",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/server/src/model-trace-history.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/trace-history-frontier/source-manifest.json",
+      "pointer": "/files/0/path",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/server/src/model-trace-history.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/source-manifest.json",
+      "pointer": "/files/25/path",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/server/src/model-trace-history.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/source-manifest.json",
+      "pointer": "/workerSourceChecks/7/path",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/server/src/model-trace-history.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/source-manifest.json",
+      "pointer": "/hashOnlyChecks/14/path",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/server/src/model-trace-history.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round50/evidence/packet-review/checks.json",
+      "pointer": "/packets/2/manifestRangeChecks/2/path",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/server/src/model-trace-history.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round50/evidence/trace-query-review/consumer-initial-pins.json",
+      "pointer": "/files/1/path",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/server/src/model-trace-history.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round50/evidence/trace-query-review/ending-checks.json",
+      "pointer": "/sourcePins/5/path",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/server/src/model-trace-history.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round50/evidence/trace-query-review/source-excerpts.json",
+      "pointer": "/2/path",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/server/src/model-trace-history.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round50/evidence/trace-query-review/source-manifest.json",
+      "pointer": "/files/2/path",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/server/src/model-trace-history.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round50/source-manifest.json",
+      "pointer": "/files/70/path",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/server/src/model-trace-history.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round50/source-manifest.json",
+      "pointer": "/workerSourceChecks/8/path",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "packages/server/src/model-trace-history.ts",
+      "completeScalar": true
+    }
+  ],
+  "targetSHA": [
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+      "pointer": "/files/3545/sha256",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "2bf60f9f830be0d04e9e96b20dfc86f7f24ed5a8d5d0f44e8c8115b2206c7dfb",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/14251/sourceHashFields/sha256",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "2bf60f9f830be0d04e9e96b20dfc86f7f24ed5a8d5d0f44e8c8115b2206c7dfb",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-index.json",
+      "pointer": "/files/3867/sha256",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "2bf60f9f830be0d04e9e96b20dfc86f7f24ed5a8d5d0f44e8c8115b2206c7dfb",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/package-inventory.json",
+      "pointer": "/files/3867/sha256",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "2bf60f9f830be0d04e9e96b20dfc86f7f24ed5a8d5d0f44e8c8115b2206c7dfb",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-status/current-inventory.json",
+      "pointer": "/files/3868/sha256",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "2bf60f9f830be0d04e9e96b20dfc86f7f24ed5a8d5d0f44e8c8115b2206c7dfb",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/packet-review/checks.json",
+      "pointer": "/packetChecks/3/sourceRowMetadata/7/capturedSha256",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "2bf60f9f830be0d04e9e96b20dfc86f7f24ed5a8d5d0f44e8c8115b2206c7dfb",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/packet-review/checks.json",
+      "pointer": "/packetChecks/4/sourceRowMetadata/0/capturedSha256",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "2bf60f9f830be0d04e9e96b20dfc86f7f24ed5a8d5d0f44e8c8115b2206c7dfb",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/root-summary-review/coverage-rows.json",
+      "pointer": "/9/row/sha256",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "2bf60f9f830be0d04e9e96b20dfc86f7f24ed5a8d5d0f44e8c8115b2206c7dfb",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/root-summary-review/coverage-rows.json",
+      "pointer": "/43/row/sourceHashFields/sha256",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "2bf60f9f830be0d04e9e96b20dfc86f7f24ed5a8d5d0f44e8c8115b2206c7dfb",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/root-summary-review/coverage-rows.json",
+      "pointer": "/47/row/sha256",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "2bf60f9f830be0d04e9e96b20dfc86f7f24ed5a8d5d0f44e8c8115b2206c7dfb",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/root-summary-review/coverage-rows.json",
+      "pointer": "/51/row/sha256",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "2bf60f9f830be0d04e9e96b20dfc86f7f24ed5a8d5d0f44e8c8115b2206c7dfb",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/root-summary-review/coverage-rows.json",
+      "pointer": "/55/row/sha256",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "2bf60f9f830be0d04e9e96b20dfc86f7f24ed5a8d5d0f44e8c8115b2206c7dfb",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/root-summary-review/history.json",
+      "pointer": "/patterns/1-sha",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "2bf60f9f830be0d04e9e96b20dfc86f7f24ed5a8d5d0f44e8c8115b2206c7dfb",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/root-summary-review/history.json",
+      "pointer": "/hits/1-sha/0/context",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "2bf60f9f830be0d04e9e96b20dfc86f7f24ed5a8d5d0f44e8c8115b2206c7dfb",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/root-summary-review/history.json",
+      "pointer": "/hits/1-sha/1/context",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "2bf60f9f830be0d04e9e96b20dfc86f7f24ed5a8d5d0f44e8c8115b2206c7dfb",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/root-summary-review/history.json",
+      "pointer": "/hits/1-sha/2/context",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "2bf60f9f830be0d04e9e96b20dfc86f7f24ed5a8d5d0f44e8c8115b2206c7dfb",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/root-summary-review/history.json",
+      "pointer": "/hits/1-sha/3/context",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "2bf60f9f830be0d04e9e96b20dfc86f7f24ed5a8d5d0f44e8c8115b2206c7dfb",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/root-summary-review/history.json",
+      "pointer": "/hits/1-sha/4/context",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "2bf60f9f830be0d04e9e96b20dfc86f7f24ed5a8d5d0f44e8c8115b2206c7dfb",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/root-summary-review/selection-initial-pins.json",
+      "pointer": "/files/1/sha256",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "2bf60f9f830be0d04e9e96b20dfc86f7f24ed5a8d5d0f44e8c8115b2206c7dfb",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/root-summary-review/source-manifest.json",
+      "pointer": "/hashOnlyFiles/0/sha256",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "2bf60f9f830be0d04e9e96b20dfc86f7f24ed5a8d5d0f44e8c8115b2206c7dfb",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/trace-history-frontier/coverage-gate-rows.json",
+      "pointer": "/rows/1/row/sha256",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "2bf60f9f830be0d04e9e96b20dfc86f7f24ed5a8d5d0f44e8c8115b2206c7dfb",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/trace-history-frontier/coverage-gate-rows.json",
+      "pointer": "/rows/5/row/sha256",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "2bf60f9f830be0d04e9e96b20dfc86f7f24ed5a8d5d0f44e8c8115b2206c7dfb",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/trace-history-frontier/coverage-gate-rows.json",
+      "pointer": "/rows/6/row/sha256",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "2bf60f9f830be0d04e9e96b20dfc86f7f24ed5a8d5d0f44e8c8115b2206c7dfb",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/trace-history-frontier/coverage-gate-rows.json",
+      "pointer": "/rows/7/row/sha256",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "2bf60f9f830be0d04e9e96b20dfc86f7f24ed5a8d5d0f44e8c8115b2206c7dfb",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/trace-history-frontier/history-contexts.json",
+      "pointer": "/trace-history-sha/0/text",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "2bf60f9f830be0d04e9e96b20dfc86f7f24ed5a8d5d0f44e8c8115b2206c7dfb",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/trace-history-frontier/history-contexts.json",
+      "pointer": "/trace-history-sha/1/text",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "2bf60f9f830be0d04e9e96b20dfc86f7f24ed5a8d5d0f44e8c8115b2206c7dfb",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/trace-history-frontier/history-contexts.json",
+      "pointer": "/trace-history-sha/2/text",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "2bf60f9f830be0d04e9e96b20dfc86f7f24ed5a8d5d0f44e8c8115b2206c7dfb",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/trace-history-frontier/history-contexts.json",
+      "pointer": "/trace-history-sha/3/text",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "2bf60f9f830be0d04e9e96b20dfc86f7f24ed5a8d5d0f44e8c8115b2206c7dfb",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/trace-history-frontier/history-contexts.json",
+      "pointer": "/trace-history-sha/4/text",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "2bf60f9f830be0d04e9e96b20dfc86f7f24ed5a8d5d0f44e8c8115b2206c7dfb",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/trace-history-frontier/initial-pins.json",
+      "pointer": "/files/0/sha256",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "2bf60f9f830be0d04e9e96b20dfc86f7f24ed5a8d5d0f44e8c8115b2206c7dfb",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/trace-history-frontier/report.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 190,
+      "context": "# Model trace history 普通DTO静态前置\n\n结果 **0正式 / 0候选 / 0新增关联**。这是有限ordinary query/list DTO负向结论，不是整个model trace系统、排序/裁剪或存储机制正确性认证。\n\n目标 `packages/server/src/model-trace-history.ts` 当前242行/9402B，SHA2bf60f9f830be0d04e9e96b20dfc86f7f24ed5a8d5d0f44e8c8115b2206c7dfb；[初始pin](initial-pins.json)在正文前。own [fresh history](history.json)纳冻结48、排49+，2026-10-17 16:19:42–46 UTC为4492=1442MD+3050JSON、1953735string/2921270scalar、169archive/_archive路径、0parse错误。值机器扫描不等于语义全文。path14/SHA5、cap100全保存；本轮确实读了[19个短窗口](history-contexts.json)与[8个简表对象](coverage-gate-rows.json)，均为库存/派生incidental记录，未建立同SHA明确full。unknown/no-row不当从未读过。Root74原说法与其更正另在[parent上下文](parent-context-notes.json)，Root的机器14/5命中不冒充其读全19窗口。\n\n## 普通合同与反证\n\n目标所读query字段/校验把正常limit1–200、withoutSession布尔、有限非负且顺序正确的since/until和有界字符串保留到新DTO；list/sessions在validated spread后转交store，session cursor错误有400映射。未用任意坏DTO、NaN或真实文件造反例。HTTP20–38仅普通query值解码，73–74直接调history list/sessions；Web API普通querySuffix以String编码、跳undefined并转交注入requester。false与正常0时间值未被truthy条件丢弃。这里只是静态值流，未构造或执行语言fixture/URL/网络请求。\n\n真实Desktop ModelTracesView250–258请求sessions limit50并用page，299–306请求list limit100并消费items/nextCursor，372–382把cursor传回并合并返回DTO。Desktop t",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/trace-history-frontier/source-display-pins.json",
+      "pointer": "/files/0/sha256",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "2bf60f9f830be0d04e9e96b20dfc86f7f24ed5a8d5d0f44e8c8115b2206c7dfb",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/trace-history-frontier/source-manifest.json",
+      "pointer": "/files/0/sha256",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "2bf60f9f830be0d04e9e96b20dfc86f7f24ed5a8d5d0f44e8c8115b2206c7dfb",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/trace-history-frontier/source-manifest.json",
+      "pointer": "/files/0/endingSha256",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "2bf60f9f830be0d04e9e96b20dfc86f7f24ed5a8d5d0f44e8c8115b2206c7dfb",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/trace-history-frontier/source-manifest.json",
+      "pointer": "/files/0/initialSemanticReadSha256",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "2bf60f9f830be0d04e9e96b20dfc86f7f24ed5a8d5d0f44e8c8115b2206c7dfb",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/trace-history-frontier/source-manifest.json",
+      "pointer": "/files/0/dedicatedSelectedReadSha256",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "2bf60f9f830be0d04e9e96b20dfc86f7f24ed5a8d5d0f44e8c8115b2206c7dfb",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/source-manifest.json",
+      "pointer": "/files/25/sha256",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "2bf60f9f830be0d04e9e96b20dfc86f7f24ed5a8d5d0f44e8c8115b2206c7dfb",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/source-manifest.json",
+      "pointer": "/files/25/currentSha256",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "2bf60f9f830be0d04e9e96b20dfc86f7f24ed5a8d5d0f44e8c8115b2206c7dfb",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/source-manifest.json",
+      "pointer": "/files/25/mainSha256",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "2bf60f9f830be0d04e9e96b20dfc86f7f24ed5a8d5d0f44e8c8115b2206c7dfb",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/source-manifest.json",
+      "pointer": "/workerSourceChecks/7/sha256",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "2bf60f9f830be0d04e9e96b20dfc86f7f24ed5a8d5d0f44e8c8115b2206c7dfb",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/source-manifest.json",
+      "pointer": "/hashOnlyChecks/14/sha256",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "2bf60f9f830be0d04e9e96b20dfc86f7f24ed5a8d5d0f44e8c8115b2206c7dfb",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round50/evidence/packet-review/checks.json",
+      "pointer": "/packets/2/manifestRangeChecks/2/sha256",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "2bf60f9f830be0d04e9e96b20dfc86f7f24ed5a8d5d0f44e8c8115b2206c7dfb",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round50/evidence/trace-query-review/consumer-initial-pins.json",
+      "pointer": "/files/1/sha256",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "2bf60f9f830be0d04e9e96b20dfc86f7f24ed5a8d5d0f44e8c8115b2206c7dfb",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round50/evidence/trace-query-review/ending-checks.json",
+      "pointer": "/sourcePins/5/initialSha256",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "2bf60f9f830be0d04e9e96b20dfc86f7f24ed5a8d5d0f44e8c8115b2206c7dfb",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round50/evidence/trace-query-review/ending-checks.json",
+      "pointer": "/sourcePins/5/endingSha256",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "2bf60f9f830be0d04e9e96b20dfc86f7f24ed5a8d5d0f44e8c8115b2206c7dfb",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round50/evidence/trace-query-review/source-excerpts.json",
+      "pointer": "/2/sha256",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "2bf60f9f830be0d04e9e96b20dfc86f7f24ed5a8d5d0f44e8c8115b2206c7dfb",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round50/evidence/trace-query-review/source-manifest.json",
+      "pointer": "/files/2/sha256",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "2bf60f9f830be0d04e9e96b20dfc86f7f24ed5a8d5d0f44e8c8115b2206c7dfb",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round50/evidence/trace-query-review/source-manifest.json",
+      "pointer": "/files/2/initialSemanticReadSha256",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "2bf60f9f830be0d04e9e96b20dfc86f7f24ed5a8d5d0f44e8c8115b2206c7dfb",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round50/evidence/trace-query-review/source-manifest.json",
+      "pointer": "/files/2/finishSha256",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "2bf60f9f830be0d04e9e96b20dfc86f7f24ed5a8d5d0f44e8c8115b2206c7dfb",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round50/source-manifest.json",
+      "pointer": "/files/70/sha256",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "2bf60f9f830be0d04e9e96b20dfc86f7f24ed5a8d5d0f44e8c8115b2206c7dfb",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round50/source-manifest.json",
+      "pointer": "/files/70/currentSha256",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "2bf60f9f830be0d04e9e96b20dfc86f7f24ed5a8d5d0f44e8c8115b2206c7dfb",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round50/source-manifest.json",
+      "pointer": "/files/70/mainSha256",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "2bf60f9f830be0d04e9e96b20dfc86f7f24ed5a8d5d0f44e8c8115b2206c7dfb",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round50/source-manifest.json",
+      "pointer": "/workerSourceChecks/8/sha256",
+      "kind": "json-value-scalar",
+      "offset": 0,
+      "context": "2bf60f9f830be0d04e9e96b20dfc86f7f24ed5a8d5d0f44e8c8115b2206c7dfb",
+      "completeScalar": true
+    }
+  ],
+  "targetFilename": [
+    {
+      "path": "docs/audit-2026-10-16/inventory.json",
+      "pointer": "/source_inventory/2026",
+      "kind": "json-value-scalar",
+      "offset": 20,
+      "context": "packages/server/src/model-trace-history.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round10/evidence/root-dedup.json",
+      "pointer": "/hits/history_identity/24/context",
+      "kind": "json-value-scalar",
+      "offset": 20,
+      "context": "packages/server/src/model-trace-history.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round10/evidence/root-dedup.json",
+      "pointer": "/hits/history_identity/29/context",
+      "kind": "json-value-scalar",
+      "offset": 227,
+      "context": "件项，不把它扩大成所有Windows会话打不开。\n- 查重：当前两批 audit及旧review对room默认Windows name关键词有限查重未见同项；与旧room进程退出/approval/接管问题不同。\n\n## 覆盖与既有基线\n\n- 选择性阅读 Server room-history、room-manager（metadata/seq/history/agent事件等段）、session-titles-store、HubRunReplay、model-trace-history/http 结构及 Mobile history/事件投影接线。认证/权限方向不做动态验证。\n- `evidence/root-codex-parser-baseline.log`：当前既有 parser suite 仅排除 approval_request 方向，**15 pass / 1 filtered / 24 expect / Completed（runner16 selected/1 skipped）**。该 suite 的 file_change/MCP mock 形状与官方协议不一致，不能用其绿色结果反驳新正常",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round14/evidence/bytes-dedup.json",
+      "pointer": "/hits/codex_parse/3/snippet",
+      "kind": "json-value-scalar",
+      "offset": 17,
+      "context": "ore、HubRunReplay、model-trace-history/http 结构及 Mobile history/事件投影接线。认证/权限方向不做动态验证。\n- `evidence/root-codex-parser-baseline.log`：当前既有 parser suite 仅排除 approval_request 方向，**15 pass / 1 filtered / 24 expect / Completed（runner16 selected/1 skipped）**。该 suite 的 file_change/MCP mock 形状与官方协议不一致，不能用其绿色结果反驳新正常",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round14/evidence/bytes-dedup.json",
+      "pointer": "/hits/codex_parse/11/snippet",
+      "kind": "json-value-scalar",
+      "offset": 17,
+      "context": "ore、HubRunReplay、model-trace-history/http 结构及 Mobile history/事件投影接线。认证/权限方向不做动态验证。\n- `evidence/root-codex-parser-baseline.log`：当前既有 parser suite 仅排除 approval_request 方向，**15 pass / 1 filtered / 24 expect / Completed（runner16 selected/1 skipped）**。该 suite 的 file_change/MCP mock 形状与官方协议不一致，不能用其绿色结果反驳新正常形状证据。\n- `evidence/root-history-replay-baseline.lo",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round22/evidence/title-dedup.json",
+      "pointer": "/matches/mechanism/9/excerpt",
+      "kind": "json-value-scalar",
+      "offset": 227,
+      "context": "件项，不把它扩大成所有Windows会话打不开。\n- 查重：当前两批 audit及旧review对room默认Windows name关键词有限查重未见同项；与旧room进程退出/approval/接管问题不同。\n\n## 覆盖与既有基线\n\n- 选择性阅读 Server room-history、room-manager（metadata/seq/history/agent事件等段）、session-titles-store、HubRunReplay、model-trace-history/http 结构及 Mobile history/事件投影接线。认证/权限方向不做动态验证。\n- `evidence/root-codex-parser-baseline.log`：当前既有 parser suite 仅排除 approval_request 方向，**15 pass / 1 filtered / 24 expect / Completed（runner16 selected/1 skipped）**。该 suite 的 file_change/MCP mock 形状与官方协议不一致，不能用其绿色结果反驳新正常",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round23/evidence/room-data-dedup.json",
+      "pointer": "/hits/exact/4/context",
+      "kind": "json-value-scalar",
+      "offset": 57,
+      "context": "seq/history/agent事件等段）、session-titles-store、HubRunReplay、model-trace-history/http 结构及 Mobile history/事件投影接线。认证/权限方向不做动态验证。\n- `evidence/root-codex-parser-baseline.log`：当前既有 parser suite 仅排除 approval_request 方向，**15 pass / 1 filtered / 24 expect / Completed（runner16 selected/1 skipped）**。该 suite 的 file_change/MCP mock 形状与官方协议不一致，不能用其绿色结果反驳新正常",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round23/evidence/room-data-dedup.json",
+      "pointer": "/hits/exact/12/context",
+      "kind": "json-value-scalar",
+      "offset": 17,
+      "context": "ore、HubRunReplay、model-trace-history/http 结构及 Mobile history/事件投影接线。认证/权限方向不做动态验证。\n- `evidence/root-codex-parser-baseline.log`：当前既有 parser suite 仅排除 approval_request 方向，**15 pass / 1 filtered / 24 expect / Completed（runner16 selected/1 skipped）**。该 suite 的 file_change/MCP mock 形状与官方协议不一致，不能用其绿色结果反驳新正常",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round23/evidence/room-data-dedup.json",
+      "pointer": "/hits/exact/20/context",
+      "kind": "json-value-scalar",
+      "offset": 17,
+      "context": "ore、HubRunReplay、model-trace-history/http 结构及 Mobile history/事件投影接线。认证/权限方向不做动态验证。\n- `evidence/root-codex-parser-baseline.log`：当前既有 parser suite 仅排除 approval_request 方向，**15 pass / 1 filtered / 24 expect / Completed（runner16 selected/1 skipped）**。该 suite 的 file_change/MCP mock 形状与官方协议不一致，不能用其绿色结果反驳新正常形状证据。\n- `evidence/root-history-replay-baseline.lo",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round23/evidence/room-data-dedup.json",
+      "pointer": "/hits/exact/56/context",
+      "kind": "json-value-scalar",
+      "offset": 57,
+      "context": "seq/history/agent事件等段）、session-titles-store、HubRunReplay、model-trace-history/http 结构及 Mobile history/事件投影接线。认证/权限方向不做动态验证。\n- `evidence/root-codex-parser-baseline.log`：当前既有 parser suite 仅排除 approval_request 方向，**15 pass / 1 filtered / 24 expect / Completed（runner16 selected/1 skipped）**。该 suite 的 file_change/MCP mock 形状与官方协议不一致，不能用其绿色结果反驳新正常",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round25/evidence/data-prep/inventory.json",
+      "pointer": "/files/133",
+      "kind": "json-value-scalar",
+      "offset": 20,
+      "context": "packages/server/src/model-trace-history.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+      "pointer": "/files/3545/path",
+      "kind": "json-value-scalar",
+      "offset": 20,
+      "context": "packages/server/src/model-trace-history.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round29/evidence/room-dedup.json",
+      "pointer": "/contexts/room-page-contract/22/context",
+      "kind": "json-value-scalar",
+      "offset": 227,
+      "context": "件项，不把它扩大成所有Windows会话打不开。\n- 查重：当前两批 audit及旧review对room默认Windows name关键词有限查重未见同项；与旧room进程退出/approval/接管问题不同。\n\n## 覆盖与既有基线\n\n- 选择性阅读 Server room-history、room-manager（metadata/seq/history/agent事件等段）、session-titles-store、HubRunReplay、model-trace-history/http 结构及 Mobile history/事件投影接线。认证/权限方向不做动态验证。\n- `evidence/root-codex-parser-baseline.log`：当前既有 parser suite 仅排除 approval_request 方向，**15 pass / 1 filtered / 24 expect / Completed（runner16 selected/1 skipped）**。该 suite 的 file_change/MCP mock 形状与官方协议不一致，不能用其绿色结果反驳新正常",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round3/root.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 3863,
+      "context": "default-name.test.ts` 为真实 RoomManager + 自有临时 room 存储，3 pass /11 expect /0 fail/skip /Completed，首跑原始 log 保存 name长度与readable=false；factory若被启动就抛错，实际未调用agent。\n- 条件/边界：运行机器不是 Windows；动态证明的是接受的 Windows 格式字符串与本地metadata读写自相矛盾，没有创建真实Windows长路径、启动真实CLI或验证Windows操作系统的长路径设置。因此保守按P3条件项，不把它扩大成所有Windows会话打不开。\n- 查重：当前两批 audit及旧review对room默认Windows name关键词有限查重未见同项；与旧room进程退出/approval/接管问题不同。\n\n## 覆盖与既有基线\n\n- 选择性阅读 Server room-history、room-manager（metadata/seq/history/agent事件等段）、session-titles-store、HubRunReplay、model-trace-history/http 结构及 Mobile history/事件投影接线。认证/权限方向不做动态验证。\n- `evidence/root-codex-parser-baseline.log`：当前既有 parser suite 仅排除 approval_request 方向，**15 pass / 1 filtered / 24 expect / Completed（runner16 selected/1 skipped）**。该 suite 的 file_change/MCP mock 形状与官方协议不一致，不能用其绿色结果反驳新正常形状证据。\n- `evidence/root-history-replay-baseline.log`：选择性普通磁盘历史冻结/跨冷重建、since过滤、snapshot过期/较大普通分页；内存run replay前缀/重叠/预算/复制；会话title并发串行与严格写/比较。**14 pass/9 filtered/59 expect/Completed（runner23 selected/9 skipped）**。其中既有10,010次本地fsync准备的测试显式120秒timeout，首跑约40.7秒完成，不作为独立性能bug；没有重跑。没有执行scope认证、权限/替换文件或真实worker测试。\n- 所有新发现区分真实 parser/本地磁盘和外部平台；没有构建、真实模型/账户/外部服务/进程执行。\n\n## 候选与跳过\n\n- Mobile buildSessionHistory 会丢 FoldItem 的 injected/clientMessageId/timestamp 等字段；其附件/内部路径投影已有旧 `docs/review-2026-10-12/legacy-history-round24.md` R84 详细确认。本轮只读核对该已知家族，没有另做附件复现或重复计入。额外internal anchor为空白气泡的影响尚未独立动态验证，继续仅作相关候选。\n- 辅助只读检索带入不存在的 shared/transcript.ts、we",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/14249/path",
+      "kind": "json-value-scalar",
+      "offset": 20,
+      "context": "packages/server/src/model-trace-history.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/14249/directSourcePathsInObject/0",
+      "kind": "json-value-scalar",
+      "offset": 20,
+      "context": "packages/server/src/model-trace-history.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/14250/path",
+      "kind": "json-value-scalar",
+      "offset": 20,
+      "context": "packages/server/src/model-trace-history.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/14250/directSourcePathsInObject/0",
+      "kind": "json-value-scalar",
+      "offset": 20,
+      "context": "packages/server/src/model-trace-history.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/14251/path",
+      "kind": "json-value-scalar",
+      "offset": 20,
+      "context": "packages/server/src/model-trace-history.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+      "pointer": "/claims/14251/directSourcePathsInObject/0",
+      "kind": "json-value-scalar",
+      "offset": 20,
+      "context": "packages/server/src/model-trace-history.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-index.json",
+      "pointer": "/files/3867/path",
+      "kind": "json-value-scalar",
+      "offset": 20,
+      "context": "packages/server/src/model-trace-history.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/package-inventory.json",
+      "pointer": "/files/3867/path",
+      "kind": "json-value-scalar",
+      "offset": 20,
+      "context": "packages/server/src/model-trace-history.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-status/comparison.json",
+      "pointer": "/unknownPaths/3519",
+      "kind": "json-value-scalar",
+      "offset": 20,
+      "context": "packages/server/src/model-trace-history.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round44/evidence/coverage-status/current-inventory.json",
+      "pointer": "/files/3868/path",
+      "kind": "json-value-scalar",
+      "offset": 20,
+      "context": "packages/server/src/model-trace-history.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round48/evidence/session-title-frontier/history-contexts.json",
+      "pointer": "/hits/source_filename/2/context",
+      "kind": "json-value-scalar",
+      "offset": 227,
+      "context": "件项，不把它扩大成所有Windows会话打不开。\n- 查重：当前两批 audit及旧review对room默认Windows name关键词有限查重未见同项；与旧room进程退出/approval/接管问题不同。\n\n## 覆盖与既有基线\n\n- 选择性阅读 Server room-history、room-manager（metadata/seq/history/agent事件等段）、session-titles-store、HubRunReplay、model-trace-history/http 结构及 Mobile history/事件投影接线。认证/权限方向不做动态验证。\n- `evidence/root-codex-parser-baseline.log`：当前既有 parser suite 仅排除 approval_request 方向，**15 pass / 1 filtered / 24 expect / Completed（runner16 selected/1 skipped）**。该 suite 的 file_change/MCP mock 形状与官方协议不一致，不能用其绿色结果反驳新正常",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round48/evidence/session-title-frontier/history-contexts.json",
+      "pointer": "/hits/source_filename/5/context",
+      "kind": "json-value-scalar",
+      "offset": 227,
+      "context": "件项，不把它扩大成所有Windows会话打不开。\n- 查重：当前两批 audit及旧review对room默认Windows name关键词有限查重未见同项；与旧room进程退出/approval/接管问题不同。\n\n## 覆盖与既有基线\n\n- 选择性阅读 Server room-history、room-manager（metadata/seq/history/agent事件等段）、session-titles-store、HubRunReplay、model-trace-history/http 结构及 Mobile history/事件投影接线。认证/权限方向不做动态验证。\n- `evidence/root-codex-parser-baseline.log`：当前既有 parser suite 仅排除 approval_request 方向，**15 pass / 1 filtered / 24 expect / Completed（runner16 selected/1 skipped）**。该 suite 的 file_change/MCP mock 形状与官方协议不一致，不能用其绿色结果反驳新正常",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round48/evidence/session-title-frontier/history-contexts.json",
+      "pointer": "/hits/source_filename/12/context",
+      "kind": "json-value-scalar",
+      "offset": 57,
+      "context": "seq/history/agent事件等段）、session-titles-store、HubRunReplay、model-trace-history/http 结构及 Mobile history/事件投影接线。认证/权限方向不做动态验证。\n- `evidence/root-codex-parser-baseline.log`：当前既有 parser suite 仅排除 approval_request 方向，**15 pass / 1 filtered / 24 expect / Completed（runner16 selected/1 skipped）**。该 suite 的 file_change/MCP mock 形状与官方协议不一致，不能用其绿色结果反驳新正常",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round48/evidence/session-title-frontier/history-contexts.json",
+      "pointer": "/hits/source_filename/13/context",
+      "kind": "json-value-scalar",
+      "offset": 57,
+      "context": "seq/history/agent事件等段）、session-titles-store、HubRunReplay、model-trace-history/http 结构及 Mobile history/事件投影接线。认证/权限方向不做动态验证。\n- `evidence/root-codex-parser-baseline.log`：当前既有 parser suite 仅排除 approval_request 方向，**15 pass / 1 filtered / 24 expect / Completed（runner16 selected/1 skipped）**。该 suite 的 file_change/MCP mock 形状与官方协议不一致，不能用其绿色结果反驳新正常",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round48/evidence/session-title-frontier/history-contexts.json",
+      "pointer": "/hits/source_filename/22/context",
+      "kind": "json-value-scalar",
+      "offset": 227,
+      "context": "件项，不把它扩大成所有Windows会话打不开。\n- 查重：当前两批 audit及旧review对room默认Windows name关键词有限查重未见同项；与旧room进程退出/approval/接管问题不同。\n\n## 覆盖与既有基线\n\n- 选择性阅读 Server room-history、room-manager（metadata/seq/history/agent事件等段）、session-titles-store、HubRunReplay、model-trace-history/http 结构及 Mobile history/事件投影接线。认证/权限方向不做动态验证。\n- `evidence/root-codex-parser-baseline.log`：当前既有 parser suite 仅排除 approval_request 方向，**15 pass / 1 filtered / 24 expect / Completed（runner16 selected/1 skipped）**。该 suite 的 file_change/MCP mock 形状与官方协议不一致，不能用其绿色结果反驳新正常",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round48/evidence/session-title-frontier/history-contexts.json",
+      "pointer": "/hits/source_filename/23/context",
+      "kind": "json-value-scalar",
+      "offset": 384,
+      "context": "adable=false；factory若被启动就抛错，实际未调用agent。\n- 条件/边界：运行机器不是 Windows；动态证明的是接受的 Windows 格式字符串与本地metadata读写自相矛盾，没有创建真实Windows长路径、启动真实CLI或验证Windows操作系统的长路径设置。因此保守按P3条件项，不把它扩大成所有Windows会话打不开。\n- 查重：当前两批 audit及旧review对room默认Windows name关键词有限查重未见同项；与旧room进程退出/approval/接管问题不同。\n\n## 覆盖与既有基线\n\n- 选择性阅读 Server room-history、room-manager（metadata/seq/history/agent事件等段）、session-titles-store、HubRunReplay、model-trace-history/http 结构及 Mobile history/事件投影接线。认证/权限方向不做动态验证。\n- `evidence/root-codex-parser-baseline.log`：当前既有 parser suite 仅排除 approval_request 方向，**15 pass / 1 filtered / 24 expect / Completed（runner16 selected/1 skipped）**。该 suite 的 file_change/MCP mock 形状与官方协议不一致，不能用其绿色结果反驳新正常形状证据。\n- `evidence/root-history-replay-baseline.log`：选择性普通磁盘历史冻结/跨冷重建、since过滤、snapshot过期/较大普通分页；内存run replay前缀/重叠/预算/复制；会话title并发串行与严格写/比较。**14 pass/9 filtered/59 expect/Completed（runner23 selected/9 skipped）**。其中既有10,010次本地fsync准备的测试显式120秒timeout，首跑约40.7秒完成，不作为独立性能bug；没有重跑。没有执行scope认证、权限/替换文件或真实worker测试。\n- 所有新发现区分真实 parser/本地磁盘和外部平台；没有构建、真实模型/账户/外部服务/进程执行。\n\n## 候选与跳过\n\n- Mobile buildSessionHistory 会丢",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/packet-review/checks.json",
+      "pointer": "/packetChecks/3/sourceRowMetadata/7/path",
+      "kind": "json-value-scalar",
+      "offset": 20,
+      "context": "packages/server/src/model-trace-history.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/packet-review/checks.json",
+      "pointer": "/packetChecks/4/sourceRowMetadata/0/path",
+      "kind": "json-value-scalar",
+      "offset": 20,
+      "context": "packages/server/src/model-trace-history.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/root-summary-review/coverage-rows.json",
+      "pointer": "/9/row/path",
+      "kind": "json-value-scalar",
+      "offset": 20,
+      "context": "packages/server/src/model-trace-history.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/root-summary-review/coverage-rows.json",
+      "pointer": "/41/row/path",
+      "kind": "json-value-scalar",
+      "offset": 20,
+      "context": "packages/server/src/model-trace-history.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/root-summary-review/coverage-rows.json",
+      "pointer": "/41/row/directSourcePathsInObject/0",
+      "kind": "json-value-scalar",
+      "offset": 20,
+      "context": "packages/server/src/model-trace-history.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/root-summary-review/coverage-rows.json",
+      "pointer": "/42/row/path",
+      "kind": "json-value-scalar",
+      "offset": 20,
+      "context": "packages/server/src/model-trace-history.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/root-summary-review/coverage-rows.json",
+      "pointer": "/42/row/directSourcePathsInObject/0",
+      "kind": "json-value-scalar",
+      "offset": 20,
+      "context": "packages/server/src/model-trace-history.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/root-summary-review/coverage-rows.json",
+      "pointer": "/43/row/path",
+      "kind": "json-value-scalar",
+      "offset": 20,
+      "context": "packages/server/src/model-trace-history.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/root-summary-review/coverage-rows.json",
+      "pointer": "/43/row/directSourcePathsInObject/0",
+      "kind": "json-value-scalar",
+      "offset": 20,
+      "context": "packages/server/src/model-trace-history.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/root-summary-review/coverage-rows.json",
+      "pointer": "/47/row/path",
+      "kind": "json-value-scalar",
+      "offset": 20,
+      "context": "packages/server/src/model-trace-history.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/root-summary-review/coverage-rows.json",
+      "pointer": "/51/row/path",
+      "kind": "json-value-scalar",
+      "offset": 20,
+      "context": "packages/server/src/model-trace-history.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/root-summary-review/coverage-rows.json",
+      "pointer": "/55/row/path",
+      "kind": "json-value-scalar",
+      "offset": 20,
+      "context": "packages/server/src/model-trace-history.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/root-summary-review/history.json",
+      "pointer": "/hits/1-path/0/context",
+      "kind": "json-value-scalar",
+      "offset": 20,
+      "context": "packages/server/src/model-trace-history.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/root-summary-review/history.json",
+      "pointer": "/hits/1-path/1/context",
+      "kind": "json-value-scalar",
+      "offset": 20,
+      "context": "packages/server/src/model-trace-history.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/root-summary-review/history.json",
+      "pointer": "/hits/1-path/2/context",
+      "kind": "json-value-scalar",
+      "offset": 20,
+      "context": "packages/server/src/model-trace-history.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/root-summary-review/history.json",
+      "pointer": "/hits/1-path/3/context",
+      "kind": "json-value-scalar",
+      "offset": 20,
+      "context": "packages/server/src/model-trace-history.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/root-summary-review/history.json",
+      "pointer": "/hits/1-path/4/context",
+      "kind": "json-value-scalar",
+      "offset": 20,
+      "context": "packages/server/src/model-trace-history.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/root-summary-review/history.json",
+      "pointer": "/hits/1-path/5/context",
+      "kind": "json-value-scalar",
+      "offset": 20,
+      "context": "packages/server/src/model-trace-history.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/root-summary-review/history.json",
+      "pointer": "/hits/1-path/6/context",
+      "kind": "json-value-scalar",
+      "offset": 20,
+      "context": "packages/server/src/model-trace-history.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/root-summary-review/history.json",
+      "pointer": "/hits/1-path/7/context",
+      "kind": "json-value-scalar",
+      "offset": 20,
+      "context": "packages/server/src/model-trace-history.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/root-summary-review/history.json",
+      "pointer": "/hits/1-path/8/context",
+      "kind": "json-value-scalar",
+      "offset": 20,
+      "context": "packages/server/src/model-trace-history.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/root-summary-review/history.json",
+      "pointer": "/hits/1-path/9/context",
+      "kind": "json-value-scalar",
+      "offset": 20,
+      "context": "packages/server/src/model-trace-history.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/root-summary-review/history.json",
+      "pointer": "/hits/1-path/10/context",
+      "kind": "json-value-scalar",
+      "offset": 20,
+      "context": "packages/server/src/model-trace-history.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/root-summary-review/history.json",
+      "pointer": "/hits/1-path/11/context",
+      "kind": "json-value-scalar",
+      "offset": 20,
+      "context": "packages/server/src/model-trace-history.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/root-summary-review/history.json",
+      "pointer": "/hits/1-path/12/context",
+      "kind": "json-value-scalar",
+      "offset": 20,
+      "context": "packages/server/src/model-trace-history.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/root-summary-review/history.json",
+      "pointer": "/hits/1-path/13/context",
+      "kind": "json-value-scalar",
+      "offset": 20,
+      "context": "packages/server/src/model-trace-history.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/root-summary-review/history.json",
+      "pointer": "/hits/summary-contract/1/context",
+      "kind": "json-value-scalar",
+      "offset": 20,
+      "context": "packages/server/src/model-trace-history.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/root-summary-review/history.json",
+      "pointer": "/hits/summary-contract/2/context",
+      "kind": "json-value-scalar",
+      "offset": 20,
+      "context": "packages/server/src/model-trace-history.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/root-summary-review/history.json",
+      "pointer": "/hits/summary-contract/3/context",
+      "kind": "json-value-scalar",
+      "offset": 227,
+      "context": "件项，不把它扩大成所有Windows会话打不开。\n- 查重：当前两批 audit及旧review对room默认Windows name关键词有限查重未见同项；与旧room进程退出/approval/接管问题不同。\n\n## 覆盖与既有基线\n\n- 选择性阅读 Server room-history、room-manager（metadata/seq/history/agent事件等段）、session-titles-store、HubRunReplay、model-trace-history/http 结构及 Mobile history/事件投影接线。认证/权限方向不做动态验证。\n- `evidence/root-codex-parser-baseline.log`：当前既有 parser suite 仅排除 approval_request 方向，**15 pass / 1 filtered / 24 expect / Completed（runner16 selected/1 skipped）**。该 suite 的 file_change/MCP mock 形状与官方协议不一致，不能用其绿色结果反驳新正常",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/root-summary-review/history.json",
+      "pointer": "/hits/summary-contract/6/context",
+      "kind": "json-value-scalar",
+      "offset": 17,
+      "context": "ore、HubRunReplay、model-trace-history/http 结构及 Mobile history/事件投影接线。认证/权限方向不做动态验证。\n- `evidence/root-codex-parser-baseline.log`：当前既有 parser suite 仅排除 approval_request 方向，**15 pass / 1 filtered / 24 expect / Completed（runner16 selected/1 skipped）**。该 suite 的 file_change/MCP mock 形状与官方协议不一致，不能用其绿色结果反驳新正常",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/root-summary-review/history.json",
+      "pointer": "/hits/summary-contract/7/context",
+      "kind": "json-value-scalar",
+      "offset": 17,
+      "context": "ore、HubRunReplay、model-trace-history/http 结构及 Mobile history/事件投影接线。认证/权限方向不做动态验证。\n- `evidence/root-codex-parser-baseline.log`：当前既有 parser suite 仅排除 approval_request 方向，**15 pass / 1 filtered / 24 expect / Completed（runner16 selected/1 skipped）**。该 suite 的 file_change/MCP mock 形状与官方协议不一致，不能用其绿色结果反驳新正常形状证据。\n- `evidence/root-history-replay-baseline.lo",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/root-summary-review/history.json",
+      "pointer": "/hits/summary-contract/8/context",
+      "kind": "json-value-scalar",
+      "offset": 227,
+      "context": "件项，不把它扩大成所有Windows会话打不开。\n- 查重：当前两批 audit及旧review对room默认Windows name关键词有限查重未见同项；与旧room进程退出/approval/接管问题不同。\n\n## 覆盖与既有基线\n\n- 选择性阅读 Server room-history、room-manager（metadata/seq/history/agent事件等段）、session-titles-store、HubRunReplay、model-trace-history/http 结构及 Mobile history/事件投影接线。认证/权限方向不做动态验证。\n- `evidence/root-codex-parser-baseline.log`：当前既有 parser suite 仅排除 approval_request 方向，**15 pass / 1 filtered / 24 expect / Completed（runner16 selected/1 skipped）**。该 suite 的 file_change/MCP mock 形状与官方协议不一致，不能用其绿色结果反驳新正常",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/root-summary-review/history.json",
+      "pointer": "/hits/summary-contract/9/context",
+      "kind": "json-value-scalar",
+      "offset": 57,
+      "context": "seq/history/agent事件等段）、session-titles-store、HubRunReplay、model-trace-history/http 结构及 Mobile history/事件投影接线。认证/权限方向不做动态验证。\n- `evidence/root-codex-parser-baseline.log`：当前既有 parser suite 仅排除 approval_request 方向，**15 pass / 1 filtered / 24 expect / Completed（runner16 selected/1 skipped）**。该 suite 的 file_change/MCP mock 形状与官方协议不一致，不能用其绿色结果反驳新正常",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/root-summary-review/history.json",
+      "pointer": "/hits/summary-contract/10/context",
+      "kind": "json-value-scalar",
+      "offset": 17,
+      "context": "ore、HubRunReplay、model-trace-history/http 结构及 Mobile history/事件投影接线。认证/权限方向不做动态验证。\n- `evidence/root-codex-parser-baseline.log`：当前既有 parser suite 仅排除 approval_request 方向，**15 pass / 1 filtered / 24 expect / Completed（runner16 selected/1 skipped）**。该 suite 的 file_change/MCP mock 形状与官方协议不一致，不能用其绿色结果反驳新正常",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/root-summary-review/history.json",
+      "pointer": "/hits/summary-contract/11/context",
+      "kind": "json-value-scalar",
+      "offset": 17,
+      "context": "ore、HubRunReplay、model-trace-history/http 结构及 Mobile history/事件投影接线。认证/权限方向不做动态验证。\n- `evidence/root-codex-parser-baseline.log`：当前既有 parser suite 仅排除 approval_request 方向，**15 pass / 1 filtered / 24 expect / Completed（runner16 selected/1 skipped）**。该 suite 的 file_change/MCP mock 形状与官方协议不一致，不能用其绿色结果反驳新正常形状证据。\n- `evidence/root-history-replay-baseline.lo",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/root-summary-review/history.json",
+      "pointer": "/hits/summary-contract/12/context",
+      "kind": "json-value-scalar",
+      "offset": 57,
+      "context": "seq/history/agent事件等段）、session-titles-store、HubRunReplay、model-trace-history/http 结构及 Mobile history/事件投影接线。认证/权限方向不做动态验证。\n- `evidence/root-codex-parser-baseline.log`：当前既有 parser suite 仅排除 approval_request 方向，**15 pass / 1 filtered / 24 expect / Completed（runner16 selected/1 skipped）**。该 suite 的 file_change/MCP mock 形状与官方协议不一致，不能用其绿色结果反驳新正常",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/root-summary-review/history.json",
+      "pointer": "/hits/summary-contract/14/context",
+      "kind": "json-value-scalar",
+      "offset": 20,
+      "context": "packages/server/src/model-trace-history.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/root-summary-review/history.json",
+      "pointer": "/hits/summary-contract/19/context",
+      "kind": "json-value-scalar",
+      "offset": 20,
+      "context": "packages/server/src/model-trace-history.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/root-summary-review/history.json",
+      "pointer": "/hits/summary-contract/20/context",
+      "kind": "json-value-scalar",
+      "offset": 227,
+      "context": "件项，不把它扩大成所有Windows会话打不开。\n- 查重：当前两批 audit及旧review对room默认Windows name关键词有限查重未见同项；与旧room进程退出/approval/接管问题不同。\n\n## 覆盖与既有基线\n\n- 选择性阅读 Server room-history、room-manager（metadata/seq/history/agent事件等段）、session-titles-store、HubRunReplay、model-trace-history/http 结构及 Mobile history/事件投影接线。认证/权限方向不做动态验证。\n- `evidence/root-codex-parser-baseline.log`：当前既有 parser suite 仅排除 approval_request 方向，**15 pass / 1 filtered / 24 expect / Completed（runner16 selected/1 skipped）**。该 suite 的 file_change/MCP mock 形状与官方协议不一致，不能用其绿色结果反驳新正常",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/root-summary-review/history.json",
+      "pointer": "/hits/summary-contract/23/context",
+      "kind": "json-value-scalar",
+      "offset": 267,
+      "context": "长路径、启动真实CLI或验证Windows操作系统的长路径设置。因此保守按P3条件项，不把它扩大成所有Windows会话打不开。\n- 查重：当前两批 audit及旧review对room默认Windows name关键词有限查重未见同项；与旧room进程退出/approval/接管问题不同。\n\n## 覆盖与既有基线\n\n- 选择性阅读 Server room-history、room-manager（metadata/seq/history/agent事件等段）、session-titles-store、HubRunReplay、model-trace-history/http 结构及 Mobile history/事件投影接线。认证/权限方向不做动态验证。\n- `evidence/root-codex-parser-baseline.log`：当前既有 parser suite 仅排除 approval_request 方向，**15 pass / 1 filtered / 24 expect / Completed（runner16 selected/1 skipped）**。该 suite 的 file_change/MCP mock 形状与官方协议不一致，不能用其绿色结果反驳新正常形状证据。\n- `evidence/root-history-replay-baseline.log`：选择性普通磁盘历史冻结/跨冷重建、since过滤、snapshot过期/较大普通分页；内存run replay前缀/重叠/预算/复制；会话title并发串行与严格写/比较。**14 pass/9 filtered/59 expect/Completed（runner23 selected/9 skipped）**。其中既有10,010次本地fsy",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/root-summary-review/history.json",
+      "pointer": "/hits/summary-contract/35/context",
+      "kind": "json-value-scalar",
+      "offset": 20,
+      "context": "packages/server/src/model-trace-history.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/root-summary-review/history.json",
+      "pointer": "/hits/summary-contract/36/context",
+      "kind": "json-value-scalar",
+      "offset": 20,
+      "context": "packages/server/src/model-trace-history.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/root-summary-review/history.json",
+      "pointer": "/hits/summary-contract/37/context",
+      "kind": "json-value-scalar",
+      "offset": 20,
+      "context": "packages/server/src/model-trace-history.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/root-summary-review/history.json",
+      "pointer": "/hits/summary-contract/38/context",
+      "kind": "json-value-scalar",
+      "offset": 20,
+      "context": "packages/server/src/model-trace-history.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/root-summary-review/history.json",
+      "pointer": "/hits/summary-contract/39/context",
+      "kind": "json-value-scalar",
+      "offset": 20,
+      "context": "packages/server/src/model-trace-history.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/root-summary-review/history.json",
+      "pointer": "/hits/summary-contract/40/context",
+      "kind": "json-value-scalar",
+      "offset": 20,
+      "context": "packages/server/src/model-trace-history.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/root-summary-review/history.json",
+      "pointer": "/hits/summary-contract/42/context",
+      "kind": "json-value-scalar",
+      "offset": 20,
+      "context": "packages/server/src/model-trace-history.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/root-summary-review/history.json",
+      "pointer": "/hits/summary-contract/44/context",
+      "kind": "json-value-scalar",
+      "offset": 20,
+      "context": "packages/server/src/model-trace-history.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/root-summary-review/history.json",
+      "pointer": "/hits/summary-contract/46/context",
+      "kind": "json-value-scalar",
+      "offset": 20,
+      "context": "packages/server/src/model-trace-history.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/root-summary-review/history.json",
+      "pointer": "/hits/summary-contract/48/context",
+      "kind": "json-value-scalar",
+      "offset": 20,
+      "context": "packages/server/src/model-trace-history.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/root-summary-review/history.json",
+      "pointer": "/hits/summary-contract/54/context",
+      "kind": "json-value-scalar",
+      "offset": 227,
+      "context": "件项，不把它扩大成所有Windows会话打不开。\n- 查重：当前两批 audit及旧review对room默认Windows name关键词有限查重未见同项；与旧room进程退出/approval/接管问题不同。\n\n## 覆盖与既有基线\n\n- 选择性阅读 Server room-history、room-manager（metadata/seq/history/agent事件等段）、session-titles-store、HubRunReplay、model-trace-history/http 结构及 Mobile history/事件投影接线。认证/权限方向不做动态验证。\n- `evidence/root-codex-parser-baseline.log`：当前既有 parser suite 仅排除 approval_request 方向，**15 pass / 1 filtered / 24 expect / Completed（runner16 selected/1 skipped）**。该 suite 的 file_change/MCP mock 形状与官方协议不一致，不能用其绿色结果反驳新正常",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/root-summary-review/history.json",
+      "pointer": "/hits/summary-contract/55/context",
+      "kind": "json-value-scalar",
+      "offset": 227,
+      "context": "件项，不把它扩大成所有Windows会话打不开。\n- 查重：当前两批 audit及旧review对room默认Windows name关键词有限查重未见同项；与旧room进程退出/approval/接管问题不同。\n\n## 覆盖与既有基线\n\n- 选择性阅读 Server room-history、room-manager（metadata/seq/history/agent事件等段）、session-titles-store、HubRunReplay、model-trace-history/http 结构及 Mobile history/事件投影接线。认证/权限方向不做动态验证。\n- `evidence/root-codex-parser-baseline.log`：当前既有 parser suite 仅排除 approval_request 方向，**15 pass / 1 filtered / 24 expect / Completed（runner16 selected/1 skipped）**。该 suite 的 file_change/MCP mock 形状与官方协议不一致，不能用其绿色结果反驳新正常",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/root-summary-review/history.json",
+      "pointer": "/hits/summary-contract/56/context",
+      "kind": "json-value-scalar",
+      "offset": 57,
+      "context": "seq/history/agent事件等段）、session-titles-store、HubRunReplay、model-trace-history/http 结构及 Mobile history/事件投影接线。认证/权限方向不做动态验证。\n- `evidence/root-codex-parser-baseline.log`：当前既有 parser suite 仅排除 approval_request 方向，**15 pass / 1 filtered / 24 expect / Completed（runner16 selected/1 skipped）**。该 suite 的 file_change/MCP mock 形状与官方协议不一致，不能用其绿色结果反驳新正常",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/root-summary-review/history.json",
+      "pointer": "/hits/summary-contract/57/context",
+      "kind": "json-value-scalar",
+      "offset": 57,
+      "context": "seq/history/agent事件等段）、session-titles-store、HubRunReplay、model-trace-history/http 结构及 Mobile history/事件投影接线。认证/权限方向不做动态验证。\n- `evidence/root-codex-parser-baseline.log`：当前既有 parser suite 仅排除 approval_request 方向，**15 pass / 1 filtered / 24 expect / Completed（runner16 selected/1 skipped）**。该 suite 的 file_change/MCP mock 形状与官方协议不一致，不能用其绿色结果反驳新正常",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/root-summary-review/history.json",
+      "pointer": "/hits/summary-contract/58/context",
+      "kind": "json-value-scalar",
+      "offset": 227,
+      "context": "件项，不把它扩大成所有Windows会话打不开。\n- 查重：当前两批 audit及旧review对room默认Windows name关键词有限查重未见同项；与旧room进程退出/approval/接管问题不同。\n\n## 覆盖与既有基线\n\n- 选择性阅读 Server room-history、room-manager（metadata/seq/history/agent事件等段）、session-titles-store、HubRunReplay、model-trace-history/http 结构及 Mobile history/事件投影接线。认证/权限方向不做动态验证。\n- `evidence/root-codex-parser-baseline.log`：当前既有 parser suite 仅排除 approval_request 方向，**15 pass / 1 filtered / 24 expect / Completed（runner16 selected/1 skipped）**。该 suite 的 file_change/MCP mock 形状与官方协议不一致，不能用其绿色结果反驳新正常",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/root-summary-review/history.json",
+      "pointer": "/hits/summary-contract/59/context",
+      "kind": "json-value-scalar",
+      "offset": 267,
+      "context": "长路径、启动真实CLI或验证Windows操作系统的长路径设置。因此保守按P3条件项，不把它扩大成所有Windows会话打不开。\n- 查重：当前两批 audit及旧review对room默认Windows name关键词有限查重未见同项；与旧room进程退出/approval/接管问题不同。\n\n## 覆盖与既有基线\n\n- 选择性阅读 Server room-history、room-manager（metadata/seq/history/agent事件等段）、session-titles-store、HubRunReplay、model-trace-history/http 结构及 Mobile history/事件投影接线。认证/权限方向不做动态验证。\n- `evidence/root-codex-parser-baseline.log`：当前既有 parser suite 仅排除 approval_request 方向，**15 pass / 1 filtered / 24 expect / Completed（runner16 selected/1 skipped）**。该 suite 的 file_change/MCP mock 形状与官方协议不一致，不能用其绿色结果反驳新正常形状证据。\n- `evidence/root-history-replay-baseline.log`：选择性普通磁盘历史冻结/跨冷重建、since过滤、snapshot过期/较大普通分页；内存run replay前缀/重叠/预算/复制；会话title并发串行与严格写/比较。**14 pass/9 filtered/59 expect/Completed（runner23 selected/9 skipped）**。其中既有10,010次本地fsy",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/root-summary-review/selection-decisions.json",
+      "pointer": "/decisions/1/path",
+      "kind": "json-value-scalar",
+      "offset": 20,
+      "context": "packages/server/src/model-trace-history.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/root-summary-review/selection-initial-pins.json",
+      "pointer": "/files/1/path",
+      "kind": "json-value-scalar",
+      "offset": 20,
+      "context": "packages/server/src/model-trace-history.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/root-summary-review/source-manifest.json",
+      "pointer": "/hashOnlyFiles/0/path",
+      "kind": "json-value-scalar",
+      "offset": 20,
+      "context": "packages/server/src/model-trace-history.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/title-gate/history-contexts.json",
+      "pointer": "/oldCause/26/context",
+      "kind": "json-value-scalar",
+      "offset": 227,
+      "context": "件项，不把它扩大成所有Windows会话打不开。\n- 查重：当前两批 audit及旧review对room默认Windows name关键词有限查重未见同项；与旧room进程退出/approval/接管问题不同。\n\n## 覆盖与既有基线\n\n- 选择性阅读 Server room-history、room-manager（metadata/seq/history/agent事件等段）、session-titles-store、HubRunReplay、model-trace-history/http 结构及 Mobile history/事件投影接线。认证/权限方向不做动态验证。\n- `evidence/root-codex-parser-baseline.log`：当前既有 parser suite 仅排除 approval_request 方向，**15 pass / 1 filtered / 24 expect / Completed（runner16 selected/1 skipped）**。该 suite 的 file_change/MCP mock 形状与官方协议不一致，不能用其绿色结果反驳新正常",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/trace-history-frontier/coverage-gate-rows.json",
+      "pointer": "/rows/1/row/path",
+      "kind": "json-value-scalar",
+      "offset": 20,
+      "context": "packages/server/src/model-trace-history.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/trace-history-frontier/coverage-gate-rows.json",
+      "pointer": "/rows/2/row/path",
+      "kind": "json-value-scalar",
+      "offset": 20,
+      "context": "packages/server/src/model-trace-history.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/trace-history-frontier/coverage-gate-rows.json",
+      "pointer": "/rows/3/row/path",
+      "kind": "json-value-scalar",
+      "offset": 20,
+      "context": "packages/server/src/model-trace-history.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/trace-history-frontier/coverage-gate-rows.json",
+      "pointer": "/rows/4/row/path",
+      "kind": "json-value-scalar",
+      "offset": 20,
+      "context": "packages/server/src/model-trace-history.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/trace-history-frontier/coverage-gate-rows.json",
+      "pointer": "/rows/5/row/path",
+      "kind": "json-value-scalar",
+      "offset": 20,
+      "context": "packages/server/src/model-trace-history.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/trace-history-frontier/coverage-gate-rows.json",
+      "pointer": "/rows/6/row/path",
+      "kind": "json-value-scalar",
+      "offset": 20,
+      "context": "packages/server/src/model-trace-history.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/trace-history-frontier/coverage-gate-rows.json",
+      "pointer": "/rows/7/row/path",
+      "kind": "json-value-scalar",
+      "offset": 20,
+      "context": "packages/server/src/model-trace-history.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/trace-history-frontier/history-contexts.json",
+      "pointer": "/trace-history/0/text",
+      "kind": "json-value-scalar",
+      "offset": 20,
+      "context": "packages/server/src/model-trace-history.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/trace-history-frontier/history-contexts.json",
+      "pointer": "/trace-history/1/text",
+      "kind": "json-value-scalar",
+      "offset": 20,
+      "context": "packages/server/src/model-trace-history.ts",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/trace-history-frontier/history-contexts.json",
+      "pointer": "/trace-history/2/text",
+      "kind": "json-value-scalar",
+      "offset": 20,
+      "context": "packages/server/src/model-trace-history.ts",
+      "completeScalar": true
+    }
+  ],
+  "oldCause": [
+    {
+      "path": "docs/audit-2026-10-17-round10/evidence/root-dedup.json",
+      "pointer": "/hits/history_identity/29/context",
+      "kind": "json-value-scalar",
+      "offset": 227,
+      "context": "件项，不把它扩大成所有Windows会话打不开。\n- 查重：当前两批 audit及旧review对room默认Windows name关键词有限查重未见同项；与旧room进程退出/approval/接管问题不同。\n\n## 覆盖与既有基线\n\n- 选择性阅读 Server room-history、room-manager（metadata/seq/history/agent事件等段）、session-titles-store、HubRunReplay、model-trace-history/http 结构及 Mobile history/事件投影接线。认证/权限方向不做动态验证。\n- `evidence/root-codex-parser-baseline.log`：当前既有 parser suite 仅排除 approval_request 方向，**15 pass / 1 filtered / 24 expect / Completed（runner16 selected/1 skipped）**。该 suite 的 file_change/MCP mock 形状与官方协议不一致，不能用其绿色结果反驳新正常",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round14/evidence/bytes-dedup.json",
+      "pointer": "/hits/codex_parse/3/snippet",
+      "kind": "json-value-scalar",
+      "offset": 17,
+      "context": "ore、HubRunReplay、model-trace-history/http 结构及 Mobile history/事件投影接线。认证/权限方向不做动态验证。\n- `evidence/root-codex-parser-baseline.log`：当前既有 parser suite 仅排除 approval_request 方向，**15 pass / 1 filtered / 24 expect / Completed（runner16 selected/1 skipped）**。该 suite 的 file_change/MCP mock 形状与官方协议不一致，不能用其绿色结果反驳新正常",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round14/evidence/bytes-dedup.json",
+      "pointer": "/hits/codex_parse/11/snippet",
+      "kind": "json-value-scalar",
+      "offset": 17,
+      "context": "ore、HubRunReplay、model-trace-history/http 结构及 Mobile history/事件投影接线。认证/权限方向不做动态验证。\n- `evidence/root-codex-parser-baseline.log`：当前既有 parser suite 仅排除 approval_request 方向，**15 pass / 1 filtered / 24 expect / Completed（runner16 selected/1 skipped）**。该 suite 的 file_change/MCP mock 形状与官方协议不一致，不能用其绿色结果反驳新正常形状证据。\n- `evidence/root-history-replay-baseline.lo",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round18/traceapi.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 583,
+      "context": "a8`。本方向 **0 项新增确认缺陷、0 项新增候选、0 项旧问题关联**。一组首次 guarded Bun 验证通过：**8 个聚焦测试、23 次断言、0 失败、0 跳过**。这只是下面明确列出的客户端适配器覆盖，不代表整个模型历史功能已验证。\n\n## 审查范围与合同\n\n- 实际运行叶模块 [`model-trace-api.ts`](../../packages/web/src/model-trace-api.ts:25) 中的 `createRemoteModelTraceApi`，通过注入的内存 `request(path)` 记录路径、返回测试自有对象。模块的 Core 引用全部是 type-only；没有导入 Core barrel/runtime，也没有 mock Core 或 i18n。\n- 普通合同为四个 GET 资源的路径选择、可选查询参数编码及 requester 返回值透传：源码 [list/sessions](../../packages/web/src/model-trace-api.ts:48)、[get](../../packages/web/src/model-trace-api.ts:56)、[getConfig](../../packages/web/src/model-trace-api.ts:68)，类型选读 [普通过滤字段与分页返回类型](../../packages/core/src/model-traces/types.ts:97)，本地文档 [Reading](../../docs/model-observability.md:107)。\n- 普通生产者只做静态选读：[`ModelTraceExplorer.tsx:267`](../../packages/web/src/components/ModelTraceExplorer.tsx:267) 传入 `limit`、`cursor`、字符串过滤值或 `undefined`；[`ModelTraceExplorer.tsx:313`](../../packages/web/src/components/ModelTraceExplorer.tsx:313) 组装 list 查询；[more](../../packages/web/src/components/ModelTraceExplorer.tsx:403) 继续传入 `nextCursor`。没有导入、渲染或运行该组件。\n- 现有 [`model-trace-api.test.ts`](../../packages/web/src/model-trace-api.test.ts:4) 的普通部分仅供静态合同参照；首次读取输出也包含同文件后续排除片段，但未分析这些分支或执行该文件。现有文件包含本批排除的负向边界用例，故没有用整份现有测试充当基线。\n\n## 首次验证结果\n\n命令、首次 combined stdout/stderr 与退出回执分别保存在 [fixture](evidence/traceapi-normal.test.ts)、[原始输出](evidence/traceapi-normal.first.raw.log)、[退出回执](evidence/traceapi-normal.first.exit.json)。raw 与 exit 文件均先落盘，再读取结果；只有一次执行，没有失败后修复或替代验证。\n\n```text\nnode scripts/run-bun-test",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/audit-2026-10-17-round18/traceapi.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 806,
+      "context": "eateRemoteModelTraceApi`，通过注入的内存 `request(path)` 记录路径、返回测试自有对象。模块的 Core 引用全部是 type-only；没有导入 Core barrel/runtime，也没有 mock Core 或 i18n。\n- 普通合同为四个 GET 资源的路径选择、可选查询参数编码及 requester 返回值透传：源码 [list/sessions](../../packages/web/src/model-trace-api.ts:48)、[get](../../packages/web/src/model-trace-api.ts:56)、[getConfig](../../packages/web/src/model-trace-api.ts:68)，类型选读 [普通过滤字段与分页返回类型](../../packages/core/src/model-traces/types.ts:97)，本地文档 [Reading](../../docs/model-observability.md:107)。\n- 普通生产者只做静态选读：[`ModelTraceExplorer.tsx:267`](../../packages/web/src/components/ModelTraceExplorer.tsx:267) 传入 `limit`、`cursor`、字符串过滤值或 `undefined`；[`ModelTraceExplorer.tsx:313`](../../packages/web/src/components/ModelTraceExplorer.tsx:313) 组装 list 查询；[more](../../packages/web/src/components/ModelTraceExplorer.tsx:403) 继续传入 `nextCursor`。没有导入、渲染或运行该组件。\n- 现有 [`model-trace-api.test.ts`](../../packages/web/src/model-trace-api.test.ts:4) 的普通部分仅供静态合同参照；首次读取输出也包含同文件后续排除片段，但未分析这些分支或执行该文件。现有文件包含本批排除的负向边界用例，故没有用整份现有测试充当基线。\n\n## 首次验证结果\n\n命令、首次 combined stdout/stderr 与退出回执分别保存在 [fixture](evidence/traceapi-normal.test.ts)、[原始输出](evidence/traceapi-normal.first.raw.log)、[退出回执](evidence/traceapi-normal.first.exit.json)。raw 与 exit 文件均先落盘，再读取结果；只有一次执行，没有失败后修复或替代验证。\n\n```text\nnode scripts/run-bun-test-shard.mjs --timeout 30000 docs/audit-2026-10-17-round18/evidence/traceapi-normal.test.ts\n```\n\n| 实际覆盖 | 观察结果与限度 |\n| --- | --- |\n| 省略查询、显式 `undefined` | `list`/`sessions` 四次调用落到两个无 `?` 的固定路径；fixture 第一项标题中的 “four ordinary route paths” 指四次调用，实际检",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/audit-2026-10-17-round18/traceapi.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 1002,
+      "context": "ions](../../packages/web/src/model-trace-api.ts:48)、[get](../../packages/web/src/model-trace-api.ts:56)、[getConfig](../../packages/web/src/model-trace-api.ts:68)，类型选读 [普通过滤字段与分页返回类型](../../packages/core/src/model-traces/types.ts:97)，本地文档 [Reading](../../docs/model-observability.md:107)。\n- 普通生产者只做静态选读：[`ModelTraceExplorer.tsx:267`](../../packages/web/src/components/ModelTraceExplorer.tsx:267) 传入 `limit`、`cursor`、字符串过滤值或 `undefined`；[`ModelTraceExplorer.tsx:313`](../../packages/web/src/components/ModelTraceExplorer.tsx:313) 组装 list 查询；[more](../../packages/web/src/components/ModelTraceExplorer.tsx:403) 继续传入 `nextCursor`。没有导入、渲染或运行该组件。\n- 现有 [`model-trace-api.test.ts`](../../packages/web/src/model-trace-api.test.ts:4) 的普通部分仅供静态合同参照；首次读取输出也包含同文件后续排除片段，但未分析这些分支或执行该文件。现有文件包含本批排除的负向边界用例，故没有用整份现有测试充当基线。\n\n## 首次验证结果\n\n命令、首次 combined stdout/stderr 与退出回执分别保存在 [fixture](evidence/traceapi-normal.test.ts)、[原始输出](evidence/traceapi-normal.first.raw.log)、[退出回执](evidence/traceapi-normal.first.exit.json)。raw 与 exit 文件均先落盘，再读取结果；只有一次执行，没有失败后修复或替代验证。\n\n```text\nnode scripts/run-bun-test-shard.mjs --timeout 30000 docs/audit-2026-10-17-round18/evidence/traceapi-normal.test.ts\n```\n\n| 实际覆盖 | 观察结果与限度 |\n| --- | --- |\n| 省略查询、显式 `undefined` | `list`/`sessions` 四次调用落到两个无 `?` 的固定路径；fixture 第一项标题中的 “four ordinary route paths” 指四次调用，实际检查的 pathname 是这两个。 |\n| 全部普通 list 字段 | `limit`、`cursor`、`search`、`traceId`、`sessionId`、`withoutSession`、`model`、`provider`、`purpose`、`callType`、`source`、`status`、`since`、`until` 经 URL 查询解码后与原值逐项相同；覆盖 Unicod",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/audit-2026-10-17-round22/evidence/title-dedup.json",
+      "pointer": "/matches/mechanism/9/excerpt",
+      "kind": "json-value-scalar",
+      "offset": 227,
+      "context": "件项，不把它扩大成所有Windows会话打不开。\n- 查重：当前两批 audit及旧review对room默认Windows name关键词有限查重未见同项；与旧room进程退出/approval/接管问题不同。\n\n## 覆盖与既有基线\n\n- 选择性阅读 Server room-history、room-manager（metadata/seq/history/agent事件等段）、session-titles-store、HubRunReplay、model-trace-history/http 结构及 Mobile history/事件投影接线。认证/权限方向不做动态验证。\n- `evidence/root-codex-parser-baseline.log`：当前既有 parser suite 仅排除 approval_request 方向，**15 pass / 1 filtered / 24 expect / Completed（runner16 selected/1 skipped）**。该 suite 的 file_change/MCP mock 形状与官方协议不一致，不能用其绿色结果反驳新正常",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round23/evidence/room-data-dedup.json",
+      "pointer": "/hits/exact/4/context",
+      "kind": "json-value-scalar",
+      "offset": 57,
+      "context": "seq/history/agent事件等段）、session-titles-store、HubRunReplay、model-trace-history/http 结构及 Mobile history/事件投影接线。认证/权限方向不做动态验证。\n- `evidence/root-codex-parser-baseline.log`：当前既有 parser suite 仅排除 approval_request 方向，**15 pass / 1 filtered / 24 expect / Completed（runner16 selected/1 skipped）**。该 suite 的 file_change/MCP mock 形状与官方协议不一致，不能用其绿色结果反驳新正常",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round23/evidence/room-data-dedup.json",
+      "pointer": "/hits/exact/12/context",
+      "kind": "json-value-scalar",
+      "offset": 17,
+      "context": "ore、HubRunReplay、model-trace-history/http 结构及 Mobile history/事件投影接线。认证/权限方向不做动态验证。\n- `evidence/root-codex-parser-baseline.log`：当前既有 parser suite 仅排除 approval_request 方向，**15 pass / 1 filtered / 24 expect / Completed（runner16 selected/1 skipped）**。该 suite 的 file_change/MCP mock 形状与官方协议不一致，不能用其绿色结果反驳新正常",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round23/evidence/room-data-dedup.json",
+      "pointer": "/hits/exact/20/context",
+      "kind": "json-value-scalar",
+      "offset": 17,
+      "context": "ore、HubRunReplay、model-trace-history/http 结构及 Mobile history/事件投影接线。认证/权限方向不做动态验证。\n- `evidence/root-codex-parser-baseline.log`：当前既有 parser suite 仅排除 approval_request 方向，**15 pass / 1 filtered / 24 expect / Completed（runner16 selected/1 skipped）**。该 suite 的 file_change/MCP mock 形状与官方协议不一致，不能用其绿色结果反驳新正常形状证据。\n- `evidence/root-history-replay-baseline.lo",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round23/evidence/room-data-dedup.json",
+      "pointer": "/hits/exact/56/context",
+      "kind": "json-value-scalar",
+      "offset": 57,
+      "context": "seq/history/agent事件等段）、session-titles-store、HubRunReplay、model-trace-history/http 结构及 Mobile history/事件投影接线。认证/权限方向不做动态验证。\n- `evidence/root-codex-parser-baseline.log`：当前既有 parser suite 仅排除 approval_request 方向，**15 pass / 1 filtered / 24 expect / Completed（runner16 selected/1 skipped）**。该 suite 的 file_change/MCP mock 形状与官方协议不一致，不能用其绿色结果反驳新正常",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+      "pointer": "/matches/model-trace/44/excerpt",
+      "kind": "json-value-scalar",
+      "offset": 142,
+      "context": "- 普通合同为四个 GET 资源的路径选择、可选查询参数编码及 requester 返回值透传：源码 [list/sessions](../../packages/web/src/model-trace-api.ts:48)、[get](../../packages/web/src/model-trace-api.ts:56)、[getConfig](../../packages/web/src/model-trace-api.ts:68)，类型选读 [普通过滤字段与分页返回类型](../../packages/core/src/model-traces/types.ts:97)，本地文档 [Reading](../../docs/model-observability.md:107)。",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+      "pointer": "/matches/model-trace/45/excerpt",
+      "kind": "json-value-scalar",
+      "offset": 142,
+      "context": "- 普通合同为四个 GET 资源的路径选择、可选查询参数编码及 requester 返回值透传：源码 [list/sessions](../../packages/web/src/model-trace-api.ts:48)、[get](../../packages/web/src/model-trace-api.ts:56)、[getConfig](../../packages/web/src/model-trace-api.ts:68)，类型选读 [普通过滤字段与分页返回类型](../../packages/core/src/model-traces/types.ts:97)，本地文档 [Reading](../../docs/model-observability.md:107)。",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+      "pointer": "/matches/model-trace/46/excerpt",
+      "kind": "json-value-scalar",
+      "offset": 102,
+      "context": "r 返回值透传：源码 [list/sessions](../../packages/web/src/model-trace-api.ts:48)、[get](../../packages/web/src/model-trace-api.ts:56)、[getConfig](../../packages/web/src/model-trace-api.ts:68)，类型选读 [普通过滤字段与分页返回类型](../../packages/core/src/model-traces/types.ts:97)，本地文档 [Reading](../../docs/model-observability.md:107)。",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round29/evidence/room-dedup.json",
+      "pointer": "/contexts/room-page-contract/22/context",
+      "kind": "json-value-scalar",
+      "offset": 227,
+      "context": "件项，不把它扩大成所有Windows会话打不开。\n- 查重：当前两批 audit及旧review对room默认Windows name关键词有限查重未见同项；与旧room进程退出/approval/接管问题不同。\n\n## 覆盖与既有基线\n\n- 选择性阅读 Server room-history、room-manager（metadata/seq/history/agent事件等段）、session-titles-store、HubRunReplay、model-trace-history/http 结构及 Mobile history/事件投影接线。认证/权限方向不做动态验证。\n- `evidence/root-codex-parser-baseline.log`：当前既有 parser suite 仅排除 approval_request 方向，**15 pass / 1 filtered / 24 expect / Completed（runner16 selected/1 skipped）**。该 suite 的 file_change/MCP mock 形状与官方协议不一致，不能用其绿色结果反驳新正常",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round3/coverage.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 1232,
+      "context": "r/状态/ledger/adjudication、summary/iterate/planner/provider普通数据选择性阅读；实际model-free早退 | 私有源码非默认Host；真实评审/共识模型、完整会话，失败reviewer-cap方向不重试 |\n| optimization-lab | correction/grading/reflection、plan/dataset/report/candidate/ledger/store普通数据选择性阅读；纯grading/reflection | feature未开启、完整实验/真实付费provider/采纳/崩溃/锁与真实并发 |\n| Server | room metadata/seq/history、CodexJSONL事件投影、HubRunReplay、title、worker bridge和Hub session普通数据链路选择性阅读；真实本地RoomManager与分页、fake agent | 真实CLI/worker、手机/HTTP/WS/UI；认证/权限/安全方向、完整Server功能 |\n| Core model-traces | store/classification/summary/search/list/session pagination/retention相关段静态核对，无新增确认 | context recorder/所有provider/事件落盘完整生命周期；不宣称独立全量测试 |\n| 其他包/独立Panel仓库 | 本批依赖上一冻结报告作导航/查重，不重新宣称动态覆盖 | 仍需后续轮次；主目标保持全仓，不缩为本表 |\n\n所有动态仅guarded Bun、自有临时数据、纯函数/fake adapter或Node VM中的真实callback。未执行实际外部消息、网络模型、真实用户数据操作，未构建/安装依赖或更改产品源码。部分包导入复用现有node_modules与预构建dist，具体fixture边界逐项披露。\n\n源文件哈希只证明被列文件与冻结blob一致，不证明每个文件逐行/逐分支覆盖。成功shard是有限例子的证据；全仓typecheck/lint/build、全量测试、所有OS和真实平台验收均未宣称完成。\n",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/audit-2026-10-17-round3/root.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 3863,
+      "context": "default-name.test.ts` 为真实 RoomManager + 自有临时 room 存储，3 pass /11 expect /0 fail/skip /Completed，首跑原始 log 保存 name长度与readable=false；factory若被启动就抛错，实际未调用agent。\n- 条件/边界：运行机器不是 Windows；动态证明的是接受的 Windows 格式字符串与本地metadata读写自相矛盾，没有创建真实Windows长路径、启动真实CLI或验证Windows操作系统的长路径设置。因此保守按P3条件项，不把它扩大成所有Windows会话打不开。\n- 查重：当前两批 audit及旧review对room默认Windows name关键词有限查重未见同项；与旧room进程退出/approval/接管问题不同。\n\n## 覆盖与既有基线\n\n- 选择性阅读 Server room-history、room-manager（metadata/seq/history/agent事件等段）、session-titles-store、HubRunReplay、model-trace-history/http 结构及 Mobile history/事件投影接线。认证/权限方向不做动态验证。\n- `evidence/root-codex-parser-baseline.log`：当前既有 parser suite 仅排除 approval_request 方向，**15 pass / 1 filtered / 24 expect / Completed（runner16 selected/1 skipped）**。该 suite 的 file_change/MCP mock 形状与官方协议不一致，不能用其绿色结果反驳新正常形状证据。\n- `evidence/root-history-replay-baseline.log`：选择性普通磁盘历史冻结/跨冷重建、since过滤、snapshot过期/较大普通分页；内存run replay前缀/重叠/预算/复制；会话title并发串行与严格写/比较。**14 pass/9 filtered/59 expect/Completed（runner23 selected/9 skipped）**。其中既有10,010次本地fsync准备的测试显式120秒timeout，首跑约40.7秒完成，不作为独立性能bug；没有重跑。没有执行scope认证、权限/替换文件或真实worker测试。\n- 所有新发现区分真实 parser/本地磁盘和外部平台；没有构建、真实模型/账户/外部服务/进程执行。\n\n## 候选与跳过\n\n- Mobile buildSessionHistory 会丢 FoldItem 的 injected/clientMessageId/timestamp 等字段；其附件/内部路径投影已有旧 `docs/review-2026-10-12/legacy-history-round24.md` R84 详细确认。本轮只读核对该已知家族，没有另做附件复现或重复计入。额外internal anchor为空白气泡的影响尚未独立动态验证，继续仅作相关候选。\n- 辅助只读检索带入不存在的 shared/transcript.ts、web/src/streamReducer.ts、render",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/audit-2026-10-17-round3/root.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 4881,
+      "context": "显式120秒timeout，首跑约40.7秒完成，不作为独立性能bug；没有重跑。没有执行scope认证、权限/替换文件或真实worker测试。\n- 所有新发现区分真实 parser/本地磁盘和外部平台；没有构建、真实模型/账户/外部服务/进程执行。\n\n## 候选与跳过\n\n- Mobile buildSessionHistory 会丢 FoldItem 的 injected/clientMessageId/timestamp 等字段；其附件/内部路径投影已有旧 `docs/review-2026-10-12/legacy-history-round24.md` R84 详细确认。本轮只读核对该已知家族，没有另做附件复现或重复计入。额外internal anchor为空白气泡的影响尚未独立动态验证，继续仅作相关候选。\n- 辅助只读检索带入不存在的 shared/transcript.ts、web/src/streamReducer.ts、renderer/messages/types.ts，rg报ENOENT。它们不属于运行实验，也不作产品问题证据；未重跑失败动态 fixture。\n- ModelTraceStore 普通summary/search/分类/排序/paging/retention链路作选择性静态阅读；list和sessions当前都复用localeCompare做cursor后继，没有把旧catalog comparator问题套用到这里。搜索是metadata字段而非JSON正文，不将Pet全文预筛问题误报到此模块。未增加动态测试或确认项。不存在的model-traces/capture.ts辅助读取已跳过。\n\n本分审5个完整成功首次shard共 **37 pass /110 expect /10 filtered /0 fail**。实际新缺陷观察/正常对照共8个测试，其余29个为当前选择性既有基线；没有把filtered选中数量当作已执行测试。\n",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/audit-2026-10-17-round48/evidence/session-title-frontier/history-contexts.json",
+      "pointer": "/hits/source_filename/2/context",
+      "kind": "json-value-scalar",
+      "offset": 227,
+      "context": "件项，不把它扩大成所有Windows会话打不开。\n- 查重：当前两批 audit及旧review对room默认Windows name关键词有限查重未见同项；与旧room进程退出/approval/接管问题不同。\n\n## 覆盖与既有基线\n\n- 选择性阅读 Server room-history、room-manager（metadata/seq/history/agent事件等段）、session-titles-store、HubRunReplay、model-trace-history/http 结构及 Mobile history/事件投影接线。认证/权限方向不做动态验证。\n- `evidence/root-codex-parser-baseline.log`：当前既有 parser suite 仅排除 approval_request 方向，**15 pass / 1 filtered / 24 expect / Completed（runner16 selected/1 skipped）**。该 suite 的 file_change/MCP mock 形状与官方协议不一致，不能用其绿色结果反驳新正常",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round48/evidence/session-title-frontier/history-contexts.json",
+      "pointer": "/hits/source_filename/5/context",
+      "kind": "json-value-scalar",
+      "offset": 227,
+      "context": "件项，不把它扩大成所有Windows会话打不开。\n- 查重：当前两批 audit及旧review对room默认Windows name关键词有限查重未见同项；与旧room进程退出/approval/接管问题不同。\n\n## 覆盖与既有基线\n\n- 选择性阅读 Server room-history、room-manager（metadata/seq/history/agent事件等段）、session-titles-store、HubRunReplay、model-trace-history/http 结构及 Mobile history/事件投影接线。认证/权限方向不做动态验证。\n- `evidence/root-codex-parser-baseline.log`：当前既有 parser suite 仅排除 approval_request 方向，**15 pass / 1 filtered / 24 expect / Completed（runner16 selected/1 skipped）**。该 suite 的 file_change/MCP mock 形状与官方协议不一致，不能用其绿色结果反驳新正常",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round48/evidence/session-title-frontier/history-contexts.json",
+      "pointer": "/hits/source_filename/12/context",
+      "kind": "json-value-scalar",
+      "offset": 57,
+      "context": "seq/history/agent事件等段）、session-titles-store、HubRunReplay、model-trace-history/http 结构及 Mobile history/事件投影接线。认证/权限方向不做动态验证。\n- `evidence/root-codex-parser-baseline.log`：当前既有 parser suite 仅排除 approval_request 方向，**15 pass / 1 filtered / 24 expect / Completed（runner16 selected/1 skipped）**。该 suite 的 file_change/MCP mock 形状与官方协议不一致，不能用其绿色结果反驳新正常",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round48/evidence/session-title-frontier/history-contexts.json",
+      "pointer": "/hits/source_filename/13/context",
+      "kind": "json-value-scalar",
+      "offset": 57,
+      "context": "seq/history/agent事件等段）、session-titles-store、HubRunReplay、model-trace-history/http 结构及 Mobile history/事件投影接线。认证/权限方向不做动态验证。\n- `evidence/root-codex-parser-baseline.log`：当前既有 parser suite 仅排除 approval_request 方向，**15 pass / 1 filtered / 24 expect / Completed（runner16 selected/1 skipped）**。该 suite 的 file_change/MCP mock 形状与官方协议不一致，不能用其绿色结果反驳新正常",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round48/evidence/session-title-frontier/history-contexts.json",
+      "pointer": "/hits/source_filename/22/context",
+      "kind": "json-value-scalar",
+      "offset": 227,
+      "context": "件项，不把它扩大成所有Windows会话打不开。\n- 查重：当前两批 audit及旧review对room默认Windows name关键词有限查重未见同项；与旧room进程退出/approval/接管问题不同。\n\n## 覆盖与既有基线\n\n- 选择性阅读 Server room-history、room-manager（metadata/seq/history/agent事件等段）、session-titles-store、HubRunReplay、model-trace-history/http 结构及 Mobile history/事件投影接线。认证/权限方向不做动态验证。\n- `evidence/root-codex-parser-baseline.log`：当前既有 parser suite 仅排除 approval_request 方向，**15 pass / 1 filtered / 24 expect / Completed（runner16 selected/1 skipped）**。该 suite 的 file_change/MCP mock 形状与官方协议不一致，不能用其绿色结果反驳新正常",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round48/evidence/session-title-frontier/history-contexts.json",
+      "pointer": "/hits/source_filename/23/context",
+      "kind": "json-value-scalar",
+      "offset": 384,
+      "context": "adable=false；factory若被启动就抛错，实际未调用agent。\n- 条件/边界：运行机器不是 Windows；动态证明的是接受的 Windows 格式字符串与本地metadata读写自相矛盾，没有创建真实Windows长路径、启动真实CLI或验证Windows操作系统的长路径设置。因此保守按P3条件项，不把它扩大成所有Windows会话打不开。\n- 查重：当前两批 audit及旧review对room默认Windows name关键词有限查重未见同项；与旧room进程退出/approval/接管问题不同。\n\n## 覆盖与既有基线\n\n- 选择性阅读 Server room-history、room-manager（metadata/seq/history/agent事件等段）、session-titles-store、HubRunReplay、model-trace-history/http 结构及 Mobile history/事件投影接线。认证/权限方向不做动态验证。\n- `evidence/root-codex-parser-baseline.log`：当前既有 parser suite 仅排除 approval_request 方向，**15 pass / 1 filtered / 24 expect / Completed（runner16 selected/1 skipped）**。该 suite 的 file_change/MCP mock 形状与官方协议不一致，不能用其绿色结果反驳新正常形状证据。\n- `evidence/root-history-replay-baseline.log`：选择性普通磁盘历史冻结/跨冷重建、since过滤、snapshot过期/较大普通分页；内存run replay前缀/重叠/预算/复制；会话title并发串行与严格写/比较。**14 pass/9 filtered/59 expect/Completed（runner23 selected/9 skipped）**。其中既有10,010次本地fsync准备的测试显式120秒timeout，首跑约40.7秒完成，不作为独立性能bug；没有重跑。没有执行scope认证、权限/替换文件或真实worker测试。\n- 所有新发现区分真实 parser/本地磁盘和外部平台；没有构建、真实模型/账户/外部服务/进程执行。\n\n## 候选与跳过\n\n- Mobile buildSessionHistory 会丢",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/README.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 574,
+      "context": "44P2、68P3**，不是当前未修复数。[全部112项列表](../audit-2026-10-17-round48/ALL-ISSUES.md)。整体审查继续，不能据此称仓库或任何完整机制已审完。\n\n归档Core记账汇总、普通preset选择/编译数据、模型调用历史query/DTO和Web消息集合投影的有限静态审读。source manifest保留full/selected/nav/hash与测试声明区别，重叠阅读不相加为唯一覆盖。没有产品、helper、fixture、测试、React、clock/timer、模型、权限身份/租约/native或业务网络运行，pass/expect0；仅Root Git及证据元数据核验。\n\n- [Root74汇总](evidence/root-summary-review/report.md)：summary.ts81行当前全文；普通tuple分组、unknown/not-sent/partial字段与真实/cost、/status、App展示链没有新反例。不认证账单、pricing/store/锁。\n- [75模型历史](evidence/trace-history-frontier/report.md)：普通query校验、HTTP/公开Web DTO声明和真实Desktop列表消费者；底层排序/裁剪及scope/visibility机制未读，不作正确反证。\n- [76 preset](evidence/preset-review/report.md)：普通选择、catalog/injection/prompt映射、compiler和实际Engine值调用。原R9同SHA readScope1–115与97行不一致，保持“可能旧已读到EOF”的歧义；本次定向选段，不称未读或首次全文。\n- [83消息投影](evidence/latest-message-frontier/report.md)：正常immutable消息更新、scope切换和实际Workbench通知消费，有限0。hook173行全显示只97行普通语义，不标module全文；DOM、scroll、ResizeObserver、连接及房间鉴权未审。\n\n另将/cost的一个待反证想法明确撤回：[Root80](evidence/root-cost-review/review.md)与[81独立复核](evidence/cost-review/report.md)均核实真实CLI→同进程AgentClient/Engine入口；repl215的sessionCostTracker就是全局costTracker，runtime54–60把同一对象绑定账本。不存在所假设的普通远程TUI空本地singleton前提。没有用任意SDK/providedClient造consumer，也不据此认证/cost所有行为。旧未绑定standalone估价问题COST-R9-01原样保留，不重报。\n\n[71](evidence/title-gate/report.md)、[72](evidence/web-format-gate/report.md)、[73](evidence/model-display-gate/report.md)、[77](evidence/agent-definition-gate/report.md)、[79](e",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/root-summary-review/history.json",
+      "pointer": "/hits/summary-contract/3/context",
+      "kind": "json-value-scalar",
+      "offset": 227,
+      "context": "件项，不把它扩大成所有Windows会话打不开。\n- 查重：当前两批 audit及旧review对room默认Windows name关键词有限查重未见同项；与旧room进程退出/approval/接管问题不同。\n\n## 覆盖与既有基线\n\n- 选择性阅读 Server room-history、room-manager（metadata/seq/history/agent事件等段）、session-titles-store、HubRunReplay、model-trace-history/http 结构及 Mobile history/事件投影接线。认证/权限方向不做动态验证。\n- `evidence/root-codex-parser-baseline.log`：当前既有 parser suite 仅排除 approval_request 方向，**15 pass / 1 filtered / 24 expect / Completed（runner16 selected/1 skipped）**。该 suite 的 file_change/MCP mock 形状与官方协议不一致，不能用其绿色结果反驳新正常",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/root-summary-review/history.json",
+      "pointer": "/hits/summary-contract/6/context",
+      "kind": "json-value-scalar",
+      "offset": 17,
+      "context": "ore、HubRunReplay、model-trace-history/http 结构及 Mobile history/事件投影接线。认证/权限方向不做动态验证。\n- `evidence/root-codex-parser-baseline.log`：当前既有 parser suite 仅排除 approval_request 方向，**15 pass / 1 filtered / 24 expect / Completed（runner16 selected/1 skipped）**。该 suite 的 file_change/MCP mock 形状与官方协议不一致，不能用其绿色结果反驳新正常",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/root-summary-review/history.json",
+      "pointer": "/hits/summary-contract/7/context",
+      "kind": "json-value-scalar",
+      "offset": 17,
+      "context": "ore、HubRunReplay、model-trace-history/http 结构及 Mobile history/事件投影接线。认证/权限方向不做动态验证。\n- `evidence/root-codex-parser-baseline.log`：当前既有 parser suite 仅排除 approval_request 方向，**15 pass / 1 filtered / 24 expect / Completed（runner16 selected/1 skipped）**。该 suite 的 file_change/MCP mock 形状与官方协议不一致，不能用其绿色结果反驳新正常形状证据。\n- `evidence/root-history-replay-baseline.lo",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/root-summary-review/history.json",
+      "pointer": "/hits/summary-contract/8/context",
+      "kind": "json-value-scalar",
+      "offset": 227,
+      "context": "件项，不把它扩大成所有Windows会话打不开。\n- 查重：当前两批 audit及旧review对room默认Windows name关键词有限查重未见同项；与旧room进程退出/approval/接管问题不同。\n\n## 覆盖与既有基线\n\n- 选择性阅读 Server room-history、room-manager（metadata/seq/history/agent事件等段）、session-titles-store、HubRunReplay、model-trace-history/http 结构及 Mobile history/事件投影接线。认证/权限方向不做动态验证。\n- `evidence/root-codex-parser-baseline.log`：当前既有 parser suite 仅排除 approval_request 方向，**15 pass / 1 filtered / 24 expect / Completed（runner16 selected/1 skipped）**。该 suite 的 file_change/MCP mock 形状与官方协议不一致，不能用其绿色结果反驳新正常",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/root-summary-review/history.json",
+      "pointer": "/hits/summary-contract/9/context",
+      "kind": "json-value-scalar",
+      "offset": 57,
+      "context": "seq/history/agent事件等段）、session-titles-store、HubRunReplay、model-trace-history/http 结构及 Mobile history/事件投影接线。认证/权限方向不做动态验证。\n- `evidence/root-codex-parser-baseline.log`：当前既有 parser suite 仅排除 approval_request 方向，**15 pass / 1 filtered / 24 expect / Completed（runner16 selected/1 skipped）**。该 suite 的 file_change/MCP mock 形状与官方协议不一致，不能用其绿色结果反驳新正常",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/root-summary-review/history.json",
+      "pointer": "/hits/summary-contract/10/context",
+      "kind": "json-value-scalar",
+      "offset": 17,
+      "context": "ore、HubRunReplay、model-trace-history/http 结构及 Mobile history/事件投影接线。认证/权限方向不做动态验证。\n- `evidence/root-codex-parser-baseline.log`：当前既有 parser suite 仅排除 approval_request 方向，**15 pass / 1 filtered / 24 expect / Completed（runner16 selected/1 skipped）**。该 suite 的 file_change/MCP mock 形状与官方协议不一致，不能用其绿色结果反驳新正常",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/root-summary-review/history.json",
+      "pointer": "/hits/summary-contract/11/context",
+      "kind": "json-value-scalar",
+      "offset": 17,
+      "context": "ore、HubRunReplay、model-trace-history/http 结构及 Mobile history/事件投影接线。认证/权限方向不做动态验证。\n- `evidence/root-codex-parser-baseline.log`：当前既有 parser suite 仅排除 approval_request 方向，**15 pass / 1 filtered / 24 expect / Completed（runner16 selected/1 skipped）**。该 suite 的 file_change/MCP mock 形状与官方协议不一致，不能用其绿色结果反驳新正常形状证据。\n- `evidence/root-history-replay-baseline.lo",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/root-summary-review/history.json",
+      "pointer": "/hits/summary-contract/12/context",
+      "kind": "json-value-scalar",
+      "offset": 57,
+      "context": "seq/history/agent事件等段）、session-titles-store、HubRunReplay、model-trace-history/http 结构及 Mobile history/事件投影接线。认证/权限方向不做动态验证。\n- `evidence/root-codex-parser-baseline.log`：当前既有 parser suite 仅排除 approval_request 方向，**15 pass / 1 filtered / 24 expect / Completed（runner16 selected/1 skipped）**。该 suite 的 file_change/MCP mock 形状与官方协议不一致，不能用其绿色结果反驳新正常",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/root-summary-review/history.json",
+      "pointer": "/hits/summary-contract/20/context",
+      "kind": "json-value-scalar",
+      "offset": 227,
+      "context": "件项，不把它扩大成所有Windows会话打不开。\n- 查重：当前两批 audit及旧review对room默认Windows name关键词有限查重未见同项；与旧room进程退出/approval/接管问题不同。\n\n## 覆盖与既有基线\n\n- 选择性阅读 Server room-history、room-manager（metadata/seq/history/agent事件等段）、session-titles-store、HubRunReplay、model-trace-history/http 结构及 Mobile history/事件投影接线。认证/权限方向不做动态验证。\n- `evidence/root-codex-parser-baseline.log`：当前既有 parser suite 仅排除 approval_request 方向，**15 pass / 1 filtered / 24 expect / Completed（runner16 selected/1 skipped）**。该 suite 的 file_change/MCP mock 形状与官方协议不一致，不能用其绿色结果反驳新正常",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/root-summary-review/history.json",
+      "pointer": "/hits/summary-contract/21/context",
+      "kind": "json-value-scalar",
+      "offset": 180,
+      "context": "tadata/seq/history、CodexJSONL事件投影、HubRunReplay、title、worker bridge和Hub session普通数据链路选择性阅读；真实本地RoomManager与分页、fake agent | 真实CLI/worker、手机/HTTP/WS/UI；认证/权限/安全方向、完整Server功能 |\n| Core model-traces | store/classification/summary/search/list/session pagination/retention相关段静态核对，无新增确认 | context recorder/所有provider/事件落盘完整生命周期；不宣称独立全量测试 |\n| 其他包/独立Panel仓库 | 本批依赖上一冻结报告作导航/查重，不重新宣称动态覆盖 | 仍需后续轮次；主目标保持全仓，不缩为本表 |\n\n所有动态仅guarded Bun、自有临时数据、纯函数/fake adapter或Node VM中的真实callback。未执行实际外部消息、网络模型、真实用户数据操作，未构建/安装依赖或更改产品源码。部分包导入复用现有node_modules与预构建dist，具体fixture边界逐项披露。\n\n源文件哈希只证明被列文件与冻结blob一致，不证明每个文件逐行/逐分支覆盖。成功shard是有限例子的证据；全仓typecheck/lint/build、全量测试、所有OS和真实平台验收均未宣称完成。\n",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/root-summary-review/history.json",
+      "pointer": "/hits/summary-contract/23/context",
+      "kind": "json-value-scalar",
+      "offset": 267,
+      "context": "长路径、启动真实CLI或验证Windows操作系统的长路径设置。因此保守按P3条件项，不把它扩大成所有Windows会话打不开。\n- 查重：当前两批 audit及旧review对room默认Windows name关键词有限查重未见同项；与旧room进程退出/approval/接管问题不同。\n\n## 覆盖与既有基线\n\n- 选择性阅读 Server room-history、room-manager（metadata/seq/history/agent事件等段）、session-titles-store、HubRunReplay、model-trace-history/http 结构及 Mobile history/事件投影接线。认证/权限方向不做动态验证。\n- `evidence/root-codex-parser-baseline.log`：当前既有 parser suite 仅排除 approval_request 方向，**15 pass / 1 filtered / 24 expect / Completed（runner16 selected/1 skipped）**。该 suite 的 file_change/MCP mock 形状与官方协议不一致，不能用其绿色结果反驳新正常形状证据。\n- `evidence/root-history-replay-baseline.log`：选择性普通磁盘历史冻结/跨冷重建、since过滤、snapshot过期/较大普通分页；内存run replay前缀/重叠/预算/复制；会话title并发串行与严格写/比较。**14 pass/9 filtered/59 expect/Completed（runner23 selected/9 skipped）**。其中既有10,010次本地fsy",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/root-summary-review/history.json",
+      "pointer": "/hits/summary-contract/24/context",
+      "kind": "json-value-scalar",
+      "offset": 180,
+      "context": "外internal anchor为空白气泡的影响尚未独立动态验证，继续仅作相关候选。\n- 辅助只读检索带入不存在的 shared/transcript.ts、web/src/streamReducer.ts、renderer/messages/types.ts，rg报ENOENT。它们不属于运行实验，也不作产品问题证据；未重跑失败动态 fixture。\n- ModelTraceStore 普通summary/search/分类/排序/paging/retention链路作选择性静态阅读；list和sessions当前都复用localeCompare做cursor后继，没有把旧catalog comparator问题套用到这里。搜索是metadata字段而非JSON正文，不将Pet全文预筛问题误报到此模块。未增加动态测试或确认项。不存在的model-traces/capture.ts辅助读取已跳过。\n\n本分审5个完整成功首次shard共 **37 pass /110 expect /10 filtered /0 fail**。实际新缺陷观察/正常对照共8个测试，其余29个为当前选择性既有基线；没有把filtered选中数量当作已执行测试。\n",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/root-summary-review/history.json",
+      "pointer": "/hits/summary-contract/54/context",
+      "kind": "json-value-scalar",
+      "offset": 227,
+      "context": "件项，不把它扩大成所有Windows会话打不开。\n- 查重：当前两批 audit及旧review对room默认Windows name关键词有限查重未见同项；与旧room进程退出/approval/接管问题不同。\n\n## 覆盖与既有基线\n\n- 选择性阅读 Server room-history、room-manager（metadata/seq/history/agent事件等段）、session-titles-store、HubRunReplay、model-trace-history/http 结构及 Mobile history/事件投影接线。认证/权限方向不做动态验证。\n- `evidence/root-codex-parser-baseline.log`：当前既有 parser suite 仅排除 approval_request 方向，**15 pass / 1 filtered / 24 expect / Completed（runner16 selected/1 skipped）**。该 suite 的 file_change/MCP mock 形状与官方协议不一致，不能用其绿色结果反驳新正常",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/root-summary-review/history.json",
+      "pointer": "/hits/summary-contract/55/context",
+      "kind": "json-value-scalar",
+      "offset": 227,
+      "context": "件项，不把它扩大成所有Windows会话打不开。\n- 查重：当前两批 audit及旧review对room默认Windows name关键词有限查重未见同项；与旧room进程退出/approval/接管问题不同。\n\n## 覆盖与既有基线\n\n- 选择性阅读 Server room-history、room-manager（metadata/seq/history/agent事件等段）、session-titles-store、HubRunReplay、model-trace-history/http 结构及 Mobile history/事件投影接线。认证/权限方向不做动态验证。\n- `evidence/root-codex-parser-baseline.log`：当前既有 parser suite 仅排除 approval_request 方向，**15 pass / 1 filtered / 24 expect / Completed（runner16 selected/1 skipped）**。该 suite 的 file_change/MCP mock 形状与官方协议不一致，不能用其绿色结果反驳新正常",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/root-summary-review/history.json",
+      "pointer": "/hits/summary-contract/56/context",
+      "kind": "json-value-scalar",
+      "offset": 57,
+      "context": "seq/history/agent事件等段）、session-titles-store、HubRunReplay、model-trace-history/http 结构及 Mobile history/事件投影接线。认证/权限方向不做动态验证。\n- `evidence/root-codex-parser-baseline.log`：当前既有 parser suite 仅排除 approval_request 方向，**15 pass / 1 filtered / 24 expect / Completed（runner16 selected/1 skipped）**。该 suite 的 file_change/MCP mock 形状与官方协议不一致，不能用其绿色结果反驳新正常",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/root-summary-review/history.json",
+      "pointer": "/hits/summary-contract/57/context",
+      "kind": "json-value-scalar",
+      "offset": 57,
+      "context": "seq/history/agent事件等段）、session-titles-store、HubRunReplay、model-trace-history/http 结构及 Mobile history/事件投影接线。认证/权限方向不做动态验证。\n- `evidence/root-codex-parser-baseline.log`：当前既有 parser suite 仅排除 approval_request 方向，**15 pass / 1 filtered / 24 expect / Completed（runner16 selected/1 skipped）**。该 suite 的 file_change/MCP mock 形状与官方协议不一致，不能用其绿色结果反驳新正常",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/root-summary-review/history.json",
+      "pointer": "/hits/summary-contract/58/context",
+      "kind": "json-value-scalar",
+      "offset": 227,
+      "context": "件项，不把它扩大成所有Windows会话打不开。\n- 查重：当前两批 audit及旧review对room默认Windows name关键词有限查重未见同项；与旧room进程退出/approval/接管问题不同。\n\n## 覆盖与既有基线\n\n- 选择性阅读 Server room-history、room-manager（metadata/seq/history/agent事件等段）、session-titles-store、HubRunReplay、model-trace-history/http 结构及 Mobile history/事件投影接线。认证/权限方向不做动态验证。\n- `evidence/root-codex-parser-baseline.log`：当前既有 parser suite 仅排除 approval_request 方向，**15 pass / 1 filtered / 24 expect / Completed（runner16 selected/1 skipped）**。该 suite 的 file_change/MCP mock 形状与官方协议不一致，不能用其绿色结果反驳新正常",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/root-summary-review/history.json",
+      "pointer": "/hits/summary-contract/59/context",
+      "kind": "json-value-scalar",
+      "offset": 267,
+      "context": "长路径、启动真实CLI或验证Windows操作系统的长路径设置。因此保守按P3条件项，不把它扩大成所有Windows会话打不开。\n- 查重：当前两批 audit及旧review对room默认Windows name关键词有限查重未见同项；与旧room进程退出/approval/接管问题不同。\n\n## 覆盖与既有基线\n\n- 选择性阅读 Server room-history、room-manager（metadata/seq/history/agent事件等段）、session-titles-store、HubRunReplay、model-trace-history/http 结构及 Mobile history/事件投影接线。认证/权限方向不做动态验证。\n- `evidence/root-codex-parser-baseline.log`：当前既有 parser suite 仅排除 approval_request 方向，**15 pass / 1 filtered / 24 expect / Completed（runner16 selected/1 skipped）**。该 suite 的 file_change/MCP mock 形状与官方协议不一致，不能用其绿色结果反驳新正常形状证据。\n- `evidence/root-history-replay-baseline.log`：选择性普通磁盘历史冻结/跨冷重建、since过滤、snapshot过期/较大普通分页；内存run replay前缀/重叠/预算/复制；会话title并发串行与严格写/比较。**14 pass/9 filtered/59 expect/Completed（runner23 selected/9 skipped）**。其中既有10,010次本地fsy",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/title-gate/history-contexts.json",
+      "pointer": "/oldCause/26/context",
+      "kind": "json-value-scalar",
+      "offset": 227,
+      "context": "件项，不把它扩大成所有Windows会话打不开。\n- 查重：当前两批 audit及旧review对room默认Windows name关键词有限查重未见同项；与旧room进程退出/approval/接管问题不同。\n\n## 覆盖与既有基线\n\n- 选择性阅读 Server room-history、room-manager（metadata/seq/history/agent事件等段）、session-titles-store、HubRunReplay、model-trace-history/http 结构及 Mobile history/事件投影接线。认证/权限方向不做动态验证。\n- `evidence/root-codex-parser-baseline.log`：当前既有 parser suite 仅排除 approval_request 方向，**15 pass / 1 filtered / 24 expect / Completed（runner16 selected/1 skipped）**。该 suite 的 file_change/MCP mock 形状与官方协议不一致，不能用其绿色结果反驳新正常",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/trace-history-frontier/report.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 1031,
+      "context": "e-rows.json)，均为库存/派生incidental记录，未建立同SHA明确full。unknown/no-row不当从未读过。Root74原说法与其更正另在[parent上下文](parent-context-notes.json)，Root的机器14/5命中不冒充其读全19窗口。\n\n## 普通合同与反证\n\n目标所读query字段/校验把正常limit1–200、withoutSession布尔、有限非负且顺序正确的since/until和有界字符串保留到新DTO；list/sessions在validated spread后转交store，session cursor错误有400映射。未用任意坏DTO、NaN或真实文件造反例。HTTP20–38仅普通query值解码，73–74直接调history list/sessions；Web API普通querySuffix以String编码、跳undefined并转交注入requester。false与正常0时间值未被truthy条件丢弃。这里只是静态值流，未构造或执行语言fixture/URL/网络请求。\n\n真实Desktop ModelTracesView250–258请求sessions limit50并用page，299–306请求list limit100并消费items/nextCursor，372–382把cursor传回并合并返回DTO。Desktop trace-history-service6–9/11–13构造同server adapter。未展开IPC注册/Host/native机制，因此不假装读完全部生产闭环。Web远程factory在所搜web/mobile/renderer路径只命中definition和test导航，未建立生产调用，不把公开接口当作实际Web UI已接入。\n\n没有从这些正常DTO建立新反例。真正排序、分页实现和裁剪在未读ModelTraceStore中；目标118–201 workspace scope/visibility完全未打开，不能作为负向证明。实际HTTP授权、真实追踪文件、fs/锁、模型下载/调用和权限/身份/custody边界均停，不作认证；永久失败运行方向不重启。\n\n## 范围、诊断与结束\n\n[所读范围](source-manifest.json)5份产品源均selected，原[显示前pin](source-display-pins.json)与[摘录](source-excerpts.txt)保留；target97行display仅78行ordinary语义，不称242全文。HTTP workspace边界行23、Web Host guard41–42、Desktop native说明/目录行5/10等只是相邻显示，排除语义。四个producer文件首次rg导航先于dedicated pin，initialSemanticReadSha256=null如实保留；随后selected块在dedicated pin之后显示。没有打开任何测试正文，声明计数0。\n\n首次metadata reader将datetime类误写成datetime.datetime，exit1；原[stderr](metadata-first-error.txt)/[阶段说明](metadata-first-error.json)保存。失败在新增producer pin落盘和正文显示前，只修metadata timestamp再读同选段，非产品或fixture重",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/audit-2026-10-17-round50/evidence/trace-query-review/history-contexts.json",
+      "pointer": "/storeFilename/10/context",
+      "kind": "json-value-scalar",
+      "offset": 500,
+      "context": "r/状态/ledger/adjudication、summary/iterate/planner/provider普通数据选择性阅读；实际model-free早退 | 私有源码非默认Host；真实评审/共识模型、完整会话，失败reviewer-cap方向不重试 |\n| optimization-lab | correction/grading/reflection、plan/dataset/report/candidate/ledger/store普通数据选择性阅读；纯grading/reflection | feature未开启、完整实验/真实付费provider/采纳/崩溃/锁与真实并发 |\n| Server | room metadata/seq/history、CodexJSONL事件投影、HubRunReplay、title、worker bridge和Hub session普通数据链路选择性阅读；真实本地RoomManager与分页、fake agent | 真实CLI/worker、手机/HTTP/WS/UI；认证/权限/安全方向、完整Server功能 |\n| Core model-traces | store/classification/summary/search/list/session pagination/retention相关段静态核对，无新增确认 | context recorder/所有provider/事件落盘完整生命周期；不宣称独立全量测试 |\n| 其他包/独立Panel仓库 | 本批依赖上一冻结报告作导航/查重，不重新宣称动态覆盖 | 仍需后续轮次；主目标保持全仓，不缩为本表 |\n\n所有动态仅guarded Bun、自有临时数据、纯函数/fake adapter或Node VM中的真实callback。未执行实际外部消息、网络模型、真实用户数据操作，未构建/安装依赖或更改产品源码。部分包导入复用现有node_modules与预构建dist，具体fixture边界逐项披露。\n\n源文件哈希只证明被列文件与冻结blob一致，不证明每个文件逐行/逐分支覆盖。成功shard是有限例子的证据；全仓typecheck/lint/build、全量测试、所有OS和真实平台验收均未宣称完成。\n",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round50/evidence/trace-query-review/history-contexts.json",
+      "pointer": "/storeFilename/39/context",
+      "kind": "json-value-scalar",
+      "offset": 180,
+      "context": "tadata/seq/history、CodexJSONL事件投影、HubRunReplay、title、worker bridge和Hub session普通数据链路选择性阅读；真实本地RoomManager与分页、fake agent | 真实CLI/worker、手机/HTTP/WS/UI；认证/权限/安全方向、完整Server功能 |\n| Core model-traces | store/classification/summary/search/list/session pagination/retention相关段静态核对，无新增确认 | context recorder/所有provider/事件落盘完整生命周期；不宣称独立全量测试 |\n| 其他包/独立Panel仓库 | 本批依赖上一冻结报告作导航/查重，不重新宣称动态覆盖 | 仍需后续轮次；主目标保持全仓，不缩为本表 |\n\n所有动态仅guarded Bun、自有临时数据、纯函数/fake adapter或Node VM中的真实callback。未执行实际外部消息、网络模型、真实用户数据操作，未构建/安装依赖或更改产品源码。部分包导入复用现有node_modules与预构建dist，具体fixture边界逐项披露。\n\n源文件哈希只证明被列文件与冻结blob一致，不证明每个文件逐行/逐分支覆盖。成功shard是有限例子的证据；全仓typecheck/lint/build、全量测试、所有OS和真实平台验收均未宣称完成。\n",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round50/evidence/trace-query-review/history-contexts.json",
+      "pointer": "/oldCause/0/context",
+      "kind": "json-value-scalar",
+      "offset": 277,
+      "context": "eateRemoteModelTraceApi`，通过注入的内存 `request(path)` 记录路径、返回测试自有对象。模块的 Core 引用全部是 type-only；没有导入 Core barrel/runtime，也没有 mock Core 或 i18n。\n- 普通合同为四个 GET 资源的路径选择、可选查询参数编码及 requester 返回值透传：源码 [list/sessions](../../packages/web/src/model-trace-api.ts:48)、[get](../../packages/web/src/model-trace-api.ts:56)、[getConfig](../../packages/web/src/model-trace-api.ts:68)，类型选读 [普通过滤字段与分页返回类型](../../packages/core/src/model-traces/types.ts:97)，本地文档 [Reading](../../docs/model-observability.md:107)。\n- 普通生产者只做静态选读：[`ModelTraceExplorer.tsx:267`](../../packages/web/src/components/ModelTraceExplorer.tsx:267) 传入 `limit`、`cursor`、字符串过滤值或 `undefined`；[`ModelTraceExplorer.tsx:313`](../../packages/web/src/components/ModelTraceExplorer.tsx:313) 组装 list 查询；[more](../../packages/web/src/components/ModelTraceExplorer.tsx:403) 继续传入 `nextCursor`。没有导入、渲染或运行该组件。\n- 现有 [`model-trace-api.test.ts`](../../packages/web/src/model-trace-api.test.ts:4) 的普通部分仅供静态合同参照；首次读取输出也包含同文件后续排除片段，但未分析这些分支或执行该文件。现有文件包含本批排除的负向边界用例，故没有用整份现有测试充当基线。\n\n## 首次验证结果\n\n命令、首次 combined stdout/stderr 与退出回执分别保存在 [fixture](evidence/traceapi-normal.test.ts)、[原始输出](evidence/traceapi-normal.first.raw.log)、[退出回执](evidence/traceapi-normal.first.exit.json)。raw 与 exit 文件均先落盘，再读取结果；只有一次执行，没有失败后修复或替代验证。\n\n```text\nnode scripts/run-bun-test",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/audit-2026-10-17-round50/evidence/trace-query-review/history-contexts.json",
+      "pointer": "/oldCause/0/context",
+      "kind": "json-value-scalar",
+      "offset": 500,
+      "context": "eateRemoteModelTraceApi`，通过注入的内存 `request(path)` 记录路径、返回测试自有对象。模块的 Core 引用全部是 type-only；没有导入 Core barrel/runtime，也没有 mock Core 或 i18n。\n- 普通合同为四个 GET 资源的路径选择、可选查询参数编码及 requester 返回值透传：源码 [list/sessions](../../packages/web/src/model-trace-api.ts:48)、[get](../../packages/web/src/model-trace-api.ts:56)、[getConfig](../../packages/web/src/model-trace-api.ts:68)，类型选读 [普通过滤字段与分页返回类型](../../packages/core/src/model-traces/types.ts:97)，本地文档 [Reading](../../docs/model-observability.md:107)。\n- 普通生产者只做静态选读：[`ModelTraceExplorer.tsx:267`](../../packages/web/src/components/ModelTraceExplorer.tsx:267) 传入 `limit`、`cursor`、字符串过滤值或 `undefined`；[`ModelTraceExplorer.tsx:313`](../../packages/web/src/components/ModelTraceExplorer.tsx:313) 组装 list 查询；[more](../../packages/web/src/components/ModelTraceExplorer.tsx:403) 继续传入 `nextCursor`。没有导入、渲染或运行该组件。\n- 现有 [`model-trace-api.test.ts`](../../packages/web/src/model-trace-api.test.ts:4) 的普通部分仅供静态合同参照；首次读取输出也包含同文件后续排除片段，但未分析这些分支或执行该文件。现有文件包含本批排除的负向边界用例，故没有用整份现有测试充当基线。\n\n## 首次验证结果\n\n命令、首次 combined stdout/stderr 与退出回执分别保存在 [fixture](evidence/traceapi-normal.test.ts)、[原始输出](evidence/traceapi-normal.first.raw.log)、[退出回执](evidence/traceapi-normal.first.exit.json)。raw 与 exit 文件均先落盘，再读取结果；只有一次执行，没有失败后修复或替代验证。\n\n```text\nnode scripts/run-bun-test-shard.mjs --timeout 30000 docs/audit-2026-10-17-round18/evidence/traceapi-normal.test.ts\n```\n\n| 实际覆盖 | 观察结果与限度 |\n| --- | --- |\n| 省略查询、显式 `undefined` | `list`/`sessions` 四次调用落到两个无 `?` 的固定路径；fixture 第一项标题中的 “four ordinary route paths” 指四",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/audit-2026-10-17-round50/evidence/trace-query-review/history-contexts.json",
+      "pointer": "/oldCause/0/context",
+      "kind": "json-value-scalar",
+      "offset": 696,
+      "context": "ions](../../packages/web/src/model-trace-api.ts:48)、[get](../../packages/web/src/model-trace-api.ts:56)、[getConfig](../../packages/web/src/model-trace-api.ts:68)，类型选读 [普通过滤字段与分页返回类型](../../packages/core/src/model-traces/types.ts:97)，本地文档 [Reading](../../docs/model-observability.md:107)。\n- 普通生产者只做静态选读：[`ModelTraceExplorer.tsx:267`](../../packages/web/src/components/ModelTraceExplorer.tsx:267) 传入 `limit`、`cursor`、字符串过滤值或 `undefined`；[`ModelTraceExplorer.tsx:313`](../../packages/web/src/components/ModelTraceExplorer.tsx:313) 组装 list 查询；[more](../../packages/web/src/components/ModelTraceExplorer.tsx:403) 继续传入 `nextCursor`。没有导入、渲染或运行该组件。\n- 现有 [`model-trace-api.test.ts`](../../packages/web/src/model-trace-api.test.ts:4) 的普通部分仅供静态合同参照；首次读取输出也包含同文件后续排除片段，但未分析这些分支或执行该文件。现有文件包含本批排除的负向边界用例，故没有用整份现有测试充当基线。\n\n## 首次验证结果\n\n命令、首次 combined stdout/stderr 与退出回执分别保存在 [fixture](evidence/traceapi-normal.test.ts)、[原始输出](evidence/traceapi-normal.first.raw.log)、[退出回执](evidence/traceapi-normal.first.exit.json)。raw 与 exit 文件均先落盘，再读取结果；只有一次执行，没有失败后修复或替代验证。\n\n```text\nnode scripts/run-bun-test-shard.mjs --timeout 30000 docs/audit-2026-10-17-round18/evidence/traceapi-normal.test.ts\n```\n\n| 实际覆盖 | 观察结果与限度 |\n| --- | --- |\n| 省略查询、显式 `undefined` | `list`/`sessions` 四次调用落到两个无 `?` 的固定路径；fixture 第一项标题中的 “four ordinary route paths” 指四",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/audit-2026-10-17-round50/evidence/trace-query-review/history-contexts.json",
+      "pointer": "/oldCause/1/context",
+      "kind": "json-value-scalar",
+      "offset": 81,
+      "context": "ions](../../packages/web/src/model-trace-api.ts:48)、[get](../../packages/web/src/model-trace-api.ts:56)、[getConfig](../../packages/web/src/model-trace-api.ts:68)，类型选读 [普通过滤字段与分页返回类型](../../packages/core/src/model-traces/types.ts:97)，本地文档 [Reading](../../docs/model-observability.md:107)。\n- 普通生产者只做静态选读：[`ModelTraceExplorer.tsx:267`](../../packages/web/src/components/ModelTraceExplorer.tsx:267) 传入 `limit`、`cursor`、字符串过滤值或 `undefined`；[`ModelTraceExplorer.tsx:313`](../../packages/web/src/components/ModelTraceExplorer.tsx:313) 组装 list 查询；[more](../../packages/web/src/components/ModelTraceExplorer.tsx:403) 继续传入 `nextCursor`。没有导入、渲染或运行该组件。\n- 现有 [`model-trace-api.test.ts`](../../packages/web/src/model-trace-api.test.ts:4) 的普通部分仅供静态合同参照；首次读取输出也包含同文件后续排除片段，但未分析这些分支或执行该文件。现有文件包含本批排除的负向边界用例，故没有用整份现有测试充当基线。\n\n## 首次验证结果\n\n命令、首次 combined stdout/stderr 与退出回执分别保存在 [fixture](evidence/traceapi-normal.test.ts)、[原始输出](evidence/traceapi-normal.first.raw.log)、[退出回执](evidence/traceapi-normal.first.exit.json)。raw 与 exit 文件均先落盘，再读取结果；只有一次执行，没有失败后修复或替代验证。\n\n```text\nnode scripts/run-bun-test",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/audit-2026-10-17-round50/evidence/trace-query-review/history-contexts.json",
+      "pointer": "/oldCause/1/context",
+      "kind": "json-value-scalar",
+      "offset": 304,
+      "context": "ions](../../packages/web/src/model-trace-api.ts:48)、[get](../../packages/web/src/model-trace-api.ts:56)、[getConfig](../../packages/web/src/model-trace-api.ts:68)，类型选读 [普通过滤字段与分页返回类型](../../packages/core/src/model-traces/types.ts:97)，本地文档 [Reading](../../docs/model-observability.md:107)。\n- 普通生产者只做静态选读：[`ModelTraceExplorer.tsx:267`](../../packages/web/src/components/ModelTraceExplorer.tsx:267) 传入 `limit`、`cursor`、字符串过滤值或 `undefined`；[`ModelTraceExplorer.tsx:313`](../../packages/web/src/components/ModelTraceExplorer.tsx:313) 组装 list 查询；[more](../../packages/web/src/components/ModelTraceExplorer.tsx:403) 继续传入 `nextCursor`。没有导入、渲染或运行该组件。\n- 现有 [`model-trace-api.test.ts`](../../packages/web/src/model-trace-api.test.ts:4) 的普通部分仅供静态合同参照；首次读取输出也包含同文件后续排除片段，但未分析这些分支或执行该文件。现有文件包含本批排除的负向边界用例，故没有用整份现有测试充当基线。\n\n## 首次验证结果\n\n命令、首次 combined stdout/stderr 与退出回执分别保存在 [fixture](evidence/traceapi-normal.test.ts)、[原始输出](evidence/traceapi-normal.first.raw.log)、[退出回执](evidence/traceapi-normal.first.exit.json)。raw 与 exit 文件均先落盘，再读取结果；只有一次执行，没有失败后修复或替代验证。\n\n```text\nnode scripts/run-bun-test-shard.mjs --timeout 30000 docs/audit-2026-10-17-round18/evidence/traceapi-normal.test.ts\n```\n\n| 实际覆盖 | 观察结果与限度 |\n| --- | --- |\n| 省略查询、显式 `undefined` | `list`/`sessions` 四次调用落到两个无 `?` 的固定路径；fixture 第一项标题中的 “four ordinary route paths” 指四次调用，实际检",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/audit-2026-10-17-round50/evidence/trace-query-review/history-contexts.json",
+      "pointer": "/oldCause/1/context",
+      "kind": "json-value-scalar",
+      "offset": 500,
+      "context": "ions](../../packages/web/src/model-trace-api.ts:48)、[get](../../packages/web/src/model-trace-api.ts:56)、[getConfig](../../packages/web/src/model-trace-api.ts:68)，类型选读 [普通过滤字段与分页返回类型](../../packages/core/src/model-traces/types.ts:97)，本地文档 [Reading](../../docs/model-observability.md:107)。\n- 普通生产者只做静态选读：[`ModelTraceExplorer.tsx:267`](../../packages/web/src/components/ModelTraceExplorer.tsx:267) 传入 `limit`、`cursor`、字符串过滤值或 `undefined`；[`ModelTraceExplorer.tsx:313`](../../packages/web/src/components/ModelTraceExplorer.tsx:313) 组装 list 查询；[more](../../packages/web/src/components/ModelTraceExplorer.tsx:403) 继续传入 `nextCursor`。没有导入、渲染或运行该组件。\n- 现有 [`model-trace-api.test.ts`](../../packages/web/src/model-trace-api.test.ts:4) 的普通部分仅供静态合同参照；首次读取输出也包含同文件后续排除片段，但未分析这些分支或执行该文件。现有文件包含本批排除的负向边界用例，故没有用整份现有测试充当基线。\n\n## 首次验证结果\n\n命令、首次 combined stdout/stderr 与退出回执分别保存在 [fixture](evidence/traceapi-normal.test.ts)、[原始输出](evidence/traceapi-normal.first.raw.log)、[退出回执](evidence/traceapi-normal.first.exit.json)。raw 与 exit 文件均先落盘，再读取结果；只有一次执行，没有失败后修复或替代验证。\n\n```text\nnode scripts/run-bun-test-shard.mjs --timeout 30000 docs/audit-2026-10-17-round18/evidence/traceapi-normal.test.ts\n```\n\n| 实际覆盖 | 观察结果与限度 |\n| --- | --- |\n| 省略查询、显式 `undefined` | `list`/`sessions` 四次调用落到两个无 `?` 的固定路径；fixture 第一项标题中的 “four ordinary route paths” 指四次调用，实际检查的 pathname 是这两个。 |\n| 全部普通 list 字段 | `limit`、`cursor`、`search`、`traceId`、`sessionId`、`withoutSession`、`model`、`provider`、`purpose`、`callType`、`source`、`status`、`since`、`until` 经 URL 查询解码后与原值逐项相同；覆盖 Unicod",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/audit-2026-10-17-round50/evidence/trace-query-review/history-contexts.json",
+      "pointer": "/oldCause/2/context",
+      "kind": "json-value-scalar",
+      "offset": 500,
+      "context": "r/状态/ledger/adjudication、summary/iterate/planner/provider普通数据选择性阅读；实际model-free早退 | 私有源码非默认Host；真实评审/共识模型、完整会话，失败reviewer-cap方向不重试 |\n| optimization-lab | correction/grading/reflection、plan/dataset/report/candidate/ledger/store普通数据选择性阅读；纯grading/reflection | feature未开启、完整实验/真实付费provider/采纳/崩溃/锁与真实并发 |\n| Server | room metadata/seq/history、CodexJSONL事件投影、HubRunReplay、title、worker bridge和Hub session普通数据链路选择性阅读；真实本地RoomManager与分页、fake agent | 真实CLI/worker、手机/HTTP/WS/UI；认证/权限/安全方向、完整Server功能 |\n| Core model-traces | store/classification/summary/search/list/session pagination/retention相关段静态核对，无新增确认 | context recorder/所有provider/事件落盘完整生命周期；不宣称独立全量测试 |\n| 其他包/独立Panel仓库 | 本批依赖上一冻结报告作导航/查重，不重新宣称动态覆盖 | 仍需后续轮次；主目标保持全仓，不缩为本表 |\n\n所有动态仅guarded Bun、自有临时数据、纯函数/fake adapter或Node VM中的真实callback。未执行实际外部消息、网络模型、真实用户数据操作，未构建/安装依赖或更改产品源码。部分包导入复用现有node_modules与预构建dist，具体fixture边界逐项披露。\n\n源文件哈希只证明被列文件与冻结blob一致，不证明每个文件逐行/逐分支覆盖。成功shard是有限例子的证据；全仓typecheck/lint/build、全量测试、所有OS和真实平台验收均未宣称完成。\n",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round50/evidence/trace-query-review/history-contexts.json",
+      "pointer": "/oldCause/3/context",
+      "kind": "json-value-scalar",
+      "offset": 500,
+      "context": "显式120秒timeout，首跑约40.7秒完成，不作为独立性能bug；没有重跑。没有执行scope认证、权限/替换文件或真实worker测试。\n- 所有新发现区分真实 parser/本地磁盘和外部平台；没有构建、真实模型/账户/外部服务/进程执行。\n\n## 候选与跳过\n\n- Mobile buildSessionHistory 会丢 FoldItem 的 injected/clientMessageId/timestamp 等字段；其附件/内部路径投影已有旧 `docs/review-2026-10-12/legacy-history-round24.md` R84 详细确认。本轮只读核对该已知家族，没有另做附件复现或重复计入。额外internal anchor为空白气泡的影响尚未独立动态验证，继续仅作相关候选。\n- 辅助只读检索带入不存在的 shared/transcript.ts、web/src/streamReducer.ts、renderer/messages/types.ts，rg报ENOENT。它们不属于运行实验，也不作产品问题证据；未重跑失败动态 fixture。\n- ModelTraceStore 普通summary/search/分类/排序/paging/retention链路作选择性静态阅读；list和sessions当前都复用localeCompare做cursor后继，没有把旧catalog comparator问题套用到这里。搜索是metadata字段而非JSON正文，不将Pet全文预筛问题误报到此模块。未增加动态测试或确认项。不存在的model-traces/capture.ts辅助读取已跳过。\n\n本分审5个完整成功首次shard共 **37 pass /110 expect /10 filtered /0 fail**。实际新缺陷观察/正常对照共8个测试，其余29个为当前选择性既有基线；没有把filtered选中数量当作已执行测试。\n",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round50/evidence/trace-query-review/history-contexts.json",
+      "pointer": "/oldCause/6/context",
+      "kind": "json-value-scalar",
+      "offset": 180,
+      "context": "tadata/seq/history、CodexJSONL事件投影、HubRunReplay、title、worker bridge和Hub session普通数据链路选择性阅读；真实本地RoomManager与分页、fake agent | 真实CLI/worker、手机/HTTP/WS/UI；认证/权限/安全方向、完整Server功能 |\n| Core model-traces | store/classification/summary/search/list/session pagination/retention相关段静态核对，无新增确认 | context recorder/所有provider/事件落盘完整生命周期；不宣称独立全量测试 |\n| 其他包/独立Panel仓库 | 本批依赖上一冻结报告作导航/查重，不重新宣称动态覆盖 | 仍需后续轮次；主目标保持全仓，不缩为本表 |\n\n所有动态仅guarded Bun、自有临时数据、纯函数/fake adapter或Node VM中的真实callback。未执行实际外部消息、网络模型、真实用户数据操作，未构建/安装依赖或更改产品源码。部分包导入复用现有node_modules与预构建dist，具体fixture边界逐项披露。\n\n源文件哈希只证明被列文件与冻结blob一致，不证明每个文件逐行/逐分支覆盖。成功shard是有限例子的证据；全仓typecheck/lint/build、全量测试、所有OS和真实平台验收均未宣称完成。\n",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round50/evidence/trace-query-review/history-contexts.json",
+      "pointer": "/oldCause/7/context",
+      "kind": "json-value-scalar",
+      "offset": 180,
+      "context": "外internal anchor为空白气泡的影响尚未独立动态验证，继续仅作相关候选。\n- 辅助只读检索带入不存在的 shared/transcript.ts、web/src/streamReducer.ts、renderer/messages/types.ts，rg报ENOENT。它们不属于运行实验，也不作产品问题证据；未重跑失败动态 fixture。\n- ModelTraceStore 普通summary/search/分类/排序/paging/retention链路作选择性静态阅读；list和sessions当前都复用localeCompare做cursor后继，没有把旧catalog comparator问题套用到这里。搜索是metadata字段而非JSON正文，不将Pet全文预筛问题误报到此模块。未增加动态测试或确认项。不存在的model-traces/capture.ts辅助读取已跳过。\n\n本分审5个完整成功首次shard共 **37 pass /110 expect /10 filtered /0 fail**。实际新缺陷观察/正常对照共8个测试，其余29个为当前选择性既有基线；没有把filtered选中数量当作已执行测试。\n",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round50/evidence/trace-query-review/history-contexts.json",
+      "pointer": "/oldCause/8/context",
+      "kind": "json-value-scalar",
+      "offset": 500,
+      "context": "e-rows.json)，均为库存/派生incidental记录，未建立同SHA明确full。unknown/no-row不当从未读过。Root74原说法与其更正另在[parent上下文](parent-context-notes.json)，Root的机器14/5命中不冒充其读全19窗口。\n\n## 普通合同与反证\n\n目标所读query字段/校验把正常limit1–200、withoutSession布尔、有限非负且顺序正确的since/until和有界字符串保留到新DTO；list/sessions在validated spread后转交store，session cursor错误有400映射。未用任意坏DTO、NaN或真实文件造反例。HTTP20–38仅普通query值解码，73–74直接调history list/sessions；Web API普通querySuffix以String编码、跳undefined并转交注入requester。false与正常0时间值未被truthy条件丢弃。这里只是静态值流，未构造或执行语言fixture/URL/网络请求。\n\n真实Desktop ModelTracesView250–258请求sessions limit50并用page，299–306请求list limit100并消费items/nextCursor，372–382把cursor传回并合并返回DTO。Desktop trace-history-service6–9/11–13构造同server adapter。未展开IPC注册/Host/native机制，因此不假装读完全部生产闭环。Web远程factory在所搜web/mobile/renderer路径只命中definition和test导航，未建立生产调用，不把公开接口当作实际Web UI已接入。\n\n没有从这些正常DTO建立新反例。真正排序、分页实现和裁剪在未读ModelTraceStore中；目标118–201 workspace scope/visibility完全未打开，不能作为负向证明。实际HTTP授权、真实追踪文件、fs/锁、模型下载/调用和权限/身份/custody边界均停，不作认证；永久失败运行方向不重启。\n\n## 范围、诊断与结束\n\n[所读范围](source-manifest.json)5份产品源均selected，原[显示前pin](source-display-pins.json)与[摘录](source-excerpts.txt)保留；target97行display仅78行ordinary语义，不称242全文。HTTP workspace边界行23、Web Host guard41–42、Desktop native说明/目录行5/10等只是相邻显示，排除语义。四个producer文件首次rg导航先于dedicated pin，initialSemanticReadSha256=null如实保留；随后selected块在dedicated pin之后显示。没有打开任何测试正文，声明计数0。\n\n首次metadata reader将datetime类误写成datetime.datetime，exit1；原[stderr](metadata-first-error.txt)/[阶段说明](metadata-first-error.json)保存。失败在新增producer pin落盘和正文显示前，只修metadata timestamp再读同选段，非产品或fixture重",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/audit-2026-10-17-round50/evidence/trace-query-review/report.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 9,
+      "context": "# Prep86：ModelTraceStore 普通 query 数据审查\n\n有限结论：**0 新 formal / 0 candidate / 0 new-related**。本次只审普通 query 过滤、metadata 投影、排序、cursor、limit 和 session summary/page DTO 的所列选段，没有建立可由真实普通调用产生的新反例；不据此认证整个 Store、Host 或 UI，也不声称全仓无 bug。[分类记录](classification.json)另存。\n\nRoot 提供当前产品 baseline `7dcd41b9a1bfd23ecc6e6563fd8fbf569cf9483b`，仅作外部上下文；本读者没有执行 Git。实际文件经 filename inventory 确认，`packages/core/src/model-traces/store.ts` 为 624 行、23181 B、SHA `4f05f5db8c1c216b2cce1dba339d464c7b64a597ba43f6602e634c9d0fcefb8f`。[最初 pins](initial-pins.json)在正文/行导航之前；测试与消费者各自的初始 pins 也在其正文或行导航之前，见 [support pins](support-initial-pins.json)、[consumer pins](consumer-initial-pins.json)、[sessions test pin](sessions-test-initial-pin.json)。CODESHELL 的当前同 SHA 217 行阅读沿用 prep71，重复 hash 不算新指令阅读。\n\n正文前 fresh [历史库存](history.json)按 [扫描方法](history-method.py)覆盖 docs/bugs Markdown 正文与递归 JSON scalar values，含归档、纳已冻结49、排数字正式50+；未搜索 JSON keys。共 **4693 份 = 1457 MD + 3236 JSON**，2129",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/audit-2026-10-17-round50/evidence/trace-query-review/report.md",
+      "pointer": "",
+      "kind": "MD text",
+      "offset": 2538,
+      "context": "total 在 cursor 过滤前计算。没有把另处旧 comparator 家族套到此处，也未手造 Unicode ID/坏 DTO 当真实 producer。\n- Store331–442 在分页前按有区分前缀的 session/trace key 汇总匹配 metadata；计数、去重 trace、sources/models/callTypes，选择最大 updatedAt 后以 startedAt/id 解同值，最后按 updatedAt/key 排序并用相同规则做 cursor 后继。未由这些普通值流建立新反例。\n- types94–105/108–145 给出普通 query/page/group DTO；server54–89 对普通 transport 字段作新 DTO 校验、limit1–200 与 since/until 顺序检查，203–206/213–218/223–229 将 validated 值传入 Store 并映射 session cursor 错误。Store 较宽的 limit 上限500本身不构成正常 UI 错误。\n- 实际 Desktop `ModelTracesView`250–258 请求 sessions limit50并收 page，299–306 请求 list limit100并消费 items/nextCursor，372–382 将 nextCursor 传回并保留下一页 DTO。这是真实源调用证据；未运行 UI、IPC、Host 或网络。\n\n[源码清单](source-manifest.json)为 **6 selected / 0 full**，463 普通语义行 = **405 产品 + 58 测试声明**，累计唯一显示664行；display/nav 与 semantic 范围逐项分开。Store 全624行只显示356行、普通语义274行，不称 full。17个现有 test titles 仅导航，其中2个 ordinary test declarations 选读意图：store119–139 的 metadata list/search/paging 与 sessions39–49/56–81 的聚合和页面断言。现有测试没有运行；同测试的 FS/crypto 损坏正文设置50–55只相邻显示、不认证该机制。[source excerpts](source-excerpts.json)在实际显示后捕获，只保存已显示行，不伪称阅读前快照。\n\nworkspaceScopes 的 admission/visibility/authority、prune/retention、读取/反序列化真实文件、原子写、locks、crypto、真实 trace/account/config/session 内容都停在边界；即使相邻源码打印出来也不纳语义结论。get/write 主体、完整 recorder/provider/Host 生命周期、Desktop 异步生命周期与绘制也未认证。旧 NDJSON/timer 等失败方向继续 SKIP，没有恢复执行、借旧 pass 或扩大本次 negative。\n\n[validation](validation.json)记录 **0 产品函数 / 0 helper / 0 import / 0 fixture / 0 tests / 0 UI / 0 模型 / 0 native / 0 network / 0 Git**；仅运行自有标准库 metadata/hash/search 脚本",
+      "completeScalar": false
+    },
+    {
+      "path": "docs/audit-2026-10-17-round50/evidence/trace-query-review/source-excerpts.json",
+      "pointer": "/0/displayedLines/8/text",
+      "kind": "json-value-scalar",
+      "offset": 2,
+      "context": "  ModelTraceListQuery,",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round50/evidence/trace-query-review/source-excerpts.json",
+      "pointer": "/0/displayedLines/42/text",
+      "kind": "json-value-scalar",
+      "offset": 35,
+      "context": "  private matchingSummaries(query: ModelTraceListQuery): ModelTraceSummary[] {",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round50/evidence/trace-query-review/source-excerpts.json",
+      "pointer": "/0/displayedLines/44/text",
+      "kind": "json-value-scalar",
+      "offset": 31,
+      "context": "      throw new Error(\"Invalid model trace query\");",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round50/evidence/trace-query-review/source-excerpts.json",
+      "pointer": "/0/displayedLines/51/text",
+      "kind": "json-value-scalar",
+      "offset": 42,
+      "context": "      (query.callType !== undefined && !isModelTraceCallType(query.callType)) ||",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round50/evidence/trace-query-review/source-excerpts.json",
+      "pointer": "/0/displayedLines/57/text",
+      "kind": "json-value-scalar",
+      "offset": 31,
+      "context": "      throw new Error(\"Invalid model trace query\");",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round50/evidence/trace-query-review/source-excerpts.json",
+      "pointer": "/0/displayedLines/75/text",
+      "kind": "json-value-scalar",
+      "offset": 33,
+      "context": "        throw new Error(\"Invalid model trace query\");",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round50/evidence/trace-query-review/source-excerpts.json",
+      "pointer": "/0/displayedLines/200/text",
+      "kind": "json-value-scalar",
+      "offset": 14,
+      "context": "  list(query: ModelTraceListQuery = {}): ModelTracePage {",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round50/evidence/trace-query-review/source-excerpts.json",
+      "pointer": "/0/displayedLines/210/text",
+      "kind": "json-value-scalar",
+      "offset": 33,
+      "context": "        throw new Error(\"Invalid model trace cursor\");",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round50/evidence/trace-query-review/source-excerpts.json",
+      "pointer": "/0/displayedLines/213/text",
+      "kind": "json-value-scalar",
+      "offset": 33,
+      "context": "        throw new Error(\"Invalid model trace cursor\");",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round50/evidence/trace-query-review/source-excerpts.json",
+      "pointer": "/0/displayedLines/237/text",
+      "kind": "json-value-scalar",
+      "offset": 18,
+      "context": "  sessions(query: ModelTraceListQuery = {}): ModelTraceSessionPage {",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round50/evidence/trace-query-review/source-excerpts.json",
+      "pointer": "/0/displayedLines/311/text",
+      "kind": "json-value-scalar",
+      "offset": 33,
+      "context": "        throw new Error(\"Invalid model trace session cursor\");",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round50/evidence/trace-query-review/source-excerpts.json",
+      "pointer": "/0/displayedLines/324/text",
+      "kind": "json-value-scalar",
+      "offset": 33,
+      "context": "        throw new Error(\"Invalid model trace session cursor\");",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round50/evidence/trace-query-review/source-excerpts.json",
+      "pointer": "/1/displayedLines/11/text",
+      "kind": "json-value-scalar",
+      "offset": 17,
+      "context": "export interface ModelTraceListQuery {",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round50/evidence/trace-query-review/source-excerpts.json",
+      "pointer": "/2/displayedLines/2/text",
+      "kind": "json-value-scalar",
+      "offset": 16,
+      "context": "export function validateModelTraceQuery(input?: unknown): ModelTraceListQuery {",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round50/evidence/trace-query-review/source-excerpts.json",
+      "pointer": "/2/displayedLines/2/text",
+      "kind": "json-value-scalar",
+      "offset": 58,
+      "context": "export function validateModelTraceQuery(input?: unknown): ModelTraceListQuery {",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round50/evidence/trace-query-review/source-excerpts.json",
+      "pointer": "/2/displayedLines/8/text",
+      "kind": "json-value-scalar",
+      "offset": 16,
+      "context": "      throw new ModelTraceRequestError(400, `Unknown model trace query field: ${key}`);",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round50/evidence/trace-query-review/source-excerpts.json",
+      "pointer": "/2/displayedLines/18/text",
+      "kind": "json-value-scalar",
+      "offset": 18,
+      "context": "        throw new ModelTraceRequestError(400, \"Model trace limit must be between 1 and 200\");",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round50/evidence/trace-query-review/source-excerpts.json",
+      "pointer": "/2/displayedLines/37/text",
+      "kind": "json-value-scalar",
+      "offset": 19,
+      "context": "  return result as ModelTraceListQuery;",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round50/evidence/trace-query-review/source-excerpts.json",
+      "pointer": "/2/displayedLines/43/text",
+      "kind": "json-value-scalar",
+      "offset": 24,
+      "context": "      const validated = validateModelTraceQuery(query);",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round50/evidence/trace-query-review/source-excerpts.json",
+      "pointer": "/2/displayedLines/54/text",
+      "kind": "json-value-scalar",
+      "offset": 24,
+      "context": "      const validated = validateModelTraceQuery(query);",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round50/evidence/trace-query-review/source-excerpts.json",
+      "pointer": "/2/displayedLines/65/text",
+      "kind": "json-value-scalar",
+      "offset": 65,
+      "context": "        if (error instanceof Error && error.message === \"Invalid model trace session cursor\")",
+      "completeScalar": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round50/evidence/trace-query-review/source-excerpts.json",
+      "pointer": "/3/displayedLines/43/text",
+      "kind": "json-value-scalar",
+      "offset": 35,
+      "context": "      .then(() => window.codeshell.modelTraces.list({ ...selectedCallQuery!, limit: 100 }))",
+      "completeScalar": true
+    }
+  ]
+}

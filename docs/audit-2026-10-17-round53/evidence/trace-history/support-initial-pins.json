@@ -1,0 +1,26 @@
+{
+  "capturedUTC": "2026-10-17T17:50:45.503777+00:00",
+  "files": [
+    {
+      "path": "packages/server/src/model-trace-http.ts",
+      "bytes": 5245,
+      "lines": 112,
+      "sha256": "c6b8f27dece9e41d0a9919d33973a7c8adb68802cd03ba081384d6318bf64d67",
+      "beforeBodyOrLineNavigation": true
+    },
+    {
+      "path": "packages/server/src/model-trace-http.test.ts",
+      "bytes": 13613,
+      "lines": 378,
+      "sha256": "efbd633353aeccb8ba90e25ef98d5aae74549f48367de2c2e7962f99c053deb1",
+      "beforeBodyOrLineNavigation": true
+    },
+    {
+      "path": "packages/desktop/src/main/trace-history-service.ts",
+      "bytes": 528,
+      "lines": 13,
+      "sha256": "e84a9d63bfd29342fb6a6032a96c3659e541ccd77178094f243229ba25f02a8e",
+      "beforeBodyOrLineNavigation": true
+    }
+  ]
+}

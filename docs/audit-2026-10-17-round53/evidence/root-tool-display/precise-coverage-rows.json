@@ -1,0 +1,823 @@
+[
+  {
+    "historyPath": "docs/audit-2026-10-17-round14/evidence/utils-source-manifest.json",
+    "at": "$[\"sources\"][4]",
+    "row": {
+      "path": "packages/core/src/utils/toolDisplay.ts",
+      "frozenBytes": 6985,
+      "bytes": 6985,
+      "sha256": "41ba468c68cb9c564e1401d3c5cd310ab60a1e61600966c45166184871e6c000",
+      "frozenSha256": "41ba468c68cb9c564e1401d3c5cd310ab60a1e61600966c45166184871e6c000",
+      "currentSha256": "41ba468c68cb9c564e1401d3c5cd310ab60a1e61600966c45166184871e6c000",
+      "currentMatchesFrozen": true,
+      "scope": "static only; Slice source was not loaded"
+    }
+  },
+  {
+    "historyPath": "docs/audit-2026-10-17-round14/source-manifest.json",
+    "at": "$[\"files\"][24]",
+    "row": {
+      "path": "packages/core/src/utils/toolDisplay.ts",
+      "bytes": 6985,
+      "sha256": "41ba468c68cb9c564e1401d3c5cd310ab60a1e61600966c45166184871e6c000",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true
+    }
+  },
+  {
+    "historyPath": "docs/audit-2026-10-17-round14/source-manifest.json",
+    "at": "$[\"workerSourceChecks\"][50]",
+    "row": {
+      "manifest": "utils-source-manifest.json",
+      "path": "packages/core/src/utils/toolDisplay.ts",
+      "sha256": "41ba468c68cb9c564e1401d3c5cd310ab60a1e61600966c45166184871e6c000"
+    }
+  },
+  {
+    "historyPath": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+    "at": "$[\"files\"][527]",
+    "row": {
+      "path": "packages/core/src/utils/toolDisplay.ts",
+      "bytes": 6985,
+      "lines": 209,
+      "sha256": "41ba468c68cb9c564e1401d3c5cd310ab60a1e61600966c45166184871e6c000",
+      "status": "current-sha-pin-only-no-semantic-coverage",
+      "currentFullClaimVariants": 0,
+      "currentSelectedClaimVariants": 0,
+      "currentSelectedUnionLines": 0,
+      "currentSelectedUnionRanges": [],
+      "priorVersionClaimVariants": 0,
+      "currentPinOnlyVariants": 1,
+      "claimVariants": 1,
+      "claims": [
+        {
+          "sourceSha256": "41ba468c68cb9c564e1401d3c5cd310ab60a1e61600966c45166184871e6c000",
+          "matchesCurrentFilesystem": true,
+          "coverageKind": "scope-unknown-pin-only",
+          "rawCoverageLabel": null,
+          "selectedLineRanges": [],
+          "validRangeBoundsForCurrentFile": true,
+          "manifests": [
+            {
+              "path": "docs/audit-2026-10-17-round14/evidence/utils-source-manifest.json",
+              "jsonLocation": "$[\"sources\"][4]"
+            },
+            {
+              "path": "docs/audit-2026-10-17-round14/source-manifest.json",
+              "jsonLocation": "$[\"files\"][24]"
+            },
+            {
+              "path": "docs/audit-2026-10-17-round14/source-manifest.json",
+              "jsonLocation": "$[\"workerSourceChecks\"][50]"
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "historyPath": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+    "at": "$[\"files\"][1563]",
+    "row": {
+      "path": "packages/core/src/utils/toolDisplay.ts",
+      "bytes": 6985,
+      "lines": 209,
+      "sha256": "41ba468c68cb9c564e1401d3c5cd310ab60a1e61600966c45166184871e6c000"
+    }
+  },
+  {
+    "historyPath": "docs/audit-2026-10-17-round40/evidence/shortcut-hints-frontier/replacement-selection-metadata.json",
+    "at": "$[\"metadataOnlyRankingCandidates\"][0]",
+    "row": {
+      "path": "packages/core/src/utils/toolDisplay.ts",
+      "bytes": 6985,
+      "lineCount": 209,
+      "sha256": "41ba468c68cb9c564e1401d3c5cd310ab60a1e61600966c45166184871e6c000",
+      "datedStatus": "current-sha-pin-only-no-semantic-coverage",
+      "datedCoverageRows": [
+        {
+          "path": "packages/core/src/utils/toolDisplay.ts",
+          "bytes": 6985,
+          "lines": 209,
+          "sha256": "41ba468c68cb9c564e1401d3c5cd310ab60a1e61600966c45166184871e6c000",
+          "status": "current-sha-pin-only-no-semantic-coverage",
+          "currentFullClaimVariants": 0,
+          "currentSelectedClaimVariants": 0,
+          "currentSelectedUnionLines": 0,
+          "currentSelectedUnionRanges": [],
+          "priorVersionClaimVariants": 0,
+          "currentPinOnlyVariants": 1,
+          "claimVariants": 1,
+          "claims": [
+            {
+              "sourceSha256": "41ba468c68cb9c564e1401d3c5cd310ab60a1e61600966c45166184871e6c000",
+              "matchesCurrentFilesystem": true,
+              "coverageKind": "scope-unknown-pin-only",
+              "rawCoverageLabel": null,
+              "selectedLineRanges": [],
+              "validRangeBoundsForCurrentFile": true,
+              "manifests": [
+                {
+                  "path": "docs/audit-2026-10-17-round14/evidence/utils-source-manifest.json",
+                  "jsonLocation": "$[\"sources\"][4]"
+                },
+                {
+                  "path": "docs/audit-2026-10-17-round14/source-manifest.json",
+                  "jsonLocation": "$[\"files\"][24]"
+                },
+                {
+                  "path": "docs/audit-2026-10-17-round14/source-manifest.json",
+                  "jsonLocation": "$[\"workerSourceChecks\"][50]"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "historyPath": "docs/audit-2026-10-17-round40/evidence/shortcut-hints-frontier/replacement-selection-metadata.json",
+    "at": "$[\"metadataOnlyRankingCandidates\"][0][\"datedCoverageRows\"][0]",
+    "row": {
+      "path": "packages/core/src/utils/toolDisplay.ts",
+      "bytes": 6985,
+      "lines": 209,
+      "sha256": "41ba468c68cb9c564e1401d3c5cd310ab60a1e61600966c45166184871e6c000",
+      "status": "current-sha-pin-only-no-semantic-coverage",
+      "currentFullClaimVariants": 0,
+      "currentSelectedClaimVariants": 0,
+      "currentSelectedUnionLines": 0,
+      "currentSelectedUnionRanges": [],
+      "priorVersionClaimVariants": 0,
+      "currentPinOnlyVariants": 1,
+      "claimVariants": 1,
+      "claims": [
+        {
+          "sourceSha256": "41ba468c68cb9c564e1401d3c5cd310ab60a1e61600966c45166184871e6c000",
+          "matchesCurrentFilesystem": true,
+          "coverageKind": "scope-unknown-pin-only",
+          "rawCoverageLabel": null,
+          "selectedLineRanges": [],
+          "validRangeBoundsForCurrentFile": true,
+          "manifests": [
+            {
+              "path": "docs/audit-2026-10-17-round14/evidence/utils-source-manifest.json",
+              "jsonLocation": "$[\"sources\"][4]"
+            },
+            {
+              "path": "docs/audit-2026-10-17-round14/source-manifest.json",
+              "jsonLocation": "$[\"files\"][24]"
+            },
+            {
+              "path": "docs/audit-2026-10-17-round14/source-manifest.json",
+              "jsonLocation": "$[\"workerSourceChecks\"][50]"
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "historyPath": "docs/audit-2026-10-17-round40/evidence/shortcut-hints-frontier/source-manifest.json",
+    "at": "$[\"hashOnlyFiles\"][2]",
+    "row": {
+      "path": "packages/core/src/utils/toolDisplay.ts",
+      "bytes": 6985,
+      "sha256": "41ba468c68cb9c564e1401d3c5cd310ab60a1e61600966c45166184871e6c000",
+      "lineCount": 209,
+      "coverage": "hash-only selection/exclusion metadata; zero body read",
+      "selectedLineRanges": [],
+      "coveredLineCount": 0,
+      "initialPinArtifact": "replacement-selection-metadata.json",
+      "initialPinUTC": "2026-10-17T13:53:32.853804+00:00",
+      "finishBytes": 6985,
+      "finishSha256": "41ba468c68cb9c564e1401d3c5cd310ab60a1e61600966c45166184871e6c000",
+      "matchesInitialPin": true,
+      "selectionRole": "Metadata ranking only, not an active or replacement semantic leaf"
+    }
+  },
+  {
+    "historyPath": "docs/audit-2026-10-17-round40/source-manifest.json",
+    "at": "$[\"files\"][12]",
+    "row": {
+      "path": "packages/core/src/utils/toolDisplay.ts",
+      "bytes": 6985,
+      "sha256": "41ba468c68cb9c564e1401d3c5cd310ab60a1e61600966c45166184871e6c000",
+      "currentBytes": 6985,
+      "currentSha256": "41ba468c68cb9c564e1401d3c5cd310ab60a1e61600966c45166184871e6c000",
+      "mainBytes": 6985,
+      "mainSha256": "41ba468c68cb9c564e1401d3c5cd310ab60a1e61600966c45166184871e6c000",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true
+    }
+  },
+  {
+    "historyPath": "docs/audit-2026-10-17-round40/source-manifest.json",
+    "at": "$[\"hashOnlyChecks\"][12]",
+    "row": {
+      "manifest": "shortcut-hints-frontier/source-manifest.json",
+      "collection": "hashOnlyFiles",
+      "path": "packages/core/src/utils/toolDisplay.ts",
+      "sha256": "41ba468c68cb9c564e1401d3c5cd310ab60a1e61600966c45166184871e6c000",
+      "coverage": "hash-only selection/exclusion metadata; zero body read",
+      "note": "Original timing/ranges/null and same-read limitations retained; formalization adds no repeated semantic read."
+    }
+  },
+  {
+    "historyPath": "docs/audit-2026-10-17-round43/evidence/dataset-frontier/author-metadata-checks.json",
+    "at": "$[\"currentByteOnlyChecks\"][6]",
+    "row": {
+      "path": "packages/core/src/utils/toolDisplay.ts",
+      "bytes": 6985,
+      "sha256": "41ba468c68cb9c564e1401d3c5cd310ab60a1e61600966c45166184871e6c000",
+      "matchesFirstPin": true,
+      "byteOnlyNow": true
+    }
+  },
+  {
+    "historyPath": "docs/audit-2026-10-17-round43/evidence/dataset-frontier/finish-hash-checks.json",
+    "at": "$[\"files\"][0]",
+    "row": {
+      "path": "packages/core/src/utils/toolDisplay.ts",
+      "bytes": 6985,
+      "sha256": "41ba468c68cb9c564e1401d3c5cd310ab60a1e61600966c45166184871e6c000",
+      "firstSha256": "41ba468c68cb9c564e1401d3c5cd310ab60a1e61600966c45166184871e6c000",
+      "matchesFirstPin": true,
+      "firstPinArtifact": "selection-initial-pins.json"
+    }
+  },
+  {
+    "historyPath": "docs/audit-2026-10-17-round43/evidence/dataset-frontier/selection-initial-pins.json",
+    "at": "$[\"files\"][0]",
+    "row": {
+      "path": "packages/core/src/utils/toolDisplay.ts",
+      "bytes": 6985,
+      "sha256": "41ba468c68cb9c564e1401d3c5cd310ab60a1e61600966c45166184871e6c000",
+      "lineCount": 209,
+      "pinTimeUTC": "2026-10-17T14:27:15.109256+00:00",
+      "coverage": "hash-only metadata selection before any current body read"
+    }
+  },
+  {
+    "historyPath": "docs/audit-2026-10-17-round43/evidence/dataset-frontier/source-manifest.json",
+    "at": "$[\"hashOnlyFiles\"][0]",
+    "row": {
+      "path": "packages/core/src/utils/toolDisplay.ts",
+      "bytes": 6985,
+      "sha256": "41ba468c68cb9c564e1401d3c5cd310ab60a1e61600966c45166184871e6c000",
+      "firstSha256": "41ba468c68cb9c564e1401d3c5cd310ab60a1e61600966c45166184871e6c000",
+      "matchesFirstPin": true,
+      "firstPinArtifact": "selection-initial-pins.json",
+      "coverage": "hash-only; no product body semantic reading",
+      "firstPinCapturedAtUTC": null
+    }
+  },
+  {
+    "historyPath": "docs/audit-2026-10-17-round43/source-manifest.json",
+    "at": "$[\"files\"][20]",
+    "row": {
+      "path": "packages/core/src/utils/toolDisplay.ts",
+      "bytes": 6985,
+      "sha256": "41ba468c68cb9c564e1401d3c5cd310ab60a1e61600966c45166184871e6c000",
+      "currentBytes": 6985,
+      "currentSha256": "41ba468c68cb9c564e1401d3c5cd310ab60a1e61600966c45166184871e6c000",
+      "mainBytes": 6985,
+      "mainSha256": "41ba468c68cb9c564e1401d3c5cd310ab60a1e61600966c45166184871e6c000",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true
+    }
+  },
+  {
+    "historyPath": "docs/audit-2026-10-17-round43/source-manifest.json",
+    "at": "$[\"hashOnlyChecks\"][0]",
+    "row": {
+      "manifest": "dataset-frontier/source-manifest.json",
+      "collection": "hashOnlyFiles",
+      "path": "packages/core/src/utils/toolDisplay.ts",
+      "sha256": "41ba468c68cb9c564e1401d3c5cd310ab60a1e61600966c45166184871e6c000",
+      "coverage": "hash-only; no product body semantic reading",
+      "note": "Original timing/ranges/null and same-read limitations retained; formalization adds no repeated semantic read."
+    }
+  },
+  {
+    "historyPath": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+    "at": "$[\"claims\"][7186]",
+    "row": {
+      "path": "packages/core/src/utils/toolDisplay.ts",
+      "sourceHashFields": {
+        "sha256": "41ba468c68cb9c564e1401d3c5cd310ab60a1e61600966c45166184871e6c000",
+        "finishSha256": "41ba468c68cb9c564e1401d3c5cd310ab60a1e61600966c45166184871e6c000"
+      },
+      "hashBinding": "current-same-object",
+      "coverageKind": "explicit-nonsemantic-or-hash-only",
+      "scopeFields": {
+        "coverage": "hash-only selection/exclusion metadata; zero body read"
+      },
+      "rangeFields": {},
+      "rangeBoundsValidForCurrent": false,
+      "roleBoundaryFields": {},
+      "sourcePathIncludesLocator": false,
+      "directSourcePathsInObject": [
+        "packages/core/src/utils/toolDisplay.ts"
+      ],
+      "origin": "object-scalar-field",
+      "provenance": [
+        {
+          "historyRow": 2372,
+          "jsonPointer": "/hashOnlyFiles/2"
+        }
+      ],
+      "claimId": "C007187"
+    }
+  },
+  {
+    "historyPath": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+    "at": "$[\"claims\"][7187]",
+    "row": {
+      "path": "packages/core/src/utils/toolDisplay.ts",
+      "sourceHashFields": {
+        "sha256": "41ba468c68cb9c564e1401d3c5cd310ab60a1e61600966c45166184871e6c000"
+      },
+      "hashBinding": "current-same-object",
+      "coverageKind": "explicit-nonsemantic-or-hash-only",
+      "scopeFields": {
+        "coverage": "hash-only selection/exclusion metadata; zero body read"
+      },
+      "rangeFields": {},
+      "rangeBoundsValidForCurrent": false,
+      "roleBoundaryFields": {
+        "note": "Original timing/ranges/null and same-read limitations retained; formalization adds no repeated semantic read."
+      },
+      "sourcePathIncludesLocator": false,
+      "directSourcePathsInObject": [
+        "packages/core/src/utils/toolDisplay.ts"
+      ],
+      "origin": "object-scalar-field",
+      "provenance": [
+        {
+          "historyRow": 2404,
+          "jsonPointer": "/hashOnlyChecks/12"
+        }
+      ],
+      "claimId": "C007188"
+    }
+  },
+  {
+    "historyPath": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+    "at": "$[\"claims\"][7188]",
+    "row": {
+      "path": "packages/core/src/utils/toolDisplay.ts",
+      "sourceHashFields": {},
+      "hashBinding": "no-same-object-sha",
+      "coverageKind": "incidental-path-or-pin-object",
+      "scopeFields": {},
+      "rangeFields": {},
+      "rangeBoundsValidForCurrent": false,
+      "roleBoundaryFields": {},
+      "sourcePathIncludesLocator": false,
+      "directSourcePathsInObject": [
+        "packages/core/src/utils/toolDisplay.ts"
+      ],
+      "origin": "list-scalar",
+      "provenance": [
+        {
+          "historyRow": 198,
+          "jsonPointer": "/source_inventory/743"
+        },
+        {
+          "historyRow": 1119,
+          "jsonPointer": "/files/334"
+        },
+        {
+          "historyRow": 3125,
+          "jsonPointer": "/observations/0/preStop/loadedWorkspaceModules/470"
+        },
+        {
+          "historyRow": 3125,
+          "jsonPointer": "/observations/0/postStop/loadedWorkspaceModules/470"
+        },
+        {
+          "historyRow": 3125,
+          "jsonPointer": "/observations/0/afterEnable/loadedWorkspaceModules/470"
+        },
+        {
+          "historyRow": 3125,
+          "jsonPointer": "/observations/1/directSettled/loadedWorkspaceModules/470"
+        },
+        {
+          "historyRow": 3125,
+          "jsonPointer": "/observations/2/normal/loadedWorkspaceModules/470"
+        },
+        {
+          "historyRow": 3125,
+          "jsonPointer": "/observations/2/afterIdleStop/loadedWorkspaceModules/470"
+        },
+        {
+          "historyRow": 3125,
+          "jsonPointer": "/final/loadedWorkspaceModules/470"
+        },
+        {
+          "historyRow": 3135,
+          "jsonPointer": "/observations/0/preStop/loadedWorkspaceModules/470"
+        },
+        {
+          "historyRow": 3135,
+          "jsonPointer": "/observations/0/postStop/loadedWorkspaceModules/470"
+        },
+        {
+          "historyRow": 3135,
+          "jsonPointer": "/observations/0/afterEnable/loadedWorkspaceModules/470"
+        },
+        {
+          "historyRow": 3135,
+          "jsonPointer": "/observations/1/directSettled/loadedWorkspaceModules/470"
+        },
+        {
+          "historyRow": 3135,
+          "jsonPointer": "/observations/2/normal/loadedWorkspaceModules/470"
+        },
+        {
+          "historyRow": 3135,
+          "jsonPointer": "/observations/2/afterIdleStop/loadedWorkspaceModules/470"
+        },
+        {
+          "historyRow": 3135,
+          "jsonPointer": "/final/loadedWorkspaceModules/470"
+        },
+        {
+          "historyRow": 3193,
+          "jsonPointer": "/snapshot/loadedWorkspaceModules/470"
+        },
+        {
+          "historyRow": 3196,
+          "jsonPointer": "/observations/0/preStop/loadedWorkspaceModules/470"
+        },
+        {
+          "historyRow": 3196,
+          "jsonPointer": "/observations/0/postStop/loadedWorkspaceModules/470"
+        },
+        {
+          "historyRow": 3196,
+          "jsonPointer": "/observations/0/afterEnable/loadedWorkspaceModules/470"
+        },
+        {
+          "historyRow": 3196,
+          "jsonPointer": "/observations/1/directSettled/loadedWorkspaceModules/470"
+        },
+        {
+          "historyRow": 3196,
+          "jsonPointer": "/observations/2/normal/loadedWorkspaceModules/470"
+        },
+        {
+          "historyRow": 3196,
+          "jsonPointer": "/observations/2/afterIdleStop/loadedWorkspaceModules/470"
+        },
+        {
+          "historyRow": 3196,
+          "jsonPointer": "/final/loadedWorkspaceModules/470"
+        },
+        {
+          "historyRow": 3202,
+          "jsonPointer": "/snapshot/loadedWorkspaceModules/470"
+        },
+        {
+          "historyRow": 3209,
+          "jsonPointer": "/observations/0/preStop/loadedWorkspaceModules/470"
+        },
+        {
+          "historyRow": 3209,
+          "jsonPointer": "/observations/0/postStop/loadedWorkspaceModules/470"
+        },
+        {
+          "historyRow": 3209,
+          "jsonPointer": "/observations/0/afterEnable/loadedWorkspaceModules/470"
+        },
+        {
+          "historyRow": 3209,
+          "jsonPointer": "/observations/1/directSettled/loadedWorkspaceModules/470"
+        },
+        {
+          "historyRow": 3209,
+          "jsonPointer": "/snapshot/loadedWorkspaceModules/470"
+        },
+        {
+          "historyRow": 3212,
+          "jsonPointer": "/snapshot/loadedWorkspaceModules/470"
+        }
+      ],
+      "claimId": "C007189"
+    }
+  },
+  {
+    "historyPath": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+    "at": "$[\"claims\"][7189]",
+    "row": {
+      "path": "packages/core/src/utils/toolDisplay.ts",
+      "sourceHashFields": {},
+      "hashBinding": "no-same-object-sha",
+      "coverageKind": "incidental-path-or-pin-object",
+      "scopeFields": {},
+      "rangeFields": {},
+      "rangeBoundsValidForCurrent": false,
+      "roleBoundaryFields": {},
+      "sourcePathIncludesLocator": false,
+      "directSourcePathsInObject": [
+        "packages/core/src/utils/toolDisplay.ts"
+      ],
+      "origin": "object-scalar-field",
+      "provenance": [
+        {
+          "historyRow": 458,
+          "jsonPointer": "/matches/100"
+        },
+        {
+          "historyRow": 458,
+          "jsonPointer": "/matches/292"
+        },
+        {
+          "historyRow": 458,
+          "jsonPointer": "/matches/298"
+        },
+        {
+          "historyRow": 458,
+          "jsonPointer": "/matches/304"
+        },
+        {
+          "historyRow": 458,
+          "jsonPointer": "/matches/310"
+        },
+        {
+          "historyRow": 458,
+          "jsonPointer": "/matches/316"
+        },
+        {
+          "historyRow": 458,
+          "jsonPointer": "/matches/322"
+        },
+        {
+          "historyRow": 458,
+          "jsonPointer": "/matches/328"
+        },
+        {
+          "historyRow": 458,
+          "jsonPointer": "/matches/334"
+        },
+        {
+          "historyRow": 458,
+          "jsonPointer": "/matches/340"
+        },
+        {
+          "historyRow": 458,
+          "jsonPointer": "/matches/346"
+        },
+        {
+          "historyRow": 458,
+          "jsonPointer": "/matches/352"
+        },
+        {
+          "historyRow": 458,
+          "jsonPointer": "/matches/358"
+        },
+        {
+          "historyRow": 458,
+          "jsonPointer": "/matches/364"
+        },
+        {
+          "historyRow": 458,
+          "jsonPointer": "/matches/370"
+        },
+        {
+          "historyRow": 458,
+          "jsonPointer": "/matches/377"
+        },
+        {
+          "historyRow": 458,
+          "jsonPointer": "/matches/383"
+        },
+        {
+          "historyRow": 458,
+          "jsonPointer": "/matches/389"
+        },
+        {
+          "historyRow": 458,
+          "jsonPointer": "/matches/395"
+        },
+        {
+          "historyRow": 458,
+          "jsonPointer": "/matches/401"
+        },
+        {
+          "historyRow": 458,
+          "jsonPointer": "/matches/407"
+        },
+        {
+          "historyRow": 458,
+          "jsonPointer": "/matches/413"
+        },
+        {
+          "historyRow": 458,
+          "jsonPointer": "/matches/419"
+        },
+        {
+          "historyRow": 458,
+          "jsonPointer": "/matches/425"
+        },
+        {
+          "historyRow": 458,
+          "jsonPointer": "/matches/431"
+        },
+        {
+          "historyRow": 458,
+          "jsonPointer": "/matches/437"
+        },
+        {
+          "historyRow": 458,
+          "jsonPointer": "/matches/443"
+        },
+        {
+          "historyRow": 458,
+          "jsonPointer": "/matches/449"
+        },
+        {
+          "historyRow": 458,
+          "jsonPointer": "/matches/455"
+        },
+        {
+          "historyRow": 458,
+          "jsonPointer": "/matches/461"
+        },
+        {
+          "historyRow": 461,
+          "jsonPointer": "/related/0"
+        },
+        {
+          "historyRow": 478,
+          "jsonPointer": "/observations/0"
+        }
+      ],
+      "claimId": "C007190"
+    }
+  },
+  {
+    "historyPath": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+    "at": "$[\"claims\"][7190]",
+    "row": {
+      "path": "packages/core/src/utils/toolDisplay.ts",
+      "sourceHashFields": {
+        "sha256": "41ba468c68cb9c564e1401d3c5cd310ab60a1e61600966c45166184871e6c000"
+      },
+      "hashBinding": "current-same-object",
+      "coverageKind": "incidental-path-or-pin-object",
+      "scopeFields": {},
+      "rangeFields": {},
+      "rangeBoundsValidForCurrent": false,
+      "roleBoundaryFields": {},
+      "sourcePathIncludesLocator": false,
+      "directSourcePathsInObject": [
+        "packages/core/src/utils/toolDisplay.ts"
+      ],
+      "origin": "object-scalar-field",
+      "provenance": [
+        {
+          "historyRow": 479,
+          "jsonPointer": "/files/24"
+        },
+        {
+          "historyRow": 479,
+          "jsonPointer": "/workerSourceChecks/50"
+        },
+        {
+          "historyRow": 1348,
+          "jsonPointer": "/files/527"
+        },
+        {
+          "historyRow": 1350,
+          "jsonPointer": "/files/1563"
+        },
+        {
+          "historyRow": 2369,
+          "jsonPointer": "/metadataOnlyRankingCandidates/0"
+        },
+        {
+          "historyRow": 2369,
+          "jsonPointer": "/metadataOnlyRankingCandidates/0/datedCoverageRows/0"
+        }
+      ],
+      "claimId": "C007191"
+    }
+  },
+  {
+    "historyPath": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+    "at": "$[\"claims\"][7191]",
+    "row": {
+      "path": "packages/core/src/utils/toolDisplay.ts",
+      "sourceHashFields": {
+        "sha256": "41ba468c68cb9c564e1401d3c5cd310ab60a1e61600966c45166184871e6c000",
+        "currentSha256": "41ba468c68cb9c564e1401d3c5cd310ab60a1e61600966c45166184871e6c000",
+        "mainSha256": "41ba468c68cb9c564e1401d3c5cd310ab60a1e61600966c45166184871e6c000"
+      },
+      "hashBinding": "current-same-object",
+      "coverageKind": "incidental-path-or-pin-object",
+      "scopeFields": {},
+      "rangeFields": {},
+      "rangeBoundsValidForCurrent": false,
+      "roleBoundaryFields": {},
+      "sourcePathIncludesLocator": false,
+      "directSourcePathsInObject": [
+        "packages/core/src/utils/toolDisplay.ts"
+      ],
+      "origin": "object-scalar-field",
+      "provenance": [
+        {
+          "historyRow": 2404,
+          "jsonPointer": "/files/12"
+        }
+      ],
+      "claimId": "C007192"
+    }
+  },
+  {
+    "historyPath": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+    "at": "$[\"claims\"][7192]",
+    "row": {
+      "path": "packages/core/src/utils/toolDisplay.ts",
+      "sourceHashFields": {
+        "sha256": "41ba468c68cb9c564e1401d3c5cd310ab60a1e61600966c45166184871e6c000",
+        "frozenSha256": "41ba468c68cb9c564e1401d3c5cd310ab60a1e61600966c45166184871e6c000",
+        "currentSha256": "41ba468c68cb9c564e1401d3c5cd310ab60a1e61600966c45166184871e6c000"
+      },
+      "hashBinding": "current-same-object",
+      "coverageKind": "scope-unknown",
+      "scopeFields": {
+        "scope": "static only; Slice source was not loaded"
+      },
+      "rangeFields": {},
+      "rangeBoundsValidForCurrent": false,
+      "roleBoundaryFields": {},
+      "sourcePathIncludesLocator": false,
+      "directSourcePathsInObject": [
+        "packages/core/src/utils/toolDisplay.ts"
+      ],
+      "origin": "object-scalar-field",
+      "provenance": [
+        {
+          "historyRow": 465,
+          "jsonPointer": "/sources/4"
+        }
+      ],
+      "claimId": "C007193"
+    }
+  },
+  {
+    "historyPath": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-index.json",
+    "at": "$[\"files\"][1881]",
+    "row": {
+      "path": "packages/core/src/utils/toolDisplay.ts",
+      "bytes": 6985,
+      "sha256": "41ba468c68cb9c564e1401d3c5cd310ab60a1e61600966c45166184871e6c000",
+      "lines": 209,
+      "status": "historical-object-no-current-explicit-semantic-coverage",
+      "currentExplicitFullClaimIds": [],
+      "currentExplicitSelectedClaimIds": [],
+      "currentSelectedUnionLines": 0,
+      "claimIds": [
+        "C007187",
+        "C007188",
+        "C007189",
+        "C007190",
+        "C007191",
+        "C007192",
+        "C007193"
+      ],
+      "claimKindCounts": {
+        "explicit-nonsemantic-or-hash-only": 2,
+        "incidental-path-or-pin-object": 4,
+        "scope-unknown": 1
+      }
+    }
+  },
+  {
+    "historyPath": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/package-inventory.json",
+    "at": "$[\"files\"][1881]",
+    "row": {
+      "path": "packages/core/src/utils/toolDisplay.ts",
+      "bytes": 6985,
+      "sha256": "41ba468c68cb9c564e1401d3c5cd310ab60a1e61600966c45166184871e6c000",
+      "lines": 209
+    }
+  },
+  {
+    "historyPath": "docs/audit-2026-10-17-round44/evidence/coverage-status/current-inventory.json",
+    "at": "$[\"files\"][1881]",
+    "row": {
+      "path": "packages/core/src/utils/toolDisplay.ts",
+      "bytes": 6985,
+      "sha256": "41ba468c68cb9c564e1401d3c5cd310ab60a1e61600966c45166184871e6c000",
+      "lines": 209,
+      "initial49ShaMatches": true,
+      "blockedBy49EndingOverlay": false,
+      "coverageStatus": "semantic-coverage-not-confirmed-by-this-index"
+    }
+  }
+]

@@ -1,0 +1,72 @@
+{
+  "createdAt": "2026-10-17T17:59:45.334340+00:00",
+  "files": [],
+  "sourceCheckCount": 13,
+  "sourcePinsAllUnchanged": true,
+  "historyFilesChecked": 5150,
+  "historyAllUnchanged": true,
+  "localLinks": [
+    {
+      "target": "history-inventory.json",
+      "exists": true,
+      "insidePacket": true
+    },
+    {
+      "target": "canonical-history-decisions.json",
+      "exists": true,
+      "insidePacket": true
+    },
+    {
+      "target": "history-gate.json",
+      "exists": true,
+      "insidePacket": true
+    },
+    {
+      "target": "focused-history-gate.json",
+      "exists": true,
+      "insidePacket": true
+    },
+    {
+      "target": "remaining-cause-window-review.json",
+      "exists": true,
+      "insidePacket": true
+    },
+    {
+      "target": "source-manifest.json",
+      "exists": true,
+      "insidePacket": true
+    },
+    {
+      "target": "source-excerpts.json",
+      "exists": true,
+      "insidePacket": true
+    },
+    {
+      "target": "metadata-diagnostics.json",
+      "exists": true,
+      "insidePacket": true
+    },
+    {
+      "target": "ending-checks.json",
+      "exists": true,
+      "insidePacket": true
+    },
+    {
+      "target": "validation.json",
+      "exists": true,
+      "insidePacket": true
+    }
+  ],
+  "allLinksValid": true,
+  "sourceRows": 11,
+  "productRows": 9,
+  "testDeclarationRows": 2,
+  "productSemanticLineCount": 273,
+  "testDeclarationLineCount": 39,
+  "semanticLineCount": 312,
+  "displayedLineCount": 736,
+  "newFindingIDs": 0,
+  "reviewedSameCandidate": 1,
+  "productExecutions": 0,
+  "gitExecutions": 0
+}
