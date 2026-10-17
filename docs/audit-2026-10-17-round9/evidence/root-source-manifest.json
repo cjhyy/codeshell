@@ -1,0 +1,194 @@
+{
+  "frozenSource": "248d091202869c07274adedf4fd50403105f1b1f",
+  "files": [
+    {
+      "path": "CODESHELL.md",
+      "bytes": 17639,
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "worktreeMatchesFrozen": true,
+      "coverage": "Selected implementation/excerpt read; fixture imports only where referenced. No whole-file coverage claim for index/turn-loop/runtime/run-finalize/run-manager-usage."
+    },
+    {
+      "path": "AGENTS.md",
+      "bytes": 206,
+      "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "worktreeMatchesFrozen": true,
+      "coverage": "Selected implementation/excerpt read; fixture imports only where referenced. No whole-file coverage claim for index/turn-loop/runtime/run-finalize/run-manager-usage."
+    },
+    {
+      "path": "scripts/run-bun-test-shard.mjs",
+      "bytes": 233,
+      "sha256": "dd2b245afbcb5aa7c798c8674d34edb8e02bb42be0be320050adf9be5ed2fd7d",
+      "worktreeMatchesFrozen": true,
+      "coverage": "Selected implementation/excerpt read; fixture imports only where referenced. No whole-file coverage claim for index/turn-loop/runtime/run-finalize/run-manager-usage."
+    },
+    {
+      "path": "packages/core/src/index.ts",
+      "bytes": 27572,
+      "sha256": "6fb12a100441e95c6ae5a0d67dba3cd941a4c2c1c16d85edfc294ba46b1863a7",
+      "worktreeMatchesFrozen": true,
+      "coverage": "Selected implementation/excerpt read; fixture imports only where referenced. No whole-file coverage claim for index/turn-loop/runtime/run-finalize/run-manager-usage."
+    },
+    {
+      "path": "packages/core/src/cost-tracker.ts",
+      "bytes": 13259,
+      "sha256": "a2cf7a70e77c7dceb22a496f7919b1c25b04e83712d4a1fb62163758a3a7bfe5",
+      "worktreeMatchesFrozen": true,
+      "coverage": "Selected implementation/excerpt read; fixture imports only where referenced. No whole-file coverage claim for index/turn-loop/runtime/run-finalize/run-manager-usage."
+    },
+    {
+      "path": "packages/core/src/cost-tracker.test.ts",
+      "bytes": 2797,
+      "sha256": "928cb20ad21e27dfdf04ca4a234716fe4846fbc99c1bcc6e418a130178a2d383",
+      "worktreeMatchesFrozen": true,
+      "coverage": "Selected implementation/excerpt read; fixture imports only where referenced. No whole-file coverage claim for index/turn-loop/runtime/run-finalize/run-manager-usage."
+    },
+    {
+      "path": "tests/cost-tracker.test.ts",
+      "bytes": 2394,
+      "sha256": "5f043245cff39a69f8d7354a83069e0ccc349546fc0592eaaa33e6bea77e731d",
+      "worktreeMatchesFrozen": true,
+      "coverage": "Selected implementation/excerpt read; fixture imports only where referenced. No whole-file coverage claim for index/turn-loop/runtime/run-finalize/run-manager-usage."
+    },
+    {
+      "path": "packages/core/src/colorizer.ts",
+      "bytes": 1045,
+      "sha256": "996f800b3d2452e58dd64d8bbf45baf75672329af8b3b8ea2f5bd13be53da2cc",
+      "worktreeMatchesFrozen": true,
+      "coverage": "Selected implementation/excerpt read; fixture imports only where referenced. No whole-file coverage claim for index/turn-loop/runtime/run-finalize/run-manager-usage."
+    },
+    {
+      "path": "packages/core/src/data/openrouter-models.ts",
+      "bytes": 3116,
+      "sha256": "535dcbb41dbb09bf365e1ec87b2b50f89ac3fe12e6caabf100b1927d419061d7",
+      "worktreeMatchesFrozen": true,
+      "coverage": "Selected implementation/excerpt read; fixture imports only where referenced. No whole-file coverage claim for index/turn-loop/runtime/run-finalize/run-manager-usage."
+    },
+    {
+      "path": "packages/core/src/data/openrouter-models.json",
+      "bytes": 6888,
+      "sha256": "4ca5e70176096242775637cb32e63fafb01a651746190290d924c2873ce98c23",
+      "worktreeMatchesFrozen": true,
+      "coverage": "Selected implementation/excerpt read; fixture imports only where referenced. No whole-file coverage claim for index/turn-loop/runtime/run-finalize/run-manager-usage."
+    },
+    {
+      "path": "packages/core/src/data/model-metadata.ts",
+      "bytes": 4821,
+      "sha256": "34284ceaa39246c9589546860c2d6631124f80879d159e959f40a8402f70cd12",
+      "worktreeMatchesFrozen": true,
+      "coverage": "Selected implementation/excerpt read; fixture imports only where referenced. No whole-file coverage claim for index/turn-loop/runtime/run-finalize/run-manager-usage."
+    },
+    {
+      "path": "packages/core/src/data/model-metadata.json",
+      "bytes": 8129,
+      "sha256": "126aebfb9e9784a826d19fdd81c3242c01909ab61084f77070c4fe78e5e1e3f0",
+      "worktreeMatchesFrozen": true,
+      "coverage": "Selected implementation/excerpt read; fixture imports only where referenced. No whole-file coverage claim for index/turn-loop/runtime/run-finalize/run-manager-usage."
+    },
+    {
+      "path": "packages/core/src/cost-ledger/store.ts",
+      "bytes": 17975,
+      "sha256": "1a3d88c4796d772cf5ad1244660d9b9b5abc9f71d83e8579a043aa37c2c91150",
+      "worktreeMatchesFrozen": true,
+      "coverage": "Selected implementation/excerpt read; fixture imports only where referenced. No whole-file coverage claim for index/turn-loop/runtime/run-finalize/run-manager-usage."
+    },
+    {
+      "path": "packages/core/src/cost-ledger/types.ts",
+      "bytes": 2251,
+      "sha256": "e959b452be100019096dbb107fac861989764728690243d5c3b1402c1dc89989",
+      "worktreeMatchesFrozen": true,
+      "coverage": "Selected implementation/excerpt read; fixture imports only where referenced. No whole-file coverage claim for index/turn-loop/runtime/run-finalize/run-manager-usage."
+    },
+    {
+      "path": "packages/core/src/cost-ledger/summary.ts",
+      "bytes": 2891,
+      "sha256": "4ef61d2b0803899574adbaaa98e33f3fde2ae4da0250f452d6f72997936b07d6",
+      "worktreeMatchesFrozen": true,
+      "coverage": "Selected implementation/excerpt read; fixture imports only where referenced. No whole-file coverage claim for index/turn-loop/runtime/run-finalize/run-manager-usage."
+    },
+    {
+      "path": "packages/core/src/cost-ledger/pricing.ts",
+      "bytes": 1919,
+      "sha256": "7584eb97d07fda14171917d093d16201521ba77ce7ce61cab0d08390da7e3640",
+      "worktreeMatchesFrozen": true,
+      "coverage": "Selected implementation/excerpt read; fixture imports only where referenced. No whole-file coverage claim for index/turn-loop/runtime/run-finalize/run-manager-usage."
+    },
+    {
+      "path": "packages/core/src/cost-ledger/context.ts",
+      "bytes": 5823,
+      "sha256": "91ab442184ca82d512c2722c64205c27470db2a6c29bde1fe2883f24d96c99ee",
+      "worktreeMatchesFrozen": true,
+      "coverage": "Selected implementation/excerpt read; fixture imports only where referenced. No whole-file coverage claim for index/turn-loop/runtime/run-finalize/run-manager-usage."
+    },
+    {
+      "path": "packages/core/src/session/usage.ts",
+      "bytes": 5944,
+      "sha256": "cec6ea891501f12ea35686ce5b409055ce76bcf7cea231f81ab03479aacd79cd",
+      "worktreeMatchesFrozen": true,
+      "coverage": "Selected implementation/excerpt read; fixture imports only where referenced. No whole-file coverage claim for index/turn-loop/runtime/run-finalize/run-manager-usage."
+    },
+    {
+      "path": "packages/core/src/session/usage.test.ts",
+      "bytes": 8502,
+      "sha256": "56f833d7af2d990b9a712d441f342def79d9dc4ce2f712f81ebaa36ff3489610",
+      "worktreeMatchesFrozen": true,
+      "coverage": "Selected implementation/excerpt read; fixture imports only where referenced. No whole-file coverage claim for index/turn-loop/runtime/run-finalize/run-manager-usage."
+    },
+    {
+      "path": "packages/core/src/engine/token-budget.ts",
+      "bytes": 1722,
+      "sha256": "f014815be3c3d40a441b93cdc7c9e6f257d1c7ca394202f24f471fb89965d104",
+      "worktreeMatchesFrozen": true,
+      "coverage": "Selected implementation/excerpt read; fixture imports only where referenced. No whole-file coverage claim for index/turn-loop/runtime/run-finalize/run-manager-usage."
+    },
+    {
+      "path": "packages/core/src/engine/runtime.ts",
+      "bytes": 6215,
+      "sha256": "9f04d688231ba7603e402f8b032ba94a24c82ec4705bdb59abc81460e1ad64ce",
+      "worktreeMatchesFrozen": true,
+      "coverage": "Selected implementation/excerpt read; fixture imports only where referenced. No whole-file coverage claim for index/turn-loop/runtime/run-finalize/run-manager-usage."
+    },
+    {
+      "path": "packages/core/src/engine/run-accounting.ts",
+      "bytes": 6970,
+      "sha256": "d31ce6cf6f14056ea549b94ab7146592d5ae223139cfa1585b026303fb13dac6",
+      "worktreeMatchesFrozen": true,
+      "coverage": "Selected implementation/excerpt read; fixture imports only where referenced. No whole-file coverage claim for index/turn-loop/runtime/run-finalize/run-manager-usage."
+    },
+    {
+      "path": "packages/core/src/engine/run-finalize.ts",
+      "bytes": 19306,
+      "sha256": "c60c45ef7392d360be5f59e75465a7f03b9a5d0fa6ea5849c4d05ff2c546f335",
+      "worktreeMatchesFrozen": true,
+      "coverage": "Selected implementation/excerpt read; fixture imports only where referenced. No whole-file coverage claim for index/turn-loop/runtime/run-finalize/run-manager-usage."
+    },
+    {
+      "path": "packages/core/src/engine/turn-loop.ts",
+      "bytes": 108774,
+      "sha256": "9ccbcd28cdb100d7d879994c3839d3b53c46af01589e0475d6f75f1d7e750413",
+      "worktreeMatchesFrozen": true,
+      "coverage": "Selected implementation/excerpt read; fixture imports only where referenced. No whole-file coverage claim for index/turn-loop/runtime/run-finalize/run-manager-usage."
+    },
+    {
+      "path": "packages/core/src/engine/cost-store.ts",
+      "bytes": 979,
+      "sha256": "5d4a1afb396d82cfd296b4b0ff58f5dc15a13b730259ab6c3088a393ced16c81",
+      "worktreeMatchesFrozen": true,
+      "coverage": "Selected implementation/excerpt read; fixture imports only where referenced. No whole-file coverage claim for index/turn-loop/runtime/run-finalize/run-manager-usage."
+    },
+    {
+      "path": "packages/desktop/src/main/usage-history-service.ts",
+      "bytes": 1277,
+      "sha256": "eb4e8a13f62cb5b964d3b83d857d5351088d15e27a102c1f57148fb6fab1c7c4",
+      "worktreeMatchesFrozen": true,
+      "coverage": "Selected implementation/excerpt read; fixture imports only where referenced. No whole-file coverage claim for index/turn-loop/runtime/run-finalize/run-manager-usage."
+    },
+    {
+      "path": "tests/run-manager-usage.test.ts",
+      "bytes": 23525,
+      "sha256": "c827a458ea378b104e759a738b2d2eee714b69291e720cfaff760a57cf6a7368",
+      "worktreeMatchesFrozen": true,
+      "coverage": "Selected implementation/excerpt read; fixture imports only where referenced. No whole-file coverage claim for index/turn-loop/runtime/run-finalize/run-manager-usage."
+    }
+  ]
+}

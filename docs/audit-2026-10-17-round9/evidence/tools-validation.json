@@ -1,0 +1,63 @@
+{
+  "frozenCommit": "248d091202869c07274adedf4fd50403105f1b1f",
+  "confirmedFindings": 0,
+  "candidates": 1,
+  "firstAttempts": 2,
+  "cleanShards": 2,
+  "cleanPass": 17,
+  "cleanExpectCalls": 97,
+  "failedShards": 0,
+  "newTests": 3,
+  "existingBaselineTests": 14,
+  "policy": "First raw combined stdout/stderr and exit preserved before inspection. No repairs/retries, installation or build. Preflight metadata correction was before all test attempts.",
+  "shards": [
+    {
+      "name": "tools-registry-replacement",
+      "scope": "New candidate fake executor and normal controls",
+      "command": [
+        "node",
+        "scripts/run-bun-test-shard.mjs",
+        "--timeout",
+        "30000",
+        "docs/audit-2026-10-17-round9/evidence/tools-registry-replacement.test.ts"
+      ],
+      "attempt": 1,
+      "exitCode": 0,
+      "combinedStdoutStderr": "tools-registry-replacement.first.log",
+      "exitReceipt": "tools-registry-replacement.first.exit.txt",
+      "completed": true,
+      "status": "passed",
+      "counts": {
+        "pass": 3,
+        "fail": 0,
+        "unhandledErrors": 0,
+        "expectCalls": 18,
+        "skipped": 0
+      }
+    },
+    {
+      "name": "tools-surface-baseline",
+      "scope": "Existing pure in-memory RunToolSurface baseline",
+      "command": [
+        "node",
+        "scripts/run-bun-test-shard.mjs",
+        "--timeout",
+        "30000",
+        "packages/core/src/tool-system/run-tool-surface.test.ts"
+      ],
+      "attempt": 1,
+      "exitCode": 0,
+      "combinedStdoutStderr": "tools-surface-baseline.first.log",
+      "exitReceipt": "tools-surface-baseline.first.exit.txt",
+      "completed": true,
+      "status": "passed",
+      "counts": {
+        "pass": 14,
+        "fail": 0,
+        "unhandledErrors": 0,
+        "expectCalls": 79,
+        "skipped": 0
+      }
+    }
+  ]
+}

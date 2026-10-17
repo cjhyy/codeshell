@@ -1,0 +1,12 @@
+{
+  "command": [
+    "node",
+    "scripts/run-bun-test-shard.mjs",
+    "--timeout",
+    "30000",
+    "docs/audit-2026-10-17-round9/evidence/session-roundtrip-controls.test.ts"
+  ],
+  "exitCode": 0,
+  "elapsedSeconds": 0.345,
+  "rawOutput": "session-roundtrip-controls.first.log"
+}

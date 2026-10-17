@@ -1,0 +1,53 @@
+bun test v1.3.11 (af24e281)
+
+packages/desktop/src/renderer/attachmentSession.test.ts:
+(pass) resolveAttachmentSessionId > uses the bound engine session id for legacy UI sessions [0.72ms]
+(pass) resolveAttachmentSessionId > falls back to the UI session id before an engine binding exists [0.03ms]
+(pass) resolveAttachmentSessionId > keeps a draft unresolved until attachment staging creates a session [0.19ms]
+
+packages/desktop/src/renderer/chat/attachments.test.ts:
+(pass) buildPathAttachment (TODO 2.1) > stages an attachment keeping the absolute path as name [0.44ms]
+(pass) buildPathAttachment (TODO 2.1) > rejects a non-image mime [0.22ms]
+(pass) buildPathAttachment (TODO 2.1) > rejects when the data URL is unparseable
+(pass) buildPathAttachment (TODO 2.1) > enforces the max-images count [0.10ms]
+(pass) buildPathAttachment (TODO 2.1) > wire payload carries the absolute path as name [0.11ms]
+(pass) decodeWireForDisplay > plain text with no image blocks passes through unchanged [0.30ms]
+(pass) decodeWireForDisplay > extracts a single image block, leaving the prose as text [0.15ms]
+(pass) decodeWireForDisplay > image-only message yields empty text and the image [0.02ms]
+(pass) decodeWireForDisplay > preserves order of multiple images [0.03ms]
+(pass) decodeWireForDisplay > decodes HTML-escaped names back to original [0.04ms]
+(pass) decodeWireForDisplay > encodes path metadata attrs while old display decode still extracts the image [0.05ms]
+(pass) decodeWireForDisplay > no-path legacy attachments still encode and decode [0.25ms]
+(pass) decodeWireForDisplay > drops an image block with an empty body [0.06ms]
+(pass) decodeWireForDisplay > keeps valid images while dropping an empty sibling [0.06ms]
+(pass) titleFromWire > uses the prose when present [0.17ms]
+(pass) titleFromWire > image-only message titles as an image placeholder, never base64 [0.04ms]
+(pass) titleFromWire > multiple image-only message reflects the count [0.04ms]
+(pass) titleFromWire > strips the annotations block so the title is the user's prose [0.89ms]
+(pass) titleFromWire > multiline annotation framing never leaks into session titles [0.31ms]
+
+packages/desktop/src/renderer/tool-cards/attachments.test.ts:
+(pass) classifyPath > classifies by extension [0.38ms]
+(pass) detectAttachments > extracts audio and video artifacts in output order and deduplicates them [0.63ms]
+(pass) detectAttachments > keeps an exact media path with spaces from successful Write args [0.17ms]
+(pass) detectAttachments > does not turn media mentions or backup extensions into playable attachments
+(pass) detectAttachments > extracts the PNG path from a GenerateImage result
+(pass) detectAttachments > extracts a Write file_path from args on success [0.03ms]
+(pass) detectAttachments > skips Write when the result is an error [0.02ms]
+(pass) detectAttachments > dedupes the same path mentioned twice
+(pass) detectAttachments > ignores paths with unknown/no extension [0.02ms]
+(pass) detectAttachments > tolerates corrupt args JSON [0.24ms]
+(pass) detectAttachments > strips trailing punctuation off a scraped path
+(pass) detectAttachments > ignores a bare filename scraped from prose (no directory)
+(pass) detectAttachments > keeps a ./-prefixed relative path scraped from prose
+(pass) detectAttachments > keeps a relative path with a directory scraped from prose
+(pass) detectAttachments > still trusts a bare filename from Write args (cwd is known) [0.01ms]
+(pass) detectAttachments > keeps the full path when segments contain non-ASCII (CJK) characters
+(pass) detectAttachments > does not scrape a known extension from the middle of a different filename [0.02ms]
+(pass) detectAttachments > scans large MCP screenshot results without blocking and retains surrounding paths [25.17ms]
+
+ 40 pass
+ 0 fail
+ 79 expect() calls
+Ran 40 tests across 3 files. [300.00ms]
+Completed Bun shard: 40 tests, 0 skipped; 0 failures.

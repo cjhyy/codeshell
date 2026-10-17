@@ -1,0 +1,3342 @@
+{
+  "frozenSource": "248d091202869c07274adedf4fd50403105f1b1f",
+  "fixture": "docs/audit-2026-10-17-round9/evidence/tools-registry-replacement.test.ts",
+  "fixtureSha256": "ffc2fb8842f6ecd268cd7edababc72605881e2a22b7171e67b42ab203a3bfbd8",
+  "relativeImports": [
+    {
+      "from": "docs/audit-2026-10-17-round9/evidence/tools-registry-replacement.test.ts",
+      "specifier": "../../../packages/core/src/tool-system/registry.js",
+      "resolved": "packages/core/src/tool-system/registry.ts"
+    },
+    {
+      "from": "docs/audit-2026-10-17-round9/evidence/tools-registry-replacement.test.ts",
+      "specifier": "../../../packages/core/src/tool-system/builtin/tool-search.js",
+      "resolved": "packages/core/src/tool-system/builtin/tool-search.ts"
+    },
+    {
+      "from": "packages/core/src/tool-system/builtin/tool-search.ts",
+      "specifier": "../mcp-tool-policy.js",
+      "resolved": "packages/core/src/tool-system/mcp-tool-policy.ts"
+    },
+    {
+      "from": "packages/core/src/tool-system/builtin/tool-search.ts",
+      "specifier": "../browser-discovery.js",
+      "resolved": "packages/core/src/tool-system/browser-discovery.ts"
+    },
+    {
+      "from": "packages/core/src/tool-system/builtin/tool-search.ts",
+      "specifier": "../plan-mode-allowlist.js",
+      "resolved": "packages/core/src/tool-system/plan-mode-allowlist.ts"
+    },
+    {
+      "from": "packages/core/src/tool-system/builtin/tool-search.ts",
+      "specifier": "../mcp-health.js",
+      "resolved": "packages/core/src/tool-system/mcp-health.ts"
+    },
+    {
+      "from": "packages/core/src/tool-system/registry.ts",
+      "specifier": "../exceptions.js",
+      "resolved": "packages/core/src/exceptions.ts"
+    },
+    {
+      "from": "packages/core/src/tool-system/registry.ts",
+      "specifier": "./builtin/index.js",
+      "resolved": "packages/core/src/tool-system/builtin/index.ts"
+    },
+    {
+      "from": "packages/core/src/tool-system/registry.ts",
+      "specifier": "./validate-tool-metadata.js",
+      "resolved": "packages/core/src/tool-system/validate-tool-metadata.ts"
+    },
+    {
+      "from": "packages/core/src/tool-system/registry.ts",
+      "specifier": "./tool-name.js",
+      "resolved": "packages/core/src/tool-system/tool-name.ts"
+    },
+    {
+      "from": "packages/core/src/tool-system/registry.ts",
+      "specifier": "../composition/lifetime.js",
+      "resolved": "packages/core/src/composition/lifetime.ts"
+    },
+    {
+      "from": "packages/core/src/tool-system/tool-name.ts",
+      "specifier": "../exceptions.js",
+      "resolved": "packages/core/src/exceptions.ts"
+    },
+    {
+      "from": "packages/core/src/tool-system/builtin/index.ts",
+      "specifier": "./read.js",
+      "resolved": "packages/core/src/tool-system/builtin/read.ts"
+    },
+    {
+      "from": "packages/core/src/tool-system/builtin/index.ts",
+      "specifier": "./write.js",
+      "resolved": "packages/core/src/tool-system/builtin/write.ts"
+    },
+    {
+      "from": "packages/core/src/tool-system/builtin/index.ts",
+      "specifier": "./generate-image.js",
+      "resolved": "packages/core/src/tool-system/builtin/generate-image.ts"
+    },
+    {
+      "from": "packages/core/src/tool-system/builtin/index.ts",
+      "specifier": "./edit-model-catalog.js",
+      "resolved": "packages/core/src/tool-system/builtin/edit-model-catalog.ts"
+    },
+    {
+      "from": "packages/core/src/tool-system/builtin/index.ts",
+      "specifier": "./configure-model-connection.js",
+      "resolved": "packages/core/src/tool-system/builtin/configure-model-connection.ts"
+    },
+    {
+      "from": "packages/core/src/tool-system/builtin/index.ts",
+      "specifier": "./generate-video.js",
+      "resolved": "packages/core/src/tool-system/builtin/generate-video.ts"
+    },
+    {
+      "from": "packages/core/src/tool-system/builtin/index.ts",
+      "specifier": "./view-image.js",
+      "resolved": "packages/core/src/tool-system/builtin/view-image.ts"
+    },
+    {
+      "from": "packages/core/src/tool-system/builtin/index.ts",
+      "specifier": "./edit.js",
+      "resolved": "packages/core/src/tool-system/builtin/edit.ts"
+    },
+    {
+      "from": "packages/core/src/tool-system/builtin/index.ts",
+      "specifier": "./glob.js",
+      "resolved": "packages/core/src/tool-system/builtin/glob.ts"
+    },
+    {
+      "from": "packages/core/src/tool-system/builtin/index.ts",
+      "specifier": "./grep.js",
+      "resolved": "packages/core/src/tool-system/builtin/grep.ts"
+    },
+    {
+      "from": "packages/core/src/tool-system/builtin/index.ts",
+      "specifier": "./bash.js",
+      "resolved": "packages/core/src/tool-system/builtin/bash.ts"
+    },
+    {
+      "from": "packages/core/src/tool-system/builtin/index.ts",
+      "specifier": "./web-search.js",
+      "resolved": "packages/core/src/tool-system/builtin/web-search.ts"
+    },
+    {
+      "from": "packages/core/src/tool-system/builtin/index.ts",
+      "specifier": "./web-fetch.js",
+      "resolved": "packages/core/src/tool-system/builtin/web-fetch.ts"
+    },
+    {
+      "from": "packages/core/src/tool-system/builtin/index.ts",
+      "specifier": "./ask-user.js",
+      "resolved": "packages/core/src/tool-system/builtin/ask-user.ts"
+    },
+    {
+      "from": "packages/core/src/tool-system/builtin/index.ts",
+      "specifier": "./agent.js",
+      "resolved": "packages/core/src/tool-system/builtin/agent.ts"
+    },
+    {
+      "from": "packages/core/src/tool-system/builtin/index.ts",
+      "specifier": "./plan.js",
+      "resolved": "packages/core/src/tool-system/builtin/plan.ts"
+    },
+    {
+      "from": "packages/core/src/tool-system/builtin/index.ts",
+      "specifier": "./tool-search.js",
+      "resolved": "packages/core/src/tool-system/builtin/tool-search.ts"
+    },
+    {
+      "from": "packages/core/src/tool-system/builtin/index.ts",
+      "specifier": "./task.js",
+      "resolved": "packages/core/src/tool-system/builtin/task.ts"
+    },
+    {
+      "from": "packages/core/src/tool-system/builtin/index.ts",
+      "specifier": "./context-notes.js",
+      "resolved": "packages/core/src/tool-system/builtin/context-notes.ts"
+    },
+    {
+      "from": "packages/core/src/tool-system/builtin/index.ts",
+      "specifier": "./sleep.definition.js",
+      "resolved": "packages/core/src/tool-system/builtin/sleep.definition.ts"
+    },
+    {
+      "from": "packages/core/src/tool-system/builtin/index.ts",
+      "specifier": "./sleep.js",
+      "resolved": "packages/core/src/tool-system/builtin/sleep.ts"
+    },
+    {
+      "from": "packages/core/src/tool-system/builtin/index.ts",
+      "specifier": "./config.js",
+      "resolved": "packages/core/src/tool-system/builtin/config.ts"
+    },
+    {
+      "from": "packages/core/src/tool-system/builtin/index.ts",
+      "specifier": "./cron.js",
+      "resolved": "packages/core/src/tool-system/builtin/cron.ts"
+    },
+    {
+      "from": "packages/core/src/tool-system/builtin/index.ts",
+      "specifier": "./cron-list.definition.js",
+      "resolved": "packages/core/src/tool-system/builtin/cron-list.definition.ts"
+    },
+    {
+      "from": "packages/core/src/tool-system/builtin/index.ts",
+      "specifier": "./skill.js",
+      "resolved": "packages/core/src/tool-system/builtin/skill.ts"
+    },
+    {
+      "from": "packages/core/src/tool-system/builtin/index.ts",
+      "specifier": "./mcp-tools.js",
+      "resolved": "packages/core/src/tool-system/builtin/mcp-tools.ts"
+    },
+    {
+      "from": "packages/core/src/tool-system/builtin/index.ts",
+      "specifier": "./sources.js",
+      "resolved": "packages/core/src/tool-system/builtin/sources.ts"
+    },
+    {
+      "from": "packages/core/src/tool-system/builtin/index.ts",
+      "specifier": "./repl.js",
+      "resolved": "packages/core/src/tool-system/builtin/repl.ts"
+    },
+    {
+      "from": "packages/core/src/tool-system/builtin/index.ts",
+      "specifier": "./powershell.js",
+      "resolved": "packages/core/src/tool-system/builtin/powershell.ts"
+    },
+    {
+      "from": "packages/core/src/tool-system/builtin/index.ts",
+      "specifier": "./memory.js",
+      "resolved": "packages/core/src/tool-system/builtin/memory.ts"
+    },
+    {
+      "from": "packages/core/src/tool-system/builtin/index.ts",
+      "specifier": "./complete-goal.js",
+      "resolved": "packages/core/src/tool-system/builtin/complete-goal.ts"
+    },
+    {
+      "from": "packages/core/src/tool-system/builtin/index.ts",
+      "specifier": "./cancel-goal.js",
+      "resolved": "packages/core/src/tool-system/builtin/cancel-goal.ts"
+    },
+    {
+      "from": "packages/core/src/tool-system/builtin/index.ts",
+      "specifier": "./add-marketplace.js",
+      "resolved": "packages/core/src/tool-system/builtin/add-marketplace.ts"
+    },
+    {
+      "from": "packages/core/src/tool-system/builtin/index.ts",
+      "specifier": "./install-capability.js",
+      "resolved": "packages/core/src/tool-system/builtin/install-capability.ts"
+    },
+    {
+      "from": "packages/core/src/tool-system/builtin/index.ts",
+      "specifier": "./background-shell-tools.js",
+      "resolved": "packages/core/src/tool-system/builtin/background-shell-tools.ts"
+    },
+    {
+      "from": "packages/core/src/tool-system/builtin/index.ts",
+      "specifier": "./browser-tools.js",
+      "resolved": "packages/core/src/tool-system/builtin/browser-tools.ts"
+    },
+    {
+      "from": "packages/core/src/tool-system/builtin/index.ts",
+      "specifier": "./browser-inspect.js",
+      "resolved": "packages/core/src/tool-system/builtin/browser-inspect.ts"
+    },
+    {
+      "from": "packages/core/src/tool-system/builtin/index.ts",
+      "specifier": "./panel.js",
+      "resolved": "packages/core/src/tool-system/builtin/panel.ts"
+    },
+    {
+      "from": "packages/core/src/tool-system/builtin/index.ts",
+      "specifier": "./send-message-to-session.js",
+      "resolved": "packages/core/src/tool-system/builtin/send-message-to-session.ts"
+    },
+    {
+      "from": "packages/core/src/tool-system/builtin/index.ts",
+      "specifier": "../../credentials/use-credential-tool.js",
+      "resolved": "packages/core/src/credentials/use-credential-tool.ts"
+    },
+    {
+      "from": "packages/core/src/tool-system/builtin/index.ts",
+      "specifier": "../../credentials/inject-credential-tool.js",
+      "resolved": "packages/core/src/credentials/inject-credential-tool.ts"
+    },
+    {
+      "from": "packages/core/src/tool-system/builtin/index.ts",
+      "specifier": "../../credentials/access.js",
+      "resolved": "packages/core/src/credentials/access.ts"
+    },
+    {
+      "from": "packages/core/src/tool-system/builtin/index.ts",
+      "specifier": "../../links/link-action-tool.js",
+      "resolved": "packages/core/src/links/link-action-tool.ts"
+    },
+    {
+      "from": "packages/core/src/links/link-action-tool.ts",
+      "specifier": "./verified-issue-state.js",
+      "resolved": "packages/core/src/links/verified-issue-state.ts"
+    },
+    {
+      "from": "packages/core/src/links/link-action-tool.ts",
+      "specifier": "./github-issue-state.js",
+      "resolved": "packages/core/src/links/github-issue-state.ts"
+    },
+    {
+      "from": "packages/core/src/links/link-action-tool.ts",
+      "specifier": "./github-star.js",
+      "resolved": "packages/core/src/links/github-star.ts"
+    },
+    {
+      "from": "packages/core/src/links/link-action-tool.ts",
+      "specifier": "./verified-star.js",
+      "resolved": "packages/core/src/links/verified-star.ts"
+    },
+    {
+      "from": "packages/core/src/links/link-action-tool.ts",
+      "specifier": "../credentials/access.js",
+      "resolved": "packages/core/src/credentials/access.ts"
+    },
+    {
+      "from": "packages/core/src/links/link-action-tool.ts",
+      "specifier": "./providers.js",
+      "resolved": "packages/core/src/links/providers.ts"
+    },
+    {
+      "from": "packages/core/src/links/link-action-tool.ts",
+      "specifier": "./cli.js",
+      "resolved": "packages/core/src/links/cli.ts"
+    },
+    {
+      "from": "packages/core/src/links/link-action-tool.ts",
+      "specifier": "./remote.js",
+      "resolved": "packages/core/src/links/remote.ts"
+    },
+    {
+      "from": "packages/core/src/links/link-action-tool.ts",
+      "specifier": "./status.js",
+      "resolved": "packages/core/src/links/status.ts"
+    },
+    {
+      "from": "packages/core/src/links/link-action-tool.ts",
+      "specifier": "./authority.js",
+      "resolved": "packages/core/src/links/authority.ts"
+    },
+    {
+      "from": "packages/core/src/links/link-action-tool.ts",
+      "specifier": "./figma.js",
+      "resolved": "packages/core/src/links/figma.ts"
+    },
+    {
+      "from": "packages/core/src/links/link-action-tool.ts",
+      "specifier": "./http.js",
+      "resolved": "packages/core/src/links/http.ts"
+    },
+    {
+      "from": "packages/core/src/links/link-action-tool.ts",
+      "specifier": "./figma-mcp-contract.js",
+      "resolved": "packages/core/src/links/figma-mcp-contract.ts"
+    },
+    {
+      "from": "packages/core/src/links/link-action-tool.ts",
+      "specifier": "./figma-mcp-params.js",
+      "resolved": "packages/core/src/links/figma-mcp-params.ts"
+    },
+    {
+      "from": "packages/core/src/links/link-action-tool.ts",
+      "specifier": "../operations/ledger.js",
+      "resolved": "packages/core/src/operations/ledger.ts"
+    },
+    {
+      "from": "packages/core/src/links/link-action-tool.ts",
+      "specifier": "./verified-write.js",
+      "resolved": "packages/core/src/links/verified-write.ts"
+    },
+    {
+      "from": "packages/core/src/links/verified-write.ts",
+      "specifier": "../operations/controller.js",
+      "resolved": "packages/core/src/operations/controller.ts"
+    },
+    {
+      "from": "packages/core/src/links/verified-write.ts",
+      "specifier": "./http.js",
+      "resolved": "packages/core/src/links/http.ts"
+    },
+    {
+      "from": "packages/core/src/links/verified-write.ts",
+      "specifier": "./github-issue-state.js",
+      "resolved": "packages/core/src/links/github-issue-state.ts"
+    },
+    {
+      "from": "packages/core/src/links/verified-write.ts",
+      "specifier": "../tool-system/bound-tool-result.js",
+      "resolved": "packages/core/src/tool-system/bound-tool-result.ts"
+    },
+    {
+      "from": "packages/core/src/links/verified-write.ts",
+      "specifier": "./operation-recovery.js",
+      "resolved": "packages/core/src/links/operation-recovery.ts"
+    },
+    {
+      "from": "packages/core/src/links/verified-write.ts",
+      "specifier": "./github-create-issue.js",
+      "resolved": "packages/core/src/links/github-create-issue.ts"
+    },
+    {
+      "from": "packages/core/src/links/verified-write.ts",
+      "specifier": "./github-create-issue.js",
+      "resolved": "packages/core/src/links/github-create-issue.ts"
+    },
+    {
+      "from": "packages/core/src/links/github-create-issue.ts",
+      "specifier": "./http.js",
+      "resolved": "packages/core/src/links/http.ts"
+    },
+    {
+      "from": "packages/core/src/links/http.ts",
+      "specifier": "./request-once.js",
+      "resolved": "packages/core/src/links/request-once.ts"
+    },
+    {
+      "from": "packages/core/src/links/operation-recovery.ts",
+      "specifier": "./authority.js",
+      "resolved": "packages/core/src/links/authority.ts"
+    },
+    {
+      "from": "packages/core/src/links/authority.ts",
+      "specifier": "./github-star.js",
+      "resolved": "packages/core/src/links/github-star.ts"
+    },
+    {
+      "from": "packages/core/src/links/authority.ts",
+      "specifier": "./figma.js",
+      "resolved": "packages/core/src/links/figma.ts"
+    },
+    {
+      "from": "packages/core/src/links/authority.ts",
+      "specifier": "./providers.js",
+      "resolved": "packages/core/src/links/providers.ts"
+    },
+    {
+      "from": "packages/core/src/links/figma.ts",
+      "specifier": "./http.js",
+      "resolved": "packages/core/src/links/http.ts"
+    },
+    {
+      "from": "packages/core/src/links/github-star.ts",
+      "specifier": "./http.js",
+      "resolved": "packages/core/src/links/http.ts"
+    },
+    {
+      "from": "packages/core/src/links/github-issue-state.ts",
+      "specifier": "./github-star.js",
+      "resolved": "packages/core/src/links/github-star.ts"
+    },
+    {
+      "from": "packages/core/src/links/github-issue-state.ts",
+      "specifier": "./http.js",
+      "resolved": "packages/core/src/links/http.ts"
+    },
+    {
+      "from": "packages/core/src/operations/controller.ts",
+      "specifier": "./ledger.js",
+      "resolved": "packages/core/src/operations/ledger.ts"
+    },
+    {
+      "from": "packages/core/src/operations/controller.ts",
+      "specifier": "./session-owner.js",
+      "resolved": "packages/core/src/operations/session-owner.ts"
+    },
+    {
+      "from": "packages/core/src/operations/session-owner.ts",
+      "specifier": "../cost-ledger/store.js",
+      "resolved": "packages/core/src/cost-ledger/store.ts"
+    },
+    {
+      "from": "packages/core/src/cost-ledger/store.ts",
+      "specifier": "./pricing.js",
+      "resolved": "packages/core/src/cost-ledger/pricing.ts"
+    },
+    {
+      "from": "packages/core/src/cost-ledger/store.ts",
+      "specifier": "./summary.js",
+      "resolved": "packages/core/src/cost-ledger/summary.ts"
+    },
+    {
+      "from": "packages/core/src/cost-ledger/pricing.ts",
+      "specifier": "../data/model-metadata.js",
+      "resolved": "packages/core/src/data/model-metadata.ts"
+    },
+    {
+      "from": "packages/core/src/cost-ledger/pricing.ts",
+      "specifier": "../data/openrouter-models.js",
+      "resolved": "packages/core/src/data/openrouter-models.ts"
+    },
+    {
+      "from": "packages/core/src/operations/ledger.ts",
+      "specifier": "../credentials/cipher.js",
+      "resolved": "packages/core/src/credentials/cipher.ts"
+    },
+    {
+      "from": "packages/core/src/operations/ledger.ts",
+      "specifier": "../utils/file-mutex.js",
+      "resolved": "packages/core/src/utils/file-mutex.ts"
+    },
+    {
+      "from": "packages/core/src/operations/ledger.ts",
+      "specifier": "./recovery.js",
+      "resolved": "packages/core/src/operations/recovery.ts"
+    },
+    {
+      "from": "packages/core/src/operations/ledger.ts",
+      "specifier": "./archive.js",
+      "resolved": "packages/core/src/operations/archive.ts"
+    },
+    {
+      "from": "packages/core/src/operations/ledger.ts",
+      "specifier": "./schema.js",
+      "resolved": "packages/core/src/operations/schema.ts"
+    },
+    {
+      "from": "packages/core/src/operations/ledger.ts",
+      "specifier": "./schema.js",
+      "resolved": "packages/core/src/operations/schema.ts"
+    },
+    {
+      "from": "packages/core/src/operations/archive.ts",
+      "specifier": "./files.js",
+      "resolved": "packages/core/src/operations/files.ts"
+    },
+    {
+      "from": "packages/core/src/operations/archive.ts",
+      "specifier": "./recovery.js",
+      "resolved": "packages/core/src/operations/recovery.ts"
+    },
+    {
+      "from": "packages/core/src/operations/archive.ts",
+      "specifier": "./schema.js",
+      "resolved": "packages/core/src/operations/schema.ts"
+    },
+    {
+      "from": "packages/core/src/operations/recovery.ts",
+      "specifier": "../utils/file-mutex.js",
+      "resolved": "packages/core/src/utils/file-mutex.ts"
+    },
+    {
+      "from": "packages/core/src/operations/recovery.ts",
+      "specifier": "./files.js",
+      "resolved": "packages/core/src/operations/files.ts"
+    },
+    {
+      "from": "packages/core/src/utils/file-mutex.ts",
+      "specifier": "./lockfile.js",
+      "resolved": "packages/core/src/utils/lockfile.ts"
+    },
+    {
+      "from": "packages/core/src/links/figma-mcp-params.ts",
+      "specifier": "./figma.js",
+      "resolved": "packages/core/src/links/figma.ts"
+    },
+    {
+      "from": "packages/core/src/links/status.ts",
+      "specifier": "../credentials/access.js",
+      "resolved": "packages/core/src/credentials/access.ts"
+    },
+    {
+      "from": "packages/core/src/links/status.ts",
+      "specifier": "./cli.js",
+      "resolved": "packages/core/src/links/cli.ts"
+    },
+    {
+      "from": "packages/core/src/links/status.ts",
+      "specifier": "./providers.js",
+      "resolved": "packages/core/src/links/providers.ts"
+    },
+    {
+      "from": "packages/core/src/links/cli.ts",
+      "specifier": "./source-reads.js",
+      "resolved": "packages/core/src/links/source-reads.ts"
+    },
+    {
+      "from": "packages/core/src/links/cli.ts",
+      "specifier": "./github-star.js",
+      "resolved": "packages/core/src/links/github-star.ts"
+    },
+    {
+      "from": "packages/core/src/links/cli.ts",
+      "specifier": "./http.js",
+      "resolved": "packages/core/src/links/http.ts"
+    },
+    {
+      "from": "packages/core/src/links/cli.ts",
+      "specifier": "./providers.js",
+      "resolved": "packages/core/src/links/providers.ts"
+    },
+    {
+      "from": "packages/core/src/links/source-reads.ts",
+      "specifier": "./http.js",
+      "resolved": "packages/core/src/links/http.ts"
+    },
+    {
+      "from": "packages/core/src/credentials/access.ts",
+      "specifier": "./types.js",
+      "resolved": "packages/core/src/credentials/types.ts"
+    },
+    {
+      "from": "packages/core/src/credentials/access.ts",
+      "specifier": "./store.js",
+      "resolved": "packages/core/src/credentials/store.ts"
+    },
+    {
+      "from": "packages/core/src/credentials/access.ts",
+      "specifier": "./change-subscription.js",
+      "resolved": "packages/core/src/credentials/change-subscription.ts"
+    },
+    {
+      "from": "packages/core/src/credentials/access.ts",
+      "specifier": "./cookie-jar.js",
+      "resolved": "packages/core/src/credentials/cookie-jar.ts"
+    },
+    {
+      "from": "packages/core/src/credentials/access.ts",
+      "specifier": "./oauth.js",
+      "resolved": "packages/core/src/credentials/oauth.ts"
+    },
+    {
+      "from": "packages/core/src/credentials/access.ts",
+      "specifier": "../links/remote.js",
+      "resolved": "packages/core/src/links/remote.ts"
+    },
+    {
+      "from": "packages/core/src/credentials/access.ts",
+      "specifier": "../links/local-oauth.js",
+      "resolved": "packages/core/src/links/local-oauth.ts"
+    },
+    {
+      "from": "packages/core/src/credentials/access.ts",
+      "specifier": "../services/oauth.js",
+      "resolved": "packages/core/src/services/oauth.ts"
+    },
+    {
+      "from": "packages/core/src/credentials/access.ts",
+      "specifier": "./mcp-binding.js",
+      "resolved": "packages/core/src/credentials/mcp-binding.ts"
+    },
+    {
+      "from": "packages/core/src/credentials/access.ts",
+      "specifier": "../links/figma-mcp-contract.js",
+      "resolved": "packages/core/src/links/figma-mcp-contract.ts"
+    },
+    {
+      "from": "packages/core/src/credentials/access.ts",
+      "specifier": "./types.js",
+      "resolved": "packages/core/src/credentials/types.ts"
+    },
+    {
+      "from": "packages/core/src/credentials/access.ts",
+      "specifier": "../links/figma-mcp.js",
+      "resolved": "packages/core/src/links/figma-mcp.ts"
+    },
+    {
+      "from": "packages/core/src/links/figma-mcp.ts",
+      "specifier": "../credentials/store.js",
+      "resolved": "packages/core/src/credentials/store.ts"
+    },
+    {
+      "from": "packages/core/src/links/figma-mcp.ts",
+      "specifier": "../credentials/oauth.js",
+      "resolved": "packages/core/src/credentials/oauth.ts"
+    },
+    {
+      "from": "packages/core/src/links/figma-mcp.ts",
+      "specifier": "../credentials/mcp-binding.js",
+      "resolved": "packages/core/src/credentials/mcp-binding.ts"
+    },
+    {
+      "from": "packages/core/src/links/figma-mcp.ts",
+      "specifier": "../tool-system/mcp-manager.js",
+      "resolved": "packages/core/src/tool-system/mcp-manager.ts"
+    },
+    {
+      "from": "packages/core/src/links/figma-mcp.ts",
+      "specifier": "../tool-system/registry.js",
+      "resolved": "packages/core/src/tool-system/registry.ts"
+    },
+    {
+      "from": "packages/core/src/links/figma-mcp.ts",
+      "specifier": "../operations/ledger.js",
+      "resolved": "packages/core/src/operations/ledger.ts"
+    },
+    {
+      "from": "packages/core/src/links/figma-mcp.ts",
+      "specifier": "./authority.js",
+      "resolved": "packages/core/src/links/authority.ts"
+    },
+    {
+      "from": "packages/core/src/links/figma-mcp.ts",
+      "specifier": "./figma.js",
+      "resolved": "packages/core/src/links/figma.ts"
+    },
+    {
+      "from": "packages/core/src/links/figma-mcp.ts",
+      "specifier": "./figma-mcp-params.js",
+      "resolved": "packages/core/src/links/figma-mcp-params.ts"
+    },
+    {
+      "from": "packages/core/src/links/figma-mcp.ts",
+      "specifier": "./figma-mcp-contract.js",
+      "resolved": "packages/core/src/links/figma-mcp-contract.ts"
+    },
+    {
+      "from": "packages/core/src/links/figma-mcp.ts",
+      "specifier": "./figma-mcp-contract.js",
+      "resolved": "packages/core/src/links/figma-mcp-contract.ts"
+    },
+    {
+      "from": "packages/core/src/tool-system/mcp-manager.ts",
+      "specifier": "./mcp-stdio-transport.js",
+      "resolved": "packages/core/src/tool-system/mcp-stdio-transport.ts"
+    },
+    {
+      "from": "packages/core/src/tool-system/mcp-manager.ts",
+      "specifier": "../llm/capabilities/index.js",
+      "resolved": "packages/core/src/llm/capabilities/index.ts"
+    },
+    {
+      "from": "packages/core/src/tool-system/mcp-manager.ts",
+      "specifier": "./registry.js",
+      "resolved": "packages/core/src/tool-system/registry.ts"
+    },
+    {
+      "from": "packages/core/src/tool-system/mcp-manager.ts",
+      "specifier": "../logging/logger.js",
+      "resolved": "packages/core/src/logging/logger.ts"
+    },
+    {
+      "from": "packages/core/src/tool-system/mcp-manager.ts",
+      "specifier": "../credentials/access.js",
+      "resolved": "packages/core/src/credentials/access.ts"
+    },
+    {
+      "from": "packages/core/src/tool-system/mcp-manager.ts",
+      "specifier": "../credentials/oauth.js",
+      "resolved": "packages/core/src/credentials/oauth.ts"
+    },
+    {
+      "from": "packages/core/src/tool-system/mcp-manager.ts",
+      "specifier": "../runtime/spawn-common.js",
+      "resolved": "packages/core/src/runtime/spawn-common.ts"
+    },
+    {
+      "from": "packages/core/src/tool-system/mcp-manager.ts",
+      "specifier": "./mcp-stdio-diagnostics.js",
+      "resolved": "packages/core/src/tool-system/mcp-stdio-diagnostics.ts"
+    },
+    {
+      "from": "packages/core/src/tool-system/mcp-manager.ts",
+      "specifier": "./mcp-connection-policy.js",
+      "resolved": "packages/core/src/tool-system/mcp-connection-policy.ts"
+    },
+    {
+      "from": "packages/core/src/tool-system/mcp-manager.ts",
+      "specifier": "../session/session-manager.js",
+      "resolved": "packages/core/src/session/session-manager.ts"
+    },
+    {
+      "from": "packages/core/src/tool-system/mcp-manager.ts",
+      "specifier": "../credentials/mcp-binding.js",
+      "resolved": "packages/core/src/credentials/mcp-binding.ts"
+    },
+    {
+      "from": "packages/core/src/tool-system/mcp-manager.ts",
+      "specifier": "./mcp-results.js",
+      "resolved": "packages/core/src/tool-system/mcp-results.ts"
+    },
+    {
+      "from": "packages/core/src/tool-system/mcp-manager.ts",
+      "specifier": "./mcp-results.js",
+      "resolved": "packages/core/src/tool-system/mcp-results.ts"
+    },
+    {
+      "from": "packages/core/src/tool-system/mcp-manager.ts",
+      "specifier": "./mcp-compat.js",
+      "resolved": "packages/core/src/tool-system/mcp-compat.ts"
+    },
+    {
+      "from": "packages/core/src/tool-system/mcp-manager.ts",
+      "specifier": "./mcp-connection-config.js",
+      "resolved": "packages/core/src/tool-system/mcp-connection-config.ts"
+    },
+    {
+      "from": "packages/core/src/tool-system/mcp-manager.ts",
+      "specifier": "./mcp-workspace.js",
+      "resolved": "packages/core/src/tool-system/mcp-workspace.ts"
+    },
+    {
+      "from": "packages/core/src/tool-system/mcp-workspace.ts",
+      "specifier": "../workspace/canonical-key.js",
+      "resolved": "packages/core/src/workspace/canonical-key.ts"
+    },
+    {
+      "from": "packages/core/src/tool-system/mcp-connection-config.ts",
+      "specifier": "./mcp-connection-policy.js",
+      "resolved": "packages/core/src/tool-system/mcp-connection-policy.ts"
+    },
+    {
+      "from": "packages/core/src/session/session-manager.ts",
+      "specifier": "./transcript.js",
+      "resolved": "packages/core/src/session/transcript.ts"
+    },
+    {
+      "from": "packages/core/src/session/session-manager.ts",
+      "specifier": "./output-coverage-state.js",
+      "resolved": "packages/core/src/session/output-coverage-state.ts"
+    },
+    {
+      "from": "packages/core/src/session/session-manager.ts",
+      "specifier": "./subagent-continuation.js",
+      "resolved": "packages/core/src/session/subagent-continuation.ts"
+    },
+    {
+      "from": "packages/core/src/session/session-manager.ts",
+      "specifier": "../exceptions.js",
+      "resolved": "packages/core/src/exceptions.ts"
+    },
+    {
+      "from": "packages/core/src/session/session-manager.ts",
+      "specifier": "./usage.js",
+      "resolved": "packages/core/src/session/usage.ts"
+    },
+    {
+      "from": "packages/core/src/session/session-manager.ts",
+      "specifier": "../goal/lifecycle.js",
+      "resolved": "packages/core/src/goal/lifecycle.ts"
+    },
+    {
+      "from": "packages/core/src/session/session-manager.ts",
+      "specifier": "../utils/lockfile.js",
+      "resolved": "packages/core/src/utils/lockfile.ts"
+    },
+    {
+      "from": "packages/core/src/session/session-manager.ts",
+      "specifier": "./profile-references.js",
+      "resolved": "packages/core/src/session/profile-references.ts"
+    },
+    {
+      "from": "packages/core/src/session/output-coverage-state.ts",
+      "specifier": "../utils/lockfile.js",
+      "resolved": "packages/core/src/utils/lockfile.ts"
+    },
+    {
+      "from": "packages/core/src/session/transcript.ts",
+      "specifier": "../logging/logger.js",
+      "resolved": "packages/core/src/logging/logger.ts"
+    },
+    {
+      "from": "packages/core/src/session/transcript.ts",
+      "specifier": "../model-request-boundary/durability.js",
+      "resolved": "packages/core/src/model-request-boundary/durability.ts"
+    },
+    {
+      "from": "packages/core/src/logging/logger.ts",
+      "specifier": "./sanitize-messages.js",
+      "resolved": "packages/core/src/logging/sanitize-messages.ts"
+    },
+    {
+      "from": "packages/core/src/llm/capabilities/index.ts",
+      "specifier": "./rules.js",
+      "resolved": "packages/core/src/llm/capabilities/rules.ts"
+    },
+    {
+      "from": "packages/core/src/llm/capabilities/index.ts",
+      "specifier": "./types.js",
+      "resolved": "packages/core/src/llm/capabilities/types.ts"
+    },
+    {
+      "from": "packages/core/src/llm/capabilities/index.ts",
+      "specifier": "./types.js",
+      "resolved": "packages/core/src/llm/capabilities/types.ts"
+    },
+    {
+      "from": "packages/core/src/tool-system/mcp-stdio-transport.ts",
+      "specifier": "../runtime/spawn-common.js",
+      "resolved": "packages/core/src/runtime/spawn-common.ts"
+    },
+    {
+      "from": "packages/core/src/credentials/store.ts",
+      "specifier": "./types.js",
+      "resolved": "packages/core/src/credentials/types.ts"
+    },
+    {
+      "from": "packages/core/src/credentials/store.ts",
+      "specifier": "./cipher.js",
+      "resolved": "packages/core/src/credentials/cipher.ts"
+    },
+    {
+      "from": "packages/core/src/credentials/store.ts",
+      "specifier": "../logging/logger.js",
+      "resolved": "packages/core/src/logging/logger.ts"
+    },
+    {
+      "from": "packages/core/src/credentials/store.ts",
+      "specifier": "./oauth.js",
+      "resolved": "packages/core/src/credentials/oauth.ts"
+    },
+    {
+      "from": "packages/core/src/credentials/store.ts",
+      "specifier": "./oauth.js",
+      "resolved": "packages/core/src/credentials/oauth.ts"
+    },
+    {
+      "from": "packages/core/src/credentials/store.ts",
+      "specifier": "./cookie-jar.js",
+      "resolved": "packages/core/src/credentials/cookie-jar.ts"
+    },
+    {
+      "from": "packages/core/src/credentials/store.ts",
+      "specifier": "../utils/file-mutex.js",
+      "resolved": "packages/core/src/utils/file-mutex.ts"
+    },
+    {
+      "from": "packages/core/src/credentials/store.ts",
+      "specifier": "./remote-link-retirement.js",
+      "resolved": "packages/core/src/credentials/remote-link-retirement.ts"
+    },
+    {
+      "from": "packages/core/src/services/oauth.ts",
+      "specifier": "../credentials/oauth.js",
+      "resolved": "packages/core/src/credentials/oauth.ts"
+    },
+    {
+      "from": "packages/core/src/links/local-oauth.ts",
+      "specifier": "../credentials/store.js",
+      "resolved": "packages/core/src/credentials/store.ts"
+    },
+    {
+      "from": "packages/core/src/links/local-oauth.ts",
+      "specifier": "../credentials/oauth.js",
+      "resolved": "packages/core/src/credentials/oauth.ts"
+    },
+    {
+      "from": "packages/core/src/links/local-oauth.ts",
+      "specifier": "./providers.js",
+      "resolved": "packages/core/src/links/providers.ts"
+    },
+    {
+      "from": "packages/core/src/links/local-oauth.ts",
+      "specifier": "./http.js",
+      "resolved": "packages/core/src/links/http.ts"
+    },
+    {
+      "from": "packages/core/src/links/local-oauth.ts",
+      "specifier": "./request-once.js",
+      "resolved": "packages/core/src/links/request-once.ts"
+    },
+    {
+      "from": "packages/core/src/links/remote.ts",
+      "specifier": "../credentials/store.js",
+      "resolved": "packages/core/src/credentials/store.ts"
+    },
+    {
+      "from": "packages/core/src/links/remote.ts",
+      "specifier": "../credentials/types.js",
+      "resolved": "packages/core/src/credentials/types.ts"
+    },
+    {
+      "from": "packages/core/src/links/remote.ts",
+      "specifier": "../credentials/oauth.js",
+      "resolved": "packages/core/src/credentials/oauth.ts"
+    },
+    {
+      "from": "packages/core/src/links/remote.ts",
+      "specifier": "../logging/logger.js",
+      "resolved": "packages/core/src/logging/logger.ts"
+    },
+    {
+      "from": "packages/core/src/links/remote.ts",
+      "specifier": "./http.js",
+      "resolved": "packages/core/src/links/http.ts"
+    },
+    {
+      "from": "packages/core/src/links/remote.ts",
+      "specifier": "./request-once.js",
+      "resolved": "packages/core/src/links/request-once.ts"
+    },
+    {
+      "from": "packages/core/src/links/remote.ts",
+      "specifier": "./figma.js",
+      "resolved": "packages/core/src/links/figma.ts"
+    },
+    {
+      "from": "packages/core/src/links/remote.ts",
+      "specifier": "./remote-adapters.js",
+      "resolved": "packages/core/src/links/remote-adapters.ts"
+    },
+    {
+      "from": "packages/core/src/links/remote-adapters.ts",
+      "specifier": "./source-reads.js",
+      "resolved": "packages/core/src/links/source-reads.ts"
+    },
+    {
+      "from": "packages/core/src/links/remote-adapters.ts",
+      "specifier": "./github-issue-state.js",
+      "resolved": "packages/core/src/links/github-issue-state.ts"
+    },
+    {
+      "from": "packages/core/src/links/remote-adapters.ts",
+      "specifier": "./figma.js",
+      "resolved": "packages/core/src/links/figma.ts"
+    },
+    {
+      "from": "packages/core/src/links/remote-adapters.ts",
+      "specifier": "./http.js",
+      "resolved": "packages/core/src/links/http.ts"
+    },
+    {
+      "from": "packages/core/src/links/verified-star.ts",
+      "specifier": "../operations/controller.js",
+      "resolved": "packages/core/src/operations/controller.ts"
+    },
+    {
+      "from": "packages/core/src/links/verified-star.ts",
+      "specifier": "../tool-system/bound-tool-result.js",
+      "resolved": "packages/core/src/tool-system/bound-tool-result.ts"
+    },
+    {
+      "from": "packages/core/src/links/verified-star.ts",
+      "specifier": "./operation-recovery.js",
+      "resolved": "packages/core/src/links/operation-recovery.ts"
+    },
+    {
+      "from": "packages/core/src/links/verified-star.ts",
+      "specifier": "./http.js",
+      "resolved": "packages/core/src/links/http.ts"
+    },
+    {
+      "from": "packages/core/src/links/verified-star.ts",
+      "specifier": "./github-star.js",
+      "resolved": "packages/core/src/links/github-star.ts"
+    },
+    {
+      "from": "packages/core/src/links/verified-issue-state.ts",
+      "specifier": "../operations/controller.js",
+      "resolved": "packages/core/src/operations/controller.ts"
+    },
+    {
+      "from": "packages/core/src/links/verified-issue-state.ts",
+      "specifier": "../tool-system/bound-tool-result.js",
+      "resolved": "packages/core/src/tool-system/bound-tool-result.ts"
+    },
+    {
+      "from": "packages/core/src/links/verified-issue-state.ts",
+      "specifier": "./operation-recovery.js",
+      "resolved": "packages/core/src/links/operation-recovery.ts"
+    },
+    {
+      "from": "packages/core/src/links/verified-issue-state.ts",
+      "specifier": "./http.js",
+      "resolved": "packages/core/src/links/http.ts"
+    },
+    {
+      "from": "packages/core/src/links/verified-issue-state.ts",
+      "specifier": "./github-issue-state.js",
+      "resolved": "packages/core/src/links/github-issue-state.ts"
+    },
+    {
+      "from": "packages/core/src/credentials/inject-credential-tool.ts",
+      "specifier": "./use-gate.js",
+      "resolved": "packages/core/src/credentials/use-gate.ts"
+    },
+    {
+      "from": "packages/core/src/credentials/inject-credential-tool.ts",
+      "specifier": "../settings/manager.js",
+      "resolved": "packages/core/src/settings/manager.ts"
+    },
+    {
+      "from": "packages/core/src/credentials/inject-credential-tool.ts",
+      "specifier": "./access.js",
+      "resolved": "packages/core/src/credentials/access.ts"
+    },
+    {
+      "from": "packages/core/src/settings/manager.ts",
+      "specifier": "./schema.js",
+      "resolved": "packages/core/src/settings/schema.ts"
+    },
+    {
+      "from": "packages/core/src/settings/manager.ts",
+      "specifier": "../migrate-models.js",
+      "resolved": "packages/core/src/migrate-models.ts"
+    },
+    {
+      "from": "packages/core/src/settings/manager.ts",
+      "specifier": "./migrate-config.js",
+      "resolved": "packages/core/src/settings/migrate-config.ts"
+    },
+    {
+      "from": "packages/core/src/settings/manager.ts",
+      "specifier": "../utils/file-mutex.js",
+      "resolved": "packages/core/src/utils/file-mutex.ts"
+    },
+    {
+      "from": "packages/core/src/settings/manager.ts",
+      "specifier": "./hook-provenance.js",
+      "resolved": "packages/core/src/settings/hook-provenance.ts"
+    },
+    {
+      "from": "packages/core/src/settings/migrate-config.ts",
+      "specifier": "../model-catalog/builtin.js",
+      "resolved": "packages/core/src/model-catalog/builtin.ts"
+    },
+    {
+      "from": "packages/core/src/model-catalog/builtin.ts",
+      "specifier": "../llm/capabilities/index.js",
+      "resolved": "packages/core/src/llm/capabilities/index.ts"
+    },
+    {
+      "from": "packages/core/src/model-catalog/builtin.ts",
+      "specifier": "../llm/capabilities/param-specs.js",
+      "resolved": "packages/core/src/llm/capabilities/param-specs.ts"
+    },
+    {
+      "from": "packages/core/src/llm/capabilities/param-specs.ts",
+      "specifier": "./reasoning-control.js",
+      "resolved": "packages/core/src/llm/capabilities/reasoning-control.ts"
+    },
+    {
+      "from": "packages/core/src/llm/capabilities/reasoning-control.ts",
+      "specifier": "./index.js",
+      "resolved": "packages/core/src/llm/capabilities/index.ts"
+    },
+    {
+      "from": "packages/core/src/settings/schema.ts",
+      "specifier": "../sources/types.js",
+      "resolved": "packages/core/src/sources/types.ts"
+    },
+    {
+      "from": "packages/core/src/settings/schema.ts",
+      "specifier": "../panel-apps/bindings.js",
+      "resolved": "packages/core/src/panel-apps/bindings.ts"
+    },
+    {
+      "from": "packages/core/src/settings/schema.ts",
+      "specifier": "../tool-system/mcp-connection-policy.js",
+      "resolved": "packages/core/src/tool-system/mcp-connection-policy.ts"
+    },
+    {
+      "from": "packages/core/src/credentials/use-credential-tool.ts",
+      "specifier": "../tool-system/tool-result-redaction.js",
+      "resolved": "packages/core/src/tool-system/tool-result-redaction.ts"
+    },
+    {
+      "from": "packages/core/src/credentials/use-credential-tool.ts",
+      "specifier": "./use-gate.js",
+      "resolved": "packages/core/src/credentials/use-gate.ts"
+    },
+    {
+      "from": "packages/core/src/credentials/use-credential-tool.ts",
+      "specifier": "../settings/manager.js",
+      "resolved": "packages/core/src/settings/manager.ts"
+    },
+    {
+      "from": "packages/core/src/credentials/use-credential-tool.ts",
+      "specifier": "../logging/logger.js",
+      "resolved": "packages/core/src/logging/logger.ts"
+    },
+    {
+      "from": "packages/core/src/credentials/use-credential-tool.ts",
+      "specifier": "./access.js",
+      "resolved": "packages/core/src/credentials/access.ts"
+    },
+    {
+      "from": "packages/core/src/tool-system/builtin/panel.ts",
+      "specifier": "../validation.js",
+      "resolved": "packages/core/src/tool-system/validation.ts"
+    },
+    {
+      "from": "packages/core/src/tool-system/builtin/browser-tools.ts",
+      "specifier": "../browser-bridge.js",
+      "resolved": "packages/core/src/tool-system/browser-bridge.ts"
+    },
+    {
+      "from": "packages/core/src/tool-system/builtin/browser-tools.ts",
+      "specifier": "../../llm/capabilities/index.js",
+      "resolved": "packages/core/src/llm/capabilities/index.ts"
+    },
+    {
+      "from": "packages/core/src/tool-system/builtin/background-shell-tools.ts",
+      "specifier": "../../runtime/background-shell.js",
+      "resolved": "packages/core/src/runtime/background-shell.ts"
+    },
+    {
+      "from": "packages/core/src/runtime/background-shell.ts",
+      "specifier": "./utf8-cut.js",
+      "resolved": "packages/core/src/runtime/utf8-cut.ts"
+    },
+    {
+      "from": "packages/core/src/runtime/background-shell.ts",
+      "specifier": "./spawn-common.js",
+      "resolved": "packages/core/src/runtime/spawn-common.ts"
+    },
+    {
+      "from": "packages/core/src/runtime/background-shell.ts",
+      "specifier": "./ring-file.js",
+      "resolved": "packages/core/src/runtime/ring-file.ts"
+    },
+    {
+      "from": "packages/core/src/runtime/background-shell.ts",
+      "specifier": "./output-clean.js",
+      "resolved": "packages/core/src/runtime/output-clean.ts"
+    },
+    {
+      "from": "packages/core/src/runtime/background-shell.ts",
+      "specifier": "../tool-system/builtin/agent-notifications.js",
+      "resolved": "packages/core/src/tool-system/builtin/agent-notifications.ts"
+    },
+    {
+      "from": "packages/core/src/runtime/background-shell.ts",
+      "specifier": "../logging/logger.js",
+      "resolved": "packages/core/src/logging/logger.ts"
+    },
+    {
+      "from": "packages/core/src/runtime/background-shell.ts",
+      "specifier": "../session/session-manager.js",
+      "resolved": "packages/core/src/session/session-manager.ts"
+    },
+    {
+      "from": "packages/core/src/tool-system/builtin/agent-notifications.ts",
+      "specifier": "../../logging/logger.js",
+      "resolved": "packages/core/src/logging/logger.ts"
+    },
+    {
+      "from": "packages/core/src/tool-system/builtin/agent-notifications.ts",
+      "specifier": "../../utils/file-mutex.js",
+      "resolved": "packages/core/src/utils/file-mutex.ts"
+    },
+    {
+      "from": "packages/core/src/tool-system/builtin/install-capability.ts",
+      "specifier": "../../settings/manager.js",
+      "resolved": "packages/core/src/settings/manager.ts"
+    },
+    {
+      "from": "packages/core/src/tool-system/builtin/install-capability.ts",
+      "specifier": "../../profile/types.js",
+      "resolved": "packages/core/src/profile/types.ts"
+    },
+    {
+      "from": "packages/core/src/tool-system/builtin/install-capability.ts",
+      "specifier": "../../profile/requirements.js",
+      "resolved": "packages/core/src/profile/requirements.ts"
+    },
+    {
+      "from": "packages/core/src/tool-system/builtin/install-capability.ts",
+      "specifier": "../../skills/scanner.js",
+      "resolved": "packages/core/src/skills/scanner.ts"
+    },
+    {
+      "from": "packages/core/src/tool-system/builtin/install-capability.ts",
+      "specifier": "../../plugins/pluginInstaller.js",
+      "resolved": "packages/core/src/plugins/pluginInstaller.ts"
+    },
+    {
+      "from": "packages/core/src/tool-system/builtin/install-capability.ts",
+      "specifier": "../../plugins/pluginContent.js",
+      "resolved": "packages/core/src/plugins/pluginContent.ts"
+    },
+    {
+      "from": "packages/core/src/tool-system/builtin/install-capability.ts",
+      "specifier": "../../plugins/pluginMcpApproval.js",
+      "resolved": "packages/core/src/plugins/pluginMcpApproval.ts"
+    },
+    {
+      "from": "packages/core/src/tool-system/builtin/install-capability.ts",
+      "specifier": "../../plugins/marketplaceManager.js",
+      "resolved": "packages/core/src/plugins/marketplaceManager.ts"
+    },
+    {
+      "from": "packages/core/src/tool-system/builtin/install-capability.ts",
+      "specifier": "../../plugins/knownMarketplaces.js",
+      "resolved": "packages/core/src/plugins/knownMarketplaces.ts"
+    },
+    {
+      "from": "packages/core/src/tool-system/builtin/install-capability.ts",
+      "specifier": "../../plugins/gitOps.js",
+      "resolved": "packages/core/src/plugins/gitOps.ts"
+    },
+    {
+      "from": "packages/core/src/tool-system/builtin/install-capability.ts",
+      "specifier": "../../plugins/installer/sourcePath.js",
+      "resolved": "packages/core/src/plugins/installer/sourcePath.ts"
+    },
+    {
+      "from": "packages/core/src/tool-system/builtin/install-capability.ts",
+      "specifier": "../../plugins/installer/preview.js",
+      "resolved": "packages/core/src/plugins/installer/preview.ts"
+    },
+    {
+      "from": "packages/core/src/tool-system/builtin/install-capability.ts",
+      "specifier": "../../capability-control/disabled-lists.js",
+      "resolved": "packages/core/src/capability-control/disabled-lists.ts"
+    },
+    {
+      "from": "packages/core/src/tool-system/builtin/install-capability.ts",
+      "specifier": "../../runtime/safe-spawn.js",
+      "resolved": "packages/core/src/runtime/safe-spawn.ts"
+    },
+    {
+      "from": "packages/core/src/tool-system/builtin/install-capability.ts",
+      "specifier": "../../utils/exec.js",
+      "resolved": "packages/core/src/utils/exec.ts"
+    },
+    {
+      "from": "packages/core/src/runtime/safe-spawn.ts",
+      "specifier": "./spawn-common.js",
+      "resolved": "packages/core/src/runtime/spawn-common.ts"
+    },
+    {
+      "from": "packages/core/src/capability-control/disabled-lists.ts",
+      "specifier": "../settings/manager.js",
+      "resolved": "packages/core/src/settings/manager.ts"
+    },
+    {
+      "from": "packages/core/src/capability-control/disabled-lists.ts",
+      "specifier": "../skills/scanner.js",
+      "resolved": "packages/core/src/skills/scanner.ts"
+    },
+    {
+      "from": "packages/core/src/capability-control/disabled-lists.ts",
+      "specifier": "../plugins/installedPlugins.js",
+      "resolved": "packages/core/src/plugins/installedPlugins.ts"
+    },
+    {
+      "from": "packages/core/src/capability-control/disabled-lists.ts",
+      "specifier": "./overlay.js",
+      "resolved": "packages/core/src/capability-control/overlay.ts"
+    },
+    {
+      "from": "packages/core/src/plugins/installedPlugins.ts",
+      "specifier": "../utils/file-mutex.js",
+      "resolved": "packages/core/src/utils/file-mutex.ts"
+    },
+    {
+      "from": "packages/core/src/plugins/installedPlugins.ts",
+      "specifier": "./installedPluginSnapshot.js",
+      "resolved": "packages/core/src/plugins/installedPluginSnapshot.ts"
+    },
+    {
+      "from": "packages/core/src/skills/scanner.ts",
+      "specifier": "../utils/memoize.js",
+      "resolved": "packages/core/src/utils/memoize.ts"
+    },
+    {
+      "from": "packages/core/src/skills/scanner.ts",
+      "specifier": "./frontmatter.js",
+      "resolved": "packages/core/src/skills/frontmatter.ts"
+    },
+    {
+      "from": "packages/core/src/skills/scanner.ts",
+      "specifier": "../plugins/installedPlugins.js",
+      "resolved": "packages/core/src/plugins/installedPlugins.ts"
+    },
+    {
+      "from": "packages/core/src/skills/scanner.ts",
+      "specifier": "../panel-apps/manifest.js",
+      "resolved": "packages/core/src/panel-apps/manifest.ts"
+    },
+    {
+      "from": "packages/core/src/skills/scanner.ts",
+      "specifier": "../panel-apps/paths.js",
+      "resolved": "packages/core/src/panel-apps/paths.ts"
+    },
+    {
+      "from": "packages/core/src/skills/scanner.ts",
+      "specifier": "../panel-apps/bindings.js",
+      "resolved": "packages/core/src/panel-apps/bindings.ts"
+    },
+    {
+      "from": "packages/core/src/skills/scanner.ts",
+      "specifier": "../settings/manager.js",
+      "resolved": "packages/core/src/settings/manager.ts"
+    },
+    {
+      "from": "packages/core/src/skills/scanner.ts",
+      "specifier": "../panel-apps/project-packages.js",
+      "resolved": "packages/core/src/panel-apps/project-packages.ts"
+    },
+    {
+      "from": "packages/core/src/skills/scanner.ts",
+      "specifier": "../panel-apps/package-content.js",
+      "resolved": "packages/core/src/panel-apps/package-content.ts"
+    },
+    {
+      "from": "packages/core/src/panel-apps/package-content.ts",
+      "specifier": "./manifest.js",
+      "resolved": "packages/core/src/panel-apps/manifest.ts"
+    },
+    {
+      "from": "packages/core/src/panel-apps/package-content.ts",
+      "specifier": "./paths.js",
+      "resolved": "packages/core/src/panel-apps/paths.ts"
+    },
+    {
+      "from": "packages/core/src/panel-apps/package-content.ts",
+      "specifier": "./registry.js",
+      "resolved": "packages/core/src/panel-apps/registry.ts"
+    },
+    {
+      "from": "packages/core/src/panel-apps/registry.ts",
+      "specifier": "./paths.js",
+      "resolved": "packages/core/src/panel-apps/paths.ts"
+    },
+    {
+      "from": "packages/core/src/panel-apps/registry.ts",
+      "specifier": "../utils/lockfile.js",
+      "resolved": "packages/core/src/utils/lockfile.ts"
+    },
+    {
+      "from": "packages/core/src/panel-apps/manifest.ts",
+      "specifier": "../tool-system/validation.js",
+      "resolved": "packages/core/src/tool-system/validation.ts"
+    },
+    {
+      "from": "packages/core/src/panel-apps/project-packages.ts",
+      "specifier": "./legacy-packages.js",
+      "resolved": "packages/core/src/panel-apps/legacy-packages.ts"
+    },
+    {
+      "from": "packages/core/src/panel-apps/project-packages.ts",
+      "specifier": "../settings/manager.js",
+      "resolved": "packages/core/src/settings/manager.ts"
+    },
+    {
+      "from": "packages/core/src/panel-apps/project-packages.ts",
+      "specifier": "./bindings.js",
+      "resolved": "packages/core/src/panel-apps/bindings.ts"
+    },
+    {
+      "from": "packages/core/src/panel-apps/project-packages.ts",
+      "specifier": "./installer.js",
+      "resolved": "packages/core/src/panel-apps/installer.ts"
+    },
+    {
+      "from": "packages/core/src/panel-apps/project-packages.ts",
+      "specifier": "./paths.js",
+      "resolved": "packages/core/src/panel-apps/paths.ts"
+    },
+    {
+      "from": "packages/core/src/panel-apps/project-packages.ts",
+      "specifier": "./registry.js",
+      "resolved": "packages/core/src/panel-apps/registry.ts"
+    },
+    {
+      "from": "packages/core/src/panel-apps/installer.ts",
+      "specifier": "./legacy-packages.js",
+      "resolved": "packages/core/src/panel-apps/legacy-packages.ts"
+    },
+    {
+      "from": "packages/core/src/panel-apps/installer.ts",
+      "specifier": "../plugins/installer/unzip.js",
+      "resolved": "packages/core/src/plugins/installer/unzip.ts"
+    },
+    {
+      "from": "packages/core/src/panel-apps/installer.ts",
+      "specifier": "./github-archive.js",
+      "resolved": "packages/core/src/panel-apps/github-archive.ts"
+    },
+    {
+      "from": "packages/core/src/panel-apps/installer.ts",
+      "specifier": "./source.js",
+      "resolved": "packages/core/src/panel-apps/source.ts"
+    },
+    {
+      "from": "packages/core/src/panel-apps/installer.ts",
+      "specifier": "./discovery.js",
+      "resolved": "packages/core/src/panel-apps/discovery.ts"
+    },
+    {
+      "from": "packages/core/src/panel-apps/installer.ts",
+      "specifier": "../utils/lockfile.js",
+      "resolved": "packages/core/src/utils/lockfile.ts"
+    },
+    {
+      "from": "packages/core/src/panel-apps/installer.ts",
+      "specifier": "./package-content.js",
+      "resolved": "packages/core/src/panel-apps/package-content.ts"
+    },
+    {
+      "from": "packages/core/src/panel-apps/installer.ts",
+      "specifier": "./manifest.js",
+      "resolved": "packages/core/src/panel-apps/manifest.ts"
+    },
+    {
+      "from": "packages/core/src/panel-apps/installer.ts",
+      "specifier": "./paths.js",
+      "resolved": "packages/core/src/panel-apps/paths.ts"
+    },
+    {
+      "from": "packages/core/src/panel-apps/installer.ts",
+      "specifier": "./registry.js",
+      "resolved": "packages/core/src/panel-apps/registry.ts"
+    },
+    {
+      "from": "packages/core/src/panel-apps/discovery.ts",
+      "specifier": "./manifest.js",
+      "resolved": "packages/core/src/panel-apps/manifest.ts"
+    },
+    {
+      "from": "packages/core/src/panel-apps/discovery.ts",
+      "specifier": "./paths.js",
+      "resolved": "packages/core/src/panel-apps/paths.ts"
+    },
+    {
+      "from": "packages/core/src/panel-apps/source.ts",
+      "specifier": "./paths.js",
+      "resolved": "packages/core/src/panel-apps/paths.ts"
+    },
+    {
+      "from": "packages/core/src/panel-apps/github-archive.ts",
+      "specifier": "./paths.js",
+      "resolved": "packages/core/src/panel-apps/paths.ts"
+    },
+    {
+      "from": "packages/core/src/panel-apps/github-archive.ts",
+      "specifier": "./github-request.js",
+      "resolved": "packages/core/src/panel-apps/github-request.ts"
+    },
+    {
+      "from": "packages/core/src/plugins/installer/unzip.ts",
+      "specifier": "./types.js",
+      "resolved": "packages/core/src/plugins/installer/types.ts"
+    },
+    {
+      "from": "packages/core/src/panel-apps/legacy-packages.ts",
+      "specifier": "./bindings.js",
+      "resolved": "packages/core/src/panel-apps/bindings.ts"
+    },
+    {
+      "from": "packages/core/src/panel-apps/legacy-packages.ts",
+      "specifier": "./paths.js",
+      "resolved": "packages/core/src/panel-apps/paths.ts"
+    },
+    {
+      "from": "packages/core/src/plugins/installer/preview.ts",
+      "specifier": "../../skills/frontmatter.js",
+      "resolved": "packages/core/src/skills/frontmatter.ts"
+    },
+    {
+      "from": "packages/core/src/plugins/installer/preview.ts",
+      "specifier": "../installedPlugins.js",
+      "resolved": "packages/core/src/plugins/installedPlugins.ts"
+    },
+    {
+      "from": "packages/core/src/plugins/installer/preview.ts",
+      "specifier": "../pluginHookIntegrity.js",
+      "resolved": "packages/core/src/plugins/pluginHookIntegrity.ts"
+    },
+    {
+      "from": "packages/core/src/plugins/installer/preview.ts",
+      "specifier": "./installFromArchive.js",
+      "resolved": "packages/core/src/plugins/installer/installFromArchive.ts"
+    },
+    {
+      "from": "packages/core/src/plugins/installer/preview.ts",
+      "specifier": "./loadPluginMcp.js",
+      "resolved": "packages/core/src/plugins/installer/loadPluginMcp.ts"
+    },
+    {
+      "from": "packages/core/src/plugins/installer/preview.ts",
+      "specifier": "./paths.js",
+      "resolved": "packages/core/src/plugins/installer/paths.ts"
+    },
+    {
+      "from": "packages/core/src/plugins/installer/preview.ts",
+      "specifier": "./projectPluginSource.js",
+      "resolved": "packages/core/src/plugins/installer/projectPluginSource.ts"
+    },
+    {
+      "from": "packages/core/src/plugins/installer/preview.ts",
+      "specifier": "./types.js",
+      "resolved": "packages/core/src/plugins/installer/types.ts"
+    },
+    {
+      "from": "packages/core/src/plugins/installer/projectPluginSource.ts",
+      "specifier": "../varRewrite.js",
+      "resolved": "packages/core/src/plugins/varRewrite.ts"
+    },
+    {
+      "from": "packages/core/src/plugins/installer/projectPluginSource.ts",
+      "specifier": "./codex/convertAgents.js",
+      "resolved": "packages/core/src/plugins/installer/codex/convertAgents.ts"
+    },
+    {
+      "from": "packages/core/src/plugins/installer/projectPluginSource.ts",
+      "specifier": "./codex/convertCommands.js",
+      "resolved": "packages/core/src/plugins/installer/codex/convertCommands.ts"
+    },
+    {
+      "from": "packages/core/src/plugins/installer/projectPluginSource.ts",
+      "specifier": "./codex/convertHooks.js",
+      "resolved": "packages/core/src/plugins/installer/codex/convertHooks.ts"
+    },
+    {
+      "from": "packages/core/src/plugins/installer/projectPluginSource.ts",
+      "specifier": "./codex/convertMcp.js",
+      "resolved": "packages/core/src/plugins/installer/codex/convertMcp.ts"
+    },
+    {
+      "from": "packages/core/src/plugins/installer/projectPluginSource.ts",
+      "specifier": "./codex/convertSkills.js",
+      "resolved": "packages/core/src/plugins/installer/codex/convertSkills.ts"
+    },
+    {
+      "from": "packages/core/src/plugins/installer/projectPluginSource.ts",
+      "specifier": "./detectFormat.js",
+      "resolved": "packages/core/src/plugins/installer/detectFormat.ts"
+    },
+    {
+      "from": "packages/core/src/plugins/installer/projectPluginSource.ts",
+      "specifier": "./loadPluginMcp.js",
+      "resolved": "packages/core/src/plugins/installer/loadPluginMcp.ts"
+    },
+    {
+      "from": "packages/core/src/plugins/installer/projectPluginSource.ts",
+      "specifier": "./normalizeManifest.js",
+      "resolved": "packages/core/src/plugins/installer/normalizeManifest.ts"
+    },
+    {
+      "from": "packages/core/src/plugins/installer/projectPluginSource.ts",
+      "specifier": "./types.js",
+      "resolved": "packages/core/src/plugins/installer/types.ts"
+    },
+    {
+      "from": "packages/core/src/plugins/installer/projectPluginSource.ts",
+      "specifier": "../../panel-apps/manifest.js",
+      "resolved": "packages/core/src/panel-apps/manifest.ts"
+    },
+    {
+      "from": "packages/core/src/plugins/installer/normalizeManifest.ts",
+      "specifier": "./types.js",
+      "resolved": "packages/core/src/plugins/installer/types.ts"
+    },
+    {
+      "from": "packages/core/src/plugins/installer/normalizeManifest.ts",
+      "specifier": "../../automation/scheduler.js",
+      "resolved": "packages/core/src/automation/scheduler.ts"
+    },
+    {
+      "from": "packages/core/src/plugins/installer/normalizeManifest.ts",
+      "specifier": "../static-svg.js",
+      "resolved": "packages/core/src/plugins/static-svg.ts"
+    },
+    {
+      "from": "packages/core/src/automation/scheduler.ts",
+      "specifier": "./cron-expr.js",
+      "resolved": "packages/core/src/automation/cron-expr.ts"
+    },
+    {
+      "from": "packages/core/src/plugins/installer/loadPluginMcp.ts",
+      "specifier": "../installedPlugins.js",
+      "resolved": "packages/core/src/plugins/installedPlugins.ts"
+    },
+    {
+      "from": "packages/core/src/plugins/installer/loadPluginMcp.ts",
+      "specifier": "../pluginMcpIntegrity.js",
+      "resolved": "packages/core/src/plugins/pluginMcpIntegrity.ts"
+    },
+    {
+      "from": "packages/core/src/plugins/installer/loadPluginMcp.ts",
+      "specifier": "../../tool-system/host-mcp-servers.js",
+      "resolved": "packages/core/src/tool-system/host-mcp-servers.ts"
+    },
+    {
+      "from": "packages/core/src/plugins/installer/loadPluginMcp.ts",
+      "specifier": "../../tool-system/mcp-connection-policy.js",
+      "resolved": "packages/core/src/tool-system/mcp-connection-policy.ts"
+    },
+    {
+      "from": "packages/core/src/plugins/installer/codex/convertSkills.ts",
+      "specifier": "../types.js",
+      "resolved": "packages/core/src/plugins/installer/types.ts"
+    },
+    {
+      "from": "packages/core/src/plugins/installer/codex/convertMcp.ts",
+      "specifier": "../types.js",
+      "resolved": "packages/core/src/plugins/installer/types.ts"
+    },
+    {
+      "from": "packages/core/src/plugins/installer/codex/convertHooks.ts",
+      "specifier": "../types.js",
+      "resolved": "packages/core/src/plugins/installer/types.ts"
+    },
+    {
+      "from": "packages/core/src/plugins/installer/codex/convertCommands.ts",
+      "specifier": "../types.js",
+      "resolved": "packages/core/src/plugins/installer/types.ts"
+    },
+    {
+      "from": "packages/core/src/plugins/installer/codex/convertAgents.ts",
+      "specifier": "../../../agent/agent-definition.js",
+      "resolved": "packages/core/src/agent/agent-definition.ts"
+    },
+    {
+      "from": "packages/core/src/plugins/installer/codex/convertAgents.ts",
+      "specifier": "../types.js",
+      "resolved": "packages/core/src/plugins/installer/types.ts"
+    },
+    {
+      "from": "packages/core/src/plugins/installer/paths.ts",
+      "specifier": "./types.js",
+      "resolved": "packages/core/src/plugins/installer/types.ts"
+    },
+    {
+      "from": "packages/core/src/plugins/installer/installFromArchive.ts",
+      "specifier": "./unzip.js",
+      "resolved": "packages/core/src/plugins/installer/unzip.ts"
+    },
+    {
+      "from": "packages/core/src/plugins/installer/installFromArchive.ts",
+      "specifier": "./install.js",
+      "resolved": "packages/core/src/plugins/installer/install.ts"
+    },
+    {
+      "from": "packages/core/src/plugins/installer/installFromArchive.ts",
+      "specifier": "./update.js",
+      "resolved": "packages/core/src/plugins/installer/update.ts"
+    },
+    {
+      "from": "packages/core/src/plugins/installer/installFromArchive.ts",
+      "specifier": "./paths.js",
+      "resolved": "packages/core/src/plugins/installer/paths.ts"
+    },
+    {
+      "from": "packages/core/src/plugins/installer/installFromArchive.ts",
+      "specifier": "./types.js",
+      "resolved": "packages/core/src/plugins/installer/types.ts"
+    },
+    {
+      "from": "packages/core/src/plugins/installer/update.ts",
+      "specifier": "./detectFormat.js",
+      "resolved": "packages/core/src/plugins/installer/detectFormat.ts"
+    },
+    {
+      "from": "packages/core/src/plugins/installer/update.ts",
+      "specifier": "./paths.js",
+      "resolved": "packages/core/src/plugins/installer/paths.ts"
+    },
+    {
+      "from": "packages/core/src/plugins/installer/update.ts",
+      "specifier": "./install.js",
+      "resolved": "packages/core/src/plugins/installer/install.ts"
+    },
+    {
+      "from": "packages/core/src/plugins/installer/update.ts",
+      "specifier": "./installFromSource.js",
+      "resolved": "packages/core/src/plugins/installer/installFromSource.ts"
+    },
+    {
+      "from": "packages/core/src/plugins/installer/update.ts",
+      "specifier": "./parseSource.js",
+      "resolved": "packages/core/src/plugins/installer/parseSource.ts"
+    },
+    {
+      "from": "packages/core/src/plugins/installer/update.ts",
+      "specifier": "../installedPlugins.js",
+      "resolved": "packages/core/src/plugins/installedPlugins.ts"
+    },
+    {
+      "from": "packages/core/src/plugins/installer/update.ts",
+      "specifier": "../pluginHookIntegrity.js",
+      "resolved": "packages/core/src/plugins/pluginHookIntegrity.ts"
+    },
+    {
+      "from": "packages/core/src/plugins/installer/update.ts",
+      "specifier": "../pluginMcpIntegrity.js",
+      "resolved": "packages/core/src/plugins/pluginMcpIntegrity.ts"
+    },
+    {
+      "from": "packages/core/src/plugins/installer/update.ts",
+      "specifier": "./loadPluginMcp.js",
+      "resolved": "packages/core/src/plugins/installer/loadPluginMcp.ts"
+    },
+    {
+      "from": "packages/core/src/plugins/installer/update.ts",
+      "specifier": "./types.js",
+      "resolved": "packages/core/src/plugins/installer/types.ts"
+    },
+    {
+      "from": "packages/core/src/plugins/installer/parseSource.ts",
+      "specifier": "../gitOps.js",
+      "resolved": "packages/core/src/plugins/gitOps.ts"
+    },
+    {
+      "from": "packages/core/src/plugins/installer/parseSource.ts",
+      "specifier": "./types.js",
+      "resolved": "packages/core/src/plugins/installer/types.ts"
+    },
+    {
+      "from": "packages/core/src/plugins/gitOps.ts",
+      "specifier": "../runtime/safe-spawn.js",
+      "resolved": "packages/core/src/runtime/safe-spawn.ts"
+    },
+    {
+      "from": "packages/core/src/plugins/gitOps.ts",
+      "specifier": "../utils/exec.js",
+      "resolved": "packages/core/src/utils/exec.ts"
+    },
+    {
+      "from": "packages/core/src/plugins/installer/installFromSource.ts",
+      "specifier": "../gitOps.js",
+      "resolved": "packages/core/src/plugins/gitOps.ts"
+    },
+    {
+      "from": "packages/core/src/plugins/installer/installFromSource.ts",
+      "specifier": "./install.js",
+      "resolved": "packages/core/src/plugins/installer/install.ts"
+    },
+    {
+      "from": "packages/core/src/plugins/installer/installFromSource.ts",
+      "specifier": "./paths.js",
+      "resolved": "packages/core/src/plugins/installer/paths.ts"
+    },
+    {
+      "from": "packages/core/src/plugins/installer/installFromSource.ts",
+      "specifier": "./types.js",
+      "resolved": "packages/core/src/plugins/installer/types.ts"
+    },
+    {
+      "from": "packages/core/src/plugins/installer/installFromSource.ts",
+      "specifier": "./sourcePath.js",
+      "resolved": "packages/core/src/plugins/installer/sourcePath.ts"
+    },
+    {
+      "from": "packages/core/src/plugins/installer/install.ts",
+      "specifier": "./paths.js",
+      "resolved": "packages/core/src/plugins/installer/paths.ts"
+    },
+    {
+      "from": "packages/core/src/plugins/installer/install.ts",
+      "specifier": "./types.js",
+      "resolved": "packages/core/src/plugins/installer/types.ts"
+    },
+    {
+      "from": "packages/core/src/plugins/installer/install.ts",
+      "specifier": "../installedPlugins.js",
+      "resolved": "packages/core/src/plugins/installedPlugins.ts"
+    },
+    {
+      "from": "packages/core/src/plugins/installer/install.ts",
+      "specifier": "../pluginHookIntegrity.js",
+      "resolved": "packages/core/src/plugins/pluginHookIntegrity.ts"
+    },
+    {
+      "from": "packages/core/src/plugins/installer/install.ts",
+      "specifier": "../pluginMcpIntegrity.js",
+      "resolved": "packages/core/src/plugins/pluginMcpIntegrity.ts"
+    },
+    {
+      "from": "packages/core/src/plugins/installer/install.ts",
+      "specifier": "./loadPluginMcp.js",
+      "resolved": "packages/core/src/plugins/installer/loadPluginMcp.ts"
+    },
+    {
+      "from": "packages/core/src/plugins/installer/install.ts",
+      "specifier": "./projectPluginSource.js",
+      "resolved": "packages/core/src/plugins/installer/projectPluginSource.ts"
+    },
+    {
+      "from": "packages/core/src/plugins/knownMarketplaces.ts",
+      "specifier": "../utils/file-mutex.js",
+      "resolved": "packages/core/src/utils/file-mutex.ts"
+    },
+    {
+      "from": "packages/core/src/plugins/marketplaceManager.ts",
+      "specifier": "./gitOps.js",
+      "resolved": "packages/core/src/plugins/gitOps.ts"
+    },
+    {
+      "from": "packages/core/src/plugins/marketplaceManager.ts",
+      "specifier": "./knownMarketplaces.js",
+      "resolved": "packages/core/src/plugins/knownMarketplaces.ts"
+    },
+    {
+      "from": "packages/core/src/plugins/marketplaceManager.ts",
+      "specifier": "./schemas.js",
+      "resolved": "packages/core/src/plugins/schemas.ts"
+    },
+    {
+      "from": "packages/core/src/plugins/marketplaceManager.ts",
+      "specifier": "./installer/paths.js",
+      "resolved": "packages/core/src/plugins/installer/paths.ts"
+    },
+    {
+      "from": "packages/core/src/plugins/pluginMcpApproval.ts",
+      "specifier": "./installedPlugins.js",
+      "resolved": "packages/core/src/plugins/installedPlugins.ts"
+    },
+    {
+      "from": "packages/core/src/plugins/pluginMcpApproval.ts",
+      "specifier": "./installer/loadPluginMcp.js",
+      "resolved": "packages/core/src/plugins/installer/loadPluginMcp.ts"
+    },
+    {
+      "from": "packages/core/src/plugins/pluginMcpApproval.ts",
+      "specifier": "./pluginMcpIntegrity.js",
+      "resolved": "packages/core/src/plugins/pluginMcpIntegrity.ts"
+    },
+    {
+      "from": "packages/core/src/plugins/pluginContent.ts",
+      "specifier": "../skills/frontmatter.js",
+      "resolved": "packages/core/src/skills/frontmatter.ts"
+    },
+    {
+      "from": "packages/core/src/plugins/pluginContent.ts",
+      "specifier": "./loadPluginHooks.js",
+      "resolved": "packages/core/src/plugins/loadPluginHooks.ts"
+    },
+    {
+      "from": "packages/core/src/plugins/pluginContent.ts",
+      "specifier": "./pluginHookApproval.js",
+      "resolved": "packages/core/src/plugins/pluginHookApproval.ts"
+    },
+    {
+      "from": "packages/core/src/plugins/pluginContent.ts",
+      "specifier": "./installer/loadPluginMcp.js",
+      "resolved": "packages/core/src/plugins/installer/loadPluginMcp.ts"
+    },
+    {
+      "from": "packages/core/src/plugins/pluginContent.ts",
+      "specifier": "./pluginCatalog.js",
+      "resolved": "packages/core/src/plugins/pluginCatalog.ts"
+    },
+    {
+      "from": "packages/core/src/plugins/pluginCatalog.ts",
+      "specifier": "./installedPlugins.js",
+      "resolved": "packages/core/src/plugins/installedPlugins.ts"
+    },
+    {
+      "from": "packages/core/src/plugins/pluginCatalog.ts",
+      "specifier": "./installer/paths.js",
+      "resolved": "packages/core/src/plugins/installer/paths.ts"
+    },
+    {
+      "from": "packages/core/src/plugins/pluginCatalog.ts",
+      "specifier": "./installer/types.js",
+      "resolved": "packages/core/src/plugins/installer/types.ts"
+    },
+    {
+      "from": "packages/core/src/plugins/pluginCatalog.ts",
+      "specifier": "./pluginInstaller.js",
+      "resolved": "packages/core/src/plugins/pluginInstaller.ts"
+    },
+    {
+      "from": "packages/core/src/plugins/pluginInstaller.ts",
+      "specifier": "./gitOps.js",
+      "resolved": "packages/core/src/plugins/gitOps.ts"
+    },
+    {
+      "from": "packages/core/src/plugins/pluginInstaller.ts",
+      "specifier": "./marketplaceManager.js",
+      "resolved": "packages/core/src/plugins/marketplaceManager.ts"
+    },
+    {
+      "from": "packages/core/src/plugins/pluginInstaller.ts",
+      "specifier": "./knownMarketplaces.js",
+      "resolved": "packages/core/src/plugins/knownMarketplaces.ts"
+    },
+    {
+      "from": "packages/core/src/plugins/pluginInstaller.ts",
+      "specifier": "./installedPlugins.js",
+      "resolved": "packages/core/src/plugins/installedPlugins.ts"
+    },
+    {
+      "from": "packages/core/src/plugins/pluginInstaller.ts",
+      "specifier": "./varRewrite.js",
+      "resolved": "packages/core/src/plugins/varRewrite.ts"
+    },
+    {
+      "from": "packages/core/src/plugins/pluginInstaller.ts",
+      "specifier": "./pluginHookIntegrity.js",
+      "resolved": "packages/core/src/plugins/pluginHookIntegrity.ts"
+    },
+    {
+      "from": "packages/core/src/plugins/pluginInstaller.ts",
+      "specifier": "./pluginMcpIntegrity.js",
+      "resolved": "packages/core/src/plugins/pluginMcpIntegrity.ts"
+    },
+    {
+      "from": "packages/core/src/plugins/pluginInstaller.ts",
+      "specifier": "./installer/paths.js",
+      "resolved": "packages/core/src/plugins/installer/paths.ts"
+    },
+    {
+      "from": "packages/core/src/plugins/pluginInstaller.ts",
+      "specifier": "./installer/pruneDisabled.js",
+      "resolved": "packages/core/src/plugins/installer/pruneDisabled.ts"
+    },
+    {
+      "from": "packages/core/src/plugins/pluginInstaller.ts",
+      "specifier": "./installer/detectFormat.js",
+      "resolved": "packages/core/src/plugins/installer/detectFormat.ts"
+    },
+    {
+      "from": "packages/core/src/plugins/pluginInstaller.ts",
+      "specifier": "./installer/normalizeManifest.js",
+      "resolved": "packages/core/src/plugins/installer/normalizeManifest.ts"
+    },
+    {
+      "from": "packages/core/src/plugins/pluginInstaller.ts",
+      "specifier": "./installer/loadPluginMcp.js",
+      "resolved": "packages/core/src/plugins/installer/loadPluginMcp.ts"
+    },
+    {
+      "from": "packages/core/src/plugins/pluginInstaller.ts",
+      "specifier": "./installer/codex/convertAgents.js",
+      "resolved": "packages/core/src/plugins/installer/codex/convertAgents.ts"
+    },
+    {
+      "from": "packages/core/src/plugins/pluginInstaller.ts",
+      "specifier": "./installer/codex/convertCommands.js",
+      "resolved": "packages/core/src/plugins/installer/codex/convertCommands.ts"
+    },
+    {
+      "from": "packages/core/src/plugins/pluginInstaller.ts",
+      "specifier": "./installer/codex/convertHooks.js",
+      "resolved": "packages/core/src/plugins/installer/codex/convertHooks.ts"
+    },
+    {
+      "from": "packages/core/src/plugins/pluginInstaller.ts",
+      "specifier": "./installer/codex/convertMcp.js",
+      "resolved": "packages/core/src/plugins/installer/codex/convertMcp.ts"
+    },
+    {
+      "from": "packages/core/src/plugins/pluginInstaller.ts",
+      "specifier": "./installer/types.js",
+      "resolved": "packages/core/src/plugins/installer/types.ts"
+    },
+    {
+      "from": "packages/core/src/plugins/pluginInstaller.ts",
+      "specifier": "./installer/sourcePath.js",
+      "resolved": "packages/core/src/plugins/installer/sourcePath.ts"
+    },
+    {
+      "from": "packages/core/src/plugins/pluginHookApproval.ts",
+      "specifier": "./installedPlugins.js",
+      "resolved": "packages/core/src/plugins/installedPlugins.ts"
+    },
+    {
+      "from": "packages/core/src/plugins/pluginHookApproval.ts",
+      "specifier": "./pluginHookIntegrity.js",
+      "resolved": "packages/core/src/plugins/pluginHookIntegrity.ts"
+    },
+    {
+      "from": "packages/core/src/plugins/loadPluginHooks.ts",
+      "specifier": "./installedPlugins.js",
+      "resolved": "packages/core/src/plugins/installedPlugins.ts"
+    },
+    {
+      "from": "packages/core/src/plugins/loadPluginHooks.ts",
+      "specifier": "./installedPluginSnapshot.js",
+      "resolved": "packages/core/src/plugins/installedPluginSnapshot.ts"
+    },
+    {
+      "from": "packages/core/src/plugins/loadPluginHooks.ts",
+      "specifier": "../runtime/constrained-process/resources.js",
+      "resolved": "packages/core/src/runtime/constrained-process/resources.ts"
+    },
+    {
+      "from": "packages/core/src/plugins/loadPluginHooks.ts",
+      "specifier": "./pluginCommandHook.js",
+      "resolved": "packages/core/src/plugins/pluginCommandHook.ts"
+    },
+    {
+      "from": "packages/core/src/plugins/loadPluginHooks.ts",
+      "specifier": "./pluginHookIntegrity.js",
+      "resolved": "packages/core/src/plugins/pluginHookIntegrity.ts"
+    },
+    {
+      "from": "packages/core/src/plugins/pluginCommandHook.ts",
+      "specifier": "../hooks/hook-output.js",
+      "resolved": "packages/core/src/hooks/hook-output.ts"
+    },
+    {
+      "from": "packages/core/src/plugins/pluginCommandHook.ts",
+      "specifier": "../hooks/shell-runner.js",
+      "resolved": "packages/core/src/hooks/shell-runner.ts"
+    },
+    {
+      "from": "packages/core/src/plugins/pluginCommandHook.ts",
+      "specifier": "../runtime/spawn-common.js",
+      "resolved": "packages/core/src/runtime/spawn-common.ts"
+    },
+    {
+      "from": "packages/core/src/plugins/pluginCommandHook.ts",
+      "specifier": "./pluginHookCommand.js",
+      "resolved": "packages/core/src/plugins/pluginHookCommand.ts"
+    },
+    {
+      "from": "packages/core/src/hooks/shell-runner.ts",
+      "specifier": "./hook-output.js",
+      "resolved": "packages/core/src/hooks/hook-output.ts"
+    },
+    {
+      "from": "packages/core/src/hooks/shell-runner.ts",
+      "specifier": "../runtime/spawn-common.js",
+      "resolved": "packages/core/src/runtime/spawn-common.ts"
+    },
+    {
+      "from": "packages/core/src/runtime/constrained-process/resources.ts",
+      "specifier": "./layout.js",
+      "resolved": "packages/core/src/runtime/constrained-process/layout.ts"
+    },
+    {
+      "from": "packages/core/src/profile/requirements.ts",
+      "specifier": "./types.js",
+      "resolved": "packages/core/src/profile/types.ts"
+    },
+    {
+      "from": "packages/core/src/profile/types.ts",
+      "specifier": "../sources/types.js",
+      "resolved": "packages/core/src/sources/types.ts"
+    },
+    {
+      "from": "packages/core/src/tool-system/builtin/add-marketplace.ts",
+      "specifier": "../../plugins/marketplaceManager.js",
+      "resolved": "packages/core/src/plugins/marketplaceManager.ts"
+    },
+    {
+      "from": "packages/core/src/tool-system/builtin/add-marketplace.ts",
+      "specifier": "../../plugins/knownMarketplaces.js",
+      "resolved": "packages/core/src/plugins/knownMarketplaces.ts"
+    },
+    {
+      "from": "packages/core/src/tool-system/builtin/memory.ts",
+      "specifier": "../../session/memory.js",
+      "resolved": "packages/core/src/session/memory.ts"
+    },
+    {
+      "from": "packages/core/src/session/memory.ts",
+      "specifier": "../utils/file-mutex.js",
+      "resolved": "packages/core/src/utils/file-mutex.ts"
+    },
+    {
+      "from": "packages/core/src/tool-system/builtin/powershell.ts",
+      "specifier": "../../runtime/safe-spawn.js",
+      "resolved": "packages/core/src/runtime/safe-spawn.ts"
+    },
+    {
+      "from": "packages/core/src/tool-system/builtin/repl.ts",
+      "specifier": "../../runtime/safe-spawn.js",
+      "resolved": "packages/core/src/runtime/safe-spawn.ts"
+    },
+    {
+      "from": "packages/core/src/tool-system/builtin/repl.ts",
+      "specifier": "../../runtime/spawn-common.js",
+      "resolved": "packages/core/src/runtime/spawn-common.ts"
+    },
+    {
+      "from": "packages/core/src/tool-system/builtin/sources.ts",
+      "specifier": "../../settings/manager.js",
+      "resolved": "packages/core/src/settings/manager.ts"
+    },
+    {
+      "from": "packages/core/src/tool-system/builtin/sources.ts",
+      "specifier": "../../sources/adapter.js",
+      "resolved": "packages/core/src/sources/adapter.ts"
+    },
+    {
+      "from": "packages/core/src/tool-system/builtin/sources.ts",
+      "specifier": "../../sources/adapters/local-files.js",
+      "resolved": "packages/core/src/sources/adapters/local-files.ts"
+    },
+    {
+      "from": "packages/core/src/tool-system/builtin/sources.ts",
+      "specifier": "../../sources/documents/index-store.js",
+      "resolved": "packages/core/src/sources/documents/index-store.ts"
+    },
+    {
+      "from": "packages/core/src/tool-system/builtin/sources.ts",
+      "specifier": "../../sources/documents/types.js",
+      "resolved": "packages/core/src/sources/documents/types.ts"
+    },
+    {
+      "from": "packages/core/src/tool-system/builtin/sources.ts",
+      "specifier": "../../sources/adapters/mcp-resource.js",
+      "resolved": "packages/core/src/sources/adapters/mcp-resource.ts"
+    },
+    {
+      "from": "packages/core/src/tool-system/builtin/sources.ts",
+      "specifier": "../../sources/adapters/link.js",
+      "resolved": "packages/core/src/sources/adapters/link.ts"
+    },
+    {
+      "from": "packages/core/src/tool-system/builtin/sources.ts",
+      "specifier": "../../sources/adapters/mock.js",
+      "resolved": "packages/core/src/sources/adapters/mock.ts"
+    },
+    {
+      "from": "packages/core/src/tool-system/builtin/sources.ts",
+      "specifier": "../../sources/adapters/collection.js",
+      "resolved": "packages/core/src/sources/adapters/collection.ts"
+    },
+    {
+      "from": "packages/core/src/tool-system/builtin/sources.ts",
+      "specifier": "../../sources/collection.js",
+      "resolved": "packages/core/src/sources/collection.ts"
+    },
+    {
+      "from": "packages/core/src/tool-system/builtin/sources.ts",
+      "specifier": "../../sources/collection-local.js",
+      "resolved": "packages/core/src/sources/collection-local.ts"
+    },
+    {
+      "from": "packages/core/src/tool-system/builtin/sources.ts",
+      "specifier": "../../sources/credential-status.js",
+      "resolved": "packages/core/src/sources/credential-status.ts"
+    },
+    {
+      "from": "packages/core/src/tool-system/builtin/sources.ts",
+      "specifier": "../../sources/context-summary.js",
+      "resolved": "packages/core/src/sources/context-summary.ts"
+    },
+    {
+      "from": "packages/core/src/tool-system/builtin/sources.ts",
+      "specifier": "../../sources/resolve.js",
+      "resolved": "packages/core/src/sources/resolve.ts"
+    },
+    {
+      "from": "packages/core/src/tool-system/builtin/sources.ts",
+      "specifier": "../../sources/truncate-utf8.js",
+      "resolved": "packages/core/src/sources/truncate-utf8.ts"
+    },
+    {
+      "from": "packages/core/src/tool-system/builtin/sources.ts",
+      "specifier": "../../utils/secret-scrubber.js",
+      "resolved": "packages/core/src/utils/secret-scrubber.ts"
+    },
+    {
+      "from": "packages/core/src/tool-system/builtin/sources.ts",
+      "specifier": "../../automation/write-policy.js",
+      "resolved": "packages/core/src/automation/write-policy.ts"
+    },
+    {
+      "from": "packages/core/src/tool-system/builtin/sources.ts",
+      "specifier": "../bound-tool-result.js",
+      "resolved": "packages/core/src/tool-system/bound-tool-result.ts"
+    },
+    {
+      "from": "packages/core/src/automation/write-policy.ts",
+      "specifier": "../tool-system/permission.js",
+      "resolved": "packages/core/src/tool-system/permission.ts"
+    },
+    {
+      "from": "packages/core/src/tool-system/permission.ts",
+      "specifier": "../logging/logger.js",
+      "resolved": "packages/core/src/logging/logger.ts"
+    },
+    {
+      "from": "packages/core/src/tool-system/permission.ts",
+      "specifier": "./plan-mode-allowlist.js",
+      "resolved": "packages/core/src/tool-system/plan-mode-allowlist.ts"
+    },
+    {
+      "from": "packages/core/src/tool-system/permission.ts",
+      "specifier": "./path-policy.js",
+      "resolved": "packages/core/src/tool-system/path-policy.ts"
+    },
+    {
+      "from": "packages/core/src/tool-system/path-policy.ts",
+      "specifier": "../plugins/installedPlugins.js",
+      "resolved": "packages/core/src/plugins/installedPlugins.ts"
+    },
+    {
+      "from": "packages/core/src/tool-system/path-policy.ts",
+      "specifier": "../workspace/canonical-key.js",
+      "resolved": "packages/core/src/workspace/canonical-key.ts"
+    },
+    {
+      "from": "packages/core/src/sources/resolve.ts",
+      "specifier": "../profile/resolve.js",
+      "resolved": "packages/core/src/profile/resolve.ts"
+    },
+    {
+      "from": "packages/core/src/sources/resolve.ts",
+      "specifier": "./adapters/local-files.js",
+      "resolved": "packages/core/src/sources/adapters/local-files.ts"
+    },
+    {
+      "from": "packages/core/src/sources/resolve.ts",
+      "specifier": "./binding.js",
+      "resolved": "packages/core/src/sources/binding.ts"
+    },
+    {
+      "from": "packages/core/src/sources/resolve.ts",
+      "specifier": "./catalog.js",
+      "resolved": "packages/core/src/sources/catalog.ts"
+    },
+    {
+      "from": "packages/core/src/sources/resolve.ts",
+      "specifier": "./link-view.js",
+      "resolved": "packages/core/src/sources/link-view.ts"
+    },
+    {
+      "from": "packages/core/src/sources/link-view.ts",
+      "specifier": "../credentials/access.js",
+      "resolved": "packages/core/src/credentials/access.ts"
+    },
+    {
+      "from": "packages/core/src/sources/link-view.ts",
+      "specifier": "../links/providers.js",
+      "resolved": "packages/core/src/links/providers.ts"
+    },
+    {
+      "from": "packages/core/src/sources/link-view.ts",
+      "specifier": "../links/remote.js",
+      "resolved": "packages/core/src/links/remote.ts"
+    },
+    {
+      "from": "packages/core/src/sources/link-view.ts",
+      "specifier": "../links/status.js",
+      "resolved": "packages/core/src/links/status.ts"
+    },
+    {
+      "from": "packages/core/src/sources/link-view.ts",
+      "specifier": "../links/authority.js",
+      "resolved": "packages/core/src/links/authority.ts"
+    },
+    {
+      "from": "packages/core/src/sources/catalog.ts",
+      "specifier": "../logging/logger.js",
+      "resolved": "packages/core/src/logging/logger.ts"
+    },
+    {
+      "from": "packages/core/src/sources/catalog.ts",
+      "specifier": "../session/session-manager.js",
+      "resolved": "packages/core/src/session/session-manager.ts"
+    },
+    {
+      "from": "packages/core/src/sources/catalog.ts",
+      "specifier": "../utils/file-mutex.js",
+      "resolved": "packages/core/src/utils/file-mutex.ts"
+    },
+    {
+      "from": "packages/core/src/sources/catalog.ts",
+      "specifier": "./types.js",
+      "resolved": "packages/core/src/sources/types.ts"
+    },
+    {
+      "from": "packages/core/src/sources/catalog.ts",
+      "specifier": "./link-view.js",
+      "resolved": "packages/core/src/sources/link-view.ts"
+    },
+    {
+      "from": "packages/core/src/sources/catalog.ts",
+      "specifier": "./collection.js",
+      "resolved": "packages/core/src/sources/collection.ts"
+    },
+    {
+      "from": "packages/core/src/sources/collection.ts",
+      "specifier": "./types.js",
+      "resolved": "packages/core/src/sources/types.ts"
+    },
+    {
+      "from": "packages/core/src/sources/collection.ts",
+      "specifier": "./documents/types.js",
+      "resolved": "packages/core/src/sources/documents/types.ts"
+    },
+    {
+      "from": "packages/core/src/sources/collection.ts",
+      "specifier": "./collection-url.js",
+      "resolved": "packages/core/src/sources/collection-url.ts"
+    },
+    {
+      "from": "packages/core/src/sources/collection-url.ts",
+      "specifier": "./documents/types.js",
+      "resolved": "packages/core/src/sources/documents/types.ts"
+    },
+    {
+      "from": "packages/core/src/sources/binding.ts",
+      "specifier": "./types.js",
+      "resolved": "packages/core/src/sources/types.ts"
+    },
+    {
+      "from": "packages/core/src/sources/adapters/local-files.ts",
+      "specifier": "../truncate-utf8.js",
+      "resolved": "packages/core/src/sources/truncate-utf8.ts"
+    },
+    {
+      "from": "packages/core/src/sources/adapters/local-files.ts",
+      "specifier": "../documents/index-store.js",
+      "resolved": "packages/core/src/sources/documents/index-store.ts"
+    },
+    {
+      "from": "packages/core/src/sources/adapters/local-files.ts",
+      "specifier": "../documents/types.js",
+      "resolved": "packages/core/src/sources/documents/types.ts"
+    },
+    {
+      "from": "packages/core/src/sources/documents/index-store.ts",
+      "specifier": "./worker.js",
+      "resolved": "packages/core/src/sources/documents/worker.ts"
+    },
+    {
+      "from": "packages/core/src/sources/documents/index-store.ts",
+      "specifier": "./types.js",
+      "resolved": "packages/core/src/sources/documents/types.ts"
+    },
+    {
+      "from": "packages/core/src/sources/documents/worker.ts",
+      "specifier": "./types.js",
+      "resolved": "packages/core/src/sources/documents/types.ts"
+    },
+    {
+      "from": "packages/core/src/profile/resolve.ts",
+      "specifier": "../logging/logger.js",
+      "resolved": "packages/core/src/logging/logger.ts"
+    },
+    {
+      "from": "packages/core/src/profile/resolve.ts",
+      "specifier": "./store.js",
+      "resolved": "packages/core/src/profile/store.ts"
+    },
+    {
+      "from": "packages/core/src/profile/store.ts",
+      "specifier": "../logging/logger.js",
+      "resolved": "packages/core/src/logging/logger.ts"
+    },
+    {
+      "from": "packages/core/src/profile/store.ts",
+      "specifier": "../session/session-manager.js",
+      "resolved": "packages/core/src/session/session-manager.ts"
+    },
+    {
+      "from": "packages/core/src/profile/store.ts",
+      "specifier": "./types.js",
+      "resolved": "packages/core/src/profile/types.ts"
+    },
+    {
+      "from": "packages/core/src/sources/context-summary.ts",
+      "specifier": "./credential-status.js",
+      "resolved": "packages/core/src/sources/credential-status.ts"
+    },
+    {
+      "from": "packages/core/src/sources/context-summary.ts",
+      "specifier": "./resolve.js",
+      "resolved": "packages/core/src/sources/resolve.ts"
+    },
+    {
+      "from": "packages/core/src/sources/credential-status.ts",
+      "specifier": "../credentials/access.js",
+      "resolved": "packages/core/src/credentials/access.ts"
+    },
+    {
+      "from": "packages/core/src/sources/collection-local.ts",
+      "specifier": "./collection.js",
+      "resolved": "packages/core/src/sources/collection.ts"
+    },
+    {
+      "from": "packages/core/src/sources/collection-local.ts",
+      "specifier": "./documents/types.js",
+      "resolved": "packages/core/src/sources/documents/types.ts"
+    },
+    {
+      "from": "packages/core/src/sources/adapters/collection.ts",
+      "specifier": "../collection.js",
+      "resolved": "packages/core/src/sources/collection.ts"
+    },
+    {
+      "from": "packages/core/src/sources/adapters/collection.ts",
+      "specifier": "../collection-local.js",
+      "resolved": "packages/core/src/sources/collection-local.ts"
+    },
+    {
+      "from": "packages/core/src/sources/adapters/collection.ts",
+      "specifier": "../collection-url.js",
+      "resolved": "packages/core/src/sources/collection-url.ts"
+    },
+    {
+      "from": "packages/core/src/sources/adapters/collection.ts",
+      "specifier": "../documents/index-store.js",
+      "resolved": "packages/core/src/sources/documents/index-store.ts"
+    },
+    {
+      "from": "packages/core/src/sources/adapters/collection.ts",
+      "specifier": "../truncate-utf8.js",
+      "resolved": "packages/core/src/sources/truncate-utf8.ts"
+    },
+    {
+      "from": "packages/core/src/sources/adapters/mock.ts",
+      "specifier": "../truncate-utf8.js",
+      "resolved": "packages/core/src/sources/truncate-utf8.ts"
+    },
+    {
+      "from": "packages/core/src/sources/adapters/link.ts",
+      "specifier": "../link-view.js",
+      "resolved": "packages/core/src/sources/link-view.ts"
+    },
+    {
+      "from": "packages/core/src/sources/adapters/link.ts",
+      "specifier": "../truncate-utf8.js",
+      "resolved": "packages/core/src/sources/truncate-utf8.ts"
+    },
+    {
+      "from": "packages/core/src/sources/adapters/link.ts",
+      "specifier": "../../tool-system/bound-tool-result.js",
+      "resolved": "packages/core/src/tool-system/bound-tool-result.ts"
+    },
+    {
+      "from": "packages/core/src/sources/adapters/mcp-resource.ts",
+      "specifier": "../truncate-utf8.js",
+      "resolved": "packages/core/src/sources/truncate-utf8.ts"
+    },
+    {
+      "from": "packages/core/src/sources/adapters/mcp-resource.ts",
+      "specifier": "../../tool-system/mcp-manager.js",
+      "resolved": "packages/core/src/tool-system/mcp-manager.ts"
+    },
+    {
+      "from": "packages/core/src/tool-system/builtin/mcp-tools.ts",
+      "specifier": "../mcp-manager.js",
+      "resolved": "packages/core/src/tool-system/mcp-manager.ts"
+    },
+    {
+      "from": "packages/core/src/tool-system/builtin/mcp-tools.ts",
+      "specifier": "../mcp-manager.js",
+      "resolved": "packages/core/src/tool-system/mcp-manager.ts"
+    },
+    {
+      "from": "packages/core/src/tool-system/builtin/mcp-tools.ts",
+      "specifier": "../mcp-manager.js",
+      "resolved": "packages/core/src/tool-system/mcp-manager.ts"
+    },
+    {
+      "from": "packages/core/src/tool-system/builtin/skill.ts",
+      "specifier": "../../skills/scanner.js",
+      "resolved": "packages/core/src/skills/scanner.ts"
+    },
+    {
+      "from": "packages/core/src/tool-system/builtin/skill.ts",
+      "specifier": "../mcp-health.js",
+      "resolved": "packages/core/src/tool-system/mcp-health.ts"
+    },
+    {
+      "from": "packages/core/src/tool-system/builtin/skill.ts",
+      "specifier": "./skill-prompt.js",
+      "resolved": "packages/core/src/tool-system/builtin/skill-prompt.ts"
+    },
+    {
+      "from": "packages/core/src/tool-system/builtin/skill-prompt.ts",
+      "specifier": "../../context/token-counter.js",
+      "resolved": "packages/core/src/context/token-counter.ts"
+    },
+    {
+      "from": "packages/core/src/tool-system/builtin/cron.ts",
+      "specifier": "../../automation/scheduler.js",
+      "resolved": "packages/core/src/automation/scheduler.ts"
+    },
+    {
+      "from": "packages/core/src/tool-system/builtin/cron.ts",
+      "specifier": "../../logging/logger.js",
+      "resolved": "packages/core/src/logging/logger.ts"
+    },
+    {
+      "from": "packages/core/src/tool-system/builtin/cron.ts",
+      "specifier": "./cron-list.definition.js",
+      "resolved": "packages/core/src/tool-system/builtin/cron-list.definition.ts"
+    },
+    {
+      "from": "packages/core/src/tool-system/builtin/config.ts",
+      "specifier": "../../settings/manager.js",
+      "resolved": "packages/core/src/settings/manager.ts"
+    },
+    {
+      "from": "packages/core/src/tool-system/builtin/config.ts",
+      "specifier": "../path-policy.js",
+      "resolved": "packages/core/src/tool-system/path-policy.ts"
+    },
+    {
+      "from": "packages/core/src/tool-system/builtin/sleep.ts",
+      "specifier": "./sleep.definition.js",
+      "resolved": "packages/core/src/tool-system/builtin/sleep.definition.ts"
+    },
+    {
+      "from": "packages/core/src/tool-system/builtin/context-notes.ts",
+      "specifier": "../../context/notes.js",
+      "resolved": "packages/core/src/context/notes.ts"
+    },
+    {
+      "from": "packages/core/src/context/notes.ts",
+      "specifier": "../session/transcript.js",
+      "resolved": "packages/core/src/session/transcript.ts"
+    },
+    {
+      "from": "packages/core/src/context/notes.ts",
+      "specifier": "./compaction.js",
+      "resolved": "packages/core/src/context/compaction.ts"
+    },
+    {
+      "from": "packages/core/src/context/notes.ts",
+      "specifier": "../logging/logger.js",
+      "resolved": "packages/core/src/logging/logger.ts"
+    },
+    {
+      "from": "packages/core/src/context/compaction.ts",
+      "specifier": "./token-counter.js",
+      "resolved": "packages/core/src/context/token-counter.ts"
+    },
+    {
+      "from": "packages/core/src/context/compaction.ts",
+      "specifier": "./tool-output-budget.js",
+      "resolved": "packages/core/src/context/tool-output-budget.ts"
+    },
+    {
+      "from": "packages/core/src/context/tool-output-budget.ts",
+      "specifier": "./token-counter.js",
+      "resolved": "packages/core/src/context/token-counter.ts"
+    },
+    {
+      "from": "packages/core/src/tool-system/builtin/agent.ts",
+      "specifier": "./agent-registry.js",
+      "resolved": "packages/core/src/tool-system/builtin/agent-registry.ts"
+    },
+    {
+      "from": "packages/core/src/tool-system/builtin/agent.ts",
+      "specifier": "./agent-heartbeat.js",
+      "resolved": "packages/core/src/tool-system/builtin/agent-heartbeat.ts"
+    },
+    {
+      "from": "packages/core/src/tool-system/builtin/agent.ts",
+      "specifier": "./agent-output-file.js",
+      "resolved": "packages/core/src/tool-system/builtin/agent-output-file.ts"
+    },
+    {
+      "from": "packages/core/src/tool-system/builtin/agent.ts",
+      "specifier": "./agent-transcript-translator.js",
+      "resolved": "packages/core/src/tool-system/builtin/agent-transcript-translator.ts"
+    },
+    {
+      "from": "packages/core/src/tool-system/builtin/agent.ts",
+      "specifier": "./agent-notifications.js",
+      "resolved": "packages/core/src/tool-system/builtin/agent-notifications.ts"
+    },
+    {
+      "from": "packages/core/src/tool-system/builtin/agent.ts",
+      "specifier": "../../logging/logger.js",
+      "resolved": "packages/core/src/logging/logger.ts"
+    },
+    {
+      "from": "packages/core/src/tool-system/builtin/agent.ts",
+      "specifier": "./agent-progress.js",
+      "resolved": "packages/core/src/tool-system/builtin/agent-progress.ts"
+    },
+    {
+      "from": "packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+      "specifier": "./agent-registry.js",
+      "resolved": "packages/core/src/tool-system/builtin/agent-registry.ts"
+    },
+    {
+      "from": "packages/core/src/tool-system/builtin/agent-registry.ts",
+      "specifier": "./agent-notifications.js",
+      "resolved": "packages/core/src/tool-system/builtin/agent-notifications.ts"
+    },
+    {
+      "from": "packages/core/src/tool-system/builtin/agent-output-file.ts",
+      "specifier": "../../settings/manager.js",
+      "resolved": "packages/core/src/settings/manager.ts"
+    },
+    {
+      "from": "packages/core/src/tool-system/builtin/agent-heartbeat.ts",
+      "specifier": "./agent-registry.js",
+      "resolved": "packages/core/src/tool-system/builtin/agent-registry.ts"
+    },
+    {
+      "from": "packages/core/src/tool-system/builtin/agent-heartbeat.ts",
+      "specifier": "./agent-notifications.js",
+      "resolved": "packages/core/src/tool-system/builtin/agent-notifications.ts"
+    },
+    {
+      "from": "packages/core/src/tool-system/builtin/agent-heartbeat.ts",
+      "specifier": "./agent-progress.js",
+      "resolved": "packages/core/src/tool-system/builtin/agent-progress.ts"
+    },
+    {
+      "from": "packages/core/src/tool-system/builtin/web-search.ts",
+      "specifier": "../../settings/manager.js",
+      "resolved": "packages/core/src/settings/manager.ts"
+    },
+    {
+      "from": "packages/core/src/tool-system/builtin/bash.ts",
+      "specifier": "../sandbox/off.js",
+      "resolved": "packages/core/src/tool-system/sandbox/off.ts"
+    },
+    {
+      "from": "packages/core/src/tool-system/builtin/bash.ts",
+      "specifier": "../../runtime/safe-spawn.js",
+      "resolved": "packages/core/src/runtime/safe-spawn.ts"
+    },
+    {
+      "from": "packages/core/src/tool-system/builtin/bash.ts",
+      "specifier": "../../runtime/truncate-output.js",
+      "resolved": "packages/core/src/runtime/truncate-output.ts"
+    },
+    {
+      "from": "packages/core/src/tool-system/builtin/bash.ts",
+      "specifier": "../../runtime/spawn-common.js",
+      "resolved": "packages/core/src/runtime/spawn-common.ts"
+    },
+    {
+      "from": "packages/core/src/tool-system/builtin/bash.ts",
+      "specifier": "../../runtime/background-shell.js",
+      "resolved": "packages/core/src/runtime/background-shell.ts"
+    },
+    {
+      "from": "packages/core/src/tool-system/builtin/bash.ts",
+      "specifier": "../../model-traces/context.js",
+      "resolved": "packages/core/src/model-traces/context.ts"
+    },
+    {
+      "from": "packages/core/src/model-traces/context.ts",
+      "specifier": "./native-process.js",
+      "resolved": "packages/core/src/model-traces/native-process.ts"
+    },
+    {
+      "from": "packages/core/src/model-traces/context.ts",
+      "specifier": "../cost-ledger/context.js",
+      "resolved": "packages/core/src/cost-ledger/context.ts"
+    },
+    {
+      "from": "packages/core/src/model-traces/context.ts",
+      "specifier": "../cost-ledger/pricing.js",
+      "resolved": "packages/core/src/cost-ledger/pricing.ts"
+    },
+    {
+      "from": "packages/core/src/model-traces/context.ts",
+      "specifier": "./store.js",
+      "resolved": "packages/core/src/model-traces/store.ts"
+    },
+    {
+      "from": "packages/core/src/model-traces/context.ts",
+      "specifier": "./sanitize.js",
+      "resolved": "packages/core/src/model-traces/sanitize.ts"
+    },
+    {
+      "from": "packages/core/src/model-traces/sanitize.ts",
+      "specifier": "../logging/sanitize-messages.js",
+      "resolved": "packages/core/src/logging/sanitize-messages.ts"
+    },
+    {
+      "from": "packages/core/src/model-traces/store.ts",
+      "specifier": "./classification.js",
+      "resolved": "packages/core/src/model-traces/classification.ts"
+    },
+    {
+      "from": "packages/core/src/model-traces/native-process.ts",
+      "specifier": "./native-frames.js",
+      "resolved": "packages/core/src/model-traces/native-frames.ts"
+    },
+    {
+      "from": "packages/core/src/tool-system/sandbox/off.ts",
+      "specifier": "../../runtime/spawn-common.js",
+      "resolved": "packages/core/src/runtime/spawn-common.ts"
+    },
+    {
+      "from": "packages/core/src/tool-system/builtin/grep.ts",
+      "specifier": "../../runtime/spawn-common.js",
+      "resolved": "packages/core/src/runtime/spawn-common.ts"
+    },
+    {
+      "from": "packages/core/src/tool-system/builtin/glob.ts",
+      "specifier": "../path-policy.js",
+      "resolved": "packages/core/src/tool-system/path-policy.ts"
+    },
+    {
+      "from": "packages/core/src/tool-system/builtin/edit.ts",
+      "specifier": "./file-cache.js",
+      "resolved": "packages/core/src/tool-system/builtin/file-cache.ts"
+    },
+    {
+      "from": "packages/core/src/tool-system/builtin/edit.ts",
+      "specifier": "./eol.js",
+      "resolved": "packages/core/src/tool-system/builtin/eol.ts"
+    },
+    {
+      "from": "packages/core/src/tool-system/builtin/edit.ts",
+      "specifier": "../path-policy.js",
+      "resolved": "packages/core/src/tool-system/path-policy.ts"
+    },
+    {
+      "from": "packages/core/src/tool-system/builtin/view-image.ts",
+      "specifier": "../../llm/capabilities/index.js",
+      "resolved": "packages/core/src/llm/capabilities/index.ts"
+    },
+    {
+      "from": "packages/core/src/tool-system/builtin/view-image.ts",
+      "specifier": "../../context/compaction.js",
+      "resolved": "packages/core/src/context/compaction.ts"
+    },
+    {
+      "from": "packages/core/src/tool-system/builtin/generate-video.ts",
+      "specifier": "../../settings/manager.js",
+      "resolved": "packages/core/src/settings/manager.ts"
+    },
+    {
+      "from": "packages/core/src/tool-system/builtin/generate-video.ts",
+      "specifier": "./agent-notifications.js",
+      "resolved": "packages/core/src/tool-system/builtin/agent-notifications.ts"
+    },
+    {
+      "from": "packages/core/src/tool-system/builtin/generate-video.ts",
+      "specifier": "./background-jobs.js",
+      "resolved": "packages/core/src/tool-system/builtin/background-jobs.ts"
+    },
+    {
+      "from": "packages/core/src/tool-system/builtin/generate-video.ts",
+      "specifier": "../../logging/logger.js",
+      "resolved": "packages/core/src/logging/logger.ts"
+    },
+    {
+      "from": "packages/core/src/tool-system/builtin/generate-video.ts",
+      "specifier": "./video-providers.js",
+      "resolved": "packages/core/src/tool-system/builtin/video-providers.ts"
+    },
+    {
+      "from": "packages/core/src/tool-system/builtin/generate-video.ts",
+      "specifier": "./image-uploader.js",
+      "resolved": "packages/core/src/tool-system/builtin/image-uploader.ts"
+    },
+    {
+      "from": "packages/core/src/tool-system/builtin/generate-video.ts",
+      "specifier": "./generate-image.js",
+      "resolved": "packages/core/src/tool-system/builtin/generate-image.ts"
+    },
+    {
+      "from": "packages/core/src/tool-system/builtin/generate-video.ts",
+      "specifier": "../../model-catalog/index.js",
+      "resolved": "packages/core/src/model-catalog/index.ts"
+    },
+    {
+      "from": "packages/core/src/tool-system/builtin/generate-video.ts",
+      "specifier": "../../model-catalog/gen-connections.js",
+      "resolved": "packages/core/src/model-catalog/gen-connections.ts"
+    },
+    {
+      "from": "packages/core/src/model-catalog/gen-connections.ts",
+      "specifier": "./resolve.js",
+      "resolved": "packages/core/src/model-catalog/resolve.ts"
+    },
+    {
+      "from": "packages/core/src/model-catalog/resolve.ts",
+      "specifier": "./index.js",
+      "resolved": "packages/core/src/model-catalog/index.ts"
+    },
+    {
+      "from": "packages/core/src/model-catalog/index.ts",
+      "specifier": "../settings/manager.js",
+      "resolved": "packages/core/src/settings/manager.ts"
+    },
+    {
+      "from": "packages/core/src/model-catalog/index.ts",
+      "specifier": "../logging/logger.js",
+      "resolved": "packages/core/src/logging/logger.ts"
+    },
+    {
+      "from": "packages/core/src/model-catalog/index.ts",
+      "specifier": "./builtin.js",
+      "resolved": "packages/core/src/model-catalog/builtin.ts"
+    },
+    {
+      "from": "packages/core/src/model-catalog/index.ts",
+      "specifier": "./types.js",
+      "resolved": "packages/core/src/model-catalog/types.ts"
+    },
+    {
+      "from": "packages/core/src/model-catalog/index.ts",
+      "specifier": "./builtin.js",
+      "resolved": "packages/core/src/model-catalog/builtin.ts"
+    },
+    {
+      "from": "packages/core/src/model-catalog/index.ts",
+      "specifier": "./save-entry.js",
+      "resolved": "packages/core/src/model-catalog/save-entry.ts"
+    },
+    {
+      "from": "packages/core/src/model-catalog/save-entry.ts",
+      "specifier": "./types.js",
+      "resolved": "packages/core/src/model-catalog/types.ts"
+    },
+    {
+      "from": "packages/core/src/model-catalog/save-entry.ts",
+      "specifier": "./upsert.js",
+      "resolved": "packages/core/src/model-catalog/upsert.ts"
+    },
+    {
+      "from": "packages/core/src/model-catalog/save-entry.ts",
+      "specifier": "../utils/file-mutex.js",
+      "resolved": "packages/core/src/utils/file-mutex.ts"
+    },
+    {
+      "from": "packages/core/src/tool-system/builtin/generate-image.ts",
+      "specifier": "../../model-traces/context.js",
+      "resolved": "packages/core/src/model-traces/context.ts"
+    },
+    {
+      "from": "packages/core/src/tool-system/builtin/generate-image.ts",
+      "specifier": "../../settings/manager.js",
+      "resolved": "packages/core/src/settings/manager.ts"
+    },
+    {
+      "from": "packages/core/src/tool-system/builtin/generate-image.ts",
+      "specifier": "./image-providers.js",
+      "resolved": "packages/core/src/tool-system/builtin/image-providers.ts"
+    },
+    {
+      "from": "packages/core/src/tool-system/builtin/generate-image.ts",
+      "specifier": "../../model-catalog/index.js",
+      "resolved": "packages/core/src/model-catalog/index.ts"
+    },
+    {
+      "from": "packages/core/src/tool-system/builtin/generate-image.ts",
+      "specifier": "../../model-catalog/gen-connections.js",
+      "resolved": "packages/core/src/model-catalog/gen-connections.ts"
+    },
+    {
+      "from": "packages/core/src/tool-system/builtin/background-jobs.ts",
+      "specifier": "../../utils/cwd-normalize.js",
+      "resolved": "packages/core/src/utils/cwd-normalize.ts"
+    },
+    {
+      "from": "packages/core/src/tool-system/builtin/background-jobs.ts",
+      "specifier": "../../utils/exec.js",
+      "resolved": "packages/core/src/utils/exec.ts"
+    },
+    {
+      "from": "packages/core/src/tool-system/builtin/configure-model-connection.ts",
+      "specifier": "../../settings/manager.js",
+      "resolved": "packages/core/src/settings/manager.ts"
+    },
+    {
+      "from": "packages/core/src/tool-system/builtin/configure-model-connection.ts",
+      "specifier": "../../model-catalog/index.js",
+      "resolved": "packages/core/src/model-catalog/index.ts"
+    },
+    {
+      "from": "packages/core/src/tool-system/builtin/configure-model-connection.ts",
+      "specifier": "../../engine/model-connections-pool.js",
+      "resolved": "packages/core/src/engine/model-connections-pool.ts"
+    },
+    {
+      "from": "packages/core/src/tool-system/builtin/configure-model-connection.ts",
+      "specifier": "../../llm/model-pool.js",
+      "resolved": "packages/core/src/llm/model-pool.ts"
+    },
+    {
+      "from": "packages/core/src/tool-system/builtin/configure-model-connection.ts",
+      "specifier": "../../llm/client-factory.js",
+      "resolved": "packages/core/src/llm/client-factory.ts"
+    },
+    {
+      "from": "packages/core/src/tool-system/builtin/configure-model-connection.ts",
+      "specifier": "../../model-catalog/resolve.js",
+      "resolved": "packages/core/src/model-catalog/resolve.ts"
+    },
+    {
+      "from": "packages/core/src/tool-system/builtin/configure-model-connection.ts",
+      "specifier": "./settings-changed.js",
+      "resolved": "packages/core/src/tool-system/builtin/settings-changed.ts"
+    },
+    {
+      "from": "packages/core/src/llm/client-factory.ts",
+      "specifier": "../exceptions.js",
+      "resolved": "packages/core/src/exceptions.ts"
+    },
+    {
+      "from": "packages/core/src/llm/client-factory.ts",
+      "specifier": "./providers/anthropic.js",
+      "resolved": "packages/core/src/llm/providers/anthropic.ts"
+    },
+    {
+      "from": "packages/core/src/llm/client-factory.ts",
+      "specifier": "./providers/openai.js",
+      "resolved": "packages/core/src/llm/providers/openai.ts"
+    },
+    {
+      "from": "packages/core/src/llm/providers/openai.ts",
+      "specifier": "../../model-request-boundary/context.js",
+      "resolved": "packages/core/src/model-request-boundary/context.ts"
+    },
+    {
+      "from": "packages/core/src/llm/providers/openai.ts",
+      "specifier": "../../model-traces/context.js",
+      "resolved": "packages/core/src/model-traces/context.ts"
+    },
+    {
+      "from": "packages/core/src/llm/providers/openai.ts",
+      "specifier": "../client-base.js",
+      "resolved": "packages/core/src/llm/client-base.ts"
+    },
+    {
+      "from": "packages/core/src/llm/providers/openai.ts",
+      "specifier": "../../exceptions.js",
+      "resolved": "packages/core/src/exceptions.ts"
+    },
+    {
+      "from": "packages/core/src/llm/providers/openai.ts",
+      "specifier": "../../logging/logger.js",
+      "resolved": "packages/core/src/logging/logger.ts"
+    },
+    {
+      "from": "packages/core/src/llm/providers/openai.ts",
+      "specifier": "../token-counter.js",
+      "resolved": "packages/core/src/llm/token-counter.ts"
+    },
+    {
+      "from": "packages/core/src/llm/providers/openai.ts",
+      "specifier": "../capabilities/index.js",
+      "resolved": "packages/core/src/llm/capabilities/index.ts"
+    },
+    {
+      "from": "packages/core/src/llm/providers/openai.ts",
+      "specifier": "../clamp-max-tokens.js",
+      "resolved": "packages/core/src/llm/clamp-max-tokens.ts"
+    },
+    {
+      "from": "packages/core/src/llm/providers/openai.ts",
+      "specifier": "../provider-auth.js",
+      "resolved": "packages/core/src/llm/provider-auth.ts"
+    },
+    {
+      "from": "packages/core/src/llm/providers/openai.ts",
+      "specifier": "../strip-vision.js",
+      "resolved": "packages/core/src/llm/strip-vision.ts"
+    },
+    {
+      "from": "packages/core/src/llm/providers/openai.ts",
+      "specifier": "../prompt-cache.js",
+      "resolved": "packages/core/src/llm/prompt-cache.ts"
+    },
+    {
+      "from": "packages/core/src/llm/providers/openai.ts",
+      "specifier": "../stream-watchdog.js",
+      "resolved": "packages/core/src/llm/stream-watchdog.ts"
+    },
+    {
+      "from": "packages/core/src/llm/client-base.ts",
+      "specifier": "../exceptions.js",
+      "resolved": "packages/core/src/exceptions.ts"
+    },
+    {
+      "from": "packages/core/src/llm/client-base.ts",
+      "specifier": "../logging/logger.js",
+      "resolved": "packages/core/src/logging/logger.ts"
+    },
+    {
+      "from": "packages/core/src/llm/client-base.ts",
+      "specifier": "../model-request-boundary/context.js",
+      "resolved": "packages/core/src/model-request-boundary/context.ts"
+    },
+    {
+      "from": "packages/core/src/llm/client-base.ts",
+      "specifier": "../cost-ledger/context.js",
+      "resolved": "packages/core/src/cost-ledger/context.ts"
+    },
+    {
+      "from": "packages/core/src/llm/client-base.ts",
+      "specifier": "../model-traces/context.js",
+      "resolved": "packages/core/src/model-traces/context.ts"
+    },
+    {
+      "from": "packages/core/src/llm/client-base.ts",
+      "specifier": "../cost-ledger/context.js",
+      "resolved": "packages/core/src/cost-ledger/context.ts"
+    },
+    {
+      "from": "packages/core/src/model-request-boundary/context.ts",
+      "specifier": "./canonical.js",
+      "resolved": "packages/core/src/model-request-boundary/canonical.ts"
+    },
+    {
+      "from": "packages/core/src/llm/providers/anthropic.ts",
+      "specifier": "../../model-request-boundary/context.js",
+      "resolved": "packages/core/src/model-request-boundary/context.ts"
+    },
+    {
+      "from": "packages/core/src/llm/providers/anthropic.ts",
+      "specifier": "../../model-traces/context.js",
+      "resolved": "packages/core/src/model-traces/context.ts"
+    },
+    {
+      "from": "packages/core/src/llm/providers/anthropic.ts",
+      "specifier": "../client-base.js",
+      "resolved": "packages/core/src/llm/client-base.ts"
+    },
+    {
+      "from": "packages/core/src/llm/providers/anthropic.ts",
+      "specifier": "../../exceptions.js",
+      "resolved": "packages/core/src/exceptions.ts"
+    },
+    {
+      "from": "packages/core/src/llm/providers/anthropic.ts",
+      "specifier": "../../logging/logger.js",
+      "resolved": "packages/core/src/logging/logger.ts"
+    },
+    {
+      "from": "packages/core/src/llm/providers/anthropic.ts",
+      "specifier": "../token-counter.js",
+      "resolved": "packages/core/src/llm/token-counter.ts"
+    },
+    {
+      "from": "packages/core/src/llm/providers/anthropic.ts",
+      "specifier": "../capabilities/index.js",
+      "resolved": "packages/core/src/llm/capabilities/index.ts"
+    },
+    {
+      "from": "packages/core/src/llm/providers/anthropic.ts",
+      "specifier": "../provider-auth.js",
+      "resolved": "packages/core/src/llm/provider-auth.ts"
+    },
+    {
+      "from": "packages/core/src/llm/providers/anthropic.ts",
+      "specifier": "../strip-vision.js",
+      "resolved": "packages/core/src/llm/strip-vision.ts"
+    },
+    {
+      "from": "packages/core/src/llm/providers/anthropic.ts",
+      "specifier": "../prompt-cache.js",
+      "resolved": "packages/core/src/llm/prompt-cache.ts"
+    },
+    {
+      "from": "packages/core/src/llm/model-pool.ts",
+      "specifier": "./model-cache.js",
+      "resolved": "packages/core/src/llm/model-cache.ts"
+    },
+    {
+      "from": "packages/core/src/llm/model-pool.ts",
+      "specifier": "../data/openrouter-models.js",
+      "resolved": "packages/core/src/data/openrouter-models.ts"
+    },
+    {
+      "from": "packages/core/src/llm/model-cache.ts",
+      "specifier": "../settings/manager.js",
+      "resolved": "packages/core/src/settings/manager.ts"
+    },
+    {
+      "from": "packages/core/src/engine/model-connections-pool.ts",
+      "specifier": "../model-catalog/resolve.js",
+      "resolved": "packages/core/src/model-catalog/resolve.ts"
+    },
+    {
+      "from": "packages/core/src/engine/model-connections-pool.ts",
+      "specifier": "../model-catalog/params.js",
+      "resolved": "packages/core/src/model-catalog/params.ts"
+    },
+    {
+      "from": "packages/core/src/tool-system/builtin/edit-model-catalog.ts",
+      "specifier": "../../model-catalog/index.js",
+      "resolved": "packages/core/src/model-catalog/index.ts"
+    },
+    {
+      "from": "packages/core/src/tool-system/builtin/edit-model-catalog.ts",
+      "specifier": "../../model-catalog/save-entry.js",
+      "resolved": "packages/core/src/model-catalog/save-entry.ts"
+    },
+    {
+      "from": "packages/core/src/tool-system/builtin/edit-model-catalog.ts",
+      "specifier": "../../model-catalog/types.js",
+      "resolved": "packages/core/src/model-catalog/types.ts"
+    },
+    {
+      "from": "packages/core/src/tool-system/builtin/edit-model-catalog.ts",
+      "specifier": "../../model-catalog/upsert.js",
+      "resolved": "packages/core/src/model-catalog/upsert.ts"
+    },
+    {
+      "from": "packages/core/src/tool-system/builtin/edit-model-catalog.ts",
+      "specifier": "../../llm/provider-kinds.js",
+      "resolved": "packages/core/src/llm/provider-kinds.ts"
+    },
+    {
+      "from": "packages/core/src/tool-system/builtin/edit-model-catalog.ts",
+      "specifier": "./settings-changed.js",
+      "resolved": "packages/core/src/tool-system/builtin/settings-changed.ts"
+    },
+    {
+      "from": "packages/core/src/tool-system/builtin/write.ts",
+      "specifier": "./file-cache.js",
+      "resolved": "packages/core/src/tool-system/builtin/file-cache.ts"
+    },
+    {
+      "from": "packages/core/src/tool-system/builtin/write.ts",
+      "specifier": "../path-policy.js",
+      "resolved": "packages/core/src/tool-system/path-policy.ts"
+    },
+    {
+      "from": "packages/core/src/tool-system/builtin/read.ts",
+      "specifier": "./file-cache.js",
+      "resolved": "packages/core/src/tool-system/builtin/file-cache.ts"
+    },
+    {
+      "from": "packages/core/src/tool-system/builtin/read.ts",
+      "specifier": "./eol.js",
+      "resolved": "packages/core/src/tool-system/builtin/eol.ts"
+    }
+  ],
+  "runtimeSourceFiles": 283,
+  "missingRelativeImports": [],
+  "bareImports": [
+    {
+      "specifier": "@anthropic-ai/sdk",
+      "resolved": "/Users/admin/Documents/个人学习/代码学习/codeshell/node_modules/.bun/@anthropic-ai+sdk@0.39.0+d56b95ac411b1cdd/node_modules/@anthropic-ai/sdk/index.js"
+    },
+    {
+      "specifier": "@cjhyy/code-shell-link",
+      "resolved": "/Users/admin/Documents/个人学习/代码学习/codeshell/packages/link/dist/index.js"
+    },
+    {
+      "specifier": "@modelcontextprotocol/sdk/client/index.js",
+      "resolved": "/Users/admin/Documents/个人学习/代码学习/codeshell/node_modules/.bun/@modelcontextprotocol+sdk@1.31.0/node_modules/@modelcontextprotocol/sdk/dist/esm/client/index.js"
+    },
+    {
+      "specifier": "@modelcontextprotocol/sdk/client/stdio.js",
+      "resolved": "/Users/admin/Documents/个人学习/代码学习/codeshell/node_modules/.bun/@modelcontextprotocol+sdk@1.31.0/node_modules/@modelcontextprotocol/sdk/dist/esm/client/stdio.js"
+    },
+    {
+      "specifier": "@modelcontextprotocol/sdk/client/streamableHttp.js",
+      "resolved": "/Users/admin/Documents/个人学习/代码学习/codeshell/node_modules/.bun/@modelcontextprotocol+sdk@1.31.0/node_modules/@modelcontextprotocol/sdk/dist/esm/client/streamableHttp.js"
+    },
+    {
+      "specifier": "@modelcontextprotocol/sdk/shared/stdio.js",
+      "resolved": "/Users/admin/Documents/个人学习/代码学习/codeshell/node_modules/.bun/@modelcontextprotocol+sdk@1.31.0/node_modules/@modelcontextprotocol/sdk/dist/esm/shared/stdio.js"
+    },
+    {
+      "specifier": "@modelcontextprotocol/sdk/types.js",
+      "resolved": "/Users/admin/Documents/个人学习/代码学习/codeshell/node_modules/.bun/@modelcontextprotocol+sdk@1.31.0/node_modules/@modelcontextprotocol/sdk/dist/esm/types.js"
+    },
+    {
+      "specifier": "bun:test",
+      "resolved": "Bun built-in provided by guarded runner"
+    },
+    {
+      "specifier": "cross-spawn",
+      "resolved": "/Users/admin/Documents/个人学习/代码学习/codeshell/node_modules/.bun/cross-spawn@7.0.6/node_modules/cross-spawn/index.js"
+    },
+    {
+      "specifier": "glob",
+      "resolved": "/Users/admin/Documents/个人学习/代码学习/codeshell/node_modules/.bun/glob@11.1.0/node_modules/glob/dist/esm/index.js"
+    },
+    {
+      "specifier": "gpt-tokenizer",
+      "resolved": "/Users/admin/Documents/个人学习/代码学习/codeshell/node_modules/.bun/gpt-tokenizer@3.4.0/node_modules/gpt-tokenizer/esm/main.js"
+    },
+    {
+      "specifier": "nanoid",
+      "resolved": "/Users/admin/Documents/个人学习/代码学习/codeshell/node_modules/.bun/nanoid@5.1.11/node_modules/nanoid/index.js"
+    },
+    {
+      "specifier": "node:async_hooks",
+      "resolved": "node:async_hooks"
+    },
+    {
+      "specifier": "node:child_process",
+      "resolved": "node:child_process"
+    },
+    {
+      "specifier": "node:crypto",
+      "resolved": "node:crypto"
+    },
+    {
+      "specifier": "node:dns/promises",
+      "resolved": "node:dns/promises"
+    },
+    {
+      "specifier": "node:fs",
+      "resolved": "node:fs"
+    },
+    {
+      "specifier": "node:fs/promises",
+      "resolved": "node:fs/promises"
+    },
+    {
+      "specifier": "node:http",
+      "resolved": "node:http"
+    },
+    {
+      "specifier": "node:https",
+      "resolved": "node:https"
+    },
+    {
+      "specifier": "node:module",
+      "resolved": "node:module"
+    },
+    {
+      "specifier": "node:net",
+      "resolved": "node:net"
+    },
+    {
+      "specifier": "node:os",
+      "resolved": "node:os"
+    },
+    {
+      "specifier": "node:path",
+      "resolved": "node:path"
+    },
+    {
+      "specifier": "node:stream",
+      "resolved": "node:stream"
+    },
+    {
+      "specifier": "node:stream/promises",
+      "resolved": "node:stream/promises"
+    },
+    {
+      "specifier": "node:string_decoder",
+      "resolved": "node:string_decoder"
+    },
+    {
+      "specifier": "node:url",
+      "resolved": "node:url"
+    },
+    {
+      "specifier": "node:util",
+      "resolved": "node:util"
+    },
+    {
+      "specifier": "openai",
+      "resolved": "/Users/admin/Documents/个人学习/代码学习/codeshell/node_modules/.bun/openai@4.104.0+8b4daec44fbddaf3/node_modules/openai/index.js"
+    },
+    {
+      "specifier": "saxes",
+      "resolved": "/Users/admin/Documents/个人学习/代码学习/codeshell/node_modules/.bun/saxes@6.0.0/node_modules/saxes/saxes.js"
+    },
+    {
+      "specifier": "semver",
+      "resolved": "/Users/admin/Documents/个人学习/代码学习/codeshell/node_modules/.bun/semver@7.8.1/node_modules/semver/index.js"
+    },
+    {
+      "specifier": "smol-toml",
+      "resolved": "/Users/admin/Documents/个人学习/代码学习/codeshell/node_modules/.bun/smol-toml@1.6.1/node_modules/smol-toml/dist/index.js"
+    },
+    {
+      "specifier": "yaml",
+      "resolved": "/Users/admin/Documents/个人学习/代码学习/codeshell/node_modules/.bun/yaml@2.9.0/node_modules/yaml/dist/index.js"
+    },
+    {
+      "specifier": "zod",
+      "resolved": "/Users/admin/Documents/个人学习/代码学习/codeshell/node_modules/.bun/zod@3.25.76/node_modules/zod/index.js"
+    }
+  ],
+  "method": "TypeScript AST import walk (literal dynamic imports included conservatively); createRequire.resolve under --conditions=import, no package execution. Bun builtin is supplied by guarded runner. No installation/build.",
+  "additionalBaseline": {
+    "path": "packages/core/src/tool-system/run-tool-surface.test.ts",
+    "sha256": "b5896d70a69fe1e5e3761ebd0f64bd9d4ce278ecc67dd3ad1f9fd0da783eb651",
+    "runtimeImports": [
+      "bun:test",
+      "./run-tool-surface.js"
+    ],
+    "relativeImportResolved": "packages/core/src/tool-system/run-tool-surface.ts",
+    "review": "Whole test file read: 14 metadata-only tests, no tool executor, provider, server, installation, user filesystem access or external I/O. Catalog replacement/restoration tests exercise pure loading-state data, not permissions."
+  }
+}

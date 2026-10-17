@@ -1,0 +1,12 @@
+bun test v1.3.11 (af24e281)
+
+docs/audit-2026-10-17-round9/evidence/tools-registry-replacement.test.ts:
+(pass) audit: definition-only replacement keeps a stale fake implementation > fresh definition-only registration has no executor and rejects execution [2.67ms]
+(pass) audit: definition-only replacement keeps a stale fake implementation > replacement publishes new metadata but executes the previous registration [1.29ms]
+(pass) audit: definition-only replacement keeps a stale fake implementation > an explicit replacement executor and registration disposers work normally [0.13ms]
+
+ 3 pass
+ 0 fail
+ 18 expect() calls
+Ran 3 tests across 1 file. [431.00ms]
+Completed Bun shard: 3 tests, 0 skipped; 0 failures.

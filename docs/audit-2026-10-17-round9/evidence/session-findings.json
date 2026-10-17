@@ -1,0 +1,25 @@
+{
+  "frozenSource": "248d091202869c07274adedf4fd50403105f1b1f",
+  "findings": [
+    {
+      "id": "SESSION-R9-01",
+      "priority": "P3",
+      "title": "工具调用超过上限后 transcript 留下被丢弃的 tool_use，普通 full fork 失败",
+      "file": "packages/core/src/engine/model-facade.ts",
+      "line": 294,
+      "trigger": "一次正常完整响应包含26个工具调用，TurnLoop采用Engine当前默认maxToolCallsPerTurn=25，随后模型正常结束。",
+      "expected": "未执行的超限调用不应让已完成会话的持久化上下文变成无法 full fork 的不完整工具轮次。",
+      "actual": "实际ModelFacade先持久化26个provider tool_use；实际TurnLoop仅给前25项写tool_use metadata/tool_result，live第二次request和返回messages完整且完成；实际SessionManager.fork读取同一源JSONL后抛 Fork provider history inserts a message before pending tool results。",
+      "evidenceLevel": "实际ModelFacade/TurnLoop/StreamingToolQueue/ContextManager/Transcript/SessionManager，内存fake client和fake executor，临时自有会话；Engine默认/生产wiring/RPC consumer仅静态",
+      "evidence": [
+        "evidence/session-call-cap.test.ts",
+        "evidence/session-call-cap.first.log",
+        "evidence/session-call-cap.first.exit.json"
+      ],
+      "control": "同一组件和Engine默认cap下25 calls正常完成，落盘配对完整且full fork成功。26 calls live配对和源文件不变也是反证控制。",
+      "limitations": "无真实Engine.run/LLM/provider/Host/RPC/UI、无真实工具执行。Engine resume会调用patchOrphanedToolUses，故不主张下一次send必然失败或数据丢失；实际后果限定 full fork。未把其它truncated-response分支算作本次动态证据。",
+      "dedup": "B-3旧记录针对live cap reminder/工具意图被忽略；当前发现针对ModelFacade提前持久化全部调用及实际fork失败。July M1错误flag和July synthetic duplicate/fork问题另行排除。",
+      "suggestedFix": "让持久化assistant工具列表与最终被执行/被明确终止的调用集合一致，或为被丢弃调用写明确一致的provider+metadata终止记录；保持原始响应审计与有效conversation投影的边界。"
+    }
+  ]
+}
