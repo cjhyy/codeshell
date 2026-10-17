@@ -188,7 +188,7 @@ async function gate() {
 async function waitGate(id, status) {
   await waitForAsyncFunction(
     app,
-    ({ id, status }) =>
+    (_electron, { id, status }) =>
       globalThis.__ownedReviewDraft.gate.snapshot().calls[id - 1]?.status === status,
     { id, status },
     { timeout: 5000, polling: 50 },
@@ -487,7 +487,7 @@ state.probing=false;
   diagnostics.caseCompleted(operations.at(-1).action, operations.length);
   await win.screenshot({ path: join(evidence, "review-draft-staged.png") });
 
-  await app.evaluate(({ id }) => globalThis.__ownedReviewDraft.gate.arm(id, "staged"), {
+  await app.evaluate((_electron, { id }) => globalThis.__ownedReviewDraft.gate.arm(id, "staged"), {
     id: a.id,
   });
   await (await reviewOptions(panel)).click();
@@ -522,7 +522,7 @@ state.probing=false;
 
   await chooseScope(panel, "staged");
   await panel.getByText(a.staged, { exact: true }).waitFor();
-  await app.evaluate(({ id }) => globalThis.__ownedReviewDraft.gate.arm(id, "staged"), {
+  await app.evaluate((_electron, { id }) => globalThis.__ownedReviewDraft.gate.arm(id, "staged"), {
     id: a.id,
   });
   await (await reviewOptions(panel)).click();
