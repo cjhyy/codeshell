@@ -1,0 +1,1 @@
+{"files": 3773, "stats": {"markdownFiles": 1385, "jsonFiles": 2388, "stringLeaves": 1180902, "scalarLeaves": 1782213}, "occurrenceCounts": {"translator": 181, "tombstone-transcript": 32, "fallback-placeholder": 14}, "parseErrors": 0, "added": 77, "changed": 0, "removed": 0, "productRuns": 0}

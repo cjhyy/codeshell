@@ -1,0 +1,878 @@
+{
+  "scope": "Future44 author prep source-only ordinary StreamEvent→background transcript→active TUI detail; no formal42 baseline claim",
+  "files": [
+    {
+      "path": "packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+      "bytes": 6622,
+      "sha256": "172784171e601f500bf74eb59870e1d1479b0ecb7a873707d2219e416cfe6d76",
+      "lineCount": 195,
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          195
+        ]
+      ],
+      "semanticLineCount": 195,
+      "displayedLineRanges": [
+        [
+          1,
+          195
+        ]
+      ],
+      "displayedLineCount": 195,
+      "role": "active-leaf",
+      "beforeThisReviewSemanticReadSha256": "172784171e601f500bf74eb59870e1d1479b0ecb7a873707d2219e416cfe6d76",
+      "firstEverSemanticReadClaim": false,
+      "pinArtifact": "selected-leaf-pin.json",
+      "pinUTC": "2026-10-17T14:15:08.085729+00:00",
+      "finishUTC": "2026-10-17T14:27:19.335918+00:00",
+      "finishSha256": "172784171e601f500bf74eb59870e1d1479b0ecb7a873707d2219e416cfe6d76",
+      "unchanged": true,
+      "scope": "Ordinary data/event/UI wiring text only; excludes adjacent native/model/permission/identity/lease mechanics; no product function executed"
+    },
+    {
+      "path": "packages/core/src/tool-system/builtin/agent.ts",
+      "bytes": 62377,
+      "sha256": "9fd165bc3d1819925fee6a639cdeb34644c394ea8e50fc0b5fed209a28572dca",
+      "lineCount": 1571,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          10,
+          10
+        ],
+        [
+          15,
+          15
+        ],
+        [
+          19,
+          19
+        ],
+        [
+          302,
+          315
+        ],
+        [
+          340,
+          359
+        ],
+        [
+          366,
+          378
+        ],
+        [
+          507,
+          521
+        ],
+        [
+          575,
+          581
+        ],
+        [
+          594,
+          597
+        ],
+        [
+          651,
+          657
+        ],
+        [
+          672,
+          675
+        ]
+      ],
+      "semanticLineCount": 87,
+      "displayedLineRanges": [
+        [
+          1,
+          31
+        ],
+        [
+          302,
+          411
+        ],
+        [
+          493,
+          608
+        ],
+        [
+          651,
+          681
+        ]
+      ],
+      "displayedLineCount": 288,
+      "role": "entry-and-completion-data",
+      "beforeThisReviewSemanticReadSha256": "9fd165bc3d1819925fee6a639cdeb34644c394ea8e50fc0b5fed209a28572dca",
+      "firstEverSemanticReadClaim": false,
+      "pinArtifact": "chain-initial-pins.json",
+      "pinUTC": "2026-10-17T14:15:46.070643+00:00",
+      "finishUTC": "2026-10-17T14:27:19.335918+00:00",
+      "finishSha256": "9fd165bc3d1819925fee6a639cdeb34644c394ea8e50fc0b5fed209a28572dca",
+      "unchanged": true,
+      "scope": "Ordinary data/event/UI wiring text only; excludes adjacent native/model/permission/identity/lease mechanics; no product function executed"
+    },
+    {
+      "path": "packages/core/src/types.ts",
+      "bytes": 51788,
+      "sha256": "1cfe13fc9d18863adb721635d56b34ae627bb1fab0508675b034a4340b987bb5",
+      "lineCount": 1333,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          751,
+          751
+        ],
+        [
+          765,
+          781
+        ],
+        [
+          832,
+          833
+        ]
+      ],
+      "semanticLineCount": 20,
+      "displayedLineRanges": [
+        [
+          680,
+          730
+        ],
+        [
+          747,
+          825
+        ],
+        [
+          830,
+          834
+        ]
+      ],
+      "displayedLineCount": 135,
+      "role": "event-contract",
+      "beforeThisReviewSemanticReadSha256": "1cfe13fc9d18863adb721635d56b34ae627bb1fab0508675b034a4340b987bb5",
+      "firstEverSemanticReadClaim": false,
+      "pinArtifact": "chain-initial-pins.json",
+      "pinUTC": "2026-10-17T14:15:46.072430+00:00",
+      "finishUTC": "2026-10-17T14:27:19.335918+00:00",
+      "finishSha256": "1cfe13fc9d18863adb721635d56b34ae627bb1fab0508675b034a4340b987bb5",
+      "unchanged": true,
+      "scope": "Ordinary data/event/UI wiring text only; excludes adjacent native/model/permission/identity/lease mechanics; no product function executed"
+    },
+    {
+      "path": "packages/core/src/engine/turn-loop.ts",
+      "bytes": 108774,
+      "sha256": "9ccbcd28cdb100d7d879994c3839d3b53c46af01589e0475d6f75f1d7e750413",
+      "lineCount": 2412,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          1116,
+          1125
+        ],
+        [
+          1138,
+          1142
+        ],
+        [
+          1647,
+          1668
+        ],
+        [
+          1670,
+          1674
+        ],
+        [
+          1692,
+          1693
+        ],
+        [
+          2103,
+          2115
+        ],
+        [
+          2117,
+          2124
+        ],
+        [
+          2170,
+          2174
+        ],
+        [
+          2197,
+          2228
+        ]
+      ],
+      "semanticLineCount": 102,
+      "displayedLineRanges": [
+        [
+          1112,
+          1149
+        ],
+        [
+          1248,
+          1287
+        ],
+        [
+          1636,
+          1700
+        ],
+        [
+          2100,
+          2138
+        ],
+        [
+          2170,
+          2235
+        ]
+      ],
+      "displayedLineCount": 248,
+      "role": "ordinary-fallback-producer-and-negative",
+      "beforeThisReviewSemanticReadSha256": "9ccbcd28cdb100d7d879994c3839d3b53c46af01589e0475d6f75f1d7e750413",
+      "firstEverSemanticReadClaim": false,
+      "pinArtifact": "chain-initial-pins.json",
+      "pinUTC": "2026-10-17T14:15:46.073425+00:00",
+      "finishUTC": "2026-10-17T14:27:19.335918+00:00",
+      "finishSha256": "9ccbcd28cdb100d7d879994c3839d3b53c46af01589e0475d6f75f1d7e750413",
+      "unchanged": true,
+      "scope": "Ordinary data/event/UI wiring text only; excludes adjacent native/model/permission/identity/lease mechanics; no product function executed"
+    },
+    {
+      "path": "packages/core/src/tool-system/builtin/agent-registry.ts",
+      "bytes": 15679,
+      "sha256": "5fef48b6e619de7c1802e4cecb64c8af3f67366c48de67131222213ac20ffc84",
+      "lineCount": 445,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          63,
+          73
+        ],
+        [
+          99,
+          107
+        ],
+        [
+          118,
+          129
+        ],
+        [
+          148,
+          157
+        ],
+        [
+          306,
+          327
+        ],
+        [
+          360,
+          362
+        ],
+        [
+          370,
+          372
+        ],
+        [
+          374,
+          376
+        ],
+        [
+          380,
+          382
+        ],
+        [
+          387,
+          402
+        ]
+      ],
+      "semanticLineCount": 92,
+      "displayedLineRanges": [
+        [
+          60,
+          111
+        ],
+        [
+          118,
+          158
+        ],
+        [
+          300,
+          327
+        ],
+        [
+          338,
+          445
+        ]
+      ],
+      "displayedLineCount": 229,
+      "role": "transcript-storage-observer-and-terminal-data",
+      "beforeThisReviewSemanticReadSha256": "5fef48b6e619de7c1802e4cecb64c8af3f67366c48de67131222213ac20ffc84",
+      "firstEverSemanticReadClaim": false,
+      "pinArtifact": "storage-consumer-pins.json",
+      "pinUTC": "2026-10-17T14:16:17.367010+00:00",
+      "finishUTC": "2026-10-17T14:27:19.335918+00:00",
+      "finishSha256": "5fef48b6e619de7c1802e4cecb64c8af3f67366c48de67131222213ac20ffc84",
+      "unchanged": true,
+      "scope": "Ordinary data/event/UI wiring text only; excludes adjacent native/model/permission/identity/lease mechanics; no product function executed"
+    },
+    {
+      "path": "packages/tui/src/ui/components/AgentDock.tsx",
+      "bytes": 7827,
+      "sha256": "6e798147a85168b0e87c44c905d0e519c99d90bcf6a2bded670b5470c1fa9677",
+      "lineCount": 254,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          38,
+          41
+        ],
+        [
+          191,
+          211
+        ]
+      ],
+      "semanticLineCount": 25,
+      "displayedLineRanges": [
+        [
+          1,
+          80
+        ],
+        [
+          144,
+          254
+        ]
+      ],
+      "displayedLineCount": 191,
+      "role": "dock-list-and-visibility-limits",
+      "beforeThisReviewSemanticReadSha256": "6e798147a85168b0e87c44c905d0e519c99d90bcf6a2bded670b5470c1fa9677",
+      "firstEverSemanticReadClaim": false,
+      "pinArtifact": "storage-consumer-pins.json",
+      "pinUTC": "2026-10-17T14:16:17.370038+00:00",
+      "finishUTC": "2026-10-17T14:27:19.335918+00:00",
+      "finishSha256": "6e798147a85168b0e87c44c905d0e519c99d90bcf6a2bded670b5470c1fa9677",
+      "unchanged": true,
+      "scope": "Ordinary data/event/UI wiring text only; excludes adjacent native/model/permission/identity/lease mechanics; no product function executed"
+    },
+    {
+      "path": "packages/tui/src/ui/App.tsx",
+      "bytes": 90976,
+      "sha256": "f535b936c26ef217617ef42eae56f71efb5063f51a4775f8b1e201815795e6d8",
+      "lineCount": 2318,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          94,
+          94
+        ],
+        [
+          101,
+          101
+        ],
+        [
+          2145,
+          2149
+        ],
+        [
+          2162,
+          2174
+        ]
+      ],
+      "semanticLineCount": 20,
+      "displayedLineRanges": [
+        [
+          84,
+          112
+        ],
+        [
+          1335,
+          1354
+        ],
+        [
+          2138,
+          2176
+        ]
+      ],
+      "displayedLineCount": 88,
+      "role": "actual-transcript-display-consumer",
+      "beforeThisReviewSemanticReadSha256": "f535b936c26ef217617ef42eae56f71efb5063f51a4775f8b1e201815795e6d8",
+      "firstEverSemanticReadClaim": false,
+      "pinArtifact": "display-consumer-pin.json",
+      "pinUTC": "2026-10-17T14:17:14.712596+00:00",
+      "finishUTC": "2026-10-17T14:27:19.335918+00:00",
+      "finishSha256": "f535b936c26ef217617ef42eae56f71efb5063f51a4775f8b1e201815795e6d8",
+      "unchanged": true,
+      "scope": "Ordinary data/event/UI wiring text only; excludes adjacent native/model/permission/identity/lease mechanics; no product function executed"
+    },
+    {
+      "path": "packages/tui/src/ui/app-helpers.tsx",
+      "bytes": 11321,
+      "sha256": "1696995a266590dc467e827df622d3f60cdbb5a57161f1015955861f212fa3e7",
+      "lineCount": 344,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          232,
+          246
+        ],
+        [
+          255,
+          272
+        ]
+      ],
+      "semanticLineCount": 33,
+      "displayedLineRanges": [
+        [
+          232,
+          275
+        ]
+      ],
+      "displayedLineCount": 44,
+      "role": "entry-display-data",
+      "beforeThisReviewSemanticReadSha256": "1696995a266590dc467e827df622d3f60cdbb5a57161f1015955861f212fa3e7",
+      "firstEverSemanticReadClaim": false,
+      "pinArtifact": "render-consumer-pins.json",
+      "pinUTC": "2026-10-17T14:18:39.159736+00:00",
+      "finishUTC": "2026-10-17T14:27:19.335918+00:00",
+      "finishSha256": "1696995a266590dc467e827df622d3f60cdbb5a57161f1015955861f212fa3e7",
+      "unchanged": true,
+      "scope": "Ordinary data/event/UI wiring text only; excludes adjacent native/model/permission/identity/lease mechanics; no product function executed"
+    },
+    {
+      "path": "packages/tui/src/ui/components/VirtualMessageList.tsx",
+      "bytes": 11173,
+      "sha256": "adaddadf3e29775206cc21847a22f7ed664e2e01bee07795a7dbe4421389f5dd",
+      "lineCount": 273,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          105,
+          109
+        ],
+        [
+          147,
+          173
+        ],
+        [
+          229,
+          237
+        ]
+      ],
+      "semanticLineCount": 41,
+      "displayedLineRanges": [
+        [
+          99,
+          114
+        ],
+        [
+          144,
+          173
+        ],
+        [
+          221,
+          241
+        ]
+      ],
+      "displayedLineCount": 67,
+      "role": "entry-list-to-render-data",
+      "beforeThisReviewSemanticReadSha256": "adaddadf3e29775206cc21847a22f7ed664e2e01bee07795a7dbe4421389f5dd",
+      "firstEverSemanticReadClaim": false,
+      "pinArtifact": "render-consumer-pins.json",
+      "pinUTC": "2026-10-17T14:18:39.160604+00:00",
+      "finishUTC": "2026-10-17T14:27:19.335918+00:00",
+      "finishSha256": "adaddadf3e29775206cc21847a22f7ed664e2e01bee07795a7dbe4421389f5dd",
+      "unchanged": true,
+      "scope": "Ordinary data/event/UI wiring text only; excludes adjacent native/model/permission/identity/lease mechanics; no product function executed"
+    },
+    {
+      "path": "packages/core/src/engine/subagent-spawner.ts",
+      "bytes": 16481,
+      "sha256": "e29fa502236da73882808561f4e1338e3497ab692b9a5fc274cb3a3d4ef8552b",
+      "lineCount": 441,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          85,
+          113
+        ],
+        [
+          374,
+          377
+        ],
+        [
+          414,
+          418
+        ],
+        [
+          424,
+          428
+        ]
+      ],
+      "semanticLineCount": 43,
+      "displayedLineRanges": [
+        [
+          58,
+          124
+        ],
+        [
+          370,
+          380
+        ],
+        [
+          408,
+          430
+        ]
+      ],
+      "displayedLineCount": 101,
+      "role": "child-event-forwarding-only",
+      "beforeThisReviewSemanticReadSha256": "e29fa502236da73882808561f4e1338e3497ab692b9a5fc274cb3a3d4ef8552b",
+      "firstEverSemanticReadClaim": false,
+      "pinArtifact": "spawner-pin.json",
+      "pinUTC": "2026-10-17T14:19:31.212934+00:00",
+      "finishUTC": "2026-10-17T14:27:19.335918+00:00",
+      "finishSha256": "e29fa502236da73882808561f4e1338e3497ab692b9a5fc274cb3a3d4ef8552b",
+      "unchanged": true,
+      "scope": "Ordinary data/event/UI wiring text only; excludes adjacent native/model/permission/identity/lease mechanics; no product function executed"
+    },
+    {
+      "path": "packages/core/src/engine/engine.ts",
+      "bytes": 210666,
+      "sha256": "cdbfc7a777e3e304b6d365988daf6a45ff24b7cd5b62f634e3b11908c701e2e0",
+      "lineCount": 5082,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          2629,
+          2629
+        ],
+        [
+          2637,
+          2647
+        ],
+        [
+          3402,
+          3407
+        ],
+        [
+          3545,
+          3547
+        ]
+      ],
+      "semanticLineCount": 21,
+      "displayedLineRanges": [
+        [
+          2620,
+          2655
+        ],
+        [
+          3398,
+          3417
+        ],
+        [
+          3535,
+          3552
+        ]
+      ],
+      "displayedLineCount": 74,
+      "role": "child-engine-to-normal-turnloop-event-wiring",
+      "beforeThisReviewSemanticReadSha256": "cdbfc7a777e3e304b6d365988daf6a45ff24b7cd5b62f634e3b11908c701e2e0",
+      "firstEverSemanticReadClaim": false,
+      "pinArtifact": "engine-entry-pins.json",
+      "pinUTC": "2026-10-17T14:20:50.166644+00:00",
+      "finishUTC": "2026-10-17T14:27:19.335918+00:00",
+      "finishSha256": "cdbfc7a777e3e304b6d365988daf6a45ff24b7cd5b62f634e3b11908c701e2e0",
+      "unchanged": true,
+      "scope": "Ordinary data/event/UI wiring text only; excludes adjacent native/model/permission/identity/lease mechanics; no product function executed"
+    },
+    {
+      "path": "packages/tui/src/cli/main.ts",
+      "bytes": 11626,
+      "sha256": "7a0a63bc7acbf23162480c2883bd5af26743459eff3c073fea787c7ce1e021ca",
+      "lineCount": 265,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          10,
+          10
+        ],
+        [
+          118,
+          124
+        ],
+        [
+          177,
+          188
+        ]
+      ],
+      "semanticLineCount": 20,
+      "displayedLineRanges": [
+        [
+          10,
+          10
+        ],
+        [
+          118,
+          124
+        ],
+        [
+          176,
+          188
+        ]
+      ],
+      "displayedLineCount": 21,
+      "role": "static-production-entry-only",
+      "beforeThisReviewSemanticReadSha256": "7a0a63bc7acbf23162480c2883bd5af26743459eff3c073fea787c7ce1e021ca",
+      "firstEverSemanticReadClaim": false,
+      "pinArtifact": "actual-ui-entry-pins.json",
+      "pinUTC": "2026-10-17T14:21:38.592870+00:00",
+      "finishUTC": "2026-10-17T14:27:19.335918+00:00",
+      "finishSha256": "7a0a63bc7acbf23162480c2883bd5af26743459eff3c073fea787c7ce1e021ca",
+      "unchanged": true,
+      "scope": "Ordinary data/event/UI wiring text only; excludes adjacent native/model/permission/identity/lease mechanics; no product function executed"
+    },
+    {
+      "path": "packages/tui/src/ui/index.tsx",
+      "bytes": 4514,
+      "sha256": "3266ee003327c3e22d1c325f0e83bfbae689672effb503aed6b01d6123e7d20d",
+      "lineCount": 122,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          10,
+          10
+        ],
+        [
+          42,
+          42
+        ],
+        [
+          67,
+          80
+        ]
+      ],
+      "semanticLineCount": 16,
+      "displayedLineRanges": [
+        [
+          10,
+          10
+        ],
+        [
+          42,
+          80
+        ]
+      ],
+      "displayedLineCount": 40,
+      "role": "static-ui-entry-only",
+      "beforeThisReviewSemanticReadSha256": "3266ee003327c3e22d1c325f0e83bfbae689672effb503aed6b01d6123e7d20d",
+      "firstEverSemanticReadClaim": false,
+      "pinArtifact": "actual-ui-entry-pins.json",
+      "pinUTC": "2026-10-17T14:21:38.593716+00:00",
+      "finishUTC": "2026-10-17T14:27:19.335918+00:00",
+      "finishSha256": "3266ee003327c3e22d1c325f0e83bfbae689672effb503aed6b01d6123e7d20d",
+      "unchanged": true,
+      "scope": "Ordinary data/event/UI wiring text only; excludes adjacent native/model/permission/identity/lease mechanics; no product function executed"
+    },
+    {
+      "path": "packages/tui/src/cli/commands/repl.ts",
+      "bytes": 13991,
+      "sha256": "a5687423399c7dc9e840929d92197000269af05385e120d93fa1e4aee9b1c2dd",
+      "lineCount": 349,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          6,
+          6
+        ],
+        [
+          26,
+          26
+        ],
+        [
+          257,
+          258
+        ],
+        [
+          267,
+          272
+        ],
+        [
+          278,
+          281
+        ],
+        [
+          320,
+          331
+        ]
+      ],
+      "semanticLineCount": 26,
+      "displayedLineRanges": [
+        [
+          6,
+          6
+        ],
+        [
+          26,
+          26
+        ],
+        [
+          257,
+          282
+        ],
+        [
+          320,
+          334
+        ]
+      ],
+      "displayedLineCount": 43,
+      "role": "in-process-runtime-and-ui-entry-only",
+      "beforeThisReviewSemanticReadSha256": "a5687423399c7dc9e840929d92197000269af05385e120d93fa1e4aee9b1c2dd",
+      "firstEverSemanticReadClaim": false,
+      "pinArtifact": "repl-entry-pin.json",
+      "pinUTC": "2026-10-17T14:22:04.850465+00:00",
+      "finishUTC": "2026-10-17T14:27:19.335918+00:00",
+      "finishSha256": "a5687423399c7dc9e840929d92197000269af05385e120d93fa1e4aee9b1c2dd",
+      "unchanged": true,
+      "scope": "Ordinary data/event/UI wiring text only; excludes adjacent native/model/permission/identity/lease mechanics; no product function executed"
+    },
+    {
+      "path": "packages/tui/package.json",
+      "bytes": 2110,
+      "sha256": "93ea44cc43ef7392227bef9146901408a49d3acd31c6a852db710eeadfcfee21",
+      "lineCount": 73,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          20,
+          27
+        ]
+      ],
+      "semanticLineCount": 8,
+      "displayedLineRanges": [
+        [
+          14,
+          28
+        ]
+      ],
+      "displayedLineCount": 15,
+      "role": "package-entry-metadata",
+      "beforeThisReviewSemanticReadSha256": "93ea44cc43ef7392227bef9146901408a49d3acd31c6a852db710eeadfcfee21",
+      "firstEverSemanticReadClaim": false,
+      "pinArtifact": "tui-entry-pins.json",
+      "pinUTC": "2026-10-17T14:21:14.762512+00:00",
+      "finishUTC": "2026-10-17T14:27:19.335918+00:00",
+      "finishSha256": "93ea44cc43ef7392227bef9146901408a49d3acd31c6a852db710eeadfcfee21",
+      "unchanged": true,
+      "scope": "Ordinary data/event/UI wiring text only; excludes adjacent native/model/permission/identity/lease mechanics; no product function executed"
+    },
+    {
+      "path": "docs/archive/review-2026-07-09/03-optimization-findings.md",
+      "bytes": 19225,
+      "sha256": "98fd44723ecd749b09cfbf60cfb0514b4b113dd5f9e1f04a5ee921ef28e8f043",
+      "lineCount": 97,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          20,
+          27
+        ]
+      ],
+      "semanticLineCount": 8,
+      "displayedLineRanges": [
+        [
+          20,
+          31
+        ]
+      ],
+      "displayedLineCount": 12,
+      "role": "old-F01-exact-cause-boundary",
+      "beforeThisReviewSemanticReadSha256": "98fd44723ecd749b09cfbf60cfb0514b4b113dd5f9e1f04a5ee921ef28e8f043",
+      "firstEverSemanticReadClaim": false,
+      "pinArtifact": "history.json inventory before old-report reading",
+      "pinUTC": "2026-10-17T14:13:46.293258+00:00",
+      "finishUTC": "2026-10-17T14:27:19.335918+00:00",
+      "finishSha256": "98fd44723ecd749b09cfbf60cfb0514b4b113dd5f9e1f04a5ee921ef28e8f043",
+      "unchanged": true,
+      "scope": "Ordinary data/event/UI wiring text only; excludes adjacent native/model/permission/identity/lease mechanics; no product function executed"
+    }
+  ],
+  "navigationOnlyFiles": [
+    {
+      "path": "packages/core/src/engine/query.ts",
+      "bytes": 4572,
+      "sha256": "074b342616085afc0fb527b916aeafe6af640298bbc5a5e9840735a3f7622953",
+      "selectedLineRanges": [],
+      "semanticRead": false,
+      "coverage": "navigation-matches-only",
+      "matchedLineNumbers": [
+        94,
+        119
+      ],
+      "reason": "Constructor/onStream navigation only; not needed beyond actual Engine path"
+    },
+    {
+      "path": "packages/tui/src/index.ts",
+      "bytes": 297,
+      "sha256": "35f3a7b537d98e7568004f52d35b9962e3eaff185156554d0274bb68cb6436a3",
+      "selectedLineRanges": [],
+      "semanticRead": false,
+      "coverage": "navigation-matches-only",
+      "matchedLineNumbers": [
+        5,
+        9
+      ],
+      "reason": "Public package barrel only reexports VERSION; actual CLI entry separately established"
+    }
+  ],
+  "hashOnlyFiles": [
+    {
+      "path": "packages/server/src/mobile-remote/codex-parse.ts",
+      "bytes": 5410,
+      "sha256": "a7a7604e92ea7fcde75a77a52f3d9d1925ce7d4ad3a8619d910cb61508e7483c",
+      "selectedLineRanges": [],
+      "semanticRead": false,
+      "coverage": "hash-only selection/exclusion",
+      "reason": "Old same-current-SHA full receipt found before body reading"
+    },
+    {
+      "path": "packages/web/src/lib/format.ts",
+      "bytes": 5447,
+      "sha256": "c1c2d582d623ba99a738b7d43c483358e6826cae24010ef7994b5d4708310f33",
+      "selectedLineRanges": [],
+      "semanticRead": false,
+      "coverage": "hash-only selection/exclusion",
+      "reason": "Old same-current-SHA full receipt found before body reading"
+    }
+  ],
+  "counts": {
+    "sourceSemanticRows": 16,
+    "currentProductAndEntryRows": 15,
+    "historicalReportRows": 1,
+    "currentSemanticLines": 749,
+    "oldReportSemanticLines": 8,
+    "totalSemanticLines": 757,
+    "displayedLines": 1791,
+    "navigationOnlyFiles": 2,
+    "hashOnlyExcludedFiles": 2,
+    "testSourceLines": 0,
+    "testRuns": 0
+  },
+  "versionContext": {
+    "historyStartedWithRootReportedFrozen40": true,
+    "excludedFutureOrTmpOnly": [
+      41,
+      42,
+      43,
+      44
+    ],
+    "laterRootReportedFormal41Branch": "f6fb short only, not independently Git read; no old product checkout by reviewer",
+    "formalBatchIntentReportedByRoot": 42,
+    "gitCommands": 0
+  },
+  "role": "New author source review; not implementation of a fix; parallel peer reading is not added to these counts",
+  "limits": [
+    "Full leaf195 newly read; no same-current-SHA full receipt established by bounded current gate, not a never-read claim",
+    "No product imports, functions, model calls, event fixtures, React/DOM/native/CLI operations or tests executed",
+    "Code printing of authority/native/model/lease adjacent lines is not semantic auditing of those mechanisms",
+    "Manual source event-order inference only; no observed UI frames or real stream timing",
+    "No raw/durable session transcript loss claim"
+  ]
+}

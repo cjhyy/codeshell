@@ -1,0 +1,72 @@
+{
+  "files": [
+    {
+      "path": "historical-read-excerpts.json",
+      "bytes": 10585,
+      "sha256": "9217a7f4eec97f1f2af07e665c4964cc7853d7ad2117b631c59dc7aace4b0ade"
+    },
+    {
+      "path": "history-decisions.json",
+      "bytes": 1168,
+      "sha256": "20def0ad8b3fd8dbc0c0e67344a50d72781fba11961bf89058c7fe7418d61df4"
+    },
+    {
+      "path": "history-first-exit.json",
+      "bytes": 37,
+      "sha256": "1eb47f8cd0e269039c6cd8a39d93f40006fbfd41f759576d6b51344ab3397c28"
+    },
+    {
+      "path": "history-first.log.txt",
+      "bytes": 293,
+      "sha256": "6dc98651411deffd88356e5a9633aa848e5f6512e72ccdccdbda421d8c3565ae"
+    },
+    {
+      "path": "history-selected-contexts.json",
+      "bytes": 41851,
+      "sha256": "db539bcd8d3df222b7b607b7ec4a39cd097aa58253a2f8e5dcfc21410313de9f"
+    },
+    {
+      "path": "history.json",
+      "bytes": 831475,
+      "sha256": "90c8e25676b1b1ca6fa83d0d96e3229025ee1802b0adc8e44281d7f681c3cac9"
+    },
+    {
+      "path": "metadata-notes.json",
+      "bytes": 673,
+      "sha256": "ff43f49d1e8d4911d07c109ac0ee15ec1f643913badc892807bb63339cac4caa"
+    },
+    {
+      "path": "review.md",
+      "bytes": 3557,
+      "sha256": "80fd26a98fe8c9600aefc93d336d2f9f6bd8e2289c051a59ed1ac714e5bb21dd"
+    },
+    {
+      "path": "scan-history.py",
+      "bytes": 3744,
+      "sha256": "b23999f43f79254638e2899a5e793f98695e130e5ba1973afe4e0a5845667c28"
+    },
+    {
+      "path": "source-excerpts.first.json",
+      "bytes": 16610,
+      "sha256": "17c3cf71100e1712e544cfa1c37a5db2958e478cfb1906aa98873271b54e2f39"
+    },
+    {
+      "path": "source-manifest.json",
+      "bytes": 5919,
+      "sha256": "2e371c810917e392ef773333548a580db92b090d0f0f5bc581b90ce6942e3064"
+    },
+    {
+      "path": "source-pins.before.json",
+      "bytes": 1864,
+      "sha256": "5671f6fd9772019448e8a03384335af1ef483a0a6a58b185479be5c784e05916"
+    },
+    {
+      "path": "validation.json",
+      "bytes": 226,
+      "sha256": "22a74d8b615c214b16b05650ee1a9fe5930a5554b917f71d36ec0eb929029cca"
+    }
+  ],
+  "selfExcluded": true,
+  "frozenAtUTC": "2026-10-17T14:26:09.668415+00:00",
+  "productRuns": 0
+}

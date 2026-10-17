@@ -1,0 +1,167 @@
+{
+  "kind": "Frozen future43 author prep; self excluded",
+  "directory": "/tmp/codeshell-audit-round43-core-data-frontier",
+  "frozenUTC": "2026-10-17T14:11:26.361385+00:00",
+  "files": [
+    {
+      "path": "consumer-initial-pins.json",
+      "bytes": 1511,
+      "sha256": "63d96d1a7770a3b44a62c4a8d5899a15b39372523b6dce44e769214f3324d845"
+    },
+    {
+      "path": "coverage-gate-rows.json",
+      "bytes": 11998,
+      "sha256": "7880a57e6b8a20b14cdc874b505336f2293e2115919a4a247b8b10cfc019db92"
+    },
+    {
+      "path": "decisions.json",
+      "bytes": 3379,
+      "sha256": "5b92e15c091be384674979a91c688a2f05de24fab7bb8d712373d87fbd097184"
+    },
+    {
+      "path": "documentation-pin.json",
+      "bytes": 532,
+      "sha256": "e71836bf4896f6c3c8b8f699b217e4b0047bc9b91f0275e2c88426f913036aa7"
+    },
+    {
+      "path": "finish-checks.json",
+      "bytes": 2342,
+      "sha256": "ad38198b54820ee5ba6b25eec96885337174c08a5cbcd5f6fca5fec3b7171a08"
+    },
+    {
+      "path": "history-contexts.json",
+      "bytes": 42048,
+      "sha256": "41cd2cc9cc90b6ab84dee12e29f32b2f763071f9de5933b4d921a4e659817fbe"
+    },
+    {
+      "path": "history-focused-method.py",
+      "bytes": 2887,
+      "sha256": "7aee69ae735d70ab91cbbb23438d27301f0302637bdbcf483760c4f64d4aab8c"
+    },
+    {
+      "path": "history-focused.json",
+      "bytes": 2584,
+      "sha256": "b87b064dc8799116268ce0256d03b4145687bef498aef02617222e8c9d93a9dd"
+    },
+    {
+      "path": "history-method.py",
+      "bytes": 4403,
+      "sha256": "bd9f132f7e3a80f81ed7fd273f05a70fc621dbc4a59113bb5ac1c22097eeb135"
+    },
+    {
+      "path": "history.json",
+      "bytes": 708872,
+      "sha256": "f45b28aee062ad99e90b76fe1b4324586f20ad2e7b51e19baffce92b7430928d"
+    },
+    {
+      "path": "initial-pins.json",
+      "bytes": 828,
+      "sha256": "0bd3378f00a90276fb8d280f9b99741773ac251665e2184d8beff465d988f97e"
+    },
+    {
+      "path": "metadata-notes.json",
+      "bytes": 1720,
+      "sha256": "235f8eaa9589c66e4954b5ead4bc81f52e6ee92c15db556af5c88ff3e8918b22"
+    },
+    {
+      "path": "report.md",
+      "bytes": 5253,
+      "sha256": "2eb420474dfc97a8b8efbd10457c1dedcf3cdcd8418054150f1a303be4e2fb2b"
+    },
+    {
+      "path": "source-excerpts.json",
+      "bytes": 22405,
+      "sha256": "57c1e04089236cc0257c71a0d2bbd153a32a74e8983acd1549627d3e1206a541"
+    },
+    {
+      "path": "source-manifest.json",
+      "bytes": 9338,
+      "sha256": "18af35013b477922d76723fce7d506656831dfa488f328a219eee285b93717d2"
+    }
+  ],
+  "fileCountExcludingSelf": 15,
+  "totalFilesIncludingSelf": 16,
+  "classification": {
+    "formal": 0,
+    "candidate": 0,
+    "newRelated": 0
+  },
+  "sourceRows": 5,
+  "productSemanticFiles": 3,
+  "productSemanticLines": 232,
+  "existingTestDeclarationLines": 55,
+  "documentationSemanticLines": 4,
+  "semanticLinesTotal": 291,
+  "displayedLinesTotal": 456,
+  "hashOnlyFiles": 3,
+  "sourceAndHashOnlyPins": 8,
+  "allPinsStable": true,
+  "historyFiles": 3581,
+  "historyScope": "frozen39/exclude40,41,42,43",
+  "historyEndingDrift": 0,
+  "historySemanticExhaustionClaim": false,
+  "selectionReplacements": 0,
+  "existingTestSyntaxCallsRead": 2,
+  "testsExecuted": 0,
+  "productRuns": 0,
+  "fixturesExecuted": 0,
+  "gitCommands": 0,
+  "onlyExactTmpWrites": true,
+  "priorSnapshotsUnmodified": true,
+  "reportLinks": [
+    {
+      "target": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/packages/server/src/panels/process-state.ts",
+      "existsOrSelf": true
+    },
+    {
+      "target": "finish-checks.json",
+      "existsOrSelf": true
+    },
+    {
+      "target": "coverage-gate-rows.json",
+      "existsOrSelf": true
+    },
+    {
+      "target": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/packages/server/src/panels/process-service.ts:732",
+      "existsOrSelf": true
+    },
+    {
+      "target": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/panel-native-tools.md:96",
+      "existsOrSelf": true
+    },
+    {
+      "target": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/packages/server/src/panels/tool-executor.ts:389",
+      "existsOrSelf": true
+    },
+    {
+      "target": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/packages/server/src/panels/process-state.test.ts",
+      "existsOrSelf": true
+    },
+    {
+      "target": "source-manifest.json",
+      "existsOrSelf": true
+    },
+    {
+      "target": "history-focused.json",
+      "existsOrSelf": true
+    },
+    {
+      "target": "decisions.json",
+      "existsOrSelf": true
+    },
+    {
+      "target": "metadata-notes.json",
+      "existsOrSelf": true
+    },
+    {
+      "target": "artifact-receipt.json",
+      "existsOrSelf": true
+    }
+  ],
+  "metadataWarningsPreserved": [
+    "unused-translator print truncated exit0",
+    "unused-translator basename context anchor limitation",
+    "large-document AND context not a precise old-cause hit"
+  ],
+  "runtimePassesClaimed": 0
+}

@@ -1,0 +1,487 @@
+[
+  {
+    "historyPath": "docs/audit-2026-10-17-round15/evidence/migration-source-manifest.json",
+    "at": "$[\"files\"][5]",
+    "row": {
+      "path": "packages/core/src/plugins/installer/normalizeManifest.ts",
+      "sha256": "e0bfb03f105ed209bd161b40a5147e11dd58b1db0dd16a8c1c84940b4b861dd3",
+      "bytes": 14597,
+      "scope": "full static read only; no disk-backed normalization or asset validation executed",
+      "currentSha256": "e0bfb03f105ed209bd161b40a5147e11dd58b1db0dd16a8c1c84940b4b861dd3",
+      "currentEqualsFrozen": true
+    }
+  },
+  {
+    "historyPath": "docs/audit-2026-10-17-round15/source-manifest.json",
+    "at": "$[\"files\"][27]",
+    "row": {
+      "path": "packages/core/src/plugins/installer/normalizeManifest.ts",
+      "bytes": 14597,
+      "sha256": "e0bfb03f105ed209bd161b40a5147e11dd58b1db0dd16a8c1c84940b4b861dd3",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentSha256": "e0bfb03f105ed209bd161b40a5147e11dd58b1db0dd16a8c1c84940b4b861dd3",
+      "mainSha256": "e0bfb03f105ed209bd161b40a5147e11dd58b1db0dd16a8c1c84940b4b861dd3"
+    }
+  },
+  {
+    "historyPath": "docs/audit-2026-10-17-round15/source-manifest.json",
+    "at": "$[\"workerSourceChecks\"][31]",
+    "row": {
+      "manifest": "migration-source-manifest.json",
+      "path": "packages/core/src/plugins/installer/normalizeManifest.ts",
+      "sha256": "e0bfb03f105ed209bd161b40a5147e11dd58b1db0dd16a8c1c84940b4b861dd3"
+    }
+  },
+  {
+    "historyPath": "docs/audit-2026-10-17-round21/evidence/root-source-manifest.json",
+    "at": "$[\"files\"][10]",
+    "row": {
+      "path": "packages/core/src/context/image-history-window.ts",
+      "bytes": 3033,
+      "sha256": "d4465094dfaf9f339c616feed2b6e2dd084b557f9b29e5d9b1c7b04a463faa71",
+      "scope": "Full static source only; compaction/retention/image bytes not imported or exercised.",
+      "lineCount": 86,
+      "frozenBlobVerified": true,
+      "currentMatchesFrozen": true
+    }
+  },
+  {
+    "historyPath": "docs/audit-2026-10-17-round21/source-manifest.json",
+    "at": "$[\"files\"][13]",
+    "row": {
+      "path": "packages/core/src/context/image-history-window.ts",
+      "bytes": 3033,
+      "sha256": "d4465094dfaf9f339c616feed2b6e2dd084b557f9b29e5d9b1c7b04a463faa71",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentSha256": "d4465094dfaf9f339c616feed2b6e2dd084b557f9b29e5d9b1c7b04a463faa71",
+      "mainSha256": "d4465094dfaf9f339c616feed2b6e2dd084b557f9b29e5d9b1c7b04a463faa71"
+    }
+  },
+  {
+    "historyPath": "docs/audit-2026-10-17-round21/source-manifest.json",
+    "at": "$[\"workerSourceChecks\"][26]",
+    "row": {
+      "manifest": "root-source-manifest.json",
+      "path": "packages/core/src/context/image-history-window.ts",
+      "sha256": "d4465094dfaf9f339c616feed2b6e2dd084b557f9b29e5d9b1c7b04a463faa71"
+    }
+  },
+  {
+    "historyPath": "docs/audit-2026-10-17-round23/evidence/root-prep/source-manifest.json",
+    "at": "$[\"sources\"][9]",
+    "row": {
+      "path": "packages/core/src/session/output-journal-backup-format.ts",
+      "scope": "incidental full static source during inventory; no semantic review",
+      "note": "node:crypto plus type-only head/storage imports; repair authority/identity/security contract excluded, no candidate or test recommendation.",
+      "frozenSha256": "98aaf46c9aa750189927786e834e47c1e39ae6b52cb77ed185dda0ac604e876a",
+      "currentSha256": "98aaf46c9aa750189927786e834e47c1e39ae6b52cb77ed185dda0ac604e876a",
+      "currentMatchesFrozen": true,
+      "bytes": 16266
+    }
+  },
+  {
+    "historyPath": "docs/audit-2026-10-17-round23/evidence/root-prep-current.json",
+    "at": "$[\"checks\"][9]",
+    "row": {
+      "path": "packages/core/src/session/output-journal-backup-format.ts",
+      "sha256": "98aaf46c9aa750189927786e834e47c1e39ae6b52cb77ed185dda0ac604e876a",
+      "currentRoundFrozenMatchesPrep": true,
+      "reading": "Prior preparation only; Root reads proposal, hash revalidation is not new full-source coverage"
+    }
+  },
+  {
+    "historyPath": "docs/audit-2026-10-17-round23/source-manifest.json",
+    "at": "$[\"files\"][49]",
+    "row": {
+      "path": "packages/core/src/session/output-journal-backup-format.ts",
+      "bytes": 16266,
+      "sha256": "98aaf46c9aa750189927786e834e47c1e39ae6b52cb77ed185dda0ac604e876a",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentSha256": "98aaf46c9aa750189927786e834e47c1e39ae6b52cb77ed185dda0ac604e876a",
+      "mainSha256": "98aaf46c9aa750189927786e834e47c1e39ae6b52cb77ed185dda0ac604e876a"
+    }
+  },
+  {
+    "historyPath": "docs/audit-2026-10-17-round23/source-manifest.json",
+    "at": "$[\"priorPrepHashOnlyChecks\"][9]",
+    "row": {
+      "path": "packages/core/src/session/output-journal-backup-format.ts",
+      "sha256": "98aaf46c9aa750189927786e834e47c1e39ae6b52cb77ed185dda0ac604e876a",
+      "currentRoundFrozenMatchesPrep": true,
+      "reading": "Prior preparation only; Root reads proposal, hash revalidation is not new full-source coverage"
+    }
+  },
+  {
+    "historyPath": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+    "at": "$[\"files\"][168]",
+    "row": {
+      "path": "packages/core/src/context/image-history-window.ts",
+      "bytes": 3033,
+      "lines": 86,
+      "sha256": "d4465094dfaf9f339c616feed2b6e2dd084b557f9b29e5d9b1c7b04a463faa71",
+      "status": "current-sha-pin-only-no-semantic-coverage",
+      "currentFullClaimVariants": 0,
+      "currentSelectedClaimVariants": 0,
+      "currentSelectedUnionLines": 0,
+      "currentSelectedUnionRanges": [],
+      "priorVersionClaimVariants": 0,
+      "currentPinOnlyVariants": 1,
+      "claimVariants": 1,
+      "claims": [
+        {
+          "sourceSha256": "d4465094dfaf9f339c616feed2b6e2dd084b557f9b29e5d9b1c7b04a463faa71",
+          "matchesCurrentFilesystem": true,
+          "coverageKind": "scope-unknown-pin-only",
+          "rawCoverageLabel": null,
+          "selectedLineRanges": [],
+          "validRangeBoundsForCurrentFile": true,
+          "manifests": [
+            {
+              "path": "docs/audit-2026-10-17-round21/evidence/root-source-manifest.json",
+              "jsonLocation": "$[\"files\"][10]"
+            },
+            {
+              "path": "docs/audit-2026-10-17-round21/source-manifest.json",
+              "jsonLocation": "$[\"files\"][13]"
+            },
+            {
+              "path": "docs/audit-2026-10-17-round21/source-manifest.json",
+              "jsonLocation": "$[\"workerSourceChecks\"][26]"
+            },
+            {
+              "path": "docs/audit-2026-10-17-round4/evidence/context-source-manifest.json",
+              "jsonLocation": "$[\"sources\"][5]"
+            },
+            {
+              "path": "docs/audit-2026-10-17-round4/source-manifest.json",
+              "jsonLocation": "$[\"files\"][20]"
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "historyPath": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+    "at": "$[\"files\"][310]",
+    "row": {
+      "path": "packages/core/src/plugins/installer/codex/convertCommands.ts",
+      "bytes": 3286,
+      "lines": 84,
+      "sha256": "d8fa166018cbb4c194009d1fa48c866e0e843b36b97a0c6ae2e1ffd3662e299d",
+      "status": "current-sha-pin-only-no-semantic-coverage",
+      "currentFullClaimVariants": 0,
+      "currentSelectedClaimVariants": 0,
+      "currentSelectedUnionLines": 0,
+      "currentSelectedUnionRanges": [],
+      "priorVersionClaimVariants": 0,
+      "currentPinOnlyVariants": 1,
+      "claimVariants": 1,
+      "claims": [
+        {
+          "sourceSha256": "d8fa166018cbb4c194009d1fa48c866e0e843b36b97a0c6ae2e1ffd3662e299d",
+          "matchesCurrentFilesystem": true,
+          "coverageKind": "scope-unknown-pin-only",
+          "rawCoverageLabel": null,
+          "selectedLineRanges": [],
+          "validRangeBoundsForCurrentFile": true,
+          "manifests": [
+            {
+              "path": "docs/audit-2026-10-17-round8/evidence/plugins-source-manifest.json",
+              "jsonLocation": "$[\"files\"][14]"
+            },
+            {
+              "path": "docs/audit-2026-10-17-round8/source-manifest.json",
+              "jsonLocation": "$[\"files\"][28]"
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "historyPath": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+    "at": "$[\"files\"][313]",
+    "row": {
+      "path": "packages/core/src/plugins/installer/codex/convertSkills.ts",
+      "bytes": 3178,
+      "lines": 79,
+      "sha256": "84085fa29442eb9926922b9bdbfea91a282db76f442bc0ba7fab73819b61d7b8",
+      "status": "current-sha-pin-only-no-semantic-coverage",
+      "currentFullClaimVariants": 0,
+      "currentSelectedClaimVariants": 0,
+      "currentSelectedUnionLines": 0,
+      "currentSelectedUnionRanges": [],
+      "priorVersionClaimVariants": 0,
+      "currentPinOnlyVariants": 1,
+      "claimVariants": 1,
+      "claims": [
+        {
+          "sourceSha256": "84085fa29442eb9926922b9bdbfea91a282db76f442bc0ba7fab73819b61d7b8",
+          "matchesCurrentFilesystem": true,
+          "coverageKind": "scope-unknown-pin-only",
+          "rawCoverageLabel": null,
+          "selectedLineRanges": [],
+          "validRangeBoundsForCurrentFile": true,
+          "manifests": [
+            {
+              "path": "docs/audit-2026-10-17-round8/evidence/plugins-source-manifest.json",
+              "jsonLocation": "$[\"files\"][11]"
+            },
+            {
+              "path": "docs/audit-2026-10-17-round8/source-manifest.json",
+              "jsonLocation": "$[\"files\"][29]"
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "historyPath": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+    "at": "$[\"files\"][319]",
+    "row": {
+      "path": "packages/core/src/plugins/installer/normalizeManifest.ts",
+      "bytes": 14597,
+      "lines": 446,
+      "sha256": "e0bfb03f105ed209bd161b40a5147e11dd58b1db0dd16a8c1c84940b4b861dd3",
+      "status": "current-sha-pin-only-no-semantic-coverage",
+      "currentFullClaimVariants": 0,
+      "currentSelectedClaimVariants": 0,
+      "currentSelectedUnionLines": 0,
+      "currentSelectedUnionRanges": [],
+      "priorVersionClaimVariants": 0,
+      "currentPinOnlyVariants": 1,
+      "claimVariants": 1,
+      "claims": [
+        {
+          "sourceSha256": "e0bfb03f105ed209bd161b40a5147e11dd58b1db0dd16a8c1c84940b4b861dd3",
+          "matchesCurrentFilesystem": true,
+          "coverageKind": "scope-unknown-pin-only",
+          "rawCoverageLabel": null,
+          "selectedLineRanges": [],
+          "validRangeBoundsForCurrentFile": true,
+          "manifests": [
+            {
+              "path": "docs/audit-2026-10-17-round15/evidence/migration-source-manifest.json",
+              "jsonLocation": "$[\"files\"][5]"
+            },
+            {
+              "path": "docs/audit-2026-10-17-round15/source-manifest.json",
+              "jsonLocation": "$[\"files\"][27]"
+            },
+            {
+              "path": "docs/audit-2026-10-17-round15/source-manifest.json",
+              "jsonLocation": "$[\"workerSourceChecks\"][31]"
+            },
+            {
+              "path": "docs/audit-2026-10-17-round8/evidence/plugins-source-manifest.json",
+              "jsonLocation": "$[\"files\"][5]"
+            },
+            {
+              "path": "docs/audit-2026-10-17-round8/source-manifest.json",
+              "jsonLocation": "$[\"files\"][33]"
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "historyPath": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+    "at": "$[\"files\"][407]",
+    "row": {
+      "path": "packages/core/src/session/output-journal-backup-format.ts",
+      "bytes": 16266,
+      "lines": 439,
+      "sha256": "98aaf46c9aa750189927786e834e47c1e39ae6b52cb77ed185dda0ac604e876a",
+      "status": "current-sha-pin-only-no-semantic-coverage",
+      "currentFullClaimVariants": 0,
+      "currentSelectedClaimVariants": 0,
+      "currentSelectedUnionLines": 0,
+      "currentSelectedUnionRanges": [],
+      "priorVersionClaimVariants": 0,
+      "currentPinOnlyVariants": 1,
+      "claimVariants": 1,
+      "claims": [
+        {
+          "sourceSha256": "98aaf46c9aa750189927786e834e47c1e39ae6b52cb77ed185dda0ac604e876a",
+          "matchesCurrentFilesystem": true,
+          "coverageKind": "scope-unknown-pin-only",
+          "rawCoverageLabel": null,
+          "selectedLineRanges": [],
+          "validRangeBoundsForCurrentFile": true,
+          "manifests": [
+            {
+              "path": "docs/audit-2026-10-17-round23/evidence/root-prep/source-manifest.json",
+              "jsonLocation": "$[\"sources\"][9]"
+            },
+            {
+              "path": "docs/audit-2026-10-17-round23/source-manifest.json",
+              "jsonLocation": "$[\"files\"][49]"
+            },
+            {
+              "path": "docs/audit-2026-10-17-round23/source-manifest.json",
+              "jsonLocation": "$[\"priorPrepHashOnlyChecks\"][9]"
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "historyPath": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+    "at": "$[\"files\"][342]",
+    "row": {
+      "path": "packages/core/src/context/image-history-window.ts",
+      "bytes": 3033,
+      "lines": 86,
+      "sha256": "d4465094dfaf9f339c616feed2b6e2dd084b557f9b29e5d9b1c7b04a463faa71"
+    }
+  },
+  {
+    "historyPath": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+    "at": "$[\"files\"][830]",
+    "row": {
+      "path": "packages/core/src/plugins/installer/codex/convertCommands.ts",
+      "bytes": 3286,
+      "lines": 84,
+      "sha256": "d8fa166018cbb4c194009d1fa48c866e0e843b36b97a0c6ae2e1ffd3662e299d"
+    }
+  },
+  {
+    "historyPath": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+    "at": "$[\"files\"][836]",
+    "row": {
+      "path": "packages/core/src/plugins/installer/codex/convertSkills.ts",
+      "bytes": 3178,
+      "lines": 79,
+      "sha256": "84085fa29442eb9926922b9bdbfea91a282db76f442bc0ba7fab73819b61d7b8"
+    }
+  },
+  {
+    "historyPath": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+    "at": "$[\"files\"][853]",
+    "row": {
+      "path": "packages/core/src/plugins/installer/normalizeManifest.ts",
+      "bytes": 14597,
+      "lines": 446,
+      "sha256": "e0bfb03f105ed209bd161b40a5147e11dd58b1db0dd16a8c1c84940b4b861dd3"
+    }
+  },
+  {
+    "historyPath": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+    "at": "$[\"files\"][1140]",
+    "row": {
+      "path": "packages/core/src/session/output-journal-backup-format.ts",
+      "bytes": 16266,
+      "lines": 439,
+      "sha256": "98aaf46c9aa750189927786e834e47c1e39ae6b52cb77ed185dda0ac604e876a"
+    }
+  },
+  {
+    "historyPath": "docs/audit-2026-10-17-round4/evidence/context-source-manifest.json",
+    "at": "$[\"sources\"][5]",
+    "row": {
+      "path": "packages/core/src/context/image-history-window.ts",
+      "sha256": "d4465094dfaf9f339c616feed2b6e2dd084b557f9b29e5d9b1c7b04a463faa71",
+      "review": "full"
+    }
+  },
+  {
+    "historyPath": "docs/audit-2026-10-17-round4/source-manifest.json",
+    "at": "$[\"files\"][20]",
+    "row": {
+      "path": "packages/core/src/context/image-history-window.ts",
+      "bytes": 3033,
+      "sha256": "d4465094dfaf9f339c616feed2b6e2dd084b557f9b29e5d9b1c7b04a463faa71",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true
+    }
+  },
+  {
+    "historyPath": "docs/audit-2026-10-17-round8/evidence/plugins-command-preflight.json",
+    "at": "$[\"source\"][2]",
+    "row": {
+      "path": "packages/core/src/plugins/installer/codex/convertCommands.ts",
+      "sha256": "d8fa166018cbb4c194009d1fa48c866e0e843b36b97a0c6ae2e1ffd3662e299d",
+      "frozenSha256": "d8fa166018cbb4c194009d1fa48c866e0e843b36b97a0c6ae2e1ffd3662e299d",
+      "matchesFrozen": true
+    }
+  },
+  {
+    "historyPath": "docs/audit-2026-10-17-round8/evidence/plugins-source-manifest.json",
+    "at": "$[\"files\"][5]",
+    "row": {
+      "path": "packages/core/src/plugins/installer/normalizeManifest.ts",
+      "frozenSourceBase": "ec0e16bf0068a458abcbaa28225a4c764c24f4de",
+      "frozenBytes": 14597,
+      "frozenSha256": "e0bfb03f105ed209bd161b40a5147e11dd58b1db0dd16a8c1c84940b4b861dd3",
+      "currentWorkingTreeSha256": "e0bfb03f105ed209bd161b40a5147e11dd58b1db0dd16a8c1c84940b4b861dd3",
+      "currentWorkingTreeMatchesFrozenBlob": true
+    }
+  },
+  {
+    "historyPath": "docs/audit-2026-10-17-round8/evidence/plugins-source-manifest.json",
+    "at": "$[\"files\"][11]",
+    "row": {
+      "path": "packages/core/src/plugins/installer/codex/convertSkills.ts",
+      "frozenSourceBase": "ec0e16bf0068a458abcbaa28225a4c764c24f4de",
+      "frozenBytes": 3178,
+      "frozenSha256": "84085fa29442eb9926922b9bdbfea91a282db76f442bc0ba7fab73819b61d7b8",
+      "currentWorkingTreeSha256": "84085fa29442eb9926922b9bdbfea91a282db76f442bc0ba7fab73819b61d7b8",
+      "currentWorkingTreeMatchesFrozenBlob": true
+    }
+  },
+  {
+    "historyPath": "docs/audit-2026-10-17-round8/evidence/plugins-source-manifest.json",
+    "at": "$[\"files\"][14]",
+    "row": {
+      "path": "packages/core/src/plugins/installer/codex/convertCommands.ts",
+      "frozenSourceBase": "ec0e16bf0068a458abcbaa28225a4c764c24f4de",
+      "frozenBytes": 3286,
+      "frozenSha256": "d8fa166018cbb4c194009d1fa48c866e0e843b36b97a0c6ae2e1ffd3662e299d",
+      "currentWorkingTreeSha256": "d8fa166018cbb4c194009d1fa48c866e0e843b36b97a0c6ae2e1ffd3662e299d",
+      "currentWorkingTreeMatchesFrozenBlob": true
+    }
+  },
+  {
+    "historyPath": "docs/audit-2026-10-17-round8/source-manifest.json",
+    "at": "$[\"files\"][28]",
+    "row": {
+      "path": "packages/core/src/plugins/installer/codex/convertCommands.ts",
+      "bytes": 3286,
+      "sha256": "d8fa166018cbb4c194009d1fa48c866e0e843b36b97a0c6ae2e1ffd3662e299d",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true
+    }
+  },
+  {
+    "historyPath": "docs/audit-2026-10-17-round8/source-manifest.json",
+    "at": "$[\"files\"][29]",
+    "row": {
+      "path": "packages/core/src/plugins/installer/codex/convertSkills.ts",
+      "bytes": 3178,
+      "sha256": "84085fa29442eb9926922b9bdbfea91a282db76f442bc0ba7fab73819b61d7b8",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true
+    }
+  },
+  {
+    "historyPath": "docs/audit-2026-10-17-round8/source-manifest.json",
+    "at": "$[\"files\"][33]",
+    "row": {
+      "path": "packages/core/src/plugins/installer/normalizeManifest.ts",
+      "bytes": 14597,
+      "sha256": "e0bfb03f105ed209bd161b40a5147e11dd58b1db0dd16a8c1c84940b4b861dd3",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true
+    }
+  }
+]

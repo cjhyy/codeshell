@@ -1,0 +1,286 @@
+{
+  "scope": "Future43 prep, Root-reported main48bc/frozen39, no independent Git baseline binding",
+  "files": [
+    {
+      "path": "packages/server/src/panels/process-state.ts",
+      "bytes": 3867,
+      "sha256": "9614623cb89fbd49914595b977e9ffae515966680b3a375115c1526b16ca2ca6",
+      "lineCount": 127,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          9,
+          9
+        ],
+        [
+          12,
+          16
+        ],
+        [
+          26,
+          45
+        ],
+        [
+          54,
+          109
+        ],
+        [
+          111,
+          127
+        ]
+      ],
+      "semanticLineCount": 99,
+      "displayedLineRanges": [
+        [
+          1,
+          127
+        ]
+      ],
+      "displayedLineCount": 127,
+      "sourceKind": "product",
+      "beforeCurrentSemanticReadPinSha256": "9614623cb89fbd49914595b977e9ffae515966680b3a375115c1526b16ca2ca6",
+      "firstEverSemanticReadClaim": false,
+      "finishSha256": "9614623cb89fbd49914595b977e9ffae515966680b3a375115c1526b16ca2ca6",
+      "finishUTC": "2026-10-17T14:10:04.995553+00:00",
+      "unchanged": true,
+      "scope": "Ordinary receipt/event DTO, retention and replay only; excludes identity/authorization/native process semantics, model trace operations and any execution",
+      "pinUTC": "2026-10-17T14:05:03.545268+00:00"
+    },
+    {
+      "path": "packages/server/src/panels/process-service.ts",
+      "bytes": 44502,
+      "sha256": "e24358ae75d1b072436c41a467145507e26bc801c14d079f40e5d614f9fa9f84",
+      "lineCount": 1136,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          34,
+          35
+        ],
+        [
+          732,
+          749
+        ],
+        [
+          750,
+          761
+        ],
+        [
+          765,
+          774
+        ],
+        [
+          780,
+          784
+        ],
+        [
+          877,
+          883
+        ],
+        [
+          885,
+          885
+        ],
+        [
+          922,
+          936
+        ],
+        [
+          939,
+          959
+        ]
+      ],
+      "semanticLineCount": 91,
+      "displayedLineRanges": [
+        [
+          28,
+          37
+        ],
+        [
+          725,
+          786
+        ],
+        [
+          836,
+          849
+        ],
+        [
+          855,
+          896
+        ],
+        [
+          908,
+          961
+        ]
+      ],
+      "displayedLineCount": 182,
+      "sourceKind": "product",
+      "beforeCurrentSemanticReadPinSha256": "e24358ae75d1b072436c41a467145507e26bc801c14d079f40e5d614f9fa9f84",
+      "firstEverSemanticReadClaim": false,
+      "finishSha256": "e24358ae75d1b072436c41a467145507e26bc801c14d079f40e5d614f9fa9f84",
+      "finishUTC": "2026-10-17T14:10:04.995553+00:00",
+      "unchanged": true,
+      "scope": "Ordinary receipt/event DTO, retention and replay only; excludes identity/authorization/native process semantics, model trace operations and any execution",
+      "pinUTC": "2026-10-17T14:05:40.555785+00:00"
+    },
+    {
+      "path": "packages/server/src/panels/tool-executor.ts",
+      "bytes": 27329,
+      "sha256": "c691bd60d770083bdbe5b89dcf6445c80a74a3da784475ade846eb1180d29216",
+      "lineCount": 666,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          389,
+          411
+        ],
+        [
+          413,
+          431
+        ]
+      ],
+      "semanticLineCount": 42,
+      "displayedLineRanges": [
+        [
+          385,
+          444
+        ]
+      ],
+      "displayedLineCount": 60,
+      "sourceKind": "product",
+      "beforeCurrentSemanticReadPinSha256": "c691bd60d770083bdbe5b89dcf6445c80a74a3da784475ade846eb1180d29216",
+      "firstEverSemanticReadClaim": false,
+      "finishSha256": "c691bd60d770083bdbe5b89dcf6445c80a74a3da784475ade846eb1180d29216",
+      "finishUTC": "2026-10-17T14:10:04.995553+00:00",
+      "unchanged": true,
+      "scope": "Ordinary receipt/event DTO, retention and replay only; excludes identity/authorization/native process semantics, model trace operations and any execution",
+      "pinUTC": "2026-10-17T14:05:40.553535+00:00"
+    },
+    {
+      "path": "packages/server/src/panels/process-state.test.ts",
+      "bytes": 2058,
+      "sha256": "4ec477065095ca862f0d4f3b2dfc2ab0c2ab7e8adc452a7dd6df8b94390dc860",
+      "lineCount": 55,
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          55
+        ]
+      ],
+      "semanticLineCount": 55,
+      "displayedLineRanges": [
+        [
+          1,
+          55
+        ]
+      ],
+      "displayedLineCount": 55,
+      "sourceKind": "existing-test-declarations",
+      "beforeCurrentSemanticReadPinSha256": "4ec477065095ca862f0d4f3b2dfc2ab0c2ab7e8adc452a7dd6df8b94390dc860",
+      "firstEverSemanticReadClaim": false,
+      "finishSha256": "4ec477065095ca862f0d4f3b2dfc2ab0c2ab7e8adc452a7dd6df8b94390dc860",
+      "finishUTC": "2026-10-17T14:10:04.995553+00:00",
+      "unchanged": true,
+      "scope": "Ordinary receipt/event DTO, retention and replay only; excludes identity/authorization/native process semantics, model trace operations and any execution",
+      "pinUTC": "2026-10-17T14:05:40.555068+00:00"
+    },
+    {
+      "path": "docs/panel-native-tools.md",
+      "bytes": 39804,
+      "sha256": "aa434a5b4ad3a55c1071bf6fc78821c7dc0be77f1b32f76ba420630d05054227",
+      "lineCount": 632,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          96,
+          99
+        ]
+      ],
+      "semanticLineCount": 4,
+      "displayedLineRanges": [
+        [
+          82,
+          113
+        ]
+      ],
+      "displayedLineCount": 32,
+      "sourceKind": "documentation",
+      "beforeCurrentSemanticReadPinSha256": "aa434a5b4ad3a55c1071bf6fc78821c7dc0be77f1b32f76ba420630d05054227",
+      "firstEverSemanticReadClaim": false,
+      "finishSha256": "aa434a5b4ad3a55c1071bf6fc78821c7dc0be77f1b32f76ba420630d05054227",
+      "finishUTC": "2026-10-17T14:10:04.995553+00:00",
+      "unchanged": true,
+      "scope": "Ordinary receipt/event DTO, retention and replay only; excludes identity/authorization/native process semantics, model trace operations and any execution",
+      "pinOrigin": "history.json full metadata inventory before first content snippet",
+      "pinUTCWindow": [
+        "2026-10-17T14:05:03.547566+00:00",
+        "2026-10-17T14:05:06.733565+00:00"
+      ],
+      "dedicatedPinAfterNavigationSnippet": true
+    }
+  ],
+  "hashOnlyFiles": [
+    {
+      "path": "packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+      "bytes": 6622,
+      "sha256": "172784171e601f500bf74eb59870e1d1479b0ecb7a873707d2219e416cfe6d76",
+      "coverage": "hash-only",
+      "selectedLineRanges": [],
+      "semanticRead": false,
+      "reason": "Unselected inventory candidate or reference file not opened for content"
+    },
+    {
+      "path": "packages/server/src/panels/process-entry.ts",
+      "bytes": 2220,
+      "sha256": "fa0280f375aa4e1ad61bb5c5cb40d2de42b44cfbf9b39287d24c239ad3ff1d13",
+      "coverage": "hash-only",
+      "selectedLineRanges": [],
+      "semanticRead": false,
+      "reason": "Unselected inventory candidate or reference file not opened for content"
+    },
+    {
+      "path": "packages/server/src/panels/bridge-contract.ts",
+      "bytes": 3493,
+      "sha256": "1ce948d0608f88ebc7e658ce92614db79f72f65e17e5270de445102870be3fcd",
+      "coverage": "hash-only",
+      "selectedLineRanges": [],
+      "semanticRead": false,
+      "reason": "Unselected inventory candidate or reference file not opened for content"
+    }
+  ],
+  "counts": {
+    "productSemanticFiles": 3,
+    "testSemanticFiles": 1,
+    "documentationSemanticFiles": 1,
+    "productSemanticLines": 232,
+    "testDeclarationLines": 55,
+    "documentationLines": 4,
+    "semanticLinesTotal": 291,
+    "displayedLinesTotal": 456,
+    "hashOnlyFiles": 3
+  },
+  "selection": {
+    "chosenPath": "packages/server/src/panels/process-state.ts",
+    "chosenFileLines": 127,
+    "selectionReplacements": 0,
+    "unusedTranslator195WasInventoryCandidateOnly": true,
+    "priorFullGate": "Current SHA matched R28 package inventory only; five path-value hits were inventories/module listings. No same-current-SHA full-semantic receipt established in this bounded gate; do not infer historically unread."
+  },
+  "ordinaryChain": "ProcessRecord starts sequence0; append allocates sequence/payload and bounded event retention; real emit sends same payload; completion stores terminal record; get returns ordered retained events/cursor/truncation; tool-executor reorders/reconciles and explicitly rejects truncation",
+  "coverageLimits": [
+    "Full127-line leaf displayed but only listed99 ordinary-data lines counted as semantic; sameProcessOwner comparison not audited",
+    "Adjacent authorization/native/model code printed is excluded from semantic counts and not experimented on",
+    "Existing test declaration calls were only read, never imported or executed",
+    "Navigation/import/module inventory is not body reading or previous test pass",
+    "No invalid DTO, NaN/counter overflow or large-pressure construction used"
+  ],
+  "executions": {
+    "product": 0,
+    "tests": 0,
+    "languageFixtures": 0,
+    "timerPromiseOrBufferFixtures": 0,
+    "realBusinessFilesNativeNetworkModelProcessIdentityPermissionExperiments": 0,
+    "git": 0
+  }
+}

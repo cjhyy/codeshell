@@ -1,0 +1,17 @@
+{
+  "capturedUTC": "2026-10-17T14:17:46.947610+00:00",
+  "prepOnly": true,
+  "formalBaseline": null,
+  "rootContextSupplied": "Frozen40 included, mutable41/future42/43/44 excluded; no Git observation or mutable author adoption.",
+  "expectedSha256Supplied": "172784171e601f500bf74eb59870e1d1479b0ecb7a873707d2219e416cfe6d76",
+  "matchesSuppliedSha256": true,
+  "files": [
+    {
+      "path": "packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+      "bytes": 6622,
+      "lineCount": 195,
+      "sha256": "172784171e601f500bf74eb59870e1d1479b0ecb7a873707d2219e416cfe6d76",
+      "pinBeforeBodyRead": true
+    }
+  ]
+}

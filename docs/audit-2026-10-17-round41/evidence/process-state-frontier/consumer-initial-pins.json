@@ -1,0 +1,45 @@
+{
+  "scope": "before content/navigation snippets for actual references",
+  "files": [
+    {
+      "path": "packages/server/src/panels/tool-executor.ts",
+      "bytes": 27329,
+      "sha256": "c691bd60d770083bdbe5b89dcf6445c80a74a3da784475ade846eb1180d29216",
+      "lines": 666,
+      "pinnedUTC": "2026-10-17T14:05:40.553535+00:00",
+      "semanticRead": false
+    },
+    {
+      "path": "packages/server/src/panels/process-state.test.ts",
+      "bytes": 2058,
+      "sha256": "4ec477065095ca862f0d4f3b2dfc2ab0c2ab7e8adc452a7dd6df8b94390dc860",
+      "lines": 55,
+      "pinnedUTC": "2026-10-17T14:05:40.555068+00:00",
+      "semanticRead": false
+    },
+    {
+      "path": "packages/server/src/panels/process-service.ts",
+      "bytes": 44502,
+      "sha256": "e24358ae75d1b072436c41a467145507e26bc801c14d079f40e5d614f9fa9f84",
+      "lines": 1136,
+      "pinnedUTC": "2026-10-17T14:05:40.555785+00:00",
+      "semanticRead": false
+    },
+    {
+      "path": "packages/server/src/panels/process-entry.ts",
+      "bytes": 2220,
+      "sha256": "fa0280f375aa4e1ad61bb5c5cb40d2de42b44cfbf9b39287d24c239ad3ff1d13",
+      "lines": 53,
+      "pinnedUTC": "2026-10-17T14:05:40.556240+00:00",
+      "semanticRead": false
+    },
+    {
+      "path": "packages/server/src/panels/bridge-contract.ts",
+      "bytes": 3493,
+      "sha256": "1ce948d0608f88ebc7e658ce92614db79f72f65e17e5270de445102870be3fcd",
+      "lines": 131,
+      "pinnedUTC": "2026-10-17T14:05:40.556681+00:00",
+      "semanticRead": false
+    }
+  ]
+}

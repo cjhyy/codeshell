@@ -1,0 +1,44 @@
+{
+  "timeUTC": "2026-10-17T14:08:01.235734+00:00",
+  "inventorySource": "history.json immutable3581 snapshot; no added paths silently included",
+  "originalFileCount": 3581,
+  "sameInventoryChangedRows": [],
+  "parseErrors": [],
+  "jsonStringLeavesThisPass": 1030881,
+  "jsonScalarLeavesThisPass": 1550274,
+  "method": "All same-inventory MD/recursive JSON value scalar query; simple literal/AND, keys not searched; one hit per string/MD unit, cap80. Bounded contexts are not full documents.",
+  "queries": {
+    "exact-names": {
+      "hits": 0,
+      "cap": 80,
+      "retained": 0
+    },
+    "replay-loss": {
+      "hits": 0,
+      "cap": 80,
+      "retained": 0
+    },
+    "replay-fields": {
+      "hits": 1,
+      "cap": 80,
+      "retained": 1
+    }
+  },
+  "contexts": {
+    "exact-names": [],
+    "replay-loss": [],
+    "replay-fields": [
+      {
+        "path": "docs/panel-native-tools.md",
+        "locator": "markdown-text",
+        "valueChars": 39804,
+        "offset": 1359,
+        "contextStart": 959,
+        "contextEnd": 2359,
+        "text": "idge advertises write-only `modelTraces.start` and\n`modelTraces.finish`. Start accepts `{provider,model,purpose?,input,stream?}` and\nreturns an opaque `{id,recorded}`. Finish accepts `{id,status,output?,error?,usage?}`.\nInput has `{systemPrompt?,messages?,tools?,parameters?}`; output has optional\n`text`, `thinking`, `toolCalls`, `stopReason` and structured `data`. Report\n`inputState/outputState: \"truncated\"` when a local bound removed content.\nEach observation is limited to 256 KiB, with 64 active calls per owner and 240\nevents per minute. These methods grant no history, credential or policy access.\nDiscover methods from capabilities; older Hosts can run the model operation\nwithout recording. Model/provider and retry policy remain Panel-owned.\n\n## Browser Wasm assets\n\nAn installed Panel may include `.wasm` files under its browser asset tree. They\nare reviewed and hashed with the rest of the package, served as `application/wasm`,\nand retain the existing package size, path and revision checks. Discover support\nthrough `context.capabilities.packageAssets.wasm`; older Hosts do not advertise it.\n\nBrowser loaders may fetch from their own package asset scope. Desktop limits this\nto the guest's `cspanel:` origin, and Web limits it to the current grant's asset\nURL prefix. External network destinations remain blocked. CSP permits\n`wasm-unsafe-eval`, while JavaScript `unsafe-eval`, arbitr",
+        "wholeValueIncluded": false
+      }
+    ]
+  },
+  "oldFailedRuntimeNotReopened": true
+}

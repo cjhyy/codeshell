@@ -1,0 +1,25 @@
+{
+  "observedDiagnostics": [
+    {
+      "toolChunk": "9ab4bf",
+      "observedExitCode": 2,
+      "rawStderr": "rg: packages/cli/src: IO error for operation on packages/cli/src: No such file or directory (os error 2)\n",
+      "kind": "Wrong guessed inventory directory, metadata locator only; actual rg inventory then identified packages/tui/src/cli/main.ts",
+      "productOrCLIExecution": false
+    }
+  ],
+  "oldGateLimits": [
+    "Initial metadata projection selected coverage/ranges but omitted a scope field; direct row review of oldR20 scope established current web-format full static module and excluded it. No initial no-row was treated as unread",
+    "Selected translator path84/currentSHA1 units retained under100 cap; only explicit sameSHA inventory row and selected historical cause contexts interpreted, not all84 full semantic readings",
+    "Earlier rejected codex/web query caps80 remain visible, not semantic exhaustion"
+  ],
+  "rootTimingContext": "Frozen40 at first3696 snapshot; later formal41 switch reported by Root, source pins remained same; history not rewritten to include mutable41",
+  "scopeCorrections": [
+    "Initial same-name parallel-running-marker suspicion not filed: actual ordinary producer drains all tools before result emission",
+    "Dock component lists agents; actual content consumer is ui/App2145–2169, not the Dock render body",
+    "Public tui/index VERSION-only barrel is separate from CLI bin direct entry; no dead-helper inference from that public barrel alone"
+  ],
+  "noPriorFrozenArtifactsModified": true,
+  "productRuntimeFailures": [],
+  "gitCommands": 0
+}

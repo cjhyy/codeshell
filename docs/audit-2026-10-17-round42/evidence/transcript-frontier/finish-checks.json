@@ -1,0 +1,159 @@
+{
+  "finishedUTC": "2026-10-17T14:28:27.512393+00:00",
+  "sourceChecks": [
+    {
+      "path": "packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+      "bytes": 6622,
+      "sha256": "172784171e601f500bf74eb59870e1d1479b0ecb7a873707d2219e416cfe6d76",
+      "unchanged": true,
+      "coverage": "full"
+    },
+    {
+      "path": "packages/core/src/tool-system/builtin/agent.ts",
+      "bytes": 62377,
+      "sha256": "9fd165bc3d1819925fee6a639cdeb34644c394ea8e50fc0b5fed209a28572dca",
+      "unchanged": true,
+      "coverage": "selected"
+    },
+    {
+      "path": "packages/core/src/types.ts",
+      "bytes": 51788,
+      "sha256": "1cfe13fc9d18863adb721635d56b34ae627bb1fab0508675b034a4340b987bb5",
+      "unchanged": true,
+      "coverage": "selected"
+    },
+    {
+      "path": "packages/core/src/engine/turn-loop.ts",
+      "bytes": 108774,
+      "sha256": "9ccbcd28cdb100d7d879994c3839d3b53c46af01589e0475d6f75f1d7e750413",
+      "unchanged": true,
+      "coverage": "selected"
+    },
+    {
+      "path": "packages/core/src/tool-system/builtin/agent-registry.ts",
+      "bytes": 15679,
+      "sha256": "5fef48b6e619de7c1802e4cecb64c8af3f67366c48de67131222213ac20ffc84",
+      "unchanged": true,
+      "coverage": "selected"
+    },
+    {
+      "path": "packages/tui/src/ui/components/AgentDock.tsx",
+      "bytes": 7827,
+      "sha256": "6e798147a85168b0e87c44c905d0e519c99d90bcf6a2bded670b5470c1fa9677",
+      "unchanged": true,
+      "coverage": "selected"
+    },
+    {
+      "path": "packages/tui/src/ui/App.tsx",
+      "bytes": 90976,
+      "sha256": "f535b936c26ef217617ef42eae56f71efb5063f51a4775f8b1e201815795e6d8",
+      "unchanged": true,
+      "coverage": "selected"
+    },
+    {
+      "path": "packages/tui/src/ui/app-helpers.tsx",
+      "bytes": 11321,
+      "sha256": "1696995a266590dc467e827df622d3f60cdbb5a57161f1015955861f212fa3e7",
+      "unchanged": true,
+      "coverage": "selected"
+    },
+    {
+      "path": "packages/tui/src/ui/components/VirtualMessageList.tsx",
+      "bytes": 11173,
+      "sha256": "adaddadf3e29775206cc21847a22f7ed664e2e01bee07795a7dbe4421389f5dd",
+      "unchanged": true,
+      "coverage": "selected"
+    },
+    {
+      "path": "packages/core/src/engine/subagent-spawner.ts",
+      "bytes": 16481,
+      "sha256": "e29fa502236da73882808561f4e1338e3497ab692b9a5fc274cb3a3d4ef8552b",
+      "unchanged": true,
+      "coverage": "selected"
+    },
+    {
+      "path": "packages/core/src/engine/engine.ts",
+      "bytes": 210666,
+      "sha256": "cdbfc7a777e3e304b6d365988daf6a45ff24b7cd5b62f634e3b11908c701e2e0",
+      "unchanged": true,
+      "coverage": "selected"
+    },
+    {
+      "path": "packages/tui/src/cli/main.ts",
+      "bytes": 11626,
+      "sha256": "7a0a63bc7acbf23162480c2883bd5af26743459eff3c073fea787c7ce1e021ca",
+      "unchanged": true,
+      "coverage": "selected"
+    },
+    {
+      "path": "packages/tui/src/ui/index.tsx",
+      "bytes": 4514,
+      "sha256": "3266ee003327c3e22d1c325f0e83bfbae689672effb503aed6b01d6123e7d20d",
+      "unchanged": true,
+      "coverage": "selected"
+    },
+    {
+      "path": "packages/tui/src/cli/commands/repl.ts",
+      "bytes": 13991,
+      "sha256": "a5687423399c7dc9e840929d92197000269af05385e120d93fa1e4aee9b1c2dd",
+      "unchanged": true,
+      "coverage": "selected"
+    },
+    {
+      "path": "packages/tui/package.json",
+      "bytes": 2110,
+      "sha256": "93ea44cc43ef7392227bef9146901408a49d3acd31c6a852db710eeadfcfee21",
+      "unchanged": true,
+      "coverage": "selected"
+    },
+    {
+      "path": "docs/archive/review-2026-07-09/03-optimization-findings.md",
+      "bytes": 19225,
+      "sha256": "98fd44723ecd749b09cfbf60cfb0514b4b113dd5f9e1f04a5ee921ef28e8f043",
+      "unchanged": true,
+      "coverage": "selected"
+    },
+    {
+      "path": "packages/core/src/engine/query.ts",
+      "bytes": 4572,
+      "sha256": "074b342616085afc0fb527b916aeafe6af640298bbc5a5e9840735a3f7622953",
+      "unchanged": true,
+      "coverage": "navigation-matches-only"
+    },
+    {
+      "path": "packages/tui/src/index.ts",
+      "bytes": 297,
+      "sha256": "35f3a7b537d98e7568004f52d35b9962e3eaff185156554d0274bb68cb6436a3",
+      "unchanged": true,
+      "coverage": "navigation-matches-only"
+    },
+    {
+      "path": "packages/server/src/mobile-remote/codex-parse.ts",
+      "bytes": 5410,
+      "sha256": "a7a7604e92ea7fcde75a77a52f3d9d1925ce7d4ad3a8619d910cb61508e7483c",
+      "unchanged": true,
+      "coverage": "hash-only selection/exclusion"
+    },
+    {
+      "path": "packages/web/src/lib/format.ts",
+      "bytes": 5447,
+      "sha256": "c1c2d582d623ba99a738b7d43c483358e6826cae24010ef7994b5d4708310f33",
+      "unchanged": true,
+      "coverage": "hash-only selection/exclusion"
+    }
+  ],
+  "sourceChecksCount": 20,
+  "allSourceBytePinsStable": true,
+  "history": {
+    "original3696RowsPreserved": true,
+    "currentSameExcludedScopeFiles": 3696,
+    "added": [],
+    "removed": [],
+    "sharedByteChanges": [],
+    "missing": [],
+    "canonicalInventorySha256": "f0959874cafcb0e587d58c1606c64c4a1469e5fde86054894ab4226f687dd81a",
+    "scope": "Frozen40 and archives included; excludes41–44 even if Root later started formal41",
+    "endingMetadataNotNewSemanticReading": true
+  },
+  "productImportsFunctionsFixturesTestsNativeModelNetworkGit": 0
+}

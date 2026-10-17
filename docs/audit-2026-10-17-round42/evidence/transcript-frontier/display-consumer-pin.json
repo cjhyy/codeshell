@@ -1,0 +1,9 @@
+{
+  "path": "packages/tui/src/ui/App.tsx",
+  "bytes": 90976,
+  "sha256": "f535b936c26ef217617ef42eae56f71efb5063f51a4775f8b1e201815795e6d8",
+  "lineCount": 2318,
+  "pinUTC": "2026-10-17T14:17:14.712596+00:00",
+  "semanticRead": false,
+  "scope": "before precise actual agent transcript consumer search; not UI execution or old native experiment"
+}

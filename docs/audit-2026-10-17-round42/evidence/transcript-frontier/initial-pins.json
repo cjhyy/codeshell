@@ -1,0 +1,23 @@
+{
+  "context": "Root reports frozen40 included; no independent Git baseline verification",
+  "files": [
+    {
+      "path": "packages/server/src/mobile-remote/codex-parse.ts",
+      "bytes": 5410,
+      "sha256": "a7a7604e92ea7fcde75a77a52f3d9d1925ce7d4ad3a8619d910cb61508e7483c",
+      "lines": 137,
+      "pinnedUTC": "2026-10-17T14:13:42.805903+00:00",
+      "coverage": "hash-only before content review",
+      "semanticRead": false
+    },
+    {
+      "path": "packages/web/src/lib/format.ts",
+      "bytes": 5447,
+      "sha256": "c1c2d582d623ba99a738b7d43c483358e6826cae24010ef7994b5d4708310f33",
+      "lines": 140,
+      "pinnedUTC": "2026-10-17T14:13:42.808538+00:00",
+      "coverage": "hash-only before content review",
+      "semanticRead": false
+    }
+  ]
+}

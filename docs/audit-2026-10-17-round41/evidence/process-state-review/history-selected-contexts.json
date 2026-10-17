@@ -1,0 +1,181 @@
+{
+  "selectedUTC": "2026-10-17T14:07:19.124173+00:00",
+  "method": "All retained literal path/filename/SHA/state-contract contexts dedup by exact context text; none at160 cap",
+  "uniqueContexts": 3,
+  "rows": [
+    {
+      "context": "packages/server/src/panels/process-state.ts",
+      "locators": [
+        {
+          "group": "source_path",
+          "index": 0,
+          "path": "docs/audit-2026-10-16/inventory.json",
+          "jsonPointer": "/source_inventory/2050",
+          "line": 1
+        },
+        {
+          "group": "source_path",
+          "index": 1,
+          "path": "docs/audit-2026-10-17-round25/evidence/data-prep/inventory.json",
+          "jsonPointer": "/files/958",
+          "line": 1
+        },
+        {
+          "group": "source_path",
+          "index": 2,
+          "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+          "jsonPointer": "/files/3588/path",
+          "line": 1
+        },
+        {
+          "group": "source_path",
+          "index": 3,
+          "path": "docs/review-2026-10-12/validation/postdelivery-report-review/audit-a.raw.json",
+          "jsonPointer": "/module_inventory/84740d56/paths/79",
+          "line": 1
+        },
+        {
+          "group": "source_path",
+          "index": 4,
+          "path": "docs/review-2026-10-12/validation/postdelivery-report-review/audit-a.raw.json",
+          "jsonPointer": "/module_inventory/a66f4ef2/paths/79",
+          "line": 1
+        },
+        {
+          "group": "source_filename",
+          "index": 0,
+          "path": "docs/audit-2026-10-16/inventory.json",
+          "jsonPointer": "/source_inventory/2050",
+          "line": 1
+        },
+        {
+          "group": "source_filename",
+          "index": 1,
+          "path": "docs/audit-2026-10-17-round25/evidence/data-prep/inventory.json",
+          "jsonPointer": "/files/958",
+          "line": 1
+        },
+        {
+          "group": "source_filename",
+          "index": 2,
+          "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+          "jsonPointer": "/files/3588/path",
+          "line": 1
+        },
+        {
+          "group": "source_filename",
+          "index": 3,
+          "path": "docs/review-2026-10-12/validation/postdelivery-report-review/audit-a.raw.json",
+          "jsonPointer": "/module_inventory/84740d56/paths/79",
+          "line": 1
+        },
+        {
+          "group": "source_filename",
+          "index": 4,
+          "path": "docs/review-2026-10-12/validation/postdelivery-report-review/audit-a.raw.json",
+          "jsonPointer": "/module_inventory/a66f4ef2/paths/79",
+          "line": 1
+        },
+        {
+          "group": "state_contract",
+          "index": 0,
+          "path": "docs/audit-2026-10-16/inventory.json",
+          "jsonPointer": "/source_inventory/2050",
+          "line": 1
+        },
+        {
+          "group": "state_contract",
+          "index": 2,
+          "path": "docs/audit-2026-10-17-round25/evidence/data-prep/inventory.json",
+          "jsonPointer": "/files/958",
+          "line": 1
+        },
+        {
+          "group": "state_contract",
+          "index": 4,
+          "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+          "jsonPointer": "/files/3588/path",
+          "line": 1
+        },
+        {
+          "group": "state_contract",
+          "index": 7,
+          "path": "docs/review-2026-10-12/validation/postdelivery-report-review/audit-a.raw.json",
+          "jsonPointer": "/module_inventory/84740d56/paths/79",
+          "line": 1
+        },
+        {
+          "group": "state_contract",
+          "index": 8,
+          "path": "docs/review-2026-10-12/validation/postdelivery-report-review/audit-a.raw.json",
+          "jsonPointer": "/module_inventory/a66f4ef2/paths/79",
+          "line": 1
+        }
+      ]
+    },
+    {
+      "context": "9614623cb89fbd49914595b977e9ffae515966680b3a375115c1526b16ca2ca6",
+      "locators": [
+        {
+          "group": "source_sha",
+          "index": 0,
+          "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+          "jsonPointer": "/files/3588/sha256",
+          "line": 1
+        }
+      ]
+    },
+    {
+      "context": "packages/server/src/panels/process-state.test.ts",
+      "locators": [
+        {
+          "group": "state_contract",
+          "index": 1,
+          "path": "docs/audit-2026-10-17-round25/evidence/data-prep/inventory.json",
+          "jsonPointer": "/files/941",
+          "line": 1
+        },
+        {
+          "group": "state_contract",
+          "index": 3,
+          "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+          "jsonPointer": "/files/3587/path",
+          "line": 1
+        },
+        {
+          "group": "state_contract",
+          "index": 5,
+          "path": "docs/review-2026-10-12/validation/original-baseline-evidence-round28/independent-existing-tests.receipt.json",
+          "jsonPointer": "/groups/0/rawLogs/60/file",
+          "line": 1
+        },
+        {
+          "group": "state_contract",
+          "index": 6,
+          "path": "docs/review-2026-10-12/validation/original-baseline-evidence-round28/manifest.json",
+          "jsonPointer": "/logs/60/file",
+          "line": 1
+        },
+        {
+          "group": "state_contract",
+          "index": 9,
+          "path": "docs/review-2026-10-12/validation/server-web-results.json",
+          "jsonPointer": "/60/file",
+          "line": 1
+        }
+      ]
+    }
+  ],
+  "samePathShaRows": [
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+      "jsonPointer": "/files/3588",
+      "row": {
+        "path": "packages/server/src/panels/process-state.ts",
+        "bytes": 3867,
+        "lines": 127,
+        "sha256": "9614623cb89fbd49914595b977e9ffae515966680b3a375115c1526b16ca2ca6"
+      }
+    }
+  ]
+}

@@ -1,0 +1,86 @@
+{
+  "initialInventory": {
+    "discovered": 3706,
+    "included": 3696,
+    "excluded": 10,
+    "md": 1379,
+    "json": 2317,
+    "bytes": 149588497,
+    "jsonStringValues": 1130742,
+    "jsonScalarValues": 1704078,
+    "jsonParseErrors": [],
+    "archiveBySubstring": 175,
+    "includesFrozenRound40": true
+  },
+  "initialHitTotals": {
+    "source_path": 72,
+    "source_filename": 90,
+    "source_sha": 1,
+    "transcript_contract": 116
+  },
+  "initialRetained": {
+    "source_path": 72,
+    "source_filename": 90,
+    "source_sha": 1,
+    "transcript_contract": 116
+  },
+  "initialCapPerGroup": 160,
+  "initial47UniqueContextWindowsFullyRead": true,
+  "samePathShaRowsRead": 1,
+  "priorCoverageMeaning": "Only R28 inventory195line/6622B sameSHA row; not a full-semantic or never-read proof. Oldloaded-module/native attempts are historical navigation, not a current pass/body/import.",
+  "focusedCompleteInventoryFiles": 3696,
+  "focusedUnitHitTotals": {
+    "helper_names": 12,
+    "translator_revoke": 6,
+    "tui_revoke": 31
+  },
+  "focusedRetained": {
+    "helper_names": 12,
+    "translator_revoke": 6,
+    "tui_revoke": 31
+  },
+  "focusedCapPerGroup": 100,
+  "focusedContextWindowsRead": 30,
+  "focusedSelection": "All12helper_names +all6translator_revoke +tui_revoke indices0,2,4,5,6,10,11,16,25,26,27,29; 19otherTUI windows not read. Windows not always entire paragraph/value.",
+  "historicalDirectReads": [
+    {
+      "path": "docs/archive/review-2026-07-09/03-optimization-findings.md",
+      "bytes": 19225,
+      "sha256": "98fd44723ecd749b09cfbf60cfb0514b4b113dd5f9e1f04a5ee921ef28e8f043",
+      "selectedLineRanges": [
+        [
+          1,
+          35
+        ]
+      ],
+      "readLines": 35,
+      "pinSource": "history initial inventory before archive content read",
+      "role": "Prior same-family cause boundary only; not current product semantic source and no old tests executed"
+    },
+    {
+      "path": "docs/archive/review-2026-07-09/04-p1-deep-dive-and-fix-design.md",
+      "bytes": 55929,
+      "sha256": "d469df1a5e32c44154d7b5c0cdf20a15694221e17b1b19aa8ebfe2747a46a66d",
+      "selectedLineRanges": [
+        [
+          15,
+          45
+        ]
+      ],
+      "readLines": 31,
+      "pinSource": "history initial inventory before archive content read",
+      "role": "Prior same-family cause boundary only; not current product semantic source and no old tests executed"
+    }
+  ],
+  "oldCauseDecisions": [
+    "July09F01 explicitly ordinary Desktop reducer, core turn_N vs freshId and assistant_message-only seal; intro excludesTUI. Current stable correlation and replacement delta producer exists, but translator still treats tombstone as finalize. Same family, independently scoped consumer defect.",
+    "July09N03/oldmodule inventory notes translator finalizes tombstone but do not claim this partial revocation bug fixed or tested.",
+    "R20 StreamAttempt ordinary main-feed rollback/request filtering does not review this independent background translator consumer; currentTUI main tombstone explicitly skips agentId events.",
+    "Oct12remaining core internal retry failed-prefix issue concerns provider/facade retry returning success without outer tombstone. Current condition uses actual outer TurnLoop tombstone, a different producer/consumer cause; do not double count old issue.",
+    "Same-named tool_running hypothesis not pursued or classified; batch drain ordering supplies counterevidence."
+  ],
+  "archiveDefinition": "175 substringarchiv paths, not exact archive directory count.",
+  "endingDrift": 0,
+  "semanticExhaustionClaim": false,
+  "novelty": "Bounded full-inventory matching and selected old contexts support distinct TUI background translator consumer cause; Root owns final same-item classification."
+}

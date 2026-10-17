@@ -1,0 +1,80 @@
+{
+  "kind": "frozen independent metadata aggregate, self excluded",
+  "ownedDirectory": "/tmp/codeshell-audit-round41-process-aggregate-review",
+  "frozenAtUTC": "2026-10-17T14:25:22.682633+00:00",
+  "files": [
+    {
+      "path": "author-checks.initial.json",
+      "bytes": 16370,
+      "sha256": "a8d492e75295fd6f0b024eb2bce4d3ecbac998ae407052c2cbf21dbd6f24e49a"
+    },
+    {
+      "path": "author-input-artifact-pins.json",
+      "bytes": 3438,
+      "sha256": "279c1792b7766850b35077692ac9b75e4e698dcc292942e68008b3b2afaff886"
+    },
+    {
+      "path": "checks.json",
+      "bytes": 34496,
+      "sha256": "d3763bc6fbd2bf872dd4ed131216add6f85d2a5034d476e2abcebb5dc5e24ca0"
+    },
+    {
+      "path": "display-supplement-input-pins.json",
+      "bytes": 903,
+      "sha256": "f3bb250b05bcb32c7a3c27c7a99cc96295bb66c43a08225a7c3216117dcedc1e"
+    },
+    {
+      "path": "final-metadata-checks.json",
+      "bytes": 1317,
+      "sha256": "164584cd498612e8fc52b8252c386e1ef2c638f126566284302350b3abf6cf71"
+    },
+    {
+      "path": "metadata-check.correction.json",
+      "bytes": 4152,
+      "sha256": "8000843cf8840d0016323f65b579609b751f060494feb30281a3e0991cd77c53"
+    },
+    {
+      "path": "metadata-check.first-diagnostic.json",
+      "bytes": 563,
+      "sha256": "20ec251257e617d11c1b42801ce32cc60770d4f25567a3236eadd946f2dad7b6"
+    },
+    {
+      "path": "metadata-check.second-diagnostic.json",
+      "bytes": 3426,
+      "sha256": "dc02b428da03a29b4ea0efb65b2089dcaf7345a3159a37c024c49d03340bb54b"
+    },
+    {
+      "path": "review.md",
+      "bytes": 3297,
+      "sha256": "0ba11348ac91b03357022619d4ddfa9ca41268d0349ada36285adac3134a11e2"
+    },
+    {
+      "path": "reviewer-input-artifact-pins.json",
+      "bytes": 4942,
+      "sha256": "95a696c91cc3278290efbaa06ecc3cd6088d157e4c0ae1ddbd7a527ea8d23445"
+    }
+  ],
+  "fileCountExcludingSelf": 10,
+  "totalFilesIncludingSelf": 11,
+  "sourceReviewClaim": false,
+  "checksFilesEmpty": true,
+  "inputFiles": 42,
+  "receiptRecordsChecked": 39,
+  "relativeInputArtifactLinksChecked": 21,
+  "newClassification": {
+    "formal": 0,
+    "candidate": 0,
+    "related": 0
+  },
+  "newProductSemanticReadLines": 0,
+  "productSourceFileReads": 0,
+  "GitCommands": 0,
+  "productRuns": 0,
+  "repoWrites": 0,
+  "ownMetadataReaderDiagnostics": 2,
+  "ownFalseDisplayMismatchRetracted": true,
+  "originalFrozenPeerManifestConsistentUsingBothFields": true,
+  "formalBaseline": null,
+  "RootOwnsLaterFormal41HistoryAndGitBinding": true,
+  "oldUtf8AndOldAggregatesModified": false
+}

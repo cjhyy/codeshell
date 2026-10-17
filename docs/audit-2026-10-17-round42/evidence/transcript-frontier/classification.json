@@ -1,0 +1,25 @@
+{
+  "proposalAlias": "TRANSCRIPT-R44-C1",
+  "severitySuggestion": "P3",
+  "authorClassification": {
+    "formal": 0,
+    "candidate": 1,
+    "newRelated": 0
+  },
+  "sourceFinding": "Background transcript translator seals tombstoned partial assistant text instead of revoking it, so active TUI child details can retain revoked text during fallback/replacement",
+  "ordinaryCondition": "Background subagent Engine streaming response emits at least one ordinary text delta, then a recoverable non-abort streaming failure takes the built-in non-streaming fallback; user views active agent detail",
+  "rootReportedFormalIntegrationIntent": {
+    "id": "TRANSCRIPT-R42-01",
+    "sameFindingAsAlias": true,
+    "countOnce": true,
+    "notAlreadyClaimedFormalByThisAuthor": true
+  },
+  "runtimeValidated": false,
+  "oldFamily": "July09 F-01 desktop fallback ID correlation+final upsert mismatch; current source uses stable IDs and replacement deltas. This leaf is a separate active TUI consumer that never uses messageId and treats tombstone as completion. Preserve relation, do not reissue old F01 desktop issue.",
+  "notClaimed": [
+    "Observed real provider failure or UI frames",
+    "Persistent/raw canonical session corruption",
+    "All TUI/display/model fallback behavior audited",
+    "Independent peer opinions counted as additional issues"
+  ]
+}

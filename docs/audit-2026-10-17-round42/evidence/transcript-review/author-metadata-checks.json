@@ -1,0 +1,347 @@
+{
+  "checkedUTC": "2026-10-17T14:33:05.671180+00:00",
+  "authorArtifactsIncludingReceipt": 27,
+  "authorReceiptRows": [
+    {
+      "path": "actual-ui-entry-pins.json",
+      "bytes": 641,
+      "sha256": "945d1328adf8718db7a3e2c8c59e0cba10c06f68e10c64c3c82089c51a92d35f",
+      "matches": true
+    },
+    {
+      "path": "cause-history-method.py",
+      "bytes": 3160,
+      "sha256": "1ed5ea46b75a6b7290e36dfd53e3aafe3cc1645d821bba46bf2eaf2e00edec61",
+      "matches": true
+    },
+    {
+      "path": "cause-history.json",
+      "bytes": 51369,
+      "sha256": "63f03abddb91e12e145c66e7074a7b15b74541db5c7380569c5239105b5c26a7",
+      "matches": true
+    },
+    {
+      "path": "chain-initial-pins.json",
+      "bytes": 942,
+      "sha256": "bd833d5a074dc8859135d7dc3c7309b9332a59c7b8b29259703af51838b15a12",
+      "matches": true
+    },
+    {
+      "path": "classification.json",
+      "bytes": 1350,
+      "sha256": "060e23cabce0ac8329cfd6f1813a32f560de5ac494f7693be4d3e0d43d081e31",
+      "matches": true
+    },
+    {
+      "path": "coverage-gate-rows.json",
+      "bytes": 217032,
+      "sha256": "cedb82a1ae6e9c2b8530fd59f6bdb67c7bde1353388fc9c697c0810e66328075",
+      "matches": true
+    },
+    {
+      "path": "decisions.json",
+      "bytes": 7471,
+      "sha256": "9bd59b6230587c526c2e1abf5c0f66598a02d8809eaa137aa4e66b2f53dff147",
+      "matches": true
+    },
+    {
+      "path": "display-consumer-pin.json",
+      "bytes": 348,
+      "sha256": "871b4bb48b7c86d0043943046d8359863f24b088b1043cc290887743201dd745",
+      "matches": true
+    },
+    {
+      "path": "engine-entry-pins.json",
+      "bytes": 673,
+      "sha256": "c9618c87657eb43cf0baad5062ba0367ad93620e216d9f0fd22ebf8f922aa078",
+      "matches": true
+    },
+    {
+      "path": "finish-checks.json",
+      "bytes": 5305,
+      "sha256": "bb719539956a0c2e49bf2b689739805bf7ec4e0f735ec6311c96bfacb3b50815",
+      "matches": true
+    },
+    {
+      "path": "history-contexts.json",
+      "bytes": 114124,
+      "sha256": "b579cdb280d0ab316d85fce27b85e658bb6bd56cd84d26347afd869bdb7456f4",
+      "matches": true
+    },
+    {
+      "path": "history-method.py",
+      "bytes": 4039,
+      "sha256": "8813ee38cee463692733ac46ea0263f63be04e1ac690489bb9c10501a5c4f936",
+      "matches": true
+    },
+    {
+      "path": "history.json",
+      "bytes": 732826,
+      "sha256": "7f6e1871319cee24d0eb14c78eebace6d4db98dcd473ae93fd9c6462c526a05f",
+      "matches": true
+    },
+    {
+      "path": "initial-pins.json",
+      "bytes": 771,
+      "sha256": "2c72676e33b9c15f96d7f8338f93ed1e4423176bdd3cf899e296305781ee0ddf",
+      "matches": true
+    },
+    {
+      "path": "metadata-notes.json",
+      "bytes": 1617,
+      "sha256": "00cb8d07687a577d5c4211e6924c4d7fd6a85fea5e984566e27d3ddacce73089",
+      "matches": true
+    },
+    {
+      "path": "render-consumer-pins.json",
+      "bytes": 695,
+      "sha256": "30a0655486dfc10d2092482485d2d8384f360f0c558de6b08ac11658648920f3",
+      "matches": true
+    },
+    {
+      "path": "repl-entry-pin.json",
+      "bytes": 334,
+      "sha256": "4c6f41915bc03d8bcadfc146b03f900667e4dacc483435c407b1d7a8194560b1",
+      "matches": true
+    },
+    {
+      "path": "report.md",
+      "bytes": 6813,
+      "sha256": "dd1ba43bb51f45ca2300112a3c46ac3ea81d983c9c01dda0dde1dcd55a9ba0a3",
+      "matches": true
+    },
+    {
+      "path": "selected-history-method.py",
+      "bytes": 3067,
+      "sha256": "ff822142a8d05550fcbd4619239521b429ba928cc7288eb22532855d6cb539f9",
+      "matches": true
+    },
+    {
+      "path": "selected-history.json",
+      "bytes": 52669,
+      "sha256": "58ac76f872b7f7e12498cce9a04473db1910b90b11cafb8065d993aa1881c215",
+      "matches": true
+    },
+    {
+      "path": "selected-leaf-pin.json",
+      "bytes": 461,
+      "sha256": "fa1c49f507e6fccc2920748e865aa4232404edced1728175bcfb4b920d697711",
+      "matches": true
+    },
+    {
+      "path": "source-excerpts.json",
+      "bytes": 92198,
+      "sha256": "717b27c7b186997a6c38ff167e7cf5378e002888cfae5ec61c49b366bc62ceb4",
+      "matches": true
+    },
+    {
+      "path": "source-manifest.json",
+      "bytes": 24611,
+      "sha256": "d0a7b31fb0f173907178aa3cbc85856251394f4557a036b38011222b3128e784",
+      "matches": true
+    },
+    {
+      "path": "spawner-pin.json",
+      "bytes": 360,
+      "sha256": "7380b52dbf105665cb2695fa7b8a49cf7e20a60cb63b18b9b9df53eee23ee4c9",
+      "matches": true
+    },
+    {
+      "path": "storage-consumer-pins.json",
+      "bytes": 685,
+      "sha256": "3ceaa3a44b2a43274c96ad3f6d535ed55adeab0a096fd7316dfdf7289ddab224",
+      "matches": true
+    },
+    {
+      "path": "tui-entry-pins.json",
+      "bytes": 636,
+      "sha256": "e1a34676d92fe702a86d0480a1c8774bf3fdebfcd833dece15c29d1250c49862",
+      "matches": true
+    }
+  ],
+  "authorArtifactSetMatches": true,
+  "allAuthorArtifactBytesMatch": true,
+  "authorReportReadAfterIndependentSourceOpinionAndFreeze": true,
+  "authorSourceHashOnlyChecks": [
+    {
+      "manifestCollection": "files",
+      "path": "packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+      "bytes": 6622,
+      "sha256": "172784171e601f500bf74eb59870e1d1479b0ecb7a873707d2219e416cfe6d76",
+      "matches": true,
+      "semanticReadingAdopted": false
+    },
+    {
+      "manifestCollection": "files",
+      "path": "packages/core/src/tool-system/builtin/agent.ts",
+      "bytes": 62377,
+      "sha256": "9fd165bc3d1819925fee6a639cdeb34644c394ea8e50fc0b5fed209a28572dca",
+      "matches": true,
+      "semanticReadingAdopted": false
+    },
+    {
+      "manifestCollection": "files",
+      "path": "packages/core/src/types.ts",
+      "bytes": 51788,
+      "sha256": "1cfe13fc9d18863adb721635d56b34ae627bb1fab0508675b034a4340b987bb5",
+      "matches": true,
+      "semanticReadingAdopted": false
+    },
+    {
+      "manifestCollection": "files",
+      "path": "packages/core/src/engine/turn-loop.ts",
+      "bytes": 108774,
+      "sha256": "9ccbcd28cdb100d7d879994c3839d3b53c46af01589e0475d6f75f1d7e750413",
+      "matches": true,
+      "semanticReadingAdopted": false
+    },
+    {
+      "manifestCollection": "files",
+      "path": "packages/core/src/tool-system/builtin/agent-registry.ts",
+      "bytes": 15679,
+      "sha256": "5fef48b6e619de7c1802e4cecb64c8af3f67366c48de67131222213ac20ffc84",
+      "matches": true,
+      "semanticReadingAdopted": false
+    },
+    {
+      "manifestCollection": "files",
+      "path": "packages/tui/src/ui/components/AgentDock.tsx",
+      "bytes": 7827,
+      "sha256": "6e798147a85168b0e87c44c905d0e519c99d90bcf6a2bded670b5470c1fa9677",
+      "matches": true,
+      "semanticReadingAdopted": false
+    },
+    {
+      "manifestCollection": "files",
+      "path": "packages/tui/src/ui/App.tsx",
+      "bytes": 90976,
+      "sha256": "f535b936c26ef217617ef42eae56f71efb5063f51a4775f8b1e201815795e6d8",
+      "matches": true,
+      "semanticReadingAdopted": false
+    },
+    {
+      "manifestCollection": "files",
+      "path": "packages/tui/src/ui/app-helpers.tsx",
+      "bytes": 11321,
+      "sha256": "1696995a266590dc467e827df622d3f60cdbb5a57161f1015955861f212fa3e7",
+      "matches": true,
+      "semanticReadingAdopted": false
+    },
+    {
+      "manifestCollection": "files",
+      "path": "packages/tui/src/ui/components/VirtualMessageList.tsx",
+      "bytes": 11173,
+      "sha256": "adaddadf3e29775206cc21847a22f7ed664e2e01bee07795a7dbe4421389f5dd",
+      "matches": true,
+      "semanticReadingAdopted": false
+    },
+    {
+      "manifestCollection": "files",
+      "path": "packages/core/src/engine/subagent-spawner.ts",
+      "bytes": 16481,
+      "sha256": "e29fa502236da73882808561f4e1338e3497ab692b9a5fc274cb3a3d4ef8552b",
+      "matches": true,
+      "semanticReadingAdopted": false
+    },
+    {
+      "manifestCollection": "files",
+      "path": "packages/core/src/engine/engine.ts",
+      "bytes": 210666,
+      "sha256": "cdbfc7a777e3e304b6d365988daf6a45ff24b7cd5b62f634e3b11908c701e2e0",
+      "matches": true,
+      "semanticReadingAdopted": false
+    },
+    {
+      "manifestCollection": "files",
+      "path": "packages/tui/src/cli/main.ts",
+      "bytes": 11626,
+      "sha256": "7a0a63bc7acbf23162480c2883bd5af26743459eff3c073fea787c7ce1e021ca",
+      "matches": true,
+      "semanticReadingAdopted": false
+    },
+    {
+      "manifestCollection": "files",
+      "path": "packages/tui/src/ui/index.tsx",
+      "bytes": 4514,
+      "sha256": "3266ee003327c3e22d1c325f0e83bfbae689672effb503aed6b01d6123e7d20d",
+      "matches": true,
+      "semanticReadingAdopted": false
+    },
+    {
+      "manifestCollection": "files",
+      "path": "packages/tui/src/cli/commands/repl.ts",
+      "bytes": 13991,
+      "sha256": "a5687423399c7dc9e840929d92197000269af05385e120d93fa1e4aee9b1c2dd",
+      "matches": true,
+      "semanticReadingAdopted": false
+    },
+    {
+      "manifestCollection": "files",
+      "path": "packages/tui/package.json",
+      "bytes": 2110,
+      "sha256": "93ea44cc43ef7392227bef9146901408a49d3acd31c6a852db710eeadfcfee21",
+      "matches": true,
+      "semanticReadingAdopted": false
+    },
+    {
+      "manifestCollection": "files",
+      "path": "docs/archive/review-2026-07-09/03-optimization-findings.md",
+      "bytes": 19225,
+      "sha256": "98fd44723ecd749b09cfbf60cfb0514b4b113dd5f9e1f04a5ee921ef28e8f043",
+      "matches": true,
+      "semanticReadingAdopted": false
+    },
+    {
+      "manifestCollection": "navigationOnlyFiles",
+      "path": "packages/core/src/engine/query.ts",
+      "bytes": 4572,
+      "sha256": "074b342616085afc0fb527b916aeafe6af640298bbc5a5e9840735a3f7622953",
+      "matches": true,
+      "semanticReadingAdopted": false
+    },
+    {
+      "manifestCollection": "navigationOnlyFiles",
+      "path": "packages/tui/src/index.ts",
+      "bytes": 297,
+      "sha256": "35f3a7b537d98e7568004f52d35b9962e3eaff185156554d0274bb68cb6436a3",
+      "matches": true,
+      "semanticReadingAdopted": false
+    },
+    {
+      "manifestCollection": "hashOnlyFiles",
+      "path": "packages/server/src/mobile-remote/codex-parse.ts",
+      "bytes": 5410,
+      "sha256": "a7a7604e92ea7fcde75a77a52f3d9d1925ce7d4ad3a8619d910cb61508e7483c",
+      "matches": true,
+      "semanticReadingAdopted": false
+    },
+    {
+      "manifestCollection": "hashOnlyFiles",
+      "path": "packages/web/src/lib/format.ts",
+      "bytes": 5447,
+      "sha256": "c1c2d582d623ba99a738b7d43c483358e6826cae24010ef7994b5d4708310f33",
+      "matches": true,
+      "semanticReadingAdopted": false
+    }
+  ],
+  "sourceCheckRows": 20,
+  "uniqueSourcePaths": 20,
+  "allAuthorSourceBytesMatch": true,
+  "authorSourceCounts": {
+    "sourceSemanticRows": 16,
+    "currentProductAndEntryRows": 15,
+    "historicalReportRows": 1,
+    "currentSemanticLines": 749,
+    "oldReportSemanticLines": 8,
+    "totalSemanticLines": 757,
+    "displayedLines": 1791,
+    "navigationOnlyFiles": 2,
+    "hashOnlyExcludedFiles": 2,
+    "testSourceLines": 0,
+    "testRuns": 0
+  },
+  "authorClassification": "0formal1candidate0related aliasTRANSCRIPT-R44-C1; Rootformal42sameitem promotion separate",
+  "sourceCoverageBorrowed": false,
+  "limits": "Top-level source/navigation/hash collections checked mechanically. This does not adopt author semantic lines or oldruntime tests as independent proof.",
+  "relativeAuthorLinkAliasRequired": false
+}

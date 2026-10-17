@@ -1,0 +1,880 @@
+{
+  "translator": [
+    {
+      "path": "docs/archive/core-complete-review.md",
+      "locator": "markdown-text",
+      "valueChars": 96025,
+      "offset": 0,
+      "contextStart": 0,
+      "contextEnd": 750,
+      "text": "# CodeShell Core 完整阅读合并版\n\n> 由 `core-deep-dive.md` 与 `core-module-reference.md` 合并生成，方便一次打开审阅。\n\n---\n\n# 来源文件：`docs/core-deep-dive.md`\n\n# `packages/core` 深度代码阅读文档\n\n> 状态：初稿骨架，后续逐节填充。\n> 范围：`packages/core/src/**`，从公开入口、运行链路、协议链路、LLM 链路、工具链路、上下文/会话/设置/插件/日志等模块逐层拆解。\n\n## 1. 总览\n\n`packages/core` 是 CodeShell 的领域无关核心包，目标是把“Agent 执行引擎”从 CLI/TUI/UI 产品层剥离出来。它主要负责：\n\n- 接收任务输入，维护 session/transcript，并驱动多轮 LLM + tool loop。\n- 管理模型 provider、模型列表、capability、streaming、usage/cost。\n- 管理工具注册、工具执行、权限审批、hook、MCP 工具和 guard。\n- 提供 JSON-RPC protocol，让 UI/CLI/worker 可以通过 `AgentClient` / `AgentServer` 调用引擎。\n- 提供 managed run 层，即 `RunManager`，用于后台任务、自动化、队列、checkpoint、approval/input resume。\n- 管理 settings、prompt sections、skills、plugins、memory、logging、session 文件。\n\n核心调用链可以理解为三层：\n\n`",
+      "wholeValueIncluded": false
+    },
+    {
+      "path": "docs/archive/core-risk-signal-index.md",
+      "locator": "markdown-text",
+      "valueChars": 13440,
+      "offset": 0,
+      "contextStart": 0,
+      "contextEnd": 750,
+      "text": "# Core 风险信号逐文件索引\n\n- 扫描文件数：290\n- 有风险关键词命中的文件数：208\n\n| 文件 | 风险关键词计数 |\n|---|---|\n| `agent/agent-definition-registry.ts` | `join(`×1 |\n| `agent/agent-definition.ts` | `exec`×1, `throw new Error`×4 |\n| `arena/arena.ts` | `exec`×2, `throw new Error`×1 |\n| `arena/context/context-tools.ts` | `catch {`×3, `join(`×4, `exec`×19, `timeout`×1 |\n| `arena/digest-builder.ts` | `join(`×2 |\n| `arena/iterate/convergence.ts` | `timeout`×1 |\n| `arena/iterate/formats/index.ts` | `join(`×5 |\n| `arena/iterate/iterative-arena.ts` | `throw new Error`×3 |\n| `arena/iterate/parse.ts` | `catch {`×3, `exec`×1 |\n| `arena/iterate/phases/argue.ts` | `exec`×2 |\n| `arena/iterate/phases/tournament.ts` | `throw new Error`×1 |\n| `arena/iterate/tools/web-tools.ts` | `exec`×1 |\n| `",
+      "wholeValueIncluded": false
+    },
+    {
+      "path": "docs/archive/review-2026-07-09/07-new-observations-verification.md",
+      "locator": "markdown-text",
+      "valueChars": 21361,
+      "offset": 12837,
+      "contextStart": 12487,
+      "contextEnd": 13587,
+      "text": "in/mobile-remote/room-manager.ts:438` 到 `packages/desktop/src/main/mobile-remote/room-manager.ts:439`：room 持久化 `turn_end`。\n- `packages/desktop/src/renderer/lib/messageMappers.ts:58`：room `turn_end` 映射成 `turn_complete`。\n- `packages/desktop/src/renderer/lib/messageMappers.ts:117`：CC history replay 为 assistant message 补 `turn_complete(completed)`。\n- `packages/core/src/tool-system/builtin/agent-transcript-translator.ts:169` 到 `packages/core/src/tool-system/builtin/agent-transcript-translator.ts:170`：后台 agent transcript translator 消费 `turn_complete` / `tombstone` 作为封口信号，不是 producer。\n\n本地 renderer 终态 marker 命中：\n\n- `packages/desktop/src/renderer/App.tsx:2182`：Engine early-return 失败且没有 stream terminal 时，本地 dispatch `turn_end(error)`。\n- `packages/desktop/src/renderer/App.tsx:2469`：用户 Stop 时，本地 dispatch `turn_end(stopped)`。\n- `packages/desktop/src/renderer/transcriptsReducer.ts:45` 到 `packages/desktop/src/renderer/transcriptsReducer.ts:49`：定义本地 `turn_end` action。\n- `packages/desktop/src/renderer/transcriptsReducer.ts:122` 到 `packages/desktop/src/renderer/transcriptsReducer.ts:123`：本地 `turn_end`",
+      "wholeValueIncluded": false
+    },
+    {
+      "path": "docs/archive/subagent-design-comparison-2026-05-27.md",
+      "locator": "markdown-text",
+      "valueChars": 5303,
+      "offset": 0,
+      "contextStart": 0,
+      "contextEnd": 750,
+      "text": "# 子 Agent 设计对比与改进建议\n\n> 2026-05-27 · 对比 Codex / Claude Code / OpenCode 的子 agent 机制，针对 codeshell 现状给出可落地的改进点。\n> 范围：机制对比 + 具体改进建议，不含代码实现。\n\n---\n\n## 1. codeshell 现状速览\n\n源码位置：`packages/core/src/tool-system/builtin/`（`agent.ts` / `agent-registry.ts` / `arena.ts` / `agent-notifications.ts` / `agent-transcript-translator.ts`）、`engine/engine.ts`、`prompt/sections/orchestration.md`。\n\n核心事实：\n\n- **派发**：`Agent(description, prompt, name?, maxTurns?, run_in_background?)` 工具。支持同步（阻塞父级）和后台（`run_in_background`）两种模式。同一条 LLM 消息里多个 `Agent` 调用会并行执行。\n- **定义方式**：**没有 agent 定义注册表**。每次调用都是临时（ephemeral）的——`name` / `description` / `prompt` 全部是调用时传入的字符串参数。`agent-registry.ts` 只存运行时元数据（id、status、时间戳、abort handle），不存\"agent 类型定义\"。\n- **上下文隔离**：每个子 agent 是一个全新的 `Engine` 实例（`engi",
+      "wholeValueIncluded": false
+    },
+    {
+      "path": "docs/audit-2026-10-16/inventory.json",
+      "locator": "/source_inventory/636",
+      "valueChars": 68,
+      "offset": 0,
+      "contextStart": 0,
+      "contextEnd": 68,
+      "text": "packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round20/evidence/streamattempt-dedup.json",
+      "locator": "/contexts/stream_revoke/4/context",
+      "valueChars": 128,
+      "offset": 0,
+      "contextStart": 0,
+      "contextEnd": 128,
+      "text": "| `agent-transcript-translator.ts` | 子代理 stream → transcript/display | 消费 stream events | 对 `turn_complete`/tombstone 等做生命周期处理 |",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round25/evidence/data-prep/inventory.json",
+      "locator": "/files/1308",
+      "valueChars": 68,
+      "offset": 0,
+      "contextStart": 0,
+      "contextEnd": 68,
+      "text": "packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+      "locator": "/files/1323/path",
+      "valueChars": 68,
+      "offset": 0,
+      "contextStart": 0,
+      "contextEnd": 68,
+      "text": "packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round29/evidence/room-dedup.json",
+      "locator": "/contexts/history-mapping/2/context",
+      "valueChars": 778,
+      "offset": 328,
+      "contextStart": 0,
+      "contextEnd": 778,
+      "text": "manager.ts:438` 到 `packages/desktop/src/main/mobile-remote/room-manager.ts:439`：room 持久化 `turn_end`。\n- `packages/desktop/src/renderer/lib/messageMappers.ts:58`：room `turn_end` 映射成 `turn_complete`。\n- `packages/desktop/src/renderer/lib/messageMappers.ts:117`：CC history replay 为 assistant message 补 `turn_complete(completed)`。\n- `packages/core/src/tool-system/builtin/agent-transcript-translator.ts:169` 到 `packages/core/src/tool-system/builtin/agent-transcript-translator.ts:170`：后台 agent transcript translator 消费 `turn_complete` / `tombstone` 作为封口信号，不是 producer。\n\n本地 renderer 终态 marker 命中：\n\n- `packages/desktop/src/renderer/App.tsx:2182`：Engine early-return 失败且没有 stream terminal 时，本地 dispatch `turn_end(error)`。\n- `packages/desktop/src/renderer/App.tsx:2469`：用户 Stop 时，本地 dispa",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round6/evidence/skills-dedup-corpus.json",
+      "locator": "/hits/106/text",
+      "valueChars": 209,
+      "offset": 0,
+      "contextStart": 0,
+      "contextEnd": 209,
+      "text": "源码位置：`packages/core/src/tool-system/builtin/`（`agent.ts` / `agent-registry.ts` / `arena.ts` / `agent-notifications.ts` / `agent-transcript-translator.ts`）、`engine/engine.ts`、`prompt/sections/orchestration.md`。",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round7/evidence/root-dedup.json",
+      "locator": "/matches/50/excerpt",
+      "valueChars": 97,
+      "offset": 0,
+      "contextStart": 0,
+      "contextEnd": 97,
+      "text": "式化**：现状只能等完成整块回传。可参考 `agent-transcript-translator.ts` 已有的 StreamEvent→ChatEntry 翻译，把增量结果也喂给父级/UI。",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+      "locator": "/hits/23/matches/26/text",
+      "valueChars": 128,
+      "offset": 0,
+      "contextStart": 0,
+      "contextEnd": 128,
+      "text": "| `agent-transcript-translator.ts` | 子代理 stream → transcript/display | 消费 stream events | 对 `turn_complete`/tombstone 等做生命周期处理 |",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+      "locator": "/hits/34/matches/1/text",
+      "valueChars": 69,
+      "offset": 0,
+      "contextStart": 0,
+      "contextEnd": 69,
+      "text": "| `tool-system/builtin/agent-transcript-translator.ts` | `as any`×7 |",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+      "locator": "/hits/49/matches/4/text",
+      "valueChars": 237,
+      "offset": 3,
+      "contextStart": 0,
+      "contextEnd": 237,
+      "text": "- `packages/core/src/tool-system/builtin/agent-transcript-translator.ts:169` 到 `packages/core/src/tool-system/builtin/agent-transcript-translator.ts:170`：后台 agent transcript translator 消费 `turn_complete` / `tombstone` 作为封口信号，不是 producer。",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+      "locator": "/hits/60/matches/0/text",
+      "valueChars": 209,
+      "offset": 0,
+      "contextStart": 0,
+      "contextEnd": 209,
+      "text": "源码位置：`packages/core/src/tool-system/builtin/`（`agent.ts` / `agent-registry.ts` / `arena.ts` / `agent-notifications.ts` / `agent-transcript-translator.ts`）、`engine/engine.ts`、`prompt/sections/orchestration.md`。",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+      "locator": "/hits/60/matches/3/text",
+      "valueChars": 114,
+      "offset": 0,
+      "contextStart": 0,
+      "contextEnd": 114,
+      "text": "4. **后台 agent 结果流式化**：现状只能等完成整块回传。可参考 `agent-transcript-translator.ts` 已有的 StreamEvent→ChatEntry 翻译，把增量结果也喂给父级/UI。",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+      "locator": "/hits/80/matches/1/text",
+      "valueChars": 68,
+      "offset": 0,
+      "contextStart": 0,
+      "contextEnd": 68,
+      "text": "packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+      "locator": "/hits/108/matches/2/text",
+      "valueChars": 209,
+      "offset": 0,
+      "contextStart": 0,
+      "contextEnd": 209,
+      "text": "源码位置：`packages/core/src/tool-system/builtin/`（`agent.ts` / `agent-registry.ts` / `arena.ts` / `agent-notifications.ts` / `agent-transcript-translator.ts`）、`engine/engine.ts`、`prompt/sections/orchestration.md`。",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+      "locator": "/hits/122/matches/0/text",
+      "valueChars": 97,
+      "offset": 0,
+      "contextStart": 0,
+      "contextEnd": 97,
+      "text": "式化**：现状只能等完成整块回传。可参考 `agent-transcript-translator.ts` 已有的 StreamEvent→ChatEntry 翻译，把增量结果也喂给父级/UI。",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+      "locator": "/hits/211/matches/1/text",
+      "valueChars": 139,
+      "offset": 71,
+      "contextStart": 0,
+      "contextEnd": 139,
+      "text": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+      "locator": "/hits/211/matches/3/text",
+      "valueChars": 139,
+      "offset": 71,
+      "contextStart": 0,
+      "contextEnd": 139,
+      "text": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+      "locator": "/hits/211/matches/5/text",
+      "valueChars": 139,
+      "offset": 71,
+      "contextStart": 0,
+      "contextEnd": 139,
+      "text": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+      "locator": "/hits/211/matches/7/text",
+      "valueChars": 139,
+      "offset": 71,
+      "contextStart": 0,
+      "contextEnd": 139,
+      "text": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+      "locator": "/hits/211/matches/9/text",
+      "valueChars": 139,
+      "offset": 71,
+      "contextStart": 0,
+      "contextEnd": 139,
+      "text": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+      "locator": "/hits/211/matches/11/text",
+      "valueChars": 139,
+      "offset": 71,
+      "contextStart": 0,
+      "contextEnd": 139,
+      "text": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+      "locator": "/hits/211/matches/13/text",
+      "valueChars": 139,
+      "offset": 71,
+      "contextStart": 0,
+      "contextEnd": 139,
+      "text": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+      "locator": "/hits/214/matches/1/text",
+      "valueChars": 131,
+      "offset": 63,
+      "contextStart": 0,
+      "contextEnd": 131,
+      "text": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+      "locator": "/hits/214/matches/3/text",
+      "valueChars": 131,
+      "offset": 63,
+      "contextStart": 0,
+      "contextEnd": 131,
+      "text": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+      "locator": "/hits/214/matches/5/text",
+      "valueChars": 131,
+      "offset": 63,
+      "contextStart": 0,
+      "contextEnd": 131,
+      "text": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+      "locator": "/hits/214/matches/7/text",
+      "valueChars": 131,
+      "offset": 63,
+      "contextStart": 0,
+      "contextEnd": 131,
+      "text": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+      "locator": "/hits/214/matches/9/text",
+      "valueChars": 131,
+      "offset": 63,
+      "contextStart": 0,
+      "contextEnd": 131,
+      "text": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+      "locator": "/hits/214/matches/11/text",
+      "valueChars": 131,
+      "offset": 63,
+      "contextStart": 0,
+      "contextEnd": 131,
+      "text": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+      "locator": "/hits/214/matches/13/text",
+      "valueChars": 131,
+      "offset": 63,
+      "contextStart": 0,
+      "contextEnd": 131,
+      "text": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+      "locator": "/hits/225/matches/1/text",
+      "valueChars": 131,
+      "offset": 63,
+      "contextStart": 0,
+      "contextEnd": 131,
+      "text": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+      "locator": "/hits/226/matches/1/text",
+      "valueChars": 131,
+      "offset": 63,
+      "contextStart": 0,
+      "contextEnd": 131,
+      "text": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+      "locator": "/hits/226/matches/3/text",
+      "valueChars": 131,
+      "offset": 63,
+      "contextStart": 0,
+      "contextEnd": 131,
+      "text": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+      "locator": "/hits/226/matches/5/text",
+      "valueChars": 131,
+      "offset": 63,
+      "contextStart": 0,
+      "contextEnd": 131,
+      "text": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+      "locator": "/hits/226/matches/7/text",
+      "valueChars": 131,
+      "offset": 63,
+      "contextStart": 0,
+      "contextEnd": 131,
+      "text": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+      "locator": "/hits/226/matches/9/text",
+      "valueChars": 131,
+      "offset": 63,
+      "contextStart": 0,
+      "contextEnd": 131,
+      "text": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+      "locator": "/hits/226/matches/11/text",
+      "valueChars": 131,
+      "offset": 63,
+      "contextStart": 0,
+      "contextEnd": 131,
+      "text": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+      "locator": "/hits/226/matches/13/text",
+      "valueChars": 131,
+      "offset": 63,
+      "contextStart": 0,
+      "contextEnd": 131,
+      "text": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+      "locator": "/hits/227/matches/1/text",
+      "valueChars": 131,
+      "offset": 63,
+      "contextStart": 0,
+      "contextEnd": 131,
+      "text": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+      "locator": "/hits/228/matches/1/text",
+      "valueChars": 131,
+      "offset": 63,
+      "contextStart": 0,
+      "contextEnd": 131,
+      "text": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+      "locator": "/hits/228/matches/3/text",
+      "valueChars": 131,
+      "offset": 63,
+      "contextStart": 0,
+      "contextEnd": 131,
+      "text": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+      "locator": "/hits/228/matches/5/text",
+      "valueChars": 131,
+      "offset": 63,
+      "contextStart": 0,
+      "contextEnd": 131,
+      "text": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+      "locator": "/hits/228/matches/7/text",
+      "valueChars": 131,
+      "offset": 63,
+      "contextStart": 0,
+      "contextEnd": 131,
+      "text": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+      "locator": "/hits/228/matches/9/text",
+      "valueChars": 131,
+      "offset": 63,
+      "contextStart": 0,
+      "contextEnd": 131,
+      "text": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+      "locator": "/hits/229/matches/1/text",
+      "valueChars": 131,
+      "offset": 63,
+      "contextStart": 0,
+      "contextEnd": 131,
+      "text": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json",
+      "locator": "/hits/320/matches/1/text",
+      "valueChars": 50,
+      "offset": 0,
+      "contextStart": 0,
+      "contextEnd": 50,
+      "text": "tool-system/builtin/agent-transcript-translator.ts",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round9/evidence/tools-preflight.json",
+      "locator": "/relativeImports/522/resolved",
+      "valueChars": 68,
+      "offset": 0,
+      "contextStart": 0,
+      "contextEnd": 68,
+      "text": "packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round9/evidence/tools-preflight.json",
+      "locator": "/relativeImports/526/from",
+      "valueChars": 68,
+      "offset": 0,
+      "contextStart": 0,
+      "contextEnd": 68,
+      "text": "packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round9/evidence/tools-preflight.regex-draft.json",
+      "locator": "/relativeImports/597/resolved",
+      "valueChars": 68,
+      "offset": 0,
+      "contextStart": 0,
+      "contextEnd": 68,
+      "text": "packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round9/evidence/tools-preflight.regex-draft.json",
+      "locator": "/relativeImports/604/from",
+      "valueChars": 68,
+      "offset": 0,
+      "contextStart": 0,
+      "contextEnd": 68,
+      "text": "packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+      "locator": "/observations/0/preStop/loadedWorkspaceModules/114",
+      "valueChars": 139,
+      "offset": 71,
+      "contextStart": 0,
+      "contextEnd": 139,
+      "text": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+      "locator": "/observations/0/postStop/loadedWorkspaceModules/114",
+      "valueChars": 139,
+      "offset": 71,
+      "contextStart": 0,
+      "contextEnd": 139,
+      "text": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+      "locator": "/observations/0/afterEnable/loadedWorkspaceModules/114",
+      "valueChars": 139,
+      "offset": 71,
+      "contextStart": 0,
+      "contextEnd": 139,
+      "text": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+      "locator": "/observations/1/directSettled/loadedWorkspaceModules/114",
+      "valueChars": 139,
+      "offset": 71,
+      "contextStart": 0,
+      "contextEnd": 139,
+      "text": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+      "locator": "/observations/2/normal/loadedWorkspaceModules/114",
+      "valueChars": 139,
+      "offset": 71,
+      "contextStart": 0,
+      "contextEnd": 139,
+      "text": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+      "locator": "/observations/2/afterIdleStop/loadedWorkspaceModules/114",
+      "valueChars": 139,
+      "offset": 71,
+      "contextStart": 0,
+      "contextEnd": 139,
+      "text": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+      "locator": "/final/loadedWorkspaceModules/114",
+      "valueChars": 139,
+      "offset": 71,
+      "contextStart": 0,
+      "contextEnd": 139,
+      "text": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+      "locator": "/observations/0/preStop/loadedWorkspaceModules/114",
+      "valueChars": 131,
+      "offset": 63,
+      "contextStart": 0,
+      "contextEnd": 131,
+      "text": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+      "locator": "/observations/0/postStop/loadedWorkspaceModules/114",
+      "valueChars": 131,
+      "offset": 63,
+      "contextStart": 0,
+      "contextEnd": 131,
+      "text": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+      "locator": "/observations/0/afterEnable/loadedWorkspaceModules/114",
+      "valueChars": 131,
+      "offset": 63,
+      "contextStart": 0,
+      "contextEnd": 131,
+      "text": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+      "locator": "/observations/1/directSettled/loadedWorkspaceModules/114",
+      "valueChars": 131,
+      "offset": 63,
+      "contextStart": 0,
+      "contextEnd": 131,
+      "text": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+      "locator": "/observations/2/normal/loadedWorkspaceModules/114",
+      "valueChars": 131,
+      "offset": 63,
+      "contextStart": 0,
+      "contextEnd": 131,
+      "text": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+      "locator": "/observations/2/afterIdleStop/loadedWorkspaceModules/114",
+      "valueChars": 131,
+      "offset": 63,
+      "contextStart": 0,
+      "contextEnd": 131,
+      "text": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+      "locator": "/final/loadedWorkspaceModules/114",
+      "valueChars": 131,
+      "offset": 63,
+      "contextStart": 0,
+      "contextEnd": 131,
+      "text": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/fifth-native-failed/native-failure-observations.json",
+      "locator": "/snapshot/loadedWorkspaceModules/114",
+      "valueChars": 131,
+      "offset": 63,
+      "contextStart": 0,
+      "contextEnd": 131,
+      "text": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+      "locator": "/observations/0/preStop/loadedWorkspaceModules/114",
+      "valueChars": 131,
+      "offset": 63,
+      "contextStart": 0,
+      "contextEnd": 131,
+      "text": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+      "locator": "/observations/0/postStop/loadedWorkspaceModules/114",
+      "valueChars": 131,
+      "offset": 63,
+      "contextStart": 0,
+      "contextEnd": 131,
+      "text": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+      "locator": "/observations/0/afterEnable/loadedWorkspaceModules/114",
+      "valueChars": 131,
+      "offset": 63,
+      "contextStart": 0,
+      "contextEnd": 131,
+      "text": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+      "locator": "/observations/1/directSettled/loadedWorkspaceModules/114",
+      "valueChars": 131,
+      "offset": 63,
+      "contextStart": 0,
+      "contextEnd": 131,
+      "text": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+      "locator": "/observations/2/normal/loadedWorkspaceModules/114",
+      "valueChars": 131,
+      "offset": 63,
+      "contextStart": 0,
+      "contextEnd": 131,
+      "text": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+      "locator": "/observations/2/afterIdleStop/loadedWorkspaceModules/114",
+      "valueChars": 131,
+      "offset": 63,
+      "contextStart": 0,
+      "contextEnd": 131,
+      "text": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+      "locator": "/final/loadedWorkspaceModules/114",
+      "valueChars": 131,
+      "offset": 63,
+      "contextStart": 0,
+      "contextEnd": 131,
+      "text": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/fourth-native-failed/native-failure-observations.json",
+      "locator": "/snapshot/loadedWorkspaceModules/114",
+      "valueChars": 131,
+      "offset": 63,
+      "contextStart": 0,
+      "contextEnd": 131,
+      "text": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/sixth-native-failed/native-failure-observations.json",
+      "locator": "/observations/0/preStop/loadedWorkspaceModules/114",
+      "valueChars": 131,
+      "offset": 63,
+      "contextStart": 0,
+      "contextEnd": 131,
+      "text": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/sixth-native-failed/native-failure-observations.json",
+      "locator": "/observations/0/postStop/loadedWorkspaceModules/114",
+      "valueChars": 131,
+      "offset": 63,
+      "contextStart": 0,
+      "contextEnd": 131,
+      "text": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/sixth-native-failed/native-failure-observations.json",
+      "locator": "/observations/0/afterEnable/loadedWorkspaceModules/114",
+      "valueChars": 131,
+      "offset": 63,
+      "contextStart": 0,
+      "contextEnd": 131,
+      "text": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-browser-stop-round22/sixth-native-failed/native-failure-observations.json",
+      "locator": "/observations/1/directSettled/loadedWorkspaceModules/114",
+      "valueChars": 131,
+      "offset": 63,
+      "contextStart": 0,
+      "contextEnd": 131,
+      "text": "/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/tool-system/builtin/agent-transcript-translator.ts",
+      "wholeValueIncluded": true
+    }
+  ],
+  "process-state": [
+    {
+      "path": "docs/audit-2026-10-16/inventory.json",
+      "locator": "/source_inventory/2050",
+      "valueChars": 43,
+      "offset": 0,
+      "contextStart": 0,
+      "contextEnd": 43,
+      "text": "packages/server/src/panels/process-state.ts",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round25/evidence/data-prep/inventory.json",
+      "locator": "/files/958",
+      "valueChars": 43,
+      "offset": 0,
+      "contextStart": 0,
+      "contextEnd": 43,
+      "text": "packages/server/src/panels/process-state.ts",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+      "locator": "/files/3588/path",
+      "valueChars": 43,
+      "offset": 0,
+      "contextStart": 0,
+      "contextEnd": 43,
+      "text": "packages/server/src/panels/process-state.ts",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/postdelivery-report-review/audit-a.raw.json",
+      "locator": "/module_inventory/84740d56/paths/79",
+      "valueChars": 43,
+      "offset": 0,
+      "contextStart": 0,
+      "contextEnd": 43,
+      "text": "packages/server/src/panels/process-state.ts",
+      "wholeValueIncluded": true
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/postdelivery-report-review/audit-a.raw.json",
+      "locator": "/module_inventory/a66f4ef2/paths/79",
+      "valueChars": 43,
+      "offset": 0,
+      "contextStart": 0,
+      "contextEnd": 43,
+      "text": "packages/server/src/panels/process-state.ts",
+      "wholeValueIncluded": true
+    }
+  ],
+  "translator-current-sha": [
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+      "locator": "/files/1323/sha256",
+      "valueChars": 64,
+      "offset": 0,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "172784171e601f500bf74eb59870e1d1479b0ecb7a873707d2219e416cfe6d76",
+      "wholeValueIncluded": true
+    }
+  ],
+  "process-state-current-sha": [
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+      "locator": "/files/3588/sha256",
+      "valueChars": 64,
+      "offset": 0,
+      "contextStart": 0,
+      "contextEnd": 64,
+      "text": "9614623cb89fbd49914595b977e9ffae515966680b3a375115c1526b16ca2ca6",
+      "wholeValueIncluded": true
+    }
+  ]
+}

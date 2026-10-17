@@ -1,0 +1,17 @@
+# Root：后台转录撤销缺口的静态复核
+
+Root支持把预备alias **TRANSCRIPT-R44-C1** 作为限定P3的同一条提议继续核对，正式编号/分类由下一批Root合包确定；本包本身不新增正式ID或独立候选计数。范围是普通流事件→后台子代理转录→TUI详情数据，未运行产品或确认真实UI时序。
+
+translator195行全文显示并读普通转换：stream_request_start只处理thinking，text_delta创建bg本地id或拼接当前行；tombstone与turn_complete共用164–174，只把旧assistant行标非streaming而不drop，也不使用messageId；switch末default不对assistant_message做final reconciliation。旧partial text行因此仍在该转录数组，新replacement delta另建行。工具placeholder同family不另计，Root不扩大为所有tool/registry机制结论。
+
+实际agent507–520把translator作为detailSink一部分。Core2103–2115定义fallback会撤销partial消息及未执行工具占位；2197–2228在eligible失败分支先撤销，再await非流式响应，发相同messageId start及replacement text delta。Root只核该普通表示链，不执行真实失败/模型请求，不外推敏感分支或所有异常。App2145–2149取所选agent.transcript，2166–2169直接交VirtualMessageList；这些选段没有后置删除旧转录行。
+
+静态文字序列说明（非fixture/函数调用）：一条partial text进入旧bg行，fallback的tombstone将它seal保留，后续replacement text进入新bg行。预期是撤销原表示再显示替换内容；实际数据容器仍含两份。用户影响限定后台子代理详情在fallback等待或后续继续运行时可能显示撤销内容，不声称已观察到画面、长期可打开已结束dock、durable session/raw transcript损坏或实际模型输出。
+
+Root依赖作者另查detailSink到child实际callback和registry无清理的证据，不冒称这些源码已由Root重读；独立reviewer另行核查。本包Root直接产品语义263行（translator195全文、agent14、turn-loop45、App9），显示361行分列，导航/相邻代码不当额外语义。初始semantic SHA保留null，dedicated hash在Root正文显示前；先知peer位置不回填为first-ever pin。
+
+[补充去重](history-decisions.json)在3696历史（1379MD/2317JSON，含archive和递归JSON value scalars、排当前41/future42–44）上做，Root此扫描在当前正文之后，绝不倒填成读前gate；作者自己fresh gate在其选择前。三query91/27/14，cap80；两个focused query共41 bounded contexts已读，translator80片段未全部读，不作语义穷尽。首打印截断后只补读已留JSON中段，原件及说明保留。
+
+旧F01明确仅core/Desktop，intro排TUI；根因是turn_N与本地freshId不一致加assistant_message仅封口。当前producer已stableID并补replacement deltas，而本translator独立consumer完全不应用撤销。Root选读F01 intro/20–27，额外显示至35不计全部历史源码；R20 streamattempt15行全文只保证主attempt过滤，并明确child行保留和不外推所有fallback。它们是同family历史背景，不能称该family首次出现，也不据别处已修复误判本模块正确。
+
+0产品import/helper、示例事件fixture、Buffer/语言/Timer、测试、Engine/ModelFacade/Registry、CLI/React/Ink/UI、真实模型/native/进程/状态/业务网络实验，0pass/expect。本exact prep无Git命令，Root全局版本控制元数据另列。仅写本exact tmp；[收据](artifact-receipt.json)自排除。

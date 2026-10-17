@@ -1,0 +1,16 @@
+{
+  "historyFiles": 3696,
+  "counts": {
+    "translator": 91,
+    "tombstone-transcript": 27,
+    "fallback-placeholder": 14
+  },
+  "contextCapEach": 80,
+  "actualReadFocusedContexts": 41,
+  "focusedContextsMethod": "27 tombstone-transcript +14 fallback-placeholder exact path/location/context rows, all read after first print truncation gap reread. Not full historical scalar/MD bodies.",
+  "translatorSavedContextsNotAllRead": true,
+  "oldF01": "Explicit core and Desktop scope, intro says no TUI; oldfreshId versus turn_N plus missing final upsert differs from this independent translator consumer ignoring revocation despite current stable correlation IDs and replacement deltas. Same family recorded, not absolute first claim.",
+  "oldR20": "Selected主attempt filtering preserves child rows; it explicitly does not certify all TUI/fallback/replay. No current translator module full receipt or same bug established by that finite report.",
+  "otherHits": "Tables describing tombstone as lifecycle signal, unrelated goal and session deletion, auth placeholder and translation fallback contexts; no new bugs inferred from those old snippets.",
+  "productRuns": 0
+}

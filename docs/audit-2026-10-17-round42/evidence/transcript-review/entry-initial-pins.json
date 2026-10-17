@@ -1,0 +1,34 @@
+{
+  "capturedUTC": "2026-10-17T14:26:25.676812+00:00",
+  "scope": "Only static entry/import/source call-site reachability, no CLI/bootstrap/native/renderer invoked.",
+  "files": [
+    {
+      "path": "packages/tui/package.json",
+      "bytes": 2110,
+      "lineCount": 73,
+      "sha256": "93ea44cc43ef7392227bef9146901408a49d3acd31c6a852db710eeadfcfee21",
+      "pinBeforeSelectedBodyOrLocatorRead": true
+    },
+    {
+      "path": "packages/tui/src/cli/main.ts",
+      "bytes": 11626,
+      "lineCount": 265,
+      "sha256": "7a0a63bc7acbf23162480c2883bd5af26743459eff3c073fea787c7ce1e021ca",
+      "pinBeforeSelectedBodyOrLocatorRead": true
+    },
+    {
+      "path": "packages/tui/src/cli/commands/repl.ts",
+      "bytes": 13991,
+      "lineCount": 349,
+      "sha256": "a5687423399c7dc9e840929d92197000269af05385e120d93fa1e4aee9b1c2dd",
+      "pinBeforeSelectedBodyOrLocatorRead": true
+    },
+    {
+      "path": "packages/tui/src/ui/index.tsx",
+      "bytes": 4514,
+      "lineCount": 122,
+      "sha256": "3266ee003327c3e22d1c325f0e83bfbae689672effb503aed6b01d6123e7d20d",
+      "pinBeforeSelectedBodyOrLocatorRead": true
+    }
+  ]
+}

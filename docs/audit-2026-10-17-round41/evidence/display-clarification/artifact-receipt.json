@@ -1,0 +1,24 @@
+{
+  "kind": "Frozen display-only metadata supplement, self-excluded receipt",
+  "directory": "/tmp/codeshell-audit-round43-process-state-display-supplement",
+  "frozenAtUTC": "2026-10-17T14:22:07.670642+00:00",
+  "files": [
+    {
+      "path": "display-clarification.json",
+      "bytes": 2712,
+      "sha256": "e78466f5fa7afb6c5168b08a7dbb4fb5f5902bb202ef4088613dcb5fcd25fc29"
+    },
+    {
+      "path": "review.md",
+      "bytes": 891,
+      "sha256": "116abc3d0495742fe47e14bb9f7c5d27acaf08b2bcf4cf3831e88d2a1bbd03f4"
+    }
+  ],
+  "fileCountExcludingSelf": 2,
+  "totalFilesIncludingSelf": 3,
+  "productSourceReads": 0,
+  "productExecutions": 0,
+  "testsExecuted": 0,
+  "gitCommands": 0,
+  "oldArtifactsModified": false
+}
