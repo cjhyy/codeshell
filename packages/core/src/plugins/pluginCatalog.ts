@@ -1,8 +1,16 @@
-import { closeSync, constants, fstatSync, lstatSync, openSync, readFileSync } from "node:fs";
+import {
+  closeSync,
+  constants,
+  fstatSync,
+  lstatSync,
+  openSync,
+  readFileSync,
+  realpathSync,
+} from "node:fs";
 import { createHash } from "node:crypto";
-import { join } from "node:path";
+import { join, relative, sep } from "node:path";
 import { readInstalledPlugins } from "./installedPlugins.js";
-import { pluginsRoot } from "./installer/paths.js";
+import { assertSafePluginName, pluginsRoot } from "./installer/paths.js";
 import {
   CANONICAL_PLUGIN_MANIFEST_FILE,
   CanonicalPluginManifest,
@@ -19,6 +27,8 @@ export interface PluginCatalogEntry {
   installKey: string;
   name: string;
   marketplace: string | null;
+  /** Validated install layout, independent of marketplace names such as "local". */
+  installationKind: "marketplace" | "direct" | "unknown";
   installPath: string;
   version: string;
   installedAt: string;
@@ -101,38 +111,99 @@ function identityFromInstallKey(
   return { name: manifest?.name ?? installKey, marketplace: null };
 }
 
+/** Existing registries predate origin metadata. Match the actual writer layouts,
+ * never a reserved marketplace name or a user-provided manifest/source label.
+ * Paths have already passed the same realpath containment as the inventory.
+ */
+function installationKind(
+  root: string,
+  installKey: string,
+  installPath: string,
+  identity: { name: string; marketplace: string | null },
+  version: string,
+): PluginCatalogEntry["installationKind"] {
+  const { name, marketplace } = identity;
+  if (installKey !== (marketplace === null ? name : `${name}@${marketplace}`)) return "unknown";
+  if (marketplace === null && name.includes("@")) return "unknown";
+  try {
+    assertSafePluginName(name);
+    if (marketplace !== null) assertSafePluginName(marketplace);
+    assertSafePluginName(version);
+  } catch {
+    return "unknown";
+  }
+  const parts = relative(root, installPath).split(sep);
+  if (parts.length === 1 && parts[0] === name && (!marketplace || marketplace === "local")) {
+    return "direct";
+  }
+  if (
+    marketplace &&
+    parts.length === 4 &&
+    parts[0] === "cache" &&
+    parts[1] === marketplace &&
+    parts[2] === name &&
+    parts[3] === version
+  ) {
+    return "marketplace";
+  }
+  return "unknown";
+}
+
 /**
  * Load the installed plugin catalog at the core boundary.
  *
  * Installed state is user-writable, so paths are realpath-contained before any
  * manifest is exposed. Multiple scope rows for one install key collapse to the
  * first safe entry, matching the current single-user-scope runtime contract.
+ * Conflicting safe origins remain visible but cannot select a destructive route.
  */
 export function loadPluginCatalog(options: LoadPluginCatalogOptions = {}): PluginCatalogEntry[] {
   const root = options.root ?? pluginsRoot();
   const installed = options.installed ?? readInstalledPlugins();
   const catalog: PluginCatalogEntry[] = [];
-  const loadedKeys = new Set<string>();
+  let canonicalRoot: string;
+  try {
+    canonicalRoot = realpathSync(root);
+  } catch {
+    return catalog;
+  }
 
   for (const installKey of Object.keys(installed.plugins).sort()) {
-    for (const entry of installed.plugins[installKey] ?? []) {
-      if (loadedKeys.has(installKey)) break;
+    const keyIdentity = identityFromInstallKey(installKey, null);
+    const rows = (installed.plugins[installKey] ?? []).flatMap((entry) => {
       const installPath = resolveSafePluginPath(entry.installPath, root);
-      if (!installPath) continue;
-      const manifest = readCatalogPluginManifest(installPath);
-      const identity = identityFromInstallKey(installKey, manifest);
-      catalog.push({
-        installKey,
-        ...identity,
-        installPath,
-        version: entry.version,
-        installedAt: entry.installedAt,
-        lastUpdated: entry.lastUpdated,
-        manifest,
-        automationTemplates: manifest?.automations?.templates ?? [],
-      });
-      loadedKeys.add(installKey);
-    }
+      if (!installPath) return [];
+      return [
+        {
+          entry,
+          installPath,
+          installationKind: installationKind(
+            canonicalRoot,
+            installKey,
+            installPath,
+            keyIdentity,
+            entry.version,
+          ),
+        },
+      ];
+    });
+    const first = rows[0];
+    if (!first) continue;
+    const kinds = new Set(rows.map((row) => row.installationKind));
+    const manifest = readCatalogPluginManifest(first.installPath);
+    const identity = identityFromInstallKey(installKey, manifest);
+    catalog.push({
+      installKey,
+      ...identity,
+      installationKind:
+        kinds.size === 1 && identity.name === keyIdentity.name ? first.installationKind : "unknown",
+      installPath: first.installPath,
+      version: first.entry.version,
+      installedAt: first.entry.installedAt,
+      lastUpdated: first.entry.lastUpdated,
+      manifest,
+      automationTemplates: manifest?.automations?.templates ?? [],
+    });
   }
 
   return catalog;

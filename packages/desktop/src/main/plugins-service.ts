@@ -49,6 +49,7 @@ export interface PluginSummary {
   installKey: string;
   /** Marketplace source — null for direct git / GitHub installs without marketplace. */
   marketplace: string | null;
+  installationKind: PluginCatalogEntry["installationKind"];
   /** Source line shown under the plugin name. */
   sourceLabel: string;
   /** Plugin install path (truncated display elsewhere). */
@@ -131,10 +132,13 @@ function deriveSourceLabel(marketplace: string | null): string {
   return `installed from ${marketplace}`;
 }
 
-export function listPlugins(_cwd: string): PluginSummary[] {
+export function listPlugins(
+  _cwd: string,
+  listCatalog: () => PluginCatalogEntry[] = loadPluginCatalog,
+): PluginSummary[] {
   let plugins: ReturnType<typeof loadPluginCatalog>;
   try {
-    plugins = loadPluginCatalog();
+    plugins = listCatalog();
   } catch {
     return [];
   }
@@ -151,6 +155,7 @@ export function listPlugins(_cwd: string): PluginSummary[] {
       mediaAvailability: pluginMediaAvailability(plugin.manifest?.interface),
       installKey,
       marketplace,
+      installationKind: plugin.installationKind,
       sourceLabel: deriveSourceLabel(marketplace),
       installPath,
       installedAt: plugin.installedAt,
@@ -222,7 +227,10 @@ export function uninstallLocalPluginEntry(name: string): void {
   uninstallPluginByName(name);
 }
 
-type PluginUpdateCatalogEntry = Pick<PluginCatalogEntry, "installKey" | "name" | "marketplace">;
+type PluginUpdateCatalogEntry = Pick<
+  PluginCatalogEntry,
+  "installKey" | "name" | "marketplace" | "installationKind"
+>;
 
 interface PluginUpdateServices {
   listCatalog(): PluginUpdateCatalogEntry[];
@@ -281,8 +289,11 @@ export async function updatePluginEntry(
     throw new Error("updatePluginEntry requires an install key");
   }
   const plugin = resolvePluginUpdateEntry(identity, services.listCatalog());
-  if (!plugin.marketplace || plugin.marketplace === "local") {
+  if (plugin.installationKind === "direct") {
     return services.updateLocal(plugin.name, services.now(), true);
+  }
+  if (plugin.installationKind !== "marketplace" || !plugin.marketplace) {
+    throw new PluginInstallError(`cannot determine installed plugin source for '${identity}'`);
   }
 
   const refreshed = await services.refreshMarket(plugin.marketplace);

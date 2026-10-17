@@ -2803,6 +2803,8 @@ export interface PluginSummary {
   installKey: string;
   /** Marketplace source — null for direct git / GitHub installs without marketplace. */
   marketplace: string | null;
+  /** Core-validated source; absent/unknown origins cannot be uninstalled. */
+  installationKind: "marketplace" | "direct" | "unknown";
   /** Source line shown under the plugin name. */
   sourceLabel: string;
   /** Plugin install path (truncated display elsewhere). */
