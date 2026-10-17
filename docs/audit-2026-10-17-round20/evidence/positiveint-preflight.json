@@ -1,0 +1,10 @@
+{
+  "base": "d40dd06987a2e0c20c377e243cf5c4e4b549c9ec",
+  "head": "d40dd06987a2e0c20c377e243cf5c4e4b549c9ec",
+  "sourceMatchesFrozen": true,
+  "fixture": "docs/audit-2026-10-17-round20/evidence/positiveint-focused.test.ts",
+  "fixtureBytes": 2592,
+  "fixtureSha256": "2761ca972aceda370e079d83ae7fa4983181294f58a3d3ad086172fa7608c1cb",
+  "dependencyResolution": "Not preflighted or guessed; actual Commander resolution belongs to the first guarded Bun run. No dependency mocks.",
+  "metadataOnly": true
+}

@@ -1,0 +1,16 @@
+{
+  "argv": [
+    "node",
+    "scripts/run-bun-test-shard.mjs",
+    "--timeout",
+    "30000",
+    "packages/tui/src/ui/stream-attempt.test.ts",
+    "docs/audit-2026-10-17-round20/evidence/streamattempt-focused.test.ts"
+  ],
+  "exitCode": 0,
+  "attempt": 1,
+  "durationSeconds": 0.172,
+  "rawLog": "docs/audit-2026-10-17-round20/evidence/streamattempt-first.raw.log",
+  "rawSha256": "4297ea48b078847bc2201d2bd14bbb8ac97259c8505d336435e2e0fab6aeb6c1",
+  "rawAndExitSavedBeforeInspection": true
+}

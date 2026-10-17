@@ -1,0 +1,14 @@
+{
+  "command": [
+    "node",
+    "scripts/run-bun-test-shard.mjs",
+    "--timeout",
+    "30000",
+    "packages/core/src/session/undo-target.test.ts",
+    "docs/audit-2026-10-17-round19/evidence/root-undo.test.ts"
+  ],
+  "exitCode": 0,
+  "firstRun": true,
+  "attempts": 1,
+  "reruns": 0
+}

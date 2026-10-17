@@ -1,0 +1,70 @@
+{
+  "base": "d40dd06987a2e0c20c377e243cf5c4e4b549c9ec",
+  "formalCount": 0,
+  "candidateCount": 0,
+  "relatedCount": 0,
+  "guardedRuns": [
+    {
+      "command": [
+        "node",
+        "scripts/run-bun-test-shard.mjs",
+        "--timeout",
+        "30000",
+        "packages/tui/src/cli/parse-int-option.test.ts",
+        "docs/audit-2026-10-17-round20/evidence/positiveint-focused.test.ts"
+      ],
+      "attempt": 1,
+      "exitCode": 0,
+      "elapsedSeconds": 0.275,
+      "raw": "docs/audit-2026-10-17-round20/evidence/positiveint-first.raw.log",
+      "rawBytes": 1542,
+      "rawSha256": "7edb21d52f54d5ddbcd910612b3f18b9a7b8426b511e702546a8b00152305583",
+      "combinedStdoutStderr": true,
+      "rawAndExitSavedBeforeInspection": true,
+      "reruns": 0,
+      "completedGuard": true,
+      "pass": 13,
+      "expect": 36,
+      "fail": 0,
+      "skipped": 0,
+      "existingTests": 5,
+      "existingExpect": 6,
+      "focusedTests": 8,
+      "focusedExpect": 30,
+      "actualProductionLeafCalls": true,
+      "manualMirroredCliRecipe": false
+    }
+  ],
+  "totals": {
+    "cleanRuns": 1,
+    "failedRuns": 0,
+    "runtimeAttempts": 1,
+    "pass": 13,
+    "expect": 36,
+    "fail": 0,
+    "skipped": 0,
+    "existingTests": 5,
+    "focusedTests": 8,
+    "productRetryCount": 0
+  },
+  "firstRunHandling": "Combined raw stdout/stderr and exit receipt saved before first inspection; one first attempt, no failures/retries.",
+  "staticOnly": [
+    "main.ts selected options and action pass-through",
+    "commands/runs.ts selected options and limit pass-through/slice"
+  ],
+  "excluded": [
+    "Old failed CLI data dynamic direction remains skipped",
+    "CLI/program.parse/process-exit behavior",
+    "run/session/model/native/network consumers",
+    "actual timers/waits/large limit allocations",
+    "numeric range beyond exact JS integers or inferred safe-integer cap",
+    "all other prior failed directions",
+    "build/typecheck/lint/full suite"
+  ],
+  "metadataAdjustments": [],
+  "limitations": [
+    "Actual Commander error instance is observed through the leaf; no claim of Commander program integration or formatted CLI exit behavior.",
+    "Largest inputs here remain exactly representable; no large numeric consumer is invoked.",
+    "Whitespace and ASCII grammar controls characterize source behavior, not a promise to accept every Unicode numeral."
+  ]
+}

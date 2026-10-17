@@ -1,0 +1,99 @@
+{
+  "base": "5f5cf69df8526470700712a4dc2d5ae6bd2da132",
+  "actualLeafImport": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/packages/coding/src/review/review-prompt.ts",
+  "leafRuntimeImports": [],
+  "noDependencyPathGuess": true,
+  "files": [
+    {
+      "path": "packages/coding/src/review/review-prompt.ts",
+      "absolutePath": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/packages/coding/src/review/review-prompt.ts",
+      "exists": true,
+      "frozenSha256": "e5508741e444c2958d0cf189559f6e707f0f23762448671985bf0a7c27e7a9d8",
+      "currentSha256": "e5508741e444c2958d0cf189559f6e707f0f23762448671985bf0a7c27e7a9d8",
+      "matchesFrozen": true,
+      "bytes": 4126,
+      "lineCount": 107
+    },
+    {
+      "path": "packages/coding/src/review/review-prompt.test.ts",
+      "absolutePath": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/packages/coding/src/review/review-prompt.test.ts",
+      "exists": true,
+      "frozenSha256": "d9519c47b78f5ac9e67466e078e0d47a3486ade00cc92be6e30169c2a7fcffce",
+      "currentSha256": "d9519c47b78f5ac9e67466e078e0d47a3486ade00cc92be6e30169c2a7fcffce",
+      "matchesFrozen": true,
+      "bytes": 2285,
+      "lineCount": 60
+    },
+    {
+      "path": "packages/tui/src/cli/commands/builtin/git-commands.ts",
+      "absolutePath": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/packages/tui/src/cli/commands/builtin/git-commands.ts",
+      "exists": true,
+      "frozenSha256": "3b5322a8e7aa5783de55a0ed6645d8acd8a670fea627f0420e6f623a53a3ff1e",
+      "currentSha256": "3b5322a8e7aa5783de55a0ed6645d8acd8a670fea627f0420e6f623a53a3ff1e",
+      "matchesFrozen": true,
+      "bytes": 8000,
+      "lineCount": 259
+    },
+    {
+      "path": "packages/tui/src/cli/commands/registry.ts",
+      "absolutePath": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/packages/tui/src/cli/commands/registry.ts",
+      "exists": true,
+      "frozenSha256": "0b73681bf81543cedbc220a28b4f7bfaf7cbf0f89784c6ac3cf74ab024689a7c",
+      "currentSha256": "0b73681bf81543cedbc220a28b4f7bfaf7cbf0f89784c6ac3cf74ab024689a7c",
+      "matchesFrozen": true,
+      "bytes": 7302,
+      "lineCount": 200
+    },
+    {
+      "path": "packages/tui/src/ui/components/CommandInput.tsx",
+      "absolutePath": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/packages/tui/src/ui/components/CommandInput.tsx",
+      "exists": true,
+      "frozenSha256": "53dbcf557487814747ac14945f103d844f7affef3de29f196c9d4610d37081fc",
+      "currentSha256": "53dbcf557487814747ac14945f103d844f7affef3de29f196c9d4610d37081fc",
+      "matchesFrozen": true,
+      "bytes": 8606,
+      "lineCount": 245
+    },
+    {
+      "path": "packages/coding/src/index.git.ts",
+      "absolutePath": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/packages/coding/src/index.git.ts",
+      "exists": true,
+      "frozenSha256": "b72970a79c39999fa0eb6602213599e93496011f28d4ed94c51af19adcc3c527",
+      "currentSha256": "b72970a79c39999fa0eb6602213599e93496011f28d4ed94c51af19adcc3c527",
+      "matchesFrozen": true,
+      "bytes": 177,
+      "lineCount": 4
+    },
+    {
+      "path": "scripts/run-bun-test-shard.mjs",
+      "absolutePath": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/scripts/run-bun-test-shard.mjs",
+      "exists": true,
+      "frozenSha256": "dd2b245afbcb5aa7c798c8674d34edb8e02bb42be0be320050adf9be5ed2fd7d",
+      "currentSha256": "dd2b245afbcb5aa7c798c8674d34edb8e02bb42be0be320050adf9be5ed2fd7d",
+      "matchesFrozen": true,
+      "bytes": 233,
+      "lineCount": 8
+    },
+    {
+      "path": "scripts/bun-test-completion.mjs",
+      "absolutePath": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/scripts/bun-test-completion.mjs",
+      "exists": true,
+      "frozenSha256": "99808f8f7c67ae5f108243b0649557209991f148f0150785fcde83d47465047e",
+      "currentSha256": "99808f8f7c67ae5f108243b0649557209991f148f0150785fcde83d47465047e",
+      "matchesFrozen": true,
+      "bytes": 6518,
+      "lineCount": 152
+    },
+    {
+      "path": "CODESHELL.md",
+      "absolutePath": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/CODESHELL.md",
+      "exists": true,
+      "frozenSha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "currentSha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "matchesFrozen": true,
+      "bytes": 17639,
+      "lineCount": 217
+    }
+  ],
+  "runtimeAttemptsSoFar": 0
+}

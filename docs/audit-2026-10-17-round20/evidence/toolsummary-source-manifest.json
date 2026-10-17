@@ -1,0 +1,126 @@
+{
+  "base": "d40dd06987a2e0c20c377e243cf5c4e4b549c9ec",
+  "files": [
+    {
+      "path": "packages/core/src/engine/tool-summary.ts",
+      "frozenSha256": "775edd65cd8bdb843f59dfc2d3b2feeb9bf1ca0f7a5a1e81801a7f0e53a89a9c",
+      "currentSha256": "775edd65cd8bdb843f59dfc2d3b2feeb9bf1ca0f7a5a1e81801a7f0e53a89a9c",
+      "matchesFrozen": true,
+      "bytes": 1721,
+      "lineCount": 51,
+      "ranges": [
+        "1-51 (full source)"
+      ],
+      "kind": "actual runtime leaf; all production logic retained"
+    },
+    {
+      "path": "packages/core/src/types.ts",
+      "frozenSha256": "a60cb4b3d6177af79e875f6bfffa7788b930964daf123d034008e2925737a4db",
+      "currentSha256": "a60cb4b3d6177af79e875f6bfffa7788b930964daf123d034008e2925737a4db",
+      "matchesFrozen": true,
+      "bytes": 50794,
+      "lineCount": 1306,
+      "ranges": [
+        "1-120"
+      ],
+      "kind": "selected type-only ToolCall/ToolResult contracts; not runtime imported"
+    },
+    {
+      "path": "packages/core/src/logging/logger.ts",
+      "frozenSha256": "9b00534985c026de06feecc88783f796decb399fa5c00715166104318cb3a05d",
+      "currentSha256": "9b00534985c026de06feecc88783f796decb399fa5c00715166104318cb3a05d",
+      "matchesFrozen": true,
+      "bytes": 17090,
+      "lineCount": 462,
+      "ranges": [
+        "1-190"
+      ],
+      "kind": "selected logger side-effect/dependency review; exact module replaced by warn-only memory mock before leaf import; real logger not imported"
+    },
+    {
+      "path": "packages/core/src/engine/turn-loop.ts",
+      "frozenSha256": "9ccbcd28cdb100d7d879994c3839d3b53c46af01589e0475d6f75f1d7e750413",
+      "currentSha256": "9ccbcd28cdb100d7d879994c3839d3b53c46af01589e0475d6f75f1d7e750413",
+      "matchesFrozen": true,
+      "bytes": 108774,
+      "lineCount": 2412,
+      "ranges": [
+        "1660-1735"
+      ],
+      "kind": "selected ordinary caller static only; no TurnLoop import/run"
+    },
+    {
+      "path": "packages/core/src/engine/run-accounting.ts",
+      "frozenSha256": "d31ce6cf6f14056ea549b94ab7146592d5ae223139cfa1585b026303fb13dac6",
+      "currentSha256": "d31ce6cf6f14056ea549b94ab7146592d5ae223139cfa1585b026303fb13dac6",
+      "matchesFrozen": true,
+      "bytes": 6970,
+      "lineCount": 174,
+      "ranges": [
+        "130-171"
+      ],
+      "kind": "selected real summarize producer static only; no model/provider/client calls"
+    },
+    {
+      "path": "packages/core/src/engine/model-facade.ts",
+      "frozenSha256": "f55170bc5df179bb204bb143fa42af073a4b5d0b14443451a10de25fcd272fcb",
+      "currentSha256": "f55170bc5df179bb204bb143fa42af073a4b5d0b14443451a10de25fcd272fcb",
+      "matchesFrozen": true,
+      "bytes": 10149,
+      "lineCount": 310,
+      "ranges": [
+        "250-275"
+      ],
+      "kind": "selected callback slot static only"
+    },
+    {
+      "path": "packages/core/src/engine/streaming-tool-queue.ts",
+      "frozenSha256": "afcd8fa36bed1a46c23707ff1fe94db558babe6c1549e3953f7c28100a94b429",
+      "currentSha256": "afcd8fa36bed1a46c23707ff1fe94db558babe6c1549e3953f7c28100a94b429",
+      "matchesFrozen": true,
+      "bytes": 5208,
+      "lineCount": 140,
+      "ranges": [
+        "1-140 (full source)"
+      ],
+      "kind": "ordinary ordering static only; not imported"
+    },
+    {
+      "path": "packages/core/src/tool-system/registry.ts",
+      "frozenSha256": "215bf049bdb2ee276d2c1bc127968d48f23309e9abbb8356fbf1ed6e897471e0",
+      "currentSha256": "215bf049bdb2ee276d2c1bc127968d48f23309e9abbb8356fbf1ed6e897471e0",
+      "matchesFrozen": true,
+      "bytes": 10363,
+      "lineCount": 296,
+      "ranges": [
+        "230-285"
+      ],
+      "kind": "ordinary success/error shape static only; not imported or executed"
+    },
+    {
+      "path": "packages/core/src/tool-system/tool-result-redaction.ts",
+      "frozenSha256": "aeeb24e299d5de5eab0702bdc630f6c6db86b809a68b1777311935979a4bf129",
+      "currentSha256": "aeeb24e299d5de5eab0702bdc630f6c6db86b809a68b1777311935979a4bf129",
+      "matchesFrozen": true,
+      "bytes": 1889,
+      "lineCount": 51,
+      "ranges": [
+        "1-51 (full source)"
+      ],
+      "kind": "display-result pass-through static only; no sensitive or authority experiments"
+    },
+    {
+      "path": "packages/core/src/engine/turn-loop-tool-summary.test.ts",
+      "frozenSha256": "109e95d73cd9e10fb6acdb3c29c40d0b493b6e0817e8a6c8577c94916533f7b4",
+      "currentSha256": "109e95d73cd9e10fb6acdb3c29c40d0b493b6e0817e8a6c8577c94916533f7b4",
+      "matchesFrozen": true,
+      "bytes": 3338,
+      "lineCount": 115,
+      "ranges": [
+        "1-115 (full source)"
+      ],
+      "kind": "existing coupled test read only; never imported or executed"
+    }
+  ],
+  "limitations": "Only tool-summary.ts actual leaf executes; logger mock only, type-only imports erased. Other listed sources are scoped static reads, not whole subsystem execution."
+}

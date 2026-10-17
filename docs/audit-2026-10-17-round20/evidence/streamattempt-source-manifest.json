@@ -1,0 +1,130 @@
+{
+  "base": "d40dd06987a2e0c20c377e243cf5c4e4b549c9ec",
+  "files": [
+    {
+      "path": "packages/tui/src/ui/stream-attempt.ts",
+      "frozenSha256": "342f7dd7cebd31a067aa6149d06e623ec74eb45b3604681fb3475a7658a1de69",
+      "currentSha256": "342f7dd7cebd31a067aa6149d06e623ec74eb45b3604681fb3475a7658a1de69",
+      "matchesFrozen": true,
+      "bytes": 1103,
+      "lineCount": 35,
+      "ranges": [
+        "1-35 full source"
+      ],
+      "kind": "actual runtime type-only-import leaf"
+    },
+    {
+      "path": "packages/tui/src/ui/stream-attempt.test.ts",
+      "frozenSha256": "e114d71595adee6af6cc46a98a206a13d2a8b31dd68bcf71383477b79f4a8d99",
+      "currentSha256": "e114d71595adee6af6cc46a98a206a13d2a8b31dd68bcf71383477b79f4a8d99",
+      "matchesFrozen": true,
+      "bytes": 1688,
+      "lineCount": 38,
+      "ranges": [
+        "1-38 full existing tests"
+      ],
+      "kind": "2 existing leaf tests executed once in this batch; old round7 baseline acknowledged"
+    },
+    {
+      "path": "packages/tui/src/ui/store.ts",
+      "frozenSha256": "2bfaa003f88b5bf3f53d845f660b8491b9f9280fee066f169766feb4ff647744",
+      "currentSha256": "2bfaa003f88b5bf3f53d845f660b8491b9f9280fee066f169766feb4ff647744",
+      "matchesFrozen": true,
+      "bytes": 6412,
+      "lineCount": 195,
+      "ranges": [
+        "1-195 full displayed source; type/store semantics only, runtime unexecuted"
+      ],
+      "kind": "selected source only; no product runtime import/execution"
+    },
+    {
+      "path": "packages/tui/src/ui/App.tsx",
+      "frozenSha256": "f535b936c26ef217617ef42eae56f71efb5063f51a4775f8b1e201815795e6d8",
+      "currentSha256": "f535b936c26ef217617ef42eae56f71efb5063f51a4775f8b1e201815795e6d8",
+      "matchesFrozen": true,
+      "bytes": 90976,
+      "lineCount": 2318,
+      "ranges": [
+        "545-810 selected buffering/finalization/stream-start/tombstone source",
+        "825-960 selected tool/agent handlers source",
+        "other rg hits navigation only"
+      ],
+      "kind": "selected source only; no product runtime import/execution"
+    },
+    {
+      "path": "packages/core/src/types.ts",
+      "frozenSha256": "a60cb4b3d6177af79e875f6bfffa7788b930964daf123d034008e2925737a4db",
+      "currentSha256": "a60cb4b3d6177af79e875f6bfffa7788b930964daf123d034008e2925737a4db",
+      "matchesFrozen": true,
+      "bytes": 50794,
+      "lineCount": 1306,
+      "ranges": [
+        "715-730 and 797-810 selected event types"
+      ],
+      "kind": "selected source only; no product runtime import/execution"
+    },
+    {
+      "path": "packages/core/src/engine/turn-loop.ts",
+      "frozenSha256": "9ccbcd28cdb100d7d879994c3839d3b53c46af01589e0475d6f75f1d7e750413",
+      "currentSha256": "9ccbcd28cdb100d7d879994c3839d3b53c46af01589e0475d6f75f1d7e750413",
+      "matchesFrozen": true,
+      "bytes": 108774,
+      "lineCount": 2412,
+      "ranges": [
+        "1090-1140,2080-2130,2190-2240 selected ordinary start/tombstone/replacement source"
+      ],
+      "kind": "selected source only; no product runtime import/execution"
+    },
+    {
+      "path": "packages/core/src/engine/turn-loop-streaming-fallback.test.ts",
+      "frozenSha256": "69b64ce193b6fe3e369039270d17df3ae8916f70bad738a73cf86b5c1ffa893b",
+      "currentSha256": "69b64ce193b6fe3e369039270d17df3ae8916f70bad738a73cf86b5c1ffa893b",
+      "matchesFrozen": true,
+      "bytes": 6874,
+      "lineCount": 202,
+      "ranges": [
+        "rg-selected start/tombstone assertions navigation only; tests unexecuted"
+      ],
+      "kind": "selected source only; no product runtime import/execution"
+    },
+    {
+      "path": "scripts/run-bun-test-shard.mjs",
+      "frozenSha256": "dd2b245afbcb5aa7c798c8674d34edb8e02bb42be0be320050adf9be5ed2fd7d",
+      "currentSha256": "dd2b245afbcb5aa7c798c8674d34edb8e02bb42be0be320050adf9be5ed2fd7d",
+      "matchesFrozen": true,
+      "bytes": 233,
+      "lineCount": 8,
+      "ranges": [
+        "1-8 full entry"
+      ],
+      "kind": "guard entry read and executed"
+    },
+    {
+      "path": "scripts/bun-test-completion.mjs",
+      "frozenSha256": "99808f8f7c67ae5f108243b0649557209991f148f0150785fcde83d47465047e",
+      "currentSha256": "99808f8f7c67ae5f108243b0649557209991f148f0150785fcde83d47465047e",
+      "matchesFrozen": true,
+      "bytes": 6518,
+      "lineCount": 152,
+      "ranges": [],
+      "kind": "metadata byte pin only; invoked by guarded runner, not independently audited"
+    },
+    {
+      "path": "CODESHELL.md",
+      "frozenSha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "currentSha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "matchesFrozen": true,
+      "bytes": 17639,
+      "lineCount": 217,
+      "ranges": [
+        "1-217 full instructions"
+      ],
+      "kind": "selected source only; no product runtime import/execution"
+    }
+  ],
+  "limitations": [
+    "Pins do not imply whole-file or transitive runtime coverage.",
+    "App, ChatStore, TurnLoop, provider, Engine, protocol/replay and real timer/render lifecycle unexecuted.",
+    "Core source is selected ordinary producer context; no fake provider or real model used."
+  ]
+}

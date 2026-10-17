@@ -1,0 +1,23 @@
+bun test v1.3.11 (af24e281)
+
+docs/audit-2026-10-17-round20/evidence/toolsummary-focused.test.ts:
+(pass) round20 actual tool-summary leaf, owned callbacks only > empty tool batch does not invoke callback [0.93ms]
+(pass) round20 actual tool-summary leaf, owned callbacks only > ordinary aligned batch includes both tool names, JSON args and outputs [0.35ms]
+(pass) round20 actual tool-summary leaf, owned callbacks only > ordinary empty success result stays empty in the prompt [0.05ms]
+(pass) round20 actual tool-summary leaf, owned callbacks only > ordinary error-only ToolResult contributes its error message
+(pass) round20 actual tool-summary leaf, owned callbacks only > ASCII args and output are sliced at the production 200/300 limits [0.25ms]
+(pass) round20 actual tool-summary leaf, owned callbacks only > the caller-owned signal reaches the callback unchanged [0.18ms]
+(pass) round20 actual tool-summary leaf, owned callbacks only > already aborted signal is forwarded and Error rejection resolves null [0.59ms]
+(pass) round20 actual tool-summary leaf, owned callbacks only > summary surrounding whitespace is trimmed
+(pass) round20 actual tool-summary leaf, owned callbacks only > whitespace-only summary resolves null
+(pass) round20 actual tool-summary leaf, owned callbacks only > ordinary Error rejection resolves null with one warn call
+(pass) round20 actual tool-summary leaf, owned callbacks only > related mechanism: handcrafted null rejection escapes as TypeError [0.36ms]
+(pass) round20 actual tool-summary leaf, owned callbacks only > related mechanism: handcrafted undefined rejection also escapes
+(pass) round20 actual tool-summary leaf, owned callbacks only > related control: handcrafted string rejection resolves null
+(pass) round20 actual tool-summary leaf, owned callbacks only > ordinary owned inputs are not mutated by summary generation [0.13ms]
+
+ 14 pass
+ 0 fail
+ 42 expect() calls
+Ran 14 tests across 1 file. [154.00ms]
+Completed Bun shard: 14 tests, 0 skipped; 0 failures.

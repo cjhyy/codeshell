@@ -1,0 +1,88 @@
+{
+  "base": "5f5cf69df8526470700712a4dc2d5ae6bd2da132",
+  "report": "docs/audit-2026-10-17-round19/reviewprompt-report.md",
+  "formalCount": 1,
+  "candidateCount": 0,
+  "relatedCount": 2,
+  "files": [
+    {
+      "path": "docs/audit-2026-10-17-round19/evidence/reviewprompt-candidates.json",
+      "sha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570",
+      "bytes": 3
+    },
+    {
+      "path": "docs/audit-2026-10-17-round19/evidence/reviewprompt-dedup-decisions.json",
+      "sha256": "ecb531b6596e3f26d6f2aa34e5ddefb61b074b59e9baf5396e327ab1228b8aa8",
+      "bytes": 2380
+    },
+    {
+      "path": "docs/audit-2026-10-17-round19/evidence/reviewprompt-dedup.json",
+      "sha256": "0424f52da9dc631dcfa1c5647251aec7ce05dafb426c8761af0caa80ccf87e58",
+      "bytes": 42617
+    },
+    {
+      "path": "docs/audit-2026-10-17-round19/evidence/reviewprompt-dedup.py",
+      "sha256": "507d3f99543dea43a7251d7711539f013f07a83f975fb4f94334afd49cf98cc1",
+      "bytes": 3647
+    },
+    {
+      "path": "docs/audit-2026-10-17-round19/evidence/reviewprompt-findings.json",
+      "sha256": "f998dabaf691c5c034f6889f39d11c878ff804d90f79aee9e737ebea5a2484a4",
+      "bytes": 2133
+    },
+    {
+      "path": "docs/audit-2026-10-17-round19/evidence/reviewprompt-first.exit.json",
+      "sha256": "6f6e0f93f5437c16d6c59934e0cd2e3f98b5dbd3748ea3a5897b58708f6a4d41",
+      "bytes": 661
+    },
+    {
+      "path": "docs/audit-2026-10-17-round19/evidence/reviewprompt-first.raw.log",
+      "sha256": "aad8dfb9f0edd3917f1eeee0a1b6e805ed60e78341be0c7c1ab94ce829d58617",
+      "bytes": 1926
+    },
+    {
+      "path": "docs/audit-2026-10-17-round19/evidence/reviewprompt-focused.test.ts",
+      "sha256": "03ee81e8efaee3461c22a8d164e06f254009bd3f728a46da9e01cb672385a652",
+      "bytes": 3574
+    },
+    {
+      "path": "docs/audit-2026-10-17-round19/evidence/reviewprompt-preflight.json",
+      "sha256": "53f4059e32cca5b9d293ed1cabaead80b6818795f3eb293b3eb90162d7ce51b1",
+      "bytes": 4498
+    },
+    {
+      "path": "docs/audit-2026-10-17-round19/evidence/reviewprompt-related.json",
+      "sha256": "9e8f3677e8b85d5a8452c549c074b31a24335b53533bfbd2c138ffeba8cd62e6",
+      "bytes": 1422
+    },
+    {
+      "path": "docs/audit-2026-10-17-round19/evidence/reviewprompt-source-manifest.json",
+      "sha256": "59955ebea96a4d077ce5441ca7dab04250c81d3047c190323451f5a0513a3067",
+      "bytes": 7429
+    },
+    {
+      "path": "docs/audit-2026-10-17-round19/evidence/reviewprompt-validation.json",
+      "sha256": "c6dbf0d90006ae8795e9a6e9c334ae49a95bcc05e630290d1afa9814adfbb7a5",
+      "bytes": 2193
+    },
+    {
+      "path": "docs/audit-2026-10-17-round19/reviewprompt-report.md",
+      "sha256": "d1777afcb05e843bd8ffe968e03d58459e06a77d396e830d3664e07c4b57c3b4",
+      "bytes": 6054
+    }
+  ],
+  "selfExcluded": true,
+  "rawLogsPreservedVerbatim": true,
+  "metadataOnlyReview": {
+    "reportLinksChecked": 26,
+    "allTargetsExist": true,
+    "referencedLinesInBounds": true,
+    "artifactHashesChecked": 13,
+    "sourcePins": 15,
+    "testReruns": 0,
+    "metadataAdjustments": [
+      "Intermediate TuiControlSurface static wiring added after independent review; receipt hashes refreshed.",
+      "Initial receipt link check deferred its own not-yet-written receipt target; final check verifies all links including existing self receipt."
+    ]
+  }
+}

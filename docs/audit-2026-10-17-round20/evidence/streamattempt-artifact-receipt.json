@@ -1,0 +1,82 @@
+{
+  "base": "d40dd06987a2e0c20c377e243cf5c4e4b549c9ec",
+  "files": [
+    {
+      "path": "docs/audit-2026-10-17-round20/streamattempt.md",
+      "bytes": 4141,
+      "sha256": "e6849d3df3a42dcd4aa4538a9148cecf7fc22465eb0403cbb3171cb759557126"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round20/evidence/streamattempt-candidates.json",
+      "bytes": 77,
+      "sha256": "bea4df49a114fb45c45ffde08fd5beeca2abe6227a21e14cea62d679283829f5"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round20/evidence/streamattempt-dedup-decisions.json",
+      "bytes": 1512,
+      "sha256": "e677ab7388be68cd4ae4cd5680ebf976b113c2a70fece5ac17152589b378280b"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round20/evidence/streamattempt-dedup.json",
+      "bytes": 449637,
+      "sha256": "ec9c35efee5c80ec69a6c5b33d273ef095133164b5e4e6b8a0f2669495c0f8a0"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round20/evidence/streamattempt-dedup.py",
+      "bytes": 3811,
+      "sha256": "dbfdc67992e9a4d0e7d8754e890ecd6b5d8b39b0a6c6d052126e1db3164e06dc"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round20/evidence/streamattempt-findings.json",
+      "bytes": 75,
+      "sha256": "bd8ae21d9e46e64fc574d98cdbc42505f4e7870b0d547aea18462fde1bb86151"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round20/evidence/streamattempt-first.exit.json",
+      "bytes": 494,
+      "sha256": "6bffa3ebd88daf9eeb0f1af2011fe4fd9aede89769ab24e635a5f16442ef92db"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round20/evidence/streamattempt-first.raw.log",
+      "bytes": 1438,
+      "sha256": "4297ea48b078847bc2201d2bd14bbb8ac97259c8505d336435e2e0fab6aeb6c1"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round20/evidence/streamattempt-focused.test.ts",
+      "bytes": 6065,
+      "sha256": "f3ef27bac7e8061e0b949158005e272205d2c5ef1986c3dc424a686f5c9ee1ad"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round20/evidence/streamattempt-metadata-skips.json",
+      "bytes": 986,
+      "sha256": "bd718114857670f9a0e1dc17d783ee2c1af5a82f95a87ad324e97b7ab94114fd"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round20/evidence/streamattempt-preflight.json",
+      "bytes": 3867,
+      "sha256": "f69980adb5962498e8b90666ebab000f1d8165dd228c4d1e688ee8eb779da947"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round20/evidence/streamattempt-related.json",
+      "bytes": 74,
+      "sha256": "ed602fdce52db0b437f27a8d619bf73bf4a766e58460ef3bf0c9f309ce337cf7"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round20/evidence/streamattempt-source-manifest.json",
+      "bytes": 5173,
+      "sha256": "653973d028fcd98d966b6b53529d854b927a026eaa01d84e8758de12ad3bc3a1"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round20/evidence/streamattempt-validation.json",
+      "bytes": 3572,
+      "sha256": "b1320bfc519fde3eafafa2b059e6ed89c2370f986215c72435794f518b709963"
+    }
+  ],
+  "rawLogs": [
+    "docs/audit-2026-10-17-round20/evidence/streamattempt-first.raw.log"
+  ],
+  "receiptSelfExcluded": true,
+  "productChanges": false,
+  "gitWrites": false,
+  "limitations": "Artifact hashes cover these owned lane files at authoring time; root integrates and may append review metadata without product test reruns."
+}

@@ -1,0 +1,633 @@
+{
+  "base": "5f5cf69df8526470700712a4dc2d5ae6bd2da132",
+  "scope": "all inventoried docs/bugs Markdown and recursively parsed JSON values, including archives; current batch excluded",
+  "statistics": {
+    "files": 2050,
+    "markdownFiles": 1161,
+    "jsonFiles": 889,
+    "jsonStringLeaves": 260970,
+    "jsonScalarLeaves": 363859,
+    "readOrParseErrors": []
+  },
+  "inventorySha256": "9519d2728936992a38479f1e00ce0afb7b91522177a42ac3b6b953f6490db3c0",
+  "patterns": {
+    "review_prompt_exact": "review-prompt|buildReviewPrompt|parseDimensions|ALL_DIMENSIONS",
+    "dimension_alias": "dimensions=|(?:review|评审|审查).{0,100}(?:perf|维度|dimension)|(?:perf|维度|dimension).{0,100}(?:review|评审|审查)",
+    "review_fence": "(?:review|评审|审查).{0,100}(?:fence|backtick|围栏|反引号|截断|truncat)|(?:fence|backtick|围栏|反引号|截断|truncat).{0,100}(?:review|评审|审查)",
+    "unicode_truncation": "DESKTOP-R12-01|UTF.?16.{0,100}(?:truncat|截断)|(?:truncat|截断).{0,100}(?:surrogate|代理|UTF.?16)"
+  },
+  "matchCounts": {
+    "review_prompt_exact": 27,
+    "dimension_alias": 38,
+    "review_fence": 141,
+    "unicode_truncation": 143
+  },
+  "matchingFiles": {
+    "review_prompt_exact": [
+      "docs/architecture/08-arena-and-integrations.md",
+      "docs/archive/core-modules/review.md",
+      "docs/audit-2026-10-16/inventory.json",
+      "docs/core-deep-dive/00-writing-plan.md",
+      "docs/core-deep-dive/09-arena-and-integrations.md"
+    ],
+    "dimension_alias": [
+      "docs/architecture/08-arena-and-integrations.md",
+      "docs/architecture/11-feature-inventory.md",
+      "docs/archive/architecture/12-mac-visual-client-research.md",
+      "docs/archive/core-modules/review.md",
+      "docs/archive/review-2026-05-30/backlog_confirmed.json",
+      "docs/archive/review-2026-05-30/backlog_verdicts.json",
+      "docs/archive/review-2026-05-30/low_confirmed.json",
+      "docs/audit-2026-10-17-round10/diagnostics.md",
+      "docs/audit-2026-10-17-round11/evidence/cross-review-chat.md",
+      "docs/audit-2026-10-17-round13/evidence/root-dedup.json",
+      "docs/audit-2026-10-17-round15/evidence/review-cli.md",
+      "docs/audit-2026-10-17-round3/cdp-browser.md",
+      "docs/audit-2026-10-17-round5/quality-profile.md",
+      "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+      "docs/audit-2026-10-17-round7/evidence/cross-review-files.md",
+      "docs/audit-2026-10-17-round7/evidence/files-dedup.json",
+      "docs/audit-2026-10-17-round7/evidence/tui-dedup-scan.json",
+      "docs/core-deep-dive/09-arena-and-integrations.md",
+      "docs/panel-media.md",
+      "docs/superpowers/specs/2026-05-16-tui-render-capability-design.md",
+      "docs/superpowers/specs/2026-06-04-workbench-builtins-design.md",
+      "docs/todo/2026-09-11-skipped-test-audit.md"
+    ],
+    "review_fence": [
+      "docs/architecture/08-arena-and-integrations.md",
+      "docs/archive/arena-architecture-analysis.md",
+      "docs/archive/arena-evidence-driven-architecture.md",
+      "docs/archive/core-complete-review.md",
+      "docs/archive/core-modules/review.md",
+      "docs/archive/review-2026-05-30/backlog.json",
+      "docs/archive/review-2026-05-30/backlog_confirmed.json",
+      "docs/archive/review-2026-05-30/backlog_ided.json",
+      "docs/archive/review-2026-05-30/backlog_verdicts.json",
+      "docs/archive/review-2026-05-30/findings.json",
+      "docs/archive/review-2026-05-30/low_confirmed.json",
+      "docs/audit-2026-10-16/core.md",
+      "docs/audit-2026-10-17-round10/evidence/cross-review-runs.md",
+      "docs/audit-2026-10-17-round10/evidence/pet-dedup.json",
+      "docs/audit-2026-10-17-round10/pet.md",
+      "docs/audit-2026-10-17-round12/evidence/desktop-dedup.json",
+      "docs/audit-2026-10-17-round13/evidence/root-dedup.json",
+      "docs/audit-2026-10-17-round13/validation.json",
+      "docs/audit-2026-10-17-round15/evidence/docinput-dedup.json",
+      "docs/audit-2026-10-17-round18/evidence/review-aggregate.md",
+      "docs/audit-2026-10-17-round18/evidence/root-qc.md",
+      "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+      "docs/audit-2026-10-17-round7/evidence/cross-review-files.md",
+      "docs/audit-2026-10-17-round7/evidence/files-dedup.json",
+      "docs/audit-2026-10-17-round7/root-metadata.md",
+      "docs/audit-2026-10-17-round8/README.md",
+      "docs/audit-2026-10-17-round8/evidence/cross-review-questions.md",
+      "docs/audit-2026-10-17-round9/evidence/attachments-dedup.json",
+      "docs/audit-2026-10-17/root.md",
+      "docs/review-2026-10-12/goal-bound-quality-round20.md",
+      "docs/review-2026-10-12/http-error-preflight-round23.md",
+      "docs/review-2026-10-12/validation/browser-stop-round22/native-observations.json",
+      "docs/review-2026-10-12/validation/latest-a66f4ef2/browser-stop-round22/native-observations.json",
+      "docs/review-2026-10-12/validation/original-browser-stop-round22/fifth-native-failed/native-failure-observations.json",
+      "docs/review-2026-10-12/validation/original-browser-stop-round22/final-author/native-observations.json",
+      "docs/review-2026-10-12/validation/original-browser-stop-round22/fourth-native-failed/native-failure-observations.json",
+      "docs/review-2026-10-12/validation/original-browser-stop-round22/sixth-native-failed/native-failure-observations.json",
+      "docs/review-2026-10-12/validation/original-browser-stop-round22/third-native-failed/native-failure-observations.json",
+      "docs/review-2026-10-12/validation/original-goal-sleep-round20/goal-bound-quality-round20.md",
+      "docs/review-2026-10-12/validation/original-preflight-round23/http-error-preflight-round23.md",
+      "docs/review-remaining-2026-10-12/hosts.md",
+      "docs/review-remaining-2026-10-12/quant-job.md",
+      "docs/review-remaining-2026-10-12/validation/source-reports/codeshell-panel-quant-job-report.md",
+      "docs/review-remaining-2026-10-12/validation/source-reports/codeshell-remaining-hosts-report.md",
+      "docs/superpowers/specs/2026-09-01-github-pr-workflow-design.md"
+    ],
+    "unicode_truncation": [
+      "docs/audit-2026-10-17-round10/evidence/pet-dedup.json",
+      "docs/audit-2026-10-17-round12/README.md",
+      "docs/audit-2026-10-17-round12/desktop.md",
+      "docs/audit-2026-10-17-round12/evidence/desktop-dedup.json",
+      "docs/audit-2026-10-17-round12/evidence/desktop-findings.json",
+      "docs/audit-2026-10-17-round12/evidence/desktop-validation.json",
+      "docs/audit-2026-10-17-round12/evidence/review-aggregate.md",
+      "docs/audit-2026-10-17-round12/evidence/review-desktop.md",
+      "docs/audit-2026-10-17-round12/findings.json",
+      "docs/audit-2026-10-17-round14/README.md",
+      "docs/audit-2026-10-17-round14/addressed-sources.json",
+      "docs/audit-2026-10-17-round14/baseline-refresh.md",
+      "docs/audit-2026-10-17-round14/bytes.md",
+      "docs/audit-2026-10-17-round14/evidence/review-aggregate.md",
+      "docs/audit-2026-10-17-round14/evidence/root-dedup.json",
+      "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+      "docs/audit-2026-10-17-round14/evidence/utils-related.json",
+      "docs/audit-2026-10-17-round14/related.json",
+      "docs/audit-2026-10-17-round14/utils.md",
+      "docs/audit-2026-10-17-round15/evidence/injection-dedup.json",
+      "docs/audit-2026-10-17-round17/evidence/frontier-dedup.json",
+      "docs/audit-2026-10-17-round3/README.md",
+      "docs/audit-2026-10-17-round3/evidence/host-dedup.json",
+      "docs/audit-2026-10-17-round3/findings.json",
+      "docs/audit-2026-10-17-round3/host-link.md",
+      "docs/audit-2026-10-17-round5/evidence/chat-dedup.json",
+      "docs/audit-2026-10-17-round9/evidence/attachments-dedup.json",
+      "docs/audit-2026-10-17/README.md",
+      "docs/audit-2026-10-17/evidence/quality-final-review.md",
+      "docs/audit-2026-10-17/findings.json",
+      "docs/refactor/goal-judge-v1-final-review-codex.md",
+      "docs/refactor/goal-judge-v1-review-codex.md",
+      "docs/todo/release-real-operations-2026-10-16.md",
+      "docs/todo/workspace-upload-document-index-delivery.md"
+    ]
+  },
+  "contextsPerPatternCap": 24,
+  "contexts": {
+    "review_prompt_exact": [
+      {
+        "path": "docs/architecture/08-arena-and-integrations.md",
+        "locator": "line:96",
+        "context": "`buildReviewPrompt()` is a pure prompt builder for `/review`. It normalizes dimensions (`correctness`, `security`, `performance`, `readability`), truncates input to 12k chars by default, emits a P0-"
+      },
+      {
+        "path": "docs/architecture/08-arena-and-integrations.md",
+        "locator": "line:96",
+        "context": "ority guide, and can switch to strict JSON output for CI-style consumers (`packages/core/src/review/review-prompt.ts:11`, `packages/core/src/review/review-prompt.ts:46`, `packages/core/src/review/review-prompt.ts:57`, `packages/core/src/review/review-prompt.ts:63`, `packages/core/src/review/r"
+      },
+      {
+        "path": "docs/architecture/08-arena-and-integrations.md",
+        "locator": "line:96",
+        "context": "t for CI-style consumers (`packages/core/src/review/review-prompt.ts:11`, `packages/core/src/review/review-prompt.ts:46`, `packages/core/src/review/review-prompt.ts:57`, `packages/core/src/review/review-prompt.ts:63`, `packages/core/src/review/review-prompt.ts:75`)."
+      },
+      {
+        "path": "docs/architecture/08-arena-and-integrations.md",
+        "locator": "line:96",
+        "context": "iew/review-prompt.ts:11`, `packages/core/src/review/review-prompt.ts:46`, `packages/core/src/review/review-prompt.ts:57`, `packages/core/src/review/review-prompt.ts:63`, `packages/core/src/review/review-prompt.ts:75`)."
+      },
+      {
+        "path": "docs/architecture/08-arena-and-integrations.md",
+        "locator": "line:96",
+        "context": "iew/review-prompt.ts:46`, `packages/core/src/review/review-prompt.ts:57`, `packages/core/src/review/review-prompt.ts:63`, `packages/core/src/review/review-prompt.ts:75`)."
+      },
+      {
+        "path": "docs/architecture/08-arena-and-integrations.md",
+        "locator": "line:96",
+        "context": "iew/review-prompt.ts:57`, `packages/core/src/review/review-prompt.ts:63`, `packages/core/src/review/review-prompt.ts:75`)."
+      },
+      {
+        "path": "docs/archive/core-modules/review.md",
+        "locator": "line:13",
+        "context": "| `review-prompt.ts` | The entire module: dimension types, `parseDimensions`, and `buildReviewPrompt`. |"
+      },
+      {
+        "path": "docs/archive/core-modules/review.md",
+        "locator": "line:13",
+        "context": "| `review-prompt.ts` | The entire module: dimension types, `parseDimensions`, and `buildReviewPrompt`. |"
+      },
+      {
+        "path": "docs/archive/core-modules/review.md",
+        "locator": "line:13",
+        "context": "| `review-prompt.ts` | The entire module: dimension types, `parseDimensions`, and `buildReviewPrompt`. |"
+      },
+      {
+        "path": "docs/archive/core-modules/review.md",
+        "locator": "line:14",
+        "context": "| `review-prompt.test.ts` | `bun:test` coverage for dimension parsing, fence selection, JSON mode, truncation, and labels. |"
+      },
+      {
+        "path": "docs/archive/core-modules/review.md",
+        "locator": "line:23",
+        "context": "const ALL_DIMENSIONS: ReviewDimension[]; // canonical order: correctness, security, performance, readability"
+      },
+      {
+        "path": "docs/archive/core-modules/review.md",
+        "locator": "line:35",
+        "context": "// falls back to ALL_DIMENSIONS if input is empty or yields none. Result keeps canonical order."
+      },
+      {
+        "path": "docs/archive/core-modules/review.md",
+        "locator": "line:36",
+        "context": "function parseDimensions(input: string | undefined): ReviewDimension[];"
+      },
+      {
+        "path": "docs/archive/core-modules/review.md",
+        "locator": "line:39",
+        "context": "function buildReviewPrompt(opts: ReviewPromptOptions): string;"
+      },
+      {
+        "path": "docs/archive/core-modules/review.md",
+        "locator": "line:47",
+        "context": "import { buildReviewPrompt, parseDimensions } from \"@codeshell/core\";"
+      },
+      {
+        "path": "docs/archive/core-modules/review.md",
+        "locator": "line:47",
+        "context": "import { buildReviewPrompt, parseDimensions } from \"@codeshell/core\";"
+      },
+      {
+        "path": "docs/archive/core-modules/review.md",
+        "locator": "line:50",
+        "context": "const dimensions = parseDimensions(dimFlag?.split(\"=\")[1]);"
+      },
+      {
+        "path": "docs/archive/core-modules/review.md",
+        "locator": "line:55",
+        "context": "const prompt = buildReviewPrompt({"
+      },
+      {
+        "path": "docs/archive/core-modules/review.md",
+        "locator": "line:69",
+        "context": "const prompt = buildReviewPrompt({"
+      },
+      {
+        "path": "docs/archive/core-modules/review.md",
+        "locator": "line:79",
+        "context": "- **`parseDimensions` never returns empty.** Empty/whitespace input and all-unknown input both fall back to `ALL_DIMENSIONS`; a partially-valid list keeps only the recognized names (`\"security,bogus\"`"
+      },
+      {
+        "path": "docs/archive/core-modules/review.md",
+        "locator": "line:79",
+        "context": "eDimensions` never returns empty.** Empty/whitespace input and all-unknown input both fall back to `ALL_DIMENSIONS`; a partially-valid list keeps only the recognized names (`\"security,bogus\"` → `[\"security\"]`)."
+      },
+      {
+        "path": "docs/archive/core-modules/review.md",
+        "locator": "line:80",
+        "context": "- **Output order is canonical, not input order.** Dimensions are filtered from `ALL_DIMENSIONS`, so `parseDimensions(\"readability correctness\")` returns `[\"correctness\",\"readability\"]`."
+      },
+      {
+        "path": "docs/archive/core-modules/review.md",
+        "locator": "line:80",
+        "context": " **Output order is canonical, not input order.** Dimensions are filtered from `ALL_DIMENSIONS`, so `parseDimensions(\"readability correctness\")` returns `[\"correctness\",\"readability\"]`."
+      },
+      {
+        "path": "docs/archive/core-modules/review.md",
+        "locator": "line:84",
+        "context": "- **ESM import paths use `.js`** (e.g. `from \"./review-prompt.js\"`) per the package's NodeNext resolution, even though the source is `.ts`."
+      }
+    ],
+    "dimension_alias": [
+      {
+        "path": "docs/architecture/08-arena-and-integrations.md",
+        "locator": "line:96",
+        "context": "`buildReviewPrompt()` is a pure prompt builder for `/review`. It normalizes dimensions (`correctness`, `security`, `performance`, `readability`), truncates input to 12k chars by default, emits a P0-P3 priority guide, and can switch to strict JSON output for CI-styl"
+      },
+      {
+        "path": "docs/architecture/11-feature-inventory.md",
+        "locator": "line:278",
+        "context": "| `/review` | 对 diff 做 P0-P3 结构化评审，支持 file/staged/json/dimensions | `packages/tui/src/cli/commands/builtin/git-commands.ts:129` | `/review --staged --json` |"
+      },
+      {
+        "path": "docs/archive/architecture/12-mac-visual-client-research.md",
+        "locator": "line:61",
+        "context": "| Log / Perf Viewer | engine traces、render frame stats、tool result previews、错误定位 |"
+      },
+      {
+        "path": "docs/archive/core-modules/review.md",
+        "locator": "line:7",
+        "context": "ruction that asks for prioritized (P0–P3), confidence-scored, location-precise findings across four review dimensions. It does **not** gather the diff, call the model, or parse the response — the TUI/desktop command does the I/O and the model does the reasoning. The module's only job is to assem"
+      },
+      {
+        "path": "docs/archive/core-modules/review.md",
+        "locator": "line:13",
+        "context": "| `review-prompt.ts` | The entire module: dimension types, `parseDimensions`, and `buildReviewPrompt`. |"
+      },
+      {
+        "path": "docs/archive/core-modules/review.md",
+        "locator": "line:14",
+        "context": "| `review-prompt.test.ts` | `bun:test` coverage for dimension parsing, fence selection, JSON mode, truncation, and labels. |"
+      },
+      {
+        "path": "docs/archive/core-modules/review.md",
+        "locator": "line:21",
+        "context": "type ReviewDimension = \"security\" | \"performance\" | \"readability\" | \"correctness\";"
+      },
+      {
+        "path": "docs/archive/core-modules/review.md",
+        "locator": "line:23",
+        "context": "const ALL_DIMENSIONS: ReviewDimension[]; // canonical order: correctness, security, performance, readability"
+      },
+      {
+        "path": "docs/archive/core-modules/review.md",
+        "locator": "line:27",
+        "context": "  dimensions?: ReviewDimension[]; // defaults to all four"
+      },
+      {
+        "path": "docs/archive/core-modules/review.md",
+        "locator": "line:36",
+        "context": "function parseDimensions(input: string | undefined): ReviewDimension[];"
+      },
+      {
+        "path": "docs/archive/core-modules/review.md",
+        "locator": "line:47",
+        "context": "import { buildReviewPrompt, parseDimensions } from \"@codeshell/core\";"
+      },
+      {
+        "path": "docs/archive/core-modules/review.md",
+        "locator": "line:49",
+        "context": "// --dimensions=security,performance  → [\"security\",\"performance\"]; bad/empty → all four"
+      },
+      {
+        "path": "docs/archive/review-2026-05-30/backlog_confirmed.json",
+        "locator": "$[63][\"verify_note\"]",
+        "context": "r ignores bad values rather than crashing; (3) worst-case impact is a window created with incorrect dimensions, not a security or stability issue. The reviewer's proposed fix (runtime validation) is reasonable but the actual practical risk is minimal."
+      },
+      {
+        "path": "docs/archive/review-2026-05-30/backlog_verdicts.json",
+        "locator": "$[73][\"note\"]",
+        "context": "r ignores bad values rather than crashing; (3) worst-case impact is a window created with incorrect dimensions, not a security or stability issue. The reviewer's proposed fix (runtime validation) is reasonable but the actual practical risk is minimal."
+      },
+      {
+        "path": "docs/archive/review-2026-05-30/low_confirmed.json",
+        "locator": "$[32][\"verify_note\"]",
+        "context": "r ignores bad values rather than crashing; (3) worst-case impact is a window created with incorrect dimensions, not a security or stability issue. The reviewer's proposed fix (runtime validation) is reasonable but the actual practical risk is minimal."
+      },
+      {
+        "path": "docs/audit-2026-10-17-round10/diagnostics.md",
+        "locator": "line:21",
+        "context": "e metadata 和现有 unit tests；Console / Network 环形记录、普通事件 metadata、entry limit、DOM BFS 与 open-shadow 遍历、Performance 数据字段均做源代码审查。实际动态只执行下表两个 guarded shard。"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round11/evidence/cross-review-chat.md",
+        "locator": "line:3",
+        "context": "tions, product edits, dependency changes, Git writes, external requests or platform operations were performed by this review. Inputs were enumerated with `rg --files` before reading. The initial evidence review was followed by a final read of `chat.md` and `chat-{findings,candidates,validation,source-manifest,artifact-receipt}.json` after those files appeared. This final review approves "
+      },
+      {
+        "path": "docs/audit-2026-10-17-round11/evidence/cross-review-chat.md",
+        "locator": "line:46",
+        "context": "all-history receipt; `chat.md` and `chat-findings.json` carry updated dedup wording. This last pass performed **0 product test runs**, changed only this review note, and found no reason to alter the supported narrow P3. Review writes are now finished for root indexing."
+      },
+      {
+        "path": "docs/audit-2026-10-17-round13/evidence/root-dedup.json",
+        "locator": "$[\"hits\"][\"pipe_subject\"][1][\"context\"]",
+        "context": "支 | `packages/tui/src/cli/commands/builtin/git-commands.ts:98` | `/branch feature-x --create` |\n| `/review` | 对 diff 做 P0-P3 结构化评审，支持 file/staged/json/dimensions |"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round15/evidence/review-cli.md",
+        "locator": "line:3",
+        "context": "king reporting issue found; no new bug proposed**. No tests or product/other-report/Git writes were performed during review. This file is the only review output."
+      },
+      {
+        "path": "docs/audit-2026-10-17-round3/cdp-browser.md",
+        "locator": "line:68",
+        "context": "仍缺真实 CSS transforms/iframe/遮挡命中、浏览器事件与 OS 键盘布局、完整滚动选择器运行、navigation 与读取竞争、真实页面脚本异常、Console/Performance 浏览器库事件兼容及整个包全量回归。图像 fetch/decode、真实 screenshot 缩放及 loading 轮询没有本轮新增动态验证。审查报告是限定范围的 checkpoint，不能称两个 package 的全部后端行为已验证。"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round5/quality-profile.md",
+        "locator": "line:3",
+        "context": "nts, product edits, native applications, network, models, credentials, or user data operations were performed for this review. The profile finding is self-authored and is not represented as independently reviewed here."
+      },
+      {
+        "path": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+        "locator": "$[\"hits\"][\"logs\"][3][\"text\"]",
+        "context": "ining += 656;` or better yet, calculate the actual replacement string length dynamically using the preview and sizeKb values\"}, {\"file\": \"packages/core/src/context/manager.ts\", \"line\": \"451\", \"category\": \"performance\", \"severity\": \"low\", \"confidence\": \"high\", \"title\": \"Inefficient object allocation due to global modified flag\", \"detail\": \"In truncateToolResults(), the `modified` flag at"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+        "locator": "$[\"hits\"][\"settings-navigation\"][1][\"text\"]",
+        "context": "r ignores bad values rather than crashing; (3) worst-case impact is a window created with incorrect dimensions, not a security or stability issue. The reviewer's proposed fix (runtime validation) is reasonable but the actual practical risk is minimal.\", \"verify_reason\": \"The code at line 19 in window-state-store.ts uses a TypeScript ty"
+      }
+    ],
+    "review_fence": [
+      {
+        "path": "docs/architecture/08-arena-and-integrations.md",
+        "locator": "line:96",
+        "context": "`buildReviewPrompt()` is a pure prompt builder for `/review`. It normalizes dimensions (`correctness`, `security`, `performance`, `readability`), truncates input to 12k chars by default, emits a P0-P3 priority guide, and can switch to strict JSON output for CI-style consumers (`packages/core/src/review/review-prompt.ts:11`, `packag"
+      },
+      {
+        "path": "docs/archive/arena-architecture-analysis.md",
+        "locator": "line:243",
+        "context": "V1 (`runCrossReview`):** Each participant reviews all other participants' reports, produces `FindingReview[]` (agree/refine/disagree/needs_evidence). Retry on truncation (`stopReason === \"length\"`)."
+      },
+      {
+        "path": "docs/archive/arena-evidence-driven-architecture.md",
+        "locator": "line:646",
+        "context": "- preview 必须截断并高信号"
+      },
+      {
+        "path": "docs/archive/core-complete-review.md",
+        "locator": "line:1126",
+        "context": "- `applyToolResultBudget()` 理论上可能二次截断已替换的 sentinel/preview，不过实际 preview 通常很小，风险低。"
+      },
+      {
+        "path": "docs/archive/core-modules/review.md",
+        "locator": "line:14",
+        "context": "| `review-prompt.test.ts` | `bun:test` coverage for dimension parsing, fence selection, JSON mode, truncation, and labels. |"
+      },
+      {
+        "path": "docs/archive/core-modules/review.md",
+        "locator": "line:66",
+        "context": "Full-file (non-incremental) review uses a plain fence and \"code\" wording:"
+      },
+      {
+        "path": "docs/archive/review-2026-05-30/backlog.json",
+        "locator": "$[14][\"detail\"]",
+        "context": " However, the actual replacement message (lines 360-363) includes `Output too large (${sizeKb}KB) — truncated to fit the per-message budget. Re-run the originating tool if you need the full output.\\n\\nPreview (first 500 chars):\\n${preview}`, which is approximately 150 + 500 = 650+ chars. This causes the `remaining` size estimate to be wildly inaccurate (off by 450+ chars), leading to u"
+      },
+      {
+        "path": "docs/archive/review-2026-05-30/backlog_confirmed.json",
+        "locator": "$[5][\"detail\"]",
+        "context": " However, the actual replacement message (lines 360-363) includes `Output too large (${sizeKb}KB) — truncated to fit the per-message budget. Re-run the originating tool if you need the full output.\\n\\nPreview (first 500 chars):\\n${preview}`, which is approximately 150 + 500 = 650+ chars. This causes the `remaining` size estimate to be wildly inaccurate (off by 450+ chars), leading to u"
+      },
+      {
+        "path": "docs/archive/review-2026-05-30/backlog_confirmed.json",
+        "locator": "$[5][\"verify_reason\"]",
+        "context": "s). For a typical large output (e.g., 100KB), the replacement would be: \"Output too large (100KB) — truncated to fit the per-message budget. Re-run the originating tool if you need the full output.\\n\\nPreview (first 500 chars):\\n[500 chars of preview]\" = approximately 656 chars. This 330+ char underestimate means the algorithm will stop truncating earlier than needed, causing the final"
+      },
+      {
+        "path": "docs/archive/review-2026-05-30/backlog_confirmed.json",
+        "locator": "$[5][\"verify_reason\"]",
+        "context": "run the originating tool if you need the full output.\\n\\nPreview (first 500 chars):\\n[500 chars of preview]\" = approximately 656 chars. This 330+ char underestimate means the algorithm will stop truncating earlier than needed, causing the final message to potentially exceed maxTotalChars. The algorithm has no downstream validation to catch this, so messages can end up larger than"
+      },
+      {
+        "path": "docs/archive/review-2026-05-30/backlog_confirmed.json",
+        "locator": "$[38][\"verify_note\"]",
+        "context": "Real defect: loses 1 character from truncated content when no newline exists in first 10,000 chars. Low severity because: (1) only affects preview text display, (2) minimal data loss (1 char), (3) rare in practice since most docs have newlines within 10k chars, (4) easy to notice but not critical functionality."
+      },
+      {
+        "path": "docs/archive/review-2026-05-30/backlog_confirmed.json",
+        "locator": "$[39][\"verify_note\"]",
+        "context": "While this is a genuine bug, the practical impact is minimal—it only loses one character from the truncated preview. The truncation still functions and the output remains mostly correct. Real but low-impact due to single-character loss in edge case (no newline in first 8K chars)."
+      },
+      {
+        "path": "docs/archive/review-2026-05-30/backlog_ided.json",
+        "locator": "$[14][\"detail\"]",
+        "context": " However, the actual replacement message (lines 360-363) includes `Output too large (${sizeKb}KB) — truncated to fit the per-message budget. Re-run the originating tool if you need the full output.\\n\\nPreview (first 500 chars):\\n${preview}`, which is approximately 150 + 500 = 650+ chars. This causes the `remaining` size estimate to be wildly inaccurate (off by 450+ chars), leading to u"
+      },
+      {
+        "path": "docs/archive/review-2026-05-30/backlog_verdicts.json",
+        "locator": "$[8][\"note\"]",
+        "context": "Real defect: loses 1 character from truncated content when no newline exists in first 10,000 chars. Low severity because: (1) only affects preview text display, (2) minimal data loss (1 char), (3) rare in practice since most docs have newlines within 10k chars, (4) easy to notice but not critical functionality."
+      },
+      {
+        "path": "docs/archive/review-2026-05-30/backlog_verdicts.json",
+        "locator": "$[9][\"note\"]",
+        "context": "While this is a genuine bug, the practical impact is minimal—it only loses one character from the truncated preview. The truncation still functions and the output remains mostly correct. Real but low-impact due to single-character loss in edge case (no newline in first 8K chars)."
+      },
+      {
+        "path": "docs/archive/review-2026-05-30/backlog_verdicts.json",
+        "locator": "$[14][\"reason\"]",
+        "context": "s). For a typical large output (e.g., 100KB), the replacement would be: \"Output too large (100KB) — truncated to fit the per-message budget. Re-run the originating tool if you need the full output.\\n\\nPreview (first 500 chars):\\n[500 chars of preview]\" = approximately 656 chars. This 330+ char underestimate means the algorithm will stop truncating earlier than needed, causing the final"
+      },
+      {
+        "path": "docs/archive/review-2026-05-30/backlog_verdicts.json",
+        "locator": "$[14][\"reason\"]",
+        "context": "run the originating tool if you need the full output.\\n\\nPreview (first 500 chars):\\n[500 chars of preview]\" = approximately 656 chars. This 330+ char underestimate means the algorithm will stop truncating earlier than needed, causing the final message to potentially exceed maxTotalChars. The algorithm has no downstream validation to catch this, so messages can end up larger than"
+      },
+      {
+        "path": "docs/archive/review-2026-05-30/findings.json",
+        "locator": "$[28][\"detail\"]",
+        "context": " However, the actual replacement message (lines 360-363) includes `Output too large (${sizeKb}KB) — truncated to fit the per-message budget. Re-run the originating tool if you need the full output.\\n\\nPreview (first 500 chars):\\n${preview}`, which is approximately 150 + 500 = 650+ chars. This causes the `remaining` size estimate to be wildly inaccurate (off by 450+ chars), leading to u"
+      },
+      {
+        "path": "docs/archive/review-2026-05-30/low_confirmed.json",
+        "locator": "$[7][\"verify_note\"]",
+        "context": "Real defect: loses 1 character from truncated content when no newline exists in first 10,000 chars. Low severity because: (1) only affects preview text display, (2) minimal data loss (1 char), (3) rare in practice since most docs have newlines within 10k chars, (4) easy to notice but not critical functionality."
+      },
+      {
+        "path": "docs/archive/review-2026-05-30/low_confirmed.json",
+        "locator": "$[8][\"verify_note\"]",
+        "context": "While this is a genuine bug, the practical impact is minimal—it only loses one character from the truncated preview. The truncation still functions and the output remains mostly correct. Real but low-impact due to single-character loss in edge case (no newline in first 8K chars)."
+      },
+      {
+        "path": "docs/audit-2026-10-16/core.md",
+        "locator": "line:15",
+        "context": "- 查重：自行从当前 provider 发现后，对 `docs/review-*` 的 finish_reason/EOF/stream truncation 相关记录检索，未发现同根因已登记项。"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round10/evidence/cross-review-runs.md",
+        "locator": "line:10",
+        "context": "arsed JSON、126,651 string leaves，parseErrors 为空；只读检查其结构和 bounded relevant contexts。旧 May 30 summary truncation 与当前否定关键词语义不同；架构 keyword-based 说明已经存在。没有从这些收据推断所有历史材料均由本审查者逐行复核。"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round10/evidence/pet-dedup.json",
+        "locator": "$[\"matches\"][37][\"hits\"][3][\"excerpt\"]",
+        "context": " However, the actual replacement message (lines 360-363) includes `Output too large (${sizeKb}KB) — truncated to fit the per-message budget. Re-run the originating tool if you need the full output.\\\\n\\\\nPreview (first 500 chars):\\\\n${preview}`, which is approximately 150 + 500 = 650+ chars. This causes the `remaining` size estimate to be wildly inaccurate (off by 450+ cha"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round10/evidence/pet-dedup.json",
+        "locator": "$[\"matches\"][37][\"hits\"][8][\"excerpt\"]",
+        "context": " However, the actual replacement message (lines 360-363) includes `Output too large (${sizeKb}KB) — truncated to fit the per-message budget. Re-run the originating tool if you need the full output.\\\\n\\\\nPreview (first 500 chars):\\\\n${preview}`, which is approximately 150 + 500 = 650+ chars. This causes the `remaining` size estimate to be wildly inaccurate (off by 450+ cha"
+      }
+    ],
+    "unicode_truncation": [
+      {
+        "path": "docs/audit-2026-10-17-round10/evidence/pet-dedup.json",
+        "locator": "$[\"matches\"][8][\"hits\"][0][\"excerpt\"]",
+        "context": "| HL-02 | P3 | 长路径默认标签截断Unicode代理对 | [host-link.md](host-link.md) |"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round10/evidence/pet-dedup.json",
+        "locator": "$[\"matches\"][9][\"hits\"][0][\"excerpt\"]",
+        "context": "长路径默认标签截断Unicode代理对"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round10/evidence/pet-dedup.json",
+        "locator": "$[\"matches\"][10][\"hits\"][0][\"excerpt\"]",
+        "context": "- **可达触发**：GitHub 文件选择不传显式 `label`，路径长度超过默认标签上限，截断点刚好落在 Unicode 代理对中间。fixture 使用 `😀/` 后接两个 250 字符目录和 8 字符文件名，总计 513 个 UTF-16 单位，每段均不超过 255，路径没有非法分隔或控制字符，远低于 resolver 的 2,000 限制。"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round10/evidence/pet-dedup.json",
+        "locator": "$[\"matches\"][17][\"hits\"][0][\"excerpt\"]",
+        "context": "| CHD02 | P3 | 长附件标签截断拆开 Unicode 代理对 | [chat-data.md](chat-data.md) |"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round10/evidence/pet-dedup.json",
+        "locator": "$[\"matches\"][18][\"hits\"][0][\"excerpt\"]",
+        "context": "长附件标签截断拆开 Unicode 代理对"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round10/evidence/pet-dedup.json",
+        "locator": "$[\"matches\"][33][\"hits\"][0][\"excerpt\"]",
+        "context": "file-selection.ts:90` 的 `defaultLabel.slice(-512)`。\n- **可达触发**：GitHub 文件选择不传显式 `label`，路径长度超过默认标签上限，截断点刚好落在 Unicode 代理对中间。fixture 使用 `😀/` 后接两个 250 字符目录和 8 字符文件名，总计 513 个 UTF-16 单位，每段均不超过 255，路径没有非法分隔或控制字符，远低于 resolver 的 2,000 限制。\n- **预期契约**：路径可以包含 Unicode；默认展示标签应保持合法 Unicode 文本。显式普通 Unicode 标签的对照项完整保留。\n- **实际**：生产 resolver 接受且保留原始 `params.p"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round10/evidence/pet-dedup.json",
+        "locator": "$[\"matches\"][33][\"hits\"][1][\"excerpt\"]",
+        "context": "长路径默认标签截断Unicode代理对"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round10/evidence/pet-dedup.json",
+        "locator": "$[\"matches\"][33][\"hits\"][2][\"excerpt\"]",
+        "context": ".md) |\n| HL-01 | P3 | 精确GitHub文件路径被trim并合并引用 | [host-link.md](host-link.md) |\n| HL-02 | P3 | 长路径默认标签截断Unicode代理对 | [host-link.md](host-link.md) |\n| CDP-R3-01 | P3 | 旋转quad点击/hover取到元素外的点 | [cdp-browser.md](cdp-browser.md) |\n| CDP-R3-02 | P3 | Shift组合的logical key与text矛盾 | [cdp-browser.md](cd"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round10/evidence/pet-dedup.json",
+        "locator": "$[\"matches\"][43][\"hits\"][0][\"excerpt\"]",
+        "context": "remote/SDK 标签条件 | 保留条件项 | `media.ts:232,234` 按 UTF-16 code units 截断；`:52` remoteAttachment 调用此 helper，`attachments.ts:61` 原样保留 name。原始测试以 254 ASCII + emoji 的完整 Unicode 标签触发尾部 lone high surrogate 0xd83d，并验证编码后 U+FFFD；短 Unicode 标签正常。只证明共享普通元数据转换及 br"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round10/evidence/pet-dedup.json",
+        "locator": "$[\"matches\"][45][\"hits\"][2][\"excerpt\"]",
+        "context": "remote/SDK 标签条件 | 保留条件项 | `media.ts:232,234` 按 UTF-16 code units 截断；`:52` remoteAttachment 调用此 helper，`attachments.ts:61` 原样保留 name。原始测试以 254 ASCII + emoji 的完整 Unicode 标签触发尾部 lone high surrogate 0xd83d，并验证编码后 U+FFFD；短 Unicode 标签正常。只证明共享普通元数据转换及 br"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round10/evidence/pet-dedup.json",
+        "locator": "$[\"matches\"][45][\"hits\"][4][\"excerpt\"]",
+        "context": "| CHD02 | P3 | 长附件标签截断拆开 Unicode 代理对 | [chat-data.md](chat-data.md) |"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round12/README.md",
+        "locator": "line:9",
+        "context": "| DESKTOP-R12-01 | 工具卡摘要截断拆开 Unicode 代理对 | 实际 helper 在正常 70/80/90 上限产生孤立高代理项；UI 消费仅静态追踪 |"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round12/README.md",
+        "locator": "line:9",
+        "context": "| DESKTOP-R12-01 | 工具卡摘要截断拆开 Unicode 代理对 | 实际 helper 在正常 70/80/90 上限产生孤立高代理项；UI 消费仅静态追踪 |"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round12/desktop.md",
+        "locator": "line:7",
+        "context": "## DESKTOP-R12-01 [P3] 工具卡摘要截断拆开 Unicode 代理对"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round12/desktop.md",
+        "locator": "line:7",
+        "context": "## DESKTOP-R12-01 [P3] 工具卡摘要截断拆开 Unicode 代理对"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round12/desktop.md",
+        "locator": "line:9",
+        "context": "- 位置：[tool-cards/utils.ts:13](../../packages/desktop/src/renderer/tool-cards/utils.ts#L13)。`truncate` 用 UTF-16 code-unit 下标 `max - 1` 截断后附省略号，未避开代理对中点。"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round12/evidence/desktop-dedup.json",
+        "locator": "$[\"patterns\"][\"truncate_unicode\"]",
+        "context": "(?:truncate|截断).{0,100}(?:surrogate|UTF.16|emoji|代理|Unicode)|(?:surrogate|UTF.16|emoji|代理|Unicode).{0,100}(?:truncate|截断)"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round12/evidence/desktop-dedup.json",
+        "locator": "$[\"hits\"][\"truncate_unicode\"][0][\"snippet\"]",
+        "context": "d) |\n| CHD01 | P2 | Slack thread 身份丢失使回复落到频道顶层 | [chat-data.md](chat-data.md) |\n| CHD02 | P3 | 长附件标签截断拆开 Unicode 代理对 | [chat-data.md](chat-data.md) |\n\n验证收据：[validation.json](validation.json)。34 个完整成功 guarded shard，实际 **227 pass / 777 expect**；另有 26 个过滤测试。共享收据只计一次，候选和正常对照不是额外 bug；断言错误现象的测试通过也不代表"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round12/evidence/desktop-dedup.json",
+        "locator": "$[\"hits\"][\"truncate_unicode\"][1][\"snippet\"]",
+        "context": "以支持 P2，不能扩大为真实 session 合并/跨账号/泄漏结论。 |\n| CHD02 / P3，长 remote/SDK 标签条件 | 保留条件项 | `media.ts:232,234` 按 UTF-16 code units 截断；`:52` remoteAttachment 调用此 helper，`attachments.ts:61` 原样保留 name。原始测试以 254 ASCII + emoji 的完整 Unicode 标签触发尾部 lone high surrogate 0xd83d，并验证编码后 U+FFFD；短 Unicode 标签正常。只证明共享普通元数据转换及 br"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round12/evidence/desktop-dedup.json",
+        "locator": "$[\"hits\"][\"truncate_unicode\"][2][\"snippet\"]",
+        "context": "长附件标签截断拆开 Unicode 代理对"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round12/evidence/desktop-dedup.json",
+        "locator": "$[\"hits\"][\"truncate_unicode\"][4][\"snippet\"]",
+        "context": "| HL-02 | P3 | 长路径默认标签截断Unicode代理对 | [host-link.md](host-link.md) |"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round12/evidence/desktop-dedup.json",
+        "locator": "$[\"hits\"][\"truncate_unicode\"][5][\"snippet\"]",
+        "context": "长路径默认标签截断Unicode代理对"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round12/evidence/desktop-dedup.json",
+        "locator": "$[\"hits\"][\"truncate_unicode\"][6][\"snippet\"]",
+        "context": "- **可达触发**：GitHub 文件选择不传显式 `label`，路径长度超过默认标签上限，截断点刚好落在 Unicode 代理对中间。fixture 使用 `😀/` 后接两个 250 字符目录和 8 字符文件名，总计 513 个 UTF-16 单位，每段均不超过 255，路径没有非法分隔或控制字符，远低于 resolver 的 2,000 限制。"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round12/evidence/desktop-dedup.json",
+        "locator": "$[\"hits\"][\"truncate_unicode\"][7][\"snippet\"]",
+        "context": "| CHD02 | P3 | 长附件标签截断拆开 Unicode 代理对 | [chat-data.md](chat-data.md) |"
+      }
+    ]
+  },
+  "limitations": "Pattern hits are an index, not proof of exhaustive semantic deduplication; context caps do not cap counts."
+}

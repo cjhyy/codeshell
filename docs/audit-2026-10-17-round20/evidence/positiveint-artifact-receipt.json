@@ -1,0 +1,77 @@
+{
+  "base": "d40dd06987a2e0c20c377e243cf5c4e4b549c9ec",
+  "report": "docs/audit-2026-10-17-round20/positiveint.md",
+  "formalCount": 0,
+  "candidateCount": 0,
+  "relatedCount": 0,
+  "files": [
+    {
+      "path": "docs/audit-2026-10-17-round20/evidence/positiveint-candidates.json",
+      "bytes": 3,
+      "sha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round20/evidence/positiveint-dedup-decisions.json",
+      "bytes": 1867,
+      "sha256": "0fa6da51b16ced83bbd3cd15f77f51ef7f6c4ab0a90716c86419b07a7589fc7b"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round20/evidence/positiveint-dedup.json",
+      "bytes": 442655,
+      "sha256": "a191e1111f79e6ce7079dd9ffede10718c37a135512d12dd20e3fc30f09824bf"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round20/evidence/positiveint-dedup.py",
+      "bytes": 2559,
+      "sha256": "32ba114f751d66b3954d734618fee7cdfcc53e8ba5940a55d84b66598ebc05d8"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round20/evidence/positiveint-findings.json",
+      "bytes": 3,
+      "sha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round20/evidence/positiveint-first.exit.json",
+      "bytes": 559,
+      "sha256": "27045c97a24f60d8b3c1413661fc4bf5f6098633c98a8aad25eae148510d6bf3"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round20/evidence/positiveint-first.raw.log",
+      "bytes": 1542,
+      "sha256": "7edb21d52f54d5ddbcd910612b3f18b9a7b8426b511e702546a8b00152305583"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round20/evidence/positiveint-focused.test.ts",
+      "bytes": 2592,
+      "sha256": "2761ca972aceda370e079d83ae7fa4983181294f58a3d3ad086172fa7608c1cb"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round20/evidence/positiveint-preflight.json",
+      "bytes": 504,
+      "sha256": "2d9f8f49e91d4863196c4df17918c37bed47c444303974448b891ccab0d044b7"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round20/evidence/positiveint-related.json",
+      "bytes": 3,
+      "sha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round20/evidence/positiveint-source-manifest.json",
+      "bytes": 2143,
+      "sha256": "2470223a7989cf77fcdde45f47822509119607023281e6290505dc08e239e35d"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round20/evidence/positiveint-validation.json",
+      "bytes": 2382,
+      "sha256": "8efc61aab29774f6b6f889b03e965c081f8a2333024c4d31c73f4dd50ec2e420"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round20/positiveint.md",
+      "bytes": 3437,
+      "sha256": "29a35815330e33109fa6124ca9aff7e417e3afc9baaa8b2ac4f940e8e1040295"
+    }
+  ],
+  "productChanges": false,
+  "gitWrites": false,
+  "receiptExcludesItself": true
+}

@@ -1,0 +1,18 @@
+[
+  {
+    "direction": "guessed Core model directory navigation",
+    "command": "rg -n stream_request_start/type:tombstone across packages/core/src/model packages/core/src/agent packages/core/src/engine and App.tsx",
+    "exitCode": 2,
+    "rawFirstError": "rg: packages/core/src/model: No such file or directory (os error 2)",
+    "classification": "read-only navigation error; no Bun/import/product execution; guessed missing path not recovered; other existing-path hits retained as navigation only",
+    "dynamicAttempts": 0
+  },
+  {
+    "direction": "historical navigation output display",
+    "command": "cat round7 receipt + rg round7 reports + sed archive F-01..F-05 + types snippets",
+    "toolOutputTokens": 4214,
+    "toolOutputTruncated": true,
+    "classification": "static historical metadata display truncation, not test/product failure; only fully displayed archive F-01 lines20-27 used, remaining archive directions not counted as read",
+    "dynamicAttempts": 0
+  }
+]

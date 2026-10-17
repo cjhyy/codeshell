@@ -1,0 +1,62 @@
+{
+  "base": "5f5cf69df8526470700712a4dc2d5ae6bd2da132",
+  "statistics": {
+    "files": 2050,
+    "markdownFiles": 1161,
+    "jsonFiles": 889,
+    "jsonStringLeaves": 260970,
+    "jsonScalarLeaves": 363859,
+    "readOrParseErrors": []
+  },
+  "matchCounts": {
+    "review_prompt_exact": 27,
+    "dimension_alias": 38,
+    "review_fence": 141,
+    "unicode_truncation": 143
+  },
+  "scope": "all inventoried docs/bugs Markdown and recursively parsed JSON values, including archives; current batch excluded",
+  "manualSelectedContexts": [
+    {
+      "paths": [
+        "docs/archive/core-modules/review.md",
+        "docs/architecture/08-arena-and-integrations.md",
+        "docs/core-deep-dive/00-writing-plan.md",
+        "docs/core-deep-dive/09-arena-and-integrations.md",
+        "docs/audit-2026-10-16/inventory.json"
+      ],
+      "decision": "Exact builder/parser hits describe normal full dimension names, archive contracts or inventory; no documented perf help mismatch."
+    },
+    {
+      "paths": [
+        "docs/archive/review-2026-05-30/backlog_confirmed.json",
+        "docs/archive/review-2026-05-30/backlog_verdicts.json",
+        "docs/archive/review-2026-05-30/low_confirmed.json"
+      ],
+      "decision": "Broad dimension alias hits concern window dimensions, not review dimensions."
+    },
+    {
+      "paths": [
+        "docs/audit-2026-10-17/root.md"
+      ],
+      "decision": "Fixed triple-backtick body wrapper is old R2-03, so new builder context stays related only."
+    },
+    {
+      "paths": [
+        "docs/audit-2026-10-17-round12/desktop.md"
+      ],
+      "decision": "UTF-16 surrogate split is old DESKTOP-R12-01, so new builder context stays related only."
+    }
+  ],
+  "secondaryBoundedRead": {
+    "selectedRows": 22,
+    "selection": "all exact review-prompt/buildReviewPrompt/parseDimensions/ALL_DIMENSIONS or dimensions=, and review/fence intersections within first scanner matching files",
+    "note": "Full selected rows were read in tool output; no large JSON source was dumped. Broad counts were not equated with semantic exhaustion."
+  },
+  "newFormalCount": 1,
+  "newCandidateCount": 0,
+  "relatedCount": 2,
+  "limitations": [
+    "Keyword indices and bounded contexts do not prove full semantic deduplication.",
+    "Current batch excluded; historical inventory is a read-time snapshot, not a claim about later main changes."
+  ]
+}

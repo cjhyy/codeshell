@@ -1,0 +1,126 @@
+{
+  "baseline": "5f5cf69df8526470700712a4dc2d5ae6bd2da132",
+  "files": [
+    {
+      "path": "packages/core/src/session/undo-target.ts",
+      "bytes": 7551,
+      "sha256": "ec84eced06a0288a7cfd65526056a05457650fa17f4e20890310f5acdc561063",
+      "scope": "Full pure source; actual four exports called on owned metadata only.",
+      "frozenBlobVerified": true,
+      "currentMatchesFrozen": true
+    },
+    {
+      "path": "packages/core/src/session/undo-target.test.ts",
+      "bytes": 10429,
+      "sha256": "7f27451c9d7536258c1532e8fbc01c80973c95661e794933c7da0b4c7b9eebf0",
+      "scope": "Full existing tests read and guarded first run; no integration test.",
+      "frozenBlobVerified": true,
+      "currentMatchesFrozen": true
+    },
+    {
+      "path": "packages/core/src/session/file-history.ts",
+      "bytes": 37411,
+      "sha256": "6f944dd828efe723fb8c11608139a712e9f51268bf24eb03768f3c7da50349e5",
+      "scope": "Selected lines20-76,138-185,306-324,850-892 and target references only; never imported/executed.",
+      "frozenBlobVerified": true,
+      "currentMatchesFrozen": true
+    },
+    {
+      "path": "packages/tui/src/cli/commands/builtin/utility-commands.ts",
+      "bytes": 9016,
+      "sha256": "30f57f0789dc55613f4a50115bf5d9900793c8e9ec5d0d144f4ad3c7e2a55f60",
+      "scope": "Selected undo consumer lines35-160; source only.",
+      "frozenBlobVerified": true,
+      "currentMatchesFrozen": true
+    },
+    {
+      "path": "packages/core/src/session/usage.ts",
+      "bytes": 5944,
+      "sha256": "cec6ea891501f12ea35686ce5b409055ce76bcf7cea231f81ab03479aacd79cd",
+      "scope": "Full static leaf; prior round9 accounting direction excluded, no runtime.",
+      "frozenBlobVerified": true,
+      "currentMatchesFrozen": true
+    },
+    {
+      "path": "packages/core/src/session/subagent-continuation.ts",
+      "bytes": 2345,
+      "sha256": "d604ea3b2baf99c53fdf492f51797ca3b54b9975ed452de8a13d900ce035b26a",
+      "scope": "Full static leaf; no authority metadata experiment/import.",
+      "frozenBlobVerified": true,
+      "currentMatchesFrozen": true
+    },
+    {
+      "path": "packages/core/src/session/output-coverage-state.ts",
+      "bytes": 11503,
+      "sha256": "d04dd758745657d94e226d2cb3d72c5590ae1df247c8768a32773281178a7f3b",
+      "scope": "Selected lines1-200 static only; no filesystem/custody experiment/import.",
+      "frozenBlobVerified": true,
+      "currentMatchesFrozen": true
+    },
+    {
+      "path": "packages/core/src/utils/cwd-normalize.ts",
+      "bytes": 475,
+      "sha256": "f7dbeb74f60c4d3c7381c7787ba34a32239efb89fd25c49f766951be324eaabe",
+      "scope": "Full static leaf; no filesystem operation/import.",
+      "frozenBlobVerified": true,
+      "currentMatchesFrozen": true
+    },
+    {
+      "path": "packages/core/src/utils/semver.ts",
+      "bytes": 398,
+      "sha256": "94d3f2a74fe43631be54459ebc8a985089b613db8be4be13e65e1fd66c94897e",
+      "scope": "Full static leaf; no dependency import or prior unexecuted fixture recovery.",
+      "frozenBlobVerified": true,
+      "currentMatchesFrozen": true
+    },
+    {
+      "path": "packages/core/src/utils/earlyInput.ts",
+      "bytes": 5398,
+      "sha256": "4e7cf8cd39cc678ebba72cb591c39f05ab2611126a54c7ae55d53add56a7d3a6",
+      "scope": "Full static leaf; old round4 excluded, no stdin/TTY import.",
+      "frozenBlobVerified": true,
+      "currentMatchesFrozen": true
+    },
+    {
+      "path": "packages/tui/src/render/components/App.tsx",
+      "bytes": 31180,
+      "sha256": "3efc8fbee2da5a638faea0c1964231e6b502af4024c4d0b65e51c33f3559dfc7",
+      "scope": "Only line232 comment/reference search; not full source read or import.",
+      "frozenBlobVerified": true,
+      "currentMatchesFrozen": true
+    },
+    {
+      "path": "docs/archive/core-modules/session.md",
+      "bytes": 10498,
+      "sha256": "8fe5ab55e61cc45a70bdefd761422cf220ccf672e31c6f02674cf4cf2412dd33",
+      "scope": "Selected historical selector inventory/dedup context.",
+      "frozenBlobVerified": true,
+      "currentMatchesFrozen": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round4/root.md",
+      "bytes": 5808,
+      "sha256": "8bd078da933e8c4900d896835f592d24e1e3efc9b7454b90c97f6b9704826412",
+      "scope": "Selected old earlyInput/diff exclusions and recorder skip context.",
+      "frozenBlobVerified": true,
+      "currentMatchesFrozen": true
+    },
+    {
+      "path": "docs/review-remaining-2026-10-12/core.md",
+      "bytes": 22162,
+      "sha256": "695848e99ff5a90b1005fbb0d816429b56962fa1bce490bfd5b00e1b288d06e2",
+      "scope": "Selected historical usage/continuation grep contexts; not full report.",
+      "frozenBlobVerified": true,
+      "currentMatchesFrozen": true
+    },
+    {
+      "path": "docs/review-remaining-2026-10-12/core-lifecycle.md",
+      "bytes": 16357,
+      "sha256": "c75cb5a43357e34fca599dfec4e989e55bb06f67bbf3c9b1abe58e71976a8390",
+      "scope": "Reference search only; no matching new root dynamic work.",
+      "frozenBlobVerified": true,
+      "currentMatchesFrozen": true
+    }
+  ],
+  "note": "Exploratory static reads are individually scoped; only undo selector leaf executed."
+}

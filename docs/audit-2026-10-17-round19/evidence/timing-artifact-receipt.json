@@ -1,0 +1,84 @@
+{
+  "base": "5f5cf69df8526470700712a4dc2d5ae6bd2da132",
+  "report": "docs/audit-2026-10-17-round19/timing.md",
+  "formalCount": 0,
+  "candidateCount": 0,
+  "relatedCount": 0,
+  "files": [
+    {
+      "path": "docs/audit-2026-10-17-round19/evidence/timing-candidates.json",
+      "sha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570",
+      "bytes": 3
+    },
+    {
+      "path": "docs/audit-2026-10-17-round19/evidence/timing-dedup.json",
+      "sha256": "0614cb8b39ec9d21366b27ecdaa7b0a6653447ae3c781281c0b5aabad7367056",
+      "bytes": 15012
+    },
+    {
+      "path": "docs/audit-2026-10-17-round19/evidence/timing-dedup.py",
+      "sha256": "1c9c59180036a997811a268d4ea1dbe89915d3c5b88e959836a7c8d8fd943658",
+      "bytes": 3776
+    },
+    {
+      "path": "docs/audit-2026-10-17-round19/evidence/timing-findings.json",
+      "sha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570",
+      "bytes": 3
+    },
+    {
+      "path": "docs/audit-2026-10-17-round19/evidence/timing-metadata-skips.json",
+      "sha256": "b12e1ff92fc47603d9500642538ebbcd274f5ff8edeca48d8527fee15313a217",
+      "bytes": 998
+    },
+    {
+      "path": "docs/audit-2026-10-17-round19/evidence/timing-normal.first.exit.json",
+      "sha256": "10118af6c18507a13fd1e79ddfe61446ef666258b88bf9aa3ebceefb9c635128",
+      "bytes": 567
+    },
+    {
+      "path": "docs/audit-2026-10-17-round19/evidence/timing-normal.first.raw.log",
+      "sha256": "8abd530b2545b293931994cc6d5039bb8a2651d58814ed60769f1a8e4dbe6933",
+      "bytes": 1185
+    },
+    {
+      "path": "docs/audit-2026-10-17-round19/evidence/timing-normal.test.ts",
+      "sha256": "5b55507cc493ea86b6a5679b77f2b538322da961ecbce57a4ed82b10176b6927",
+      "bytes": 4898
+    },
+    {
+      "path": "docs/audit-2026-10-17-round19/evidence/timing-preflight.json",
+      "sha256": "c003c4bd1d9c511f11d8a5d853744f13179307bc7af8b83dfed7876fbb47eea4",
+      "bytes": 4985
+    },
+    {
+      "path": "docs/audit-2026-10-17-round19/evidence/timing-related.json",
+      "sha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570",
+      "bytes": 3
+    },
+    {
+      "path": "docs/audit-2026-10-17-round19/evidence/timing-source-manifest.json",
+      "sha256": "ed4a9395fbbdb7e4e37d6e8570cbe1fe043efbc6058586345b5072d9b65877f6",
+      "bytes": 4764
+    },
+    {
+      "path": "docs/audit-2026-10-17-round19/evidence/timing-validation.json",
+      "sha256": "fd0b02f57d72afb6ca5038f402a956856b4b9590d3e06b622b90530207184a32",
+      "bytes": 3096
+    },
+    {
+      "path": "docs/audit-2026-10-17-round19/timing.md",
+      "sha256": "84b153340cfb082ef79d7e34a6b438a5a93cc66296071b40301de0607ec37672",
+      "bytes": 6479
+    }
+  ],
+  "selfExcluded": true,
+  "rawLogsPreservedVerbatim": true,
+  "metadataOnlyReview": {
+    "reportLinksChecked": 21,
+    "allTargetsExist": true,
+    "referencedLinesInBounds": true,
+    "artifactHashesChecked": 13,
+    "testReruns": 0
+  },
+  "rawAndExitSavedBeforeInspection": true
+}
