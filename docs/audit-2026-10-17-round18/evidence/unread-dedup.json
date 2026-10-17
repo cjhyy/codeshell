@@ -1,0 +1,209 @@
+{
+  "baseCommit": "65691923fa629970ac26dc04e35362a9c4ab57a8",
+  "scope": "All prior docs/bugs MD and recursively parsed JSON value leaves, including archive/_archive; this batch excluded. JSON keys are not string leaves. Keyword contexts are bounded and are not exhaustive semantic proof.",
+  "files": 1995,
+  "counts": {
+    "md": 1148,
+    "json": 847,
+    "stringLeaves": 253680,
+    "scalarLeaves": 353952
+  },
+  "parseErrors": [],
+  "patterns": {
+    "helper_names": "markSessionUnread|clearUnreadSession|pruneUnreadSessions",
+    "unread_state": "unreadSessionIds|(?:未读|unread).{0,100}(?:session|会话|list|列表|clear|清)",
+    "list_active_clear": "(?:session\\.list\\.ok|activeSessionId).{0,160}(?:unread|未读|clearUnreadSession|清除)",
+    "selection_revision": "conversationRevisionRef.{0,120}(?:unread|未读)|(?:unread|未读).{0,120}(?:boundSessionRef|activeSessionId|selectedSessionId)"
+  },
+  "contextCapPerPattern": 40,
+  "matches": {
+    "helper_names": {
+      "matches": 0,
+      "contexts": []
+    },
+    "unread_state": {
+      "matches": 35,
+      "contexts": [
+        {
+          "location": "bugs/2026-07-13-repo-audit.md:230",
+          "context": "- **证据**：TUI runner 固定启动 cwd 并 `run(...,{cwd})`：`packages/tui/src/cli/commands/repl.ts:244-264`，未读 `job.cwd/resumeSessionId`；RunManager binding 只传 objective/cwd/metadata：`packages/core/src/automation/runner.ts:137-154`，没有 resumeSessionId/permissionLevel。"
+        },
+        {
+          "location": "docs/archive/review-2026-07-09/11-N06-verification.md:67",
+          "context": "### 3.3 读取路径：`requestApproval()` 先查实例级 session rules，未读 `req.sessionId`"
+        },
+        {
+          "location": "docs/audit-2026-10-17-round9/evidence/session-dedup-corpus.json#/hits/149/matches/5/text",
+          "context": "缺：UseCredential 成功 token 不进 stream/transcript/renderer；desktop snapshot 对 unreadable enc:* 的 env fail-closed；renderer 伪造 guestId/sessionId/bucket 被拒。建议补为安全回归测试。"
+        },
+        {
+          "location": "docs/plan-2026-07-09-security-M3-M2-IMPL-NOTES.md:108",
+          "context": "- m1: Added the requested negative security tests for sensitive UseCredential stream/transcript/history redaction, unreadable `enc:safeStorage:*` env/header fail-closed behavior, and forged browser guest/session metadata rejection."
+        },
+        {
+          "location": "docs/review-2026-07-09/pre-beta-06-security-impl-review.md:38",
+          "context": "缺：UseCredential 成功 token 不进 stream/transcript/renderer；desktop snapshot 对 unreadable enc:* 的 env fail-closed；renderer 伪造 guestId/sessionId/bucket 被拒。建议补为安全回归测试。"
+        },
+        {
+          "location": "docs/review-2026-10-12/remote-settings-quality-round15.md:61",
+          "context": "eController 的运行状态变更后更新 remote settings，修复自动化详情不触及该链。R61 是 shared SessionCatalog 的 activeSessionId 广播过度覆盖每窗口导航；本例恰是同一个全局 Host 事实**缺少**成功启动广播，未读取或修改 sessionIndices/activeSessionId。三项都涉及异步 UI，不能因此合并为同一根因或把它泛化成所有多窗口数据不同步。"
+        },
+        {
+          "location": "docs/review-2026-10-12/remote-settings-round15.md:39",
+          "context": "首次[失败日志](validation/original-remote-settings-round15/remote-settings.harness-failed.log)是miniDOM text helper未读nodeValue和cleanup误调用不存在的cloudAccount.dispose；未点击start、未启动listener，不计产品失败。修正fixture后两份空owned临时目录已清理。早版2/15与补preload后的3/22日志分别保留initial-pass/control22；最终补齐observer先running后stop对照为3/23，不重复累加。相关5个生产文件在84740..a66f间diff为空；目前原始运行仅a66f，主审若在两基线便携复跑需另记结果。"
+        },
+        {
+          "location": "docs/review-2026-10-12/validation/original-remote-settings-round15/quality-audit.md:61",
+          "context": "eController 的运行状态变更后更新 remote settings，修复自动化详情不触及该链。R61 是 shared SessionCatalog 的 activeSessionId 广播过度覆盖每窗口导航；本例恰是同一个全局 Host 事实**缺少**成功启动广播，未读取或修改 sessionIndices/activeSessionId。三项都涉及异步 UI，不能因此合并为同一根因或把它泛化成所有多窗口数据不同步。"
+        },
+        {
+          "location": "docs/review-2026-10-12/validation/original-remote-settings-round15/report.md:39",
+          "context": "首次[失败日志](/tmp/codeshell-review-20261012-remote-settings-round15/remote-settings.harness-failed.log)是miniDOM text helper未读nodeValue和cleanup误调用不存在的cloudAccount.dispose；未点击start、未启动listener，不计产品失败。修正fixture后两份空owned临时目录已清理。早版2/15与补preload后的3/22日志分别保留initial-pass/control22；最终补齐observer先running后stop对照为3/23，不重复累加。相关5个生产文件在84740..a66f间diff为空；目前原始运行仅a66f，主审若在两基线便携复跑需另记结果。"
+        },
+        {
+          "location": "docs/review-2026-10-12/web-round3.md:33",
+          "context": "- 建议：pending create 时将非目标原生输出只记未读，不自动绑定；草稿迁移必须以对应 clientRequestId 的创建确认作为依据，而不是任意 activeSessionId 变化。"
+        },
+        {
+          "location": "docs/superpowers/plans/2026-07-23-session-world-progressive-disclosure.md:536",
+          "context": "      continue; // not a session dir or unreadable — skip, never fail the listing"
+        },
+        {
+          "location": "docs/superpowers/plans/2026-07-23-session-world-progressive-disclosure.md:745",
+          "context": "        continue; // unreadable session — skip"
+        },
+        {
+          "location": "docs/todo/mobile-remote-optimizations.md:268",
+          "context": "/desktop/src/renderer/App.tsx:238` 是 `busyKeys`，`App.tsx:245` 是 interrupt relay 用的 `relayingBuckets`，`App.tsx:473-519` 把 asking / running / unread 解析成每个 bucket 的状态。状态优先级在 `packages/desktop/src/renderer/sessionStatus.ts:10-25`：`asking > running > unread`。"
+        },
+        {
+          "location": "docs/todo/mobile-remote-optimizations.md:283",
+          "context": "- 桌面端未读是“会话级未读”，不是消息级未读。`App.tsx:246-249` 注释写明 `unreadBuckets` 是“bucket finished a turn while the user was viewing a different session”，不持久化，只是 live 提示。"
+        },
+        {
+          "location": "docs/todo/mobile-remote-optimizations.md:283",
+          "context": "- 桌面端未读是“会话级未读”，不是消息级未读。`App.tsx:246-249` 注释写明 `unreadBuckets` 是“bucket finished a turn while the user was viewing a different session”，不持久化，只是 live 提示。"
+        },
+        {
+          "location": "docs/todo/mobile-remote-optimizations.md:286",
+          "context": "- UI 落点：`unreadBuckets` 参与 `sessionStatusMap`：`App.tsx:457-519`；`SessionRow` 在 `status === \"unread\"` 时渲染一个静态圆点：`packages/desktop/src/renderer/Sidebar.tsx:600-605`。同一位置的 `asking` 是脉冲圆点：`Sidebar.tsx:594-599`，`running` 是 spinner：`Sidebar.tsx:589-593`。"
+        },
+        {
+          "location": "docs/todo/mobile-remote-optimizations.md:287",
+          "context": "- 搜索 `unread/unseen/badge/dot/hasNew/newMessage` 未发现桌面消息流内“某条消息未读点”的实现；与本问题相关的是 sidebar 会话行状态点。"
+        },
+        {
+          "location": "docs/todo/mobile-remote-optimizations.md:302",
+          "context": "- `SessionList` 当前没有 unread/running/asking 状态点，列表行只显示标题、automation badge、cwd 和相对时间：`packages/desktop/src/mobile/components/SessionList.tsx:190-218`。"
+        },
+        {
+          "location": "docs/todo/mobile-remote-optimizations.md:304",
+          "context": "- `CcSessionList` 当前也没有 unread badge；每行只显示 firstMessage、messageCount、lastModified：`packages/desktop/src/mobile/components/CcSessionList.tsx:93-116`。`CcDiscoveredSession` 类型也只有 `sessionId/firstMessage/lastModified/messageCount`：`packages/desktop/src/main/mobile-remote/types.ts:29-35`。"
+        },
+        {
+          "location": "docs/todo/mobile-remote-optimizations.md:306",
+          "context": "- 但这些 seq 目前只用于“当前绑定会话”的补流/去重。`useRemoteApp.ts:350-363` 对非当前 session 的 `session.stream` 直接跳过，没有维护 per-session unread 集合；`MobileSessionMeta` 也没有 unread/running 字段：`packages/desktop/src/main/mobile-remote/types.ts:194-201`。"
+        },
+        {
+          "location": "docs/todo/mobile-remote-optimizations.md:310",
+          "context": "结论：mobile 目前没有桌面同款“会话级未读圆点”。普通 session 有足够的 live `session.stream seq` 能在 hook 内做会话级 unread；CC session 只有 active room 的 seq 和 discovery 的 `lastModified`，做精确 per-CC-session unread 需要额外映射/状态。"
+        },
+        {
+          "location": "docs/todo/mobile-remote-optimizations.md:325",
+          "context": "- 先对齐桌面端为“会话级未读”，不要做消息级 unread。桌面触发/清除都是 session bucket 维度：完成于非当前会话时标记，选择该会话时清除。"
+        },
+        {
+          "location": "docs/todo/mobile-remote-optimizations.md:326",
+          "context": "- 普通 session 推荐在 `useRemoteApp` 增加 `unreadSessionIds: Set<string>` 和可选 `runningSessionIds: Set<string>`："
+        },
+        {
+          "location": "docs/todo/mobile-remote-optimizations.md:327",
+          "context": "ssionId` 时，不 reduce 到当前 chat，但可以检查 `event.event.type`。`stream_request_start` 标 running；顶层 `turn_complete` / `error` 清 running 并把该 session 加 unread；如果是当前 bound session，只更新当前 chat，不加 unread。"
+        },
+        {
+          "location": "docs/todo/mobile-remote-optimizations.md:331",
+          "context": "  - `SessionList` 增加 `statusFor?: (id:string) => \"running\" | \"unread\" | undefined` 或 `unreadSessionIds/runningSessionIds` prop，在 `SessionList.tsx:200-209` 标题行右侧加 `Loader2 animate-spin` 或 `h-2 w-2 rounded-full bg-primary`，样式可直接模仿桌面 `Sidebar.tsx:589-605`。"
+        },
+        {
+          "location": "docs/todo/mobile-remote-optimizations.md:332",
+          "context": "  - `MobileSessionSwitcher` 可加 tab 级小圆点/count：当 sessions tab 下存在 unread 普通会话，或未来 CC tab 下存在 unread CC 会话时，在 `MobileSessionSwitcher.tsx:56-71` 的 label 旁渲染小圆点。这个是可选，但手机抽屉关闭时更容易发现另一个 tab 有新内容。"
+        },
+        {
+          "location": "docs/todo/mobile-remote-optimizations.md:334",
+          "context": "  - S/M 档先用 `CcDiscoveredSession.lastModified` 和本机 `lastSeenCcSessionAt` 做弱 unread：打开某 CC session 时记录 seen time；列表刷新后若 `lastModified > seenAt` 且不是当前 active room，则显示 unread。数据点在 `types.ts:29-35` 和 `CcSessionList.tsx:112-114` 已存在。"
+        },
+        {
+          "location": "docs/todo/mobile-remote-optimizations.md:334",
+          "context": "Session.lastModified` 和本机 `lastSeenCcSessionAt` 做弱 unread：打开某 CC session 时记录 seen time；列表刷新后若 `lastModified > seenAt` 且不是当前 active room，则显示 unread。数据点在 `types.ts:29-35` 和 `CcSessionList.tsx:112-114` 已存在。"
+        },
+        {
+          "location": "docs/todo/mobile-remote-optimizations.md:335",
+          "context": "M 档需要服务端把 CC discovered session 与 roomId/lastSeq 对齐，或让 `ccRoom.listSessions.ok` 带 per-session latest cursor；mobile 才能像普通 session 一样用 seq 判断 unread。现有 `lastRoomSeqRef` 只适用于当前 active room，不足以判断所有 `CcSessionList` 行。"
+        },
+        {
+          "location": "docs/todo/mobile-remote-optimizations.md:337",
+          "context": "- 量级：普通 session 会话级 unread 是 M（hook 状态 + list UI + 测试）；只给 `SessionList` 加 dot 不碰 CC 是 S/M。CC 精确 unread 是 M；用 `lastModified > seenAt` 的弱提示是 S/M。"
+        },
+        {
+          "location": "docs/todo/mobile-remote-optimizations.md:344",
+          "context": "- 协议/主进程仅在做 CC 精确 unread 或 server-side session status 时需要：`packages/desktop/src/main/mobile-remote/types.ts`、`packages/desktop/src/main/index.ts`、`packages/desktop/src/main/mobile-remote/room-manager.ts`。"
+        },
+        {
+          "location": "docs/todo/mobile-remote-optimizations.md:349",
+          "context": "/hooks/remoteAppSync.test.ts` 或新增 hook 测试，模拟非当前 session 的 `session.stream(stream_request_start)`、`session.stream(turn_complete)`，断言 running/unread 集合变化；模拟 `selectSession` 清除 unread。"
+        },
+        {
+          "location": "docs/todo/mobile-remote-optimizations.md:351",
+          "context": "- 主进程集成测试（仅做 server-side unread/CC seq 时需要）：模拟 `session.stream` 广播和 `room.history(sinceSeq)`，断言 mobile 能收到足够 cursor 信息但不会重复 append。"
+        },
+        {
+          "location": "docs/todo/mobile-remote-optimizations.md:365",
+          "context": "- 普通 session 未读圆点：M。需要 `useRemoteApp` 增加 per-session 状态、`SessionList`/可能 `MobileSessionSwitcher` 增加 UI、补测试。"
+        },
+        {
+          "location": "docs/todo/mobile-remote-optimizations.md:367",
+          "context": "- 需要编排者决策：未读是否第一版只对齐桌面的“普通会话级未读”，CC 先用弱提示/暂不做；以及 mobile 是否要把 loading 指示做成“assistant 气泡 spinner”还是同时做“列表行 running spinner + tab badge”。建议先做普通会话级 unread + active MessageStream spinner，CC 精确 unread 延后。"
+        }
+      ]
+    },
+    "list_active_clear": {
+      "matches": 4,
+      "contexts": [
+        {
+          "location": "docs/review-2026-10-12/remote-settings-quality-round15.md:61",
+          "context": "化后详情没有更新，其 producer、数据与订阅接口属于 automation。此项需要在 MobileRemoteController 的运行状态变更后更新 remote settings，修复自动化详情不触及该链。R61 是 shared SessionCatalog 的 activeSessionId 广播过度覆盖每窗口导航；本例恰是同一个全局 Host 事实**缺少**成功启动广播，未读取或修改 sessionIndices/activeSessionId。三项都涉及异步 UI，不能因此合并为同一根因或把它泛化成所有多窗口数据不同步。"
+        },
+        {
+          "location": "docs/review-2026-10-12/validation/original-remote-settings-round15/quality-audit.md:61",
+          "context": "化后详情没有更新，其 producer、数据与订阅接口属于 automation。此项需要在 MobileRemoteController 的运行状态变更后更新 remote settings，修复自动化详情不触及该链。R61 是 shared SessionCatalog 的 activeSessionId 广播过度覆盖每窗口导航；本例恰是同一个全局 Host 事实**缺少**成功启动广播，未读取或修改 sessionIndices/activeSessionId。三项都涉及异步 UI，不能因此合并为同一根因或把它泛化成所有多窗口数据不同步。"
+        },
+        {
+          "location": "docs/review-2026-10-12/web-round3.md:28",
+          "context": "有检查 pendingCreateRef；新会话 action `:1464-1468,1505-1522` 正处于 pendingCreate 且主动清空当前 binding。`packages/web/app/DesktopApp.tsx:253-265` 把随后出现的任意 activeSessionId 当成新建结果，迁移草稿后就清除 pendingCreate。"
+        },
+        {
+          "location": "docs/todo/mobile-remote-optimizations.md:329",
+          "context": "  - `session.list.ok` 可用来裁剪不存在的 unread id：`useRemoteApp.ts:321-330`。"
+        }
+      ]
+    },
+    "selection_revision": {
+      "matches": 3,
+      "contexts": [
+        {
+          "location": "docs/review-2026-10-12/remote-settings-quality-round15.md:61",
+          "context": "eController 的运行状态变更后更新 remote settings，修复自动化详情不触及该链。R61 是 shared SessionCatalog 的 activeSessionId 广播过度覆盖每窗口导航；本例恰是同一个全局 Host 事实**缺少**成功启动广播，未读取或修改 sessionIndices/activeSessionId。三项都涉及异步 UI，不能因此合并为同一根因或把它泛化成所有多窗口数据不同步。"
+        },
+        {
+          "location": "docs/review-2026-10-12/validation/original-remote-settings-round15/quality-audit.md:61",
+          "context": "eController 的运行状态变更后更新 remote settings，修复自动化详情不触及该链。R61 是 shared SessionCatalog 的 activeSessionId 广播过度覆盖每窗口导航；本例恰是同一个全局 Host 事实**缺少**成功启动广播，未读取或修改 sessionIndices/activeSessionId。三项都涉及异步 UI，不能因此合并为同一根因或把它泛化成所有多窗口数据不同步。"
+        },
+        {
+          "location": "docs/review-2026-10-12/web-round3.md:33",
+          "context": "- 建议：pending create 时将非目标原生输出只记未读，不自动绑定；草稿迁移必须以对应 clientRequestId 的创建确认作为依据，而不是任意 activeSessionId 变化。"
+        }
+      ]
+    }
+  },
+  "inventorySha256": "41454603b6f45be40f6a95f4a3a9fcf29d4b829faa1c5487b98fe1b1c8e3f399"
+}

@@ -1,0 +1,17 @@
+{
+  "command": [
+    "node",
+    "scripts/run-bun-test-shard.mjs",
+    "--timeout",
+    "30000",
+    "docs/audit-2026-10-17-round18/evidence/traceapi-normal.test.ts"
+  ],
+  "cwd": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell",
+  "exitCode": 0,
+  "wallTimeSeconds": 0.150982,
+  "rawLog": "docs/audit-2026-10-17-round18/evidence/traceapi-normal.first.raw.log",
+  "rawBytes": 1036,
+  "attempt": 1,
+  "combinedStdoutStderr": true,
+  "rawAndExitSavedBeforeInspection": true
+}

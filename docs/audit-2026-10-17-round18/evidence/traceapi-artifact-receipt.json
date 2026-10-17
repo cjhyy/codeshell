@@ -1,0 +1,73 @@
+{
+  "base": "65691923fa629970ac26dc04e35362a9c4ab57a8",
+  "report": "docs/audit-2026-10-17-round18/traceapi.md",
+  "formalCount": 0,
+  "candidateCount": 0,
+  "relatedCount": 0,
+  "files": [
+    {
+      "path": "docs/audit-2026-10-17-round18/traceapi.md",
+      "sha256": "638f062f1571717fed6142daf29f0498c28f5f79252f86f230a64fe79f86a436",
+      "bytes": 6321
+    },
+    {
+      "path": "docs/audit-2026-10-17-round18/evidence/traceapi-candidates.json",
+      "sha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570",
+      "bytes": 3
+    },
+    {
+      "path": "docs/audit-2026-10-17-round18/evidence/traceapi-dedup.json",
+      "sha256": "6f46aacec20a4332815df5104568fd54282efc16ac4a963eb427c7e21f2b1a0a",
+      "bytes": 2651
+    },
+    {
+      "path": "docs/audit-2026-10-17-round18/evidence/traceapi-dedup.py",
+      "sha256": "83dc01cbcf707753d82f18109cfa06225c39b595fedec5bd217633ffa53fd16b",
+      "bytes": 3448
+    },
+    {
+      "path": "docs/audit-2026-10-17-round18/evidence/traceapi-findings.json",
+      "sha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570",
+      "bytes": 3
+    },
+    {
+      "path": "docs/audit-2026-10-17-round18/evidence/traceapi-normal.first.exit.json",
+      "sha256": "f185e7209ba7d53f7b25159c0c23b28b067033f880597c661b8fc11ca37b73b6",
+      "bytes": 487
+    },
+    {
+      "path": "docs/audit-2026-10-17-round18/evidence/traceapi-normal.first.raw.log",
+      "sha256": "6505f896fe066d81697e2e9a58800b18aa918064943951f2980568b03434b3e2",
+      "bytes": 1036
+    },
+    {
+      "path": "docs/audit-2026-10-17-round18/evidence/traceapi-normal.test.ts",
+      "sha256": "d1432a374a1c8ed1efaf89abfbcd4c330b0752f3502cb94dd85ee3192a56f18b",
+      "bytes": 5870
+    },
+    {
+      "path": "docs/audit-2026-10-17-round18/evidence/traceapi-preflight.json",
+      "sha256": "d91192bfdcbfb5f61032af9314ce3d9c81481832609d8ec136a75d897fd215bc",
+      "bytes": 3014
+    },
+    {
+      "path": "docs/audit-2026-10-17-round18/evidence/traceapi-source-manifest.json",
+      "sha256": "d1a0d3bb23369224a7d9aee7723bdb56026dc2dec24711d13e0bc399e5e26576",
+      "bytes": 4839
+    },
+    {
+      "path": "docs/audit-2026-10-17-round18/evidence/traceapi-validation.json",
+      "sha256": "28d2a6c54193b2f0bb2f93bfe99d53068a3f88f06555fde055bf91b21dd4ed7e",
+      "bytes": 1703
+    }
+  ],
+  "selfExcluded": true,
+  "rawLogsPreservedVerbatim": true,
+  "metadataOnlyReview": {
+    "reportLinksChecked": 18,
+    "allTargetsExist": true,
+    "referencedLinesInBounds": true,
+    "artifactHashesChecked": 11,
+    "testReruns": 0
+  }
+}

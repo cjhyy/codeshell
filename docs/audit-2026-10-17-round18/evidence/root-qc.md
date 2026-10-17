@@ -1,0 +1,13 @@
+# Root evidence review and integration requirements
+
+Keep0 formal findings,1 bounded unread candidate and0 newly revalidated related issues. Four first guarded logs/exits reconcile to33 pass /138 expectations:5 maintained Web presentation cases plus28 focused;32 direct leaf cases plus1 explicitly hand-mirrored unread composition. No product retry, failed Bun shard or full hook/producer/UI result is claimed.
+
+Unread's actual helpers satisfy their local contracts. The candidate concerns the statically inspected order of clear-before-navigation and a manually mirrored helper recipe. Real event timing/browser binding/outcome remains unexecuted. Trace API owned partial objects prove passthrough only; the first test's four-call/two-path title mismatch is preserved and disclosed. Environment prior full static coverage is acknowledged, and the unused project-reference helper is not exercised to manufacture a bug.
+
+38 unique selected source/contract paths,44 per-worker source checks and36 worker artifact hashes reconcile. Only the extra old Write card differs from frozen/current/main. Its other-task source change is separately recorded, with no old card/Write/new-regression/UI runtime. Current helper pins are unchanged. Historical dedup inventory describes the earlier frozen corpus; the release Markdown later changed on main, so its old inventory hash is not asserted to describe final main.
+
+Guessed locators, metadata range corrections and a large-output truncation are labeled in worker/review material. No such metadata event counts as a product/dependency failure or restores an old skipped dynamic route. Final metadata checks cover exact index bytes/SHA, source pins, worker receipts, raw logs and local Markdown files/line bounds; final review/integration plan must be indexed after creation.
+
+Trace API cross-review originally said no Git operations while its frozen pin checks used read-only git show. At the author's request root narrowed that phrase to no Git writes and stated the read explicitly. This changes only review prose; final index incorporates the new SHA. Aggregate review records the earlier65 matching index rows plus this known post-index prose change, with later plan/review additions; final checks use the refreshed complete index. No fixture/raw/source/product retry followed the wording correction.
+
+Before commit root requires exact owned staged paths/Git blobs plus full/non-log whitespace checks. The external post-commit receipt records actual checks, main fast-forward, original primary dirty/untracked preservation and a clean owned worktree. Other-task HEAD advancement is retained in initial/refreshed snapshots. This remains an active whole-repository audit checkpoint, not exhaustive completion.
