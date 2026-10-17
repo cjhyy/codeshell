@@ -1,0 +1,24 @@
+bun test v1.3.11 (af24e281)
+
+docs/audit-2026-10-17-round20/evidence/positiveint-focused.test.ts:
+(pass) round20 positive integer leaf controls > trims ordinary argument whitespace before decimal conversion [1.33ms]
+(pass) round20 positive integer leaf controls > leading zeros stay decimal and all-zero input stays invalid [0.64ms]
+(pass) round20 positive integer leaf controls > rejects empty and whitespace-only values [0.07ms]
+(pass) round20 positive integer leaf controls > rejects alternate numeric syntaxes and embedded separators
+(pass) round20 positive integer leaf controls > base-ten ASCII grammar does not silently accept non-ASCII numeral shapes [0.13ms]
+(pass) round20 positive integer leaf controls > error keeps the option label and original input escaping [0.65ms]
+(pass) round20 positive integer leaf controls > arg-parser wrappers preserve independent option labels [0.08ms]
+(pass) round20 positive integer leaf controls > owned exact large decimal value is returned without invoking a consumer
+
+packages/tui/src/cli/parse-int-option.test.ts:
+(pass) parsePositiveInt > parses a valid positive integer [0.10ms]
+(pass) parsePositiveInt > uses radix 10 (no octal surprise)
+(pass) parsePositiveInt > throws a clear error on non-numeric input
+(pass) parsePositiveInt > throws on zero and negatives [0.05ms]
+(pass) parsePositiveInt > rejects trailing garbage (parseInt would accept '5abc') [0.02ms]
+
+ 13 pass
+ 0 fail
+ 36 expect() calls
+Ran 13 tests across 2 files. [179.00ms]
+Completed Bun shard: 13 tests, 0 skipped; 0 failures.

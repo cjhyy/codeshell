@@ -1,0 +1,23 @@
+bun test v1.3.11 (af24e281)
+
+docs/audit-2026-10-17-round20/evidence/streamattempt-focused.test.ts:
+(pass) a wrong tombstone leaves the tracked attempt available for its matching tombstone [1.03ms]
+(pass) begin snapshots IDs rather than retaining a mutable caller array [0.04ms]
+(pass) pre-existing rows survive even when their type is a provisional model-row type [0.07ms]
+(pass) new rows outside the four provisional model types retain their order and identity [0.01ms]
+(pass) every new provisional child row is preserved while equivalent main rows are removed [0.07ms]
+(pass) revoke creates a new survivor array and never mutates caller entries or rows [0.23ms]
+(pass) clear cancels the old snapshot and a later begin owns a fresh baseline [0.01ms]
+(pass) a revoked request can reopen with the same correlation ID and a new baseline [0.04ms]
+(pass) optional missing request ID does not match a string tombstone or block the next known request [0.01ms]
+(pass) independent instances keep request correlation and baselines separate [0.03ms]
+
+packages/tui/src/ui/stream-attempt.test.ts:
+(pass) revoking a failed model request removes its flushed prose and unexecuted tools while preserving unrelated messages [0.50ms]
+(pass) late or unrelated tombstones cannot remove the current or completed request [0.04ms]
+
+ 12 pass
+ 0 fail
+ 28 expect() calls
+Ran 12 tests across 2 files. [67.00ms]
+Completed Bun shard: 12 tests, 0 skipped; 0 failures.

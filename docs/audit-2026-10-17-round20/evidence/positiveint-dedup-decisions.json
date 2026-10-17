@@ -1,0 +1,28 @@
+{
+  "base": "d40dd06987a2e0c20c377e243cf5c4e4b549c9ec",
+  "newFormal": 0,
+  "newCandidates": 0,
+  "newRelated": 0,
+  "decisions": [
+    {
+      "topic": "Round15 parsePositiveInt baseline",
+      "prior": "docs/audit-2026-10-17-round15/cli.md:7",
+      "decision": "Existing five leaf tests were already executed in round15. This batch repeats those only within the one first shard paired with eight new wrapper/grammar/error controls; no old finding or repaired parseInt case is counted as new."
+    },
+    {
+      "topic": "Old review-2026-05-30 invalid parseInt/NaN/trailing garbage",
+      "prior": "docs/audit-2026-10-17-round15/cli.md:21",
+      "decision": "Known historical root cause; current positive-decimal/finite-integer checks are not promoted as a new bug."
+    },
+    {
+      "topic": "Precision/range above exact-integer range",
+      "prior": "docs/audit-2026-10-17-round15/cli.md:21",
+      "decision": "Already explicitly deferred for lack of ordinary accepted producer/limit contract. This batch does not probe beyond Number.MAX_SAFE_INTEGER or assert a new safe-integer requirement. The exact boundary and 2^31 integer are leaf controls only, without running limit/wait/max-turn consumers."
+    },
+    {
+      "topic": "CLI data prior failed group",
+      "decision": "Remains skipped. No full CLI, data commands, program.parse or process exit was imported/executed. Real Commander dependency is resolved by the actual parser leaf; no mocks or guessed dependency paths."
+    }
+  ],
+  "navigation": "All-history scan includes archive paths, Markdown lines and recursive JSON scalar value leaves. Broad precision pattern has 1040 matching leaves/lines but retains only 100 contexts; exact leaf/export pattern has 16 matching leaves/lines, all retained. Round15 cli.md was read directly in full. Pattern counts do not prove semantic exhaustion."
+}

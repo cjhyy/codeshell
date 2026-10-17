@@ -1,0 +1,168 @@
+{
+  "baseline": "d40dd06987a2e0c20c377e243cf5c4e4b549c9ec",
+  "files": [
+    {
+      "path": "packages/chat/src/media.ts",
+      "bytes": 9244,
+      "sha256": "9cd43efac474d03615408fd8ab094c3136ef1972d399b72fc30c362487dabe14",
+      "scope": "Full mixed source static read; only mediaKind actual runtime calls. Type imports+node:net builtin; other exports not called.",
+      "frozenBlobVerified": true,
+      "currentMatchesFrozen": true,
+      "lineCount": 272
+    },
+    {
+      "path": "packages/chat/src/media.test.ts",
+      "bytes": 4583,
+      "sha256": "487b8fed2f2d7a5a4d25ef50233d5e462dd95f709bac28463f9bd07b12a2aa8b",
+      "scope": "Selected lines1-30 only static read; mixed URL/download/outgoing tests not executed or filtered.",
+      "frozenBlobVerified": true,
+      "currentMatchesFrozen": true,
+      "lineCount": 140
+    },
+    {
+      "path": "packages/chat/src/slack.ts",
+      "bytes": 5782,
+      "sha256": "64e9a881a428bc82edec00ff7dfd0811024b4846802fa802174dac2cb75231d8",
+      "scope": "Selected lines35-62 ordinary metadata consumer; no SDK import/adapter/network execution.",
+      "frozenBlobVerified": true,
+      "currentMatchesFrozen": true,
+      "lineCount": 165
+    },
+    {
+      "path": "packages/chat/src/teams.ts",
+      "bytes": 11374,
+      "sha256": "172cf065fb84b5659398c33bad63579fcf1f56e6fcf3c13b93668fb4ab683914",
+      "scope": "Selected lines120-142 ordinary metadata consumer; no SDK import/adapter/network execution.",
+      "frozenBlobVerified": true,
+      "currentMatchesFrozen": true,
+      "lineCount": 314
+    },
+    {
+      "path": "packages/chat/src/mattermost.ts",
+      "bytes": 6980,
+      "sha256": "ab77fad6ff661e2af867e766d6536d588160d7c218a9e2fdb6a32587fe1df06f",
+      "scope": "Selected lines164-180 ordinary metadata consumer; no SDK import/adapter/network execution.",
+      "frozenBlobVerified": true,
+      "currentMatchesFrozen": true,
+      "lineCount": 213
+    },
+    {
+      "path": "packages/chat/src/discord.ts",
+      "bytes": 6121,
+      "sha256": "2ebbe26e0ba512cb2398361aed272555494dae89f79980d5fcd94f3a59c1a4c9",
+      "scope": "Reference search only line69; not full read/import, old failed Discord direction excluded.",
+      "frozenBlobVerified": true,
+      "currentMatchesFrozen": true,
+      "lineCount": 182
+    },
+    {
+      "path": "packages/chat/src/attachments.ts",
+      "bytes": 3512,
+      "sha256": "58a2c3b5b566db4d7d3dc1a74bedc371c74972368fae3d9dbf6d400fcd29fc82",
+      "scope": "Read command up to line120 displayed complete 93-line file; static only, no loader/bytes/materialization run.",
+      "frozenBlobVerified": true,
+      "currentMatchesFrozen": true,
+      "lineCount": 93
+    },
+    {
+      "path": "packages/chat/src/channel.ts",
+      "bytes": 7027,
+      "sha256": "645c32c69b3a8d76de60b85783a765f96133b93a5c183100bfef20794380e0ce",
+      "scope": "Selected first180 lines static only; no adapter/capability validation.",
+      "frozenBlobVerified": true,
+      "currentMatchesFrozen": true,
+      "lineCount": 193
+    },
+    {
+      "path": "packages/chat/src/protocol.ts",
+      "bytes": 3521,
+      "sha256": "ac7e097c07b4d4ffbca59a7958e2cf71fa68b2ccc9833f8f07043ef6d9afb65a",
+      "scope": "Import/export declaration search only; not full read/runtime.",
+      "frozenBlobVerified": true,
+      "currentMatchesFrozen": true,
+      "lineCount": 122
+    },
+    {
+      "path": "packages/chat/src/lifecycle.ts",
+      "bytes": 824,
+      "sha256": "cdf93e75be321a483b0b9d8339cbefe87b9e211549dfdda58f348ef1ab010d46",
+      "scope": "Full static leaf; old Mattermost Markdown candidate remains skipped, no runtime.",
+      "frozenBlobVerified": true,
+      "currentMatchesFrozen": true,
+      "lineCount": 28
+    },
+    {
+      "path": "packages/web/src/lib/format.ts",
+      "bytes": 5447,
+      "sha256": "c1c2d582d623ba99a738b7d43c483358e6826cae24010ef7994b5d4708310f33",
+      "scope": "Full static module; old project matching and i18n preflight directions not recovered, no import.",
+      "frozenBlobVerified": true,
+      "currentMatchesFrozen": true,
+      "lineCount": 140
+    },
+    {
+      "path": "packages/core/src/sources/context-summary.ts",
+      "bytes": 1622,
+      "sha256": "adb53dc4fe6fa3d417f0893c64416447afdbc3305639aa3d27b29d229b203742",
+      "scope": "Full static leaf; authority/credential resolver not imported or exercised.",
+      "frozenBlobVerified": true,
+      "currentMatchesFrozen": true,
+      "lineCount": 36
+    },
+    {
+      "path": "packages/core/src/sources/context-summary.test.ts",
+      "bytes": 5019,
+      "sha256": "63f3c12f5e55b09d777ce1319379537289d1a8482f69b63af5ae6d405d64b7cb",
+      "scope": "Selected first130 lines static only; no settings/profile/credential test run.",
+      "frozenBlobVerified": true,
+      "currentMatchesFrozen": true,
+      "lineCount": 136
+    },
+    {
+      "path": "packages/tui/src/ui/query-guard.ts",
+      "bytes": 4947,
+      "sha256": "1908085df5b5c8a197da24a3d396d1bfce7a27656b1abe9588549d5b54150d53",
+      "scope": "Full static pure UI state class; no runtime or concurrency/timer experiment.",
+      "frozenBlobVerified": true,
+      "currentMatchesFrozen": true,
+      "lineCount": 152
+    },
+    {
+      "path": "docs/audit-2026-10-17/chat-data.md",
+      "bytes": 8500,
+      "sha256": "1c9fcfb4606c4c3721f9e3d22459cff65604a0b24995a362f05108445207f773",
+      "scope": "Selected CHD02 and exclusions lines17-37; prior filename Unicode mechanism excluded.",
+      "frozenBlobVerified": true,
+      "currentMatchesFrozen": true,
+      "lineCount": 52
+    },
+    {
+      "path": "docs/audit-2026-10-17-round11/evidence/chat-candidates.json",
+      "bytes": 1573,
+      "sha256": "af313122f97dfe4a7553145cbd98f49c109fc64548901ae87e9eb15f1dc6ad9a",
+      "scope": "Full prior metadata/candidate exclusions read; mediaKind conflict/tracker/Mattermost skip retained.",
+      "frozenBlobVerified": true,
+      "currentMatchesFrozen": true,
+      "lineCount": 26
+    },
+    {
+      "path": "docs/audit-2026-10-17-round9/attachments.md",
+      "bytes": 6246,
+      "sha256": "1f806623cd40c6be1fcb5f739db67488855c7f659b5c51b63e1ebe882113dd1b",
+      "scope": "Full prior source-context report read; spaced output-path mechanism excluded.",
+      "frozenBlobVerified": true,
+      "currentMatchesFrozen": true,
+      "lineCount": 24
+    },
+    {
+      "path": "docs/audit-2026-10-17-round8/web.md",
+      "bytes": 8362,
+      "sha256": "3ecb7e29d33ae46a5aa4a30692bbd0245dd82ca6bd628b0cdada44a168ce023e",
+      "scope": "Read command up to line95 displayed complete 38-line old report; only Web project/MIME alias context used, no runtime/current repair claim.",
+      "frozenBlobVerified": true,
+      "currentMatchesFrozen": true,
+      "lineCount": 38
+    }
+  ],
+  "note": "Exploratory static scope explicitly separated; only mediaKind executed. Read-command upper bounds are not claims that nonexistent lines were read; actual line counts are recorded."
+}

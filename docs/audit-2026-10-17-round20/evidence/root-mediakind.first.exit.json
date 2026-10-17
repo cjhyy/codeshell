@@ -1,0 +1,14 @@
+{
+  "command": [
+    "node",
+    "scripts/run-bun-test-shard.mjs",
+    "--timeout",
+    "30000",
+    "docs/audit-2026-10-17-round20/evidence/root-mediakind.test.ts"
+  ],
+  "exitCode": 0,
+  "firstRun": true,
+  "attempts": 1,
+  "reruns": 0,
+  "rawAndExitSavedBeforeInspection": true
+}

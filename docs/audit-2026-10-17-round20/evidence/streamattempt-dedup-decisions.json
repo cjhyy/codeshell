@@ -1,0 +1,26 @@
+{
+  "base": "d40dd06987a2e0c20c377e243cf5c4e4b549c9ec",
+  "decisions": [
+    {
+      "prior": "docs/audit-2026-10-17-round7/tui.md:9",
+      "mechanism": "actual StreamAttempt existing two tests were part of round7 27-test store/anchor baseline",
+      "decision": "Acknowledged existing coverage; 2 existing tests here are repeated baseline controls, not new findings or new focused cases."
+    },
+    {
+      "prior": "docs/archive/review-2026-07-09/03-optimization-findings.md:20",
+      "mechanism": "F-01 Desktop streaming fallback tombstone correlation and final replacement mismatch",
+      "decision": "Excluded old mechanism from new findings. Current TUI uses request-level snapshot filter, and actual current Core emits matching assistantMessageId before replacement start; selected source only, no end-to-end repaired claim."
+    },
+    {
+      "prior": "docs/audit-2026-10-17-round17/mappers.md",
+      "mechanism": "history snapshot/live message correlation candidate",
+      "decision": "Different history mapper, not imported/executed here and not counted as a new related item."
+    },
+    {
+      "prior": "docs/audit-2026-10-17-round9/session.md",
+      "mechanism": "provider call/accounting vs turn-loop history fork pairing",
+      "decision": "Not exercised; no provider, ModelFacade or TurnLoop runtime validation."
+    }
+  ],
+  "limitations": "Full corpus pattern indexing is supplemented by these selected semantic decisions; no claim that keywords exhaust all historical semantics."
+}

@@ -1,0 +1,57 @@
+{
+  "base": "d40dd06987a2e0c20c377e243cf5c4e4b549c9ec",
+  "statistics": {
+    "files": 2109,
+    "markdown": 1176,
+    "json": 933,
+    "jsonStringLeaves": 267491,
+    "jsonScalarLeaves": 373239
+  },
+  "matchCounts": {
+    "exact_summary": 81,
+    "summary_error": 155,
+    "summary_format": 11,
+    "old_json_summary": 465,
+    "nonerror_rejection": 281
+  },
+  "parseErrors": [],
+  "selectedContexts": [
+    {
+      "path": "docs/archive/review-2026-05-30/findings.json",
+      "jsonPath": "$[44]",
+      "decision": "Old mismatched toolCalls/results allegation; corresponding backlog_verdicts[22] false_positive, current actual queue source returns original-order results; excluded, no mismatched-array dynamic inputs."
+    },
+    {
+      "path": "docs/archive/review-2026-05-30/backlog_verdicts.json",
+      "jsonPath": "$[22]",
+      "decision": "Read whole selected verdict; current optional chaining and queue invariant checked statically, no new finding."
+    },
+    {
+      "path": "docs/archive/review-2026-05-30/findings.json",
+      "jsonPath": "$[36],$[119]",
+      "decision": "Read whole selected entries: existing caught non-Error direct .message mechanism; current new location only related weak-trigger characterization."
+    },
+    {
+      "path": "docs/archive/core-complete-review.md",
+      "lines": "388-401",
+      "decision": "Old static tool-summary background error-handling discussion acknowledged; current leaf dynamic coverage not claimed unprecedented module coverage."
+    },
+    {
+      "path": "docs/archive/review-2026-07-09/05-p2-deep-dive-and-fix-design.md",
+      "lines": "139-152",
+      "decision": "Old batch/agent routing mechanism acknowledged and excluded; current static caller now includes toolCallIds; no routing dynamic run/fix verification."
+    },
+    {
+      "path": "docs/audit-2026-10-17/root.md",
+      "lines": "111-118",
+      "decision": "Old failed JSON summary fixture direction excluded entirely; no repair/retry/alternate recovery."
+    }
+  ],
+  "decisions": {
+    "newFormal": 0,
+    "newCandidate": 0,
+    "related": 1,
+    "promptFormat": "No ordinary model producer evidence; prompt wishes not promoted to output-validation hard contract bug."
+  },
+  "limitations": "All MD and recursive JSON scalars scanned, bounded keyword contexts plus selected exact old records manually read; no semantic exhaustion claim."
+}

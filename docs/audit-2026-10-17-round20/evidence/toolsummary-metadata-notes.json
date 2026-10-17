@@ -1,0 +1,23 @@
+{
+  "base": "d40dd06987a2e0c20c377e243cf5c4e4b549c9ec",
+  "navigationFailure": {
+    "firstResponseTranscription": true,
+    "command": "rg -n (summarizeTool|toolSummary|tool.summary|summarize.*[Tt]ool) packages/core/src/engine packages/core/src/types packages/core/src/tools",
+    "exitCode": 2,
+    "stderr": [
+      "rg: packages/core/src/types: No such file or directory (os error 2)",
+      "rg: packages/core/src/tools: No such file or directory (os error 2)"
+    ],
+    "scope": "Only guessed nonexistent static navigation directories skipped; actual paths separately inventoried by rg --files; zero product import/test attempt in this command.",
+    "rawCapture": "Tool response transcription, not independently redirected raw log."
+  },
+  "dedupOutputTruncation": {
+    "toolChunk": "56f9a0",
+    "collectorExitCode": 0,
+    "rawToolOriginalTokenCount": 13786,
+    "renderedWarning": "Warning: truncated output",
+    "completeArtifact": "docs/audit-2026-10-17-round20/evidence/toolsummary-dedup.json",
+    "subsequentAction": "Read bounded already-saved match locators and selected actual old JSON entries / Markdown lines only; no product rerun."
+  },
+  "productReruns": 0
+}
