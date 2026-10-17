@@ -725,6 +725,7 @@ jobs:
             ${{ env.ACCEPTANCE_ROOT }}/windows-nsis/ui-replaced.stdout.log
             ${{ env.ACCEPTANCE_ROOT }}/windows-nsis/ui-replaced.stderr.log
             ${{ env.ACCEPTANCE_ROOT }}/windows-nsis/ui-first/receipt.json
+            ${{ env.ACCEPTANCE_ROOT }}/windows-nsis/ui-first/first-error.json
             ${{ env.ACCEPTANCE_ROOT }}/windows-nsis/ui-first/failure.png
             ${{ env.ACCEPTANCE_ROOT }}/windows-nsis/ui-first/failure-body.txt
             ${{ env.ACCEPTANCE_ROOT }}/windows-nsis/ui-first/settings-1280-light.png
@@ -735,6 +736,7 @@ jobs:
             ${{ env.ACCEPTANCE_ROOT }}/windows-nsis/ui-first/settings-390-dark.png
             ${{ env.ACCEPTANCE_ROOT }}/windows-nsis/ui-first/settings-reload-390-dark.png
             ${{ env.ACCEPTANCE_ROOT }}/windows-nsis/ui-replaced/receipt.json
+            ${{ env.ACCEPTANCE_ROOT }}/windows-nsis/ui-replaced/first-error.json
             ${{ env.ACCEPTANCE_ROOT }}/windows-nsis/ui-replaced/failure.png
             ${{ env.ACCEPTANCE_ROOT }}/windows-nsis/ui-replaced/failure-body.txt
             ${{ env.ACCEPTANCE_ROOT }}/windows-nsis/ui-replaced/settings-1280-light.png
