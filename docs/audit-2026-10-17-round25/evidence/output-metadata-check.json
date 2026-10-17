@@ -1,0 +1,238 @@
+{
+  "base": "8b9677c78d150abe9681a2f65ab8e55b1288be4b",
+  "kind": "metadata-only; no product/test rerun",
+  "sourcePinCount": 7,
+  "activeProductContractPinCount": 6,
+  "instructionPinCount": 1,
+  "productContractReadLines": 550,
+  "sourceChecks": [
+    {
+      "path": "packages/core/src/runtime/output-clean.ts",
+      "sha256": "e1f7e179003f57dcf3c07da35f76860151e6703de989b0f04db58acbe99bb86a",
+      "frozenGitBlob": "db661f02eb2de72466806a00eaca8879a6d6cdfb",
+      "coverage": "full",
+      "matchesFrozen": true
+    },
+    {
+      "path": "packages/core/src/runtime/output-clean.test.ts",
+      "sha256": "5118d580eeb7038205e16ad0a050a74c0e1d51a00ae19abadb71742e5a57b127",
+      "frozenGitBlob": "e2d96758906504be497e28e87f6459f4f70cc43a",
+      "coverage": "full",
+      "matchesFrozen": true
+    },
+    {
+      "path": "packages/core/src/runtime/background-shell.ts",
+      "sha256": "dabb4c006d1aa10fbb8e916e4de716c3382908a80fb9e8c73224a96562a8f0f5",
+      "frozenGitBlob": "dcf3f1db0cb52ac62ae9afd714ce3ae0cdf41d75",
+      "coverage": "selected",
+      "matchesFrozen": true
+    },
+    {
+      "path": "packages/core/src/tool-system/builtin/background-shell-tools.ts",
+      "sha256": "e52c34e95dc2ca15dbad41491323f23cfecfd66d9701f1b06903aa3ee8b5f5e6",
+      "frozenGitBlob": "df9050f5c27206ff810ca33028ab2c2d430833d3",
+      "coverage": "selected",
+      "matchesFrozen": true
+    },
+    {
+      "path": "docs/superpowers/specs/2026-06-05-background-shell-design.md",
+      "sha256": "aa6a68e5724760259bd7122ef365e97ba3477d8717f1858a06dd3bd2ad4f0903",
+      "frozenGitBlob": "e2cfdea739d943ef70a9e60a0ba5fe67cd5c092d",
+      "coverage": "selected",
+      "matchesFrozen": true
+    },
+    {
+      "path": "packages/core/src/runtime/ring-file.ts",
+      "sha256": "f3981f59140f06ce2aa138bd15b26a08ad4cff9dd46b76b7c3b57f7bab81fdcd",
+      "frozenGitBlob": "33d65a1e472ed6d1160a267680cf58b3ebe946fc",
+      "coverage": "full",
+      "matchesFrozen": true
+    },
+    {
+      "path": "CODESHELL.md",
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "frozenGitBlob": "50671f6297598a14ad4710b61ab103747fa7676a",
+      "coverage": "full",
+      "matchesFrozen": true
+    }
+  ],
+  "prepHashOnlyRecheckCount": 11,
+  "rawBytes": 2477,
+  "rawSha256": "3756561600256bdbd45f529d4a6b0d0936c1e6fb49710c36a79a08e6d02c80d0",
+  "firstRunExitCode": 0,
+  "guardCompleted": true,
+  "pass": 13,
+  "expect": 23,
+  "fail": 0,
+  "skipped": 0,
+  "existingTests": 7,
+  "focusedTests": 6,
+  "formalCount": 1,
+  "candidateCount": 0,
+  "relatedCount": 0,
+  "localLinkCount": 31,
+  "localLinks": [
+    {
+      "link": "evidence/output-findings.json",
+      "exists": true,
+      "line": null
+    },
+    {
+      "link": "evidence/output-candidates.json",
+      "exists": true,
+      "line": null
+    },
+    {
+      "link": "evidence/output-related.json",
+      "exists": true,
+      "line": null
+    },
+    {
+      "link": "../../packages/core/src/runtime/output-clean.ts:32",
+      "exists": true,
+      "line": 32
+    },
+    {
+      "link": "../../packages/core/src/runtime/output-clean.ts:36",
+      "exists": true,
+      "line": 36
+    },
+    {
+      "link": "../../packages/core/src/runtime/background-shell.ts:328",
+      "exists": true,
+      "line": 328
+    },
+    {
+      "link": "../../packages/core/src/runtime/ring-file.ts:96",
+      "exists": true,
+      "line": 96
+    },
+    {
+      "link": "../../packages/core/src/runtime/ring-file.ts:120",
+      "exists": true,
+      "line": 120
+    },
+    {
+      "link": "../../packages/core/src/runtime/ring-file.ts:147",
+      "exists": true,
+      "line": 147
+    },
+    {
+      "link": "../../packages/core/src/runtime/background-shell.ts:461",
+      "exists": true,
+      "line": 461
+    },
+    {
+      "link": "../../packages/core/src/runtime/background-shell.ts:499",
+      "exists": true,
+      "line": 499
+    },
+    {
+      "link": "../../packages/core/src/tool-system/builtin/background-shell-tools.ts:25",
+      "exists": true,
+      "line": 25
+    },
+    {
+      "link": "evidence/output-preflight.json",
+      "exists": true,
+      "line": null
+    },
+    {
+      "link": "evidence/output-crlf.test.ts",
+      "exists": true,
+      "line": null
+    },
+    {
+      "link": "evidence/output-first.raw.log",
+      "exists": true,
+      "line": null
+    },
+    {
+      "link": "evidence/output-first.exit.json",
+      "exists": true,
+      "line": null
+    },
+    {
+      "link": "evidence/output-run-first.py",
+      "exists": true,
+      "line": null
+    },
+    {
+      "link": "evidence/output-validation.json",
+      "exists": true,
+      "line": null
+    },
+    {
+      "link": "../../packages/core/src/runtime/output-clean.test.ts:1",
+      "exists": true,
+      "line": 1
+    },
+    {
+      "link": "../../packages/core/src/runtime/output-clean.ts:12",
+      "exists": true,
+      "line": 12
+    },
+    {
+      "link": "../superpowers/specs/2026-06-05-background-shell-design.md:125",
+      "exists": true,
+      "line": 125
+    },
+    {
+      "link": "../../packages/core/src/runtime/ring-file.ts:170",
+      "exists": true,
+      "line": 170
+    },
+    {
+      "link": "evidence/output-dedup.py",
+      "exists": true,
+      "line": null
+    },
+    {
+      "link": "evidence/output-dedup.json",
+      "exists": true,
+      "line": null
+    },
+    {
+      "link": "evidence/output-history-decisions.json",
+      "exists": true,
+      "line": null
+    },
+    {
+      "link": "evidence/output-source-manifest.json",
+      "exists": true,
+      "line": null
+    },
+    {
+      "link": "evidence/data-prep/proposal.json",
+      "exists": true,
+      "line": null
+    },
+    {
+      "link": "evidence/output-metadata-first-responses.json",
+      "exists": true,
+      "line": null
+    },
+    {
+      "link": "evidence/output-metadata-notes.json",
+      "exists": true,
+      "line": null
+    },
+    {
+      "link": "evidence/output-metadata-check.json",
+      "exists": true,
+      "line": null
+    },
+    {
+      "link": "evidence/output-artifact-receipt.json",
+      "exists": true,
+      "line": null
+    }
+  ],
+  "authorArtifactCountWithoutReceipt": 18,
+  "ownedJSONParseCountWithoutReceipt": 12,
+  "metadataOnlyFailureCount": 1,
+  "productFailureCount": 0,
+  "productReruns": 0,
+  "productChanges": false,
+  "gitWrites": false
+}

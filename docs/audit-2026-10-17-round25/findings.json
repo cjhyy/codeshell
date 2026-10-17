@@ -1,0 +1,103 @@
+{
+  "baseline": "8b9677c78d150abe9681a2f65ab8e55b1288be4b",
+  "count": 1,
+  "findings": [
+    {
+      "id": "OUTPUT-R25-01",
+      "priority": "P2",
+      "title": "CRLF-completed output loses visible line bodies during progress folding",
+      "source": "packages/core/src/runtime/output-clean.ts",
+      "lineStart": 34,
+      "lineEnd": 37,
+      "cause": "split(\"\\n\") leaves CR at the end of each CRLF segment. lastIndexOf(\"\\r\") then points to that last character, so slice(lastCr+1) replaces the completed visible line with an empty segment.",
+      "ordinaryTrigger": "A short background stdout/stderr slice containing a completed CRLF line, such as ready\\r\\n. The real onData/ring/readOutput/BashOutput chain accepts and forwards such raw text without prior newline normalization in the statically read source.",
+      "contract": "The leaf and BashOutput promise cleaned process output with ANSI/progress noise removed; ordinary completed line text and the final progress frame remain meaningful output. Literal LF expectations test visible text preservation, not byte-exact CRLF serialization.",
+      "expectedEscaped": "ready\\n",
+      "observedEscaped": "\\n",
+      "observations": [
+        {
+          "input": "ready\r\n",
+          "literalExpectedCleanText": "ready\n",
+          "observed": "\n"
+        },
+        {
+          "input": "ready\r\nnext\r\n",
+          "literalExpectedCleanText": "ready\nnext\n",
+          "observed": "\n\n"
+        },
+        {
+          "input": "first\nsecond\r\nlast",
+          "literalExpectedCleanText": "first\nsecond\nlast",
+          "observed": "first\n\nlast"
+        },
+        {
+          "input": "10%\r100%\r\nready\r\n",
+          "literalExpectedCleanText": "100%\nready\n",
+          "observed": "\n\n"
+        }
+      ],
+      "actualValidation": "Actual output-clean leaf imported directly, four current-wrong-result characterizations and two controls plus seven existing tests in one guarded first shard: 13 pass/23 expect/0 fail/0 skipped/Completed/exit0. Passing characterizations are not a fix.",
+      "staticConsumerEvidence": [
+        {
+          "path": "packages/core/src/runtime/background-shell.ts",
+          "ranges": [
+            [
+              328,
+              342
+            ],
+            [
+              444,
+              502
+            ]
+          ]
+        },
+        {
+          "path": "packages/core/src/runtime/ring-file.ts",
+          "ranges": [
+            [
+              96,
+              112
+            ],
+            [
+              119,
+              122
+            ],
+            [
+              147,
+              151
+            ],
+            [
+              170,
+              184
+            ]
+          ]
+        },
+        {
+          "path": "packages/core/src/tool-system/builtin/background-shell-tools.ts",
+          "ranges": [
+            [
+              25,
+              46
+            ],
+            [
+              50,
+              62
+            ]
+          ]
+        }
+      ],
+      "impact": "The agent-facing BashOutput body loses ordinary CRLF line text in either read mode when that complete line is present in the cleaned slice. A newline remains, so the tool usually returns blank lines; (no new output) is not guaranteed. Incremental raw offset advancement occurs before cleaning in static source, not a dynamically verified manager result.",
+      "counterevidence": [
+        "LF text and intentional bare-CR progress folding retain expected behavior in the focused controls.",
+        "Only short ASCII strings are characterized; no cap, wraparound, UTF-8, ANSI parser or chunk-boundary expansion.",
+        "Ring data is retained as raw Buffer and disk mirror is best effort; cleanup does not rewrite the raw ring/disk. This is not disk corruption or an assertion that disk persistence always succeeds.",
+        "No Windows, PTY, shell, manager, tool, session, model or actual filesystem workflow was executed; consumer reachability is source-only."
+      ],
+      "novelty": "All recursive docs/bugs MD and JSON scalar history searched excluding round25. Selected exact output-clean mentions were contracts/inventories; old frontmatter, patch, simplediff, NDJSON, pagination and ANSI mechanisms differ and were not reopened. Keyword search is not semantic exhaustion.",
+      "raw": "docs/audit-2026-10-17-round25/evidence/output-first.raw.log",
+      "exit": "docs/audit-2026-10-17-round25/evidence/output-first.exit.json",
+      "fixture": "docs/audit-2026-10-17-round25/evidence/output-crlf.test.ts",
+      "fixed": false
+    }
+  ]
+}

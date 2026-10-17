@@ -1,4 +1,4 @@
-import React, { memo, useEffect, useRef, useState } from "react";
+import React, { memo, useEffect, useMemo, useRef, useState } from "react";
 import { ChevronRight, ChevronDown, RotateCcw, RotateCw, Eye, X } from "lucide-react";
 import type { FilesChangedSummaryMessage } from "../types";
 import type { TurnUndoResult } from "../../preload/types";
@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { useT } from "../i18n/I18nProvider";
 import { useLocalRuntimeActions } from "../runtime/RuntimeCapabilities";
+import { groupReviewSnapshot } from "../diff/reviewSnapshot";
 
 interface Props {
   message: FilesChangedSummaryMessage;
@@ -79,7 +80,13 @@ function FilesChangedCardImpl({ message, cwd, sessionId, isLatest }: Props) {
   const visible = showAll ? files : files.slice(0, INITIAL_VISIBLE);
   const remaining = files.length - visible.length;
 
-  const sessionDiffText = message.sessionDiffs?.map((d) => d.diff).join("\n");
+  const sessionDiffText = useMemo(
+    () =>
+      message.sessionDiffs === undefined
+        ? undefined
+        : groupReviewSnapshot(message.sessionDiffs.map((d) => d.diff).join("\n")),
+    [message.sessionDiffs],
+  );
   const canReview = files.length > 0 && ((localActions && !!cwd) || !!sessionDiffText);
   // Undo/redo needs the session's FileHistory; only the latest turn is peelable.
   const canUndo = localActions && !!sessionId && files.length > 0 && isLatest;

@@ -1,0 +1,20 @@
+{
+  "baseline": "8b9677c78d150abe9681a2f65ab8e55b1288be4b",
+  "argv": [
+    "node",
+    "scripts/run-bun-test-shard.mjs",
+    "--timeout",
+    "30000",
+    "packages/core/src/runtime/output-clean.test.ts",
+    "docs/audit-2026-10-17-round25/evidence/output-crlf.test.ts"
+  ],
+  "attempt": 1,
+  "exitCode": 0,
+  "elapsedSeconds": 0.284,
+  "raw": "docs/audit-2026-10-17-round25/evidence/output-first.raw.log",
+  "rawBytes": 2477,
+  "rawSha256": "3756561600256bdbd45f529d4a6b0d0936c1e6fb49710c36a79a08e6d02c80d0",
+  "combinedStdoutStderr": true,
+  "rawAndExitSavedBeforeInspection": true,
+  "productReruns": 0
+}

@@ -48,6 +48,35 @@ afterEach(async () => {
 });
 
 describe("ReviewPanel workspace requests", () => {
+  test("repeated historical edits render one file block and one menu option per path", async () => {
+    const second = snapshot.replace("after-note", "after-second-edit");
+    const other = snapshot.replaceAll("note.txt", "other.txt");
+    const container = document.createElement("div");
+    root = createRoot(container);
+    await act(async () => {
+      root?.render(
+        <ReviewPanel
+          cwd="/repo"
+          sessionId="session-a"
+          gitAvailable={false}
+          turnDiff={snapshot + other + second}
+        />,
+      );
+      await flushMicrotasks();
+    });
+    expect(
+      nodes(container).filter((node) => node.getAttribute?.("title") === "note.txt"),
+    ).toHaveLength(1);
+    expect(
+      nodes(container).filter((node) => node.getAttribute?.("title") === "other.txt"),
+    ).toHaveLength(1);
+    expect(text(container)).toContain("after-note");
+    expect(text(container)).toContain("after-second-edit");
+    // The file selector counts files rather than sequential edit operations.
+    expect(text(container)).toContain("全部文件（2）");
+    expect(text(container)).not.toContain("全部文件（3）");
+  });
+
   test("the AI review action prepares the historical snapshot and custom focus as a draft", async () => {
     const requests: unknown[][] = [];
     const drafts: unknown[] = [];
@@ -225,7 +254,7 @@ describe("ReviewPanel workspace requests", () => {
     expect(requests).toEqual([]);
   });
 
-  test("does not mount a Git viewer without a repository or a nonempty snapshot", async () => {
+  test("does not mount a Git viewer without a repository or a supplied snapshot", async () => {
     const requests: string[] = [];
     Object.assign(window, {
       codeshell: {
@@ -237,7 +266,7 @@ describe("ReviewPanel workspace requests", () => {
     });
     const container = document.createElement("div");
     root = createRoot(container);
-    for (const turnDiff of [undefined, " \n\t"]) {
+    for (const turnDiff of [undefined]) {
       await act(async () => {
         root?.render(
           <ReviewPanel
@@ -251,6 +280,38 @@ describe("ReviewPanel workspace requests", () => {
         await flushMicrotasks();
       });
       expect(container.childNodes.length).toBe(0);
+    }
+    expect(requests).toEqual([]);
+  });
+
+  test("an explicit empty turn snapshot never falls back to unrelated working-tree changes", async () => {
+    const requests: unknown[] = [];
+    Object.assign(window, {
+      codeshell: {
+        getReviewDiff: async (...args: unknown[]) => {
+          requests.push(args);
+          throw new Error("must not query the live repository for an empty turn");
+        },
+      },
+    });
+    const container = document.createElement("div");
+    root = createRoot(container);
+    for (const gitAvailable of [true, false]) {
+      for (const turnDiff of ["", " \n\t"]) {
+        await act(async () => {
+          root?.render(
+            <ReviewPanel
+              cwd="/repo"
+              sessionId="session-a"
+              gitAvailable={gitAvailable}
+              files={["a.ts"]}
+              turnDiff={turnDiff}
+            />,
+          );
+          await flushMicrotasks();
+        });
+        expect(text(container)).toContain("no changes");
+      }
     }
     expect(requests).toEqual([]);
   });

@@ -1,0 +1,40 @@
+{
+  "baseline": "8b9677c78d150abe9681a2f65ab8e55b1288be4b",
+  "head": "8b9677c78d150abe9681a2f65ab8e55b1288be4b",
+  "sources": [
+    {
+      "path": "packages/core/src/runtime/output-clean.ts",
+      "bytes": 1722,
+      "lineCount": 45,
+      "sha256": "e1f7e179003f57dcf3c07da35f76860151e6703de989b0f04db58acbe99bb86a",
+      "frozenSha256": "e1f7e179003f57dcf3c07da35f76860151e6703de989b0f04db58acbe99bb86a",
+      "matchesFrozen": true
+    },
+    {
+      "path": "packages/core/src/runtime/output-clean.test.ts",
+      "bytes": 1257,
+      "lineCount": 34,
+      "sha256": "5118d580eeb7038205e16ad0a050a74c0e1d51a00ae19abadb71742e5a57b127",
+      "frozenSha256": "5118d580eeb7038205e16ad0a050a74c0e1d51a00ae19abadb71742e5a57b127",
+      "matchesFrozen": true
+    }
+  ],
+  "leafRuntimeImports": [],
+  "existingTestImports": [
+    "bun:test",
+    "./output-clean.js"
+  ],
+  "existingTestDeclarations": 7,
+  "focusedFixtureWrittenYet": false,
+  "runtimeAttempts": 0,
+  "prohibitedImports": "No manager/tool/barrel/Engine/native/VM/AST/security/bidi/OSC fixture or dependency imports. Existing7leaf tests include bounded ANSI controls from existing file, explicitly authorized by Root shard command; focused fixture will only use CRLF/LF/bareCR strings.",
+  "instruction": "CODESHELL fullread earlier in currentaudit and unchanged digest checked duringprep; parentowns allGit writes.",
+  "focusedFixtureWritten": true,
+  "focusedFixtureImports": [
+    "bun:test",
+    "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/packages/core/src/runtime/output-clean.ts"
+  ],
+  "focusedFixtureSha256": "14907b0efd875782bd5ba516fc333ed1c0e9f4f0ee41df94d311a0cdf199454f",
+  "focusedCases": 6,
+  "focusedBoundary": "Four currentwrongbehavior characterizations plus2ordinaryLF/bareCR controls; shortASCII strings only. No mocks/native/VM/AST/process/HOME/manager/tool imports."
+}

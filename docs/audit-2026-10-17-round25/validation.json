@@ -1,0 +1,64 @@
+{
+  "baseline": "8b9677c78d150abe9681a2f65ab8e55b1288be4b",
+  "totals": {
+    "firstBunShards": 1,
+    "completedCleanShards": 1,
+    "failedBunShards": 0,
+    "productAttempts": 1,
+    "testAttempts": 1,
+    "runtimeProductModules": 1,
+    "passedTests": 13,
+    "expectations": 23,
+    "failedTests": 0,
+    "skippedOrFilteredTests": 0,
+    "existingBaselineTests": 7,
+    "focusedTests": 6,
+    "wrongBehaviorCharacterizations": 4,
+    "focusedNormalControls": 2,
+    "productReruns": 0
+  },
+  "runs": [
+    {
+      "baseline": "8b9677c78d150abe9681a2f65ab8e55b1288be4b",
+      "argv": [
+        "node",
+        "scripts/run-bun-test-shard.mjs",
+        "--timeout",
+        "30000",
+        "packages/core/src/runtime/output-clean.test.ts",
+        "docs/audit-2026-10-17-round25/evidence/output-crlf.test.ts"
+      ],
+      "attempt": 1,
+      "exitCode": 0,
+      "elapsedSeconds": 0.284,
+      "raw": "docs/audit-2026-10-17-round25/evidence/output-first.raw.log",
+      "rawBytes": 2477,
+      "rawSha256": "3756561600256bdbd45f529d4a6b0d0936c1e6fb49710c36a79a08e6d02c80d0",
+      "combinedStdoutStderr": true,
+      "rawAndExitSavedBeforeInspection": true,
+      "productReruns": 0,
+      "completedGuard": true,
+      "pass": 13,
+      "expect": 23,
+      "fail": 0,
+      "skipped": 0,
+      "existingTests": 7,
+      "focusedTests": 6,
+      "focusedWrongBehaviorCharacterizations": 4,
+      "focusedControls": 2,
+      "actualProductionLeafCalls": true,
+      "manualConsumerMirror": false,
+      "log": "evidence/output-first.raw.log"
+    }
+  ],
+  "actualProductModules": [
+    "packages/core/src/runtime/output-clean.ts"
+  ],
+  "notes": [
+    "One independent cause, not four findings. Passing tests assert current bad behavior and do not mean a fix.",
+    "Literal LF expected strings preserve visible text; no byte-exact CRLF contract claimed.",
+    "Static raw producer chain only; raw retention/disk mirror source is counterevidence, not actual persistence validation.",
+    "Only actual leaf string behavior run;consumer/producer/ring/disk static. Existing7 include bounded originalANSIcontrols; focused6 onlyASCII CRLF/LF/bareCR. No newANSI/OSC/bidi/native/manager/tool experiment.",
+    "Prep/root/reviewer actions metadata/static only;guardrunner ownedHOME/JUnit writes are isolation,not a processlog diskpersistence reproduction."
+  ]
+}

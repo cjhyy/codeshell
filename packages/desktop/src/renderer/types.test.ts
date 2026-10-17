@@ -1075,7 +1075,11 @@ describe("applyStreamEvent — turn_complete files_changed + turnEpoch", () => {
     const cards = s.messages.filter((m) => m.kind === "files_changed");
     expect(cards.length).toBe(1);
     if (cards[0].kind === "files_changed") {
-      expect(cards[0].files).toEqual([{ path: "a.ts", added: 2, removed: 2, count: 2 }]);
+      expect(cards[0].files).toEqual([{ path: "a.ts", added: 1, removed: 1, count: 2 }]);
+      expect(cards[0].sessionDiffs).toHaveLength(1);
+      expect(cards[0].sessionDiffs?.[0]?.diff).toContain("-x");
+      expect(cards[0].sessionDiffs?.[0]?.diff).toContain("+z");
+      expect(cards[0].sessionDiffs?.[0]?.diff).not.toContain("+y");
     }
   });
 });

@@ -1,0 +1,33 @@
+{
+  "allWritesUnder": "/tmp/codeshell-audit-round25-link-frontier",
+  "productAttempts": 0,
+  "tests": 0,
+  "imports": 0,
+  "fixtures": 0,
+  "vm": 0,
+  "network": 0,
+  "browser": 0,
+  "native": 0,
+  "realAuthPermissionCustodyIdentitySecurityExecution": 0,
+  "gitWrites": 0,
+  "currentRound24Writes": 0,
+  "metadataOnly": [
+    "rg inventories/navigation",
+    "Python standard-library text/JSON/hash collectors",
+    "Git rev-parse/branch/show read-only metadata"
+  ],
+  "outputTruncation": [
+    {
+      "operation": "A combined static read of plan1-125 and other source exceeded tool aggregate output budget.",
+      "resolution": "No full-plan reading claim. Contract selected87-125 and local-link selected39-72 independently re-read within bounded output. All source target sections used for conclusions are separately complete.",
+      "productFailure": false
+    }
+  ],
+  "priorExcludedDirections": [
+    "No package dist absence/resolver export failure retry",
+    "No Unicode/slice/file-selection repeat",
+    "No actual auth/provider/permission/custody/identity/security/native/process/CLI/network validation",
+    "No known failed/skipped direction reopened"
+  ],
+  "sourceChanges": "No source or old audit edits by this subagent."
+}

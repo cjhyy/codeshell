@@ -1,0 +1,189 @@
+{
+  "initialReadHead": "70d2e3846ea48d0d797e51dbeac7026f563c76bb",
+  "currentHead": "70d2e3846ea48d0d797e51dbeac7026f563c76bb",
+  "sources": [
+    {
+      "path": "packages/core/src/runtime/output-clean.ts",
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          45
+        ]
+      ],
+      "lineCount": 45,
+      "bytes": 1722,
+      "sha256": "e1f7e179003f57dcf3c07da35f76860151e6703de989b0f04db58acbe99bb86a",
+      "frozenSha256": "e1f7e179003f57dcf3c07da35f76860151e6703de989b0f04db58acbe99bb86a",
+      "currentMatchesFrozen": true,
+      "note": "Selected next frontier; exact zero-import string leaf, no invocation."
+    },
+    {
+      "path": "packages/core/src/runtime/output-clean.test.ts",
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          34
+        ]
+      ],
+      "lineCount": 34,
+      "bytes": 1257,
+      "sha256": "5118d580eeb7038205e16ad0a050a74c0e1d51a00ae19abadb71742e5a57b127",
+      "frozenSha256": "5118d580eeb7038205e16ad0a050a74c0e1d51a00ae19abadb71742e5a57b127",
+      "currentMatchesFrozen": true,
+      "note": "Seven existing Bun declarations static only; no import/test run."
+    },
+    {
+      "path": "packages/core/src/runtime/background-shell.ts",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          280,
+          345
+        ],
+        [
+          410,
+          515
+        ]
+      ],
+      "lineCount": 702,
+      "bytes": 25112,
+      "sha256": "dabb4c006d1aa10fbb8e916e4de716c3382908a80fb9e8c73224a96562a8f0f5",
+      "frozenSha256": "dabb4c006d1aa10fbb8e916e4de716c3382908a80fb9e8c73224a96562a8f0f5",
+      "currentMatchesFrozen": true,
+      "note": "Ordinary rawstdout/ring to cleanOutput consumer/cursor pipeline only; no manager/process/native/custody execution."
+    },
+    {
+      "path": "packages/core/src/tool-system/builtin/background-shell-tools.ts",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          1,
+          79
+        ]
+      ],
+      "lineCount": 130,
+      "bytes": 5335,
+      "sha256": "e52c34e95dc2ca15dbad41491323f23cfecfd66d9701f1b06903aa3ee8b5f5e6",
+      "frozenSha256": "e52c34e95dc2ca15dbad41491323f23cfecfd66d9701f1b06903aa3ee8b5f5e6",
+      "currentMatchesFrozen": true,
+      "note": "Actual inventory-resolved BashOutput definition/tool body; no import or session/permission experiment."
+    },
+    {
+      "path": "docs/superpowers/specs/2026-06-05-background-shell-design.md",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          104,
+          135
+        ]
+      ],
+      "lineCount": 396,
+      "bytes": 23642,
+      "sha256": "aa6a68e5724760259bd7122ef365e97ba3477d8717f1858a06dd3bd2ad4f0903",
+      "frozenSha256": "aa6a68e5724760259bd7122ef365e97ba3477d8717f1858a06dd3bd2ad4f0903",
+      "currentMatchesFrozen": true,
+      "note": "Priorrawlog/cleanedagent/progressframe contract only; no process/signal semantics verified."
+    },
+    {
+      "path": "packages/core/src/services/session-memory-sort.ts",
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          13
+        ]
+      ],
+      "lineCount": 13,
+      "bytes": 523,
+      "sha256": "22c8dfaa8e862136e8e816f1fd6a64e6b96f5ebcf7a0ede465a40279a8f4ad67",
+      "frozenSha256": "22c8dfaa8e862136e8e816f1fd6a64e6b96f5ebcf7a0ede465a40279a8f4ad67",
+      "currentMatchesFrozen": true,
+      "note": "Considered then excluded: old filename fix and OM3 timestamp representation bug already documented, including old failedgroup."
+    },
+    {
+      "path": "packages/core/src/services/session-memory-sort.test.ts",
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          27
+        ]
+      ],
+      "lineCount": 27,
+      "bytes": 1229,
+      "sha256": "87a4eab4c5f35479f150b5e578190933cb3a054baa06559f69edf7c54b412dfe",
+      "frozenSha256": "87a4eab4c5f35479f150b5e578190933cb3a054baa06559f69edf7c54b412dfe",
+      "currentMatchesFrozen": true,
+      "note": "Existing declarations read only; never run, oldfailed direction remains excluded."
+    },
+    {
+      "path": "packages/core/src/protocol/session-message-result.ts",
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          59
+        ]
+      ],
+      "lineCount": 59,
+      "bytes": 2130,
+      "sha256": "37d992ff979bc43bb0a8e821fd10e0a3c027ca0b7f05bd7ce21deb7bd3a3e7aa",
+      "frozenSha256": "37d992ff979bc43bb0a8e821fd10e0a3c027ca0b7f05bd7ce21deb7bd3a3e7aa",
+      "currentMatchesFrozen": true,
+      "note": "Considered only; no new independent cause selected; notification/authority builder and runtime Date.now excluded."
+    },
+    {
+      "path": "packages/core/src/utils/format.ts",
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          300
+        ]
+      ],
+      "lineCount": 300,
+      "bytes": 9304,
+      "sha256": "39d3fa4786f19681e53ec4a42cf9c5ee0bffc818d4c95c4bc151d3ea705c85b6",
+      "frozenSha256": "39d3fa4786f19681e53ec4a42cf9c5ee0bffc818d4c95c4bc151d3ea705c85b6",
+      "currentMatchesFrozen": true,
+      "note": "Considered then excluded: runtime intl import and oldR14 formatting concern/noordinarycaller; no i18n/runtime recovery."
+    },
+    {
+      "path": "docs/audit-2026-10-17/operations-memory.md",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          23,
+          39
+        ]
+      ],
+      "lineCount": 91,
+      "bytes": 13007,
+      "sha256": "40b575c42f9ac53e995ebf441482ab65524fdf71bed70ba418f86530540de466",
+      "frozenSha256": "40b575c42f9ac53e995ebf441482ab65524fdf71bed70ba418f86530540de466",
+      "currentMatchesFrozen": true,
+      "note": "PriorOM3 and failedsource-directedgroup exclusion only."
+    },
+    {
+      "path": "docs/audit-2026-10-17-round14/utils.md",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          25,
+          34
+        ]
+      ],
+      "lineCount": 40,
+      "bytes": 6276,
+      "sha256": "ad2dde78de997e26f5267580bbf89e3d6431706fc84a330882168887c6f5bf1d",
+      "frozenSha256": "ad2dde78de997e26f5267580bbf89e3d6431706fc84a330882168887c6f5bf1d",
+      "currentMatchesFrozen": true,
+      "note": "PriorformatResetTime observation and oldfailedAnsi exclusions only."
+    }
+  ],
+  "productAttempts": 0,
+  "testAttempts": 0,
+  "note": "Static proposal source scopes only. Sourcebytehashes donotprove full semanticcoverage beyond declared full/selected. No target/runtime import, function evaluation,fixture,VM,AST or nativeexperiment."
+}

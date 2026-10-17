@@ -1,11 +1,11 @@
 import type { FileEditEntry, Message, SessionFileDiff, ToolMessage } from "../types";
+import {
+  composeFileEdits,
+  syntheticSnippetDiff,
+  type FileEditOperation,
+} from "../diff/composeFileEdits";
 
-const EDIT_TOOLS = new Set([
-  "edit",
-  "multiedit",
-  "applypatch",
-  "apply_patch",
-]);
+const EDIT_TOOLS = new Set(["edit", "multiedit", "applypatch", "apply_patch"]);
 const WRITE_TOOLS = new Set(["write", "filewrite"]);
 const NOTEBOOK_TOOLS = new Set(["notebookedit", "notebook_edit"]);
 
@@ -36,6 +36,7 @@ interface ToolEditChange {
   added: number;
   removed: number;
   diff: string;
+  operations?: FileEditOperation[];
 }
 
 interface ExternalFileChange {
@@ -47,7 +48,10 @@ interface ExternalFileChange {
 
 function normalizeFilePath(path: string): string {
   const slash = path.replace(/\\/g, "/");
-  const drive = slash.match(/^[A-Za-z]:\//)?.[0]?.slice(0, 2).toUpperCase();
+  const drive = slash
+    .match(/^[A-Za-z]:\//)?.[0]
+    ?.slice(0, 2)
+    .toUpperCase();
   const absolute = slash.startsWith("/") || drive !== undefined;
   const body = drive ? slash.slice(3) : slash.startsWith("/") ? slash.slice(1) : slash;
   const parts: string[] = [];
@@ -173,17 +177,21 @@ function entryFor(t: ToolMessage): ToolEditChange | ToolEditChange[] | null {
           return {
             oldText: stringOf(record.old_string),
             newText: stringOf(record.new_string),
+            replaceAll: record.replace_all === true,
           };
         })
-        .filter((edit): edit is { oldText: string; newText: string } => edit !== null);
+        .filter((edit): edit is NonNullable<typeof edit> => edit !== null);
       if (pieces.length > 0) {
         return {
           path,
           added: pieces.reduce((sum, edit) => sum + countLines(edit.newText), 0),
           removed: pieces.reduce((sum, edit) => sum + countLines(edit.oldText), 0),
           diff: pieces
-            .map((edit, i) => syntheticSnippetDiff(path, edit.oldText, edit.newText, undefined, i + 1))
+            .map((edit, i) =>
+              syntheticSnippetDiff(path, edit.oldText, edit.newText, undefined, i + 1),
+            )
             .join("\n"),
+          operations: pieces.map((edit) => ({ kind: "edit", ...edit })),
         };
       }
     }
@@ -194,6 +202,7 @@ function entryFor(t: ToolMessage): ToolEditChange | ToolEditChange[] | null {
       added: countLines(newText),
       removed: countLines(oldText),
       diff: syntheticSnippetDiff(path, oldText, newText),
+      operations: [{ kind: "edit", oldText, newText, replaceAll: args.replace_all === true }],
     };
   }
   if (WRITE_TOOLS.has(name)) {
@@ -203,6 +212,7 @@ function entryFor(t: ToolMessage): ToolEditChange | ToolEditChange[] | null {
       added: countLines(content),
       removed: 0,
       diff: syntheticSnippetDiff(path, "", content, "added"),
+      operations: [{ kind: "write", content }],
     };
   }
   if (NOTEBOOK_TOOLS.has(name)) {
@@ -222,76 +232,8 @@ function stringOf(value: unknown): string {
   return typeof value === "string" ? value : "";
 }
 
-function linesOf(text: string): string[] {
-  if (!text) return [];
-  return text.endsWith("\n") ? text.slice(0, -1).split("\n") : text.split("\n");
-}
-
 function hunkRange(start: number, count: number): string {
   return count === 1 ? String(start) : `${start},${count}`;
-}
-
-function syntheticSnippetDiff(
-  file: string,
-  oldText: string,
-  newText: string,
-  status: "modified" | "added" = "modified",
-  hunkIndex?: number,
-): string {
-  const oldLinesAll = linesOf(oldText);
-  const newLinesAll = linesOf(newText);
-
-  // Trim the common leading / trailing lines so the diff INTERLEAVES around the
-  // actual change instead of dumping the whole old block then the whole new
-  // block. A one-line edit then reads as context · -old · +new · context,
-  // matching a real unified diff. (An added file has no old side — skip.)
-  let pre = 0;
-  if (status !== "added") {
-    while (
-      pre < oldLinesAll.length &&
-      pre < newLinesAll.length &&
-      oldLinesAll[pre] === newLinesAll[pre]
-    ) {
-      pre++;
-    }
-  }
-  let post = 0;
-  if (status !== "added") {
-    while (
-      post < oldLinesAll.length - pre &&
-      post < newLinesAll.length - pre &&
-      oldLinesAll[oldLinesAll.length - 1 - post] === newLinesAll[newLinesAll.length - 1 - post]
-    ) {
-      post++;
-    }
-  }
-  const oldLines = oldLinesAll.slice(pre, oldLinesAll.length - post);
-  const newLines = newLinesAll.slice(pre, newLinesAll.length - post);
-  // Up to 3 lines of context on each side, like git's default.
-  const ctxBefore = oldLinesAll.slice(Math.max(0, pre - 3), pre);
-  const ctxAfter = oldLinesAll.slice(
-    oldLinesAll.length - post,
-    Math.min(oldLinesAll.length, oldLinesAll.length - post + 3),
-  );
-  const oldStart = oldLinesAll.length === 0 ? 0 : Math.max(1, pre - ctxBefore.length + 1);
-  const newStart = newLinesAll.length === 0 ? 0 : Math.max(1, pre - ctxBefore.length + 1);
-  const oldCount = ctxBefore.length + oldLines.length + ctxAfter.length;
-  const newCount = ctxBefore.length + newLines.length + ctxAfter.length;
-  return [
-    `diff --git a/${file} b/${file}`,
-    ...(status === "added" ? ["new file mode 100644"] : []),
-    status === "added" ? "--- /dev/null" : `--- a/${file}`,
-    `+++ b/${file}`,
-    `@@ -${hunkRange(oldStart, oldCount)} +${hunkRange(
-      newStart,
-      newCount,
-    )} @@${hunkIndex ? ` edit ${hunkIndex}` : ""}`,
-    ...ctxBefore.map((line) => ` ${line}`),
-    ...oldLines.map((line) => `-${line}`),
-    ...newLines.map((line) => `+${line}`),
-    ...ctxAfter.map((line) => ` ${line}`),
-    "",
-  ].join("\n");
 }
 
 /**
@@ -370,7 +312,10 @@ export function aggregateFileChangeSummary(
   };
 
   const byPath = new Map<string, FileEditEntry>();
-  const sessionDiffs: SessionFileDiff[] = [];
+  const operationsByPath = new Map<
+    string,
+    { firstToolCallId: string; operations: FileEditOperation[] }
+  >();
   const consume = (
     toolCallId: string,
     raw: ToolEditChange,
@@ -390,8 +335,16 @@ export function aggregateFileChangeSummary(
         count: 1,
       });
     }
-    if (raw.diff.trim()) {
-      sessionDiffs.push({ path: raw.path, toolCallId, diff: raw.diff });
+    const operations =
+      raw.operations ?? (raw.diff.trim() ? [{ kind: "opaque" as const, diff: raw.diff }] : []);
+    if (operations.length) {
+      const previous = operationsByPath.get(identity);
+      if (previous) previous.operations.push(...operations);
+      else
+        operationsByPath.set(identity, {
+          firstToolCallId: toolCallId,
+          operations: [...operations],
+        });
     }
   };
 
@@ -419,6 +372,25 @@ export function aggregateFileChangeSummary(
     );
   }
 
+  const sessionDiffs: SessionFileDiff[] = [];
+  for (const [identity, source] of operationsByPath) {
+    const entry = byPath.get(identity)!;
+    const composed = composeFileEdits(entry.path, source.operations);
+    // A successful edit followed by its exact reversal has no net change.
+    // Keep external-only attribution when no payload can establish its result.
+    if (!composed.diff && !externalIdentities.has(identity)) {
+      byPath.delete(identity);
+      continue;
+    }
+    entry.added = composed.added;
+    entry.removed = composed.removed;
+    if (composed.diff)
+      sessionDiffs.push({
+        path: entry.path,
+        toolCallId: source.firstToolCallId,
+        diff: composed.diff,
+      });
+  }
   if (byPath.size === 0) return null;
   return { files: Array.from(byPath.values()), sessionDiffs };
 }

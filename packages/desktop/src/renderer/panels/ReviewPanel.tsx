@@ -15,7 +15,7 @@ import {
 import { REVIEW_SCOPES, type ReviewScope } from "../diff/reviewScope";
 import type { ReviewGitCommit, ReviewGitDiffRequest } from "../../preload/types";
 import { useT } from "../i18n/I18nProvider";
-import { selectReviewSnapshot } from "../diff/reviewSnapshot";
+import { groupReviewSnapshot, selectReviewSnapshot } from "../diff/reviewSnapshot";
 import { useReviewPrompt } from "./useReviewPrompt";
 
 const ALL_FILES = "__all__";
@@ -92,11 +92,24 @@ export function useWorkspaceRecentCommits(
  * scroll horizontally (see diff.css). (A commit/push/PR action bar is a later
  * slice — see TODO 2.3a.)
  */
-export function ReviewPanel({ cwd, sessionId, gitAvailable = true, files, turnDiff }: Props) {
+export function ReviewPanel({
+  cwd,
+  sessionId,
+  gitAvailable = true,
+  files,
+  turnDiff: rawTurnDiff,
+}: Props) {
   const { t } = useT();
+  const turnDiff = useMemo(
+    () => (rawTurnDiff === undefined ? undefined : groupReviewSnapshot(rawTurnDiff)),
+    [rawTurnDiff],
+  );
   const scopeLabel = (id: ReviewScope): string => t(`panels.review.scopes.${id}`);
   const hasTurnFiles = !!files && files.length > 0;
-  const hasTurnSnapshot = !!turnDiff?.trim();
+  // An explicitly empty snapshot is authoritative: this turn has no net diff.
+  // Only an absent snapshot may use the legacy live-Git fallback.
+  const hasTurnSnapshot = turnDiff !== undefined;
+  const hasReviewableTurnDiff = Boolean(turnDiff?.trim());
   const hasTurnContext = hasTurnFiles || hasTurnSnapshot;
   const [scope, setScope] = useState<ReviewScope>(hasTurnContext ? "turn" : "all");
   // Apply availability during render so a previously selected Git scope cannot
@@ -112,9 +125,13 @@ export function ReviewPanel({ cwd, sessionId, gitAvailable = true, files, turnDi
   // File list parsed out of the turn snapshot, to populate the dropdown.
   const turnFilePaths = useMemo(() => {
     if (!turnDiff) return [];
-    return parseUnifiedDiff(turnDiff)
-      .map((f) => f.newPath ?? f.oldPath)
-      .filter((p): p is string => !!p);
+    return [
+      ...new Set(
+        parseUnifiedDiff(turnDiff)
+          .map((f) => f.newPath ?? f.oldPath)
+          .filter((p): p is string => !!p),
+      ),
+    ];
   }, [turnDiff]);
   // A file selected in an earlier turn may not exist in the next snapshot.
   // Resolve that stale filter immediately, before the diff viewer renders.
@@ -185,7 +202,7 @@ export function ReviewPanel({ cwd, sessionId, gitAvailable = true, files, turnDi
   const aiReview = useReviewPrompt(sessionId, reviewContext);
   const prepareReview = (): void => {
     // Without a turn snapshot, a file list cannot reconstruct a past turn.
-    if (activeScope === "turn" && !hasTurnSnapshot) return;
+    if (activeScope === "turn" && !hasReviewableTurnDiff) return;
     void aiReview.prepare(
       activeScope === "turn"
         ? {
@@ -324,7 +341,7 @@ export function ReviewPanel({ cwd, sessionId, gitAvailable = true, files, turnDi
             aria-label={t("panels.review.prepareAiReview")}
             title={t("panels.review.prepareAiReviewHint")}
             disabled={
-              aiReview.phase === "preparing" || (activeScope === "turn" && !hasTurnSnapshot)
+              aiReview.phase === "preparing" || (activeScope === "turn" && !hasReviewableTurnDiff)
             }
             className="ml-auto flex h-8 items-center gap-1 rounded-md border border-border px-2 text-xs hover:bg-accent disabled:opacity-50"
             onClick={() => setShowReviewOptions((value) => !value)}
@@ -365,7 +382,7 @@ export function ReviewPanel({ cwd, sessionId, gitAvailable = true, files, turnDi
             type="button"
             onClick={prepareReview}
             disabled={
-              aiReview.phase === "preparing" || (activeScope === "turn" && !hasTurnSnapshot)
+              aiReview.phase === "preparing" || (activeScope === "turn" && !hasReviewableTurnDiff)
             }
             className="flex items-center gap-1 rounded-md bg-primary px-2 py-1.5 text-xs text-primary-foreground disabled:opacity-50"
           >

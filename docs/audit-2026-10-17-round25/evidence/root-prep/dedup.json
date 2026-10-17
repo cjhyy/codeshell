@@ -1,0 +1,326 @@
+{
+  "baseline": "70d2e3846ea48d0d797e51dbeac7026f563c76bb",
+  "patterns": {
+    "simple_diff": "simple-diff|renderDiffPreview|LCS|quadratic|二次方|二次复杂度|最[长大]公共子序列",
+    "sort_memory": "session-memory-sort|sortSessionMemoriesByRecency"
+  },
+  "stats": {
+    "markdownFiles": 1233,
+    "jsonFiles": 1218,
+    "jsonStrings": 405154,
+    "jsonScalars": 575335
+  },
+  "counts": {
+    "simple_diff": 239,
+    "sort_memory": 95
+  },
+  "hits": {
+    "simple_diff": [
+      {
+        "path": "docs/architecture/04-protocol-and-sessions.md",
+        "at": "$",
+        "context": "pplies the stashed post-turn files and clears `undone` (`packages/core/src/session/undo-target.ts:124`, `packages/core/src/session/file-history.ts:337`). Diff previews use a small LCS diff with CRLF normalization (`packages/core/src/session/simple-diff.ts:19`, `packages/core/src/session/simple-diff.ts:61`).\n\n## 9. Runtime ownership\n\nCore no longer exposes a process-wide `state.ts` bag. Session/cwd/usage authority is explicit: durable session fields belong to `SessionManager`, run usage belongs to the injected engine runtime/cost tracker, and TUI interaction state stays inside the TUI renderer. This prevents one worker process from silently sharing mutable session identity or accounting across concurrent sessions.\n\n## 10. Where to read next\n\n- What the server ultimately dri"
+      },
+      {
+        "path": "docs/architecture/04-protocol-and-sessions.md",
+        "at": "$",
+        "context": "ages/core/src/session/undo-target.ts:124`, `packages/core/src/session/file-history.ts:337`). Diff previews use a small LCS diff with CRLF normalization (`packages/core/src/session/simple-diff.ts:19`, `packages/core/src/session/simple-diff.ts:61`).\n\n## 9. Runtime ownership\n\nCore no longer exposes a process-wide `state.ts` bag. Session/cwd/usage authority is explicit: durable session fields belong to `SessionManager`, run usage belongs to the injected engine runtime/cost tracker, and TUI interaction state stays inside the TUI renderer. This prevents one worker process from silently sharing mutable session identity or accounting across concurrent sessions.\n\n## 10. Where to read next\n\n- What the server ultimately drives: [01 · Engine & turn loop](01-engine-and-turn-loop.md)\n- Tools, p"
+      },
+      {
+        "path": "docs/architecture/04-protocol-and-sessions.md",
+        "at": "$",
+        "context": "kages/core/src/session/file-history.ts:337`). Diff previews use a small LCS diff with CRLF normalization (`packages/core/src/session/simple-diff.ts:19`, `packages/core/src/session/simple-diff.ts:61`).\n\n## 9. Runtime ownership\n\nCore no longer exposes a process-wide `state.ts` bag. Session/cwd/usage authority is explicit: durable session fields belong to `SessionManager`, run usage belongs to the injected engine runtime/cost tracker, and TUI interaction state stays inside the TUI renderer. This prevents one worker process from silently sharing mutable session identity or accounting across concurrent sessions.\n\n## 10. Where to read next\n\n- What the server ultimately drives: [01 · Engine & turn loop](01-engine-and-turn-loop.md)\n- Tools, permissions, and approvals behind `ApprovalReque"
+      },
+      {
+        "path": "docs/archive/architecture/19-core-chain-review-beta.md",
+        "at": "$",
+        "context": "ate.json、create/resume/list/fork。 |\n| `session/transcript.ts` | JSONL 事件日志和 `toMessages()` 转换。 |\n| `session/file-history.ts` | Write/Edit/ApplyPatch 前快照,支持 undo/redo。 |\n| `session/simple-diff.ts`、`undo-target.ts` | undo 目标和 diff 辅助。 |\n| `types.ts` | SessionState、TranscriptEvent、Message、ToolResult 等共享类型。 |\n\n### 5.2 Transcript 是事件日志,不是聊天数组\n\n`Transcript` 存的是事件:\n\n- `session_meta`\n- `message`\n- `tool_use`\n- `tool_result`\n- `turn_boundary`\n- `summary`\n- `error`\n\n`toMessages()` 才把事件日志转换成 LLM 所需的 `Message[]`。\n\n为什么这样做:\n\n- 事件日志可以保留比模型输入更丰富的信息,例如 turn boundary、error、summary。\n- 模型输入可以过滤掉不该重放的事件。\n- resume/fork/list/preview 可以各取所需,不用把聊天数组当数据库。\n\n### 5.3 SessionManager 的安全边界\n\n`assertSafeSessionId()` 会拒绝路径分隔符、`..`、异常字符和超长 id。原因是 public entry points 会把 sessionId join 到 session dir,必须防止路径逃逸。\n\n好处:\n\n-"
+      },
+      {
+        "path": "docs/archive/core-modules/session.md",
+        "at": "$",
+        "context": "| Pure (fs-free) selectors that decide *what* to undo/redo from a snapshot list: `latestUndoTarget`, `earliestSnapshotsPerFile`, `latestTurnUndoTargets`, `latestRedoTargets`. |\n| `simple-diff.ts` | Dependency-free LCS unified-diff for `/undo` previews: `diffLines`, `renderDiffPreview`. |\n| `memory.ts` | `MemoryManager` — persistent user/dream memory entries as markdown; `filterByAge`, `resolveMemoryBaseDir`. |\n| `*.test.ts` | Unit tests (session-manager home/origin/parent/readcwd, memory maxage, undo target/integration, simple-diff). |\n\n## 公开接口 / Public API\n\nRe-exported from the package root (`packages/core/src/index.ts`).\n\n```ts\n// session-manager.ts\ninterface SessionBundle { state: SessionState; transcript: Transcript; }\ntype SessionListEntry = SessionState & { preview?: string;"
+      },
+      {
+        "path": "docs/archive/core-modules/session.md",
+        "at": "$",
+        "context": "cide *what* to undo/redo from a snapshot list: `latestUndoTarget`, `earliestSnapshotsPerFile`, `latestTurnUndoTargets`, `latestRedoTargets`. |\n| `simple-diff.ts` | Dependency-free LCS unified-diff for `/undo` previews: `diffLines`, `renderDiffPreview`. |\n| `memory.ts` | `MemoryManager` — persistent user/dream memory entries as markdown; `filterByAge`, `resolveMemoryBaseDir`. |\n| `*.test.ts` | Unit tests (session-manager home/origin/parent/readcwd, memory maxage, undo target/integration, simple-diff). |\n\n## 公开接口 / Public API\n\nRe-exported from the package root (`packages/core/src/index.ts`).\n\n```ts\n// session-manager.ts\ninterface SessionBundle { state: SessionState; transcript: Transcript; }\ntype SessionListEntry = SessionState & { preview?: string; lastActiveAt: number };\n\n"
+      },
+      {
+        "path": "docs/archive/core-modules/session.md",
+        "at": "$",
+        "context": "tUndoTarget`, `earliestSnapshotsPerFile`, `latestTurnUndoTargets`, `latestRedoTargets`. |\n| `simple-diff.ts` | Dependency-free LCS unified-diff for `/undo` previews: `diffLines`, `renderDiffPreview`. |\n| `memory.ts` | `MemoryManager` — persistent user/dream memory entries as markdown; `filterByAge`, `resolveMemoryBaseDir`. |\n| `*.test.ts` | Unit tests (session-manager home/origin/parent/readcwd, memory maxage, undo target/integration, simple-diff). |\n\n## 公开接口 / Public API\n\nRe-exported from the package root (`packages/core/src/index.ts`).\n\n```ts\n// session-manager.ts\ninterface SessionBundle { state: SessionState; transcript: Transcript; }\ntype SessionListEntry = SessionState & { preview?: string; lastActiveAt: number };\n\nclass SessionManager {\n  constructor(storageDir?: string); // defau"
+      },
+      {
+        "path": "docs/archive/core-modules/session.md",
+        "at": "$",
+        "context": "emory entries as markdown; `filterByAge`, `resolveMemoryBaseDir`. |\n| `*.test.ts` | Unit tests (session-manager home/origin/parent/readcwd, memory maxage, undo target/integration, simple-diff). |\n\n## 公开接口 / Public API\n\nRe-exported from the package root (`packages/core/src/index.ts`).\n\n```ts\n// session-manager.ts\ninterface SessionBundle { state: SessionState; transcript: Transcript; }\ntype SessionListEntry = SessionState & { preview?: string; lastActiveAt: number };\n\nclass SessionManager {\n  constructor(storageDir?: string); // default: <codeShellHome()>/sessions\n  create(cwd: string, model: string, provider: string,\n         explicitSessionId?: string,\n         parentSessionId?: string | null,\n         origin?: SessionOrigin): SessionBundle;\n  exists(sessionId: string): boolean;  "
+      },
+      {
+        "path": "docs/archive/core-modules/session.md",
+        "at": "$",
+        "context": "t[];\nfunction latestTurnUndoTargets(snapshots: FileSnapshot[]): FileSnapshot[];\nfunction latestRedoTargets(redoRecords: RedoRecord[], snapshots: FileSnapshot[]): RedoRecord[];\n\n// simple-diff.ts\nfunction diffLines(from: string, to: string): DiffLine[];\nfunction renderDiffPreview(from: string, to: string, context?: number): string;\n\n// memory.ts\nclass MemoryManager {\n  constructor(options?: MemoryManagerOptions | string); // string arg == { projectDir }\n  save(entry: Omit<MemoryEntry, \"fileName\" | \"scope\">): string;\n  getMemoryDir(): string; getScope(): MemoryScope;\n}\nfunction filterByAge(entries: MemoryEntry[], maxAgeDays?: number, now?: number): MemoryEntry[];\nfunction resolveMemoryBaseDir(override?: string): string;\ntype MemoryScope = \"user\" | \"dream\";\ninterface MemoryEntry { na"
+      },
+      {
+        "path": "docs/archive/core-modules/session.md",
+        "at": "$",
+        "context": "nction latestRedoTargets(redoRecords: RedoRecord[], snapshots: FileSnapshot[]): RedoRecord[];\n\n// simple-diff.ts\nfunction diffLines(from: string, to: string): DiffLine[];\nfunction renderDiffPreview(from: string, to: string, context?: number): string;\n\n// memory.ts\nclass MemoryManager {\n  constructor(options?: MemoryManagerOptions | string); // string arg == { projectDir }\n  save(entry: Omit<MemoryEntry, \"fileName\" | \"scope\">): string;\n  getMemoryDir(): string; getScope(): MemoryScope;\n}\nfunction filterByAge(entries: MemoryEntry[], maxAgeDays?: number, now?: number): MemoryEntry[];\nfunction resolveMemoryBaseDir(override?: string): string;\ntype MemoryScope = \"user\" | \"dream\";\ninterface MemoryEntry { name; description; type; content; fileName; scope; updatedAt?; pinned?; origin?; }\n```\n\n##"
+      },
+      {
+        "path": "docs/archive/core-modules/session.md",
+        "at": "$",
+        "context": "/undo command (TUI or desktop host): preview then revert the latest turn\nconst targets = latestTurnUndoTargets(fileHistory.getSnapshots(somePath)); // or full list\nconst preview = renderDiffPreview(currentOnDisk, fs.readFileSync(targets[0].backupPath, \"utf8\"));\nconst results = fileHistory.undoLatestTurn(targets);\n```\n\n## 注意 / Gotchas\n\n- **Every public ID goes through `assertSafeSessionId` before a path `join`.** `create(explicitSessionId)`, `resume`, `saveState(state.sessionId)`, `fork`, `exists`, `readCwd` all validate (allow-list `[A-Za-z0-9_.-]`, max 128, no `..`/separators) — IDs come from protocol clients and on-disk state and could be traversal-shaped. `exists`/`readCwd` swallow a bad id as \"not present\" rather than throwing.\n- **`resume` throws, `exists`/`readCwd` don't.** Use `e"
+      },
+      {
+        "path": "docs/archive/core-modules/session.md",
+        "at": "$",
+        "context": "te` is atomic (tmp + rename); `Transcript.append` is a plain `appendFileSync`.** State writes survive concurrent writers; transcript appends do not lock.\n- **`undo-target.ts` and `simple-diff.ts` are deliberately fs-free and pure** so the \"what to undo\" decision is unit-testable and shared across hosts. Keep them that way — read files in the caller, pass content/snapshot lists in.\n- **`turnSeq`-tagged snapshots vs. legacy.** Undo is turn-level (`one user message = one turn`). Snapshots written before the feature have no `turnSeq`, share the `undefined` (smallest) bucket, and degrade to whole-session behavior. `undone` snapshots/markers are kept on disk (not deleted) so redo has material — selectors skip them.\n- **`CODE_SHELL_HOME` overrides `~/.code-shell`** for both sessions (`co"
+      },
+      {
+        "path": "docs/archive/review-2026-05-30/findings.json",
+        "at": "$[219].title",
+        "context": "LCS-based diff reconstruction algorithm is incorrect"
+      },
+      {
+        "path": "docs/archive/review-2026-05-30/findings.json",
+        "at": "$[219].detail",
+        "context": "The computeUnifiedDiff function reconstructs diffs by checking if oldLines[oi] === lcs[li] && newLines[ni] === lcs[li], but this logic is flawed. The LCS backtracking returns a subsequence of matching elements, but the three indices (oi, ni, li) don't correspond to positions in a way that allows correct reconstruction. A line appearing in both sequences (oldLines[oi] === newLines[ni] === lcs[li]) doesn't mean it's at the correct position in the LCS reconstruction path. This causes incorrect diff output for many inputs—lines may be incorrectly marked as 'same', 'add', or 'remove' depending on coincidental matches in the LCS."
+      },
+      {
+        "path": "docs/archive/review-2026-05-30/findings.json",
+        "at": "$[219].detail",
+        "context": "The computeUnifiedDiff function reconstructs diffs by checking if oldLines[oi] === lcs[li] && newLines[ni] === lcs[li], but this logic is flawed. The LCS backtracking returns a subsequence of matching elements, but the three indices (oi, ni, li) don't correspond to positions in a way that allows correct reconstruction. A line appearing in both sequences (oldLines[oi] === newLines[ni] === lcs[li]) doesn't mean it's at the correct position in the LCS reconstruction path. This causes incorrect diff output for many inputs—lines may be incorrectly marked as 'same', 'add', or 'remove' depending on coincidental matches in the LCS."
+      },
+      {
+        "path": "docs/archive/review-2026-05-30/findings.json",
+        "at": "$[219].detail",
+        "context": "The computeUnifiedDiff function reconstructs diffs by checking if oldLines[oi] === lcs[li] && newLines[ni] === lcs[li], but this logic is flawed. The LCS backtracking returns a subsequence of matching elements, but the three indices (oi, ni, li) don't correspond to positions in a way that allows correct reconstruction. A line appearing in both sequences (oldLines[oi] === newLines[ni] === lcs[li]) doesn't mean it's at the correct position in the LCS reconstruction path. This causes incorrect diff output for many inputs—lines may be incorrectly marked as 'same', 'add', or 'remove' depending on coincidental matches in the LCS."
+      },
+      {
+        "path": "docs/archive/review-2026-05-30/findings.json",
+        "at": "$[219].detail",
+        "context": "but the three indices (oi, ni, li) don't correspond to positions in a way that allows correct reconstruction. A line appearing in both sequences (oldLines[oi] === newLines[ni] === lcs[li]) doesn't mean it's at the correct position in the LCS reconstruction path. This causes incorrect diff output for many inputs—lines may be incorrectly marked as 'same', 'add', or 'remove' depending on coincidental matches in the LCS."
+      },
+      {
+        "path": "docs/archive/review-2026-05-30/findings.json",
+        "at": "$[219].detail",
+        "context": "itions in a way that allows correct reconstruction. A line appearing in both sequences (oldLines[oi] === newLines[ni] === lcs[li]) doesn't mean it's at the correct position in the LCS reconstruction path. This causes incorrect diff output for many inputs—lines may be incorrectly marked as 'same', 'add', or 'remove' depending on coincidental matches in the LCS."
+      },
+      {
+        "path": "docs/archive/review-2026-05-30/findings.json",
+        "at": "$[219].detail",
+        "context": "e LCS reconstruction path. This causes incorrect diff output for many inputs—lines may be incorrectly marked as 'same', 'add', or 'remove' depending on coincidental matches in the LCS."
+      },
+      {
+        "path": "docs/archive/review-2026-05-30/findings.json",
+        "at": "$[219].fix",
+        "context": "Replace the LCS reconstruction logic with a proper diff algorithm such as Myers' algorithm or a simpler line-by-line edit distance approach, or use a well-tested diff library. The current approach of checking sequence equality without tracking reconstruction state is fundamentally broken."
+      },
+      {
+        "path": "docs/audit-2026-10-16/inventory.json",
+        "at": "$.source_inventory[569]",
+        "context": "packages/core/src/session/simple-diff.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round15/evidence/docinput-prefix-dedup-context.json",
+        "at": "$.records[5].matches[0].match",
+        "context": "forward reference.\"}, {\"file\": \"packages/tui/src/ui/components/StructuredDiff.tsx\", \"line\": \"58-85\", \"category\": \"correctness\", \"severity\": \"high\", \"confidence\": \"high\", \"title\": \"LCS-based diff reconstruction algorithm is incorrect\", \"detail\": \"The computeUnifiedDiff function reconstructs diffs by checking if oldLines[oi] === lcs[li] && newLines[ni] === lcs[li], but this logic is flawed. The LCS backtracking returns a subsequence of matching elements, but the three indices (oi, ni, li) don't correspond to positions in a way that allows correct reconstruction. A line appearing in both sequences (oldLines[oi] === newLines[ni] === lcs[li]) doesn't mean it's at the correct position in the LCS reconstruction path. This causes incorrect diff output for many inputs\\u2014lines ma"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round15/evidence/docinput-prefix-dedup-context.json",
+        "at": "$.records[5].matches[0].match",
+        "context": "confidence\": \"high\", \"title\": \"LCS-based diff reconstruction algorithm is incorrect\", \"detail\": \"The computeUnifiedDiff function reconstructs diffs by checking if oldLines[oi] === lcs[li] && newLines[ni] === lcs[li], but this logic is flawed. The LCS backtracking returns a subsequence of matching elements, but the three indices (oi, ni, li) don't correspond to positions in a way that allows correct reconstruction. A line appearing in both sequences (oldLines[oi] === newLines[ni] === lcs[li]) doesn't mean it's at the correct position in the LCS reconstruction path. This causes incorrect diff output for many inputs\\u2014lines may be incorrectly marked as 'same', 'add', or 'remove' depending on coincidental matches in the LCS.\", \"fix\": \"Replace the LCS reconstruction logic wi"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round15/evidence/docinput-prefix-dedup-context.json",
+        "at": "$.records[5].matches[0].match",
+        "context": ": \"LCS-based diff reconstruction algorithm is incorrect\", \"detail\": \"The computeUnifiedDiff function reconstructs diffs by checking if oldLines[oi] === lcs[li] && newLines[ni] === lcs[li], but this logic is flawed. The LCS backtracking returns a subsequence of matching elements, but the three indices (oi, ni, li) don't correspond to positions in a way that allows correct reconstruction. A line appearing in both sequences (oldLines[oi] === newLines[ni] === lcs[li]) doesn't mean it's at the correct position in the LCS reconstruction path. This causes incorrect diff output for many inputs\\u2014lines may be incorrectly marked as 'same', 'add', or 'remove' depending on coincidental matches in the LCS.\", \"fix\": \"Replace the LCS reconstruction logic with a proper diff algorithm s"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round15/evidence/docinput-prefix-dedup-context.json",
+        "at": "$.records[5].matches[0].match",
+        "context": "thm is incorrect\", \"detail\": \"The computeUnifiedDiff function reconstructs diffs by checking if oldLines[oi] === lcs[li] && newLines[ni] === lcs[li], but this logic is flawed. The LCS backtracking returns a subsequence of matching elements, but the three indices (oi, ni, li) don't correspond to positions in a way that allows correct reconstruction. A line appearing in both sequences (oldLines[oi] === newLines[ni] === lcs[li]) doesn't mean it's at the correct position in the LCS reconstruction path. This causes incorrect diff output for many inputs\\u2014lines may be incorrectly marked as 'same', 'add', or 'remove' depending on coincidental matches in the LCS.\", \"fix\": \"Replace the LCS reconstruction logic with a proper diff algorithm such as Myers' algorithm or a simpler li"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round15/evidence/docinput-prefix-dedup-context.json",
+        "at": "$.records[5].matches[0].match",
+        "context": "but the three indices (oi, ni, li) don't correspond to positions in a way that allows correct reconstruction. A line appearing in both sequences (oldLines[oi] === newLines[ni] === lcs[li]) doesn't mean it's at the correct position in the LCS reconstruction path. This causes incorrect diff output for many inputs\\u2014lines may be incorrectly marked as 'same', 'add', or 'remove' depending on coincidental matches in the LCS.\", \"fix\": \"Replace the LCS reconstruction logic with a proper diff algorithm such as Myers' algorithm or a simpler line-by-line edit distance approach, or use a well-tested diff library. The current approach of checking sequence equality without tracking reconstruction state is fundamentally broken.\"}, {\"file\": \"packages/tui/src/ui/components/TextInput.tsx"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round15/evidence/docinput-prefix-dedup-context.json",
+        "at": "$.records[5].matches[0].match",
+        "context": "itions in a way that allows correct reconstruction. A line appearing in both sequences (oldLines[oi] === newLines[ni] === lcs[li]) doesn't mean it's at the correct position in the LCS reconstruction path. This causes incorrect diff output for many inputs\\u2014lines may be incorrectly marked as 'same', 'add', or 'remove' depending on coincidental matches in the LCS.\", \"fix\": \"Replace the LCS reconstruction logic with a proper diff algorithm such as Myers' algorithm or a simpler line-by-line edit distance approach, or use a well-tested diff library. The current approach of checking sequence equality without tracking reconstruction state is fundamentally broken.\"}, {\"file\": \"packages/tui/src/ui/components/TextInput.tsx\", \"line\": \"173-179\", \"category\": \"correctness\", \"severity"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round15/evidence/docinput-prefix-dedup-context.json",
+        "at": "$.records[5].matches[0].match",
+        "context": " reconstruction path. This causes incorrect diff output for many inputs\\u2014lines may be incorrectly marked as 'same', 'add', or 'remove' depending on coincidental matches in the LCS.\", \"fix\": \"Replace the LCS reconstruction logic with a proper diff algorithm such as Myers' algorithm or a simpler line-by-line edit distance approach, or use a well-tested diff library. The current approach of checking sequence equality without tracking reconstruction state is fundamentally broken.\"}, {\"file\": \"packages/tui/src/ui/components/TextInput.tsx\", \"line\": \"173-179\", \"category\": \"correctness\", \"severity\": \"high\", \"confidence\": \"high\", \"title\": \"Alt+D (delete word forward) missing cursor position update\", \"detail\": \"The Alt+D handler (lines 173-179) calls onChange to delete the word "
+      },
+      {
+        "path": "docs/audit-2026-10-17-round15/evidence/docinput-prefix-dedup-context.json",
+        "at": "$.records[5].matches[0].match",
+        "context": "causes incorrect diff output for many inputs\\u2014lines may be incorrectly marked as 'same', 'add', or 'remove' depending on coincidental matches in the LCS.\", \"fix\": \"Replace the LCS reconstruction logic with a proper diff algorithm such as Myers' algorithm or a simpler line-by-line edit distance approach, or use a well-tested diff library. The current approach of checking sequence equality without tracking reconstruction state is fundamentally broken.\"}, {\"file\": \"packages/tui/src/ui/components/TextInput.tsx\", \"line\": \"173-179\", \"category\": \"correctness\", \"severity\": \"high\", \"confidence\": \"high\", \"title\": \"Alt+D (delete word forward) missing cursor position update\", \"detail\": \"The Alt+D handler (lines 173-179) calls onChange to delete the word but fails to call setCursor"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round15/evidence/docinput-prefix-dedup-context.json",
+        "at": "$.records[5].matches[0].context",
+        "context": "forward reference.\"}, {\"file\": \"packages/tui/src/ui/components/StructuredDiff.tsx\", \"line\": \"58-85\", \"category\": \"correctness\", \"severity\": \"high\", \"confidence\": \"high\", \"title\": \"LCS-based diff reconstruction algorithm is incorrect\", \"detail\": \"The computeUnifiedDiff function reconstructs diffs by checking if oldLines[oi] === lcs[li] && newLines[ni] === lcs[li], but this logic is flawed. The LCS backtracking returns a subsequence of matching elements, but the three indices (oi, ni, li) don't correspond to positions in a way that allows correct reconstruction. A line appearing in both sequences (oldLines[oi] === newLines[ni] === lcs[li]) doesn't mean it's at the correct position in the LCS reconstruction path. This causes incorrect diff output for many inputs\\u2014lines ma"
+      }
+    ],
+    "sort_memory": [
+      {
+        "path": "docs/archive/architecture/19-core-chain-review-beta.md",
+        "at": "$",
+        "context": "mory。 |\n| `services/session-memory.ts` | session summary 存储。 |\n| `services/auto-dream.ts` | dream 触发节奏。 |\n| `services/dream-consolidation.ts` | dream tool-call loop。 |\n| `services/session-memory-sort.ts` | session memory 排序。 |\n\n### 5.5 user / dream 双 scope\n\nMemory 分两个 scope:\n\n- `user`: 用户拥有的记忆,修改需要权限。\n- `dream`: 自动整理工作区,LLM 可以更自由地合并/删除。\n\n为什么这么做:\n\n- 自动整理不会直接破坏用户记忆。\n- dream 可以先作为草稿区积累和去重。\n- prompt 注入时能明确告诉模型哪些记忆归用户所有。\n\n### 5.6 Memory pipeline\n\nEngine 结束后 fire-and-forget:\n\n```text\ntranscript -> sanitize image/base64 -> MemoryOrchestrator\n  -> extract durable memories\n  -> save session summary\n  -> record session\n  -> maybe auto-dream\n```\n\n为什么不阻塞主结果:\n\n- 记忆是辅助能力,失败不应该让用户这轮对话失败。\n- 可以走 aux/extraction model,降低成本。\n- 长 transcript 的提取不会卡 UI 的 turn complete。\n\n### 5.7 好处\n\n- session 和 memory 分工明确: sess"
+      },
+      {
+        "path": "docs/archive/core-complete-review.md",
+        "at": "$",
+        "context": "非主循环但被 Engine/CLI 调用的服务。\n\n### 16.1 memory services\n\n相关文件：\n\n- `memory-orchestrator.ts`\n- `extract-memories.ts`\n- `dream-consolidation.ts`\n- `auto-dream.ts`\n- `session-memory.ts`\n- `session-memory-sort.ts`\n\nEngine.run 完成后会 fire-and-forget：\n\n- 从 session 中抽取 memory。\n- 做 dream consolidation。\n- 更新 session memory context。\n\n这些任务不阻塞主 run 返回。\n\n风险：fire-and-forget 后台任务没有统一生命周期管理。进程退出时可能丢任务；错误通常只记录，不反馈给用户。\n\n### 16.2 OAuth / browser open\n\n- `oauth.ts` 负责 OAuth 相关流程。\n- `browser-open.ts` 封装打开浏览器。\n\n### 16.3 notifier\n\n`notifier.ts` 负责系统通知。可用于 run 完成、后台任务等提醒。\n\n### 16.4 analytics / diagnostics\n\n- `analytics.ts`：分析/遥测相关封装。\n- `diagnostics.ts`：诊断信息收集。\n\nCore 里很多 telemetry/state API 是 lightweight stub 或兼容层，避免 engine 强依赖具体产品端。\n\n## 17. Logging 模块\n\n`src/logging/**` 管运行日志、消息脱敏、session recorder。\n\n### 17.1 logger\n\n`log"
+      },
+      {
+        "path": "docs/archive/core-modules/services.md",
+        "at": "$",
+        "context": "sponse into `ExtractedMemory[]`; code-side cap of 2 per pass. |\n| `session-memory.ts` | Persist/load/list/search per-session summaries under `~/.code-shell/session-memories`. |\n| `session-memory-sort.ts` | `sortSessionMemoriesByRecency` — order by `createdAt`, not filename. |\n| `auto-dream.ts` | Dream cadence state machine (`shouldAutoDream`/`recordSession`/`recordDreamComplete`) + dream prompt builders. State in `~/.code-shell/auto-dream-state.json`. |\n| `dream-consolidation.ts` | `runDreamConsolidation` — the bounded LLM tool-call loop that mutates the `dream` memory scope (exported from package root). |\n| `analytics.ts` | Singleton event tracker with a JSONL file sink under `~/.code-shell/analytics`. |\n| `diagnostics.ts` | Singleton error/health tracker with JSONL persistence under `~/"
+      },
+      {
+        "path": "docs/archive/core-modules/services.md",
+        "at": "$",
+        "context": "y[]`; code-side cap of 2 per pass. |\n| `session-memory.ts` | Persist/load/list/search per-session summaries under `~/.code-shell/session-memories`. |\n| `session-memory-sort.ts` | `sortSessionMemoriesByRecency` — order by `createdAt`, not filename. |\n| `auto-dream.ts` | Dream cadence state machine (`shouldAutoDream`/`recordSession`/`recordDreamComplete`) + dream prompt builders. State in `~/.code-shell/auto-dream-state.json`. |\n| `dream-consolidation.ts` | `runDreamConsolidation` — the bounded LLM tool-call loop that mutates the `dream` memory scope (exported from package root). |\n| `analytics.ts` | Singleton event tracker with a JSONL file sink under `~/.code-shell/analytics`. |\n| `diagnostics.ts` | Singleton error/health tracker with JSONL persistence under `~/.code-shell/diagnostics`. |\n| `notif"
+      },
+      {
+        "path": "docs/audit-2026-10-16/inventory.json",
+        "at": "$.source_inventory[543]",
+        "context": "packages/core/src/services/session-memory-sort.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17/evidence/ops-source-manifest.json",
+        "at": "$.productionSources[2].path",
+        "context": "packages/core/src/services/session-memory-sort.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17/evidence/quality-final-review.md",
+        "at": "$",
+        "context": "e.parse 证明 newer 晚于 older，再真实 saveSessionMemory/listSessionMemories 打印 expected=[newer,older]、actual=[older,newer]，两项断言通过；`session-memory.ts:146–148` 接受可 Date.parse 的有效 offset 时间，`session-memory-sort.ts:4–7` 明确 most-recent-first，`:12` 却比较原字符串，因此首项足以支持 SDK/导入有效 offset 时间的窄 P3。该文件后续三项失败、整组 1 pass / 3 fail / 7 expect、无 Completed；不能宣称干净门禁、完整 memory suite 或内建 toISOString writer 同样受影响。TTL/promotion/approval 三个后续候选仍从不计正式发现。\n\nREADME、validation 和候选账本目前均明确上述分账，并将独立质量复核标记为新增动态执行 0。最终判断：**索引、优先级、报告锚点及统计一致；无需补实验，无待修阻断项。** 本质量文件收束后需由根作者按原交付流程刷新 evidence-index 中本文件的哈希。\n\n根作者另行提供交付收据：仓库规则忽略 `*.log`，已显式纳入本任务 42 份原始日志（包含测试及只读查重等日志，故多于上述 37 份测试日志）；staged diff 的唯一 whitespace 提示为 `root-summary-json.log:22` 原始 Bun 诊断行 `47 | ` 的尾空格。该空格属于首跑 stdout/stderr，保留逐字节原始证据；不建议修剪或重写原始日志。其余非 log 文件另作 whitespace 检查。这是根作者的 st"
+      },
+      {
+        "path": "docs/audit-2026-10-17/evidence/quality-ui-review.md",
+        "at": "$",
+        "context": "两次 fake JSON响应、remaining只剩新read正文、old charge正文消失。整组2 pass / 13 expect / Completed。 |\n| OM3 / P3 | `session-memory.ts:98–101` most-recent-first，`:146–148` 接受 Date.parse 有限的时区偏移字符串；`session-memory-sort.ts:12` 字符串比较确实可能倒序。内建 orchestrator 统一UTC不触发，SDK/import条件已收窄，P3适当。 | `ops-memory-data-round1.log` **1 pass / 3 fail / exit1 / 无Completed**；第一个case有明确 expected/actual，源码也直接支持。可以保留该窄观察，但汇总不得标该shard完成、不得计为通过整组；其他三个失败case未确认且不重试，现报告准确。 |\n| OM4 / P3 | `agent-progress.ts:53` 复制“最近工具”的 startedAt，两个不同id工具交错后名称与开始时间来自不同工具。`agent-notifications.ts:43–47` startedAt/finishedAt 是同一个 lastTool 的元数据，缺信息可省略。`agent.ts:386–398` 实际消费 reducer。仅进度元数据错误，当前UI时长未证实，P3边界准确。 | `ops-progress-recovery-round3.test.ts` 首项纯reducer三帧，实际Read completed startedAt=20而Read原start=10。2 pass / 7 expect / Completed包含另一正常queued边界，不是两个bu"
+      },
+      {
+        "path": "docs/audit-2026-10-17/findings.json",
+        "at": "$.findings[15].source",
+        "context": "packages/core/src/services/session-memory-sort.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17/operations-memory.md",
+        "at": "$",
+        "context": "or、promotion gate 与自有临时文件；模型是两次内存 JSON 响应。\n- 查重：未在本轮检索的旧审查报告发现同一问题；旧 auto-dream cadence 竞态与本项不同。\n\n### OM3 · P3 · Session summary 接受时区偏移时间但按字符串排新旧\n\n- 位置：`packages/core/src/services/session-memory-sort.ts:12`，接受范围 `packages/core/src/services/session-memory.ts:145–148`。\n- 触发：合法保存 older=`2026-10-17T01:00:00+08:00`（实际 UTC 10/16 17:00），newer=`2026-10-16T23:00:00Z`（实际晚六小时）。\n- 预期：`listSessionMemories` 契约“most recent first”应返回 newer、older。\n- 实际：返回 older、newer。保存校验使用 Date.parse，排序却直接比较原始字符串。\n- 影响：SDK/导入调用传入带偏移有效时间时顺序错误，limit 较小时可能选入旧摘要；内建 orchestrator 的 `toISOString()` 时间为统一 UTC，不受该样例影响。\n- 证据：`evidence/ops-memory-data-round1.test.ts` 第一个测试实际通过并打印 expected/actual。**该整组是 1 pass / 3 fail / 7 expect，退出 1，没有 Completed，不构成完成门禁。** 原始 `evidence/ops-memory-data-round1.log` 保留未覆盖。不能将单项观察扩大为整组通过。\n- 查重：旧 2026-"
+      },
+      {
+        "path": "docs/audit-2026-10-17/source-manifest.json",
+        "at": "$.files[25].path",
+        "context": "packages/core/src/services/session-memory-sort.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round23/evidence/root-prep/history.json",
+        "at": "$.patterns.memory-sort",
+        "context": "sortSessionMemoriesByRecency|session-memory-sort(?:\\.test)?\\.ts|session memor.{0,30}(?:sort|recen)"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round23/evidence/root-prep/history.json",
+        "at": "$.patterns.memory-sort",
+        "context": "sortSessionMemoriesByRecency|session-memory-sort(?:\\.test)?\\.ts|session memor.{0,30}(?:sort|recen)"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round23/evidence/root-prep/history.json",
+        "at": "$.hits.memory-sort[0].excerpt",
+        "context": "| `services/session-memory-sort.ts` | session memory 排序。 |"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round23/evidence/root-prep/history.json",
+        "at": "$.hits.memory-sort[1].excerpt",
+        "context": "- `session-memory-sort.ts`"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round23/evidence/root-prep/history.json",
+        "at": "$.hits.memory-sort[2].excerpt",
+        "context": "| `session-memory-sort.ts` | `sortSessionMemoriesByRecency` — order by `createdAt`, not filename. |"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round23/evidence/root-prep/history.json",
+        "at": "$.hits.memory-sort[2].excerpt",
+        "context": "| `session-memory-sort.ts` | `sortSessionMemoriesByRecency` — order by `createdAt`, not filename. |"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round23/evidence/root-prep/history.json",
+        "at": "$.hits.memory-sort[3].excerpt",
+        "context": "| `session-memory-sort.ts` | `sortSessionMemoriesByRecency` — order by `createdAt`, not filename. |"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round23/evidence/root-prep/history.json",
+        "at": "$.hits.memory-sort[3].excerpt",
+        "context": "| `session-memory-sort.ts` | `sortSessionMemoriesByRecency` — order by `createdAt`, not filename. |"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round23/evidence/root-prep/history.json",
+        "at": "$.hits.memory-sort[4].excerpt",
+        "context": "packages/core/src/services/session-memory-sort.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round23/evidence/root-prep/history.json",
+        "at": "$.hits.memory-sort[5].excerpt",
+        "context": "packages/core/src/services/session-memory-sort.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round23/evidence/root-prep/history.json",
+        "at": "$.hits.memory-sort[6].excerpt",
+        "context": "stSessionMemories 打印 expected=[newer,older]、actual=[older,newer]，两项断言通过；`session-memory.ts:146–148` 接受可 Date.parse 的有效 offset 时间，`session-memory-sort.ts:4–7` 明确 most-recent-first，`:12` 却比较原字符串，因此首项足以支持 SDK/导入有效 offset 时间的窄 P3。该文件后续三项失败、整组 1 pass / 3 fail / 7 expect、无 Completed；不能宣称干净门禁、完整 memory suite 或内建 toISOString writer 同样受影响。TTL/promotion/approval 三个后续候选仍从不计正式发现。"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round23/evidence/root-prep/history.json",
+        "at": "$.hits.memory-sort[7].excerpt",
+        "context": "| OM3 / P3 | `session-memory.ts:98–101` most-recent-first，`:146–148` 接受 Date.parse 有限的时区偏移字符串；`session-memory-sort.ts:12` 字符串比较确实可能倒序。内建 orchestrator 统一UTC不触发，SDK/import条件已收窄，P3适当。 | `ops-memory-data-round1.log` **1 pass / 3 fail / exit1 / 无Completed**；第一个case有明确 expected/actual，源码也直接支持。可以保留该窄观察，但汇总不得标该shard完成、不得计为通过整组；其他三个失败case未确认且不重试，现报告准确。 |"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round23/evidence/root-prep/history.json",
+        "at": "$.hits.memory-sort[8].excerpt",
+        "context": "packages/core/src/services/session-memory-sort.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round23/evidence/root-prep/history.json",
+        "at": "$.hits.memory-sort[9].excerpt",
+        "context": "- 位置：`packages/core/src/services/session-memory-sort.ts:12`，接受范围 `packages/core/src/services/session-memory.ts:145–148`。"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round23/evidence/root-prep/history.json",
+        "at": "$.hits.memory-sort[10].excerpt",
+        "context": "packages/core/src/services/session-memory-sort.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round23/evidence/root-prep/history.json",
+        "at": "$.hits.memory-sort[11].excerpt",
+        "context": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/services/session-memory-sort.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round23/evidence/root-prep/history.json",
+        "at": "$.hits.memory-sort[12].excerpt",
+        "context": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/services/session-memory-sort.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round23/evidence/root-prep/history.json",
+        "at": "$.hits.memory-sort[13].excerpt",
+        "context": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/services/session-memory-sort.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round23/evidence/root-prep/history.json",
+        "at": "$.hits.memory-sort[14].excerpt",
+        "context": "/Users/admin/.codex/worktrees/server-desktop-review-20261012/codeshell/packages/core/src/services/session-memory-sort.ts"
+      }
+    ]
+  },
+  "errors": [],
+  "contextCap": 30,
+  "scope": "Read-time all docs/bugs MD and parsed recursive JSON scalars;includes uncommitted round24. Keyword scan not semantic exhaustion."
+}

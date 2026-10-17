@@ -1,0 +1,94 @@
+{
+  "baseline": "8b9677c78d150abe9681a2f65ab8e55b1288be4b",
+  "files": [
+    {
+      "path": "packages/core/src/runtime/output-clean.ts",
+      "bytes": 1722,
+      "sha256": "e1f7e179003f57dcf3c07da35f76860151e6703de989b0f04db58acbe99bb86a",
+      "readScope": "full",
+      "readRanges": [
+        [
+          1,
+          45
+        ]
+      ],
+      "runtimeExecuted": false,
+      "note": "Root static read;guard runner only source navigation here;selected consumer notimported."
+    },
+    {
+      "path": "packages/core/src/runtime/output-clean.test.ts",
+      "bytes": 1257,
+      "sha256": "5118d580eeb7038205e16ad0a050a74c0e1d51a00ae19abadb71742e5a57b127",
+      "readScope": "full",
+      "readRanges": [
+        [
+          1,
+          34
+        ]
+      ],
+      "runtimeExecuted": false,
+      "note": "Root static read;guard runner only source navigation here;selected consumer notimported."
+    },
+    {
+      "path": "packages/core/src/runtime/background-shell.ts",
+      "bytes": 25112,
+      "sha256": "dabb4c006d1aa10fbb8e916e4de716c3382908a80fb9e8c73224a96562a8f0f5",
+      "readScope": "selected",
+      "readRanges": [
+        [
+          310,
+          350
+        ],
+        [
+          435,
+          510
+        ]
+      ],
+      "runtimeExecuted": false,
+      "note": "Root static read;guard runner only source navigation here;selected consumer notimported."
+    },
+    {
+      "path": "packages/core/src/tool-system/builtin/background-shell-tools.ts",
+      "bytes": 5335,
+      "sha256": "e52c34e95dc2ca15dbad41491323f23cfecfd66d9701f1b06903aa3ee8b5f5e6",
+      "readScope": "selected",
+      "readRanges": [
+        [
+          1,
+          82
+        ]
+      ],
+      "runtimeExecuted": false,
+      "note": "Root static read;guard runner only source navigation here;selected consumer notimported."
+    },
+    {
+      "path": "packages/core/src/protocol/server.ts",
+      "bytes": 195050,
+      "sha256": "1dcf2cba50bdedefb7ff04ce5c26565f59fdef275e8b74e2c5fb35d95af826d5",
+      "readScope": "selected",
+      "readRanges": [
+        [
+          2715,
+          2743
+        ]
+      ],
+      "runtimeExecuted": false,
+      "note": "Root static read;guard runner only source navigation here;selected consumer notimported."
+    },
+    {
+      "path": "scripts/run-bun-test-shard.mjs",
+      "bytes": 233,
+      "sha256": "dd2b245afbcb5aa7c798c8674d34edb8e02bb42be0be320050adf9be5ed2fd7d",
+      "readScope": "full",
+      "readRanges": [
+        [
+          1,
+          8
+        ]
+      ],
+      "runtimeExecuted": false,
+      "note": "Root static read;guard runner only source navigation here;selected consumer notimported."
+    }
+  ],
+  "productAttempts": 0
+}

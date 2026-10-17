@@ -1,0 +1,1250 @@
+{
+  "baseline": "8b9677c78d150abe9681a2f65ab8e55b1288be4b",
+  "mainHead": "d9d2c33ddd1b2edea28a719e4cd0a505a96c0b08",
+  "files": [
+    {
+      "path": "AGENTS.md",
+      "bytes": 206,
+      "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "currentSha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "mainSha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "currentBytes": 206,
+      "mainBytes": 206,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentWorkingTreeMatchesMain": true
+    },
+    {
+      "path": "CODESHELL.md",
+      "bytes": 17639,
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "currentSha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "mainSha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "currentBytes": 17639,
+      "mainBytes": 17639,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentWorkingTreeMatchesMain": true
+    },
+    {
+      "path": "bun.lock",
+      "bytes": 339166,
+      "sha256": "89653da5f19dce556850d5f8ba7de47e400274453ef303d9190ebf6bcb61ac2d",
+      "currentSha256": "89653da5f19dce556850d5f8ba7de47e400274453ef303d9190ebf6bcb61ac2d",
+      "mainSha256": "89653da5f19dce556850d5f8ba7de47e400274453ef303d9190ebf6bcb61ac2d",
+      "currentBytes": 339166,
+      "mainBytes": 339166,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentWorkingTreeMatchesMain": true
+    },
+    {
+      "path": "docs/architecture/local-link-mvp.md",
+      "bytes": 14632,
+      "sha256": "0cee7784ee9f57eee9e6558dce0e3fc5851af19ac9aff1c32214598821f82fb9",
+      "currentSha256": "0cee7784ee9f57eee9e6558dce0e3fc5851af19ac9aff1c32214598821f82fb9",
+      "mainSha256": "0cee7784ee9f57eee9e6558dce0e3fc5851af19ac9aff1c32214598821f82fb9",
+      "currentBytes": 14632,
+      "mainBytes": 14632,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentWorkingTreeMatchesMain": true
+    },
+    {
+      "path": "docs/archive/beta-prep-audit-2026-06-23.md",
+      "bytes": 99990,
+      "sha256": "2cadf52899194bd9532e4d3890a1ccad64cb94e48c2cadcef6fe7e8c1f842f1c",
+      "currentSha256": "2cadf52899194bd9532e4d3890a1ccad64cb94e48c2cadcef6fe7e8c1f842f1c",
+      "mainSha256": "2cadf52899194bd9532e4d3890a1ccad64cb94e48c2cadcef6fe7e8c1f842f1c",
+      "currentBytes": 99990,
+      "mainBytes": 99990,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentWorkingTreeMatchesMain": true
+    },
+    {
+      "path": "docs/archive/core-modules/runtime.md",
+      "bytes": 10185,
+      "sha256": "6a5acecf8d73d8fb134e1987b422078f3aa2cb7f8ba8f8b3be4f7b02a71ab1a2",
+      "currentSha256": "6a5acecf8d73d8fb134e1987b422078f3aa2cb7f8ba8f8b3be4f7b02a71ab1a2",
+      "mainSha256": "6a5acecf8d73d8fb134e1987b422078f3aa2cb7f8ba8f8b3be4f7b02a71ab1a2",
+      "currentBytes": 10185,
+      "mainBytes": 10185,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentWorkingTreeMatchesMain": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round14/utils.md",
+      "bytes": 6276,
+      "sha256": "ad2dde78de997e26f5267580bbf89e3d6431706fc84a330882168887c6f5bf1d",
+      "currentSha256": "ad2dde78de997e26f5267580bbf89e3d6431706fc84a330882168887c6f5bf1d",
+      "mainSha256": "ad2dde78de997e26f5267580bbf89e3d6431706fc84a330882168887c6f5bf1d",
+      "currentBytes": 6276,
+      "mainBytes": 6276,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentWorkingTreeMatchesMain": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round16/tasknoise.md",
+      "bytes": 5751,
+      "sha256": "4a77837071c75a6a41c8e2ed596c1bfb52cf66500e9e02ef36660e5fd48d78b1",
+      "currentSha256": "4a77837071c75a6a41c8e2ed596c1bfb52cf66500e9e02ef36660e5fd48d78b1",
+      "mainSha256": "4a77837071c75a6a41c8e2ed596c1bfb52cf66500e9e02ef36660e5fd48d78b1",
+      "currentBytes": 5751,
+      "mainBytes": 5751,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentWorkingTreeMatchesMain": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round19/simplediff.md",
+      "bytes": 6379,
+      "sha256": "a2309fec29f3e213c772d7010a5456cbd41519fb355cd628bb40c8ef1fbfc930",
+      "currentSha256": "a2309fec29f3e213c772d7010a5456cbd41519fb355cd628bb40c8ef1fbfc930",
+      "mainSha256": "a2309fec29f3e213c772d7010a5456cbd41519fb355cd628bb40c8ef1fbfc930",
+      "currentBytes": 6379,
+      "mainBytes": 6379,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentWorkingTreeMatchesMain": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round21/ndjson.md",
+      "bytes": 4829,
+      "sha256": "c1427ad4ff04aeab42227365d41f8823b591da6fb4d98d2b7b35f2242095f153",
+      "currentSha256": "c1427ad4ff04aeab42227365d41f8823b591da6fb4d98d2b7b35f2242095f153",
+      "mainSha256": "c1427ad4ff04aeab42227365d41f8823b591da6fb4d98d2b7b35f2242095f153",
+      "currentBytes": 4829,
+      "mainBytes": 4829,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentWorkingTreeMatchesMain": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round6/skills-agents.md",
+      "bytes": 9203,
+      "sha256": "efff8f799481911e0b3c3b8ac3c0a4686411f55336f97abeb4d64b2c8dd22ec4",
+      "currentSha256": "efff8f799481911e0b3c3b8ac3c0a4686411f55336f97abeb4d64b2c8dd22ec4",
+      "mainSha256": "efff8f799481911e0b3c3b8ac3c0a4686411f55336f97abeb4d64b2c8dd22ec4",
+      "currentBytes": 9203,
+      "mainBytes": 9203,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentWorkingTreeMatchesMain": true
+    },
+    {
+      "path": "docs/audit-2026-10-17/operations-memory.md",
+      "bytes": 13007,
+      "sha256": "40b575c42f9ac53e995ebf441482ab65524fdf71bed70ba418f86530540de466",
+      "currentSha256": "40b575c42f9ac53e995ebf441482ab65524fdf71bed70ba418f86530540de466",
+      "mainSha256": "40b575c42f9ac53e995ebf441482ab65524fdf71bed70ba418f86530540de466",
+      "currentBytes": 13007,
+      "mainBytes": 13007,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentWorkingTreeMatchesMain": true
+    },
+    {
+      "path": "docs/review-2026-10-12/runtime-round3.md",
+      "bytes": 8292,
+      "sha256": "d3873d2f368812e049bda27862bca1b6a7a026a2c6d451e2b12765888a5230d7",
+      "currentSha256": "d3873d2f368812e049bda27862bca1b6a7a026a2c6d451e2b12765888a5230d7",
+      "mainSha256": "d3873d2f368812e049bda27862bca1b6a7a026a2c6d451e2b12765888a5230d7",
+      "currentBytes": 8292,
+      "mainBytes": 8292,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentWorkingTreeMatchesMain": true
+    },
+    {
+      "path": "docs/superpowers/specs/2026-06-05-background-shell-design.md",
+      "bytes": 23642,
+      "sha256": "aa6a68e5724760259bd7122ef365e97ba3477d8717f1858a06dd3bd2ad4f0903",
+      "currentSha256": "aa6a68e5724760259bd7122ef365e97ba3477d8717f1858a06dd3bd2ad4f0903",
+      "mainSha256": "aa6a68e5724760259bd7122ef365e97ba3477d8717f1858a06dd3bd2ad4f0903",
+      "currentBytes": 23642,
+      "mainBytes": 23642,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentWorkingTreeMatchesMain": true
+    },
+    {
+      "path": "docs/todo/link-catalog-compatibility-delivery.md",
+      "bytes": 2501,
+      "sha256": "07d6ba33c88d8f18c1f34528940b2a526ddb2b8b84f21a52555efa85c54466a6",
+      "currentSha256": "07d6ba33c88d8f18c1f34528940b2a526ddb2b8b84f21a52555efa85c54466a6",
+      "mainSha256": "07d6ba33c88d8f18c1f34528940b2a526ddb2b8b84f21a52555efa85c54466a6",
+      "currentBytes": 2501,
+      "mainBytes": 2501,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentWorkingTreeMatchesMain": true
+    },
+    {
+      "path": "docs/todo/link-connector-refactor-delivery-2026-10-16.md",
+      "bytes": 4467,
+      "sha256": "4ef3ded399653be9caa4a4e8c7eee9203586b4cba294b9c91eb8705ad5e98eba",
+      "currentSha256": "4ef3ded399653be9caa4a4e8c7eee9203586b4cba294b9c91eb8705ad5e98eba",
+      "mainSha256": "4ef3ded399653be9caa4a4e8c7eee9203586b4cba294b9c91eb8705ad5e98eba",
+      "currentBytes": 4467,
+      "mainBytes": 4467,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentWorkingTreeMatchesMain": true
+    },
+    {
+      "path": "docs/todo/link-connector-refactor-plan-2026-10-16.md",
+      "bytes": 54388,
+      "sha256": "754609741a24ae3acb5fb2d49034ff9bd79c60123f39cdee80a7481243c48ddc",
+      "currentSha256": "754609741a24ae3acb5fb2d49034ff9bd79c60123f39cdee80a7481243c48ddc",
+      "mainSha256": "754609741a24ae3acb5fb2d49034ff9bd79c60123f39cdee80a7481243c48ddc",
+      "currentBytes": 54388,
+      "mainBytes": 54388,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentWorkingTreeMatchesMain": true
+    },
+    {
+      "path": "package.json",
+      "bytes": 7063,
+      "sha256": "1f1cc2c90ce4e6b8e6cce3f392cd94e6a497464568ceda7c00c7d0c009fbc3d9",
+      "currentSha256": "1f1cc2c90ce4e6b8e6cce3f392cd94e6a497464568ceda7c00c7d0c009fbc3d9",
+      "mainSha256": "1f1cc2c90ce4e6b8e6cce3f392cd94e6a497464568ceda7c00c7d0c009fbc3d9",
+      "currentBytes": 7063,
+      "mainBytes": 7063,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentWorkingTreeMatchesMain": true
+    },
+    {
+      "path": "packages/core/src/engine/prompt-cache-diagnostics.ts",
+      "bytes": 9316,
+      "sha256": "5fdef8bfe040fb7ae3fa5edd3820abdf6c54e1398532df9a79707925733a6a9e",
+      "currentSha256": "5fdef8bfe040fb7ae3fa5edd3820abdf6c54e1398532df9a79707925733a6a9e",
+      "mainSha256": "5fdef8bfe040fb7ae3fa5edd3820abdf6c54e1398532df9a79707925733a6a9e",
+      "currentBytes": 9316,
+      "mainBytes": 9316,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentWorkingTreeMatchesMain": true
+    },
+    {
+      "path": "packages/core/src/engine/sandbox-cache-key.ts",
+      "bytes": 748,
+      "sha256": "797afb95bc499a445850ae6aad00aeb4d4e321b4bcfc79e194058f931d56d6c0",
+      "currentSha256": "797afb95bc499a445850ae6aad00aeb4d4e321b4bcfc79e194058f931d56d6c0",
+      "mainSha256": "797afb95bc499a445850ae6aad00aeb4d4e321b4bcfc79e194058f931d56d6c0",
+      "currentBytes": 748,
+      "mainBytes": 748,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentWorkingTreeMatchesMain": true
+    },
+    {
+      "path": "packages/core/src/llm/prompt-cache.ts",
+      "bytes": 8363,
+      "sha256": "0c4d64c68ccefdc3f1f368c63313191076a1c7e4a6a689875d0b505152381d53",
+      "currentSha256": "0c4d64c68ccefdc3f1f368c63313191076a1c7e4a6a689875d0b505152381d53",
+      "mainSha256": "0c4d64c68ccefdc3f1f368c63313191076a1c7e4a6a689875d0b505152381d53",
+      "currentBytes": 8363,
+      "mainBytes": 8363,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentWorkingTreeMatchesMain": true
+    },
+    {
+      "path": "packages/core/src/prompt/section-cache.ts",
+      "bytes": 970,
+      "sha256": "19c9ee13f2c2a8485e265d5a499a3b5583e545aea6e516d3a891f31a0c72cf27",
+      "currentSha256": "19c9ee13f2c2a8485e265d5a499a3b5583e545aea6e516d3a891f31a0c72cf27",
+      "mainSha256": "19c9ee13f2c2a8485e265d5a499a3b5583e545aea6e516d3a891f31a0c72cf27",
+      "currentBytes": 970,
+      "mainBytes": 970,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentWorkingTreeMatchesMain": true
+    },
+    {
+      "path": "packages/core/src/protocol/server-output.ts",
+      "bytes": 1706,
+      "sha256": "c7025b3360f8039090b06d320d29c70da35b7fda2a1d3e440b4eb2eb2bdb2c76",
+      "currentSha256": "c7025b3360f8039090b06d320d29c70da35b7fda2a1d3e440b4eb2eb2bdb2c76",
+      "mainSha256": "c7025b3360f8039090b06d320d29c70da35b7fda2a1d3e440b4eb2eb2bdb2c76",
+      "currentBytes": 1706,
+      "mainBytes": 1706,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentWorkingTreeMatchesMain": true
+    },
+    {
+      "path": "packages/core/src/protocol/server.ts",
+      "bytes": 195050,
+      "sha256": "1dcf2cba50bdedefb7ff04ce5c26565f59fdef275e8b74e2c5fb35d95af826d5",
+      "currentSha256": "1dcf2cba50bdedefb7ff04ce5c26565f59fdef275e8b74e2c5fb35d95af826d5",
+      "mainSha256": "1dcf2cba50bdedefb7ff04ce5c26565f59fdef275e8b74e2c5fb35d95af826d5",
+      "currentBytes": 195050,
+      "mainBytes": 195050,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentWorkingTreeMatchesMain": true
+    },
+    {
+      "path": "packages/core/src/protocol/session-message-result.ts",
+      "bytes": 2130,
+      "sha256": "37d992ff979bc43bb0a8e821fd10e0a3c027ca0b7f05bd7ce21deb7bd3a3e7aa",
+      "currentSha256": "37d992ff979bc43bb0a8e821fd10e0a3c027ca0b7f05bd7ce21deb7bd3a3e7aa",
+      "mainSha256": "37d992ff979bc43bb0a8e821fd10e0a3c027ca0b7f05bd7ce21deb7bd3a3e7aa",
+      "currentBytes": 2130,
+      "mainBytes": 2130,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentWorkingTreeMatchesMain": true
+    },
+    {
+      "path": "packages/core/src/runtime/background-shell.test.ts",
+      "bytes": 14593,
+      "sha256": "c2be42cc868eed0fdac3a4b7c68765732a70a3be3a7cb3e0faf1e7b039071170",
+      "currentSha256": "c2be42cc868eed0fdac3a4b7c68765732a70a3be3a7cb3e0faf1e7b039071170",
+      "mainSha256": "c2be42cc868eed0fdac3a4b7c68765732a70a3be3a7cb3e0faf1e7b039071170",
+      "currentBytes": 14593,
+      "mainBytes": 14593,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentWorkingTreeMatchesMain": true
+    },
+    {
+      "path": "packages/core/src/runtime/background-shell.ts",
+      "bytes": 25112,
+      "sha256": "dabb4c006d1aa10fbb8e916e4de716c3382908a80fb9e8c73224a96562a8f0f5",
+      "currentSha256": "dabb4c006d1aa10fbb8e916e4de716c3382908a80fb9e8c73224a96562a8f0f5",
+      "mainSha256": "dabb4c006d1aa10fbb8e916e4de716c3382908a80fb9e8c73224a96562a8f0f5",
+      "currentBytes": 25112,
+      "mainBytes": 25112,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentWorkingTreeMatchesMain": true
+    },
+    {
+      "path": "packages/core/src/runtime/output-clean.test.ts",
+      "bytes": 1257,
+      "sha256": "5118d580eeb7038205e16ad0a050a74c0e1d51a00ae19abadb71742e5a57b127",
+      "currentSha256": "5118d580eeb7038205e16ad0a050a74c0e1d51a00ae19abadb71742e5a57b127",
+      "mainSha256": "5118d580eeb7038205e16ad0a050a74c0e1d51a00ae19abadb71742e5a57b127",
+      "currentBytes": 1257,
+      "mainBytes": 1257,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentWorkingTreeMatchesMain": true
+    },
+    {
+      "path": "packages/core/src/runtime/output-clean.ts",
+      "bytes": 1722,
+      "sha256": "e1f7e179003f57dcf3c07da35f76860151e6703de989b0f04db58acbe99bb86a",
+      "currentSha256": "e1f7e179003f57dcf3c07da35f76860151e6703de989b0f04db58acbe99bb86a",
+      "mainSha256": "e1f7e179003f57dcf3c07da35f76860151e6703de989b0f04db58acbe99bb86a",
+      "currentBytes": 1722,
+      "mainBytes": 1722,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentWorkingTreeMatchesMain": true
+    },
+    {
+      "path": "packages/core/src/runtime/ring-file.ts",
+      "bytes": 5956,
+      "sha256": "f3981f59140f06ce2aa138bd15b26a08ad4cff9dd46b76b7c3b57f7bab81fdcd",
+      "currentSha256": "f3981f59140f06ce2aa138bd15b26a08ad4cff9dd46b76b7c3b57f7bab81fdcd",
+      "mainSha256": "f3981f59140f06ce2aa138bd15b26a08ad4cff9dd46b76b7c3b57f7bab81fdcd",
+      "currentBytes": 5956,
+      "mainBytes": 5956,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentWorkingTreeMatchesMain": true
+    },
+    {
+      "path": "packages/core/src/services/session-memory-sort.test.ts",
+      "bytes": 1229,
+      "sha256": "87a4eab4c5f35479f150b5e578190933cb3a054baa06559f69edf7c54b412dfe",
+      "currentSha256": "87a4eab4c5f35479f150b5e578190933cb3a054baa06559f69edf7c54b412dfe",
+      "mainSha256": "87a4eab4c5f35479f150b5e578190933cb3a054baa06559f69edf7c54b412dfe",
+      "currentBytes": 1229,
+      "mainBytes": 1229,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentWorkingTreeMatchesMain": true
+    },
+    {
+      "path": "packages/core/src/services/session-memory-sort.ts",
+      "bytes": 523,
+      "sha256": "22c8dfaa8e862136e8e816f1fd6a64e6b96f5ebcf7a0ede465a40279a8f4ad67",
+      "currentSha256": "22c8dfaa8e862136e8e816f1fd6a64e6b96f5ebcf7a0ede465a40279a8f4ad67",
+      "mainSha256": "22c8dfaa8e862136e8e816f1fd6a64e6b96f5ebcf7a0ede465a40279a8f4ad67",
+      "currentBytes": 523,
+      "mainBytes": 523,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentWorkingTreeMatchesMain": true
+    },
+    {
+      "path": "packages/core/src/services/session-memory.ts",
+      "bytes": 7686,
+      "sha256": "ff2cda058982c0c841b1ee3486a9ba9d99cd3d072fc0e9e85eb7247b9f3abe92",
+      "currentSha256": "ff2cda058982c0c841b1ee3486a9ba9d99cd3d072fc0e9e85eb7247b9f3abe92",
+      "mainSha256": "ff2cda058982c0c841b1ee3486a9ba9d99cd3d072fc0e9e85eb7247b9f3abe92",
+      "currentBytes": 7686,
+      "mainBytes": 7686,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentWorkingTreeMatchesMain": true
+    },
+    {
+      "path": "packages/core/src/session/file-history.ts",
+      "bytes": 37411,
+      "sha256": "6f944dd828efe723fb8c11608139a712e9f51268bf24eb03768f3c7da50349e5",
+      "currentSha256": "6f944dd828efe723fb8c11608139a712e9f51268bf24eb03768f3c7da50349e5",
+      "mainSha256": "6f944dd828efe723fb8c11608139a712e9f51268bf24eb03768f3c7da50349e5",
+      "currentBytes": 37411,
+      "mainBytes": 37411,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentWorkingTreeMatchesMain": true
+    },
+    {
+      "path": "packages/core/src/session/simple-diff.test.ts",
+      "bytes": 1828,
+      "sha256": "a38f35d8159d8de537cc27ba052587d18744fc30f37dfd458bb687a503bfe83d",
+      "currentSha256": "a38f35d8159d8de537cc27ba052587d18744fc30f37dfd458bb687a503bfe83d",
+      "mainSha256": "a38f35d8159d8de537cc27ba052587d18744fc30f37dfd458bb687a503bfe83d",
+      "currentBytes": 1828,
+      "mainBytes": 1828,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentWorkingTreeMatchesMain": true
+    },
+    {
+      "path": "packages/core/src/session/simple-diff.ts",
+      "bytes": 3041,
+      "sha256": "fc1d8e83f81bc3d6042561fb3549dc0af14e228d20b6a76b46998d9b3446ffeb",
+      "currentSha256": "fc1d8e83f81bc3d6042561fb3549dc0af14e228d20b6a76b46998d9b3446ffeb",
+      "mainSha256": "fc1d8e83f81bc3d6042561fb3549dc0af14e228d20b6a76b46998d9b3446ffeb",
+      "currentBytes": 3041,
+      "mainBytes": 3041,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentWorkingTreeMatchesMain": true
+    },
+    {
+      "path": "packages/core/src/session/undo-target.ts",
+      "bytes": 7551,
+      "sha256": "ec84eced06a0288a7cfd65526056a05457650fa17f4e20890310f5acdc561063",
+      "currentSha256": "ec84eced06a0288a7cfd65526056a05457650fa17f4e20890310f5acdc561063",
+      "mainSha256": "ec84eced06a0288a7cfd65526056a05457650fa17f4e20890310f5acdc561063",
+      "currentBytes": 7551,
+      "mainBytes": 7551,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentWorkingTreeMatchesMain": true
+    },
+    {
+      "path": "packages/core/src/tool-system/builtin/background-shell-tools.ts",
+      "bytes": 5335,
+      "sha256": "e52c34e95dc2ca15dbad41491323f23cfecfd66d9701f1b06903aa3ee8b5f5e6",
+      "currentSha256": "e52c34e95dc2ca15dbad41491323f23cfecfd66d9701f1b06903aa3ee8b5f5e6",
+      "mainSha256": "e52c34e95dc2ca15dbad41491323f23cfecfd66d9701f1b06903aa3ee8b5f5e6",
+      "currentBytes": 5335,
+      "mainBytes": 5335,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentWorkingTreeMatchesMain": true
+    },
+    {
+      "path": "packages/core/src/tool-system/builtin/bash.ts",
+      "bytes": 10753,
+      "sha256": "f5bbf67f296aaff1b3d154b194e40d1362cb010257b44607a3704897cec67e22",
+      "currentSha256": "f5bbf67f296aaff1b3d154b194e40d1362cb010257b44607a3704897cec67e22",
+      "mainSha256": "f5bbf67f296aaff1b3d154b194e40d1362cb010257b44607a3704897cec67e22",
+      "currentBytes": 10753,
+      "mainBytes": 10753,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentWorkingTreeMatchesMain": true
+    },
+    {
+      "path": "packages/core/src/utils/format.ts",
+      "bytes": 9304,
+      "sha256": "39d3fa4786f19681e53ec4a42cf9c5ee0bffc818d4c95c4bc151d3ea705c85b6",
+      "currentSha256": "39d3fa4786f19681e53ec4a42cf9c5ee0bffc818d4c95c4bc151d3ea705c85b6",
+      "mainSha256": "39d3fa4786f19681e53ec4a42cf9c5ee0bffc818d4c95c4bc151d3ea705c85b6",
+      "currentBytes": 9304,
+      "mainBytes": 9304,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentWorkingTreeMatchesMain": true
+    },
+    {
+      "path": "packages/desktop/src/main/index.ts",
+      "bytes": 299077,
+      "sha256": "77c8f9dcbd0ecf7000fd0c923d28b078f5fc187aebbd1b28830af18960233c4f",
+      "currentSha256": "105b2b49a28e0a7ef10980ac5feaa3a07ff81e7197f5acbefd95feb2498224c0",
+      "mainSha256": "105b2b49a28e0a7ef10980ac5feaa3a07ff81e7197f5acbefd95feb2498224c0",
+      "currentBytes": 299337,
+      "mainBytes": 299337,
+      "currentWorkingTreeMatchesFrozenBlob": false,
+      "mainMatchesFrozenBlob": false,
+      "currentWorkingTreeMatchesMain": true
+    },
+    {
+      "path": "packages/desktop/src/main/link-provider-catalog.test.ts",
+      "bytes": 1129,
+      "sha256": "edee306446e97f32fff066c76a907822bdecd55cdf2390bd556bafe90cb21759",
+      "currentSha256": "edee306446e97f32fff066c76a907822bdecd55cdf2390bd556bafe90cb21759",
+      "mainSha256": "edee306446e97f32fff066c76a907822bdecd55cdf2390bd556bafe90cb21759",
+      "currentBytes": 1129,
+      "mainBytes": 1129,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentWorkingTreeMatchesMain": true
+    },
+    {
+      "path": "packages/desktop/src/main/link-provider-catalog.ts",
+      "bytes": 259,
+      "sha256": "8fcbdc0e8ada2dfca9c55cb88dc1ba9efd30cfadd9722e19d31532275bc7aaea",
+      "currentSha256": "8fcbdc0e8ada2dfca9c55cb88dc1ba9efd30cfadd9722e19d31532275bc7aaea",
+      "mainSha256": "8fcbdc0e8ada2dfca9c55cb88dc1ba9efd30cfadd9722e19d31532275bc7aaea",
+      "currentBytes": 259,
+      "mainBytes": 259,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentWorkingTreeMatchesMain": true
+    },
+    {
+      "path": "packages/host/README.md",
+      "bytes": 1609,
+      "sha256": "0a3a2d64c648d8fc86464946dfd994b006d1bf93aa27100de899a812992271fb",
+      "currentSha256": "0a3a2d64c648d8fc86464946dfd994b006d1bf93aa27100de899a812992271fb",
+      "mainSha256": "0a3a2d64c648d8fc86464946dfd994b006d1bf93aa27100de899a812992271fb",
+      "currentBytes": 1609,
+      "mainBytes": 1609,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentWorkingTreeMatchesMain": true
+    },
+    {
+      "path": "packages/host/package.json",
+      "bytes": 923,
+      "sha256": "dea8055de59b310c169ca2caddbb95d441eb46c6336f855bf34a8a72b68ad3ea",
+      "currentSha256": "dea8055de59b310c169ca2caddbb95d441eb46c6336f855bf34a8a72b68ad3ea",
+      "mainSha256": "dea8055de59b310c169ca2caddbb95d441eb46c6336f855bf34a8a72b68ad3ea",
+      "currentBytes": 923,
+      "mainBytes": 923,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentWorkingTreeMatchesMain": true
+    },
+    {
+      "path": "packages/host/src/index.ts",
+      "bytes": 388,
+      "sha256": "cbe279016f7d26c9e797398eb2af8e2f426ff4098fb389911d8bcbef39c9e107",
+      "currentSha256": "cbe279016f7d26c9e797398eb2af8e2f426ff4098fb389911d8bcbef39c9e107",
+      "mainSha256": "cbe279016f7d26c9e797398eb2af8e2f426ff4098fb389911d8bcbef39c9e107",
+      "currentBytes": 388,
+      "mainBytes": 388,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentWorkingTreeMatchesMain": true
+    },
+    {
+      "path": "packages/host/src/runtime.ts",
+      "bytes": 4014,
+      "sha256": "b785ab50fd5265ffb7f7d78c312f01b8c2ace165a5bcfdb6a25655b3e5dd3089",
+      "currentSha256": "b785ab50fd5265ffb7f7d78c312f01b8c2ace165a5bcfdb6a25655b3e5dd3089",
+      "mainSha256": "b785ab50fd5265ffb7f7d78c312f01b8c2ace165a5bcfdb6a25655b3e5dd3089",
+      "currentBytes": 4014,
+      "mainBytes": 4014,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentWorkingTreeMatchesMain": true
+    },
+    {
+      "path": "packages/link/README.md",
+      "bytes": 2941,
+      "sha256": "2757bf796cffbd722a3fd54ae545af026aef418f36fc187e44e6869ad141df38",
+      "currentSha256": "2757bf796cffbd722a3fd54ae545af026aef418f36fc187e44e6869ad141df38",
+      "mainSha256": "2757bf796cffbd722a3fd54ae545af026aef418f36fc187e44e6869ad141df38",
+      "currentBytes": 2941,
+      "mainBytes": 2941,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentWorkingTreeMatchesMain": true
+    },
+    {
+      "path": "packages/link/package.json",
+      "bytes": 951,
+      "sha256": "d8dcf10e9c55af86d64faa9bcba724f622c35361f2ec70988b1b15eebeec74a6",
+      "currentSha256": "d8dcf10e9c55af86d64faa9bcba724f622c35361f2ec70988b1b15eebeec74a6",
+      "mainSha256": "d8dcf10e9c55af86d64faa9bcba724f622c35361f2ec70988b1b15eebeec74a6",
+      "currentBytes": 951,
+      "mainBytes": 951,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentWorkingTreeMatchesMain": true
+    },
+    {
+      "path": "packages/link/src/catalog.test.ts",
+      "bytes": 4144,
+      "sha256": "ad5b68cce0659519ab20730cb3f1e1224b0dae697ad6eceb4b56fc49d1686eb1",
+      "currentSha256": "ad5b68cce0659519ab20730cb3f1e1224b0dae697ad6eceb4b56fc49d1686eb1",
+      "mainSha256": "ad5b68cce0659519ab20730cb3f1e1224b0dae697ad6eceb4b56fc49d1686eb1",
+      "currentBytes": 4144,
+      "mainBytes": 4144,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentWorkingTreeMatchesMain": true
+    },
+    {
+      "path": "packages/link/src/catalog.ts",
+      "bytes": 30277,
+      "sha256": "2cf5bd2e1b2632a377750aa7c2aa6631120d341da801df9a185b3d8bf3e2bb4b",
+      "currentSha256": "2cf5bd2e1b2632a377750aa7c2aa6631120d341da801df9a185b3d8bf3e2bb4b",
+      "mainSha256": "2cf5bd2e1b2632a377750aa7c2aa6631120d341da801df9a185b3d8bf3e2bb4b",
+      "currentBytes": 30277,
+      "mainBytes": 30277,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentWorkingTreeMatchesMain": true
+    },
+    {
+      "path": "packages/link/src/figma.ts",
+      "bytes": 1031,
+      "sha256": "976162d245cc7fd65b80feb7a2b3e8e3997ea22a62254e07f00f30288267aff8",
+      "currentSha256": "976162d245cc7fd65b80feb7a2b3e8e3997ea22a62254e07f00f30288267aff8",
+      "mainSha256": "976162d245cc7fd65b80feb7a2b3e8e3997ea22a62254e07f00f30288267aff8",
+      "currentBytes": 1031,
+      "mainBytes": 1031,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentWorkingTreeMatchesMain": true
+    },
+    {
+      "path": "packages/link/src/index.ts",
+      "bytes": 1878,
+      "sha256": "d2c5d752e7bbd91386616d01b883fef8da62add62fcd38d2365b424abff7cd89",
+      "currentSha256": "d2c5d752e7bbd91386616d01b883fef8da62add62fcd38d2365b424abff7cd89",
+      "mainSha256": "d2c5d752e7bbd91386616d01b883fef8da62add62fcd38d2365b424abff7cd89",
+      "currentBytes": 1878,
+      "mainBytes": 1878,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentWorkingTreeMatchesMain": true
+    },
+    {
+      "path": "packages/link/src/operation-types.ts",
+      "bytes": 4215,
+      "sha256": "43a5e96ef31b154f66663695023f5f769691205daa15c6fbd3eed36b6c3b7945",
+      "currentSha256": "43a5e96ef31b154f66663695023f5f769691205daa15c6fbd3eed36b6c3b7945",
+      "mainSha256": "43a5e96ef31b154f66663695023f5f769691205daa15c6fbd3eed36b6c3b7945",
+      "currentBytes": 4215,
+      "mainBytes": 4215,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentWorkingTreeMatchesMain": true
+    },
+    {
+      "path": "packages/link/src/recipes.test.ts",
+      "bytes": 2561,
+      "sha256": "292ac53b0ae5d8e45e861f612a877b5929806aca6eba0eea2096f14770de2e3d",
+      "currentSha256": "292ac53b0ae5d8e45e861f612a877b5929806aca6eba0eea2096f14770de2e3d",
+      "mainSha256": "292ac53b0ae5d8e45e861f612a877b5929806aca6eba0eea2096f14770de2e3d",
+      "currentBytes": 2561,
+      "mainBytes": 2561,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentWorkingTreeMatchesMain": true
+    },
+    {
+      "path": "packages/link/src/recipes.ts",
+      "bytes": 4162,
+      "sha256": "fa330115b25373afc293fb12d91e6929de4119cfe87db54db09bedce0537c676",
+      "currentSha256": "fa330115b25373afc293fb12d91e6929de4119cfe87db54db09bedce0537c676",
+      "mainSha256": "fa330115b25373afc293fb12d91e6929de4119cfe87db54db09bedce0537c676",
+      "currentBytes": 4162,
+      "mainBytes": 4162,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentWorkingTreeMatchesMain": true
+    },
+    {
+      "path": "packages/link/src/types.ts",
+      "bytes": 3278,
+      "sha256": "d26e95c578b079a7b18e0c7365062130db40707e2d4e500f53333b090fe75072",
+      "currentSha256": "d26e95c578b079a7b18e0c7365062130db40707e2d4e500f53333b090fe75072",
+      "mainSha256": "d26e95c578b079a7b18e0c7365062130db40707e2d4e500f53333b090fe75072",
+      "currentBytes": 3278,
+      "mainBytes": 3278,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentWorkingTreeMatchesMain": true
+    },
+    {
+      "path": "packages/server/src/links/catalog.ts",
+      "bytes": 2243,
+      "sha256": "d5c6a137aad127a6835243d3435afd790cb26c2ff404904c7dfeb7e797b1baec",
+      "currentSha256": "d5c6a137aad127a6835243d3435afd790cb26c2ff404904c7dfeb7e797b1baec",
+      "mainSha256": "d5c6a137aad127a6835243d3435afd790cb26c2ff404904c7dfeb7e797b1baec",
+      "currentBytes": 2243,
+      "mainBytes": 2243,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentWorkingTreeMatchesMain": true
+    },
+    {
+      "path": "packages/server/src/links/service.ts",
+      "bytes": 84284,
+      "sha256": "7d7363bbf6a6853f4a1678a22b0a5813162b9549b4a0fab0273d3f131aaf325c",
+      "currentSha256": "7d7363bbf6a6853f4a1678a22b0a5813162b9549b4a0fab0273d3f131aaf325c",
+      "mainSha256": "7d7363bbf6a6853f4a1678a22b0a5813162b9549b4a0fab0273d3f131aaf325c",
+      "currentBytes": 84284,
+      "mainBytes": 84284,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentWorkingTreeMatchesMain": true
+    },
+    {
+      "path": "packages/tui/src/cli/commands/builtin/utility-commands.ts",
+      "bytes": 9016,
+      "sha256": "30f57f0789dc55613f4a50115bf5d9900793c8e9ec5d0d144f4ad3c7e2a55f60",
+      "currentSha256": "30f57f0789dc55613f4a50115bf5d9900793c8e9ec5d0d144f4ad3c7e2a55f60",
+      "mainSha256": "30f57f0789dc55613f4a50115bf5d9900793c8e9ec5d0d144f4ad3c7e2a55f60",
+      "currentBytes": 9016,
+      "mainBytes": 9016,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentWorkingTreeMatchesMain": true
+    },
+    {
+      "path": "scripts/run-bun-test-shard.mjs",
+      "bytes": 233,
+      "sha256": "dd2b245afbcb5aa7c798c8674d34edb8e02bb42be0be320050adf9be5ed2fd7d",
+      "currentSha256": "dd2b245afbcb5aa7c798c8674d34edb8e02bb42be0be320050adf9be5ed2fd7d",
+      "mainSha256": "dd2b245afbcb5aa7c798c8674d34edb8e02bb42be0be320050adf9be5ed2fd7d",
+      "currentBytes": 233,
+      "mainBytes": 233,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentWorkingTreeMatchesMain": true
+    },
+    {
+      "path": "tsconfig.json",
+      "bytes": 3723,
+      "sha256": "927ca6a46a23dd9f7f0be6a3e486ab54eee9ce4c0cefaac584ed593bc36f2301",
+      "currentSha256": "927ca6a46a23dd9f7f0be6a3e486ab54eee9ce4c0cefaac584ed593bc36f2301",
+      "mainSha256": "927ca6a46a23dd9f7f0be6a3e486ab54eee9ce4c0cefaac584ed593bc36f2301",
+      "currentBytes": 3723,
+      "mainBytes": 3723,
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true,
+      "currentWorkingTreeMatchesMain": true
+    }
+  ],
+  "workerSourceChecks": [
+    {
+      "manifest": "root-source-manifest.json",
+      "path": "packages/core/src/runtime/output-clean.ts",
+      "sha256": "e1f7e179003f57dcf3c07da35f76860151e6703de989b0f04db58acbe99bb86a",
+      "readScope": "full",
+      "note": "Author/reviewer declared static scopes,hash isprovenance notsemanticfullcoverage."
+    },
+    {
+      "manifest": "root-source-manifest.json",
+      "path": "packages/core/src/runtime/output-clean.test.ts",
+      "sha256": "5118d580eeb7038205e16ad0a050a74c0e1d51a00ae19abadb71742e5a57b127",
+      "readScope": "full",
+      "note": "Author/reviewer declared static scopes,hash isprovenance notsemanticfullcoverage."
+    },
+    {
+      "manifest": "root-source-manifest.json",
+      "path": "packages/core/src/runtime/background-shell.ts",
+      "sha256": "dabb4c006d1aa10fbb8e916e4de716c3382908a80fb9e8c73224a96562a8f0f5",
+      "readScope": "selected",
+      "note": "Author/reviewer declared static scopes,hash isprovenance notsemanticfullcoverage."
+    },
+    {
+      "manifest": "root-source-manifest.json",
+      "path": "packages/core/src/tool-system/builtin/background-shell-tools.ts",
+      "sha256": "e52c34e95dc2ca15dbad41491323f23cfecfd66d9701f1b06903aa3ee8b5f5e6",
+      "readScope": "selected",
+      "note": "Author/reviewer declared static scopes,hash isprovenance notsemanticfullcoverage."
+    },
+    {
+      "manifest": "root-source-manifest.json",
+      "path": "packages/core/src/protocol/server.ts",
+      "sha256": "1dcf2cba50bdedefb7ff04ce5c26565f59fdef275e8b74e2c5fb35d95af826d5",
+      "readScope": "selected",
+      "note": "Author/reviewer declared static scopes,hash isprovenance notsemanticfullcoverage."
+    },
+    {
+      "manifest": "root-source-manifest.json",
+      "path": "scripts/run-bun-test-shard.mjs",
+      "sha256": "dd2b245afbcb5aa7c798c8674d34edb8e02bb42be0be320050adf9be5ed2fd7d",
+      "readScope": "full",
+      "note": "Author/reviewer declared static scopes,hash isprovenance notsemanticfullcoverage."
+    },
+    {
+      "manifest": "output-source-manifest.json",
+      "path": "packages/core/src/runtime/output-clean.ts",
+      "sha256": "e1f7e179003f57dcf3c07da35f76860151e6703de989b0f04db58acbe99bb86a",
+      "readScope": "full",
+      "note": "Author/reviewer declared static scopes,hash isprovenance notsemanticfullcoverage."
+    },
+    {
+      "manifest": "output-source-manifest.json",
+      "path": "packages/core/src/runtime/output-clean.test.ts",
+      "sha256": "5118d580eeb7038205e16ad0a050a74c0e1d51a00ae19abadb71742e5a57b127",
+      "readScope": "full",
+      "note": "Author/reviewer declared static scopes,hash isprovenance notsemanticfullcoverage."
+    },
+    {
+      "manifest": "output-source-manifest.json",
+      "path": "packages/core/src/runtime/background-shell.ts",
+      "sha256": "dabb4c006d1aa10fbb8e916e4de716c3382908a80fb9e8c73224a96562a8f0f5",
+      "readScope": "selected",
+      "note": "Author/reviewer declared static scopes,hash isprovenance notsemanticfullcoverage."
+    },
+    {
+      "manifest": "output-source-manifest.json",
+      "path": "packages/core/src/tool-system/builtin/background-shell-tools.ts",
+      "sha256": "e52c34e95dc2ca15dbad41491323f23cfecfd66d9701f1b06903aa3ee8b5f5e6",
+      "readScope": "selected",
+      "note": "Author/reviewer declared static scopes,hash isprovenance notsemanticfullcoverage."
+    },
+    {
+      "manifest": "output-source-manifest.json",
+      "path": "docs/superpowers/specs/2026-06-05-background-shell-design.md",
+      "sha256": "aa6a68e5724760259bd7122ef365e97ba3477d8717f1858a06dd3bd2ad4f0903",
+      "readScope": "selected",
+      "note": "Author/reviewer declared static scopes,hash isprovenance notsemanticfullcoverage."
+    },
+    {
+      "manifest": "output-source-manifest.json",
+      "path": "packages/core/src/runtime/ring-file.ts",
+      "sha256": "f3981f59140f06ce2aa138bd15b26a08ad4cff9dd46b76b7c3b57f7bab81fdcd",
+      "readScope": "full",
+      "note": "Author/reviewer declared static scopes,hash isprovenance notsemanticfullcoverage."
+    },
+    {
+      "manifest": "output-source-manifest.json",
+      "path": "CODESHELL.md",
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "readScope": "full",
+      "note": "Author/reviewer declared static scopes,hash isprovenance notsemanticfullcoverage."
+    },
+    {
+      "manifest": "output-static-source-manifest.json",
+      "path": "CODESHELL.md",
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "readScope": "full",
+      "note": "Author/reviewer declared static scopes,hash isprovenance notsemanticfullcoverage."
+    },
+    {
+      "manifest": "output-static-source-manifest.json",
+      "path": "packages/core/src/runtime/output-clean.ts",
+      "sha256": "e1f7e179003f57dcf3c07da35f76860151e6703de989b0f04db58acbe99bb86a",
+      "readScope": "full",
+      "note": "Author/reviewer declared static scopes,hash isprovenance notsemanticfullcoverage."
+    },
+    {
+      "manifest": "output-static-source-manifest.json",
+      "path": "packages/core/src/runtime/output-clean.test.ts",
+      "sha256": "5118d580eeb7038205e16ad0a050a74c0e1d51a00ae19abadb71742e5a57b127",
+      "readScope": "full",
+      "note": "Author/reviewer declared static scopes,hash isprovenance notsemanticfullcoverage."
+    },
+    {
+      "manifest": "output-static-source-manifest.json",
+      "path": "packages/core/src/runtime/background-shell.ts",
+      "sha256": "dabb4c006d1aa10fbb8e916e4de716c3382908a80fb9e8c73224a96562a8f0f5",
+      "readScope": "selected",
+      "note": "Author/reviewer declared static scopes,hash isprovenance notsemanticfullcoverage."
+    },
+    {
+      "manifest": "output-static-source-manifest.json",
+      "path": "packages/core/src/tool-system/builtin/background-shell-tools.ts",
+      "sha256": "e52c34e95dc2ca15dbad41491323f23cfecfd66d9701f1b06903aa3ee8b5f5e6",
+      "readScope": "selected",
+      "note": "Author/reviewer declared static scopes,hash isprovenance notsemanticfullcoverage."
+    },
+    {
+      "manifest": "output-static-source-manifest.json",
+      "path": "packages/core/src/runtime/ring-file.ts",
+      "sha256": "f3981f59140f06ce2aa138bd15b26a08ad4cff9dd46b76b7c3b57f7bab81fdcd",
+      "readScope": "full",
+      "note": "Author/reviewer declared static scopes,hash isprovenance notsemanticfullcoverage."
+    },
+    {
+      "manifest": "output-static-source-manifest.json",
+      "path": "packages/core/src/tool-system/builtin/bash.ts",
+      "sha256": "f5bbf67f296aaff1b3d154b194e40d1362cb010257b44607a3704897cec67e22",
+      "readScope": "selected",
+      "note": "Author/reviewer declared static scopes,hash isprovenance notsemanticfullcoverage."
+    },
+    {
+      "manifest": "output-static-source-manifest.json",
+      "path": "packages/core/src/protocol/server-output.ts",
+      "sha256": "c7025b3360f8039090b06d320d29c70da35b7fda2a1d3e440b4eb2eb2bdb2c76",
+      "readScope": "full",
+      "note": "Author/reviewer declared static scopes,hash isprovenance notsemanticfullcoverage."
+    },
+    {
+      "manifest": "output-static-source-manifest.json",
+      "path": "packages/core/src/runtime/background-shell.test.ts",
+      "sha256": "c2be42cc868eed0fdac3a4b7c68765732a70a3be3a7cb3e0faf1e7b039071170",
+      "readScope": "selected",
+      "note": "Author/reviewer declared static scopes,hash isprovenance notsemanticfullcoverage."
+    },
+    {
+      "manifest": "output-static-source-manifest.json",
+      "path": "docs/superpowers/specs/2026-06-05-background-shell-design.md",
+      "sha256": "aa6a68e5724760259bd7122ef365e97ba3477d8717f1858a06dd3bd2ad4f0903",
+      "readScope": "selected",
+      "note": "Author/reviewer declared static scopes,hash isprovenance notsemanticfullcoverage."
+    },
+    {
+      "manifest": "output-static-source-manifest.json",
+      "path": "docs/archive/core-modules/runtime.md",
+      "sha256": "6a5acecf8d73d8fb134e1987b422078f3aa2cb7f8ba8f8b3be4f7b02a71ab1a2",
+      "readScope": "selected",
+      "note": "Author/reviewer declared static scopes,hash isprovenance notsemanticfullcoverage."
+    },
+    {
+      "manifest": "output-static-source-manifest.json",
+      "path": "docs/audit-2026-10-17-round6/skills-agents.md",
+      "sha256": "efff8f799481911e0b3c3b8ac3c0a4686411f55336f97abeb4d64b2c8dd22ec4",
+      "readScope": "selected",
+      "note": "Author/reviewer declared static scopes,hash isprovenance notsemanticfullcoverage."
+    },
+    {
+      "manifest": "output-static-source-manifest.json",
+      "path": "docs/audit-2026-10-17-round19/simplediff.md",
+      "sha256": "a2309fec29f3e213c772d7010a5456cbd41519fb355cd628bb40c8ef1fbfc930",
+      "readScope": "selected",
+      "note": "Author/reviewer declared static scopes,hash isprovenance notsemanticfullcoverage."
+    },
+    {
+      "manifest": "output-static-source-manifest.json",
+      "path": "docs/audit-2026-10-17-round21/ndjson.md",
+      "sha256": "c1427ad4ff04aeab42227365d41f8823b591da6fb4d98d2b7b35f2242095f153",
+      "readScope": "full",
+      "note": "Author/reviewer declared static scopes,hash isprovenance notsemanticfullcoverage."
+    },
+    {
+      "manifest": "output-static-source-manifest.json",
+      "path": "docs/audit-2026-10-17-round16/tasknoise.md",
+      "sha256": "4a77837071c75a6a41c8e2ed596c1bfb52cf66500e9e02ef36660e5fd48d78b1",
+      "readScope": "selected",
+      "note": "Author/reviewer declared static scopes,hash isprovenance notsemanticfullcoverage."
+    },
+    {
+      "manifest": "output-static-source-manifest.json",
+      "path": "docs/review-2026-10-12/runtime-round3.md",
+      "sha256": "d3873d2f368812e049bda27862bca1b6a7a026a2c6d451e2b12765888a5230d7",
+      "readScope": "full",
+      "note": "Author/reviewer declared static scopes,hash isprovenance notsemanticfullcoverage."
+    },
+    {
+      "manifest": "output-static-source-manifest.json",
+      "path": "docs/archive/beta-prep-audit-2026-06-23.md",
+      "sha256": "2cadf52899194bd9532e4d3890a1ccad64cb94e48c2cadcef6fe7e8c1f842f1c",
+      "readScope": "selected",
+      "note": "Author/reviewer declared static scopes,hash isprovenance notsemanticfullcoverage."
+    }
+  ],
+  "priorPrepHashOnlyChecks": [
+    {
+      "prep": "data-prep",
+      "path": "packages/core/src/runtime/output-clean.ts",
+      "sha256": "e1f7e179003f57dcf3c07da35f76860151e6703de989b0f04db58acbe99bb86a",
+      "note": "Revalidated prep pin provenance;not another full semantic reading or runtime."
+    },
+    {
+      "prep": "data-prep",
+      "path": "packages/core/src/runtime/output-clean.test.ts",
+      "sha256": "5118d580eeb7038205e16ad0a050a74c0e1d51a00ae19abadb71742e5a57b127",
+      "note": "Revalidated prep pin provenance;not another full semantic reading or runtime."
+    },
+    {
+      "prep": "data-prep",
+      "path": "packages/core/src/runtime/background-shell.ts",
+      "sha256": "dabb4c006d1aa10fbb8e916e4de716c3382908a80fb9e8c73224a96562a8f0f5",
+      "note": "Revalidated prep pin provenance;not another full semantic reading or runtime."
+    },
+    {
+      "prep": "data-prep",
+      "path": "packages/core/src/tool-system/builtin/background-shell-tools.ts",
+      "sha256": "e52c34e95dc2ca15dbad41491323f23cfecfd66d9701f1b06903aa3ee8b5f5e6",
+      "note": "Revalidated prep pin provenance;not another full semantic reading or runtime."
+    },
+    {
+      "prep": "data-prep",
+      "path": "docs/superpowers/specs/2026-06-05-background-shell-design.md",
+      "sha256": "aa6a68e5724760259bd7122ef365e97ba3477d8717f1858a06dd3bd2ad4f0903",
+      "note": "Revalidated prep pin provenance;not another full semantic reading or runtime."
+    },
+    {
+      "prep": "data-prep",
+      "path": "packages/core/src/services/session-memory-sort.ts",
+      "sha256": "22c8dfaa8e862136e8e816f1fd6a64e6b96f5ebcf7a0ede465a40279a8f4ad67",
+      "note": "Revalidated prep pin provenance;not another full semantic reading or runtime."
+    },
+    {
+      "prep": "data-prep",
+      "path": "packages/core/src/services/session-memory-sort.test.ts",
+      "sha256": "87a4eab4c5f35479f150b5e578190933cb3a054baa06559f69edf7c54b412dfe",
+      "note": "Revalidated prep pin provenance;not another full semantic reading or runtime."
+    },
+    {
+      "prep": "data-prep",
+      "path": "packages/core/src/protocol/session-message-result.ts",
+      "sha256": "37d992ff979bc43bb0a8e821fd10e0a3c027ca0b7f05bd7ce21deb7bd3a3e7aa",
+      "note": "Revalidated prep pin provenance;not another full semantic reading or runtime."
+    },
+    {
+      "prep": "data-prep",
+      "path": "packages/core/src/utils/format.ts",
+      "sha256": "39d3fa4786f19681e53ec4a42cf9c5ee0bffc818d4c95c4bc151d3ea705c85b6",
+      "note": "Revalidated prep pin provenance;not another full semantic reading or runtime."
+    },
+    {
+      "prep": "data-prep",
+      "path": "docs/audit-2026-10-17/operations-memory.md",
+      "sha256": "40b575c42f9ac53e995ebf441482ab65524fdf71bed70ba418f86530540de466",
+      "note": "Revalidated prep pin provenance;not another full semantic reading or runtime."
+    },
+    {
+      "prep": "data-prep",
+      "path": "docs/audit-2026-10-17-round14/utils.md",
+      "sha256": "ad2dde78de997e26f5267580bbf89e3d6431706fc84a330882168887c6f5bf1d",
+      "note": "Revalidated prep pin provenance;not another full semantic reading or runtime."
+    },
+    {
+      "prep": "root-prep",
+      "path": "packages/core/src/session/simple-diff.ts",
+      "sha256": "fc1d8e83f81bc3d6042561fb3549dc0af14e228d20b6a76b46998d9b3446ffeb",
+      "note": "Revalidated prep pin provenance;not another full semantic reading or runtime."
+    },
+    {
+      "prep": "root-prep",
+      "path": "packages/core/src/session/simple-diff.test.ts",
+      "sha256": "a38f35d8159d8de537cc27ba052587d18744fc30f37dfd458bb687a503bfe83d",
+      "note": "Revalidated prep pin provenance;not another full semantic reading or runtime."
+    },
+    {
+      "prep": "root-prep",
+      "path": "packages/core/src/services/session-memory-sort.ts",
+      "sha256": "22c8dfaa8e862136e8e816f1fd6a64e6b96f5ebcf7a0ede465a40279a8f4ad67",
+      "note": "Revalidated prep pin provenance;not another full semantic reading or runtime."
+    },
+    {
+      "prep": "root-prep",
+      "path": "packages/core/src/services/session-memory-sort.test.ts",
+      "sha256": "87a4eab4c5f35479f150b5e578190933cb3a054baa06559f69edf7c54b412dfe",
+      "note": "Revalidated prep pin provenance;not another full semantic reading or runtime."
+    },
+    {
+      "prep": "root-prep",
+      "path": "packages/core/src/session/undo-target.ts",
+      "sha256": "ec84eced06a0288a7cfd65526056a05457650fa17f4e20890310f5acdc561063",
+      "note": "Revalidated prep pin provenance;not another full semantic reading or runtime."
+    },
+    {
+      "prep": "root-prep",
+      "path": "packages/core/src/prompt/section-cache.ts",
+      "sha256": "19c9ee13f2c2a8485e265d5a499a3b5583e545aea6e516d3a891f31a0c72cf27",
+      "note": "Revalidated prep pin provenance;not another full semantic reading or runtime."
+    },
+    {
+      "prep": "root-prep",
+      "path": "packages/core/src/engine/prompt-cache-diagnostics.ts",
+      "sha256": "5fdef8bfe040fb7ae3fa5edd3820abdf6c54e1398532df9a79707925733a6a9e",
+      "note": "Revalidated prep pin provenance;not another full semantic reading or runtime."
+    },
+    {
+      "prep": "root-prep",
+      "path": "packages/core/src/llm/prompt-cache.ts",
+      "sha256": "0c4d64c68ccefdc3f1f368c63313191076a1c7e4a6a689875d0b505152381d53",
+      "note": "Revalidated prep pin provenance;not another full semantic reading or runtime."
+    },
+    {
+      "prep": "root-prep",
+      "path": "packages/core/src/engine/sandbox-cache-key.ts",
+      "sha256": "797afb95bc499a445850ae6aad00aeb4d4e321b4bcfc79e194058f931d56d6c0",
+      "note": "Revalidated prep pin provenance;not another full semantic reading or runtime."
+    },
+    {
+      "prep": "root-prep",
+      "path": "packages/tui/src/cli/commands/builtin/utility-commands.ts",
+      "sha256": "30f57f0789dc55613f4a50115bf5d9900793c8e9ec5d0d144f4ad3c7e2a55f60",
+      "note": "Revalidated prep pin provenance;not another full semantic reading or runtime."
+    },
+    {
+      "prep": "root-prep",
+      "path": "packages/core/src/session/file-history.ts",
+      "sha256": "6f944dd828efe723fb8c11608139a712e9f51268bf24eb03768f3c7da50349e5",
+      "note": "Revalidated prep pin provenance;not another full semantic reading or runtime."
+    },
+    {
+      "prep": "root-prep",
+      "path": "packages/core/src/services/session-memory.ts",
+      "sha256": "ff2cda058982c0c841b1ee3486a9ba9d99cd3d072fc0e9e85eb7247b9f3abe92",
+      "note": "Revalidated prep pin provenance;not another full semantic reading or runtime."
+    },
+    {
+      "prep": "link-prep",
+      "path": "CODESHELL.md",
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "note": "Prep author read-head70d2/completion8b;Root rehash only,not another fullsemanticreading/runtime."
+    },
+    {
+      "prep": "link-prep",
+      "path": "packages/link/README.md",
+      "sha256": "2757bf796cffbd722a3fd54ae545af026aef418f36fc187e44e6869ad141df38",
+      "note": "Prep author read-head70d2/completion8b;Root rehash only,not another fullsemanticreading/runtime."
+    },
+    {
+      "prep": "link-prep",
+      "path": "packages/link/package.json",
+      "sha256": "d8dcf10e9c55af86d64faa9bcba724f622c35361f2ec70988b1b15eebeec74a6",
+      "note": "Prep author read-head70d2/completion8b;Root rehash only,not another fullsemanticreading/runtime."
+    },
+    {
+      "prep": "link-prep",
+      "path": "packages/host/README.md",
+      "sha256": "0a3a2d64c648d8fc86464946dfd994b006d1bf93aa27100de899a812992271fb",
+      "note": "Prep author read-head70d2/completion8b;Root rehash only,not another fullsemanticreading/runtime."
+    },
+    {
+      "prep": "link-prep",
+      "path": "packages/host/package.json",
+      "sha256": "dea8055de59b310c169ca2caddbb95d441eb46c6336f855bf34a8a72b68ad3ea",
+      "note": "Prep author read-head70d2/completion8b;Root rehash only,not another fullsemanticreading/runtime."
+    },
+    {
+      "prep": "link-prep",
+      "path": "packages/link/src/catalog.ts",
+      "sha256": "2cf5bd2e1b2632a377750aa7c2aa6631120d341da801df9a185b3d8bf3e2bb4b",
+      "note": "Prep author read-head70d2/completion8b;Root rehash only,not another fullsemanticreading/runtime."
+    },
+    {
+      "prep": "link-prep",
+      "path": "packages/link/src/types.ts",
+      "sha256": "d26e95c578b079a7b18e0c7365062130db40707e2d4e500f53333b090fe75072",
+      "note": "Prep author read-head70d2/completion8b;Root rehash only,not another fullsemanticreading/runtime."
+    },
+    {
+      "prep": "link-prep",
+      "path": "packages/link/src/recipes.ts",
+      "sha256": "fa330115b25373afc293fb12d91e6929de4119cfe87db54db09bedce0537c676",
+      "note": "Prep author read-head70d2/completion8b;Root rehash only,not another fullsemanticreading/runtime."
+    },
+    {
+      "prep": "link-prep",
+      "path": "packages/link/src/figma.ts",
+      "sha256": "976162d245cc7fd65b80feb7a2b3e8e3997ea22a62254e07f00f30288267aff8",
+      "note": "Prep author read-head70d2/completion8b;Root rehash only,not another fullsemanticreading/runtime."
+    },
+    {
+      "prep": "link-prep",
+      "path": "packages/link/src/index.ts",
+      "sha256": "d2c5d752e7bbd91386616d01b883fef8da62add62fcd38d2365b424abff7cd89",
+      "note": "Prep author read-head70d2/completion8b;Root rehash only,not another fullsemanticreading/runtime."
+    },
+    {
+      "prep": "link-prep",
+      "path": "packages/link/src/catalog.test.ts",
+      "sha256": "ad5b68cce0659519ab20730cb3f1e1224b0dae697ad6eceb4b56fc49d1686eb1",
+      "note": "Prep author read-head70d2/completion8b;Root rehash only,not another fullsemanticreading/runtime."
+    },
+    {
+      "prep": "link-prep",
+      "path": "packages/link/src/recipes.test.ts",
+      "sha256": "292ac53b0ae5d8e45e861f612a877b5929806aca6eba0eea2096f14770de2e3d",
+      "note": "Prep author read-head70d2/completion8b;Root rehash only,not another fullsemanticreading/runtime."
+    },
+    {
+      "prep": "link-prep",
+      "path": "packages/link/src/operation-types.ts",
+      "sha256": "43a5e96ef31b154f66663695023f5f769691205daa15c6fbd3eed36b6c3b7945",
+      "note": "Prep author read-head70d2/completion8b;Root rehash only,not another fullsemanticreading/runtime."
+    },
+    {
+      "prep": "link-prep",
+      "path": "packages/host/src/runtime.ts",
+      "sha256": "b785ab50fd5265ffb7f7d78c312f01b8c2ace165a5bcfdb6a25655b3e5dd3089",
+      "note": "Prep author read-head70d2/completion8b;Root rehash only,not another fullsemanticreading/runtime."
+    },
+    {
+      "prep": "link-prep",
+      "path": "packages/host/src/index.ts",
+      "sha256": "cbe279016f7d26c9e797398eb2af8e2f426ff4098fb389911d8bcbef39c9e107",
+      "note": "Prep author read-head70d2/completion8b;Root rehash only,not another fullsemanticreading/runtime."
+    },
+    {
+      "prep": "link-prep",
+      "path": "packages/server/src/links/catalog.ts",
+      "sha256": "d5c6a137aad127a6835243d3435afd790cb26c2ff404904c7dfeb7e797b1baec",
+      "note": "Prep author read-head70d2/completion8b;Root rehash only,not another fullsemanticreading/runtime."
+    },
+    {
+      "prep": "link-prep",
+      "path": "packages/desktop/src/main/link-provider-catalog.ts",
+      "sha256": "8fcbdc0e8ada2dfca9c55cb88dc1ba9efd30cfadd9722e19d31532275bc7aaea",
+      "note": "Prep author read-head70d2/completion8b;Root rehash only,not another fullsemanticreading/runtime."
+    },
+    {
+      "prep": "link-prep",
+      "path": "packages/desktop/src/main/link-provider-catalog.test.ts",
+      "sha256": "edee306446e97f32fff066c76a907822bdecd55cdf2390bd556bafe90cb21759",
+      "note": "Prep author read-head70d2/completion8b;Root rehash only,not another fullsemanticreading/runtime."
+    },
+    {
+      "prep": "link-prep",
+      "path": "packages/server/src/links/service.ts",
+      "sha256": "7d7363bbf6a6853f4a1678a22b0a5813162b9549b4a0fab0273d3f131aaf325c",
+      "note": "Prep author read-head70d2/completion8b;Root rehash only,not another fullsemanticreading/runtime."
+    },
+    {
+      "prep": "link-prep",
+      "path": "packages/desktop/src/main/index.ts",
+      "sha256": "77c8f9dcbd0ecf7000fd0c923d28b078f5fc187aebbd1b28830af18960233c4f",
+      "note": "Prep author read-head70d2/completion8b;Root rehash only,not another fullsemanticreading/runtime."
+    },
+    {
+      "prep": "link-prep",
+      "path": "docs/todo/link-catalog-compatibility-delivery.md",
+      "sha256": "07d6ba33c88d8f18c1f34528940b2a526ddb2b8b84f21a52555efa85c54466a6",
+      "note": "Prep author read-head70d2/completion8b;Root rehash only,not another fullsemanticreading/runtime."
+    },
+    {
+      "prep": "link-prep",
+      "path": "docs/todo/link-connector-refactor-delivery-2026-10-16.md",
+      "sha256": "4ef3ded399653be9caa4a4e8c7eee9203586b4cba294b9c91eb8705ad5e98eba",
+      "note": "Prep author read-head70d2/completion8b;Root rehash only,not another fullsemanticreading/runtime."
+    },
+    {
+      "prep": "link-prep",
+      "path": "docs/todo/link-connector-refactor-plan-2026-10-16.md",
+      "sha256": "754609741a24ae3acb5fb2d49034ff9bd79c60123f39cdee80a7481243c48ddc",
+      "note": "Prep author read-head70d2/completion8b;Root rehash only,not another fullsemanticreading/runtime."
+    },
+    {
+      "prep": "link-prep",
+      "path": "docs/architecture/local-link-mvp.md",
+      "sha256": "0cee7784ee9f57eee9e6558dce0e3fc5851af19ac9aff1c32214598821f82fb9",
+      "note": "Prep author read-head70d2/completion8b;Root rehash only,not another fullsemanticreading/runtime."
+    }
+  ],
+  "changedFromFrozenPaths": [
+    "packages/desktop/src/main/index.ts"
+  ],
+  "note": "Current==main;oneknownindexdelta fromfrozen separatelyrecorded. Root+author+staticreviewchecks separatefrom47prep hash-only checks;reviewextra sourcesnot runtime."
+}

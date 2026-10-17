@@ -1,0 +1,116 @@
+{
+  "readHead": "70d2e3846ea48d0d797e51dbeac7026f563c76bb",
+  "corpus": {
+    "files": 2452,
+    "markdown": 1233,
+    "json": 1219,
+    "stringLeaves": 405162,
+    "scalarLeaves": 575350,
+    "parseErrors": 0
+  },
+  "pattern": "composeLinkProviderCatalog|link-provider-catalog|packages/server/src/links/catalog\\.ts|packages/link/src/catalog\\.test\\.ts",
+  "matches": 15,
+  "contextCap": 100,
+  "hits": [
+    {
+      "path": "docs/architecture/local-link-mvp.md",
+      "location": "47",
+      "excerpt": "- `packages/desktop/src/main/link-provider-catalog.ts`：在宿主边界校验独立清单与可信执行器的 Provider / Action 版本并组合。",
+      "wholeValueCharacters": 98
+    },
+    {
+      "path": "docs/audit-2026-10-16/inventory.json",
+      "location": "$[\"source_inventory\"][1011]",
+      "excerpt": "packages/desktop/src/main/link-provider-catalog.ts",
+      "wholeValueCharacters": 50
+    },
+    {
+      "path": "docs/audit-2026-10-16/inventory.json",
+      "location": "$[\"source_inventory\"][1990]",
+      "excerpt": "packages/server/src/links/catalog.ts",
+      "wholeValueCharacters": 36
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/desktop-main-results.json",
+      "location": "$[101][\"file\"]",
+      "excerpt": "packages/desktop/src/main/link-provider-catalog.test.ts",
+      "wholeValueCharacters": 55
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/desktop-main-results.json",
+      "location": "$[101][\"log\"]",
+      "excerpt": "/tmp/codeshell-review-20261012/desktop-main-baseline/101-link-provider-catalog.test.ts.log",
+      "wholeValueCharacters": 90
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-baseline-evidence-round28/independent-existing-tests.receipt.json",
+      "location": "$[\"groups\"][2][\"rawLogs\"][101][\"file\"]",
+      "excerpt": "packages/desktop/src/main/link-provider-catalog.test.ts",
+      "wholeValueCharacters": 55
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-baseline-evidence-round28/independent-existing-tests.receipt.json",
+      "location": "$[\"groups\"][2][\"rawLogs\"][101][\"log\"]",
+      "excerpt": "/tmp/codeshell-review-20261012/desktop-main-baseline/101-link-provider-catalog.test.ts.log",
+      "wholeValueCharacters": 90
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-baseline-evidence-round28/independent-existing-tests.receipt.json",
+      "location": "$[\"groups\"][2][\"rawLogs\"][101][\"resolvedLog\"]",
+      "excerpt": "/private/tmp/codeshell-review-20261012/desktop-main-baseline/101-link-provider-catalog.test.ts.log",
+      "wholeValueCharacters": 98
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-baseline-evidence-round28/independent-existing-tests.receipt.json",
+      "location": "$[\"groups\"][2][\"rawLogs\"][101][\"archiveMemberBasename\"]",
+      "excerpt": "101-link-provider-catalog.test.ts.log",
+      "wholeValueCharacters": 37
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-baseline-evidence-round28/manifest.json",
+      "location": "$[\"logs\"][524][\"file\"]",
+      "excerpt": "packages/desktop/src/main/link-provider-catalog.test.ts",
+      "wholeValueCharacters": 55
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-baseline-evidence-round28/manifest.json",
+      "location": "$[\"logs\"][524][\"originalLog\"]",
+      "excerpt": "/tmp/codeshell-review-20261012/desktop-main-baseline/101-link-provider-catalog.test.ts.log",
+      "wholeValueCharacters": 90
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-baseline-evidence-round28/manifest.json",
+      "location": "$[\"logs\"][524][\"tarMember\"]",
+      "excerpt": "desktop-main/101-link-provider-catalog.test.ts.log",
+      "wholeValueCharacters": 50
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/postdelivery-report-review/audit-a.raw.json",
+      "location": "$[\"module_inventory\"][\"84740d56\"][\"paths\"][32]",
+      "excerpt": "packages/server/src/links/catalog.ts",
+      "wholeValueCharacters": 36
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/postdelivery-report-review/audit-a.raw.json",
+      "location": "$[\"module_inventory\"][\"a66f4ef2\"][\"paths\"][32]",
+      "excerpt": "packages/server/src/links/catalog.ts",
+      "wholeValueCharacters": 36
+    },
+    {
+      "path": "docs/todo/link-headless-server-feasibility.md",
+      "location": "20",
+      "excerpt": "| `packages/server/src/links/catalog.ts`          | 将 manifest 与 Core 已实现的 provider/action 对齐                         |",
+      "wholeValueCharacters": 119
+    }
+  ],
+  "byFile": {
+    "docs/architecture/local-link-mvp.md": 1,
+    "docs/audit-2026-10-16/inventory.json": 2,
+    "docs/review-2026-10-12/validation/desktop-main-results.json": 2,
+    "docs/review-2026-10-12/validation/original-baseline-evidence-round28/independent-existing-tests.receipt.json": 4,
+    "docs/review-2026-10-12/validation/original-baseline-evidence-round28/manifest.json": 3,
+    "docs/review-2026-10-12/validation/postdelivery-report-review/audit-a.raw.json": 2,
+    "docs/todo/link-headless-server-feasibility.md": 1
+  },
+  "note": "Same complete corpus as history.json, including archive and separately identified round24. Actual parent records must be read before inferring coverage."
+}

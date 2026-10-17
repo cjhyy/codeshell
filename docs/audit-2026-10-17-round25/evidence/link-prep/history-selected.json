@@ -1,0 +1,496 @@
+{
+  "records": [
+    {
+      "path": "docs/audit-2026-10-17-round3/evidence/host-receipts.json",
+      "sha256": "669d371be59a7e7a7d428db3df5abb662159cffab6d10460c7145ab052474436",
+      "parent": "$.runs / $.total / $.findings / $.boundaryOnly / $.unconfirmedCandidates",
+      "value": {
+        "runs": [
+          {
+            "command": "node scripts/run-bun-test-shard.mjs --timeout 30000 docs/audit-2026-10-17-round3/evidence/host-link-selection.test.ts",
+            "actualShellCommand": "node scripts/run-bun-test-shard.mjs --timeout 30000 docs/audit-2026-10-17-round3/evidence/host-link-selection.test.ts > docs/audit-2026-10-17-round3/evidence/host-link-selection.raw.log 2>&1",
+            "exitCode": 0,
+            "log": "evidence/host-link-selection.raw.log",
+            "sha256": "2b36a3f4d9e4a11bc625a7c6c1be06ac6de6f958ad333a901d8ec11244d5682a",
+            "executedPassed": 4,
+            "filteredSkipped": 0,
+            "failures": 0,
+            "assertions": 26,
+            "wrapperTestsIncludingSkipped": 4,
+            "completionMarker": "Completed Bun shard: 4 tests, 0 skipped; 0 failures."
+          },
+          {
+            "command": "node scripts/run-bun-test-shard.mjs --timeout 30000 --test-name-pattern 'HostRuntime|only providers|canonical GitHub|Figma URLs' packages/host/src/runtime.test.ts packages/link/src/file-selection.test.ts",
+            "actualShellCommand": "node scripts/run-bun-test-shard.mjs --timeout 30000 --test-name-pattern 'HostRuntime|only providers|canonical GitHub|Figma URLs' packages/host/src/runtime.test.ts packages/link/src/file-selection.test.ts > docs/audit-2026-10-17-round3/evidence/host-baseline.raw.log 2>&1",
+            "exitCode": 0,
+            "log": "evidence/host-baseline.raw.log",
+            "sha256": "c56e5b89bca9f6701119d7ddbf8bd21cf737bdcec9e3dcb93e5bb55583d963a0",
+            "executedPassed": 19,
+            "filteredSkipped": 16,
+            "failures": 0,
+            "assertions": 88,
+            "wrapperTestsIncludingSkipped": 35,
+            "completionMarker": "Completed Bun shard: 35 tests, 16 skipped; 0 failures."
+          },
+          {
+            "command": "node scripts/run-bun-test-shard.mjs --timeout 30000 --test-name-pattern 'the complete catalog|legacy Figma summary|full Figma results' packages/link/src/operations.test.ts",
+            "actualShellCommand": "node scripts/run-bun-test-shard.mjs --timeout 30000 --test-name-pattern 'the complete catalog|legacy Figma summary|full Figma results' packages/link/src/operations.test.ts > docs/audit-2026-10-17-round3/evidence/host-operation-baseline.raw.log 2>&1",
+            "exitCode": 0,
+            "log": "evidence/host-operation-baseline.raw.log",
+            "sha256": "9233da694e7e865fddaa5ae047e74c5903387bb369094a62aceeec2fe09f6c93",
+            "executedPassed": 3,
+            "filteredSkipped": 6,
+            "failures": 0,
+            "assertions": 209,
+            "wrapperTestsIncludingSkipped": 9,
+            "completionMarker": "Completed Bun shard: 9 tests, 6 skipped; 0 failures."
+          }
+        ],
+        "total": {
+          "executedPassed": 26,
+          "filteredSkipped": 22,
+          "failures": 0,
+          "assertions": 323,
+          "wrapperTestsIncludingSkipped": 48
+        },
+        "findings": [
+          {
+            "id": "HL-01",
+            "priority": "P3",
+            "source": "packages/link/src/file-selection.ts",
+            "line": 15,
+            "report": "host-link.md",
+            "reportLine": 7,
+            "evidence": "host-link-selection.raw.log",
+            "status": "confirmed-pure-function-conditional-static-consumer-impact"
+          },
+          {
+            "id": "HL-02",
+            "priority": "P3",
+            "source": "packages/link/src/file-selection.ts",
+            "line": 90,
+            "report": "host-link.md",
+            "reportLine": 16,
+            "evidence": "host-link-selection.raw.log",
+            "status": "confirmed-pure-function-display-only"
+          }
+        ],
+        "boundaryOnly": [
+          "HL-B1",
+          "HL-B2"
+        ],
+        "unconfirmedCandidates": [
+          "HL-C1"
+        ]
+      },
+      "interpretation": "Actual bounded receipt parents read; historical26 pass/323expect includes selection, baseline and ordinary operation cases, not this proposal execution. No raw or provider/native assertions independently rerun."
+    },
+    {
+      "path": "docs/audit-2026-10-17-round3/evidence/host-source-manifest.json",
+      "sha256": "5f8b852d59fade9d6878e4af48bf5036f39a9f0d4264ecab051380f2a7bde352",
+      "parent": "$.sources[entries with actual packages/link or packages/host paths]",
+      "value": [
+        {
+          "path": "packages/host/src/runtime.ts",
+          "sha256": "b785ab50fd5265ffb7f7d78c312f01b8c2ace165a5bcfdb6a25655b3e5dd3089",
+          "bytes": 4014,
+          "lines": 117,
+          "currentSha256": "b785ab50fd5265ffb7f7d78c312f01b8c2ace165a5bcfdb6a25655b3e5dd3089",
+          "currentMatchesPrior": true
+        },
+        {
+          "path": "packages/host/src/host-requests.ts",
+          "sha256": "d3d96655a3f3877dedb9094f4ff8b5433ac750925dfbe4d4a5b00778e317be0d",
+          "bytes": 4880,
+          "lines": 151,
+          "currentSha256": "d3d96655a3f3877dedb9094f4ff8b5433ac750925dfbe4d4a5b00778e317be0d",
+          "currentMatchesPrior": true
+        },
+        {
+          "path": "packages/host/src/index.ts",
+          "sha256": "cbe279016f7d26c9e797398eb2af8e2f426ff4098fb389911d8bcbef39c9e107",
+          "bytes": 388,
+          "lines": 13,
+          "currentSha256": "cbe279016f7d26c9e797398eb2af8e2f426ff4098fb389911d8bcbef39c9e107",
+          "currentMatchesPrior": true
+        },
+        {
+          "path": "packages/link/src/catalog.ts",
+          "sha256": "2cf5bd2e1b2632a377750aa7c2aa6631120d341da801df9a185b3d8bf3e2bb4b",
+          "bytes": 30277,
+          "lines": 705,
+          "currentSha256": "2cf5bd2e1b2632a377750aa7c2aa6631120d341da801df9a185b3d8bf3e2bb4b",
+          "currentMatchesPrior": true
+        },
+        {
+          "path": "packages/link/src/file-selection.ts",
+          "sha256": "4b60b77e29a0f3e7ed46701d66394e3d8816b354c669222d622c726e8fdebd4b",
+          "bytes": 3645,
+          "lines": 92,
+          "currentSha256": "4b60b77e29a0f3e7ed46701d66394e3d8816b354c669222d622c726e8fdebd4b",
+          "currentMatchesPrior": true
+        },
+        {
+          "path": "packages/link/src/operations.ts",
+          "sha256": "a8b18b58eb56825f603d33b4031dcdf170ed5e05f5ddf84fcf93501a5b2190a3",
+          "bytes": 17020,
+          "lines": 584,
+          "currentSha256": "a8b18b58eb56825f603d33b4031dcdf170ed5e05f5ddf84fcf93501a5b2190a3",
+          "currentMatchesPrior": true
+        },
+        {
+          "path": "packages/link/src/operation-validation.ts",
+          "sha256": "0aa6e812a889f8563f42c4a86114676fb46502a3fd43e4de38bc17435a5d10dd",
+          "bytes": 10999,
+          "lines": 278,
+          "currentSha256": "0aa6e812a889f8563f42c4a86114676fb46502a3fd43e4de38bc17435a5d10dd",
+          "currentMatchesPrior": true
+        },
+        {
+          "path": "packages/link/src/operation-types.ts",
+          "sha256": "43a5e96ef31b154f66663695023f5f769691205daa15c6fbd3eed36b6c3b7945",
+          "bytes": 4215,
+          "lines": 118,
+          "currentSha256": "43a5e96ef31b154f66663695023f5f769691205daa15c6fbd3eed36b6c3b7945",
+          "currentMatchesPrior": true
+        },
+        {
+          "path": "packages/link/src/types.ts",
+          "sha256": "d26e95c578b079a7b18e0c7365062130db40707e2d4e500f53333b090fe75072",
+          "bytes": 3278,
+          "lines": 107,
+          "currentSha256": "d26e95c578b079a7b18e0c7365062130db40707e2d4e500f53333b090fe75072",
+          "currentMatchesPrior": true
+        },
+        {
+          "path": "packages/link/src/management-types.ts",
+          "sha256": "290214fc9c1f191c0dae2943eea79f32a54291e0fbe76134b880c7de0cb477ed",
+          "bytes": 7193,
+          "lines": 258,
+          "currentSha256": "290214fc9c1f191c0dae2943eea79f32a54291e0fbe76134b880c7de0cb477ed",
+          "currentMatchesPrior": true
+        },
+        {
+          "path": "packages/link/src/recipes.ts",
+          "sha256": "fa330115b25373afc293fb12d91e6929de4119cfe87db54db09bedce0537c676",
+          "bytes": 4162,
+          "lines": 122,
+          "currentSha256": "fa330115b25373afc293fb12d91e6929de4119cfe87db54db09bedce0537c676",
+          "currentMatchesPrior": true
+        },
+        {
+          "path": "packages/link/src/figma.ts",
+          "sha256": "976162d245cc7fd65b80feb7a2b3e8e3997ea22a62254e07f00f30288267aff8",
+          "bytes": 1031,
+          "lines": 29,
+          "currentSha256": "976162d245cc7fd65b80feb7a2b3e8e3997ea22a62254e07f00f30288267aff8",
+          "currentMatchesPrior": true
+        },
+        {
+          "path": "packages/link/src/index.ts",
+          "sha256": "d2c5d752e7bbd91386616d01b883fef8da62add62fcd38d2365b424abff7cd89",
+          "bytes": 1878,
+          "lines": 71,
+          "currentSha256": "d2c5d752e7bbd91386616d01b883fef8da62add62fcd38d2365b424abff7cd89",
+          "currentMatchesPrior": true
+        },
+        {
+          "path": "packages/host/src/runtime.test.ts",
+          "sha256": "789c3d008b4b153a3480b7c1a6b7981b988b6aa1f830f15fe87c382090bb8a62",
+          "bytes": 10519,
+          "lines": 300,
+          "currentSha256": "789c3d008b4b153a3480b7c1a6b7981b988b6aa1f830f15fe87c382090bb8a62",
+          "currentMatchesPrior": true
+        },
+        {
+          "path": "packages/link/src/file-selection.test.ts",
+          "sha256": "4f145853d1d1be65f0a180d3fceb9a5059d93b571281a890bc584504548013e1",
+          "bytes": 3564,
+          "lines": 106,
+          "currentSha256": "4f145853d1d1be65f0a180d3fceb9a5059d93b571281a890bc584504548013e1",
+          "currentMatchesPrior": true
+        },
+        {
+          "path": "packages/link/src/operations.test.ts",
+          "sha256": "46fdf8b6575c41f5ddfae2d75fce03a41d3fae167010bc1245157d73f8ba978c",
+          "bytes": 8281,
+          "lines": 212,
+          "currentSha256": "46fdf8b6575c41f5ddfae2d75fce03a41d3fae167010bc1245157d73f8ba978c",
+          "currentMatchesPrior": true
+        }
+      ],
+      "interpretation": "Actual source records, not initial inventory hits. Scope limits come from the full host-link.md report; unchanged hashes are not proof of no bugs."
+    },
+    {
+      "path": "docs/audit-2026-10-17-round11/evidence/host-validation.json",
+      "sha256": "e319fcdc3ddb9fb4639cdd0f352791e97caa3d5cda48874158f1a623fce143ec",
+      "parent": "$",
+      "value": {
+        "frozenSource": "b8b776d56e5982e59b18de0262d5c49367746625",
+        "formalFindings": 0,
+        "newCandidates": 0,
+        "shards": [
+          {
+            "id": "host-lifecycle-controls",
+            "firstExecution": true,
+            "command": [
+              "node",
+              "scripts/run-bun-test-shard.mjs",
+              "--timeout",
+              "30000",
+              "docs/audit-2026-10-17-round11/evidence/host-lifecycle-controls.test.ts"
+            ],
+            "exitCode": 0,
+            "completed": true,
+            "pass": 6,
+            "fail": 0,
+            "expect": 22,
+            "skip": 0,
+            "rawLog": "evidence/host-lifecycle-controls.first.log",
+            "receipt": "evidence/host-lifecycle-controls.first.receipt.json",
+            "scope": "6 newly authored pure memory synchronous lifecycle controls, no request dispatch"
+          }
+        ],
+        "totals": {
+          "cleanShards": 1,
+          "pass": 6,
+          "fail": 0,
+          "expect": 22,
+          "skip": 0,
+          "failedShards": 0
+        },
+        "staticToolFailure": {
+          "exitCode": 2,
+          "direction": "guessed top-level archive/_archive inventory",
+          "note": "evidence/host-static-inventory-skip.md",
+          "productFailure": false
+        },
+        "excludedKnownCandidate": {
+          "id": "HL-C1",
+          "previousReport": "docs/audit-2026-10-17-round3/host-link.md",
+          "reason": "caller-owned service references; still no normal producer mutation or declared immutable registration snapshot contract; no mutation experiment"
+        },
+        "limits": [
+          "No worker/Engine/provider/plugin/native/authority/approval/credential/security/custody process or network execution.",
+          "Current production HostRuntime callers pass no start/stop callbacks; callback tests validate public synchronous lifecycle only.",
+          "No full existing Host suite, build, typecheck, lint, or distribution validation."
+        ]
+      },
+      "interpretation": "Full validation parent read:6 pure synchronous controls/22expect, no new findings or candidates; not current tests."
+    },
+    {
+      "path": "docs/audit-2026-10-17-round11/evidence/host-lifecycle-controls.first.receipt.json",
+      "sha256": "2b88bf8928bcdf16a3e7176920b4496e75820af01113dfd5ef67f1191ddeb84f",
+      "parent": "$",
+      "value": {
+        "command": [
+          "node",
+          "scripts/run-bun-test-shard.mjs",
+          "--timeout",
+          "30000",
+          "docs/audit-2026-10-17-round11/evidence/host-lifecycle-controls.test.ts"
+        ],
+        "exitCode": 0,
+        "elapsedSeconds": 0.33458709716796875,
+        "firstExecution": true,
+        "rawCombinedLog": "docs/audit-2026-10-17-round11/evidence/host-lifecycle-controls.first.log",
+        "bytes": 1073,
+        "sha256": "c5e5c0f5467870f9c1faab9772af94a33a44857326ffc3d69fd7a4a2ab613129",
+        "scope": "HostRuntime direct source import; synchronous in-memory callbacks; no request/approval/worker/provider/native/network operations"
+      },
+      "interpretation": "Full first-run metadata read; current proposal did not retrieve or execute that runtime."
+    },
+    {
+      "path": "docs/audit-2026-10-17-round11/evidence/host-source-manifest.json",
+      "sha256": "66fe3d8510535f753bfebfcc7b84b602a11aaccfd6b1d836bbde3a64301a0eaf",
+      "parent": "$.files[entries with actual packages/host paths]",
+      "value": [
+        {
+          "path": "packages/host/src/runtime.ts",
+          "frozenSha256": "b785ab50fd5265ffb7f7d78c312f01b8c2ace165a5bcfdb6a25655b3e5dd3089",
+          "bytes": 4014,
+          "currentEqualsFrozen": true,
+          "readScope": "full; ordinary capability declarations and synchronous lifecycle; no request dispatch experiments"
+        },
+        {
+          "path": "packages/host/src/host-requests.ts",
+          "frozenSha256": "d3d96655a3f3877dedb9094f4ff8b5433ac750925dfbe4d4a5b00778e317be0d",
+          "bytes": 4880,
+          "currentEqualsFrozen": true,
+          "readScope": "full static data shape and mapping inventory only; authority/approval/security semantics excluded"
+        },
+        {
+          "path": "packages/host/src/index.ts",
+          "frozenSha256": "cbe279016f7d26c9e797398eb2af8e2f426ff4098fb389911d8bcbef39c9e107",
+          "bytes": 388,
+          "currentEqualsFrozen": true,
+          "readScope": "full public export inventory"
+        },
+        {
+          "path": "packages/host/src/runtime.test.ts",
+          "frozenSha256": "789c3d008b4b153a3480b7c1a6b7981b988b6aa1f830f15fe87c382090bb8a62",
+          "bytes": 10519,
+          "currentEqualsFrozen": true,
+          "readScope": "full static test inventory; not executed because request/approval tests are outside scope"
+        },
+        {
+          "path": "packages/host/README.md",
+          "frozenSha256": "0a3a2d64c648d8fc86464946dfd994b006d1bf93aa27100de899a812992271fb",
+          "bytes": 1609,
+          "currentEqualsFrozen": true,
+          "readScope": "full; synchronous lifecycle declared contract only; credential paragraphs excluded from audit"
+        },
+        {
+          "path": "packages/host/package.json",
+          "frozenSha256": "dea8055de59b310c169ca2caddbb95d441eb46c6336f855bf34a8a72b68ad3ea",
+          "bytes": 923,
+          "currentEqualsFrozen": true,
+          "readScope": "full package metadata"
+        }
+      ],
+      "interpretation": "Actual full/selected prior scopes read, including declaration that mixed request/approval existing suite was not run."
+    },
+    {
+      "path": "docs/audit-2026-10-17-round23/evidence/root-source-manifest.json",
+      "sha256": "25cde34c621c86dbe1f4b7f1ff40934e09fd47a864b6f4d3b59c24c36c443dae",
+      "parent": "$.files[9]",
+      "value": {
+        "path": "packages/link/src/recipes.ts",
+        "bytes": 4162,
+        "sha256": "fa330115b25373afc293fb12d91e6929de4119cfe87db54db09bedce0537c676",
+        "scope": "Full exploratory static only; no auth recipe/host boundary execution.",
+        "lineCount": 122,
+        "frozenBlobVerified": true,
+        "currentMatchesFrozen": true
+      },
+      "interpretation": "Recipes prior coverage is full exploratory static only, not dynamic success."
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/postdelivery-report-review/audit-c.raw.json",
+      "sha256": "c85dc55f39440fe1324c78a52d539a2e5276f0ec13f1a436e76d66f7f2364522",
+      "parent": "$.module_coverage[4]",
+      "value": {
+        "module": "packages/link",
+        "actual_module_evidence": [
+          "CODESHELL.md:14",
+          "packages/link/src/index.ts:1",
+          "packages/link/src/index.ts:2",
+          "packages/link/src/index.ts:19"
+        ],
+        "status": "纯manifest/catalog包无独立专项；上层Links功能已局部动态覆盖",
+        "covered": [
+          {
+            "file": "links-round8.md",
+            "lines": [
+              3,
+              5,
+              6,
+              7,
+              8,
+              10,
+              12
+            ],
+            "claim": "Server/Web/Desktop授权正常接线与既有套件，不是Link catalog自有测试",
+            "mode": "mixed"
+          },
+          {
+            "file": "link-recovery-round16.md",
+            "lines": [
+              11,
+              15,
+              16,
+              17,
+              18,
+              19,
+              28,
+              37,
+              48,
+              67
+            ],
+            "claim": "上层授权组件/controller/native manager/LinkService/CredentialStore5正常测试；provider validation/OAuth transport替身",
+            "mode": "dynamic_upper_layer"
+          }
+        ],
+        "not_covered_as_systematic_review": [
+          "packages/link/catalog.ts manifest完整性/权限guide/本地化",
+          "所有provider/method schema合同及catalog.test.ts"
+        ],
+        "boundary": "不能以Links0finding推断无覆盖；也不能把上层LinkService与纯manifest包混为同一模块，真实OAuth/账号/provider均未运行。"
+      },
+      "interpretation": "Earlier Links upper-layer coverage explicitly was not independent full manifest/catalog review; not inflated into full coverage. Later round3 report considered separately."
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/desktop-main-results.json",
+      "sha256": "203cbbd482c666c62e154b4da44e6f28884424938654a221bfc1acc6c0401326",
+      "parent": "$[101]",
+      "value": {
+        "file": "packages/desktop/src/main/link-provider-catalog.test.ts",
+        "log": "/tmp/codeshell-review-20261012/desktop-main-baseline/101-link-provider-catalog.test.ts.log",
+        "code": 0,
+        "signal": null,
+        "milliseconds": 378
+      },
+      "interpretation": "Historical code0 row alone is not complete runtime evidence."
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-baseline-evidence-round28/independent-existing-tests.receipt.json",
+      "sha256": "73ad4e09fdb09e15673e0c5e7a585f46d48e7756438c63635f853b7b289be9af",
+      "parent": "$.groups[2].rawLogs[101]",
+      "value": {
+        "metadataRow0": 101,
+        "file": "packages/desktop/src/main/link-provider-catalog.test.ts",
+        "log": "/tmp/codeshell-review-20261012/desktop-main-baseline/101-link-provider-catalog.test.ts.log",
+        "resolvedLog": "/private/tmp/codeshell-review-20261012/desktop-main-baseline/101-link-provider-catalog.test.ts.log",
+        "archiveMemberBasename": "101-link-provider-catalog.test.ts.log",
+        "bytes": 453,
+        "sha256": "5f094b36f12976c013b5e91f50bd466aae3754767bd0f0cb792b6317ce8acc95",
+        "metadataCode": 0,
+        "metadataSignal": null,
+        "completedMarkerCount": 1,
+        "completedTests": 2,
+        "completedSkipped": 0,
+        "completedFailures": 0,
+        "BunPassTests": 2,
+        "BunFailTests": 0,
+        "BunRanFiles": 1
+      },
+      "interpretation": "Bounded parent reports2pass/0fail complete marker and raw hash; not accessed under historical /private/tmp and not this proposal execution."
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-baseline-evidence-round28/manifest.json",
+      "sha256": "16f4dac9f9f13073662fcc299b72efd7add8ff28ab8868f3b9cb7d1a7c45d763",
+      "parent": "$.logs[524]",
+      "value": {
+        "group": "desktop-main",
+        "file": "packages/desktop/src/main/link-provider-catalog.test.ts",
+        "originalLog": "/tmp/codeshell-review-20261012/desktop-main-baseline/101-link-provider-catalog.test.ts.log",
+        "tarMember": "desktop-main/101-link-provider-catalog.test.ts.log",
+        "bytes": 453,
+        "sha256": "5f094b36f12976c013b5e91f50bd466aae3754767bd0f0cb792b6317ce8acc95",
+        "tests": 2,
+        "skipped": 0,
+        "code": 0,
+        "signal": null,
+        "completed": true
+      },
+      "interpretation": "Matching historical2-test archive metadata; no archive extraction or product execution."
+    }
+  ],
+  "fullReadReports": [
+    {
+      "path": "docs/audit-2026-10-17-round3/host-link.md",
+      "sha256": "53c4eb98275b007dc9c72c3b65e74d9b0b46c5e74e709e466bf5cf0cc8ec3b03",
+      "readScope": "full",
+      "lines": 48,
+      "text": "# Host / Link 普通生命周期与数据续审\n\n源码基线：`0f83bbfdfb8f2c6f31148250bd6544f5325c16e7`。仅审查和写证据，未修改产品文件、执行 Git 写操作或操作真实连接。结果：**2 项条件性 P3 确认问题、1 项已观察能力边界**；Host 普通生命周期和 worker 分派未确认新问题。下面的“确认”指生产纯函数行为及静态可达接线，不等同于真实 GitHub/Electron 端到端复现。\n\n## 确认问题\n\n### HL-01 · P3 · 精确 GitHub 文件引用裁掉文件名首尾空格，合并不同路径\n\n- **位置**：`packages/link/src/file-selection.ts:15`，由 `:42` 将路径传入共用 `text()`；普通 UI 在 `packages/desktop/src/renderer/credentials/LinkedFileSourcesDialog.tsx:26` 也先裁剪每行路径。\n- **可达触发**：选择带前导或尾随空格的仓库路径，例如 ` report.md`、`report.md ` 或全角空格开头的 `　report.md`。该字符串通过现有类型、长度和分段校验。条件是仓库确实含这种文件名；本轮没有访问真实仓库。\n- **预期契约**：已有 `packages/link/src/file-selection.test.ts:27` 的正常路径测试写明精确 paths/refs；Desktop 的 `LinkedFileSourcesDialog.tsx:37` 与 `linked-file-sources-service.ts:144` 将选择定义为保存精确引用。owner/repo 的大小写归一化不意味着可以修改文件路径。\n- **实际**：生产 resolver 返回的 `params.path` 是 `report.md`。四种不同输入与原始 `report.md` 都归为相同的 adapter 配置。`linked-file-sources-service.ts:117` 将该配置用于 `identity`，`:120` 计算 source ID，`:122` 保存默认标签。因此这些原本不同的精确路径会被同一 source identity 合并；输入已丢失，后续 reader 无法恢复。\n- **影响**：这种文件名无法按原样选择。若裁剪后路径也存在，保存的引用指向它；若不存在，后续读取会找不到文件。**动态只证明路径变更及一个自有 Map 中的不同内容命中，未读取实际 GitHub 文件、未运行 UI/IPC 或 source 持久化。** identity 合并和后续读取影响由上述生产接线静态推出。Core 的 `packages/core/src/links/http.ts:174` 同样裁剪路径字符串，修复时需一并评估该边界；本轮未改代码。\n- **证据**：[fixture](evidence/host-link-selection.test.ts) 第一项及 [首次 raw log](evidence/host-link-selection.raw.log)，4 个输入均打印 requested/selected；整组 `4 pass / 0 fail / 26 expect`，并有 `Completed Bun shard: 4 tests, 0 skipped; 0 failures.`。\n\n### HL-02 · P3 · 长路径默认文件标签从半个 emoji 开始\n\n- **位置**：`packages/link/src/file-selection.ts:90` 的 `defaultLabel.slice(-512)`。\n- **可达触发**：GitHub 文件选择不传显式 `label`，路径长度超过默认标签上限，截断点刚好落在 Unicode 代理对中间。fixture 使用 `😀/` 后接两个 250 字符目录和 8 字符文件名，总计 513 个 UTF-16 单位，每段均不超过 255，路径没有非法分隔或控制字符，远低于 resolver 的 2,000 限制。\n- **预期契约**：路径可以包含 Unicode；默认展示标签应保持合法 Unicode 文本。显式普通 Unicode 标签的对照项完整保留。\n- **实际**：生产 resolver 接受且保留原始 `params.path`，但返回的 512 单位标签首字符是低代理项 `0xde00`，`label.isWellFormed()` 为 false，原路径则为 true。\n- **影响**：默认标签带孤立代理项，显示或文本编码会产生替代字符。`linked-file-sources-service.ts:122` 将此标签写入 source definition，`packages/desktop/src/renderer/project-config/DataSourcesSection.tsx:241` 将 definition label 投影到数据源列表；这是显示元数据损坏，路径参数仍正确。**动态只运行 resolver，没有真实平台、持久化或字体/UI 截图验证。**\n- **证据**：同一 [fixture](evidence/host-link-selection.test.ts) 第三、四项与 [首次 raw log](evidence/host-link-selection.raw.log)，观察为 `requestedLength:513, labelLength:512, firstCodeUnit:\"de00\", labelWellFormed:false`。\n\n## 能力边界、候选与排除\n\n- **HL-B1 · 已观察能力边界，不计 bug**：`docs/rate%2Ftable.md`、`docs/rate%5Ctable.md` 被 `file-selection.ts:46` 的 decode 后分段规则拒绝，而字面 `%20` 名称保留；fixture 第二项保留了这一结果。Core `links/http.ts:189` 的 `assertPathSegment()` 明确采用相同的原始/解码后双检查，`:215` 规定此格式经过每段验证后编码。尚无契约保证支持这两种字面表示，不能由“Git 文件名可能包含这些字符”直接推成产品 bug。本轮没有测试绕过或安全方向。\n- **HL-B2 · 已声明边界**：只有 GitHub/Figma manifest 提供普通文件选择；Notion 的 `document-content-unavailable`、Figma Make 的不支持类型，以及 Host 同步 `start/stop` 都是当前明示边界，未包装成缺陷。没有对异步 adapter 做实验。\n- **HL-C1 · 未确认**：`HostRuntime.register()` 保存 caller-owned service 引用（`runtime.ts:50`），dispatch 再读取 handler（`:114`）；若调用者后来改对象，登记快照可能与 handler 不一致。当前 Desktop/serve/Panel 的创建点均构造私有对象，未找到正常调用方后续变更；没有执行人为突变，不计问题。\n- **重复核对**：两批 audit findings、2026-10-12 remaining findings、2026-05-30 findings，以及 2026-07-09 register、2026-08-13 report 共六个旧索引未找到这两个生产路径的同根因条目。`CHD02` 是相同 UTF-16 截断类别，但发生在 chat 附件名函数，消费者不同；列为相关问题，未作为重复移除。此为限定索引查重，非所有历史文档逐字穷尽。见 [dedup receipt](evidence/host-dedup.json)。\n\n## 覆盖与精确收据\n\n普通 Host 阅读 `runtime.ts`、`host-requests.ts`、公开入口及 Desktop/serve/Panel 创建和 dispatch 接线；基线覆盖原子登记、启动顺序、部分失败回滚、cleanup 错误聚合、反向停止、幂等、正常 handler、下游 route、未知请求数据分类。当前生产 caller 没有传入有副作用的 adapter start/stop，因此假 adapter 验证不能代表真实 native 生命周期。\n\nLink 阅读 manifest/文件选择、operation contracts、`snapshotJson`/结构匹配、公开入口、普通 metadata 投影；类型文件仅核对数据形状。authorization/filter 和凭据/认证实现未作为审查目标，未运行相关操作单测。operation 基线验证 immutable catalog 快照、Figma summary/content 的输入输出区分，以及深层普通结果数据保留。29 个被读取或静态接线核对的源/测试文件和 SHA-256 见 [source manifest](evidence/host-source-manifest.json)，其中消费者大文件仅阅读相关调用段，不能当成整个文件全覆盖。\n\n所有动态均从首次执行就把 stdout/stderr 写入自有 `.raw.log`，通过 `node scripts/run-bun-test-shard.mjs --timeout 30000 ...` 执行；没有动态失败、重试或补修 fixture。Bun 版本 `1.3.11 (af24e281)`。\n\n| 收据 | 执行结果 | wrapper 完成信息 | 范围 |\n| --- | --- | --- | --- |\n| [host-link-selection.raw.log](evidence/host-link-selection.raw.log) | exit 0；4 pass，0 fail；26 assertions | 4 tests，0 skipped | 自有 resolver 纯函数；包括 1 项能力边界观察 |\n| [host-baseline.raw.log](evidence/host-baseline.raw.log) | exit 0；19 pass，16 filtered out，0 fail；88 assertions | 35 tests，16 skipped | 16 个 Host 假 adapter/解析用例及 3 个普通文件选择用例 |\n| [host-operation-baseline.raw.log](evidence/host-operation-baseline.raw.log) | exit 0；3 pass，6 filtered out，0 fail；209 assertions | 9 tests，6 skipped | 仅普通 catalog/schema/result 用例 |\n\n合计 **26 项实际通过、22 项按名称筛选排除、0 失败，323 assertions**。wrapper 总 tests 为 48，其中包括 22 skipped；不能写成 48 项已执行通过。完整命令、退出码和日志哈希见 [receipts](evidence/host-receipts.json)。\n\n剩余覆盖缺口：真实 provider/API/CLI/MCP、native adapter、Electron 对话框与持久化端到端均未执行；真实平台是否接受所列条件文件名未验证。未接触用户数据、真实消息、模型、网络 fixture、权限/认证或此前平台中止方向。产品问题均未修复。\n"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round11/host.md",
+      "sha256": "f9d2b070debafc22f69006e2db7f0cb2e4261de045c802379bad3efb02eaf005",
+      "readScope": "full",
+      "lines": 32,
+      "text": "# Host 普通目录与同步生命周期复审\n\n冻结源码：`b8b776d56e5982e59b18de0262d5c49367746625`。本范围 **0 项新确认问题、0 项新候选**。只写审查记录和证据，没有修改产品代码。\n\n`packages/host/src` 只有 runtime、host-requests、公开入口和两份测试，没有 model/tool catalog 实现。阅读了全部非测试源码及 `runtime.test.ts`，并核对 Desktop、serve、Panel task 三个实际 HostRuntime 创建点；大消费者文件仅核对创建段。声明、登记原子性、运行状态门禁、反向清理、同步错误聚合未发现新的普通数据缺陷。\n\n## 已验证行为\n\n[定向 fixture](evidence/host-lifecycle-controls.test.ts) 直接导入冻结源码 `runtime.ts`。其两个依赖均为 type-only import，不加载 Core、Host request 模块、adapter 平台或 worker。所有 adapter/service 都是本测试内同步数组回调。\n\n- 空服务目录：adapter start/stop 各一次，重复 start/stop 幂等。\n- `capabilities()` 返回数组被调用方修改不会改登记表；运行前和停止后 `supports()` 为 false。\n- adapter.start 内调用 stop：状态终结、后续服务不启动、adapter 不重复停止。\n- service.start 内调用 stop：只清理已到达服务，按相反顺序停止，后续服务不启动。\n- service.stop/adapter.stop 内重入 stop：每项仅停止一次。\n- 多个同步 stop 抛错：逆序保留全部 service 错误和 adapter 错误，停止后不能重启。\n\n[首次 raw combined log](evidence/host-lifecycle-controls.first.log) 为 **6 pass / 0 fail / 22 expect / 0 skipped**，guarded runner 确认 `Completed Bun shard: 6 tests, 0 skipped; 0 failures.`。先保存首次 stdout/stderr 与退出码后才阅读；没有失败后修支架、重跑或替代验证。命令及原始日志 SHA-256 见 [首次收据](evidence/host-lifecycle-controls.first.receipt.json)。这些通过用例是正常生命周期控制，不是 bug 复现，也不代表真实 native 生命周期。\n\n## 查重与排除\n\n[全历史查重](evidence/host-dedup.json) 遍历现有 docs/bugs 下 **1,601 份 Markdown/JSON**，包含 **169 份 nested archive/_archive** 文件；JSON 按 leaf 解析，无解析错误。当前 round11 排除。115 个词项匹配主要是历史覆盖、架构、引用及既有候选，均未当成新发现。\n\n`runtime.ts:50` 保存 caller-owned service 引用的想法已经在 [round3 HL-C1](../audit-2026-10-17-round3/host-link.md) 记录。当前三个生产创建点仍构造私有对象，没有后续 service/handler 突变生产者，且没有明确的登记快照契约；未做人为突变实验，不重复登记为新候选。README 明确生命周期同步，因此没有以 async void 回调制造缺陷。\n\n初次历史库存错误把不存在的顶层 archive/_archive 传给 rg，工具 exit 2 且路径列表过大被工具截断。该静态导航失败的 [标注转录](evidence/host-static-inventory-skip.md) 已保留；不存在路径方向跳过。后续独立去重只从实际存在 docs/bugs 根收集并解析嵌套档案。此事件没有运行产品或测试，不计 failed Bun shard。\n\n## 覆盖界限\n\nhost-requests 仅阅读普通数据形状与映射清单；authority/approval/security/auth/credential/custody/watchdog 行为均不作为本次验证目标，未调用 dispatch/intercept。没有启动真实 worker、Engine、模型、provider、插件 native entry、外部进程或网络，没有访问用户数据。三处当前生产 HostRuntime 创建点都没有传入 start/stop 回调，因此 fake adapter 控制只证明公共同步生命周期行为。现有 runtime.test.ts 混有请求/approval 测试，本次未执行整文件。未运行构建、typecheck、lint 或 full suite。\n\n[源码 manifest](evidence/host-source-manifest.json) 记录 11 份源码/配置与冻结哈希、当前一致性及读取范围；[validation](evidence/host-validation.json) 给出精确计数。\n"
+    }
+  ],
+  "limits": "Bounded primary parents and reports were read. Navigation hits alone are not evidence of coverage. Historic raw log paths are provenance strings only, not opened here."
+}

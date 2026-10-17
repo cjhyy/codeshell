@@ -1,0 +1,60 @@
+{
+  "selfExcluded": true,
+  "completionHead": "8b9677c78d150abe9681a2f65ab8e55b1288be4b",
+  "files": [
+    {
+      "path": "caller-navigation.json",
+      "bytes": 21419,
+      "sha256": "47198f2176073560d6a226e649aae2fb8eeedcf13df58e80a50e31be10fa1942"
+    },
+    {
+      "path": "collect-proposal.py",
+      "bytes": 19165,
+      "sha256": "9a6968016a42290cfd587b6076c7ac929bb3ba1776aa8b5b7f835dd4ec42310c"
+    },
+    {
+      "path": "dedup.py",
+      "bytes": 3874,
+      "sha256": "65165d4969e7d123922d84299e5d3ae084e499d5f9df8b8573436e994d7f55e4"
+    },
+    {
+      "path": "history-selected.json",
+      "bytes": 34769,
+      "sha256": "b5db8af1d834b2099ba65a412f47dc8e23a04058427e71c28a07a1763826b459"
+    },
+    {
+      "path": "history.json",
+      "bytes": 666501,
+      "sha256": "c2252fa38b1492179492a3bfdef6a7060553d44f26b849bd8f2675440849c1fe"
+    },
+    {
+      "path": "inventory.json",
+      "bytes": 11158,
+      "sha256": "644f519b30a5a9925c19a8cf92fdde6d2d0df94f2405e6db27ca92f5f91e2c6f"
+    },
+    {
+      "path": "metadata-notes.json",
+      "bytes": 1244,
+      "sha256": "60c8cd8c1090ecba1ceb72323cd212c28c999bdcd83afc1504b3b8c747285aba"
+    },
+    {
+      "path": "projection-history.json",
+      "bytes": 5370,
+      "sha256": "0b4469c3387ecb64693a38294529917b0f59c37c21ac9ea60d900d59ba428789"
+    },
+    {
+      "path": "proposal.json",
+      "bytes": 8244,
+      "sha256": "4623b7229fd618a634eba85149368d0eacedba01a5ee37439efd6c42d44f2e42"
+    },
+    {
+      "path": "source-manifest.json",
+      "bytes": 15740,
+      "sha256": "181ba2d0001c0561fd6aae63ecafa8202149ba24ef19e19443ba6fd5fb017e34"
+    }
+  ],
+  "total": 10,
+  "productAndTestRuns": 0,
+  "gitWrites": 0,
+  "note": "Author metadata receipt. No current raw runtime artifacts exist because no product/test/import/fixture attempts were made."
+}
