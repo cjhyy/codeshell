@@ -308,6 +308,7 @@ jobs:
           node scripts/run-bun-test-shard.mjs --timeout 30000 packages/desktop/src/renderer/app/useTranscriptBuckets.goal-null.test.tsx packages/desktop/src/renderer/transcriptHydration.test.ts packages/desktop/src/renderer/transcriptsReducer.test.ts 2>&1 | tee "$ACCEPTANCE_ROOT/goal-hydration.log"
           node scripts/run-bun-test-shard.mjs --timeout 30000 packages/server/src/attachment-service.retention.test.ts 2>&1 | tee "$ACCEPTANCE_ROOT/attachment-retention.log"
           node scripts/run-bun-test-shard.mjs --timeout 30000 packages/server/src/attachment-service.test.ts 2>&1 | tee "$ACCEPTANCE_ROOT/attachment-service.log"
+          node scripts/run-bun-test-shard.mjs --timeout 30000 packages/server/src/attachment-service.cold-module.test.ts 2>&1 | tee "$ACCEPTANCE_ROOT/attachment-cold-module.log"
 
       - name: materialize production workspace packages
         timeout-minutes: 5
@@ -511,6 +512,7 @@ jobs:
             ${{ env.ACCEPTANCE_ROOT }}/goal-hydration.log
             ${{ env.ACCEPTANCE_ROOT }}/attachment-retention.log
             ${{ env.ACCEPTANCE_ROOT }}/attachment-service.log
+            ${{ env.ACCEPTANCE_ROOT }}/attachment-cold-module.log
             ${{ env.ACCEPTANCE_ROOT }}/review-diagnostic-contracts.log
             ${{ env.ACCEPTANCE_ROOT }}/review-draft-contracts.log
             ${{ env.ACCEPTANCE_ROOT }}/review-draft-operations.log
@@ -633,6 +635,7 @@ jobs:
             ${{ env.ACCEPTANCE_ROOT }}/goal-hydration.log
             ${{ env.ACCEPTANCE_ROOT }}/attachment-retention.log
             ${{ env.ACCEPTANCE_ROOT }}/attachment-service.log
+            ${{ env.ACCEPTANCE_ROOT }}/attachment-cold-module.log
             ${{ env.ACCEPTANCE_ROOT }}/review-diagnostic-contracts.log
             ${{ env.ACCEPTANCE_ROOT }}/review-draft-contracts.log
             ${{ env.ACCEPTANCE_ROOT }}/review-draft-operations.log
