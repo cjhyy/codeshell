@@ -1,0 +1,21 @@
+{
+  "base": "615e4e4dd3a61b1ad132ab4f3683985a0d582386",
+  "command": [
+    "node",
+    "scripts/run-bun-test-shard.mjs",
+    "--timeout",
+    "30000",
+    "packages/core/src/context/tool-output-budget.test.ts",
+    "docs/audit-2026-10-17-round21/evidence/toolbudget-focused.test.ts"
+  ],
+  "cwd": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell",
+  "startedAt": "2026-10-17T09:06:20.965153+00:00",
+  "endedAt": "2026-10-17T09:06:21.198851+00:00",
+  "exitCode": 0,
+  "raw": "docs/audit-2026-10-17-round21/evidence/toolbudget-first.raw.log",
+  "rawSha256": "c677be4ad27bb301af61e9fff7ac72a7a0c1d6f6ad796a575985364f951953e8",
+  "rawBytes": 2506,
+  "savedBeforeInspection": true,
+  "firstAttempt": true,
+  "reruns": 0
+}

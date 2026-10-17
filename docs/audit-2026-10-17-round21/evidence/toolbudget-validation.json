@@ -1,0 +1,60 @@
+{
+  "base": "615e4e4dd3a61b1ad132ab4f3683985a0d582386",
+  "formalCount": 0,
+  "candidateCount": 0,
+  "relatedCount": 1,
+  "runs": [
+    {
+      "command": [
+        "node",
+        "scripts/run-bun-test-shard.mjs",
+        "--timeout",
+        "30000",
+        "packages/core/src/context/tool-output-budget.test.ts",
+        "docs/audit-2026-10-17-round21/evidence/toolbudget-focused.test.ts"
+      ],
+      "exitCode": 0,
+      "raw": "docs/audit-2026-10-17-round21/evidence/toolbudget-first.raw.log",
+      "exit": "docs/audit-2026-10-17-round21/evidence/toolbudget-first.exit.json",
+      "completed": true,
+      "pass": 18,
+      "expect": 94,
+      "fail": 0,
+      "skipped": 0,
+      "existingTests": 8,
+      "focusedTests": 10,
+      "ordinaryFocusedControls": 8,
+      "handcraftedBoundaryControlTests": 1,
+      "handcraftedRelatedEdgeTests": 1,
+      "actualProductionLeafCalls": true,
+      "manualMirroredRecipe": false,
+      "firstAttempt": true
+    }
+  ],
+  "cleanTotals": {
+    "runs": 1,
+    "pass": 18,
+    "expect": 94,
+    "fail": 0,
+    "skipped": 0,
+    "existingTests": 8,
+    "focusedTests": 10
+  },
+  "failedShards": 0,
+  "reruns": 0,
+  "productChanges": false,
+  "firstRunHandling": "Combined raw stdout/stderr and exit JSON saved before inspection; single clean guarded shard. Fixture unchanged after preflight/run.",
+  "scope": "Actual tool-output-budget leaf+actual heuristic estimateStringTokens; owned small strings/typed blocks. Existing fixed default30k-cap test included, no pressure experiment. No runtime mocks or source extraction.",
+  "skippedDirections": [
+    "All previous failed directions unchanged,especially JSON summary repair",
+    "ContextManager/compaction/storage/Engine/providers coupled runtime and existing aggregate test not run",
+    "New Unicode/grapheme investigation and old magic-200/structured summary findings excluded"
+  ],
+  "excluded": [
+    "Real provider tokenizer/token prices/models/paid APIs/network/actualtools/userdata/native/security/custody",
+    "0/negative/NaN budget inventions",
+    "performance/largeinput pressure",
+    "broad build/typecheck/lint/full suite"
+  ],
+  "metadataFailures": "See toolbudget-metadata-notes.json; wrong navigation and truncated auxiliary static output, not product failures."
+}

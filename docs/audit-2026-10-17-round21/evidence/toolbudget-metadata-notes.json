@@ -1,0 +1,30 @@
+{
+  "scope": "Metadata-only navigation/transcription; no product rerun or replacement validation",
+  "events": [
+    {
+      "command": "rg -n createToolTextReplacement|... packages/core/src/context packages/core/src/settings packages/core/src/tools",
+      "exitCode": 2,
+      "firstResponseTranscription": "rg: packages/core/src/tools: No such file or directory (os error 2)",
+      "disposition": "Guessed absent auxiliary directory skipped. Actual tool-system filenames later discovered with rg --files; not a Bun import/dependency/product failure."
+    },
+    {
+      "command": "cat existing toolsummary receipts; sed -n 1,240p docs/audit-2026-10-17-round20/tool-summary.md",
+      "exitCode": 1,
+      "firstResponseTranscription": "sed: docs/audit-2026-10-17-round20/tool-summary.md: No such file or directory",
+      "disposition": "Wrong old report spelling skipped; subsequent read uses report path given by its actual artifact receipt,toolsummary.md. No product execution."
+    },
+    {
+      "command": "Combined static selected old context report + archive source + JSON records",
+      "exitCode": 0,
+      "firstResponseTranscription": "Warning: truncated output (original token count: 7999); tool output capped at6000 tokens",
+      "disposition": "No hidden product output involved. Important old floor line and current compaction source re-read bounded; selected old magic-200 JSON record text visible in original response. Full source files remain on disk."
+    },
+    {
+      "command": "toolbudget-preflight.py",
+      "exitCode": 0,
+      "disposition": "Initial full-source range labels exceeded actual file endings; actual measured lineCount corrected labels before product run and metadata preflight re-evaluated. Source bytes/fixture were unchanged; no test run had occurred."
+    }
+  ],
+  "rawEvidence": "Toolbudget raw test stdout/stderr and exit were saved before first inspection and never rewritten.",
+  "testReruns": 0
+}

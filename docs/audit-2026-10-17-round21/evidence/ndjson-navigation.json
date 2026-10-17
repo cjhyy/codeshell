@@ -1,0 +1,65 @@
+{
+  "base": "615e4e4dd3a61b1ad132ab4f3683985a0d582386",
+  "specificProductionReferenceSearch": {
+    "command": [
+      "rg",
+      "-l",
+      "NdjsonReader|ndjson-reader",
+      "packages",
+      "scripts",
+      "tests",
+      "--glob",
+      "*.ts",
+      "--glob",
+      "*.tsx",
+      "--glob",
+      "*.js",
+      "--glob",
+      "*.mjs",
+      "--glob",
+      "*.json"
+    ],
+    "matchedPaths": [
+      "packages/tui/src/cli/input/ndjson-reader.ts",
+      "packages/tui/src/cli/input/ndjson-reader.test.ts"
+    ],
+    "limitation": "Only literal references in selected source extensions; no claim to disprove computed or external consumers."
+  },
+  "ordinaryEntryStaticSelection": {
+    "main.ts": [
+      [
+        1,
+        18
+      ],
+      [
+        50,
+        115
+      ],
+      [
+        185,
+        210
+      ]
+    ],
+    "commands/run.ts": [
+      [
+        1,
+        110
+      ]
+    ],
+    "observed": "main uses read-stdin task resolver and output option; selected run imports/RunOptions do not connect NdjsonReader. These modules were not imported."
+  },
+  "metadataAdjustments": [
+    {
+      "kind": "Over-broad historical navigation",
+      "detail": "An initial rg over docs/bugs included giant single-line JSON values and its tool display was truncated. It was not used as complete history evidence; saved recursive scalar scan and bounded contexts replace that navigation only, without product retries."
+    },
+    {
+      "kind": "Guessed receipt navigation",
+      "detail": "Two guessed prior names positiveint-source.json and positiveint-artifacts.json did not exist; after rg --files the actual source-manifest/artifact-receipt were read. Metadata only."
+    },
+    {
+      "kind": "Preparation chat count correction",
+      "detail": "A preparation message guessed 8 start/4 iterator; actual fixture/raw are 7 start/5 iterator/3 lifecycle =15. Final receipt uses raw counts. Fixture/raw unchanged."
+    }
+  ]
+}

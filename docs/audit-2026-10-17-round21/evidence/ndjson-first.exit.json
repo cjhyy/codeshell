@@ -1,0 +1,19 @@
+{
+  "base": "615e4e4dd3a61b1ad132ab4f3683985a0d582386",
+  "command": [
+    "node",
+    "scripts/run-bun-test-shard.mjs",
+    "--timeout",
+    "30000",
+    "docs/audit-2026-10-17-round21/evidence/ndjson-focused.test.ts"
+  ],
+  "attempt": 1,
+  "exitCode": 0,
+  "elapsedSeconds": 0.162,
+  "raw": "docs/audit-2026-10-17-round21/evidence/ndjson-first.raw.log",
+  "rawBytes": 2032,
+  "rawSha256": "66b5c30a498d68b0aee0cf443220aff93f104350f44dbf99ad6c3dfe19ce56a8",
+  "combinedStdoutStderr": true,
+  "rawSavedBeforeInspection": true,
+  "reruns": 0
+}

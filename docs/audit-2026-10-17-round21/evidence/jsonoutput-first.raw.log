@@ -1,0 +1,25 @@
+bun test v1.3.11 (af24e281)
+
+docs/audit-2026-10-17-round21/evidence/jsonoutput-focused.test.ts:
+(pass) json factory uses actual class and buffers events until completion [1.25ms]
+(pass) json nonempty final text is authoritative over earlier ordinary deltas [1.41ms]
+(pass) json empty completion without deltas stays empty
+(pass) json retains ordinary session metadata and Unicode final content
+(pass) json ignores ordinary non-text stream frames
+(pass) json escapes ordinary quotes and line breaks in string values [0.02ms]
+(pass) json preserves a non-completed terminal reason with final content
+(pass) jsonl factory and ordered event framing retain child and cursor identities [0.13ms]
+(pass) jsonl final envelope uses ordinary metadata and exactly one newline [0.02ms]
+(pass) jsonl empty final text remains distinct from prior stream events
+(pass) jsonl serialization leaves an ordinary event object unchanged [1.18ms]
+(pass) stream-json factory and ordered event framing retain child and cursor identities [0.05ms]
+(pass) stream-json final envelope uses ordinary metadata and exactly one newline
+(pass) stream-json empty final text remains distinct from prior stream events
+(pass) stream-json serialization leaves an ordinary event object unchanged [0.06ms]
+(pass) jsonl and stream-json aliases emit identical bytes for ordinary events and final metadata [0.02ms]
+
+ 16 pass
+ 0 fail
+ 52 expect() calls
+Ran 16 tests across 1 file. [665.00ms]
+Completed Bun shard: 16 tests, 0 skipped; 0 failures.

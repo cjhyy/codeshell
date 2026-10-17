@@ -1,0 +1,39 @@
+{
+  "base": "615e4e4dd3a61b1ad132ab4f3683985a0d582386",
+  "fullCorpus": "docs/audit-2026-10-17-round21/evidence/toolbudget-dedup.json",
+  "selectedRecords": [
+    {
+      "path": "docs/audit-2026-10-17-round4/context.md",
+      "lines": [
+        21,
+        43
+      ],
+      "decision": "CTX-2 structured summary text omission and CTX-1 call/result pairing are separate old findings, excluded entirely. Existing source concern line41 covers an unavoidable aggregate floor; current within-result separator floor is concrete helper evidence linked conservatively to that concern, not a new counted candidate."
+    },
+    {
+      "path": "docs/archive/review-2026-05-30/findings.json",
+      "locator": "$[28]",
+      "title": "Underestimated replacement size in applyToolResultBudget",
+      "decision": "Old magic-200 accounting root cause excluded; current static caller subtracts actual replaced.text.length. No aggregate runtime or old regression rerun."
+    },
+    {
+      "path": "docs/archive/review-2026-05-30/backlog_confirmed.json",
+      "locator": "$[5]",
+      "decision": "Same old magic-200 finding/verified-note record; not the present within-result separator accounting, no new formal count."
+    },
+    {
+      "path": "docs/archive/review-2026-05-30/backlog_verdicts.json",
+      "locator": "$[14]",
+      "decision": "Same old accounting mechanism; no additional finding."
+    },
+    {
+      "path": "docs/audit-2026-10-17-round12/README.md",
+      "decision": "Prior UTF16 truncation mechanism excluded; existing leaf Unicode regressions run as existing controls only, no new Unicode exploration or claim."
+    },
+    {
+      "path": "docs/audit-2026-10-17-round20/toolsummary.md",
+      "decision": "Old JSON summary repair failure and tool-summary non-Error related issue remain excluded; neither summary implementation imported."
+    }
+  ],
+  "keywordLimitations": "Full recursive JSON scalar and Markdown traversal includes archives. Bounded contexts and total hits locate semantic review only; no proof of corpus-wide semantic exhaustion."
+}

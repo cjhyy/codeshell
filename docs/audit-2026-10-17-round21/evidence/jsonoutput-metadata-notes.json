@@ -1,0 +1,37 @@
+{
+  "notes": [
+    {
+      "kind": "navigation-output-truncated",
+      "command": "wide rg of output-format/stream-json/jsonl across docs and TUI",
+      "result": "output truncated at 19191 tokens; not authoritative full review; relevant source/docs subsequently read through bounded exact paths"
+    },
+    {
+      "kind": "nonexistent-directory-navigation",
+      "command": "rg --files docs/bugs bugs",
+      "exitCode": 2,
+      "result": "docs/bugs absent; bugs exists; dedup uses only actually-existing docs and bugs recursively, no product import/test attempted"
+    },
+    {
+      "kind": "nonexistent-file-navigation",
+      "command": "rg source selections including guessed packages/core/src/engine/run-completion.ts",
+      "exitCode": 2,
+      "result": "guessed file absent; subsequent rg inventory found actual run-finalize.ts; static only, no product dynamic attempt"
+    },
+    {
+      "kind": "bounded-dedup-display-truncated",
+      "result": "6097-token combined selected context/source display exceeded 6000-token output cap; full dedup persisted, key old A12 and actual source reread bounded"
+    },
+    {
+      "kind": "shell-glob-navigation",
+      "command": "rg with unquoted nonexistent packages/core/src/engine/turn-loop-completion*.ts",
+      "result": "zsh no matches; that rg never executed; no retry/alternate product test; remaining independent exact source reads executed"
+    },
+    {
+      "kind": "source-range-metadata-correction",
+      "result": "Initial full-source upper bounds176/114 exceeded actual renderer/renderer.test lengths163/111 and were corrected. An intermediate metadata-only narrowing of run-finalize340–430 to340–427 guessed an endpoint from the excerpt; actual manifest lineCount480 confirmed340–430 is in bounds, so the original selected read range was restored. Source bytes, fixture, raw and exit unchanged; no product rerun."
+    }
+  ],
+  "productAttemptsAtNotes": 0,
+  "productDependencyFailures": 0,
+  "scope": "metadata-only navigation; no product failures, no failed direction recovered"
+}
