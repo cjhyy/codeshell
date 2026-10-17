@@ -7,6 +7,7 @@ export interface SelectableContextTurn {
   toEventId: string;
   eventIds: string[];
   preview: string;
+  clientMessageId?: string;
 }
 
 const SELECTABLE_TYPES = new Set([
@@ -28,6 +29,7 @@ function isRealUserEvent(event: RawTranscriptEvent): boolean {
     event.type === "message" &&
     event.data.role === "user" &&
     event.data.injected !== true &&
+    !event.data.steerId &&
     !isSystemReminderText(event.data.content)
   );
 }
@@ -72,6 +74,10 @@ export function buildSelectableContextTurns(
       fromEventId: first.id,
       toEventId: last.id,
       eventIds: taskTurn.map((event) => event.id),
+      ...(typeof realUserEvent.data.clientMessageId === "string" &&
+      realUserEvent.data.clientMessageId
+        ? { clientMessageId: realUserEvent.data.clientMessageId }
+        : {}),
       preview:
         typeof previewContent === "string"
           ? previewContent.slice(0, 160)
@@ -93,6 +99,8 @@ interface ContextSelectableDisplayItem {
   kind: string;
   injected?: boolean;
   text?: string;
+  sourceEventId?: string;
+  clientMessageId?: string;
 }
 
 export interface ContextSelectionDisplayGroup<T extends ContextSelectableDisplayItem> {
@@ -130,6 +138,44 @@ export function groupStreamItemsIntoContextTurns<T extends ContextSelectableDisp
   }
   flush();
   return groups;
+}
+
+/** A display window may start anywhere in the raw transcript. Never infer its offset
+ * from row positions or text, which can repeat. Refuse incomplete/ambiguous alignment. */
+export function alignContextSelectionGroups<T extends ContextSelectableDisplayItem>(
+  groups: readonly ContextSelectionDisplayGroup<T>[],
+  turns: readonly SelectableContextTurn[],
+): ContextSelectionDisplayGroup<T>[] | null {
+  const events = new Map<string, number | null>();
+  const clients = new Map<string, number | null>();
+  const add = (map: Map<string, number | null>, id: string, index: number) => {
+    map.set(id, map.has(id) && map.get(id) !== index ? null : index);
+  };
+  turns.forEach((turn, index) => {
+    for (const id of turn.eventIds) add(events, id, index);
+    if (turn.clientMessageId) add(clients, turn.clientMessageId, index);
+  });
+  const aligned: ContextSelectionDisplayGroup<T>[] = [];
+  let previous: number | undefined;
+  for (const group of groups) {
+    if (group.selectionIndex === null) {
+      aligned.push(group);
+      continue;
+    }
+    const user = group.items[0]!;
+    // Repeated submit identities cannot prove which rendered history owns a range.
+    if (user.clientMessageId && clients.get(user.clientMessageId) === null) return null;
+    const index = user.sourceEventId
+      ? events.get(user.sourceEventId)
+      : user.clientMessageId
+        ? clients.get(user.clientMessageId)
+        : undefined;
+    if (index === undefined || index === null || (previous !== undefined && index !== previous + 1))
+      return null;
+    aligned.push({ ...group, selectionIndex: index });
+    previous = index;
+  }
+  return aligned;
 }
 
 export function selectedTurnRange(

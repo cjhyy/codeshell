@@ -122,6 +122,7 @@ export const chat = {
         empty: "暂无可转发的对话",
         emptyHint: "完成一轮对话后，就可以把它带入新会话继续聊。",
         readFailed: "暂时无法读取对话",
+        alignRequired: "暂时无法对齐对话历史。请退出选择并加载更早的历史后重试。",
         selected: "已选择 {count} 轮对话",
         selectionHint: "所选内容将整理成摘要，作为新会话的背景。",
         rangeStart: "起点",
@@ -434,6 +435,8 @@ export const chat = {
         empty: "No conversation turns to forward",
         emptyHint: "Complete a conversation turn, then bring it into a new session to continue.",
         readFailed: "Could not load the conversation",
+        alignRequired:
+          "Conversation history could not be aligned. Exit selection and load earlier history before retrying.",
         selected: "{count} conversation turns selected",
         selectionHint: "Selected content becomes background context in the new session.",
         rangeStart: "Start",

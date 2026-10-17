@@ -44,6 +44,8 @@ export interface UserMessage {
   steerId?: string;
   /** Stable submit-intent id used to merge duplicate local/server echoes. */
   clientMessageId?: string;
+  /** Original persisted user event when replayed from a transcript window. */
+  sourceEventId?: string;
   /** True until the engine echoes steer_injected for this steerId. */
   pending?: boolean;
   /** User-supplied Mimi attachments projected for chat rendering. */
@@ -2062,6 +2064,7 @@ export function appendUserMessage(
   pending?: boolean,
   clientMessageId?: string,
   attachments?: PetChatAttachment[],
+  sourceEventId?: string,
 ): MessagesReducerState {
   if (clientMessageId) {
     let replaced = false;
@@ -2078,6 +2081,7 @@ export function appendUserMessage(
           pending: pending ?? m.pending,
           clientMessageId,
           attachments: attachments ?? m.attachments,
+          ...(sourceEventId ? { sourceEventId } : {}),
         };
       }
       return m;
@@ -2106,6 +2110,7 @@ export function appendUserMessage(
         pending,
         clientMessageId,
         attachments,
+        ...(sourceEventId ? { sourceEventId } : {}),
       },
     ],
   };

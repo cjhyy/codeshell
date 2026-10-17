@@ -2,6 +2,7 @@ import { describe, expect, it } from "bun:test";
 import type { RawTranscriptEvent } from "../preload/types";
 import {
   buildSelectableContextTurns,
+  alignContextSelectionGroups,
   copyContextPackageOverrides,
   groupStreamItemsIntoContextTurns,
   selectedTurnRange,
@@ -16,6 +17,72 @@ const event = (
 ): RawTranscriptEvent => ({ id, type, turnNumber, timestamp: turnNumber, data });
 
 describe("MessageStream context selection", () => {
+  it("aligns a same-text tail by durable event identity, independently of its local row index", () => {
+    const turns = buildSelectableContextTurns(
+      [
+        event("old", "message", 0, { role: "user", content: "continue" }),
+        event("b1", "turn_boundary", 1),
+        event("recent", "message", 1, { role: "user", content: "continue" }),
+        event("b2", "turn_boundary", 2),
+      ],
+      false,
+    );
+    const groups = groupStreamItemsIntoContextTurns([
+      { id: "random-renderer-id", kind: "user", text: "continue", sourceEventId: "recent" },
+    ]);
+    expect(groups[0]?.selectionIndex).toBe(0);
+    expect(alignContextSelectionGroups(groups, turns)?.[0]?.selectionIndex).toBe(1);
+  });
+
+  it("does not replace a missing raw identity with a coincident submit id or UI position", () => {
+    const turns = buildSelectableContextTurns(
+      [
+        event("u1", "message", 0, { role: "user", content: "one", clientMessageId: "client" }),
+        event("b1", "turn_boundary", 1),
+      ],
+      false,
+    );
+    for (const user of [
+      { id: "ui", kind: "user", text: "one" },
+      { id: "ui", kind: "user", text: "one", sourceEventId: "missing", clientMessageId: "client" },
+    ])
+      expect(
+        alignContextSelectionGroups(groupStreamItemsIntoContextTurns([user]), turns),
+      ).toBeNull();
+    expect(
+      alignContextSelectionGroups(
+        groupStreamItemsIntoContextTurns([{ id: "ui", kind: "user", clientMessageId: "client" }]),
+        turns,
+      )?.[0]?.selectionIndex,
+    ).toBe(0);
+  });
+
+  it("rejects reordered or noncontiguous display windows rather than forwarding unseen turns", () => {
+    const turns = buildSelectableContextTurns(
+      [0, 1, 2].flatMap((index) => [
+        event(`u${index}`, "message", index, { role: "user", content: "same" }),
+        event(`b${index}`, "turn_boundary", index + 1),
+      ]),
+      false,
+    );
+    for (const indices of [
+      [2, 1],
+      [0, 2],
+    ])
+      expect(
+        alignContextSelectionGroups(
+          groupStreamItemsIntoContextTurns(
+            indices.map((index) => ({
+              id: `ui${index}`,
+              kind: "user",
+              sourceEventId: `u${index}`,
+            })),
+          ),
+          turns,
+        ),
+      ).toBeNull();
+  });
+
   it("groups complete turns, keeps tool cards with their turn and excludes a streaming tail", () => {
     const turns = buildSelectableContextTurns(
       [

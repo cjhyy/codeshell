@@ -34,11 +34,11 @@ const source = `
   const summary={zh:'我们已经确定了首页的信息层级：当前任务、最近项目和常用入口。\\n\\n设计方向保持简洁，用清晰的标题、适度的留白和统一的操作样式帮助用户快速找到下一步。\\n\\n接下来先完成首页草图，再逐步细化任务卡片与导航。',
     en:'We agreed on the home page hierarchy: current tasks, recent projects, and common actions.\\n\\nThe design should use clear headings, comfortable spacing, and consistent controls so people can find the next step quickly.\\n\\nNext, finish the page sketch, then refine the task cards and navigation.'};
   const messages=lang=>[
-    {kind:'user',id:'display-user-1',text:lang==='zh'?'我们要重新设计项目首页，先帮我梳理重点。':'Help me identify the priorities for redesigning the project home page.'},
+    {kind:'user',id:'display-user-1',sourceEventId:'raw-user-1',text:lang==='zh'?'我们要重新设计项目首页，先帮我梳理重点。':'Help me identify the priorities for redesigning the project home page.'},
     {kind:'assistant',id:'display-answer-1',done:true,text:lang==='zh'?'首页可以突出三个区域：当前任务、最近项目和常用入口。先让信息层级清楚，再考虑视觉细节。':'Start with three areas: current tasks, recent projects, and common actions. Clarify the hierarchy before refining visual details.'},
-    {kind:'user',id:'display-user-2',text:lang==='zh'?'视觉上希望更简洁，操作也更顺手。':'Keep the visual design simple and make the controls easier to use.'},
+    {kind:'user',id:'display-user-2',sourceEventId:'raw-user-2',text:lang==='zh'?'视觉上希望更简洁，操作也更顺手。':'Keep the visual design simple and make the controls easier to use.'},
     {kind:'assistant',id:'display-answer-2',done:true,text:lang==='zh'?'建议减少重复边框，统一按钮和间距。主要操作用明确的文字，次要信息保持低对比度。':'Reduce repeated borders and use consistent buttons and spacing. Give primary actions clear labels and keep secondary information quiet.'},
-    {kind:'user',id:'display-user-3',text:lang==='zh'?'很好，把这些结论带到新会话，继续讨论首页草图。':'Take these decisions into a new conversation so we can discuss the home page sketch.'},
+    {kind:'user',id:'display-user-3',sourceEventId:'raw-user-3',text:lang==='zh'?'很好，把这些结论带到新会话，继续讨论首页草图。':'Take these decisions into a new conversation so we can discuss the home page sketch.'},
     {kind:'assistant',id:'display-answer-3',done:true,text:lang==='zh'?'可以保留这三轮完整讨论作为背景，下一步直接从草图开始。':'Keep all three complete exchanges as background, then start directly with the sketch.'},
   ];
   window.codeshell={

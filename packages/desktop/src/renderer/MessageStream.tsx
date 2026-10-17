@@ -33,6 +33,7 @@ import { useT } from "./i18n/I18nProvider";
 import type { SummaryForkSessionResult } from "../preload/types";
 import {
   buildSelectableContextTurns,
+  alignContextSelectionGroups,
   groupStreamItemsIntoContextTurns,
   isSystemReminderText,
   selectedTurnRange,
@@ -319,7 +320,11 @@ export function MessageStream({
   }, [contextSelectionRequest, openContextSelection]);
 
   const chooseTurn = (index: number) => {
-    if (selectionStatus !== "idle" || packagingEpochRef.current === selectionLoadEpochRef.current)
+    if (
+      !selectionAligned ||
+      selectionStatus !== "idle" ||
+      packagingEpochRef.current === selectionLoadEpochRef.current
+    )
       return;
     if (selectionAnchor === null || selectionEnd === null) {
       setSelectionAnchor(index);
@@ -359,6 +364,7 @@ export function MessageStream({
     if (
       !localRuntime ||
       !engineSessionId ||
+      !selectionAligned ||
       selectionAnchor === null ||
       selectionEnd === null ||
       selectionStatus !== "idle" ||
@@ -435,7 +441,11 @@ export function MessageStream({
       ),
     [messages, liveTurnActive],
   );
-  const displayGroups = useMemo(() => groupStreamItemsIntoContextTurns(items), [items]);
+  const displayGroups = useMemo(
+    () => alignContextSelectionGroups(groupStreamItemsIntoContextTurns(items), selectionTurns),
+    [items, selectionTurns],
+  );
+  const selectionAligned = displayGroups !== null;
 
   const renderStreamItem = (m: RenderedStreamItem): React.ReactNode => {
     if (m.kind === "turn_process_group") {
@@ -658,47 +668,58 @@ export function MessageStream({
         >
           <div className="cs-chat-transcript w-full min-w-0">
             {!selectionOpen && leading}
-            {selectionOpen && (selectionStatus === "loading" || selectionTurns.length === 0) && (
-              <div
-                className={
-                  "cs-context-selection-state" +
-                  (selectionError && selectionStatus !== "loading"
-                    ? " cs-context-selection-state-error"
-                    : "")
-                }
-              >
-                {(!selectionError || selectionStatus === "loading") && (
-                  <span className="mb-3 flex size-11 items-center justify-center rounded-2xl border border-border/70 bg-card text-muted-foreground">
-                    {selectionStatus === "loading" ? (
-                      <Loader2 size={20} className="animate-spin text-primary" aria-hidden="true" />
-                    ) : (
-                      <MessageSquare size={20} aria-hidden="true" />
-                    )}
-                  </span>
-                )}
-                <p
-                  className="text-sm font-medium text-foreground"
-                  role={selectionStatus === "loading" ? "status" : undefined}
+            {selectionOpen &&
+              (selectionStatus === "loading" ||
+                selectionTurns.length === 0 ||
+                !selectionAligned) && (
+                <div
+                  className={
+                    "cs-context-selection-state" +
+                    (selectionError && selectionStatus !== "loading"
+                      ? " cs-context-selection-state-error"
+                      : "")
+                  }
                 >
-                  {t(
-                    selectionStatus === "loading"
-                      ? "chat.contextPackage.loading"
-                      : selectionError
-                        ? "chat.contextPackage.readFailed"
-                        : "chat.contextPackage.empty",
+                  {(!selectionError || selectionStatus === "loading") && (
+                    <span className="mb-3 flex size-11 items-center justify-center rounded-2xl border border-border/70 bg-card text-muted-foreground">
+                      {selectionStatus === "loading" ? (
+                        <Loader2
+                          size={20}
+                          className="animate-spin text-primary"
+                          aria-hidden="true"
+                        />
+                      ) : (
+                        <MessageSquare size={20} aria-hidden="true" />
+                      )}
+                    </span>
                   )}
-                </p>
-                {selectionStatus !== "loading" && !selectionError && (
-                  <p className="mt-2 max-w-64 text-xs leading-5 text-muted-foreground">
-                    {t("chat.contextPackage.emptyHint")}
+                  <p
+                    className="text-sm font-medium text-foreground"
+                    role={selectionStatus === "loading" ? "status" : undefined}
+                  >
+                    {t(
+                      selectionStatus === "loading"
+                        ? "chat.contextPackage.loading"
+                        : !selectionAligned && selectionTurns.length > 0
+                          ? "chat.contextPackage.alignRequired"
+                          : selectionError
+                            ? "chat.contextPackage.readFailed"
+                            : "chat.contextPackage.empty",
+                    )}
                   </p>
-                )}
-              </div>
-            )}
+                  {selectionStatus !== "loading" &&
+                    !selectionError &&
+                    selectionTurns.length === 0 && (
+                      <p className="mt-2 max-w-64 text-xs leading-5 text-muted-foreground">
+                        {t("chat.contextPackage.emptyHint")}
+                      </p>
+                    )}
+                </div>
+              )}
             {selectionOpen &&
               selectionStatus !== "loading" &&
               selectionTurns.length > 0 &&
-              displayGroups.map((group) => {
+              displayGroups?.map((group) => {
                 const index = group.selectionIndex;
                 if (index === null) {
                   return (
@@ -852,6 +873,7 @@ export function MessageStream({
                     disabled={
                       selectionAnchor === null ||
                       selectionEnd === null ||
+                      !selectionAligned ||
                       selectionStatus !== "idle"
                     }
                     onClick={() => void createContextPackage()}

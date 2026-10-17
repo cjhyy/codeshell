@@ -41,6 +41,8 @@ export function foldTranscript(
             item.steerId,
             undefined,
             item.clientMessageId,
+            undefined,
+            item.sourceEventId,
           )
         : appendUserMessage(
             state,
@@ -51,6 +53,8 @@ export function foldTranscript(
             undefined,
             undefined,
             item.clientMessageId,
+            undefined,
+            item.sourceEventId,
           );
     } else if (item.kind === "turn_stopped") {
       // Rebuild the user-interrupt marker so the stopped turn renders flat

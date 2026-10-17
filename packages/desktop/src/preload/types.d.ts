@@ -272,6 +272,8 @@ export type FoldItem =
       injected?: boolean;
       steerId?: string;
       clientMessageId?: string;
+      /** Persisted user-event identity, independent of the loaded history window. */
+      sourceEventId?: string;
       timestamp?: number;
     }
   // User interrupted this turn (Stop). Rebuilt from the core transcript's

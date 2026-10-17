@@ -15,6 +15,25 @@ function line(type: string, data: Record<string, unknown>): string {
 }
 
 describe("transcriptToFoldItems", () => {
+  it("preserves exact user-event identity without fabricating a cursor from invalid metadata", () => {
+    const user = (id: unknown, clientMessageId?: unknown) =>
+      transcriptToFoldItems(
+        JSON.stringify({
+          id,
+          type: "message",
+          timestamp: 1,
+          turnNumber: 0,
+          data: { role: "user", content: "same", clientMessageId },
+        }),
+      )[0];
+    expect(user("raw-user", "submit-id")).toMatchObject({
+      sourceEventId: "raw-user",
+      clientMessageId: "submit-id",
+    });
+    for (const id of [undefined, 12, "", "x".repeat(513), "raw\0user"])
+      expect(user(id)).not.toHaveProperty("sourceEventId");
+    expect(user("raw-user", 12)).not.toHaveProperty("clientMessageId");
+  });
   it("keeps missing or corrupt persisted time unknown instead of manufacturing epoch timestamps", () => {
     for (const timestamp of [undefined, null, "yesterday", -1, Infinity]) {
       const items = transcriptToFoldItems(
@@ -78,7 +97,7 @@ describe("transcriptToFoldItems", () => {
       event: { type: "session_started", sessionId: "sess-1", promptTokens: 0 },
       timestamp: 1,
     });
-    expect(items[1]).toEqual({ kind: "user", text: "hello", timestamp: 1 });
+    expect(items[1]).toEqual({ kind: "user", text: "hello", sourceEventId: "x", timestamp: 1 });
     expect(items[2]).toEqual({
       kind: "stream",
       event: { type: "stream_request_start", turnNumber: 0 },
@@ -224,6 +243,7 @@ describe("transcriptToFoldItems", () => {
       text: "直接搜一下 给我第8个",
       steerId: "q-1",
       clientMessageId: "client-1",
+      sourceEventId: "x",
       timestamp: 1,
     });
   });
@@ -242,6 +262,7 @@ describe("transcriptToFoldItems", () => {
       kind: "user",
       text: "【Design Studio】 把标题改得更醒目",
       clientMessageId: "panel:design-studio:1",
+      sourceEventId: "x",
       timestamp: 1,
     });
   });
@@ -265,7 +286,9 @@ describe("transcriptToFoldItems", () => {
     const items = transcriptToFoldItems(jsonl);
     const userItems = items.filter((i) => i.kind === "user");
     // Only the REAL user message survives as a bubble; the injected one is gone.
-    expect(userItems).toEqual([{ kind: "user", text: "真正的用户问题", timestamp: 1 }]);
+    expect(userItems).toEqual([
+      { kind: "user", text: "真正的用户问题", sourceEventId: "x", timestamp: 1 },
+    ]);
   });
 
   it("retains an internal submission as an empty run anchor without its machine prompt", () => {
@@ -283,12 +306,19 @@ describe("transcriptToFoldItems", () => {
       ].join("\n"),
     );
     expect(items.filter((item) => item.kind === "user")).toEqual([
-      { kind: "user", text: "Start the work", clientMessageId: "request", timestamp: 1 },
+      {
+        kind: "user",
+        text: "Start the work",
+        clientMessageId: "request",
+        sourceEventId: "x",
+        timestamp: 1,
+      },
       {
         kind: "user",
         text: "",
         injected: true,
         clientMessageId: "internal-completion",
+        sourceEventId: "x",
         timestamp: 1,
       },
     ]);
@@ -385,7 +415,7 @@ describe("transcriptToFoldItems", () => {
       line("message", { role: "user", content: "ok" }),
     ].join("\n");
     const items = transcriptToFoldItems(jsonl);
-    expect(items).toEqual([{ kind: "user", text: "ok", timestamp: 1 }]);
+    expect(items).toEqual([{ kind: "user", text: "ok", sourceEventId: "x", timestamp: 1 }]);
   });
 
   it("maps summary and error", () => {
@@ -636,7 +666,7 @@ describe("getSessionTranscript", () => {
       line("message", { role: "user", content: "yo" }) + "\n",
     );
     expect(await getSessionTranscript("sess-9", dir)).toEqual([
-      { kind: "user", text: "yo", timestamp: 1 },
+      { kind: "user", text: "yo", sourceEventId: "x", timestamp: 1 },
     ]);
   });
 
@@ -656,6 +686,7 @@ describe("getSessionTranscript", () => {
       expect((await getSessionTranscriptPage(id, {}, dir)).items).toContainEqual({
         kind: "user",
         text: `history-${id}`,
+        sourceEventId: "x",
         timestamp: 1,
       });
     }
@@ -706,7 +737,7 @@ describe("getSessionTranscript", () => {
       line("message", { role: "user", content: "current" }),
     );
     expect(await getSessionTranscript("migrated", dir)).toEqual([
-      { kind: "user", text: "current", timestamp: 1 },
+      { kind: "user", text: "current", sourceEventId: "x", timestamp: 1 },
     ]);
   });
 

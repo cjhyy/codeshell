@@ -92,16 +92,16 @@ const summaryResult: SummaryForkSessionResult = {
 };
 
 const displayMessages: Message[] = [
-  { kind: "user", id: "display-user", text: "old selection" },
+  { kind: "user", id: "display-user", sourceEventId: "old-user", text: "old selection" },
   { kind: "assistant", id: "display-assistant", text: "answer", done: true },
 ];
 
 const multiTurnDisplayMessages: Message[] = [
-  { kind: "user", id: "display-u1", text: "first" },
+  { kind: "user", id: "display-u1", sourceEventId: "u1", text: "first" },
   { kind: "assistant", id: "display-a1", text: "first answer", done: true },
-  { kind: "user", id: "display-u2", text: "second" },
+  { kind: "user", id: "display-u2", sourceEventId: "u2", text: "second" },
   { kind: "assistant", id: "display-a2", text: "second answer", done: true },
-  { kind: "user", id: "display-u3", text: "third" },
+  { kind: "user", id: "display-u3", sourceEventId: "u3", text: "third" },
   { kind: "assistant", id: "display-a3", text: "third answer", done: true },
 ];
 

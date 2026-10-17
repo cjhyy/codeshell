@@ -244,7 +244,12 @@ export function transcriptToFoldItems(jsonl: string): FoldItem[] {
         continue;
       }
       ev = {
-        id: typeof rawEvent.id === "string" ? rawEvent.id.slice(0, 512) : "",
+        id:
+          typeof rawEvent.id === "string" &&
+          rawEvent.id.length <= 512 &&
+          !rawEvent.id.includes("\0")
+            ? rawEvent.id
+            : "",
         type: rawEvent.type,
         timestamp:
           typeof rawEvent.timestamp === "number" &&
@@ -318,6 +323,7 @@ export function transcriptToFoldItems(jsonl: string): FoldItem[] {
                 text: "",
                 injected: true,
                 clientMessageId: d.clientMessageId,
+                ...(ev.id ? { sourceEventId: ev.id } : {}),
                 timestamp: ts,
               });
             }
@@ -330,7 +336,10 @@ export function transcriptToFoldItems(jsonl: string): FoldItem[] {
                 ? d.displayText
                 : textOf(d.content),
             ...(d.steerId ? { steerId: String(d.steerId) } : {}),
-            ...(d.clientMessageId ? { clientMessageId: String(d.clientMessageId) } : {}),
+            ...(typeof d.clientMessageId === "string" && d.clientMessageId
+              ? { clientMessageId: d.clientMessageId }
+              : {}),
+            ...(ev.id ? { sourceEventId: ev.id } : {}),
             timestamp: ts,
           });
         } else if (role === "assistant") {
