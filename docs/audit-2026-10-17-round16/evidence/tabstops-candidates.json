@@ -1,0 +1,50 @@
+[
+  {
+    "id": "TAB-R16-C1",
+    "title": "TUI tab measurement uses relative column zero while static screen writer uses absolute origin",
+    "status": "candidate",
+    "frozenBase": "ac314bf73e99399b72ec0aa7c8ce9d5c3ab4bc2f",
+    "source": [
+      {
+        "path": "packages/tui/src/render/tabstops.ts",
+        "line": 22
+      },
+      {
+        "path": "packages/tui/src/render/dom.ts",
+        "line": 350
+      },
+      {
+        "path": "packages/tui/src/render/output.ts",
+        "line": 683
+      }
+    ],
+    "observed": "Actual expandTabs and Bun.stringWidth produce width 9 for aaaaaaa\\tX. Static output arithmetic at origin 5 implies relative width 12.",
+    "normalProducer": "CodeBlock.tsx:29,41,42 keeps code tabs in a Text node after margin/prefix; source-only.",
+    "whyCandidate": "Actual DOM/Yoga/writer/terminal not executed; final visible/layout impact and correction by other constraints unproven. The 12 result is standalone integer arithmetic from static source, not an executed product writer.",
+    "controls": "Default leading/consecutive/exact-boundary tabs, newline reset and positive custom interval.",
+    "runtimeEvidence": "evidence/tabstops-pure.first.raw.log",
+    "runtimeScope": "Actual pure expandTabs, real tokenizer and real Bun.stringWidth; static output arithmetic."
+  },
+  {
+    "id": "TAB-R16-C2",
+    "title": "SGR boundary inside a hand-built ZWJ cluster changes tab padding",
+    "status": "candidate",
+    "frozenBase": "ac314bf73e99399b72ec0aa7c8ce9d5c3ab4bc2f",
+    "source": [
+      {
+        "path": "packages/tui/src/render/tabstops.ts",
+        "line": 24
+      },
+      {
+        "path": "packages/tui/src/render/tabstops.ts",
+        "line": 39
+      }
+    ],
+    "observed": "Actual whole emoji width 2 and styled whole prefix width 2, but text-token widths 2+2 cause tab padding 6→4; actual styled expanded line width 7.",
+    "normalProducer": "Unproven; SGR boundary inside the grapheme is hand-built. Ordinary markdown/highlighter not executed.",
+    "whyCandidate": "No ordinary producer or terminal rendering evidence for a style change inside a ZWJ grapheme. No confirmed product impact.",
+    "controls": "ASCII SGR boundaries, complete OSC 8 string, Chinese width, decomposed Latin width, unsplit emoji.",
+    "runtimeEvidence": "evidence/tabstops-pure.first.raw.log",
+    "runtimeScope": "Actual pure expandTabs, real tokenizer and real Bun.stringWidth; no JS fallback, ANSI Parser, UI or terminal."
+  }
+]

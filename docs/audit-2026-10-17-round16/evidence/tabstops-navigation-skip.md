@@ -1,0 +1,8 @@
+# Metadata navigation skips (no product execution)
+
+1. First command `rg -n getGraphemeSegmenter packages/core/src/intl.ts packages/core/src --glob '*.ts'` included a guessed path. First tool response: `rg: packages/core/src/intl.ts: No such file or directory (os error 2)`. The enclosing read command ended at a later successful read (exit 0); this is not a successful probe of that path. Skip the nonexistent path. The independently inventoried actual file is `packages/core/src/utils/intl.ts`; that real file was read afterwards. No runtime validation had occurred.
+2. First command included shell glob `packages/tui/src/ui/components/Markdown*`. First tool response: `zsh:1: no matches found: packages/tui/src/ui/components/Markdown*`, exit 1. Skip the guessed component path; the independently inventoried actual code used for the static producer analysis is `packages/tui/src/ui/components/CodeBlock.tsx` and later rg found MessageContent. Neither component is imported/executed by this audit.
+
+These are metadata-only navigation errors. They do not establish a product defect, dependency failure, or Bun test failure. No failed product fixture was repaired or rerun.
+
+3. First metadata artifact collector checked report links before creating its own planned receipt. First tool response: `Traceback (most recent call last): File "<stdin>", line 8, in <module>; AssertionError: evidence/tabstops-artifact-receipt.json`, exit 1. The collector had not executed product or tests. The ordering error was corrected by creating the owned receipt first, then checking links and refreshing only receipt metadata. No product rerun or original-log change. This is an assembly failure, separate from the two navigation skips.

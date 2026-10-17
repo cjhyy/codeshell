@@ -1,0 +1,139 @@
+{
+  "baseline": "ac314bf73e99399b72ec0aa7c8ce9d5c3ab4bc2f",
+  "totals": {
+    "firstBunShards": 4,
+    "completedCleanShards": 4,
+    "failedBunShards": 0,
+    "passedTests": 40,
+    "expectations": 111,
+    "failedTests": 0,
+    "skippedOrFilteredTests": 0,
+    "existingBaselineTests": 0,
+    "newFocusedObservationsAndControls": 40,
+    "actualPureModuleTests": 33,
+    "sourceExtractedPredicateTests": 7,
+    "productReruns": 0
+  },
+  "runs": [
+    {
+      "log": "evidence/root-memoize.first.log",
+      "exitFile": "evidence/root-memoize.first.exit.json",
+      "command": [
+        "node",
+        "scripts/run-bun-test-shard.mjs",
+        "--timeout",
+        "30000",
+        "docs/audit-2026-10-17-round16/evidence/root-memoize.test.ts"
+      ],
+      "firstRun": true,
+      "attempts": 1,
+      "reruns": 0,
+      "exitCode": 0,
+      "completed": true,
+      "clean": true,
+      "passed": 7,
+      "failed": 0,
+      "errors": 0,
+      "expectations": 36,
+      "skipped": 0,
+      "existingTests": 0,
+      "focusedTests": 7,
+      "scope": "actual pure memoize with owned callbacks; no scanner/loader",
+      "sha256": "de2c78107ddcec01fa6d49e091878ce8aea44751afea0c681d379a778bc086d7"
+    },
+    {
+      "log": "evidence/tabstops-pure.first.raw.log",
+      "exitFile": "evidence/tabstops-pure.first.exit.json",
+      "command": [
+        "node",
+        "scripts/run-bun-test-shard.mjs",
+        "--timeout",
+        "30000",
+        "docs/audit-2026-10-17-round16/evidence/tabstops-pure.test.ts"
+      ],
+      "firstRun": true,
+      "attempts": 1,
+      "reruns": 0,
+      "exitCode": 0,
+      "completed": true,
+      "clean": true,
+      "passed": 9,
+      "failed": 0,
+      "errors": 0,
+      "expectations": 27,
+      "skipped": 0,
+      "existingTests": 0,
+      "focusedTests": 9,
+      "scope": "actual expandTabs/tokenizer/Bun width with pre-import minimal Core barrel; output origin arithmetic static",
+      "sha256": "e2b4c30af39f2cf7535712487ed6e1f29ea210b8468c8d72f58be18fe37f2cf3"
+    },
+    {
+      "log": "evidence/tasknoise-pure.first.raw.log",
+      "exitFile": "evidence/tasknoise-pure.first.exit.json",
+      "command": [
+        "node",
+        "scripts/run-bun-test-shard.mjs",
+        "--timeout",
+        "30000",
+        "docs/audit-2026-10-17-round16/evidence/tasknoise-pure.test.ts"
+      ],
+      "firstRun": true,
+      "attempts": 1,
+      "reruns": 0,
+      "exitCode": 0,
+      "completed": true,
+      "clean": true,
+      "passed": 17,
+      "failed": 0,
+      "errors": 0,
+      "expectations": 27,
+      "skipped": 0,
+      "existingTests": 0,
+      "focusedTests": 17,
+      "scope": "actual detectPastedNoise pure helper; renderer/transport/Engine static",
+      "sha256": "fc7fc1d152cbbed6078d48a0e3cf82660fc16120c5225ee394b99b414f560f10"
+    },
+    {
+      "log": "evidence/bidi-predicate.first.raw.log",
+      "exitFile": "evidence/bidi-predicate.first.exit.json",
+      "command": [
+        "node",
+        "scripts/run-bun-test-shard.mjs",
+        "--timeout",
+        "30000",
+        "docs/audit-2026-10-17-round16/evidence/bidi-predicate.test.ts"
+      ],
+      "firstRun": true,
+      "attempts": 1,
+      "reruns": 0,
+      "exitCode": 0,
+      "completed": true,
+      "clean": true,
+      "passed": 7,
+      "failed": 0,
+      "errors": 0,
+      "expectations": 21,
+      "skipped": 0,
+      "existingTests": 0,
+      "focusedTests": 7,
+      "scope": "compiled-from-frozen-source hasRTLCharacters predicate; actual module/export/library/platform gate not executed",
+      "sha256": "b7e103d3a9ca6ecce958657ec1b73d1eaa93b2ab96f942675a233ca74bbabb17"
+    }
+  ],
+  "metadataNotes": [
+    "evidence/root-navigation-skip.md",
+    "evidence/tabstops-navigation-skip.md",
+    "evidence/tasknoise-navigation-skip.md"
+  ],
+  "notes": [
+    "Four first combined stdout/stderr logs and exit receipts saved before inspection; no failed Bun shard, product retry, fixture repair or alternative validation.",
+    "All40 tests are new focused observations/controls.33 execute actual pure helper modules;7 compile an exact frozen-source predicate. No existing suite or full bidi module execution.",
+    "Tab origin12 is standalone integer arithmetic corresponding to static writer code, not an executed screen writer; inside-grapheme SGR is hand-built and ordinary producer unproven.",
+    "Tab fixture pre-import exposes only actual intl getGraphemeSegmenter through Core barrel; real tokenizer and Bun.stringWidth retained; no JS width fallback or terminal.",
+    "Noise helper's cleaned projection is consumed only in the static rejection hint; normal Engine taskText is not shown rewritten. Input transport and exhaustive heuristic contracts unproven.",
+    "Bidi predicate removes only two TS signature annotations from frozen function; no library, actual export, platform/env gate or terminal. Mirroring concern is static; glyph handling not verified.",
+    "Initial bidi double-backslash hypothesis disproved by raw bytes and controls, not a finding or failed execution.",
+    "Metadata navigation/collector errors separately transcribed and skipped/corrected only as metadata; no guessed package/resolver preflight or restored old failed dynamic direction.",
+    "No real models, paid APIs, accounts, user artifacts, external messages, product network/native/PTY/auth/permission/security/custody/watchdog experiments, shared dependency/dist rebuild or full build/typecheck/lint/suite."
+  ]
+}

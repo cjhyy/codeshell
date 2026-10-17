@@ -1,0 +1,11 @@
+# Root read-only review: Bidi lane
+
+Accept **0 formal findings / 2 candidates / 0 related**. Root read bidi.md, predicate fixture, first raw/exit, source/extraction/artifact records, full bidi.ts and selected Output consumer ranges. The single first guarded run is 7 pass / 21 expectations / 0 fail/skip, all focused; no product or test execution was added during review.
+
+The fixture reads exact frozen bytes and extracts only the final hasRTLCharacters function, removes the two signature annotations and compiles its otherwise unchanged body. Root independently verified original-function, compiled-function, actual New Function argument and emitted artifact hashes without compiling or calling any of them. This proves the provenance of a source-extracted predicate, not actual reorderBidi module, bidi-js, platform/env gate or terminal execution. Single-backslash bytes disprove the initial display-escaping hypothesis; it is correctly omitted from findings.
+
+The Adlam predicate observation is accurately bounded. Root independently opened [Unicode DerivedBidiClass](https://www.unicode.org/Public/UCD/latest/ucd/extracted/DerivedBidiClass.txt) and confirmed the stated range has class R. Root also checked [UAX #9](https://www.unicode.org/reports/tr9/): the current header reports Unicode 18.0.0 / revision 52 / 2026-09-01; L4 and section 7 concern mirrored glyph display. These primary references support the directional-property/display background only. They do not establish installed bidi-js coverage, current font support or terminal output. No platform experiment occurred.
+
+The mirroring item is source-only. Objects retain their value through reordering and the directly inspected Output consumer passes it to setCellAt, but actual embedding levels, final glyph rendering and downstream responsibility remain unverified. The report does not assert that code-point substitution is always required or that a malformed bracket output was observed. Keeping this as a candidate is appropriate.
+
+Read-only metadata checks passed for all 9 frozen/current source hashes and 17 worker artifact bytes/hashes. Selected file hashes do not imply full Output or dependency coverage. Historical keyword inventory and context limits remain distinct from exhaustive semantic dedup. No required correction, extra runtime, fixture change or Git write was requested.

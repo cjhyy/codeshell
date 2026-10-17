@@ -1,0 +1,77 @@
+{
+  "frozenBase": "ac314bf73e99399b72ec0aa7c8ce9d5c3ab4bc2f",
+  "sources": [
+    {
+      "path": "CODESHELL.md",
+      "frozenBytes": 17639,
+      "frozenSha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "currentSha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "currentMatchesFrozen": true,
+      "scope": "Full read repository instructions; no product execution."
+    },
+    {
+      "path": "AGENTS.md",
+      "frozenBytes": 206,
+      "frozenSha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "currentSha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "currentMatchesFrozen": true,
+      "scope": "Root instruction alias; workflow handled by parent."
+    },
+    {
+      "path": "packages/tui/src/render/bidi.ts",
+      "frozenBytes": 4305,
+      "frozenSha256": "561670cc97aaba05770800bd15e13021c817f550a3438f8800a57073faf988aa",
+      "currentSha256": "561670cc97aaba05770800bd15e13021c817f550a3438f8800a57073faf988aa",
+      "currentMatchesFrozen": true,
+      "scope": "Fully read. Exact lines 132-140 predicate source extracted and compiled; no actual export, getBidi, needsBidi, library or complete algorithm execution."
+    },
+    {
+      "path": "packages/tui/src/render/output.ts",
+      "frozenBytes": 27146,
+      "frozenSha256": "aa3caa98bfe9af0cf4215f877e08d914b48c715554a53df4bfcbd6a239fcdaef",
+      "currentSha256": "aa3caa98bfe9af0cf4215f877e08d914b48c715554a53df4bfcbd6a239fcdaef",
+      "currentMatchesFrozen": true,
+      "scope": "Selected static excerpts: ClusteredChar fields, line splitting, style/grapheme production, reorderBidi call and direct cell write; no Output import or screen rendering."
+    },
+    {
+      "path": "packages/tui/src/render/stringWidth.ts",
+      "frozenBytes": 7186,
+      "frozenSha256": "278150fbb17d545715e00b545c77791fb72dd7eed35a8a01b55dce76b4e60463",
+      "currentSha256": "278150fbb17d545715e00b545c77791fb72dd7eed35a8a01b55dce76b4e60463",
+      "currentMatchesFrozen": true,
+      "scope": "First 150 lines static source only, no width helper import/execution or correctness claim."
+    },
+    {
+      "path": "packages/tui/src/render/README.md",
+      "frozenBytes": 6920,
+      "frozenSha256": "cf0de9339cb52257f361b79c1f84bf689b44735aa8f7d3e565f43b44ca1d85fc",
+      "currentSha256": "cf0de9339cb52257f361b79c1f84bf689b44735aa8f7d3e565f43b44ca1d85fc",
+      "currentMatchesFrozen": true,
+      "scope": "Full read renderer internal API/ownership contract; no benchmarks or runtime."
+    },
+    {
+      "path": "packages/tui/package.json",
+      "frozenBytes": 2110,
+      "frozenSha256": "93ea44cc43ef7392227bef9146901408a49d3acd31c6a852db710eeadfcfee21",
+      "currentSha256": "93ea44cc43ef7392227bef9146901408a49d3acd31c6a852db710eeadfcfee21",
+      "currentMatchesFrozen": true,
+      "scope": "Static dependency declaration and package boundaries only; no resolver/install checks."
+    },
+    {
+      "path": "bun.lock",
+      "frozenBytes": 339166,
+      "frozenSha256": "89653da5f19dce556850d5f8ba7de47e400274453ef303d9190ebf6bcb61ac2d",
+      "currentSha256": "89653da5f19dce556850d5f8ba7de47e400274453ef303d9190ebf6bcb61ac2d",
+      "currentMatchesFrozen": true,
+      "scope": "Selected bidi-js manifest entries only; whole-file hash is source identity, not whole-file review."
+    },
+    {
+      "path": "scripts/run-bun-test-shard.mjs",
+      "frozenBytes": 233,
+      "frozenSha256": "dd2b245afbcb5aa7c798c8674d34edb8e02bb42be0be320050adf9be5ed2fd7d",
+      "currentSha256": "dd2b245afbcb5aa7c798c8674d34edb8e02bb42be0be320050adf9be5ed2fd7d",
+      "currentMatchesFrozen": true,
+      "scope": "Read small wrapper and invoked guarded runner once; no broad suite."
+    }
+  ]
+}

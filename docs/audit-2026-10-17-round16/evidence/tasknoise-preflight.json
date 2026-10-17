@@ -1,0 +1,9 @@
+{
+  "base": "ac314bf73e99399b72ec0aa7c8ce9d5c3ab4bc2f",
+  "source": "packages/core/src/utils/task-sanitizer.ts",
+  "absoluteImport": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/packages/core/src/utils/task-sanitizer.ts",
+  "sourceSha256": "92678ec033e4451d7b6bd83cd202b9e1956e6f4f59930bd0ccf5329d6f28e1cf",
+  "sourceEqualsFrozen": true,
+  "runtimeImportsBeforeRun": false,
+  "dependencyResolutionPreflight": false
+}

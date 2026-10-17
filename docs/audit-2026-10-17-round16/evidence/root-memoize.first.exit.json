@@ -1,0 +1,12 @@
+{
+  "command": [
+    "node",
+    "scripts/run-bun-test-shard.mjs",
+    "--timeout",
+    "30000",
+    "docs/audit-2026-10-17-round16/evidence/root-memoize.test.ts"
+  ],
+  "exitCode": 0,
+  "firstRun": true,
+  "elapsedSeconds": 0.3038
+}

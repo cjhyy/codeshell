@@ -1,0 +1,71 @@
+{
+  "frozenBase": "ac314bf73e99399b72ec0aa7c8ce9d5c3ab4bc2f",
+  "owner": "tabstops_round16",
+  "scope": "Owned audit documentation/evidence only; no Git or product writes.",
+  "selfExcluded": true,
+  "artifacts": [
+    {
+      "path": "docs/audit-2026-10-17-round16/tabstops.md",
+      "bytes": 6290,
+      "sha256": "23374783f01b06d71f7d96b85a3e0f3674fb1d3cbfadb4ac4c3e72c4d7109e4e"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round16/evidence/tabstops-candidates.json",
+      "bytes": 2482,
+      "sha256": "57fbe3e60431656eff3e398b0151436155fc9ee148e170c802e3f9bec7666f46"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round16/evidence/tabstops-dedup.json",
+      "bytes": 382423,
+      "sha256": "8630de2015694c51afba126d1ad36093386e6756b3ed4919d27b6c9aa5a353e1"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round16/evidence/tabstops-dedup.py",
+      "bytes": 3333,
+      "sha256": "8b376c54df1ffacecde654d0dcd4634ee250d90c2669d4883d7ade46a74aa376"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round16/evidence/tabstops-findings.json",
+      "bytes": 3,
+      "sha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round16/evidence/tabstops-navigation-skip.md",
+      "bytes": 1721,
+      "sha256": "21bf3246d72d50f0ee7373af1c76ba3f4ad2e8535a9f731b4be6cab2f6e32562"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round16/evidence/tabstops-preflight.json",
+      "bytes": 1390,
+      "sha256": "c745a3dfb8e48b6d3d0a8122045345177e713b849d8ecdcf8a6cdbb64fe769ad"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round16/evidence/tabstops-pure.first.exit.json",
+      "bytes": 731,
+      "sha256": "6be8c2b5d615942421cb79fe1ded5b32f761c761310f57e47c778d9636b28c4b"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round16/evidence/tabstops-pure.first.raw.log",
+      "bytes": 1395,
+      "sha256": "e2b4c30af39f2cf7535712487ed6e1f29ea210b8468c8d72f58be18fe37f2cf3"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round16/evidence/tabstops-pure.test.ts",
+      "bytes": 4114,
+      "sha256": "39c077a161a7652b5a32de139589993f380f6841eb50097478b3f9617ede8274"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round16/evidence/tabstops-source-manifest.json",
+      "bytes": 8973,
+      "sha256": "4f91384c62d84a7b0691ebad46ec5f537e28bf4bc3d63ac717c2ef9ebe5cbc44"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round16/evidence/tabstops-validation.json",
+      "bytes": 1489,
+      "sha256": "55404b57c36bdeab75a9e0621fe03393e507aeea6c0045683e530acea4231a97"
+    }
+  ],
+  "artifactCount": 12,
+  "reportLocalLinksChecked": 26,
+  "productReruns": 0
+}

@@ -1,0 +1,21 @@
+{
+  "base": "ac314bf73e99399b72ec0aa7c8ce9d5c3ab4bc2f",
+  "command": [
+    "node",
+    "scripts/run-bun-test-shard.mjs",
+    "--timeout",
+    "30000",
+    "docs/audit-2026-10-17-round16/evidence/tabstops-pure.test.ts"
+  ],
+  "cwd": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell",
+  "startedUtc": "2026-10-17T07:42:45.099818+00:00",
+  "finishedUtc": "2026-10-17T07:42:45.650836+00:00",
+  "exitCode": 0,
+  "rawLog": "docs/audit-2026-10-17-round16/evidence/tabstops-pure.first.raw.log",
+  "rawBytes": 1395,
+  "rawSha256": "e2b4c30af39f2cf7535712487ed6e1f29ea210b8468c8d72f58be18fe37f2cf3",
+  "combinedStdoutStderr": true,
+  "firstAttempt": true,
+  "productReruns": 0,
+  "inspectionOccurredAfterRawAndExitSaved": true
+}

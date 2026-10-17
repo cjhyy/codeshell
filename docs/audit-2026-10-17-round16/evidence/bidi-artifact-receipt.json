@@ -1,0 +1,98 @@
+{
+  "frozenBase": "ac314bf73e99399b72ec0aa7c8ce9d5c3ab4bc2f",
+  "report": "docs/audit-2026-10-17-round16/bidi.md",
+  "formalCount": 0,
+  "candidateCount": 2,
+  "relatedCount": 0,
+  "rawLogs": [
+    "docs/audit-2026-10-17-round16/evidence/bidi-predicate.first.raw.log"
+  ],
+  "artifactCount": 17,
+  "artifacts": [
+    {
+      "path": "docs/audit-2026-10-17-round16/bidi.md",
+      "bytes": 6582,
+      "sha256": "0be4ea613bb4cc763c0c1266a55d264348c96bd8d6c9f1e1277d26acdc61021c"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round16/evidence/bidi-assemble.py",
+      "bytes": 7236,
+      "sha256": "03e95e897a14085fb30df5c281d5011372c5eea4c1a7747f5032500c107611a3"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round16/evidence/bidi-candidates.json",
+      "bytes": 2003,
+      "sha256": "c51d4d7c1a25f53c0757cdc0b33812b77bacf7a143898a351cdcd27266c461e3"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round16/evidence/bidi-compiled-predicate.js",
+      "bytes": 371,
+      "sha256": "68ac08ec2f5d9e72dddd0e493989a4dc8ec639ecdc996302170dd236882fcf8b"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round16/evidence/bidi-dedup.json",
+      "bytes": 370119,
+      "sha256": "1afc108fd8520c096c679669471a35ffe4f05ecb18b26d5ae9e28b152ef3c209"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round16/evidence/bidi-dedup.py",
+      "bytes": 2503,
+      "sha256": "563bc3698182d38f7bde55982395a611b60cc7cbfc91b85acc9249675bc94708"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round16/evidence/bidi-external-contracts.json",
+      "bytes": 884,
+      "sha256": "362e9a94ce0d7c6c8847811d452298e61844a0292e17f5c1e15a8617a8ae56f9"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round16/evidence/bidi-extraction.json",
+      "bytes": 824,
+      "sha256": "c0583ad294a3b0d803288d0070e966dc39bb05025dc5771e25b3899e8891992a"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round16/evidence/bidi-findings.json",
+      "bytes": 3,
+      "sha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round16/evidence/bidi-predicate.first.exit.json",
+      "bytes": 570,
+      "sha256": "5036b846217b3b62cf568ee5409403de2f151cfba9b21caeb2bb619ca8b7a34e"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round16/evidence/bidi-predicate.first.raw.log",
+      "bytes": 1228,
+      "sha256": "b7e103d3a9ca6ecce958657ec1b73d1eaa93b2ab96f942675a233ca74bbabb17"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round16/evidence/bidi-predicate.test.ts",
+      "bytes": 3358,
+      "sha256": "50e475057aee20b600ca1089aa6cec78ec98a8eef7ab167d37dad6c2c45799b0"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round16/evidence/bidi-preflight.json",
+      "bytes": 983,
+      "sha256": "3abbd8a90e519d1b8fa954d294b63fef1db765dec146e88705558d4a37d95488"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round16/evidence/bidi-preflight.py",
+      "bytes": 1434,
+      "sha256": "d1736af4383c9559be192f767405aa37780d8ec216f239cf45933f142afc7dae"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round16/evidence/bidi-run-first.py",
+      "bytes": 1120,
+      "sha256": "c482ad189f1c74c96a596eab0137f14924c85f6d221f094801a96b01b7848265"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round16/evidence/bidi-source-manifest.json",
+      "bytes": 3784,
+      "sha256": "4bf82d7d9decb2f061a36a9b9f0f64a527b57e76f4ab15765e81861f7d432663"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round16/evidence/bidi-validation.json",
+      "bytes": 1237,
+      "sha256": "9906007ec50b4f51173cafe7d82b2cc9a800d8a02bcb9173df6b1928572f842b"
+    }
+  ]
+}
