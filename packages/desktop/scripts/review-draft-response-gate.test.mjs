@@ -1,10 +1,13 @@
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
+import ts from "typescript";
 import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "node:test";
 import vm from "node:vm";
 import { createReviewDraftResponseGate } from "./review-draft-response-gate.mjs";
+import { reviewDraftReadonlyRpcGuardSource } from "./review-draft-readonly-rpc-guard.mjs";
 
 const ids = ["owned-a", "owned-b"];
 const request = (mode = "staged") => ({
@@ -216,7 +219,11 @@ test("native driver keeps actual IPC, early custody, complete operations and fin
   ).replace(/\r\n?/g, "\n");
   const compact = source.replace(/\s+/g, "");
   assert.ok(source.includes("state.gate.invoke(listener,args)"));
-  assert.ok(source.includes('return deny("agent:msg")'));
+  assert.ok(
+    source.includes("reviewDraftReadonlyRpcGuardSource(sessions.map((session) => session.id))"),
+  );
+  assert.ok(compact.includes("assert.deepEqual(report.main.agentMessages,[])"));
+  assert.ok(compact.includes("assert.ok(report.main.readonlyAgentRequests.length>0)"));
   assert.ok(
     source.includes(
       'if(args?.some(arg=>String(arg).includes("agent-server-stdio")))return deny("Worker")',
@@ -336,4 +343,358 @@ test("actual LF/CRLF final tail retains failed owned HOME and truthfully reports
         assert.equal(report.privateHomeRemoved, true, "Final IO cannot restore removed HOME");
     }
   }
+});
+
+function readonlyGuard(record = () => undefined) {
+  const listeners = new Map();
+  const state = { readonlyAgentRequests: [], agentMessages: [] };
+  const denied = [],
+    records = [];
+  const ipcMain = {
+    on(channel, listener) {
+      listeners.set(channel, listener);
+      return ipcMain;
+    },
+  };
+  const source = reviewDraftReadonlyRpcGuardSource(ids);
+  vm.runInNewContext(source, {
+    Buffer,
+    ipcMain,
+    state,
+    recordReviewIpc(row) {
+      const result = record(row);
+      records.push(JSON.parse(JSON.stringify(row)));
+      return result;
+    },
+    deny(kind, metadata) {
+      denied.push({ kind, ...JSON.parse(JSON.stringify(metadata)) });
+      throw Error("Owned RPC denied");
+    },
+  });
+  return { ipcMain, listeners, state, denied, records, source };
+}
+const readonlyLine = (method, params, id = "owned-rpc-1") =>
+  JSON.stringify({ jsonrpc: "2.0", id, method, params });
+const readonlyRequests = ids.flatMap((sessionId) => [
+  ["agent/goalGet", { sessionId }],
+  ["agent/backgroundWork", { sessionId }],
+  ["agent/backgroundWork", { sessionId, scope: "session" }],
+  ["agent/backgroundWork", { sessionId, scope: "all" }],
+  ["agent/backgroundShells", { sessionId, action: "list" }],
+]);
+
+test("actual generated read guard forwards only owned read requests with exact production arguments and return", () => {
+  const guard = readonlyGuard();
+  const event = {},
+    receiver = {},
+    result = { exact: "production listener result" },
+    received = [];
+  guard.ipcMain.on("agent:msg", function (...args) {
+    assert.equal(this, receiver);
+    received.push(args);
+    return result;
+  });
+  for (const [index, [method, params]] of readonlyRequests.entries()) {
+    const line = readonlyLine(method, params, index);
+    assert.equal(guard.listeners.get("agent:msg").call(receiver, event, line), result);
+    assert.equal(received[index][0], event);
+    assert.equal(received[index][1], line);
+    assert.deepEqual(guard.records[index], {
+      kind: "readonly-agent-rpc",
+      method,
+      sessionId: params.sessionId,
+      id: index,
+    });
+  }
+  assert.equal(guard.denied.length, 0);
+  assert.equal(guard.state.readonlyAgentRequests.length, readonlyRequests.length);
+  const other = () => result;
+  guard.ipcMain.on("some-other-channel", other);
+  assert.equal(guard.listeners.get("some-other-channel"), other);
+});
+
+test("read guard refuses turns, configuration, goal writes, shell controls and foreign or extra parameters", () => {
+  const methods = [
+    "agent/run",
+    "agent/configure",
+    "agent/forkSession",
+    "agent/query",
+    "agent/goalSet",
+    "agent/goalUpdate",
+    "agent/goalDelete",
+    "agent/goalClear",
+    "agent/goalExtend",
+    "agent/approve",
+    "agent/cancel",
+    "agent/backgroundWorkCancel",
+  ];
+  const requests = methods.map((method) => [
+    method,
+    { sessionId: ids[0], task: "DO_NOT_RECORD_RAW_TASK", type: "compact" },
+  ]);
+  requests.push(
+    ["agent/backgroundShells", { sessionId: ids[0], action: "kill", shellId: "owned-shell" }],
+    ["agent/backgroundShells", { sessionId: ids[0], action: "output", shellId: "owned-shell" }],
+    ["agent/goalGet", { sessionId: "foreign-session" }],
+    ["agent/goalGet", { sessionId: ids[0], cwd: "/private-argv-must-not-be-recorded" }],
+    ["agent/backgroundWork", { sessionId: ids[0], scope: "foreign" }],
+  );
+  for (const [method, params] of requests) {
+    const guard = readonlyGuard();
+    let calls = 0;
+    guard.ipcMain.on("agent:msg", () => calls++);
+    assert.throws(
+      () => guard.listeners.get("agent:msg")({}, readonlyLine(method, params)),
+      /Owned RPC denied/,
+    );
+    assert.equal(calls, 0);
+    assert.equal(guard.records.length, 0);
+    assert.equal(guard.denied[0].method, method);
+    assert.equal(guard.denied[0].sessionId, params.sessionId);
+    assert.deepEqual(Object.keys(guard.denied[0]).sort(), ["id", "kind", "method", "sessionId"]);
+    assert.ok(!JSON.stringify(guard.denied).includes("DO_NOT_RECORD_RAW_TASK"));
+    assert.ok(!JSON.stringify(guard.denied).includes("private-argv"));
+  }
+});
+
+test("read guard rejects malformed frames and keeps all recorded metadata bounded", () => {
+  const valid = JSON.parse(readonlyLine("agent/goalGet", { sessionId: ids[0] }));
+  const inputs = [
+    null,
+    {},
+    "null",
+    "[]",
+    "{",
+    JSON.stringify({ ...valid, id: null }),
+    JSON.stringify({ ...valid, id: "x".repeat(129) }),
+    JSON.stringify({ ...valid, jsonrpc: "1.0" }),
+    JSON.stringify({ ...valid, params: [] }),
+    JSON.stringify({ ...valid, params: { sessionId: ids[0], extra: true } }),
+    JSON.stringify([valid]),
+    readonlyLine("agent/goalGet", { sessionId: ids[0] }) + "\n",
+    "x".repeat(5000),
+  ];
+  const guard = readonlyGuard();
+  let calls = 0;
+  guard.ipcMain.on("agent:msg", () => calls++);
+  for (const input of inputs) assert.throws(() => guard.listeners.get("agent:msg")({}, input));
+  assert.equal(calls, 0);
+  assert.ok(guard.denied.every((row) => row.method.length <= 70 && row.sessionId.length <= 128));
+  assert.ok(Buffer.byteLength(JSON.stringify(guard.denied)) < 8192);
+  assert.throws(
+    () => vm.runInNewContext(reviewDraftReadonlyRpcGuardSource([ids[0]]), { Buffer, ipcMain: {} }),
+    /Expected two owned/,
+  );
+});
+
+test("read guard preserves exact production failures and refuses evidence IO failure before delegation", async () => {
+  const guard = readonlyGuard(),
+    error = Error("owned production failure");
+  guard.ipcMain.on("agent:msg", () => {
+    throw error;
+  });
+  assert.throws(
+    () =>
+      guard.listeners.get("agent:msg")({}, readonlyLine("agent/goalGet", { sessionId: ids[0] })),
+    (found) => found === error,
+  );
+  const promise = Promise.reject(error);
+  promise.catch(() => {});
+  guard.ipcMain.on("agent:msg", () => promise);
+  assert.equal(
+    guard.listeners.get("agent:msg")({}, readonlyLine("agent/goalGet", { sessionId: ids[0] })),
+    promise,
+  );
+  await assert.rejects(promise, (found) => found === error);
+  let calls = 0;
+  const broken = readonlyGuard(() => {
+    throw Error("owned ledger IO failure");
+  });
+  broken.ipcMain.on("agent:msg", () => calls++);
+  assert.throws(
+    () =>
+      broken.listeners.get("agent:msg")({}, readonlyLine("agent/goalGet", { sessionId: ids[0] })),
+    /ledger IO failure/,
+  );
+  assert.equal(calls, 0);
+  const asynchronous = readonlyGuard(() => ({
+    get then() {
+      throw Error("must not inspect thenable");
+    },
+  }));
+  asynchronous.ipcMain.on("agent:msg", () => calls++);
+  assert.throws(
+    () =>
+      asynchronous.listeners.get("agent:msg")(
+        {},
+        readonlyLine("agent/goalGet", { sessionId: ids[0] }),
+      ),
+    /sink must be synchronous/,
+  );
+  assert.equal(calls, 0);
+});
+
+test("read metadata traffic has a finite admission cap and never records raw messages", () => {
+  const guard = readonlyGuard();
+  let calls = 0;
+  guard.ipcMain.on("agent:msg", () => calls++);
+  const line = readonlyLine("agent/goalGet", { sessionId: ids[0] });
+  for (let i = 0; i < 128; i++) guard.listeners.get("agent:msg")({}, line);
+  assert.throws(() => guard.listeners.get("agent:msg")({}, line));
+  assert.equal(calls, 128);
+  assert.equal(guard.state.readonlyAgentRequests.length, 128);
+  assert.ok(
+    guard.records.every((row) => Object.keys(row).sort().join(",") === "id,kind,method,sessionId"),
+  );
+});
+
+function pureTypescript(
+  relative,
+  require = () => {
+    throw Error("Unexpected runtime import");
+  },
+) {
+  const source = readFileSync(new URL(relative, import.meta.url), "utf8");
+  const exports = {};
+  const compiled = ts.transpileModule(source, {
+    compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 },
+  }).outputText;
+  vm.runInNewContext(compiled, { exports, require });
+  return exports;
+}
+
+test("allowed source routes remain non-run metadata and production no-Worker fallback reads", () => {
+  const fallback = pureTypescript("../src/main/agent-bridge-fallback.ts");
+  const metadata = pureTypescript("../src/main/agent-run-metadata.ts", (name) => {
+    assert.equal(name, "@cjhyy/code-shell-core/internal");
+    return {
+      isOperationBatchAuthorityFrame: () => false,
+      canonicalKey() {
+        throw Error("Unexpected run-only path");
+      },
+    };
+  });
+  const deps = new Proxy(
+    {},
+    {
+      get() {
+        throw Error("Read route requested run authority");
+      },
+    },
+  );
+  const sessions = new Proxy(
+    {
+      readActiveGoal(sid) {
+        assert.ok(ids.includes(sid));
+        return undefined;
+      },
+    },
+    {
+      get(target, key) {
+        assert.equal(key, "readActiveGoal");
+        return target[key];
+      },
+    },
+  );
+  for (const [method, params] of readonlyRequests) {
+    const line = readonlyLine(method, params),
+      prepared = metadata.prepareAgentRunMetadata(
+        line,
+        { origin: "renderer", producer: "agent:msg" },
+        deps,
+      );
+    assert.equal(prepared.outLine, line);
+    assert.equal(prepared.parsed.method, method);
+    assert.equal(fallback.forkSourceSessionId(prepared.parsed), null);
+    assert.equal(fallback.compactQuerySessionId(prepared.parsed), null);
+    const response = JSON.parse(fallback.buildNoChildFallbackReply(prepared.parsed, sessions));
+    assert.equal(response.id, "owned-rpc-1");
+    if (method === "agent/goalGet") assert.equal(response.result.goal, null);
+    else
+      assert.deepEqual(
+        response.result,
+        method === "agent/backgroundWork" ? { items: [] } : { shells: [] },
+      );
+  }
+});
+
+test("readonly guard leaves the original three UI operation bodies frozen", () => {
+  const source = readFileSync(
+    new URL("./e2e-review-draft-operations.mjs", import.meta.url),
+    "utf8",
+  ).replace(/\r\n?/g, "\n");
+  const start = source.indexOf('  diagnostics.phase("review-ui-operations");');
+  const end = source.indexOf("\n} catch (error) {", start);
+  assert.ok(start > 0 && end > start);
+  assert.equal(
+    createHash("sha256").update(source.slice(start, end)).digest("hex"),
+    "ac5e7e1f291decef502e72aefe487807340b1f58f29ce49892c6d65c1e3b2202",
+  );
+});
+
+test("the actual pre-Core template parses and its IPC writer emits complete JSONL bytes", () => {
+  const driver = new URL("./e2e-review-draft-operations.mjs", import.meta.url);
+  const source = readFileSync(driver, "utf8");
+  const parsed = ts.createSourceFile(
+    "driver.mjs",
+    source,
+    ts.ScriptTarget.Latest,
+    true,
+    ts.ScriptKind.JS,
+  );
+  const templates = [];
+  function visit(node) {
+    if (
+      ts.isCallExpression(node) &&
+      node.expression.getText(parsed) === "put" &&
+      node.arguments[0]?.getText(parsed) === "guard" &&
+      ts.isTemplateExpression(node.arguments[1])
+    )
+      templates.push(node.arguments[1]);
+    ts.forEachChild(node, visit);
+  }
+  visit(parsed);
+  assert.equal(templates.length, 1);
+  // Evaluate only the template interpolation, never the generated native imports/guard.
+  const generated = vm.runInNewContext(
+    templates[0].getText(parsed).replaceAll("import.meta.url", JSON.stringify(driver.href)),
+    {
+      JSON,
+      URL,
+      join,
+      isolated: { home: "/owned-fixture" },
+      sessions: ids.map((id) => ({ id })),
+      reviewDraftReadonlyRpcGuardSource,
+    },
+  );
+  const guard = ts.createSourceFile(
+    "guard.mjs",
+    generated,
+    ts.ScriptTarget.Latest,
+    true,
+    ts.ScriptKind.JS,
+  );
+  assert.deepEqual(guard.parseDiagnostics, []);
+  const writer = guard.statements.filter(
+    (statement) =>
+      ts.isVariableStatement(statement) &&
+      statement.declarationList.declarations.some((declaration) =>
+        ["ipcBytes", "ipcFile", "recordReviewIpc"].includes(declaration.name.getText(guard)),
+      ),
+  );
+  assert.equal(writer.length, 3);
+  const writes = [];
+  vm.runInNewContext(
+    writer.map((statement) => statement.getText(guard)).join("\n") +
+      '\nrecordReviewIpc({kind:"readonly-agent-rpc",method:"agent/goalGet",sessionId:"owned-a",id:1});',
+    { Buffer, appendFileSync: (...args) => writes.push(args) },
+  );
+  assert.equal(writes.length, 1);
+  assert.equal(writes[0][0], join("/owned-fixture", "review-draft-ipc.jsonl"));
+  assert.equal(
+    writes[0][1],
+    '{"kind":"readonly-agent-rpc","method":"agent/goalGet","sessionId":"owned-a","id":1}\n',
+  );
+  assert.equal(writes[0][2].mode, 0o600);
+  assert.equal(JSON.parse(writes[0][1]).sessionId, "owned-a");
 });

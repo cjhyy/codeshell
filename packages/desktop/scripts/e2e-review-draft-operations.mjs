@@ -1,6 +1,7 @@
 /* Actual Main/ReviewService/preload/React. Only catalog:list is synthetic.
  * The original preparePrompt listener runs before its exact result is delayed.
- * Never sends an agent message or starts Engine/Worker/provider/OS operations.
+ * Only bounded owned read-only agent metadata reaches its production listener.
+ * Never starts agent turns, Engine/Worker/provider or OS operations.
  * Run through run-isolated-node-smoke.mjs; actual native execution is CI-only. */
 /* global window, document */
 import assert from "node:assert/strict";
@@ -24,6 +25,7 @@ import {
 import { prepareConfinedElectronFixture } from "./confined-electron-fixture.mjs";
 import { watchElectronTestProcess } from "./electron-test-watchdog.mjs";
 import { createReviewOperationDiagnostics } from "./review-operation-diagnostics.mjs";
+import { reviewDraftReadonlyRpcGuardSource } from "./review-draft-readonly-rpc-guard.mjs";
 
 assert.equal(process.env.NODE_ENV, "test");
 assert.equal(process.env.CODE_SHELL_TEST_HOME, join(process.env.HOME, ".code-shell"));
@@ -71,9 +73,9 @@ const report = {
     actual:
       "Owned real Git, compiled Main ReviewService, preload, ReviewPanel, App bucket and ChatView input. No React internals or DOM fabrication.",
     controlled:
-      "catalog:list returns an owned synthetic UI catalog. Two actual preparePrompt responses are held only after the production listener finishes; their result bytes are never replaced. Synthetic owned sidebar/disk Session metadata only.",
+      "catalog:list returns an owned synthetic UI catalog. Two actual preparePrompt responses are held only after the production listener finishes; their result bytes are never replaced. Synthetic owned sidebar/disk Session metadata. Strict owned goalGet/backgroundWork/backgroundShells-list RPCs use the original production listener; no metadata replies are mocked. The production SessionManager may initialize mkdir/chmod/owned staging housekeeping inside this fixture HOME.",
     excluded:
-      "No agent:msg, send, Worker, Engine, provider, credentials, network, native crypto or OS open. Not an OS egress sandbox. Three new operations/one Main are separate from the unchanged original eleven Review operations.",
+      "No agent turns, configuration or goal writes, shell control, Worker, Engine, provider, credentials, network, native crypto or OS open. Not an OS egress sandbox. Three new operations/one Main are separate from the unchanged original eleven Review operations.",
   },
 };
 let isolated, app, win, fixture, captured, monitor, processClosed;
@@ -262,8 +264,9 @@ await import(${JSON.stringify(new URL("../../../scripts/runtime-cost-smoke-isola
 const {app,ipcMain,net,safeStorage,shell} = await import("electron");
 const {createReviewDraftResponseGate} = await import(${JSON.stringify(new URL("./review-draft-response-gate.mjs", import.meta.url).href)});
 let ipcBytes=0;const ipcFile=${JSON.stringify(join(isolated.home, "review-draft-ipc.jsonl"))};
-const state = globalThis.__ownedReviewDraft = {gate:createReviewDraftResponseGate(${JSON.stringify(sessions.map((s) => s.id))},{onRecord:(row)=>{const line=JSON.stringify(row)+"\\n";ipcBytes+=Buffer.byteLength(line);if(ipcBytes>512*1024)throw Error("Review IPC ledger cap");appendFileSync(ipcFile,line,{mode:0o600});}}),catalogCalls:0,registered:0,agentMessages:[],unexpected:[],probes:[],probing:false};
-const deny = (kind) => { if(!state.probing) {state.unexpected.push(kind);appendFileSync(${JSON.stringify(join(isolated.home, "denied-attempts.jsonl"))},JSON.stringify({pid:process.pid,kind})+"\\n",{mode:0o600});} throw Error("Owned Review draft denied "+kind); };
+const recordReviewIpc=(row)=>{const line=JSON.stringify(row)+"\\n";ipcBytes+=Buffer.byteLength(line);if(ipcBytes>512*1024)throw Error("Review IPC ledger cap");appendFileSync(ipcFile,line,{mode:0o600});};
+const state = globalThis.__ownedReviewDraft = {gate:createReviewDraftResponseGate(${JSON.stringify(sessions.map((s) => s.id))},{onRecord:recordReviewIpc}),catalogCalls:0,registered:0,agentMessages:[],readonlyAgentRequests:[],unexpected:[],probes:[],probing:false};
+const deny = (kind,metadata={}) => { if(!state.probing) {state.unexpected.push(kind);appendFileSync(${JSON.stringify(join(isolated.home, "denied-attempts.jsonl"))},JSON.stringify({pid:process.pid,kind,...metadata})+"\\n",{mode:0o600});} throw Error("Owned Review draft denied "+kind); };
 globalThis.fetch=()=>deny("fetch");
 for(const name of ["node:http","node:https"]) {const transport=(await import(name)).default;for(const method of ["get","request"])transport[method]=()=>deny(name+"."+method);}
 for(const [name,methods]of [["node:net",["connect","createConnection"]],["node:tls",["connect"]]]) {const transport=(await import(name)).default;for(const method of methods)transport[method]=()=>deny(name+"."+method);}
@@ -280,7 +283,7 @@ ipcMain.handle=(channel,listener)=>{
  state.registered++;if(state.registered!==1)throw Error("Duplicate Review production listener");
  return handle(channel,(...args)=>state.gate.invoke(listener,args));
 };
-const on=ipcMain.on.bind(ipcMain);ipcMain.on=(channel,listener)=>on(channel,channel!=="agent:msg"?listener:(_event,line)=>{state.agentMessages.push(String(line).slice(0,200));return deny("agent:msg");});
+${reviewDraftReadonlyRpcGuardSource(sessions.map((session) => session.id))}
 state.probing=true;
 for(const[name,probe]of [
  ["fetch external",()=>fetch("https://example.invalid/blocked")],
@@ -314,6 +317,9 @@ state.probing=false;
         .trim() !== "",
     fixtureSHA256: hash(await readFile(fileURLToPath(import.meta.url))),
     gateSHA256: hash(await readFile(new URL("./review-draft-response-gate.mjs", import.meta.url))),
+    readonlyRpcGuardSHA256: hash(
+      await readFile(new URL("./review-draft-readonly-rpc-guard.mjs", import.meta.url)),
+    ),
     mainSHA256: hash(await readFile(join(appDir, "out/main/index.mjs"))),
     preloadSHA256: hash(await readFile(join(appDir, "out/preload/index.cjs"))),
   };
@@ -583,6 +589,7 @@ state.probing=false;
             registered: state.registered,
             catalogCalls: state.catalogCalls,
             agentMessages: state.agentMessages,
+            readonlyAgentRequests: state.readonlyAgentRequests,
             unexpected: state.unexpected,
             probes: state.probes,
           };
@@ -602,6 +609,7 @@ state.probing=false;
       );
       assert.ok(report.main.gate.calls.every((call) => call.status === "returned"));
       assert.deepEqual(report.main.agentMessages, []);
+      assert.ok(report.main.readonlyAgentRequests.length > 0);
       assert.deepEqual(report.main.unexpected, []);
       assert.equal(report.main.probes.length, 7);
       assert.ok(report.main.probes.every((probe) => probe.blocked));
@@ -695,6 +703,12 @@ state.probing=false;
           [2, 4],
         );
         assert.equal(rows.filter((row) => row.kind === "gate-closed").length, 1);
+        assert.deepEqual(
+          rows
+            .filter((row) => row.kind === "readonly-agent-rpc")
+            .map(({ method, sessionId, id }) => ({ method, sessionId, id })),
+          report.main.readonlyAgentRequests,
+        );
         report.ipcLedger = {
           bytes: Buffer.byteLength(content),
           sha256: hash(content),
