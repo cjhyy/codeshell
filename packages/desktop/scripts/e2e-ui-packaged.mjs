@@ -9,6 +9,11 @@ import assert from "node:assert/strict";
 import { mkdir, readFile, realpath, writeFile } from "node:fs/promises";
 import { basename, isAbsolute, join, relative, resolve, sep } from "node:path";
 import { deflateSync } from "node:zlib";
+import {
+  capturePackagedMainDiagnosticSources,
+  collectPackagedMainCrashEvidence,
+  recordPackagedMainFirstError,
+} from "./windows-packaged-main-crash-evidence.mjs";
 import { preparePackagedPetFixture } from "./packaged-pet-fixture.mjs";
 import { settlePackagedPet } from "./packaged-pet-shutdown.mjs";
 import { startMockProviderServer } from "./mock-provider-server.mjs";
@@ -68,6 +73,15 @@ const operations = [];
 const rendererErrors = [];
 let identity;
 let processEvidence;
+let firstError;
+let diagnosticSourcePins;
+const diagnosticRecordingFailures = [];
+const recordFirstError = (error, details) => {
+  if (firstError) return;
+  firstError = recordPackagedMainFirstError(join(evidence, "first-error.json"), error, details);
+  if (!firstError.written)
+    diagnosticRecordingFailures.push(Error("Original packaged UI error recording failed"));
+};
 
 const put = async (path, value) => {
   await writeFile(
@@ -195,6 +209,13 @@ try {
     surfaces: { window: { light: "light.png", dark: "dark.png", opacity: 0.2 } },
   });
   model = await startMockProviderServer();
+  if (process.platform === "win32") {
+    try {
+      diagnosticSourcePins = capturePackagedMainDiagnosticSources();
+    } catch {
+      // A missing diagnostic pin cannot change launch or grant query authority.
+    }
+  }
   fixture = await preparePackagedPetFixture({
     officialApp: options.get("--packaged-app"),
     isolated,
@@ -202,6 +223,7 @@ try {
     fixtureRoot,
     keychainReferenceFile: options.get("--default-keychain-reference"),
     requireWorkerEvidence: false,
+    onLaunchError: recordFirstError,
   });
   await step(
     "Start the supplied package with first-instruction Main guard and private HOME",
@@ -383,7 +405,9 @@ try {
     "UI fixture invoked native secret storage",
   );
 } catch (error) {
+  recordFirstError(error, { phase: "ui-operation", pid: app?.process().pid, ppid: process.pid });
   failures.push(error);
+  failures.push(...diagnosticRecordingFailures);
   if (win) {
     try {
       await win.screenshot({ path: join(evidence, "failure.png"), timeout: 3_000 });
@@ -419,6 +443,19 @@ const result = await settlePackagedPet({
   cleanup: () => isolated.cleanup(),
   retainedHome: isolated.home,
 });
+const packagedMainCrashEvidence =
+  result.errors.length &&
+  collectPackagedMainCrashEvidence({
+    failed: true,
+    firstError,
+    sourcePins: diagnosticSourcePins,
+    ci: process.env,
+    context: fixture?.diagnosticContext(),
+    environment: fixture?.env,
+    artifacts: result.artifacts,
+    mainGuards: processEvidence?.mainGuards,
+    observedAt: new Date().toISOString().replace("Z", "0000Z"),
+  });
 if (result.nativeCalls?.length || processEvidence?.spawnedWorkers.length || model?.requests.length)
   result.errors.push(
     Error("UI-only fixture invoked secret storage, created a worker or sent a model request"),
@@ -465,6 +502,8 @@ const receipt = {
   privateHomeRemoved: result.privateHomeRemoved,
   retainedHome: result.privateHomeRemoved ? null : isolated.home,
   errors: result.errors.map((error) => describe(error)),
+  ...(firstError ? { firstErrorRecording: firstError } : {}),
+  ...(packagedMainCrashEvidence ? { packagedMainCrashEvidence } : {}),
 };
 await put(join(evidence, "receipt.json"), JSON.stringify(receipt, null, 2) + "\n");
 console.log(

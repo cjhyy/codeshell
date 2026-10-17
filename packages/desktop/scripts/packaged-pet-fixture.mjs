@@ -29,6 +29,7 @@ export async function preparePackagedPetFixture({
   keychainReferenceFile,
   requireWorkerEvidence = true,
   appImageRuntime,
+  onLaunchError,
 }) {
   assert.equal(typeof requireWorkerEvidence, "boolean");
   if (appImageRuntime) {
@@ -139,6 +140,16 @@ export async function preparePackagedPetFixture({
     env: environment,
     managedNode,
     managedNodeVersion: before.managedNode.version,
+    diagnosticContext() {
+      return {
+        root: fixtureRoot,
+        home: isolated.home,
+        appRoot: officialApp,
+        executable,
+        executableSHA256: before.executableSHA256,
+        appTreeSHA256: before.appTreeSHA256,
+      };
+    },
     async launch() {
       ensureElectronKeychainContext({
         home: isolated.home,
@@ -253,6 +264,7 @@ export async function preparePackagedPetFixture({
         syncBuiltinESMExports();
       }
       let app;
+      let launchPhase = "playwright-launch";
       try {
         app = await _electron.launch({
           executablePath: launcherExecutable,
@@ -262,9 +274,11 @@ export async function preparePackagedPetFixture({
           env: environment,
           timeout: 30_000,
         });
+        launchPhase = "startup-barrier";
         const startupPause = await preload;
         assert.equal(captured, app.process(), "packaged executable was not captured at spawn");
         if (windowsTransport) assert.deepEqual(windowsTransport.receipt().failures, []);
+        launchPhase = "identity-read";
         const identity = await app.evaluate(({ app }) => ({
           packaged: app.isPackaged,
           appPath: app.getAppPath(),
@@ -326,6 +340,12 @@ export async function preparePackagedPetFixture({
         app.__startupPause = startupPause;
       } catch (error) {
         launchFailed = true;
+        let diagnosticError;
+        try {
+          onLaunchError?.(error, { phase: launchPhase, pid: captured?.pid, ppid: process.pid });
+        } catch (failure) {
+          diagnosticError = failure;
+        }
         if (preload)
           await preload.catch((failure) => {
             preloadFailure = failure;
@@ -334,6 +354,7 @@ export async function preparePackagedPetFixture({
         // the exact process captured from this launch may be terminated.
         const errors = [
           error,
+          ...(diagnosticError ? [diagnosticError] : []),
           ...(preloadFailure && preloadFailure !== error ? [preloadFailure] : []),
         ];
         if (captured && captured.exitCode === null && captured.signalCode === null) {
