@@ -474,3 +474,28 @@ describe("transcriptsReducer pending steer bubbles", () => {
     expect(ignored.b).toBe(replacement);
   });
 });
+
+it("does not reconcile an old engine lookup into a rebound bucket", () => {
+  const current = {
+    ...INITIAL_STATE,
+    sessionId: "owned-new-engine",
+    snapshotEpoch: "owned-same-epoch",
+    activeGoal: {
+      goalId: "owned-same-goal",
+      revision: 7,
+      objective: "The rebound engine still owns this Goal",
+      round: 0,
+      paused: true,
+    },
+  };
+  const map = { b: current };
+  const next = transcriptsReducer(map, {
+    type: "goal_reconcile",
+    bucket: "b",
+    sessionId: "owned-old-engine",
+    epoch: "owned-same-epoch",
+    expected: { goalId: "owned-same-goal", revision: 7 },
+    goal: null,
+  });
+  expect(next).toBe(map);
+});

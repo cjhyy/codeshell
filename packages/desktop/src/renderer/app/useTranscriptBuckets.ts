@@ -379,9 +379,13 @@ export function useTranscriptBuckets({
 
       // Goal metadata must not delay committing a replayed stream prefix.
       if (engineId && !cancelled) {
-        const goalBeforeLookup = state.activeGoal;
+        // Replay can retain a cached Goal even when the canonical message fold has none.
+        const goalBeforeLookup = state.activeGoal ?? local.activeGoal;
+        const goalLookupEpoch = state.snapshotEpoch ?? null;
+        let goalLookupSucceeded = false;
         try {
           const { ok, goal, goalId, paused, revision } = await window.codeshell.goalGet(engineId);
+          goalLookupSucceeded = ok !== false;
           if (ok !== false && goal) {
             const persistedGoalId = goalId ?? state.activeGoal?.goalId;
             const persistedRevision = revision ?? state.activeGoal?.revision;
@@ -411,10 +415,12 @@ export function useTranscriptBuckets({
             error: error instanceof Error ? error.message : String(error),
           });
         }
-        if (!cancelled && state.activeGoal !== goalBeforeLookup) {
+        if (!cancelled && goalLookupSucceeded && state.activeGoal !== goalBeforeLookup) {
           dispatch({
             type: "goal_reconcile",
             bucket,
+            sessionId: engineId,
+            epoch: goalLookupEpoch,
             expected: goalBeforeLookup,
             goal: state.activeGoal,
           });

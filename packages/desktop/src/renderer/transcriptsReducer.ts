@@ -49,6 +49,9 @@ export type TranscriptsAction =
       bucket: string;
       expected: Pick<ActiveGoal, "goalId" | "revision"> | null;
       goal: ActiveGoal | null;
+      /** Hydration lookups pin identity; optimistic UI mutations leave these absent. */
+      sessionId?: string;
+      epoch?: string | null;
     }
   | { type: "hydrate"; bucket: string; state: MessagesReducerState }
   | {
@@ -223,6 +226,11 @@ function reduceTranscriptAction(map: TranscriptsMap, action: TranscriptsAction):
       break;
     }
     case "goal_reconcile": {
+      if (
+        (action.sessionId !== undefined && current.sessionId !== action.sessionId) ||
+        (action.epoch !== undefined && (current.snapshotEpoch ?? null) !== action.epoch)
+      )
+        return map;
       const active = current.activeGoal;
       const expectedMatches =
         action.expected === null
