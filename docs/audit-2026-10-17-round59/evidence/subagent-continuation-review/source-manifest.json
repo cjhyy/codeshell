@@ -1,0 +1,441 @@
+{
+  "root": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell",
+  "rootReportedHead": "c39eb6f987b7bd5d740fee6d8ab5b46718f9c9af",
+  "GitVerified": false,
+  "reviewType": "Independent targeted static review after Root148 lead/report; not blind source discovery or second authorization of product behavior.",
+  "files": [
+    {
+      "path": "packages/core/src/session/subagent-continuation.ts",
+      "bytes": 2345,
+      "lines": 63,
+      "sha256": "d604ea3b2baf99c53fdf492f51797ca3b54b9975ed452de8a13d900ce035b26a",
+      "pinAt": "2026-10-17T19:46:49.772428+00:00",
+      "coverage": "full",
+      "pinArtifact": "initial-source-pins.json",
+      "sourceKind": "product",
+      "selectedLineRanges": [
+        [
+          1,
+          63
+        ]
+      ],
+      "semanticLineCount": 63,
+      "bodyDisplayedLineRanges": [
+        [
+          1,
+          63
+        ]
+      ],
+      "bodyDisplayedLineCount": 63,
+      "displayArtifacts": [
+        "creation-restore-display.json"
+      ],
+      "scope": "Full parser, explicitly overlaps same-SHA original round19 full leaf. Shape validation/detached value reconstruction only, not authority enforcement experiment.",
+      "newUniqueCoverageClaim": false,
+      "endingSha256": "d604ea3b2baf99c53fdf492f51797ca3b54b9975ed452de8a13d900ce035b26a",
+      "endingUnchanged": true
+    },
+    {
+      "path": "packages/core/src/types.ts",
+      "bytes": 51788,
+      "lines": 1333,
+      "sha256": "1cfe13fc9d18863adb721635d56b34ae627bb1fab0508675b034a4340b987bb5",
+      "pinAt": "2026-10-17T19:46:49.773322+00:00",
+      "coverage": "selected",
+      "pinArtifact": "initial-source-pins.json",
+      "sourceKind": "product",
+      "selectedLineRanges": [
+        [
+          8,
+          23
+        ]
+      ],
+      "semanticLineCount": 16,
+      "bodyDisplayedLineRanges": [
+        [
+          8,
+          23
+        ]
+      ],
+      "bodyDisplayedLineCount": 16,
+      "displayArtifacts": [
+        "creation-restore-display.json"
+      ],
+      "scope": "Stored continuation interface fields; optional model/allowlists/prompt are not fully resolved runtime environment.",
+      "newUniqueCoverageClaim": false,
+      "endingSha256": "1cfe13fc9d18863adb721635d56b34ae627bb1fab0508675b034a4340b987bb5",
+      "endingUnchanged": true
+    },
+    {
+      "path": "packages/core/src/tool-system/builtin/agent.ts",
+      "bytes": 62377,
+      "lines": 1571,
+      "sha256": "9fd165bc3d1819925fee6a639cdeb34644c394ea8e50fc0b5fed209a28572dca",
+      "pinAt": "2026-10-17T19:46:49.774262+00:00",
+      "coverage": "selected",
+      "pinArtifact": "initial-source-pins.json",
+      "sourceKind": "product",
+      "selectedLineRanges": [
+        [
+          51,
+          104
+        ],
+        [
+          366,
+          366
+        ],
+        [
+          403,
+          414
+        ],
+        [
+          423,
+          427
+        ],
+        [
+          430,
+          467
+        ],
+        [
+          844,
+          855
+        ],
+        [
+          880,
+          897
+        ],
+        [
+          1463,
+          1465
+        ],
+        [
+          1492,
+          1493
+        ],
+        [
+          1510,
+          1515
+        ],
+        [
+          1525,
+          1569
+        ]
+      ],
+      "semanticLineCount": 196,
+      "bodyDisplayedLineRanges": [
+        [
+          51,
+          115
+        ],
+        [
+          350,
+          467
+        ],
+        [
+          844,
+          900
+        ],
+        [
+          1463,
+          1569
+        ]
+      ],
+      "bodyDisplayedLineCount": 347,
+      "displayArtifacts": [
+        "creation-restore-display.json",
+        "storage-parent-projection-display.json"
+      ],
+      "scope": "Ordinary role override resolution, detached creation snapshot, forwarding, registry/persisted preference and terminal reconstruction. Parent/lease/running-route guards and hooks only adjacent display, not enforcement review. Label precedence and legacy branch explicitly retained.",
+      "newUniqueCoverageClaim": false,
+      "endingSha256": "9fd165bc3d1819925fee6a639cdeb34644c394ea8e50fc0b5fed209a28572dca",
+      "endingUnchanged": true
+    },
+    {
+      "path": "packages/core/src/session/session-manager.ts",
+      "bytes": 109429,
+      "lines": 2841,
+      "sha256": "3a0ac1691e1eaa8b948c31b2d9530ddc1be275992022128f48326043240b05af",
+      "pinAt": "2026-10-17T19:46:49.775070+00:00",
+      "coverage": "selected",
+      "pinArtifact": "initial-source-pins.json",
+      "sourceKind": "product",
+      "selectedLineRanges": [
+        [
+          736,
+          769
+        ],
+        [
+          802,
+          806
+        ],
+        [
+          1043,
+          1053
+        ]
+      ],
+      "semanticLineCount": 50,
+      "bodyDisplayedLineRanges": [
+        [
+          736,
+          769
+        ],
+        [
+          792,
+          817
+        ],
+        [
+          1043,
+          1053
+        ]
+      ],
+      "bodyDisplayedLineCount": 71,
+      "displayArtifacts": [
+        "storage-parent-projection-display.json"
+      ],
+      "scope": "Canonical field value enters state and is handed to state writer; stored continuation readback parses that field. No writer atomicity, real disk, custody or recovery certification.",
+      "newUniqueCoverageClaim": false,
+      "endingSha256": "3a0ac1691e1eaa8b948c31b2d9530ddc1be275992022128f48326043240b05af",
+      "endingUnchanged": true
+    },
+    {
+      "path": "packages/core/src/engine/subagent-spawner.ts",
+      "bytes": 16481,
+      "lines": 441,
+      "sha256": "e29fa502236da73882808561f4e1338e3497ab692b9a5fc274cb3a3d4ef8552b",
+      "pinAt": "2026-10-17T19:46:49.775855+00:00",
+      "coverage": "selected",
+      "pinArtifact": "initial-source-pins.json",
+      "sourceKind": "product",
+      "selectedLineRanges": [
+        [
+          30,
+          40
+        ],
+        [
+          333,
+          340
+        ],
+        [
+          349,
+          357
+        ],
+        [
+          414,
+          430
+        ]
+      ],
+      "semanticLineCount": 45,
+      "bodyDisplayedLineRanges": [
+        [
+          29,
+          40
+        ],
+        [
+          328,
+          357
+        ],
+        [
+          414,
+          430
+        ]
+      ],
+      "bodyDisplayedLineCount": 59,
+      "displayArtifacts": [
+        "storage-parent-projection-display.json"
+      ],
+      "scope": "Model key resolution fallback/current parent prompt projection and ordinary continuation forwarding. Tool scope resolution/security/host mechanics outside semantic scope.",
+      "newUniqueCoverageClaim": false,
+      "endingSha256": "e29fa502236da73882808561f4e1338e3497ab692b9a5fc274cb3a3d4ef8552b",
+      "endingUnchanged": true
+    },
+    {
+      "path": "packages/core/src/engine/run-session-open.ts",
+      "bytes": 11804,
+      "lines": 292,
+      "sha256": "7520474ab6efb36ff9b93fd60c1d743c8b746ec7723e80e990f7e2f578007799",
+      "pinAt": "2026-10-17T19:46:49.776505+00:00",
+      "coverage": "selected",
+      "pinArtifact": "initial-source-pins.json",
+      "sourceKind": "product",
+      "selectedLineRanges": [
+        [
+          61,
+          69
+        ],
+        [
+          98,
+          115
+        ],
+        [
+          195,
+          207
+        ]
+      ],
+      "semanticLineCount": 40,
+      "bodyDisplayedLineRanges": [
+        [
+          61,
+          69
+        ],
+        [
+          98,
+          115
+        ],
+        [
+          195,
+          207
+        ]
+      ],
+      "bodyDisplayedLineCount": 40,
+      "displayArtifacts": [
+        "storage-parent-projection-display.json"
+      ],
+      "scope": "Continuation parser/value consistency checks and SessionManager.create argument. Static field consistency, not parent authority or live-writer ownership certification.",
+      "newUniqueCoverageClaim": false,
+      "endingSha256": "7520474ab6efb36ff9b93fd60c1d743c8b746ec7723e80e990f7e2f578007799",
+      "endingUnchanged": true
+    },
+    {
+      "path": "packages/core/src/engine/engine.ts",
+      "bytes": 210666,
+      "lines": 5082,
+      "sha256": "cdbfc7a777e3e304b6d365988daf6a45ff24b7cd5b62f634e3b11908c701e2e0",
+      "pinAt": "2026-10-17T19:48:18.172624+00:00",
+      "coverage": "selected",
+      "pinArtifact": "engine-before-pin.json",
+      "sourceKind": "product",
+      "selectedLineRanges": [
+        [
+          2616,
+          2619
+        ],
+        [
+          2625,
+          2626
+        ],
+        [
+          2628,
+          2629
+        ],
+        [
+          2633,
+          2644
+        ]
+      ],
+      "semanticLineCount": 20,
+      "bodyDisplayedLineRanges": [
+        [
+          2616,
+          2648
+        ]
+      ],
+      "bodyDisplayedLineCount": 33,
+      "displayArtifacts": [
+        "engine-readback-binding-display.json"
+      ],
+      "scope": "Actual spawner readback binding to SessionManager and normal child runner argument forwarding; neighboring permission/sandbox fields not audited.",
+      "newUniqueCoverageClaim": false,
+      "endingSha256": "cdbfc7a777e3e304b6d365988daf6a45ff24b7cd5b62f634e3b11908c701e2e0",
+      "endingUnchanged": true
+    }
+  ],
+  "hashOnlyFiles": [
+    {
+      "path": "CODESHELL.md",
+      "bytes": 17639,
+      "lines": 217,
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "pinAt": "2026-10-17T19:46:49.771032+00:00",
+      "coverage": "hash-only",
+      "pinArtifact": "initial-source-pins.json",
+      "selectedLineRanges": [],
+      "semanticLineCount": 0,
+      "scope": "Previously read same-SHA instructions reused; no new instruction semantic read."
+    },
+    {
+      "path": "AGENTS.md",
+      "bytes": 206,
+      "lines": 5,
+      "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "pinAt": "2026-10-17T19:46:49.771926+00:00",
+      "coverage": "hash-only",
+      "pinArtifact": "initial-source-pins.json",
+      "selectedLineRanges": [],
+      "semanticLineCount": 0,
+      "scope": "Previously read same-SHA instructions reused; no new instruction semantic read."
+    }
+  ],
+  "metadataInputs": [
+    {
+      "path": "/tmp/codeshell-audit-round148-subagent-continuation/report.md",
+      "bytes": 2202,
+      "sha256": "fef0226d0780d9a0e5c3c50314e2a81e331324a15156818bab82cea081fee30c",
+      "pinAt": "2026-10-17T19:46:35.261971+00:00",
+      "endingSha256": "fef0226d0780d9a0e5c3c50314e2a81e331324a15156818bab82cea081fee30c",
+      "endingUnchanged": true,
+      "readScope": "Entire Root148 report and source-manifest metadata; not all author artifact contents or source excerpts."
+    },
+    {
+      "path": "/tmp/codeshell-audit-round148-subagent-continuation/source-manifest.json",
+      "bytes": 11798,
+      "sha256": "c9ab15c5dc34193661a73efed36760d1248a6e16d986fd91a8538c912ecb0169",
+      "pinAt": "2026-10-17T19:46:35.264705+00:00",
+      "endingSha256": "c9ab15c5dc34193661a73efed36760d1248a6e16d986fd91a8538c912ecb0169",
+      "endingUnchanged": true,
+      "readScope": "Entire Root148 report and source-manifest metadata; not all author artifact contents or source excerpts."
+    }
+  ],
+  "historicalMetadata": [
+    {
+      "path": "docs/audit-2026-10-17-round19/evidence/root-source-manifest.json",
+      "initialSha256": "81bc4165917263af60b19d5cc46912ca35c82bbf1642cbe58420beb8b08bf64b",
+      "endingSha256": "81bc4165917263af60b19d5cc46912ca35c82bbf1642cbe58420beb8b08bf64b",
+      "unchanged": true,
+      "selectedObjects": [
+        "/files/5"
+      ]
+    },
+    {
+      "path": "docs/audit-2026-10-17-round19/source-manifest.json",
+      "initialSha256": "ca08c8f60ca5afc1286adc5f1b54289a25c00489f495594c609efa68d5d25f59",
+      "endingSha256": "ca08c8f60ca5afc1286adc5f1b54289a25c00489f495594c609efa68d5d25f59",
+      "unchanged": true,
+      "selectedObjects": [
+        "/files/24"
+      ]
+    }
+  ],
+  "oldParserFullGate": {
+    "canonical": "docs/audit-2026-10-17-round19/evidence/root-source-manifest.json",
+    "pointer": "/files/5",
+    "scope": "Full static leaf; no authority metadata experiment/import.",
+    "sameCurrentSha256": true,
+    "currentReadRetainsOverlap": true
+  },
+  "historyScope": "No fresh whole-history scan. Only two original canonical objects were selected to establish old parser full overlap; Root148 shared batch is author evidence, not this reviewer full-history semantic reading.",
+  "totals": {
+    "productFiles": 7,
+    "productSemanticLines": 430,
+    "bodyDisplayedLines": 629,
+    "fullProductFiles": 1,
+    "selectedProductFiles": 6,
+    "testDeclarationFiles": 0,
+    "testDeclarationLines": 0,
+    "navigationOnlyFiles": 0,
+    "hashOnlyInstructionFiles": 2,
+    "newUniqueCoverageClaim": false
+  },
+  "executions": {
+    "product": 0,
+    "helper": 0,
+    "imports": 0,
+    "tests": 0,
+    "fixtures": 0,
+    "models": 0,
+    "realSessions": 0,
+    "native": 0,
+    "network": 0,
+    "Git": 0
+  },
+  "endingAt": "2026-10-17T19:50:00.176601+00:00"
+}

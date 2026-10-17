@@ -1,0 +1,330 @@
+{
+  "files": [
+    {
+      "path": "packages/core/src/session/subagent-continuation.ts",
+      "bytes": 2345,
+      "lines": 63,
+      "sha256": "d604ea3b2baf99c53fdf492f51797ca3b54b9975ed452de8a13d900ce035b26a",
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          63
+        ]
+      ],
+      "bodyDisplayedLineRanges": [
+        [
+          1,
+          63
+        ]
+      ],
+      "semanticLines": 63,
+      "bodyDisplayedLines": 63,
+      "beforeBodyOrLineNavigation": true,
+      "scope": "Ordinary stored continuation fields from Agent creation through state snapshot and terminal AgentSendInput restore. Authority, sandbox, process, live-writer concurrency, hooks, filesystem atomicity and provider execution are outside this finite conclusion.",
+      "overlap": "Parser leaf has same-SHA full original round19 scope. Supporting paths retain existing selected/unknown coverage metadata without inferring unread or first reading; no new unique-file coverage union."
+    },
+    {
+      "path": "packages/core/src/types.ts",
+      "bytes": 51788,
+      "lines": 1333,
+      "sha256": "1cfe13fc9d18863adb721635d56b34ae627bb1fab0508675b034a4340b987bb5",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          8,
+          23
+        ]
+      ],
+      "bodyDisplayedLineRanges": [
+        [
+          1,
+          35
+        ]
+      ],
+      "semanticLines": 16,
+      "bodyDisplayedLines": 35,
+      "beforeBodyOrLineNavigation": true,
+      "scope": "Ordinary stored continuation fields from Agent creation through state snapshot and terminal AgentSendInput restore. Authority, sandbox, process, live-writer concurrency, hooks, filesystem atomicity and provider execution are outside this finite conclusion.",
+      "overlap": "Parser leaf has same-SHA full original round19 scope. Supporting paths retain existing selected/unknown coverage metadata without inferring unread or first reading; no new unique-file coverage union."
+    },
+    {
+      "path": "packages/core/src/tool-system/builtin/agent.ts",
+      "bytes": 62377,
+      "lines": 1571,
+      "sha256": "9fd165bc3d1819925fee6a639cdeb34644c394ea8e50fc0b5fed209a28572dca",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          403,
+          467
+        ],
+        [
+          844,
+          861
+        ],
+        [
+          880,
+          900
+        ],
+        [
+          1463,
+          1515
+        ],
+        [
+          1525,
+          1569
+        ]
+      ],
+      "bodyDisplayedLineRanges": [
+        [
+          350,
+          490
+        ],
+        [
+          800,
+          935
+        ],
+        [
+          1035,
+          1155
+        ],
+        [
+          1170,
+          1305
+        ],
+        [
+          1425,
+          1571
+        ]
+      ],
+      "semanticLines": 202,
+      "bodyDisplayedLines": 681,
+      "beforeBodyOrLineNavigation": true,
+      "scope": "Ordinary stored continuation fields from Agent creation through state snapshot and terminal AgentSendInput restore. Authority, sandbox, process, live-writer concurrency, hooks, filesystem atomicity and provider execution are outside this finite conclusion.",
+      "overlap": "Parser leaf has same-SHA full original round19 scope. Supporting paths retain existing selected/unknown coverage metadata without inferring unread or first reading; no new unique-file coverage union."
+    },
+    {
+      "path": "packages/core/src/session/session-manager.ts",
+      "bytes": 109429,
+      "lines": 2841,
+      "sha256": "3a0ac1691e1eaa8b948c31b2d9530ddc1be275992022128f48326043240b05af",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          736,
+          769
+        ],
+        [
+          792,
+          817
+        ],
+        [
+          1043,
+          1053
+        ]
+      ],
+      "bodyDisplayedLineRanges": [
+        [
+          730,
+          830
+        ],
+        [
+          1038,
+          1061
+        ]
+      ],
+      "semanticLines": 71,
+      "bodyDisplayedLines": 125,
+      "beforeBodyOrLineNavigation": true,
+      "scope": "Ordinary stored continuation fields from Agent creation through state snapshot and terminal AgentSendInput restore. Authority, sandbox, process, live-writer concurrency, hooks, filesystem atomicity and provider execution are outside this finite conclusion.",
+      "overlap": "Parser leaf has same-SHA full original round19 scope. Supporting paths retain existing selected/unknown coverage metadata without inferring unread or first reading; no new unique-file coverage union."
+    },
+    {
+      "path": "packages/core/src/engine/engine.ts",
+      "bytes": 210666,
+      "lines": 5082,
+      "sha256": "cdbfc7a777e3e304b6d365988daf6a45ff24b7cd5b62f634e3b11908c701e2e0",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          2616,
+          2648
+        ]
+      ],
+      "bodyDisplayedLineRanges": [
+        [
+          2600,
+          2660
+        ]
+      ],
+      "semanticLines": 33,
+      "bodyDisplayedLines": 61,
+      "beforeBodyOrLineNavigation": true,
+      "scope": "Ordinary stored continuation fields from Agent creation through state snapshot and terminal AgentSendInput restore. Authority, sandbox, process, live-writer concurrency, hooks, filesystem atomicity and provider execution are outside this finite conclusion.",
+      "overlap": "Parser leaf has same-SHA full original round19 scope. Supporting paths retain existing selected/unknown coverage metadata without inferring unread or first reading; no new unique-file coverage union."
+    },
+    {
+      "path": "packages/core/src/engine/subagent-spawner.ts",
+      "bytes": 16481,
+      "lines": 441,
+      "sha256": "e29fa502236da73882808561f4e1338e3497ab692b9a5fc274cb3a3d4ef8552b",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          328,
+          375
+        ],
+        [
+          414,
+          430
+        ]
+      ],
+      "bodyDisplayedLineRanges": [
+        [
+          235,
+          270
+        ],
+        [
+          280,
+          441
+        ]
+      ],
+      "semanticLines": 65,
+      "bodyDisplayedLines": 198,
+      "beforeBodyOrLineNavigation": true,
+      "scope": "Ordinary stored continuation fields from Agent creation through state snapshot and terminal AgentSendInput restore. Authority, sandbox, process, live-writer concurrency, hooks, filesystem atomicity and provider execution are outside this finite conclusion.",
+      "overlap": "Parser leaf has same-SHA full original round19 scope. Supporting paths retain existing selected/unknown coverage metadata without inferring unread or first reading; no new unique-file coverage union."
+    },
+    {
+      "path": "packages/core/src/engine/run-session-open.ts",
+      "bytes": 11804,
+      "lines": 292,
+      "sha256": "7520474ab6efb36ff9b93fd60c1d743c8b746ec7723e80e990f7e2f578007799",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          61,
+          69
+        ],
+        [
+          98,
+          115
+        ],
+        [
+          195,
+          207
+        ]
+      ],
+      "bodyDisplayedLineRanges": [
+        [
+          1,
+          155
+        ],
+        [
+          180,
+          245
+        ]
+      ],
+      "semanticLines": 40,
+      "bodyDisplayedLines": 221,
+      "beforeBodyOrLineNavigation": true,
+      "scope": "Ordinary stored continuation fields from Agent creation through state snapshot and terminal AgentSendInput restore. Authority, sandbox, process, live-writer concurrency, hooks, filesystem atomicity and provider execution are outside this finite conclusion.",
+      "overlap": "Parser leaf has same-SHA full original round19 scope. Supporting paths retain existing selected/unknown coverage metadata without inferring unread or first reading; no new unique-file coverage union."
+    }
+  ],
+  "navigationOnly": [
+    {
+      "path": "packages/core/src/engine/run-types.ts",
+      "bytes": 12029,
+      "lines": 262,
+      "sha256": "b1daf9f5b1753091e4cb1fc324c50a56c3171dd1fb3909d65473f8ff594ac73e",
+      "coverage": "navigation-only",
+      "selectedLineRanges": [],
+      "scope": "Filename/path pin and matching continuation symbol line navigation only, no surrounding body read."
+    },
+    {
+      "path": "packages/core/src/tool-system/context.ts",
+      "bytes": 29617,
+      "lines": 624,
+      "sha256": "1bfff3d434f876089460f61336ff160d31a0eda6483b604cf874b331fb6e3b03",
+      "coverage": "navigation-only",
+      "selectedLineRanges": [],
+      "scope": "Filename/path pin and matching continuation symbol line navigation only, no surrounding body read."
+    },
+    {
+      "path": "packages/core/src/tool-system/builtin/agent-registry.ts",
+      "bytes": 15679,
+      "lines": 445,
+      "sha256": "5fef48b6e619de7c1802e4cecb64c8af3f67366c48de67131222213ac20ffc84",
+      "coverage": "navigation-only",
+      "selectedLineRanges": [],
+      "scope": "Filename/path pin and matching continuation symbol line navigation only, no surrounding body read."
+    }
+  ],
+  "historicalReportReads": [
+    {
+      "path": "docs/audit-2026-10-17-round19/evidence/root-source-manifest.json",
+      "bytes": 5155,
+      "lines": 126,
+      "sha256": "81bc4165917263af60b19d5cc46912ca35c82bbf1642cbe58420beb8b08bf64b",
+      "coverage": "selected-metadata",
+      "jsonPointers": [
+        "/files/5"
+      ],
+      "pinTiming": "Root binds current bytes after the reported selected metadata read; not fabricated as a before-read metadata pin."
+    },
+    {
+      "path": "docs/audit-2026-10-17-round19/source-manifest.json",
+      "bytes": 29411,
+      "lines": 655,
+      "sha256": "ca08c8f60ca5afc1286adc5f1b54289a25c00489f495594c609efa68d5d25f59",
+      "coverage": "selected-metadata",
+      "jsonPointers": [
+        "/files/24"
+      ],
+      "pinTiming": "Root binds current bytes after the reported selected metadata read; not fabricated as a before-read metadata pin."
+    },
+    {
+      "path": "docs/audit-2026-10-17-round55/evidence/coverage-current/unified-current-index.json",
+      "bytes": 1941121,
+      "lines": 46441,
+      "sha256": "5adcd53bfca820e03282db45815c370bcc529c3606aa4c8f860126d14e646ee2",
+      "coverage": "selected-metadata",
+      "jsonPointers": [
+        "/files: only nine supporting paths"
+      ],
+      "pinTiming": "Root binds current bytes after the reported selected metadata read; not fabricated as a before-read metadata pin."
+    }
+  ],
+  "instructionCarryForward": [
+    {
+      "path": "AGENTS.md",
+      "bytes": 206,
+      "lines": 5,
+      "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "coverage": "hash-only-instruction-carry-forward",
+      "scope": "Previously read instructions reused after matching SHA; CODESHELL also reread in primary during user status response, not new product coverage."
+    },
+    {
+      "path": "CODESHELL.md",
+      "bytes": 17639,
+      "lines": 217,
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "coverage": "hash-only-instruction-carry-forward",
+      "scope": "Previously read instructions reused after matching SHA; CODESHELL also reread in primary during user status response, not new product coverage."
+    }
+  ],
+  "sourceSemanticReads": 7,
+  "productExecution": 0,
+  "history": {
+    "batch": "/tmp/codeshell-audit-round148-subagent-continuation/history-batch.json",
+    "historyFiles": 6010,
+    "jsonValueScalarsVisited": 4291442,
+    "target": "packages/core/src/session/subagent-continuation.ts",
+    "count": 56,
+    "cap": 100,
+    "machineNavigationOnly": true
+  },
+  "scope": "Finite ordinary creation/storage/terminal restore field chain; no authority metadata or real session experiment, no test read/run. All old failure directions remain skipped."
+}

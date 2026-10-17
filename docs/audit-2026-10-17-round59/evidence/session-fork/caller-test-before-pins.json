@@ -1,0 +1,53 @@
+{
+  "files": [
+    {
+      "path": "packages/core/src/engine/engine.ts",
+      "bytes": 210666,
+      "lineCount": 5082,
+      "sha256": "cdbfc7a777e3e304b6d365988daf6a45ff24b7cd5b62f634e3b11908c701e2e0",
+      "pinnedAtUTC": "2026-10-17T19:41:07.786052+00:00",
+      "timing": "before body/nav; paths confirmed initialinventory or actualR9hyperlinks from personally read old report"
+    },
+    {
+      "path": "packages/core/src/protocol/server.ts",
+      "bytes": 195050,
+      "lineCount": 4949,
+      "sha256": "1dcf2cba50bdedefb7ff04ce5c26565f59fdef275e8b74e2c5fb35d95af826d5",
+      "pinnedAtUTC": "2026-10-17T19:41:07.788076+00:00",
+      "timing": "before body/nav; paths confirmed initialinventory or actualR9hyperlinks from personally read old report"
+    },
+    {
+      "path": "packages/core/src/session/session-manager.context-transfer.test.ts",
+      "bytes": 2097,
+      "lineCount": 55,
+      "sha256": "09b7b700527f9e26b6c126ab296895852f3f5743493ea6bc12ee865302eefc6e",
+      "pinnedAtUTC": "2026-10-17T19:41:07.788643+00:00",
+      "timing": "before body/nav; paths confirmed initialinventory or actualR9hyperlinks from personally read old report"
+    },
+    {
+      "path": "packages/core/src/session/session-manager.side-fork.test.ts",
+      "bytes": 9272,
+      "lineCount": 214,
+      "sha256": "1ac1df286552cd98c1ca228a5c655372d5b0547810730dffa4dcb27fe5c9d650",
+      "pinnedAtUTC": "2026-10-17T19:41:07.789367+00:00",
+      "timing": "before body/nav; paths confirmed initialinventory or actualR9hyperlinks from personally read old report"
+    },
+    {
+      "path": "packages/core/src/protocol/server.fork.test.ts",
+      "bytes": 14733,
+      "lineCount": 460,
+      "sha256": "b7292a9a9357feb2989d9ee35ab0b97f1bdaa3747531a617519689035ca4b7dc",
+      "pinnedAtUTC": "2026-10-17T19:41:07.789975+00:00",
+      "timing": "before body/nav; paths confirmed initialinventory or actualR9hyperlinks from personally read old report"
+    },
+    {
+      "path": "packages/core/src/engine/engine.session-fork-history.test.ts",
+      "bytes": 10028,
+      "lineCount": 245,
+      "sha256": "7bde9395bb6d35c2dbab98386483b043a4b3a1787195096a0f1c988a49b996d6",
+      "pinnedAtUTC": "2026-10-17T19:41:07.790474+00:00",
+      "timing": "before body/nav; paths confirmed initialinventory or actualR9hyperlinks from personally read old report"
+    }
+  ],
+  "policy": "Unselected sources remain hash-only; no test/import execution promised."
+}

@@ -1,0 +1,55 @@
+{
+  "counts": {
+    "formal": 0,
+    "candidate": 0,
+    "newRelated": 0
+  },
+  "opinion": "support-Root148-bounded-negative-with-field-versus-effective-config-qualification",
+  "findings": [],
+  "candidates": [],
+  "scopeSupported": [
+    "Modern ordinary creation with ctx.sessionId stores a structured-cloned continuation of resolved role override fields; canonical parsing copies arrays and retains explicit null agentType.",
+    "A terminal continuation uses registry snapshot first, else actual spawner→SessionManager readback. Present continuation bypasses current role lookup, so editing/removing that role does not replace those saved override fields.",
+    "Run options pass the same continuation; openSession canonicalizes and checks existing snapshot consistency, then creation hands it to state writer. This is field forwarding evidence, not actual durable write/runtime proof."
+  ],
+  "qualifications": [
+    {
+      "source": "packages/core/src/tool-system/builtin/agent.ts",
+      "lines": [
+        1525,
+        1526
+      ],
+      "fact": "Name and description prefer current registry entry, then continuation; not unconditional restoration of saved display labels."
+    },
+    {
+      "source": "packages/core/src/tool-system/builtin/agent.ts",
+      "lines": [
+        1543,
+        1550
+      ],
+      "fact": "Legacy same-process entry without a snapshot may resolve its current known role. The modern snapshot conclusion does not erase this exception."
+    },
+    {
+      "source": "packages/core/src/engine/subagent-spawner.ts",
+      "lines": [
+        30,
+        40
+      ],
+      "fact": "Saved model is a key/optional override. Missing/unresolved key falls back to current parent LLM; no frozen complete model config contract was established."
+    },
+    {
+      "source": "packages/core/src/engine/subagent-spawner.ts",
+      "lines": [
+        349,
+        356
+      ],
+      "fact": "Current parent custom prompt/instructions and parent appendSystemPrompt still enter the effective child config; saved role append prompt is combined with current parent append prompt."
+    }
+  ],
+  "notABugByItself": "No source contract was established requiring cross-turn freezing of the full model pool, full parent prompt/environment or all parent policies. Differences in that inherited layer are not manufactured as a new bug.",
+  "noScopeExpansion": [
+    "No authority, permission, sandbox, lease or identity enforcement certified.",
+    "No real disk recovery, writer atomicity, session resume, model execution or lifecycle timing run.",
+    "No new static candidate; no unrelated old cause or global coverage status changed."
+  ]
+}

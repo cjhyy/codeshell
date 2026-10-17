@@ -1,0 +1,583 @@
+packages/core/src/engine/subagent-spawner.ts:235–270
+235:     task: string,
+236:     options: Pick<
+237:       EngineRunOptions,
+238:       | "signal"
+239:       | "onStream"
+240:       | "sessionId"
+241:       | "onAgentProgress"
+242:       | "subAgentContinuation"
+243:       | "toolAllowlist"
+244:     >,
+245:   ): Promise<Awaited<ReturnType<ChildEngineRuntime["run"]>>> {
+246:     this.running = true;
+247:     let nextTask = task;
+248:     let agentDirection: EngineRunOptions["agentDirection"];
+249:     try {
+250:       for (;;) {
+251:         const controller = new AbortController();
+252:         this.activeController = controller;
+253:         const lifecycleSignal = options.signal;
+254:         const cascadeAbort = () => controller.abort();
+255:         if (lifecycleSignal?.aborted) cascadeAbort();
+256:         else lifecycleSignal?.addEventListener("abort", cascadeAbort, { once: true });
+257:         this.state = agentDirection ? "redriving" : "starting";
+258:         let result;
+259:         try {
+260:           result = await this.runtime.run(nextTask, {
+261:             ...options,
+262:             signal: controller.signal,
+263:             runtimeGeneration: this.runtimeGeneration,
+264:             ...(agentDirection ? { injected: true, agentDirection } : {}),
+265:           });
+266:         } finally {
+267:           lifecycleSignal?.removeEventListener("abort", cascadeAbort);
+268:           this.activeController = undefined;
+269:         }
+270:         if (lifecycleSignal?.aborted) {
+
+packages/core/src/engine/subagent-spawner.ts:280–441
+280:         const directions = this.drainDirections();
+281:         this.interruptPending = false;
+282:         if (directions.length === 0) {
+283:           return result;
+284:         }
+285:         directions.sort((left, right) => left.sequence - right.sequence);
+286:         nextTask = buildAgentDirectionMessage(directions);
+287:         agentDirection = {
+288:           envelopeIds: directions.map((item) => item.id),
+289:           correlationIds: directions
+290:             .map((item) => item.correlationId)
+291:             .filter((value): value is string => value !== undefined),
+292:         };
+293:       }
+294:     } finally {
+295:       this.closeDirectionIntake();
+296:       this.running = false;
+297:       this.state = "terminal";
+298:       for (const { receipt, resolve } of this.pendingDelivered.values()) {
+299:         resolve({ status: "queued", ...receipt });
+300:       }
+301:       this.pendingDelivered.clear();
+302:       this.runtime.setAgentControlStateListener(undefined);
+303:       this.runtime.setAgentDirectionsDeliveredListener?.(undefined);
+304:     }
+305:   }
+306: }
+307: 
+308: export function createSubAgentSpawner(deps: CreateSubAgentSpawnerDeps): SubAgentSpawner {
+309:   return {
+310:     parentStream: deps.parentStream,
+311:     describe: () => ({
+312:       cwd: deps.cwd,
+313:       preset: deps.presetName,
+314:       permissionMode: deps.permissionMode,
+315:     }),
+316:     sessionExists: deps.sessionExists,
+317:     getSessionParentId: deps.getSessionParentId,
+318:     getSessionContinuation: deps.getSessionContinuation,
+319:     spawn: async (request) => {
+320:       if (!request.resumeSessionId) {
+321:         try {
+322:           deps.appendParentSubagent(request.agentId, request.description);
+323:         } catch {
+324:           // Parent anchors are best-effort and must never block a child run.
+325:         }
+326:       }
+327: 
+328:       const scope = resolveChildToolScope(
+329:         request.toolAllowlist,
+330:         deps.parentConfig.disabledBuiltinTools,
+331:         deps.parentConfig.enabledBuiltinTools,
+332:       );
+333:       const childConfig: EngineConfig = {
+334:         llm: resolveChildLlm(request.model, deps.modelPool, deps.parentConfig.llm),
+335:         clientDefaults: {
+336:           ...(deps.parentConfig.clientDefaults ?? {}),
+337:           retryMaxAttempts: 2,
+338:         },
+339:         cwd: deps.cwd,
+340:         workspaceContext: deps.workspaceContext ?? deps.parentConfig.workspaceContext,
+341:         permissionMode: deps.permissionMode,
+342:         preset: deps.presetName,
+343:         enabledBuiltinTools: scope.enabled,
+344:         disabledBuiltinTools: scope.disabled,
+345:         composition: deps.parentConfig.composition,
+346:         modules: deps.parentConfig.modules,
+347:         builtinToolHost: deps.parentConfig.builtinToolHost,
+348:         documentParserExecutable: deps.parentConfig.documentParserExecutable,
+349:         customSystemPrompt: deps.parentConfig.customSystemPrompt,
+350:         appendSystemPrompt:
+351:           [deps.parentConfig.appendSystemPrompt, request.appendSystemPrompt]
+352:             .filter(Boolean)
+353:             .join("\n\n") || undefined,
+354:         responseLanguage: deps.parentConfig.responseLanguage,
+355:         userProfile: deps.parentConfig.userProfile,
+356:         instructions: deps.parentConfig.instructions,
+357:         maxTurns: request.maxTurns,
+358:         maxContextTokens: deps.parentConfig.maxContextTokens ?? 200_000,
+359:         sessionStorageDir: deps.parentConfig.sessionStorageDir,
+360:         usageLedger: deps.parentConfig.usageLedger,
+361:         // The child borrows the same Host authority; Engine never disposes a
+362:         // signer explicitly supplied in its config.
+363:         modelRequestSigner: deps.parentConfig.modelRequestSigner,
+364:         headless: deps.parentConfig.headless,
+365:         readOnlySession: deps.parentConfig.readOnlySession || request.readOnlySession,
+366:         projectTrusted: deps.parentConfig.projectTrusted,
+367:         allowBackgroundShells: deps.parentConfig.allowBackgroundShells,
+368:         approvalBackend: deps.parentConfig.approvalBackend,
+369:         approvalRouter: deps.parentConfig.approvalRouter,
+370:         skillAllowlist: request.skillAllowlist,
+371:         sandbox: resolveChildSandbox(request.sandboxMode, deps.parentSandbox),
+372:         mcpServers: resolveChildMcpServers(request.mcpAllowlist, deps.parentConfig.mcpServers),
+373:         settingsScope: deps.parentConfig.settingsScope ?? "project",
+374:         isSubAgent: true,
+375:       };
+376:       const destination = request.streamOverride ?? deps.parentStream;
+377:       const childSessionId = request.resumeSessionId ?? request.agentId;
+378:       const parentSessionId = deps.getParentSessionId?.() ?? deps.parentSessionId;
+379:       const host = parentSessionId
+380:         ? deps.parentConfig.createChildHostBindings?.({
+381:             parentSessionId,
+382:             sessionId: childSessionId,
+383:             signal: request.signal,
+384:           })
+385:         : undefined;
+386:       if (host) {
+387:         childConfig.browserBridge = host.browserBridge;
+388:         childConfig.askUser = host.askUser;
+389:         childConfig.askUserAsync = host.askUserAsync;
+390:         childConfig.injectCredentialToBrowser = host.injectCredentialToBrowser;
+391:         childConfig.approvalBackend = host.approvalBackend ?? childConfig.approvalBackend;
+392:       }
+393:       let runtime: ChildEngineRuntime | undefined;
+394:       try {
+395:         if (deps.childRunner.createChild && request.runtimeGeneration !== undefined) {
+396:           runtime = deps.childRunner.createChild(childConfig);
+397:           const supervisor = new ChildRunSupervisor(
+398:             runtime,
+399:             childSessionId,
+400:             request.runtimeGeneration,
+401:           );
+402:           const ownerToken = nanoid();
+403:           const bound = request.bindLiveControl?.(supervisor, ownerToken);
+404:           supervisor.setCloseIntake(() =>
+405:             request.closeLiveControl?.(
+406:               supervisor,
+407:               bound && bound !== true ? (bound as ChildWriterLease) : undefined,
+408:             ),
+409:           );
+410:           if (bound === false) {
+411:             throw new Error(`child session ${childSessionId} already has a live transcript writer`);
+412:           }
+413:           host?.activate?.();
+414:           return await supervisor.run(request.prompt, {
+415:             signal: request.signal,
+416:             onStream: wrapChildRuntimeStream(destination, request.agentId, request.onProgressEvent),
+417:             sessionId: childSessionId,
+418:             subAgentContinuation: request.continuation,
+419:             toolAllowlist: request.toolAllowlist === undefined ? undefined : scope.enabled,
+420:             onAgentProgress: request.onAgentProgress,
+421:           });
+422:         }
+423:         host?.activate?.();
+424:         const result = await deps.childRunner.runChild(childConfig, request.prompt, {
+425:           signal: request.signal,
+426:           onStream: wrapChildRuntimeStream(destination, request.agentId, request.onProgressEvent),
+427:           sessionId: childSessionId,
+428:           subAgentContinuation: request.continuation,
+429:           toolAllowlist: request.toolAllowlist === undefined ? undefined : scope.enabled,
+430:         });
+431:         return result;
+432:       } finally {
+433:         try {
+434:           host?.dispose();
+435:         } finally {
+436:           await runtime?.dispose?.();
+437:         }
+438:       }
+439:     },
+440:   };
+441: }
+
+packages/core/src/tool-system/builtin/agent.ts:1035–1155
+1035:       agentType: overrides.resolvedType,
+1036:     });
+1037:     if (syncController.signal.aborted) return "Agent was aborted.";
+1038:     return `Agent error: ${(err as Error).message}`;
+1039:   } finally {
+1040:     if (bgTimer) clearTimeout(bgTimer);
+1041:     // Only detach the parent-abort listener when we awaited to completion.
+1042:     // On handoff, handoffToBackground already detached it (the agent is still
+1043:     // running and now follows the background contract, not parent-turn abort).
+1044:     if (!handedOff) parentSignal?.removeEventListener("abort", onParentAbort);
+1045:     if (!handedOff && liveBinding) asyncAgentRegistry.releaseWriterLease(liveBinding.lease);
+1046:   }
+1047: }
+1048: 
+1049: /**
+1050:  * Detach a still-running synchronous sub-agent into the background registry
+1051:  * (TODO 4.1). The agent KEEPS running on its existing signal — we attach
+1052:  * completion handlers that mirror the explicit run_in_background path so its
+1053:  * result/error arrives via the notification queue and the registry shows it as
+1054:  * a running (then completed/failed) background agent. Never aborts the agent.
+1055:  */
+1056: function handoffToBackground(
+1057:   runPromise: Promise<string>,
+1058:   controller: AbortController,
+1059:   meta: {
+1060:     agentId: string;
+1061:     name?: string;
+1062:     description: string;
+1063:     agentType?: string;
+1064:     continuation?: SubAgentContinuation;
+1065:     sessionId?: string;
+1066:     childSessionId: string;
+1067:     runtimeGeneration: number;
+1068:     liveBinding?: { control: LiveChildControl; lease: ChildWriterLease };
+1069:     progress?: ProgressPayload;
+1070:     hooks?: HookRegistry;
+1071:     parentSignal?: AbortSignal;
+1072:     onParentAbort: () => void;
+1073:     /**
+1074:      * UI sink for the terminal `agent_end` marker. The agent_start was already
+1075:      * emitted by runSubAgent before the handoff, so the UI card is 'working';
+1076:      * these handlers must close it out. On SUCCESS, runSubAgent's own agent_end
+1077:      * (it shares this runPromise and reaches its success emit) already fires —
+1078:      * so we only emit agent_end here for the failure/cancel paths, which
+1079:      * runSubAgent never reaches (it throws before its success emit).
+1080:      */
+1081:     uiStream?: StreamCallback;
+1082:   },
+1083: ): void {
+1084:   const {
+1085:     agentId,
+1086:     name,
+1087:     description,
+1088:     agentType,
+1089:     continuation,
+1090:     sessionId,
+1091:     hooks,
+1092:     uiStream,
+1093:     childSessionId,
+1094:     runtimeGeneration,
+1095:     liveBinding,
+1096:     progress,
+1097:   } = meta;
+1098: 
+1099:   // The agent outlives the spawning turn now, so parent-turn abort must NOT
+1100:   // cascade to it (same contract as an explicit background agent). Detach the
+1101:   // parent listener; cancellation from here on goes through AgentCancel.
+1102:   meta.parentSignal?.removeEventListener("abort", meta.onParentAbort);
+1103: 
+1104:   asyncAgentRegistry.register({
+1105:     agentId,
+1106:     name,
+1107:     agentType,
+1108:     continuation,
+1109:     description,
+1110:     sessionId,
+1111:     childSessionId,
+1112:     runtimeGeneration,
+1113:     transcript: asyncAgentRegistry.get(agentId)?.transcript,
+1114:     progress,
+1115:     status: "running",
+1116:     startedAt: Date.now(),
+1117:     abort: () => controller.abort(),
+1118:   });
+1119:   if (
+1120:     liveBinding &&
+1121:     !asyncAgentRegistry.bindLiveControl(agentId, liveBinding.control, liveBinding.lease)
+1122:   ) {
+1123:     logger.warn("agent_live_control.handoff_bind_failed", {
+1124:       agentId,
+1125:       childSessionId,
+1126:       runtimeGeneration,
+1127:     });
+1128:   }
+1129: 
+1130:   // Tell the UI this agent is now running in the BACKGROUND (still working,
+1131:   // just detached from the parent turn). Without this the card's only signals
+1132:   // are agent_start (looks foreground) and the eventual agent_end — so during
+1133:   // the handoff→completion gap turn_complete's done-sweep marks it done and the
+1134:   // card collapses / shows no "running". (A: background-agent-visibility)
+1135:   safeEmit(uiStream, { type: "agent_backgrounded", agentId, name, description, agentType });
+1136: 
+1137:   // B: keep a liveness heartbeat going while this (and any sibling) background
+1138:   // agent runs, so the UI shows "alive" even through long LLM-request silence.
+1139:   // Idempotent; self-stops when no agent remains.
+1140:   ensureAgentHeartbeat();
+1141: 
+1142:   runPromise
+1143:     .then((text) => {
+1144:       if (controller.signal.aborted) {
+1145:         if (liveBinding) {
+1146:           asyncAgentRegistry.completeTerminal(agentId, "cancelled", liveBinding.lease);
+1147:         } else {
+1148:           asyncAgentRegistry.markCancelled(agentId);
+1149:         }
+1150:         void hooks?.emit("notification", { kind: "agent_cancelled", agentId, name, description });
+1151:         return;
+1152:       }
+1153:       const transitioned = liveBinding
+1154:         ? asyncAgentRegistry.completeTerminal(agentId, "completed", liveBinding.lease)
+1155:         : (asyncAgentRegistry.markCompleted(agentId), true);
+
+packages/core/src/tool-system/builtin/agent.ts:1170–1305
+1170:             status: "completed",
+1171:             finalText: text,
+1172:             enqueuedAt: Date.now(),
+1173:           },
+1174:           sessionId,
+1175:         );
+1176:       } else {
+1177:         logger.warn("agent_completion_without_session", { agentId, name, status: "completed" });
+1178:       }
+1179:       void hooks?.emit("notification", {
+1180:         kind: "agent_completed",
+1181:         agentId,
+1182:         name,
+1183:         description,
+1184:         finalText: text,
+1185:       });
+1186:     })
+1187:     .catch((err: Error) => {
+1188:       // runSubAgent threw before its success agent_end, so the UI card is still
+1189:       // 'working'. Close it out with a terminal agent_end{error} (mirrors the
+1190:       // synchronous catch at the agentTool level).
+1191:       safeEmit(uiStream, {
+1192:         type: "agent_end",
+1193:         agentId,
+1194:         name,
+1195:         description,
+1196:         error: err.message,
+1197:         agentType,
+1198:       });
+1199:       if (controller.signal.aborted) {
+1200:         if (liveBinding) {
+1201:           asyncAgentRegistry.completeTerminal(agentId, "cancelled", liveBinding.lease);
+1202:         } else {
+1203:           asyncAgentRegistry.markCancelled(agentId);
+1204:         }
+1205:         void hooks?.emit("notification", { kind: "agent_cancelled", agentId, name, description });
+1206:         return;
+1207:       }
+1208:       const transitioned = liveBinding
+1209:         ? asyncAgentRegistry.completeTerminal(agentId, "failed", liveBinding.lease)
+1210:         : (asyncAgentRegistry.markFailed(agentId), true);
+1211:       if (!transitioned) return;
+1212:       void writeAgentOutputFile(agentId, {
+1213:         status: "failed",
+1214:         body: err.message,
+1215:         description,
+1216:         name,
+1217:         onError: (m, meta) => logger.warn(m, meta),
+1218:       });
+1219:       if (sessionId) {
+1220:         notificationQueue.enqueue(
+1221:           {
+1222:             agentId,
+1223:             name,
+1224:             description,
+1225:             status: "failed",
+1226:             error: err.message,
+1227:             enqueuedAt: Date.now(),
+1228:           },
+1229:           sessionId,
+1230:         );
+1231:       } else {
+1232:         logger.warn("agent_completion_without_session", { agentId, name, status: "failed" });
+1233:       }
+1234:       void hooks?.emit("notification", {
+1235:         kind: "agent_failed",
+1236:         agentId,
+1237:         name,
+1238:         description,
+1239:         error: err.message,
+1240:       });
+1241:     });
+1242: }
+1243: 
+1244: // ─── AgentStatus / AgentCancel — companions to run_in_background ─
+1245: 
+1246: export const agentStatusToolDef: ToolDefinition = {
+1247:   name: "AgentStatus",
+1248:   description:
+1249:     "Check the status of a background agent launched with Agent(run_in_background=true). " +
+1250:     "Returns running / completed / failed / cancelled, plus the result text once finished. " +
+1251:     "Omit agent_id to list this session's background agents (pass all=true for every session in the process). " +
+1252:     "Results arrive automatically when an agent finishes — use this for an on-demand check, not to poll.",
+1253:   inputSchema: {
+1254:     type: "object",
+1255:     properties: {
+1256:       agent_id: {
+1257:         type: "string",
+1258:         description: "The agent_id returned by Agent(run_in_background=true). Omit to list.",
+1259:       },
+1260:       all: {
+1261:         type: "boolean",
+1262:         description:
+1263:           "When listing (no agent_id): true lists background agents from every session in this process; " +
+1264:           "default (false) lists only the current session's.",
+1265:       },
+1266:     },
+1267:   },
+1268: };
+1269: 
+1270: export async function agentStatusTool(
+1271:   args: Record<string, unknown>,
+1272:   ctx?: ToolContext,
+1273: ): Promise<string> {
+1274:   const agentId = args.agent_id as string | undefined;
+1275: 
+1276:   if (!agentId) {
+1277:     const all = args.all === true;
+1278:     // Default to the current session's agents so concurrent sessions don't
+1279:     // leak into each other's listings; fall back to process-wide only when
+1280:     // there's no session context or the caller explicitly asks for `all`.
+1281:     const list =
+1282:       all || !ctx?.sessionId
+1283:         ? asyncAgentRegistry.list()
+1284:         : asyncAgentRegistry.listForSession(ctx.sessionId);
+1285:     if (list.length === 0) {
+1286:       return all || !ctx?.sessionId
+1287:         ? "No background agents in this process."
+1288:         : "No background agents in this session.";
+1289:     }
+1290:     return list
+1291:       .map((e) => {
+1292:         const dur = ((e.finishedAt ?? Date.now()) - e.startedAt) / 1000;
+1293:         const progress = e.status === "running" && e.progress ? ` — ${e.progress.summary}` : "";
+1294:         return `${e.agentId} [${e.status}] ${e.description}${progress} (${dur.toFixed(1)}s)`;
+1295:       })
+1296:       .join("\n");
+1297:   }
+1298: 
+1299:   const e = asyncAgentRegistry.get(agentId);
+1300:   if (!e) return `Error: agent_id "${agentId}" not found.`;
+1301:   if (ctx?.sessionId && e.sessionId !== ctx.sessionId) {
+1302:     return `Error: agent_id "${agentId}" is not in this session.`;
+1303:   }
+1304: 
+1305:   const dur = ((e.finishedAt ?? Date.now()) - e.startedAt) / 1000;
+
+packages/core/src/engine/run-session-open.ts:180–245
+180:       clientMessageId: options?.clientMessageId,
+181:       displayText: options?.displayText?.trim() || undefined,
+182:       ...(options?.agentDirection
+183:         ? {
+184:             authority: "agent" as const,
+185:             source: "agent-direction" as const,
+186:             envelopeIds: options.agentDirection.envelopeIds,
+187:             correlationIds: options.agentDirection.correlationIds,
+188:           }
+189:         : {}),
+190:     }).id;
+191:     if (options?.agentDirection) {
+192:       args.onAgentDirectionsDelivered?.(options.agentDirection.envelopeIds);
+193:     }
+194:   } else {
+195:     // Cold start: shape (2) reuses the host-supplied sid; shape (3)
+196:     // lets sessionManager generate one with nanoid.
+197:     session = args.sessionManager.create(
+198:       args.cwd,
+199:       args.llmModel,
+200:       args.llmProvider,
+201:       options?.sessionId,
+202:       args.isSubAgent ? getCurrentSid() : undefined,
+203:       args.isSubAgent ? "subagent" : args.origin,
+204:       args.sessionKind,
+205:       options?.ephemeral === true,
+206:       continuation,
+207:     );
+208:     if (args.projectBinding) {
+209:       args.sessionManager.saveStateOrUpdateFields(session.state, { project: args.projectBinding });
+210:     }
+211:     const userMsg: Message = { role: "user", content: args.userMessageContent };
+212:     claimClientMessageId(session, options?.clientMessageId, "submit");
+213:     if (args.parsedTask.hasImages) freshImageMessage = userMsg;
+214:     messages = [userMsg];
+215:     runId = session.transcript.appendMessage("user", args.userMessageContent, {
+216:       injected: options?.injected === true,
+217:       clientMessageId: options?.clientMessageId,
+218:       displayText: options?.displayText?.trim() || undefined,
+219:       ...(options?.agentDirection
+220:         ? {
+221:             authority: "agent" as const,
+222:             source: "agent-direction" as const,
+223:             envelopeIds: options.agentDirection.envelopeIds,
+224:             correlationIds: options.agentDirection.correlationIds,
+225:           }
+226:         : {}),
+227:     }).id;
+228:     if (options?.agentDirection) {
+229:       args.onAgentDirectionsDelivered?.(options.agentDirection.envelopeIds);
+230:     }
+231:     // Save first user message as session summary — text only. The summary
+232:     // shows up in the session list; "[image]" is more informative than a
+233:     // truncated `[object Object]` when the prompt was purely visual.
+234:     const summarySrc =
+235:       options?.displayText?.trim() ||
+236:       (args.parsedTask.hasImages
+237:         ? args.parsedTask.text ||
+238:           `[image${args.parsedTask.images.length > 1 ? `s × ${args.parsedTask.images.length}` : ""}]`
+239:         : args.taskText);
+240:     session.state.summary = summarySrc.slice(0, 80).replace(/\n/g, " ");
+241:     args.sessionManager.saveStateOrUpdateFields(session.state, {
+242:       summary: session.state.summary,
+243:     });
+244:   }
+245: 
+
+packages/core/src/session/session-manager.ts:780–830
+780:         provider,
+781:         startedAt: state.startedAt,
+782:         kind,
+783:       });
+784:       if (transcript.flushFailed()) {
+785:         throw new SessionError(`Failed to persist initial transcript for ${sessionId}`);
+786:       }
+787:       const bundle = { state, transcript };
+788:       this.storeProcessLocalBundle(bundle);
+789:       return bundle;
+790:     }
+791: 
+792:     const sessionDir = join(this.sessionsDir, sessionId);
+793:     try {
+794:       mkdirSync(sessionDir, { mode: 0o700 });
+795:     } catch (err) {
+796:       if ((err as NodeJS.ErrnoException).code === "EEXIST") {
+797:         throw new SessionError(`Session already exists: ${sessionId}`);
+798:       }
+799:       throw err;
+800:     }
+801: 
+802:     // Atomic write (tmp+rename) like saveState, so a crash during this one-time
+803:     // create can't leave a torn state.json that resume() then fails to parse.
+804:     try {
+805:       const stateTarget = join(sessionDir, "state.json");
+806:       this.writeStateAtomically(stateTarget, state, "create");
+807: 
+808:       const transcript = new Transcript(join(sessionDir, "transcript.jsonl"));
+809:       transcript.append("session_meta", {
+810:         sessionId,
+811:         cwd,
+812:         model,
+813:         provider,
+814:         startedAt: state.startedAt,
+815:         kind,
+816:       });
+817: 
+818:       return { state, transcript };
+819:     } catch (error) {
+820:       // A failed first materialization must not reserve the session id forever
+821:       // with an empty/partial directory.
+822:       rmSync(sessionDir, { recursive: true, force: true });
+823:       throw error;
+824:     }
+825:   }
+826: 
+827:   /** Whether a persisted or process-local session exists. */
+828:   exists(sessionId: string): boolean {
+829:     // exists() is a probe — callers use it to decide between resume and
+830:     // create-with-explicit-sid. Treat an invalid id as "not present"

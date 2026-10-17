@@ -1,0 +1,119 @@
+[
+  {
+    "path": "docs/audit-2026-10-17-round4/source-manifest.json",
+    "bytes": 16629,
+    "sha256": "8a24586af05d7ff9741ed73a8086baef555838ee65e0140403b764797e60f054",
+    "pinAt": "2026-10-17T19:42:13.929663+00:00",
+    "readAt": "2026-10-17T19:42:13.931130+00:00",
+    "selectedObjects": [
+      {
+        "pointer": "/files/12",
+        "value": {
+          "path": "packages/coding/src/lsp/manager.ts",
+          "bytes": 8880,
+          "sha256": "ff1a25879fd6a2ce725a9e82f501af543e2afa429ea99020be6513ef0c4e0b7d",
+          "frozenBlobVerified": true,
+          "currentWorkingTreeMatchesFrozenBlob": true
+        }
+      },
+      {
+        "pointer": "/files/14",
+        "value": {
+          "path": "packages/coding/src/lsp/root-path.ts",
+          "bytes": 508,
+          "sha256": "11868a6f1b14f0b2a8b642ea741994784834ea9931cfd8b99910861aca415c3c",
+          "frozenBlobVerified": true,
+          "currentWorkingTreeMatchesFrozenBlob": true
+        }
+      },
+      {
+        "pointer": "/files/15",
+        "value": {
+          "path": "packages/coding/src/lsp/servers.ts",
+          "bytes": 1744,
+          "sha256": "91f5c21df41ebc75bbbf19d21ed7f4d7971c82d850c485b9288b1c688d8ea18c",
+          "frozenBlobVerified": true,
+          "currentWorkingTreeMatchesFrozenBlob": true
+        }
+      }
+    ]
+  },
+  {
+    "path": "docs/audit-2026-10-17-round4/evidence/coding-receipts.json",
+    "bytes": 7917,
+    "sha256": "3c1622371a5030b791ac131324f396006b79200e53034d4098db4f3c7d7b0e15",
+    "pinAt": "2026-10-17T19:42:13.932184+00:00",
+    "readAt": "2026-10-17T19:42:13.932314+00:00",
+    "selectedObjects": [
+      {
+        "pointer": "/sources/1",
+        "value": {
+          "path": "packages/coding/src/lsp/manager.ts",
+          "sha256": "ff1a25879fd6a2ce725a9e82f501af543e2afa429ea99020be6513ef0c4e0b7d",
+          "frozen_sha256": "ff1a25879fd6a2ce725a9e82f501af543e2afa429ea99020be6513ef0c4e0b7d",
+          "matches_frozen": true
+        }
+      },
+      {
+        "pointer": "/sources/2",
+        "value": {
+          "path": "packages/coding/src/lsp/root-path.ts",
+          "sha256": "11868a6f1b14f0b2a8b642ea741994784834ea9931cfd8b99910861aca415c3c",
+          "frozen_sha256": "11868a6f1b14f0b2a8b642ea741994784834ea9931cfd8b99910861aca415c3c",
+          "matches_frozen": true
+        }
+      },
+      {
+        "pointer": "/sources/4",
+        "value": {
+          "path": "packages/coding/src/lsp/servers.ts",
+          "sha256": "91f5c21df41ebc75bbbf19d21ed7f4d7971c82d850c485b9288b1c688d8ea18c",
+          "frozen_sha256": "91f5c21df41ebc75bbbf19d21ed7f4d7971c82d850c485b9288b1c688d8ea18c",
+          "matches_frozen": true
+        }
+      }
+    ]
+  },
+  {
+    "path": "docs/audit-2026-10-17-round4/coding.md",
+    "bytes": 8002,
+    "lines": 52,
+    "sha256": "90cf1904e21a433228cb72498f40147ed6ec1004136849094c40ff4cb7ec22a3",
+    "pinAt": "2026-10-17T19:42:13.933437+00:00",
+    "readAt": "2026-10-17T19:42:13.933443+00:00",
+    "selectedLineRanges": [
+      [
+        1,
+        47
+      ]
+    ],
+    "ranges": [
+      {
+        "first": 1,
+        "last": 47,
+        "text": "1: # Coding LSP / 文件数据补审（第四批）\n2: \n3: 冻结源码：`4ee32f28f78b8315112cca77cfc22b2f2f80ced6`；分支：`codex/audit/context-round4-20261017`。本报告只记录结果，未修改产品源码、依赖或既有测试，未进行 Git 写操作。\n4: \n5: 本轮有 **2 项新发现（2 P2）**；两种 URI 输出表现合并为一项，重复打开与可能陈旧的诊断合并为一项。候选和历史问题均不加进此数量。证据直接导入当前 `packages/coding/src`，在真实 workspace manager 上注入内存 client；没有启动语言服务器或其他产品进程，没有网络调用。\n6: \n7: ## CODING-R4-01 [P2] Definition / References 将编码 URI 当作文件路径返回\n8: \n9: - 源码：`packages/coding/src/tools/lsp.ts:199–210`，核心为第 208 行的 `uri.replace(\"file://\", \"\")`；两个实际入口为第 96–110 行。工具注册与调用路径见 `packages/coding/src/index.capability.ts:190–202`，它是 Coding preset 的实际 LSP 实现。\n10: - 触发：语言服务器正常返回一个 `Location`，其文件名含空格、中文、`%` 或 `#`。工具请求端第 91 行正确使用 `pathToFileURL`，结果端却只去掉 scheme，没有进行 URI 解码。\n11: - 观察：夹具创建真实临时文件 `a b-中文-100%#file.ts`；Definition 返回的路径保留 `%20`、UTF-8 百分号编码、`%25`、`%23`。原文件存在，而该返回路径不存在。References 同样保留 `reference%20space.ts`。ASCII 文件和 1-based 行号控制通过。\n12: - 影响：Agent 按返回的 `path:line` 定位、读取或编辑普通含空格/非 ASCII 文件时，得到与实际文件不同的路径。此处确认的是工具输出失真，不是 GUI 点击导航或真实语言服务器故障。Windows/UNC 未运行，不把平台推断当作实测。\n13: - 修复方向：对 `file:` Location 使用平台文件 URL 转换；对其他 URI scheme 保留可识别的 URI。此次没有实施修复。\n14: - 去重：2026-05-30 的历史 finding 是 **manager 的 spawn cwd** 使用同类 replace；当前 `lsp/root-path.ts:11–12` 已用 `fileURLToPath` 修复，该正常行为也在本轮通过控制。当前项是仍未修复的 **工具结果 consumer**，不同源码位置和用户影响；没有把旧 manager 问题重复计入。10-16、10-17、round3 及 review 系列未找到此结果 formatter finding，详见 [去重回执](evidence/coding-dedup.json)。\n15: - 证据：[夹具](evidence/coding-lsp-data.test.ts)、[首跑原始 stdout+stderr](evidence/coding-lsp-data.first.log)、[退出码](evidence/coding-lsp-data.first.exit.txt)。\n16: \n17: ## CODING-R4-02 [P2] 重复 getDiagnostics 不同步已打开文件的编辑\n18: \n19: - 源码：`packages/coding/src/tools/lsp.ts:135–158`，特别是第 156–157 行每次都发送 `textDocument/didOpen`，固定 `version: 1`。整个工具没有 `didChange` / `didClose`。Manager 按 cwd 复用已初始化 client，见 `packages/coding/src/lsp/manager.ts:42–43,253–258`；因此同一 workspace 的连续调用不是新协议 session。\n20: - 触发：对一个文件调用 `getDiagnostics`，修改磁盘内容，再对同一文件调用 `getDiagnostics`。[LSP 3.17 官方 didOpen 合同](https://raw.githubusercontent.com/microsoft/language-server-protocol/gh-pages/_specifications/lsp/3.17/textDocument/didOpen.md)要求 open/close 成对、同一时刻最多打开一次；打开后内容由 client 管理。已打开文档的变更应使用同步更新或先关闭再重开，重复 `didOpen` 不构成合法的内容更新。官方源由本轮 root 独立只读核对；本 Coding 执行未访问网络。\n21: - 观察：真实工具首次发送 `BROKEN\\n`，临时文件随后改成 `export const fixed = true;\\n`。第二次仍发送 `didOpen`、`version: 1`，且没有更新/关闭消息。保留首次打开文档的严格内存 adapter 再发布旧内容的诊断，真实工具返回 `Old text is broken`。这证明非法通知序列，以及在该 adapter 下磁盘已修复而诊断仍旧；未声称任何特定真实服务器已经实测。\n22: - 影响：语言服务器可能保留首次打开的文档、拒绝重复打开、或不再发布诊断，后续检查无法可靠对应当前磁盘内容。在本轮 fake adapter 下观察到的是陈旧结果；没有执行 10 秒不发布分支，也没有将假设的等待计为第二项。\n23: - 修复方向：记录已同步文档及版本，按服务器协商的同步方式发送变更；或对独立磁盘检查采用成对 open/close。诊断的版本/请求相关性应和此同步策略一起处理。此次没有实施修复。\n24: - 去重：历史 2026-05-30 diagnostics finding 是固定等待 2 秒且不收集通知，当前第 138–174 行已收集与格式化诊断；本项关注重复检查时的文档内容同步。旧 N15/N16（启动失败、死 client、并发 cold start）均排除、未重跑。详见 [去重回执](evidence/coding-dedup.json)。\n25: - 证据：[夹具](evidence/coding-lsp-data.test.ts)、[首跑原始 stdout+stderr](evidence/coding-lsp-data.first.log)、[退出码](evidence/coding-lsp-data.first.exit.txt)。\n26: \n27: ## 候选与排除（不计新发现）\n28: \n29: | 方向 | 处置与原因 |\n30: | --- | --- |\n31: | `getSymbols` 只映射顶层、没有展开 `children` | 不计。`client.ts:77` 未广告 `hierarchicalDocumentSymbolSupport`；没有确证当前协商合同下合规服务器会返回层级树。实际 flat `SymbolInformation[]` 与空数组控制通过。 |\n32: | `LocationLink.targetSelectionRange` | 不计。`client.ts:74` 未广告 definition `linkSupport`；当前确认的 URI finding 只使用普通 `Location`。没有把可能不在当前合同内的 response 形状当作新发现。 |\n33: | `.js/.jsx/.scss/.less` 的 `languageId` 使用配置所属语言 | 静态候选，未确认。`servers.ts:16–21,56–61` 与 `tools/lsp.ts:157` 可见映射；未运行具体服务器证明语言 mode / 诊断影响，本轮不扩展到真实服务器。 |\n34: | `rootUriToPath` | 已修复/正常控制，不计新发现。 |\n35: | LSP startup、退出、readiness、旧 failed fixtures、N12 | 按本轮范围排除，未执行、未重试，也未用其他方法绕过。 |\n36: | 原生平台、语言服务器安装/可用性、真实 LSP、网络、安全边界 | 明确未覆盖。 |\n37: \n38: ## 验证与覆盖边界\n39: \n40: 唯一测试命令：\n41: \n42: ```text\n43: node scripts/run-bun-test-shard.mjs --timeout 30000 docs/audit-2026-10-17-round4/evidence/coding-lsp-data.test.ts\n44: ```\n45: \n46: 首跑 **1 文件 / 8 pass / 0 fail / 0 skip / 32 expect() / Completed / exit 0**；没有重跑、修夹具、切换 runner 或执行替代方法。guarded runner 为此次执行提供隔离 HOME 与凭据环境。首跑合并 stdout+stderr 原样保存在 `.first.log`，退出码单独保存。\n47: "
+      }
+    ]
+  },
+  {
+    "path": "docs/review-remaining-2026-10-12/coding-tui-chat.md",
+    "bytes": 31923,
+    "lines": 233,
+    "sha256": "956ae03625e6511b9871ebd754c4320dfbbb0ccdfcbe07605df32678ee3a0844",
+    "pinAt": "2026-10-17T19:42:13.935160+00:00",
+    "readAt": "2026-10-17T19:42:13.935166+00:00",
+    "selectedLineRanges": [
+      [
+        84,
+        119
+      ]
+    ],
+    "ranges": [
+      {
+        "first": 84,
+        "last": 119,
+        "text": "84: ### C4 [P2] Failed LSP starts do not have complete error and process ownership\n85: \n86: Sources:\n87: \n88: - `/Users/admin/.codex/worktrees/remaining-modules-review-20261012/codeshell/packages/coding/src/lsp/client.ts:48`\n89: - `/Users/admin/.codex/worktrees/remaining-modules-review-20261012/codeshell/packages/coding/src/lsp/manager.ts:72`\n90: - `/Users/admin/.codex/worktrees/remaining-modules-review-20261012/codeshell/packages/coding/src/lsp/manager.ts:84`\n91: \n92: Two observed launch-failure manifestations share incomplete startup lifecycle ownership. (a) ChildProcess emits `error` for a now-invalid cwd/missing interpreter after availability probing. LSPClient installs exit but no error handler; native Node raises an unhandled error and terminates the host. (b) A running language server rejects initialize; manager catches and returns undefined, but client is scoped inside try and assigned to managed.client only after successful initialize. The live failed child cannot be reached by shutdownAll; repeated attempts can accumulate children.\n93: \n94: Owned executable normal server initialized and shut down. Owned initialize-error server left PID alive after manager.getClient returned undefined and manager.shutdownAll completed. Fixture explicitly SIGKILLed that owned PID. Separate owned native host with missing cwd exited1, stderr classified `Unhandled 'error' event` + ENOENT. Happy native handshake is the availability/stdio normal control. No real language-server install, user process or interpreter invoked.\n95: \n96: Recommendation: own the child from spawn onward, turn async spawn errors into the awaited startup failure, and close failed initialization in finally/catch with bounded exit escalation.\n97: \n98: ### C5 [P2] LSP readiness state can return a dead client or false unavailable result\n99: \n100: Sources:\n101: \n102: - `/Users/admin/.codex/worktrees/remaining-modules-review-20261012/codeshell/packages/coding/src/lsp/client.ts:58`\n103: - `/Users/admin/.codex/worktrees/remaining-modules-review-20261012/codeshell/packages/coding/src/lsp/client.ts:154`\n104: - `/Users/admin/.codex/worktrees/remaining-modules-review-20261012/codeshell/packages/coding/src/lsp/manager.ts:42`\n105: - `/Users/admin/.codex/worktrees/remaining-modules-review-20261012/codeshell/packages/coding/src/lsp/manager.ts:46`\n106: \n107: The manager's ready/starting decisions do not represent actual completion and liveness. After a server exits, process remains assigned and process.killed remains false (it means kill() was called, not process exited); manager keeps returning the same dead client. New LSP operations cannot recover by lazy restart. Concurrent cold calls instead wait a fixed2s and return managed.client regardless of initialize state; a valid server taking2.2s to initialize yields undefined to the second caller while the first succeeds. LSP tool reports server unavailable/install advice in this branch.\n108: \n109: Owned server exited3 after initialize: isAlive=true and next manager.getClient returned the exact same object. Separate2200ms initialize: second call after20ms returned undefined, first then returned ready. Happy handshake/shutdown is the normal control. Fixture clears its private dead client handle before shutdown solely to avoid spending the known30s request timeout in test cleanup; product's broken state is asserted before that test-only cleanup.\n110: \n111: Recommendation: share a startup promise; invalidate client/state on terminal child events and distinguish exited/failed/starting from ready.\n112: \n113: ### C6 [P2, lower-frequency trigger] Claude runtime close returns while the provider remains alive\n114: \n115: Sources:\n116: \n117: - `/Users/admin/.codex/worktrees/remaining-modules-review-20261012/codeshell/packages/coding/src/external-runtimes/claude-code/runtime.ts:223`\n118: - `/Users/admin/.codex/worktrees/remaining-modules-review-20261012/codeshell/packages/coding/src/external-runtimes/claude-code/runtime.ts:229`\n119: - `/Users/admin/.codex/worktrees/remaining-modules-review-20261012/codeshell/packages/coding/src/external-runtimes/session-factory.ts:141` (close unregisters routing, closes runtime, then disposes tool host/bridge)"
+      }
+    ]
+  }
+]

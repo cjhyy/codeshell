@@ -1,0 +1,23 @@
+{
+  "atUTC": "2026-10-17T19:50:43.172988+00:00",
+  "formal": [],
+  "candidates": [],
+  "related": [],
+  "allReadersFrozen": true,
+  "subagentIndependentReviewComplete": true,
+  "sourceReadBaseline": "c39eb6f987b7bd5d740fee6d8ab5b46718f9c9af",
+  "decisions": [
+    "145 ordinary LSP root chain finite negative; known URI/diagnostics/C4/C5 and failed N12 excluded.",
+    "146 ordinary full/summary/completed-side fork finite negative; known SESSION-R9 and CTX1/2 excluded.",
+    "147 provider/own run delta/latest state/event fields finite negative; old pricing/timing/accounting causes excluded.",
+    "148 ordinary stored role override restore finite negative, independently qualified by149: current parent model/prompt and registry labels are not a complete effective-config freeze contract."
+  ],
+  "productRuns": 0,
+  "historicalFormalRecords": 118,
+  "priorities": {
+    "P2": 45,
+    "P3": 73
+  },
+  "goalStillActive": true,
+  "nextUnusedPrep": 150
+}

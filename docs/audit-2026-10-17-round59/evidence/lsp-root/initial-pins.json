@@ -1,0 +1,49 @@
+{
+  "root": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell",
+  "rootReportedHead": "c39eb6f987b7bd5d740fee6d8ab5b46718f9c9af",
+  "branchReported": 59,
+  "GitVerified": false,
+  "files": [
+    {
+      "path": "CODESHELL.md",
+      "bytes": 17639,
+      "lines": 217,
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "pinAt": "2026-10-17T19:39:35.508924+00:00",
+      "coverage": "hash-only before body/navigation"
+    },
+    {
+      "path": "AGENTS.md",
+      "bytes": 206,
+      "lines": 5,
+      "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "pinAt": "2026-10-17T19:39:35.509792+00:00",
+      "coverage": "hash-only before body/navigation"
+    },
+    {
+      "path": "packages/coding/src/lsp/root-path.ts",
+      "bytes": 508,
+      "lines": 13,
+      "sha256": "11868a6f1b14f0b2a8b642ea741994784834ea9931cfd8b99910861aca415c3c",
+      "pinAt": "2026-10-17T19:39:35.510165+00:00",
+      "coverage": "hash-only before body/navigation"
+    },
+    {
+      "path": "packages/coding/src/lsp/servers.ts",
+      "bytes": 1744,
+      "lines": 71,
+      "sha256": "91f5c21df41ebc75bbbf19d21ed7f4d7971c82d850c485b9288b1c688d8ea18c",
+      "pinAt": "2026-10-17T19:39:35.510506+00:00",
+      "coverage": "hash-only before body/navigation"
+    },
+    {
+      "path": "packages/coding/src/lsp/manager.ts",
+      "bytes": 8880,
+      "lines": 279,
+      "sha256": "ff1a25879fd6a2ce725a9e82f501af543e2afa429ea99020be6513ef0c4e0b7d",
+      "pinAt": "2026-10-17T19:39:35.510936+00:00",
+      "coverage": "hash-only before body/navigation"
+    }
+  ],
+  "instructions": "Previously read CODESHELL/AGENTS reused only if unchanged; no new semantic instruction reading."
+}

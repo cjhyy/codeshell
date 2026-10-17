@@ -1,0 +1,39 @@
+{
+  "rootReportedBaseline": "c39eb6f987b7bd5d740fee6d8ab5b46718f9c9af",
+  "gitCertified": false,
+  "instructionReuse": "Prior full instruction read reused with current exactSHA checks; no new instruction body read.",
+  "files": [
+    {
+      "path": "CODESHELL.md",
+      "bytes": 17639,
+      "lineCount": 217,
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "pinnedAtUTC": "2026-10-17T19:39:49.914561+00:00",
+      "timing": "before own source body/nav; exact inventory confirmed"
+    },
+    {
+      "path": "AGENTS.md",
+      "bytes": 206,
+      "lineCount": 5,
+      "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "pinnedAtUTC": "2026-10-17T19:39:49.914798+00:00",
+      "timing": "before own source body/nav; exact inventory confirmed"
+    },
+    {
+      "path": "packages/core/src/session/session-manager.ts",
+      "bytes": 109429,
+      "lineCount": 2841,
+      "sha256": "3a0ac1691e1eaa8b948c31b2d9530ddc1be275992022128f48326043240b05af",
+      "pinnedAtUTC": "2026-10-17T19:39:49.915702+00:00",
+      "timing": "before own source body/nav; exact inventory confirmed"
+    },
+    {
+      "path": "packages/core/src/session/transcript.ts",
+      "bytes": 51303,
+      "lineCount": 1377,
+      "sha256": "0d2e32dd2e530200c626dd2f94f563d3268f9ae9ad2e37e3497d1a849669d829",
+      "pinnedAtUTC": "2026-10-17T19:39:49.916261+00:00",
+      "timing": "before own source body/nav; exact inventory confirmed"
+    }
+  ]
+}

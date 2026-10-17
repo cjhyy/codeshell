@@ -1,0 +1,29 @@
+{
+  "atUTC": "2026-10-17T19:42:09.561609+00:00",
+  "files": [
+    {
+      "path": "docs/audit-2026-10-17-round9/evidence/root-source-manifest.json",
+      "bytes": 10736,
+      "sha256": "59aa8bb179daa09591c111268dc7997b419759dcc78fc3e76c2b00c2be9e435d",
+      "beforeRead": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round19/evidence/root-source-manifest.json",
+      "bytes": 5155,
+      "sha256": "81bc4165917263af60b19d5cc46912ca35c82bbf1642cbe58420beb8b08bf64b",
+      "beforeRead": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round19/evidence/timing-source-manifest.json",
+      "bytes": 4764,
+      "sha256": "ed4a9395fbbdb7e4e37d6e8570cbe1fe043efbc6058586345b5072d9b65877f6",
+      "beforeRead": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round19/timing.md",
+      "bytes": 6479,
+      "sha256": "84b153340cfb082ef79d7e34a6b438a5a93cc66296071b40301de0607ec37672",
+      "beforeRead": true
+    }
+  ]
+}

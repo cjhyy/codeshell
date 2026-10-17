@@ -1,0 +1,718 @@
+{
+  "atUTC": "2026-10-17T19:46:12.328828+00:00",
+  "rootReportedBaselineOnly": "c39eb6f987b7bd5d740fee6d8ab5b46718f9c9af",
+  "role": "Independent bounded normal producer→per-run counters→session commit→usage event source reviewer, not runtime verifier",
+  "files": [
+    {
+      "path": "packages/core/src/session/usage.ts",
+      "bytes": 5944,
+      "lines": 149,
+      "sha256": "cec6ea891501f12ea35686ce5b409055ce76bcf7cea231f81ab03479aacd79cd",
+      "beforeBodyOrLineNavigation": true,
+      "coverage": "full",
+      "sourceKind": "product",
+      "selectedLineRanges": [
+        [
+          1,
+          149
+        ]
+      ],
+      "semanticLines": 149,
+      "displayedLineRanges": [
+        [
+          1,
+          149
+        ]
+      ],
+      "additionalNavigationSnippetLines": [],
+      "uniqueDisplayedLines": 149,
+      "navigationOnlyDisplayedLineRanges": [],
+      "purpose": "Directed reread of known same-SHA R19 full leaf, not new unique coverage. Pure additive/fold/versioned foreground cache contract; no pricing/provider behavior execution.",
+      "fullFileReadingClaimed": true,
+      "priorCoverage": "Usage same-SHA full established; run-accounting prior selected established; other overlap not exhaustively reconstructed. No new unique coverage claim.",
+      "newUniqueCoverageClaim": false,
+      "initialSemanticReadSha256": "cec6ea891501f12ea35686ce5b409055ce76bcf7cea231f81ab03479aacd79cd",
+      "finishSha256": "cec6ea891501f12ea35686ce5b409055ce76bcf7cea231f81ab03479aacd79cd",
+      "finishMatchesInitial": true
+    },
+    {
+      "path": "packages/core/src/engine/run-accounting.ts",
+      "bytes": 6970,
+      "lines": 174,
+      "sha256": "d31ce6cf6f14056ea549b94ab7146592d5ae223139cfa1585b026303fb13dac6",
+      "beforeBodyOrLineNavigation": true,
+      "coverage": "selected",
+      "sourceKind": "product",
+      "selectedLineRanges": [
+        [
+          21,
+          118
+        ],
+        [
+          145,
+          159
+        ]
+      ],
+      "semanticLines": 113,
+      "displayedLineRanges": [
+        [
+          1,
+          174
+        ]
+      ],
+      "additionalNavigationSnippetLines": [],
+      "uniqueDisplayedLines": 174,
+      "navigationOnlyDisplayedLineRanges": [
+        [
+          1,
+          20
+        ],
+        [
+          119,
+          144
+        ],
+        [
+          160,
+          174
+        ]
+      ],
+      "purpose": "Foreground vs external billed response counters, normal model facade totals and summarize returned usage funnel; budget termination/assertion mechanism not certified.",
+      "fullFileReadingClaimed": false,
+      "priorCoverage": "Usage same-SHA full established; run-accounting prior selected established; other overlap not exhaustively reconstructed. No new unique coverage claim.",
+      "newUniqueCoverageClaim": false,
+      "initialSemanticReadSha256": "d31ce6cf6f14056ea549b94ab7146592d5ae223139cfa1585b026303fb13dac6",
+      "finishSha256": "d31ce6cf6f14056ea549b94ab7146592d5ae223139cfa1585b026303fb13dac6",
+      "finishMatchesInitial": true
+    },
+    {
+      "path": "packages/core/src/engine/run-state-persistence.ts",
+      "bytes": 4502,
+      "lines": 110,
+      "sha256": "1834ff88a225c3a685c9332f7d4ba92a458b7e711c2595624b01e36510badf4e",
+      "beforeBodyOrLineNavigation": true,
+      "coverage": "full",
+      "sourceKind": "product",
+      "selectedLineRanges": [
+        [
+          1,
+          110
+        ]
+      ],
+      "semanticLines": 110,
+      "displayedLineRanges": [
+        [
+          1,
+          110
+        ]
+      ],
+      "additionalNavigationSnippetLines": [],
+      "uniqueDisplayedLines": 110,
+      "navigationOnlyDisplayedLineRanges": [],
+      "purpose": "Ordinary captured-minus-committed merge and output fields; manager CAS/FS/locks/ownership enforcement implementation not read or certified.",
+      "fullFileReadingClaimed": true,
+      "priorCoverage": "Usage same-SHA full established; run-accounting prior selected established; other overlap not exhaustively reconstructed. No new unique coverage claim.",
+      "newUniqueCoverageClaim": false,
+      "initialSemanticReadSha256": "1834ff88a225c3a685c9332f7d4ba92a458b7e711c2595624b01e36510badf4e",
+      "finishSha256": "1834ff88a225c3a685c9332f7d4ba92a458b7e711c2595624b01e36510badf4e",
+      "finishMatchesInitial": true
+    },
+    {
+      "path": "packages/core/src/engine/engine.ts",
+      "bytes": 210666,
+      "lines": 5082,
+      "sha256": "cdbfc7a777e3e304b6d365988daf6a45ff24b7cd5b62f634e3b11908c701e2e0",
+      "beforeBodyOrLineNavigation": true,
+      "coverage": "selected",
+      "sourceKind": "product",
+      "selectedLineRanges": [
+        [
+          1776,
+          1786
+        ],
+        [
+          2083,
+          2087
+        ],
+        [
+          2771,
+          2778
+        ],
+        [
+          2790,
+          2794
+        ],
+        [
+          3480,
+          3481
+        ],
+        [
+          3555,
+          3569
+        ],
+        [
+          3583,
+          3593
+        ],
+        [
+          3890,
+          3919
+        ],
+        [
+          3955,
+          3965
+        ]
+      ],
+      "semanticLines": 98,
+      "displayedLineRanges": [
+        [
+          1776,
+          1789
+        ],
+        [
+          2078,
+          2088
+        ],
+        [
+          2768,
+          2800
+        ],
+        [
+          3468,
+          3485
+        ],
+        [
+          3555,
+          3600
+        ],
+        [
+          3870,
+          3930
+        ],
+        [
+          3950,
+          3968
+        ]
+      ],
+      "additionalNavigationSnippetLines": [
+        31,
+        106,
+        108,
+        109,
+        2054,
+        2121,
+        2158,
+        2167,
+        2178,
+        2195,
+        2200,
+        2219,
+        2742,
+        2744,
+        2828,
+        2830,
+        2956,
+        2957,
+        3000,
+        3358,
+        3359,
+        3383,
+        3384,
+        3673,
+        3715
+      ],
+      "uniqueDisplayedLines": 227,
+      "navigationOnlyDisplayedLineRanges": [
+        [
+          31,
+          31
+        ],
+        [
+          106,
+          106
+        ],
+        [
+          108,
+          109
+        ],
+        [
+          1787,
+          1789
+        ],
+        [
+          2054,
+          2054
+        ],
+        [
+          2078,
+          2082
+        ],
+        [
+          2088,
+          2088
+        ],
+        [
+          2121,
+          2121
+        ],
+        [
+          2158,
+          2158
+        ],
+        [
+          2167,
+          2167
+        ],
+        [
+          2178,
+          2178
+        ],
+        [
+          2195,
+          2195
+        ],
+        [
+          2200,
+          2200
+        ],
+        [
+          2219,
+          2219
+        ],
+        [
+          2742,
+          2742
+        ],
+        [
+          2744,
+          2744
+        ],
+        [
+          2768,
+          2770
+        ],
+        [
+          2779,
+          2789
+        ],
+        [
+          2795,
+          2800
+        ],
+        [
+          2828,
+          2828
+        ],
+        [
+          2830,
+          2830
+        ],
+        [
+          2956,
+          2957
+        ],
+        [
+          3000,
+          3000
+        ],
+        [
+          3358,
+          3359
+        ],
+        [
+          3383,
+          3384
+        ],
+        [
+          3468,
+          3479
+        ],
+        [
+          3482,
+          3485
+        ],
+        [
+          3570,
+          3582
+        ],
+        [
+          3594,
+          3600
+        ],
+        [
+          3673,
+          3673
+        ],
+        [
+          3715,
+          3715
+        ],
+        [
+          3870,
+          3889
+        ],
+        [
+          3920,
+          3930
+        ],
+        [
+          3950,
+          3954
+        ],
+        [
+          3966,
+          3968
+        ]
+      ],
+      "purpose": "Actual per-run ownUsage/ownCacheUsage bindings, accounting constructor, response callback wiring, heartbeat, late auxiliary checkpoint and persistence call. Nearby owner/lease/finalizer/authority routes navigation only.",
+      "fullFileReadingClaimed": false,
+      "priorCoverage": "Usage same-SHA full established; run-accounting prior selected established; other overlap not exhaustively reconstructed. No new unique coverage claim.",
+      "newUniqueCoverageClaim": false,
+      "initialSemanticReadSha256": "cdbfc7a777e3e304b6d365988daf6a45ff24b7cd5b62f634e3b11908c701e2e0",
+      "finishSha256": "cdbfc7a777e3e304b6d365988daf6a45ff24b7cd5b62f634e3b11908c701e2e0",
+      "finishMatchesInitial": true
+    },
+    {
+      "path": "packages/core/src/engine/model-facade.ts",
+      "bytes": 10149,
+      "lines": 310,
+      "sha256": "f55170bc5df179bb204bb143fa42af073a4b5d0b14443451a10de25fcd272fcb",
+      "beforeBodyOrLineNavigation": true,
+      "coverage": "selected",
+      "sourceKind": "product",
+      "selectedLineRanges": [
+        [
+          307,
+          309
+        ]
+      ],
+      "semanticLines": 3,
+      "displayedLineRanges": [
+        [
+          300,
+          310
+        ]
+      ],
+      "additionalNavigationSnippetLines": [],
+      "uniqueDisplayedLines": 11,
+      "navigationOnlyDisplayedLineRanges": [
+        [
+          300,
+          306
+        ],
+        [
+          310,
+          310
+        ]
+      ],
+      "purpose": "Actual getUsage delegates to per-run client tracker; client/provider implementation and network not read.",
+      "fullFileReadingClaimed": false,
+      "priorCoverage": "Usage same-SHA full established; run-accounting prior selected established; other overlap not exhaustively reconstructed. No new unique coverage claim.",
+      "newUniqueCoverageClaim": false,
+      "initialSemanticReadSha256": "f55170bc5df179bb204bb143fa42af073a4b5d0b14443451a10de25fcd272fcb",
+      "finishSha256": "f55170bc5df179bb204bb143fa42af073a4b5d0b14443451a10de25fcd272fcb",
+      "finishMatchesInitial": true
+    },
+    {
+      "path": "packages/core/src/engine/run-finalize.ts",
+      "bytes": 19306,
+      "lines": 480,
+      "sha256": "c60c45ef7392d360be5f59e75465a7f03b9a5d0fa6ea5849c4d05ff2c546f335",
+      "beforeBodyOrLineNavigation": true,
+      "coverage": "selected",
+      "sourceKind": "product",
+      "selectedLineRanges": [
+        [
+          360,
+          370
+        ],
+        [
+          383,
+          393
+        ]
+      ],
+      "semanticLines": 22,
+      "displayedLineRanges": [
+        [
+          355,
+          395
+        ]
+      ],
+      "additionalNavigationSnippetLines": [
+        18,
+        27,
+        149,
+        150,
+        175,
+        187,
+        250,
+        255
+      ],
+      "uniqueDisplayedLines": 49,
+      "navigationOnlyDisplayedLineRanges": [
+        [
+          18,
+          18
+        ],
+        [
+          27,
+          27
+        ],
+        [
+          149,
+          150
+        ],
+        [
+          175,
+          175
+        ],
+        [
+          187,
+          187
+        ],
+        [
+          250,
+          250
+        ],
+        [
+          255,
+          255
+        ],
+        [
+          355,
+          359
+        ],
+        [
+          371,
+          382
+        ],
+        [
+          394,
+          395
+        ]
+      ],
+      "purpose": "Final cumulative field commit before usage publication, separate foreground single-turn cache metrics; transcript flush/hook mechanics navigation only.",
+      "fullFileReadingClaimed": false,
+      "priorCoverage": "Usage same-SHA full established; run-accounting prior selected established; other overlap not exhaustively reconstructed. No new unique coverage claim.",
+      "newUniqueCoverageClaim": false,
+      "initialSemanticReadSha256": "c60c45ef7392d360be5f59e75465a7f03b9a5d0fa6ea5849c4d05ff2c546f335",
+      "finishSha256": "c60c45ef7392d360be5f59e75465a7f03b9a5d0fa6ea5849c4d05ff2c546f335",
+      "finishMatchesInitial": true
+    },
+    {
+      "path": "packages/core/src/engine/run-state-persistence.test.ts",
+      "bytes": 3310,
+      "lines": 99,
+      "sha256": "bbe61d2746ca76bd3b7b06eb74a96dcbcaec64b4f5ed562087a27a423d136e31",
+      "beforeBodyOrLineNavigation": true,
+      "coverage": "selected",
+      "sourceKind": "test-declaration",
+      "selectedLineRanges": [
+        [
+          27,
+          47
+        ],
+        [
+          54,
+          56
+        ],
+        [
+          61,
+          99
+        ]
+      ],
+      "semanticLines": 63,
+      "displayedLineRanges": [
+        [
+          1,
+          99
+        ]
+      ],
+      "additionalNavigationSnippetLines": [],
+      "uniqueDisplayedLines": 99,
+      "navigationOnlyDisplayedLineRanges": [
+        [
+          1,
+          26
+        ],
+        [
+          48,
+          53
+        ],
+        [
+          57,
+          60
+        ]
+      ],
+      "purpose": "Two existing cases assert independent billed/cache checkpoints, heartbeat idempotence, other-owner auxiliary additions and failed-write checkpoint retention. Fixture setup/native calls displayed only, never executed.",
+      "fullFileReadingClaimed": false,
+      "priorCoverage": "Usage same-SHA full established; run-accounting prior selected established; other overlap not exhaustively reconstructed. No new unique coverage claim.",
+      "newUniqueCoverageClaim": false,
+      "initialSemanticReadSha256": "bbe61d2746ca76bd3b7b06eb74a96dcbcaec64b4f5ed562087a27a423d136e31",
+      "finishSha256": "bbe61d2746ca76bd3b7b06eb74a96dcbcaec64b4f5ed562087a27a423d136e31",
+      "finishMatchesInitial": true
+    },
+    {
+      "path": "packages/core/src/engine/turn-loop.ts",
+      "bytes": 108774,
+      "lines": 2412,
+      "sha256": "9ccbcd28cdb100d7d879994c3839d3b53c46af01589e0475d6f75f1d7e750413",
+      "beforeBodyOrLineNavigation": true,
+      "coverage": "selected",
+      "sourceKind": "product",
+      "selectedLineRanges": [
+        [
+          816,
+          834
+        ],
+        [
+          836,
+          889
+        ],
+        [
+          1202,
+          1206
+        ]
+      ],
+      "semanticLines": 78,
+      "displayedLineRanges": [
+        [
+          802,
+          889
+        ],
+        [
+          1183,
+          1212
+        ],
+        [
+          1344,
+          1375
+        ]
+      ],
+      "additionalNavigationSnippetLines": [
+        170,
+        1337,
+        2054,
+        2055
+      ],
+      "uniqueDisplayedLines": 154,
+      "navigationOnlyDisplayedLineRanges": [
+        [
+          170,
+          170
+        ],
+        [
+          802,
+          815
+        ],
+        [
+          835,
+          835
+        ],
+        [
+          1183,
+          1201
+        ],
+        [
+          1207,
+          1212
+        ],
+        [
+          1337,
+          1337
+        ],
+        [
+          1344,
+          1375
+        ],
+        [
+          2054,
+          2055
+        ]
+      ],
+      "purpose": "Normal response usage records run/session counters and emits provider/single-turn/session cumulative fields. Other abort, truncation, Goal and clock sections navigation only.",
+      "fullFileReadingClaimed": false,
+      "priorCoverage": "Usage same-SHA full established; run-accounting prior selected established; other overlap not exhaustively reconstructed. No new unique coverage claim.",
+      "newUniqueCoverageClaim": false,
+      "initialSemanticReadSha256": "9ccbcd28cdb100d7d879994c3839d3b53c46af01589e0475d6f75f1d7e750413",
+      "finishSha256": "9ccbcd28cdb100d7d879994c3839d3b53c46af01589e0475d6f75f1d7e750413",
+      "finishMatchesInitial": true
+    }
+  ],
+  "navigationOnly": [
+    {
+      "path": "packages/core/src/engine/engine.primary-cache-accounting.test.ts",
+      "bytes": 11409,
+      "lines": 317,
+      "sha256": "259b288bfda6eb9105c6968d6f45c97bf5529c15962e2f68f61f03d821fc4fbb",
+      "beforeBodyOrLineNavigation": true,
+      "coverage": "navigation-only",
+      "navigationLines": [
+        153,
+        249
+      ],
+      "semanticLines": 0,
+      "purpose": "Only two existing test titles located, no case body read or run."
+    }
+  ],
+  "hashOnly": [
+    {
+      "path": "packages/core/src/session/stream-timing.ts",
+      "bytes": 1606,
+      "lines": 41,
+      "sha256": "9306f80c1fa56b8f59f35afc879045140d08129e8cbf167085fb82f63c831ced",
+      "beforeBodyOrLineNavigation": true
+    },
+    {
+      "path": "packages/core/src/session/usage.test.ts",
+      "bytes": 8502,
+      "lines": 258,
+      "sha256": "56f833d7af2d990b9a712d441f342def79d9dc4ce2f712f81ebaa36ff3489610",
+      "beforeBodyOrLineNavigation": true
+    },
+    {
+      "path": "packages/core/src/session/stream-timing.test.ts",
+      "bytes": 2058,
+      "lines": 70,
+      "sha256": "9dffcaa98d129f79dfd8547a656b796bcf613e848e1c764dee488341f90a0a04",
+      "beforeBodyOrLineNavigation": true
+    },
+    {
+      "path": "packages/core/src/session/output-publisher.ts",
+      "bytes": 6300,
+      "lines": 176,
+      "sha256": "9babc9a24d42d99d4bb4d823f3656f855f102946c853a89cbf0d5462b50dcd5d",
+      "beforeBodyOrLineNavigation": true
+    }
+  ],
+  "instructionHashOnly": [
+    {
+      "path": "AGENTS.md",
+      "bytes": 206,
+      "lines": 5,
+      "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "beforeBodyOrLineNavigation": true
+    },
+    {
+      "path": "CODESHELL.md",
+      "bytes": 17639,
+      "lines": 217,
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "beforeBodyOrLineNavigation": true
+    }
+  ],
+  "instructions": "Prior actual AGENTS5/CODESHELL217 reading carried under unchanged SHA, no semantic reread this task.",
+  "counts": {
+    "semanticFiles": 8,
+    "full": 2,
+    "selected": 6,
+    "productSemanticLines": 573,
+    "testDeclarationSemanticLines": 63,
+    "uniqueDisplayedLines": 975,
+    "displayCoverageComplete": true,
+    "navigationOnlyFiles": 1,
+    "hashOnlyFiles": 4,
+    "instructionHashOnly": 2,
+    "newUniqueCoverageClaim": false
+  },
+  "scopeLimits": "No provider SDK/timer/model/clock experiment, real session files/config, manager lock/CAS/permission/identity/custody or full UI consumer review. Stream timing body excluded before read as old same-SHA full."
+}

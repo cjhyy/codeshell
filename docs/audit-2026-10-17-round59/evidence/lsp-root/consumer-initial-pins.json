@@ -1,0 +1,50 @@
+[
+  {
+    "path": "packages/coding/src/tools/lsp.ts",
+    "bytes": 8752,
+    "lines": 243,
+    "sha256": "c2c3678fcd30d46761e151c716bb905944f3f44daa2312ab9636b5c657233eab",
+    "pinAt": "2026-10-17T19:42:56.055733+00:00",
+    "coverage": "hash-only before consumer/client/test body or source-line navigation"
+  },
+  {
+    "path": "packages/coding/src/index.capability.ts",
+    "bytes": 11585,
+    "lines": 377,
+    "sha256": "74cd003641b923e5f2fe0f69f015fed12fb4c7122188508126d501e92d8bf6c8",
+    "pinAt": "2026-10-17T19:42:56.056497+00:00",
+    "coverage": "hash-only before consumer/client/test body or source-line navigation"
+  },
+  {
+    "path": "packages/coding/src/lsp/client.ts",
+    "bytes": 7365,
+    "lines": 220,
+    "sha256": "7884e6ab61bbc5c82dbf7872941d602a3a4d2170b634932dcdb83b4dbe5aa31e",
+    "pinAt": "2026-10-17T19:42:56.056710+00:00",
+    "coverage": "hash-only before consumer/client/test body or source-line navigation"
+  },
+  {
+    "path": "packages/coding/src/lsp/root-path.test.ts",
+    "bytes": 1432,
+    "lines": 33,
+    "sha256": "fcc79e191c841cf4466b17b97db2d7962a0424ca550f8b25c795fef2cf611991",
+    "pinAt": "2026-10-17T19:42:56.056920+00:00",
+    "coverage": "hash-only before consumer/client/test body or source-line navigation"
+  },
+  {
+    "path": "packages/coding/src/lsp/manager.test.ts",
+    "bytes": 1066,
+    "lines": 30,
+    "sha256": "493fa1d39db49f4d57ac43ba022bdcd3c54f17d29fd53130cd1e702b877d0198",
+    "pinAt": "2026-10-17T19:42:56.057145+00:00",
+    "coverage": "hash-only before consumer/client/test body or source-line navigation"
+  },
+  {
+    "path": "packages/coding/src/lsp/manager-lifecycle.test.ts",
+    "bytes": 5479,
+    "lines": 134,
+    "sha256": "149d77a060427e6aac3eba6250b45540220d4c480a5f0b74dc93bd85b92073b4",
+    "pinAt": "2026-10-17T19:42:56.057372+00:00",
+    "coverage": "hash-only before consumer/client/test body or source-line navigation"
+  }
+]

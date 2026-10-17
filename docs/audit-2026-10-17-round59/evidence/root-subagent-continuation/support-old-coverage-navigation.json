@@ -1,0 +1,92 @@
+[
+  {
+    "path": "packages/core/src/engine/engine.ts",
+    "bytes": 210666,
+    "sha256": "cdbfc7a777e3e304b6d365988daf6a45ff24b7cd5b62f634e3b11908c701e2e0",
+    "lines": 5082,
+    "frozen45Coverage": "selected",
+    "carryForwardCoverage": "selected",
+    "oldSha256": "cdbfc7a777e3e304b6d365988daf6a45ff24b7cd5b62f634e3b11908c701e2e0",
+    "publishableCurrentCoverage": "selected"
+  },
+  {
+    "path": "packages/core/src/engine/run-session-open.ts",
+    "bytes": 11804,
+    "sha256": "7520474ab6efb36ff9b93fd60c1d743c8b746ec7723e80e990f7e2f578007799",
+    "lines": 292,
+    "frozen45Coverage": "unknown",
+    "carryForwardCoverage": "unknown",
+    "oldSha256": "7520474ab6efb36ff9b93fd60c1d743c8b746ec7723e80e990f7e2f578007799",
+    "publishableCurrentCoverage": "unknown"
+  },
+  {
+    "path": "packages/core/src/engine/run-types.ts",
+    "bytes": 12029,
+    "sha256": "b1daf9f5b1753091e4cb1fc324c50a56c3171dd1fb3909d65473f8ff594ac73e",
+    "lines": 262,
+    "frozen45Coverage": "unknown",
+    "carryForwardCoverage": "unknown",
+    "oldSha256": "b1daf9f5b1753091e4cb1fc324c50a56c3171dd1fb3909d65473f8ff594ac73e",
+    "publishableCurrentCoverage": "unknown"
+  },
+  {
+    "path": "packages/core/src/engine/subagent-spawner.ts",
+    "bytes": 16481,
+    "sha256": "e29fa502236da73882808561f4e1338e3497ab692b9a5fc274cb3a3d4ef8552b",
+    "lines": 441,
+    "frozen45Coverage": "selected",
+    "carryForwardCoverage": "selected",
+    "oldSha256": "e29fa502236da73882808561f4e1338e3497ab692b9a5fc274cb3a3d4ef8552b",
+    "publishableCurrentCoverage": "selected"
+  },
+  {
+    "path": "packages/core/src/session/session-manager.ts",
+    "bytes": 109429,
+    "sha256": "3a0ac1691e1eaa8b948c31b2d9530ddc1be275992022128f48326043240b05af",
+    "lines": 2841,
+    "frozen45Coverage": "unknown",
+    "carryForwardCoverage": "unknown",
+    "oldSha256": "3a0ac1691e1eaa8b948c31b2d9530ddc1be275992022128f48326043240b05af",
+    "publishableCurrentCoverage": "unknown"
+  },
+  {
+    "path": "packages/core/src/tool-system/builtin/agent-registry.ts",
+    "bytes": 15679,
+    "sha256": "5fef48b6e619de7c1802e4cecb64c8af3f67366c48de67131222213ac20ffc84",
+    "lines": 445,
+    "frozen45Coverage": "selected",
+    "carryForwardCoverage": "selected",
+    "oldSha256": "5fef48b6e619de7c1802e4cecb64c8af3f67366c48de67131222213ac20ffc84",
+    "publishableCurrentCoverage": "selected"
+  },
+  {
+    "path": "packages/core/src/tool-system/builtin/agent.ts",
+    "bytes": 62377,
+    "sha256": "9fd165bc3d1819925fee6a639cdeb34644c394ea8e50fc0b5fed209a28572dca",
+    "lines": 1571,
+    "frozen45Coverage": "selected",
+    "carryForwardCoverage": "selected",
+    "oldSha256": "9fd165bc3d1819925fee6a639cdeb34644c394ea8e50fc0b5fed209a28572dca",
+    "publishableCurrentCoverage": "selected"
+  },
+  {
+    "path": "packages/core/src/tool-system/context.ts",
+    "bytes": 29617,
+    "sha256": "1bfff3d434f876089460f61336ff160d31a0eda6483b604cf874b331fb6e3b03",
+    "lines": 624,
+    "frozen45Coverage": "selected",
+    "carryForwardCoverage": "selected",
+    "oldSha256": "1bfff3d434f876089460f61336ff160d31a0eda6483b604cf874b331fb6e3b03",
+    "publishableCurrentCoverage": "selected"
+  },
+  {
+    "path": "packages/core/src/types.ts",
+    "bytes": 51788,
+    "sha256": "1cfe13fc9d18863adb721635d56b34ae627bb1fab0508675b034a4340b987bb5",
+    "lines": 1333,
+    "frozen45Coverage": "selected",
+    "carryForwardCoverage": "selected",
+    "oldSha256": "1cfe13fc9d18863adb721635d56b34ae627bb1fab0508675b034a4340b987bb5",
+    "publishableCurrentCoverage": "selected"
+  }
+]

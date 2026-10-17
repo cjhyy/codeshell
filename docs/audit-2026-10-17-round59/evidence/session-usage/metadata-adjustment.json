@@ -1,0 +1,14 @@
+{
+  "atUTC": "2026-10-17T19:46:31.303287+00:00",
+  "type": "Metadata wording correction before public freeze announcement",
+  "originalFile": "validation.first.json",
+  "originalSha256": "b1f0306f13eadaf1542b2ae60327406fad6042fa42c38a9cb5f76468774a18d6",
+  "originalText": "four additional test titles/old test results",
+  "correctedText": "two additional primary-cache test titles, navigation only; old results not current execution",
+  "sourceManifestCountsUnchanged": true,
+  "cause": "Initial finalizer wording overstated navigation test-title count; manifest already has exact two navigation lines153/249.",
+  "sourceReadingAdded": 0,
+  "productExecution": 0,
+  "git": 0,
+  "note": "First wording retained verbatim. No test/helper/source rerun."
+}

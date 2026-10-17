@@ -1,0 +1,9 @@
+{
+  "path": "packages/core/src/context/compaction.ts",
+  "bytes": 43905,
+  "lineCount": 1184,
+  "sha256": "981daf03db583c466b7c190efdd9336167978e193690096cec8c9e9c8ec7d81e",
+  "pinnedAtUTC": "2026-10-17T19:43:40.954144+00:00",
+  "timing": "before body/nav; exact originalCTX2 hyperlink and currentfilename inventory",
+  "scopeIntent": "Only actual portable context-package nested-text serializer called by Engine; old compaction/snipping mechanism not re-audited."
+}

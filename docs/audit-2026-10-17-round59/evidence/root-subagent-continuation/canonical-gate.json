@@ -1,0 +1,15 @@
+{
+  "atUTC": "2026-10-17T19:43:38.553142+00:00",
+  "target": "packages/core/src/session/subagent-continuation.ts",
+  "canonicalOriginal": "docs/audit-2026-10-17-round19/evidence/root-source-manifest.json",
+  "pointer": "/files/5",
+  "sha256": "d604ea3b2baf99c53fdf492f51797ca3b54b9975ed452de8a13d900ce035b26a",
+  "oldScope": "Full static leaf; no authority metadata experiment/import.",
+  "sameSHA": true,
+  "currentQuestion": "Trace ordinary subagent metadata production and transcript continuation consumption; existing leaf full reading is retained as overlap and is not new unique coverage.",
+  "humanRead": [
+    "round19 root manifest /files/5",
+    "round19 integrated manifest /files/24"
+  ],
+  "productExecution": 0
+}

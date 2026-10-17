@@ -1,0 +1,13 @@
+{
+  "metadataExceptions": [],
+  "toolOutputTruncationObserved": false,
+  "allThisReviewToolCallsExitedZero": true,
+  "authorDiagnosticObserved": "Root148 report discloses an earlier invalid-escape SyntaxWarning with command exit0 and no separately captured warning file. This review neither reruns nor fabricates that first diagnostic; pinned Root report retains its provenance.",
+  "incidentalDisplayExcluded": [
+    "Agent hook/progress/run lifecycle lines350–402 and lease/parent/running-route checks adjacent to1493 not certified.",
+    "Agent namespacePluginSkills comment105–115 displayed after resolved override mapping; plugin skill mechanism not reviewed.",
+    "Spawner tool-scope/permission fields328–332/341–348 only adjacent display; no enforcement conclusion.",
+    "SessionManager directory/transcript setup neighboring state writer and engine parent/sandbox fields excluded from scope."
+  ],
+  "sourceTiming": "Every product source pin precedes this reviewer source line navigation/body. Root148 metadata read precedes these targeted independent source reads; review not described as blind."
+}

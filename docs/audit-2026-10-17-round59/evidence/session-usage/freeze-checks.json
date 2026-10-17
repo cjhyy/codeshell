@@ -1,0 +1,118 @@
+{
+  "role": "Author metadata finalization only, no new source read or execution",
+  "checks": {
+    "files": []
+  },
+  "rangeChecks": {
+    "semanticSubsetOfDisplayed": true,
+    "withinPinnedLines": true,
+    "counts": {
+      "semanticFiles": 8,
+      "full": 2,
+      "selected": 6,
+      "productSemanticLines": 573,
+      "testDeclarationSemanticLines": 63,
+      "uniqueDisplayedLines": 975,
+      "displayCoverageComplete": true,
+      "navigationOnlyFiles": 1,
+      "hashOnlyFiles": 4,
+      "instructionHashOnly": 2,
+      "newUniqueCoverageClaim": false
+    }
+  },
+  "links": [
+    {
+      "target": "initial-pins.json",
+      "insideOwnedDir": true,
+      "existsOrPlannedSelfGenerated": true
+    },
+    {
+      "target": "support-pins.json",
+      "insideOwnedDir": true,
+      "existsOrPlannedSelfGenerated": true
+    },
+    {
+      "target": "producer-pins.json",
+      "insideOwnedDir": true,
+      "existsOrPlannedSelfGenerated": true
+    },
+    {
+      "target": "response-producer-pin.json",
+      "insideOwnedDir": true,
+      "existsOrPlannedSelfGenerated": true
+    },
+    {
+      "target": "gate-decision.json",
+      "insideOwnedDir": true,
+      "existsOrPlannedSelfGenerated": true
+    },
+    {
+      "target": "shared-history-projection.json",
+      "insideOwnedDir": true,
+      "existsOrPlannedSelfGenerated": true
+    },
+    {
+      "target": "targeted-history-navigation.json",
+      "insideOwnedDir": true,
+      "existsOrPlannedSelfGenerated": true
+    },
+    {
+      "target": "canonical-before-pins.json",
+      "insideOwnedDir": true,
+      "existsOrPlannedSelfGenerated": true
+    },
+    {
+      "target": "old-cause-before-pin.json",
+      "insideOwnedDir": true,
+      "existsOrPlannedSelfGenerated": true
+    },
+    {
+      "target": "source-manifest.json",
+      "insideOwnedDir": true,
+      "existsOrPlannedSelfGenerated": true
+    },
+    {
+      "target": "source-excerpts.json",
+      "insideOwnedDir": true,
+      "existsOrPlannedSelfGenerated": true
+    },
+    {
+      "target": "diagnostics.json",
+      "insideOwnedDir": true,
+      "existsOrPlannedSelfGenerated": true
+    },
+    {
+      "target": "ending-checks.json",
+      "insideOwnedDir": true,
+      "existsOrPlannedSelfGenerated": true
+    },
+    {
+      "target": "classification.json",
+      "insideOwnedDir": true,
+      "existsOrPlannedSelfGenerated": true
+    },
+    {
+      "target": "validation.json",
+      "insideOwnedDir": true,
+      "existsOrPlannedSelfGenerated": true
+    },
+    {
+      "target": "freeze-checks.json",
+      "insideOwnedDir": true,
+      "existsOrPlannedSelfGenerated": true
+    },
+    {
+      "target": "reviewer-receipt.json",
+      "insideOwnedDir": true,
+      "existsOrPlannedSelfGenerated": true
+    }
+  ],
+  "plannedSelfGenerated": [
+    "freeze-checks.json",
+    "reviewer-receipt.json"
+  ],
+  "allSourcePinsSame": true,
+  "allHistoryPinsSame": true,
+  "productExecution": 0,
+  "git": 0
+}

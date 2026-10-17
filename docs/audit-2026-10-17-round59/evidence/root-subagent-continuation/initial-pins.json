@@ -1,0 +1,12 @@
+{
+  "atUTC": "2026-10-17T19:40:01.022940+00:00",
+  "files": [
+    {
+      "path": "packages/core/src/session/subagent-continuation.ts",
+      "bytes": 2345,
+      "lines": 63,
+      "sha256": "d604ea3b2baf99c53fdf492f51797ca3b54b9975ed452de8a13d900ce035b26a",
+      "beforeBodyOrLineNavigation": true
+    }
+  ]
+}

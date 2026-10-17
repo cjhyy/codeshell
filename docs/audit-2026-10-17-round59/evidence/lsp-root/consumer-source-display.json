@@ -1,0 +1,106 @@
+[
+  {
+    "path": "packages/coding/src/tools/lsp.ts",
+    "sha256": "c2c3678fcd30d46761e151c716bb905944f3f44daa2312ab9636b5c657233eab",
+    "displayAt": "2026-10-17T19:43:21.342480+00:00",
+    "displayedLineRanges": [
+      [
+        1,
+        110
+      ]
+    ],
+    "ranges": [
+      {
+        "first": 1,
+        "last": 110,
+        "text": "1: /**\n2:  * LSPTool — language server protocol operations for code intelligence.\n3:  */\n4: \n5: import type { ToolContext, ToolDefinition } from \"@cjhyy/code-shell-core/extension\";\n6: import { getLSPManager } from \"../lsp/manager.js\";\n7: import { detectLSPServer } from \"../lsp/servers.js\";\n8: import { pathToFileURL } from \"node:url\";\n9: import { isAbsolute, resolve } from \"node:path\";\n10: \n11: /**\n12:  * How long to wait for `textDocument/publishDiagnostics` after opening a file.\n13:  *\n14:  * A cold server has to index the project first, so this is a deadline rather\n15:  * than an expected duration — timing out reports \"still indexing\" instead of\n16:  * silently claiming the file is clean.\n17:  */\n18: const DIAGNOSTICS_TIMEOUT_MS = 10_000;\n19: \n20: const DIAGNOSTIC_SEVERITY: Record<number, string> = {\n21:   1: \"error\",\n22:   2: \"warning\",\n23:   3: \"info\",\n24:   4: \"hint\",\n25: };\n26: \n27: interface LspDiagnostic {\n28:   message: string;\n29:   severity?: number;\n30:   source?: string;\n31:   range?: { start?: { line: number; character: number } };\n32: }\n33: \n34: export const lspToolDef: ToolDefinition = {\n35:   name: \"LSP\",\n36:   description:\n37:     \"Use Language Server Protocol for code intelligence operations. \" +\n38:     \"Available actions: goToDefinition, findReferences, hover, getDiagnostics, getSymbols. \" +\n39:     \"Requires a language server to be installed for the target language.\",\n40:   inputSchema: {\n41:     type: \"object\",\n42:     properties: {\n43:       action: {\n44:         type: \"string\",\n45:         enum: [\"goToDefinition\", \"findReferences\", \"hover\", \"getDiagnostics\", \"getSymbols\"],\n46:         description: \"The LSP operation to perform\",\n47:       },\n48:       file_path: {\n49:         type: \"string\",\n50:         description: \"Absolute path to the file\",\n51:       },\n52:       line: {\n53:         type: \"number\",\n54:         description: \"Line number (0-based). Required for goToDefinition, findReferences, hover.\",\n55:       },\n56:       character: {\n57:         type: \"number\",\n58:         description:\n59:           \"Character offset (0-based). Required for goToDefinition, findReferences, hover.\",\n60:       },\n61:     },\n62:     required: [\"action\", \"file_path\"],\n63:   },\n64: };\n65: \n66: export async function lspTool(args: Record<string, unknown>, ctx?: ToolContext): Promise<string> {\n67:   const action = args.action as string;\n68:   const rawPath = args.file_path as string;\n69:   const line = (args.line as number) ?? 0;\n70:   const character = (args.character as number) ?? 0;\n71: \n72:   if (!rawPath) return \"Error: file_path is required\";\n73:   const cwd = ctx?.cwd ?? process.cwd();\n74:   const filePath = isAbsolute(rawPath) ? rawPath : resolve(cwd, rawPath);\n75: \n76:   // Lazily create the manager for THIS workspace. Previously this read a\n77:   // process-wide singleton that no host ever initialized, so the tool was\n78:   // advertised to the agent but always answered \"LSP is not initialized\".\n79:   const manager = getLSPManager(cwd);\n80:   if (!manager) return \"Error: LSP is not initialized. Language servers are not available.\";\n81: \n82:   // Detect the appropriate server\n83:   const serverConfig = detectLSPServer(filePath);\n84:   if (!serverConfig) return `Error: No language server configured for ${filePath}`;\n85: \n86:   const client = await manager.getClient(serverConfig.name);\n87:   if (!client) {\n88:     return `Error: Language server \"${serverConfig.name}\" is not available. Install: ${serverConfig.installHint}`;\n89:   }\n90: \n91:   const uri = pathToFileURL(filePath).href;\n92:   const position = { line, character };\n93: \n94:   try {\n95:     switch (action) {\n96:       case \"goToDefinition\": {\n97:         const result = await client.request(\"textDocument/definition\", {\n98:           textDocument: { uri },\n99:           position,\n100:         });\n101:         return formatLocationResult(result, \"Definition\");\n102:       }\n103: \n104:       case \"findReferences\": {\n105:         const result = await client.request(\"textDocument/references\", {\n106:           textDocument: { uri },\n107:           position,\n108:           context: { includeDeclaration: true },\n109:         });\n110:         return formatLocationResult(result, \"References\");"
+      }
+    ],
+    "pinReference": "consumer-initial-pins.json"
+  },
+  {
+    "path": "packages/coding/src/lsp/client.ts",
+    "sha256": "7884e6ab61bbc5c82dbf7872941d602a3a4d2170b634932dcdb83b4dbe5aa31e",
+    "displayAt": "2026-10-17T19:43:21.344109+00:00",
+    "displayedLineRanges": [
+      [
+        40,
+        86
+      ],
+      [
+        130,
+        156
+      ]
+    ],
+    "ranges": [
+      {
+        "first": 40,
+        "last": 86,
+        "text": "40:   constructor(\n41:     private readonly command: string,\n42:     private readonly args: string[] = [],\n43:     private readonly cwd?: string,\n44:   ) {\n45:     super();\n46:   }\n47: \n48:   async start(): Promise<void> {\n49:     this.process = spawn(this.command, this.args, {\n50:       cwd: this.cwd,\n51:       stdio: [\"pipe\", \"pipe\", \"pipe\"],\n52:     });\n53: \n54:     this.process.stdout?.on(\"data\", (data: Buffer) => this.handleData(data));\n55:     this.process.stderr?.on(\"data\", (_data: Buffer) => {\n56:       // LSP servers often log to stderr — ignore\n57:     });\n58:     this.process.on(\"exit\", (code) => {\n59:       this.emit(\"exit\", code);\n60:       this.rejectAll(new Error(`LSP server exited with code ${code}`));\n61:     });\n62: \n63:     // Don't keep the event loop alive solely for the LSP child.\n64:     // Call after listeners are wired so event registration doesn't re-ref.\n65:     this.process.unref();\n66:   }\n67: \n68:   async initialize(rootUri: string): Promise<unknown> {\n69:     const result = await this.request(\"initialize\", {\n70:       processId: process.pid,\n71:       rootUri,\n72:       capabilities: {\n73:         textDocument: {\n74:           definition: { dynamicRegistration: false },\n75:           references: { dynamicRegistration: false },\n76:           hover: { contentFormat: [\"plaintext\", \"markdown\"] },\n77:           documentSymbol: { dynamicRegistration: false },\n78:           completion: { dynamicRegistration: false },\n79:         },\n80:         workspace: {\n81:           symbol: { dynamicRegistration: false },\n82:         },\n83:       },\n84:     });\n85:     await this.notify(\"initialized\", {});\n86:     this.initialized = true;"
+      },
+      {
+        "first": 130,
+        "last": 156,
+        "text": "130:   async shutdown(): Promise<void> {\n131:     if (!this.process) return;\n132:     try {\n133:       await this.request(\"shutdown\", {});\n134:       await this.notify(\"exit\", {});\n135:     } catch {\n136:       // Force kill\n137:     }\n138:     this.process.stdout?.removeAllListeners();\n139:     this.process.stderr?.removeAllListeners();\n140:     this.process.removeAllListeners();\n141:     this.process.kill();\n142:     this.process = undefined;\n143:     // Drain pending requests\n144:     for (const { reject } of this.pending.values()) {\n145:       reject(new Error(\"LSP server shut down\"));\n146:     }\n147:     this.pending.clear();\n148:   }\n149: \n150:   get isInitialized(): boolean {\n151:     return this.initialized;\n152:   }\n153: \n154:   get isAlive(): boolean {\n155:     return this.process !== undefined && !this.process.killed;\n156:   }"
+      }
+    ],
+    "pinReference": "consumer-initial-pins.json"
+  },
+  {
+    "path": "packages/coding/src/index.capability.ts",
+    "sha256": "74cd003641b923e5f2fe0f69f015fed12fb4c7122188508126d501e92d8bf6c8",
+    "displayAt": "2026-10-17T19:43:21.344830+00:00",
+    "displayedLineRanges": [
+      [
+        190,
+        200
+      ]
+    ],
+    "ranges": [
+      {
+        "first": 190,
+        "last": 200,
+        "text": "190:   defineTool(\n191:     {\n192:       ...lspToolDef,\n193:       source: \"builtin\",\n194:       permissionDefault: \"allow\",\n195:       isReadOnly: true,\n196:       isConcurrencySafe: true,\n197:       pathPolicy: [{ kind: \"arg\", arg: \"file_path\", operation: \"read\" }],\n198:     },\n199:     lspTool,\n200:     {"
+      }
+    ],
+    "pinReference": "consumer-initial-pins.json"
+  },
+  {
+    "path": "packages/coding/src/lsp/root-path.test.ts",
+    "sha256": "fcc79e191c841cf4466b17b97db2d7962a0424ca550f8b25c795fef2cf611991",
+    "displayAt": "2026-10-17T19:43:21.345498+00:00",
+    "displayedLineRanges": [
+      [
+        1,
+        33
+      ]
+    ],
+    "ranges": [
+      {
+        "first": 1,
+        "last": 33,
+        "text": "1: import { describe, test, expect } from \"bun:test\";\n2: import { pathToFileURL } from \"node:url\";\n3: import { rootUriToPath } from \"./root-path.js\";\n4: \n5: // Regression: LSPServerManager derived the workspace path with\n6: // `rootUri.replace(\"file://\", \"\")` (review-2026-05-30, high). That only strips\n7: // the first \"file://\" and mangles Windows URLs: file:///C:/x → /C:/x (invalid).\n8: // fileURLToPath handles platform paths and percent-decoding correctly.\n9: \n10: describe(\"coding rootUriToPath\", () => {\n11:   test(\"round-trips a posix path through file:// URL\", () => {\n12:     const p = \"/Users/me/proj\";\n13:     expect(rootUriToPath(pathToFileURL(p).href)).toBe(p);\n14:   });\n15: \n16:   test(\"decodes percent-encoded spaces (replace() would leave %20)\", () => {\n17:     const p = \"/Users/me/my project\";\n18:     const uri = pathToFileURL(p).href; // .../my%20project\n19:     expect(uri).toContain(\"%20\");\n20:     expect(rootUriToPath(uri)).toBe(p);\n21:   });\n22: \n23:   test(\"differs from the naive replace() on a percent-encoded path\", () => {\n24:     // The concrete bug the fix removes (verifiable on any platform): naive\n25:     // replace() leaves %20 in the path, fileURLToPath decodes it.\n26:     const p = \"/Users/me/a b/proj\";\n27:     const uri = pathToFileURL(p).href;\n28:     const naive = uri.replace(\"file://\", \"\");\n29:     expect(naive).toContain(\"%20\"); // buggy: still encoded\n30:     expect(rootUriToPath(uri)).toBe(p); // fixed: decoded, equals original\n31:     expect(rootUriToPath(uri)).not.toBe(naive);\n32:   });\n33: });"
+      }
+    ],
+    "pinReference": "consumer-initial-pins.json"
+  },
+  {
+    "path": "packages/coding/src/lsp/manager-lifecycle.test.ts",
+    "sha256": "149d77a060427e6aac3eba6250b45540220d4c480a5f0b74dc93bd85b92073b4",
+    "displayAt": "2026-10-17T19:43:21.346157+00:00",
+    "displayedLineRanges": [
+      [
+        1,
+        134
+      ]
+    ],
+    "ranges": [
+      {
+        "first": 1,
+        "last": 134,
+        "text": "1: // LSP manager lifecycle.\n2: //\n3: // The manager used to be a single process-wide singleton created only by\n4: // `initializeLSPManager()` — which NO host ever called. The `LSP` tool was\n5: // registered and advertised to the agent, but its first act is `getLSPManager()`,\n6: // so every invocation returned \"LSP is not initialized\". The capability was dead\n7: // in every product surface.\n8: //\n9: // It is now created lazily per workspace root, which also fixes the design flaw\n10: // behind the singleton: one process can span several workspaces (worktrees,\n11: // sub-agents) while a language server is rooted at exactly one directory.\n12: import { afterEach, describe, expect, test } from \"bun:test\";\n13: import { mkdtempSync, rmSync } from \"node:fs\";\n14: import { tmpdir } from \"node:os\";\n15: import { join } from \"node:path\";\n16: import {\n17:   getLSPManager,\n18:   initializeLSPManager,\n19:   shutdownAllLSPManagers,\n20:   shutdownLSPManager,\n21: } from \"./manager.js\";\n22: \n23: const dirs: string[] = [];\n24: function workspace(): string {\n25:   const d = mkdtempSync(join(tmpdir(), \"lsp-ws-\"));\n26:   dirs.push(d);\n27:   return d;\n28: }\n29: \n30: afterEach(async () => {\n31:   await shutdownAllLSPManagers();\n32:   for (const d of dirs.splice(0)) rmSync(d, { recursive: true, force: true });\n33: });\n34: \n35: describe(\"LSP manager registry\", () => {\n36:   test(\"getLSPManager creates one on first use instead of returning undefined\", async () => {\n37:     // The whole bug: this returned undefined forever because nothing called\n38:     // initializeLSPManager().\n39:     const root = workspace();\n40:     expect(getLSPManager(root, { create: false })).toBeUndefined();\n41:     expect(getLSPManager(root)).toBeDefined();\n42:   });\n43: \n44:   test(\"the same root reuses one manager\", () => {\n45:     const root = workspace();\n46:     const first = getLSPManager(root);\n47:     expect(first).toBeDefined();\n48:     expect(getLSPManager(root)).toBe(first!);\n49:     expect(initializeLSPManager(root)).toBe(first!);\n50:   });\n51: \n52:   test(\"different roots get different managers\", () => {\n53:     // A language server is rooted at one directory; two worktrees must not share.\n54:     const a = workspace();\n55:     const b = workspace();\n56:     expect(getLSPManager(a)).not.toBe(getLSPManager(b));\n57:   });\n58: \n59:   test(\"create:false observes without spawning\", () => {\n60:     const root = workspace();\n61:     expect(getLSPManager(root, { create: false })).toBeUndefined();\n62:     // Still nothing was registered.\n63:     expect(getLSPManager(root, { create: false })).toBeUndefined();\n64:   });\n65: \n66:   test(\"shutdown forgets the workspace so a later call builds a fresh one\", async () => {\n67:     const root = workspace();\n68:     const first = getLSPManager(root);\n69:     await shutdownLSPManager(root);\n70:     expect(getLSPManager(root, { create: false })).toBeUndefined();\n71:     expect(getLSPManager(root)).not.toBe(first);\n72:   });\n73: \n74:   test(\"shutting down an unknown workspace is a no-op\", async () => {\n75:     await shutdownLSPManager(join(tmpdir(), \"never-registered\"));\n76:   });\n77: \n78:   test(\"the no-argument form resolves only when unambiguous\", async () => {\n79:     // Back-compat for call sites without workspace context.\n80:     expect(getLSPManager()).toBeUndefined();\n81:     const only = getLSPManager(workspace());\n82:     expect(getLSPManager()).toBe(only);\n83:     // With two workspaces there is no single right answer, so it declines.\n84:     getLSPManager(workspace());\n85:     expect(getLSPManager()).toBeUndefined();\n86:   });\n87: \n88:   test(\"the live workspace set is bounded — oldest are evicted\", () => {\n89:     // Per-workspace managers fixed the single-cwd bug but made the map\n90:     // unbounded: a long session touching many worktrees would keep a language\n91:     // server per root alive forever.\n92:     const roots = Array.from({ length: 6 }, () => workspace());\n93:     for (const root of roots) getLSPManager(root);\n94: \n95:     const live = roots.filter((root) => getLSPManager(root, { create: false }) !== undefined);\n96:     expect(live.length).toBeLessThanOrEqual(4);\n97:     // The most recently used ones survive.\n98:     expect(getLSPManager(roots[5]!, { create: false })).toBeDefined();\n99:     expect(getLSPManager(roots[0]!, { create: false })).toBeUndefined();\n100:   });\n101: \n102:   test(\"recency is refreshed on read, so an active workspace is not evicted\", () => {\n103:     const roots = Array.from({ length: 4 }, () => workspace());\n104:     for (const root of roots) getLSPManager(root);\n105: \n106:     // Keep using the OLDEST one, then push the set past the cap.\n107:     const keepAlive = roots[0]!;\n108:     expect(getLSPManager(keepAlive, { create: false })).toBeDefined();\n109:     getLSPManager(workspace());\n110:     getLSPManager(workspace());\n111: \n112:     // It survived because reads count as use; without that it would have been\n113:     // the first victim purely for having been created earliest.\n114:     expect(getLSPManager(keepAlive, { create: false })).toBeDefined();\n115:   });\n116: \n117:   test(\"an evicted workspace simply rebuilds on next use\", () => {\n118:     const roots = Array.from({ length: 6 }, () => workspace());\n119:     for (const root of roots) getLSPManager(root);\n120:     const evicted = roots[0]!;\n121:     expect(getLSPManager(evicted, { create: false })).toBeUndefined();\n122:     // Cold start, not an error.\n123:     expect(getLSPManager(evicted)).toBeDefined();\n124:   });\n125: \n126:   test(\"a fresh manager reports its servers as stopped, not connected\", () => {\n127:     const manager = getLSPManager(workspace())!;\n128:     expect(manager.isConnected()).toBe(false);\n129:     // Built-in servers are registered but not started — lazy by design, so a\n130:     // session that never uses LSP pays for no processes.\n131:     expect(manager.listServers().length).toBeGreaterThan(0);\n132:     expect(manager.listServers().every((s) => s.state === \"stopped\")).toBe(true);\n133:   });\n134: });"
+      }
+    ],
+    "pinReference": "consumer-initial-pins.json"
+  }
+]

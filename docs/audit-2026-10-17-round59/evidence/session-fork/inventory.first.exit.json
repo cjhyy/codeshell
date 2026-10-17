@@ -1,0 +1,17 @@
+{
+  "command": [
+    "rg",
+    "--files",
+    "packages/core/src",
+    "-g",
+    "session-manager.ts",
+    "-g",
+    "transcript.ts",
+    "-g",
+    "*fork*.test.ts",
+    "-g",
+    "*context-transfer*.test.ts"
+  ],
+  "exitCode": 0,
+  "atUTC": "2026-10-17T19:39:49.913239+00:00"
+}

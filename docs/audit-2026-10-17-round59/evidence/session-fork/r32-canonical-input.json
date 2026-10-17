@@ -1,0 +1,57 @@
+{
+  "path": "docs/audit-2026-10-17-round32/evidence/review-selection-source-manifest.json",
+  "bytes": 68076,
+  "sha256": "95941a427d831da92106051aced689d442aa8eee9fbb63b113a4ffb003a19d2f",
+  "pointer": "/files/5",
+  "row": {
+    "path": "packages/core/src/session/session-manager.ts",
+    "bytes": 109011,
+    "lineCount": 2831,
+    "sha256": "935b6a689a12946da58641e8e8752bc5d11cbfdfe49add67e28ec5a9a4ba9b78",
+    "initialFilesystemSha256": "935b6a689a12946da58641e8e8752bc5d11cbfdfe49add67e28ec5a9a4ba9b78",
+    "finishFilesystemSha256": "935b6a689a12946da58641e8e8752bc5d11cbfdfe49add67e28ec5a9a4ba9b78",
+    "initialEqualsFinish": true,
+    "initialSemanticReadSha256": "935b6a689a12946da58641e8e8752bc5d11cbfdfe49add67e28ec5a9a4ba9b78",
+    "pinTiming": "Before independent direct consumer/backend source read; prior rg/peer locator excerpts excluded from declared coverage",
+    "captureRecord": "consumer-initial-pins.json",
+    "captureRecordUTC": "2026-10-17T12:06:32.785309+00:00",
+    "gitBlobComparedByReviewer": false,
+    "runtimeExecuted": false,
+    "coverage": "selected",
+    "selectedLineRanges": [
+      [
+        2160,
+        2238
+      ]
+    ],
+    "coveredLineCount": 79,
+    "prepSourceRow": {
+      "path": "packages/core/src/session/session-manager.ts",
+      "bytes": 109011,
+      "lineCount": 2831,
+      "sha256": "935b6a689a12946da58641e8e8752bc5d11cbfdfe49add67e28ec5a9a4ba9b78",
+      "initialFilesystemSha256": "935b6a689a12946da58641e8e8752bc5d11cbfdfe49add67e28ec5a9a4ba9b78",
+      "finishFilesystemSha256": "935b6a689a12946da58641e8e8752bc5d11cbfdfe49add67e28ec5a9a4ba9b78",
+      "initialEqualsFinish": true,
+      "initialSemanticReadSha256": "935b6a689a12946da58641e8e8752bc5d11cbfdfe49add67e28ec5a9a4ba9b78",
+      "pinTiming": "Before independent direct consumer/backend source read; prior rg/peer locator excerpts excluded from declared coverage",
+      "captureRecord": "consumer-initial-pins.json",
+      "captureRecordUTC": "2026-10-17T12:06:32.785309+00:00",
+      "gitBlobComparedByReviewer": false,
+      "runtimeExecuted": false,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          2160,
+          2238
+        ]
+      ],
+      "coveredLineCount": 79
+    },
+    "semanticReadReusedFromPrep": true,
+    "formalizationNewSemanticRead": false,
+    "formalizationFinishFilesystemSha256": "935b6a689a12946da58641e8e8752bc5d11cbfdfe49add67e28ec5a9a4ba9b78",
+    "formalizationInitialEqualsFinish": true
+  },
+  "atUTC": "2026-10-17T19:42:22.878763+00:00"
+}

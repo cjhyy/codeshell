@@ -1,0 +1,63 @@
+1: import type { SubAgentContinuation } from "../types.js";
+2: 
+3: /** Reject corrupt or legacy metadata rather than restoring a wider child scope. */
+4: export function parseSubAgentContinuation(
+5:   value: unknown,
+6:   parentSessionId: unknown,
+7: ): SubAgentContinuation | undefined {
+8:   if (!value || typeof value !== "object" || Array.isArray(value)) return undefined;
+9:   const data = value as Record<string, unknown>;
+10:   if (
+11:     data.version !== 1 ||
+12:     typeof data.parentSessionId !== "string" ||
+13:     !data.parentSessionId ||
+14:     data.parentSessionId !== parentSessionId ||
+15:     (data.agentType !== null && (typeof data.agentType !== "string" || !data.agentType.trim())) ||
+16:     typeof data.description !== "string" ||
+17:     !Number.isSafeInteger(data.maxTurns) ||
+18:     (data.maxTurns as number) <= 0 ||
+19:     typeof data.readOnlySession !== "boolean"
+20:   ) {
+21:     return undefined;
+22:   }
+23:   const optionalStrings = ["name", "model", "appendSystemPrompt"] as const;
+24:   for (const key of optionalStrings) {
+25:     if (data[key] !== undefined && typeof data[key] !== "string") return undefined;
+26:   }
+27:   const allowlists = ["toolAllowlist", "skillAllowlist", "mcpAllowlist"] as const;
+28:   for (const key of allowlists) {
+29:     const list = data[key];
+30:     if (
+31:       list !== undefined &&
+32:       (!Array.isArray(list) || list.some((item) => typeof item !== "string" || !item.trim()))
+33:     ) {
+34:       return undefined;
+35:     }
+36:   }
+37:   if (
+38:     data.sandboxMode !== undefined &&
+39:     !["off", "auto", "seatbelt", "bwrap"].includes(data.sandboxMode as string)
+40:   ) {
+41:     return undefined;
+42:   }
+43:   // Reconstruct a canonical detached value: persisted JSON omits undefined keys,
+44:   // and caller mutations must not change the frozen snapshot held by a Session.
+45:   const result: SubAgentContinuation = {
+46:     version: 1,
+47:     parentSessionId: data.parentSessionId,
+48:     agentType: data.agentType as string | null,
+49:     description: data.description,
+50:     maxTurns: data.maxTurns as number,
+51:     readOnlySession: data.readOnlySession,
+52:   };
+53:   for (const key of optionalStrings) {
+54:     if (data[key] !== undefined) result[key] = data[key] as string;
+55:   }
+56:   for (const key of allowlists) {
+57:     if (data[key] !== undefined) result[key] = [...(data[key] as string[])];
+58:   }
+59:   if (data.sandboxMode !== undefined) {
+60:     result.sandboxMode = data.sandboxMode as SubAgentContinuation["sandboxMode"];
+61:   }
+62:   return result;
+63: }

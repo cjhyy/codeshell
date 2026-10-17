@@ -1,0 +1,12 @@
+{
+  "productRuns": 0,
+  "productReruns": 0,
+  "metadata": [
+    {
+      "operation": "Root symbol navigation wrapper",
+      "exitCode": 0,
+      "diagnostic": "Python emitted SyntaxWarning for non-raw regex escape \\. on stderr; source navigation completed0. Original warning is in tool transcript; it was not captured into a separate raw stderr file. No product attempt occurred and no command rerun was used to hide it."
+    }
+  ],
+  "failedProductDirectionsReopened": []
+}

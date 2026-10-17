@@ -1,0 +1,139 @@
+{
+  "at": "2026-10-17T19:39:55.603683+00:00",
+  "excludedFormalAtOrAbove": 59,
+  "queries": [
+    {
+      "query": "packages/coding/src/lsp/root-path.ts",
+      "command": [
+        "rg",
+        "-l",
+        "-F",
+        "packages/coding/src/lsp/root-path.ts",
+        "docs",
+        "bugs"
+      ],
+      "exitCode": 0,
+      "stderr": "",
+      "machineFilenameCount": 14,
+      "files": [
+        "docs/audit-2026-10-17-round55/evidence/coverage-current/unified-current-index.first.json",
+        "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+        "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+        "docs/audit-2026-10-17-round55/evidence/coverage-current/current-source-inventory.json",
+        "docs/audit-2026-10-17-round55/evidence/coverage-current/unified-current-index.json",
+        "docs/audit-2026-10-17-round4/evidence/coding-receipts.json",
+        "docs/audit-2026-10-17-round4/source-manifest.json",
+        "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-index.json",
+        "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "docs/audit-2026-10-17-round44/evidence/coverage-frontier/package-inventory.json",
+        "docs/audit-2026-10-16/inventory.json",
+        "docs/audit-2026-10-17-round44/evidence/coverage-status/current-inventory.json",
+        "docs/audit-2026-10-17-round44/evidence/coverage-status/comparison.json",
+        "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/inventory.json"
+      ],
+      "scope": "Filename-only old metadata locators; not semantic reading of matched documents."
+    },
+    {
+      "query": "packages/coding/src/lsp/manager.ts",
+      "command": [
+        "rg",
+        "-l",
+        "-F",
+        "packages/coding/src/lsp/manager.ts",
+        "docs",
+        "bugs"
+      ],
+      "exitCode": 0,
+      "stderr": "",
+      "machineFilenameCount": 20,
+      "files": [
+        "docs/audit-2026-10-16/inventory.json",
+        "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+        "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+        "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-index.json",
+        "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+        "docs/audit-2026-10-17-round44/evidence/coverage-frontier/package-inventory.json",
+        "docs/audit-2026-10-17-round44/evidence/coverage-status/current-inventory.json",
+        "docs/audit-2026-10-17-round44/evidence/coverage-status/comparison.json",
+        "docs/audit-2026-10-17-round4/coding.md",
+        "docs/audit-2026-10-17-round4/evidence/coding-receipts.json",
+        "docs/audit-2026-10-17-round4/evidence/coding-dedup.json",
+        "docs/audit-2026-10-17-round4/source-manifest.json",
+        "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/inventory.json",
+        "docs/audit-2026-10-17-round55/evidence/coverage-current/unified-current-index.first.json",
+        "docs/audit-2026-10-17-round55/evidence/coverage-current/current-source-inventory.json",
+        "docs/audit-2026-10-17-round55/evidence/coverage-current/unified-current-index.json",
+        "docs/review-remaining-2026-10-12/validation/source-reports/codeshell-remaining-cli-chat-report.md",
+        "docs/review-remaining-2026-10-12/findings.json",
+        "docs/review-remaining-2026-10-12/README.md",
+        "docs/review-remaining-2026-10-12/coding-tui-chat.md"
+      ],
+      "scope": "Filename-only old metadata locators; not semantic reading of matched documents."
+    },
+    {
+      "query": "CODING-R4",
+      "command": [
+        "rg",
+        "-l",
+        "-F",
+        "CODING-R4",
+        "docs",
+        "bugs"
+      ],
+      "exitCode": 0,
+      "stderr": "",
+      "machineFilenameCount": 24,
+      "files": [
+        "docs/audit-2026-10-17-round57/ALL-ISSUES.md",
+        "docs/audit-2026-10-17-round57/recorded-findings-catalog.json",
+        "docs/audit-2026-10-17-round53/ALL-ISSUES.md",
+        "docs/audit-2026-10-17-round53/recorded-findings-catalog.json",
+        "docs/audit-2026-10-17-round4/quality-settings.md",
+        "docs/audit-2026-10-17-round4/findings.json",
+        "docs/audit-2026-10-17-round4/coding.md",
+        "docs/audit-2026-10-17-round4/README.md",
+        "docs/audit-2026-10-17-round4/quality-context.md",
+        "docs/audit-2026-10-17-round4/evidence/coding-receipts.json",
+        "docs/audit-2026-10-17-round43/README.md",
+        "docs/audit-2026-10-17-round43/recorded-findings-catalog.json",
+        "docs/audit-2026-10-17-round52/ALL-ISSUES.md",
+        "docs/audit-2026-10-17-round52/recorded-findings-catalog.json",
+        "docs/audit-2026-10-17-round43/evidence/catalog-review/checks.json",
+        "docs/audit-2026-10-17-round48/ALL-ISSUES.md",
+        "docs/audit-2026-10-17-round48/recorded-findings-catalog.json",
+        "docs/audit-2026-10-17-round58/ALL-ISSUES.md",
+        "docs/audit-2026-10-17-round48/evidence/user-catalog-draft/checks.json",
+        "docs/audit-2026-10-17-round48/evidence/user-catalog-draft/draft.md",
+        "docs/audit-2026-10-17-round58/recorded-findings-catalog.json",
+        "docs/audit-2026-10-17-round48/evidence/delivery-review/checks.json",
+        "docs/audit-2026-10-17-round50/ALL-ISSUES.md",
+        "docs/audit-2026-10-17-round50/recorded-findings-catalog.json"
+      ],
+      "scope": "Filename-only old metadata locators; not semantic reading of matched documents."
+    },
+    {
+      "query": "N12",
+      "command": [
+        "rg",
+        "-l",
+        "-F",
+        "N12",
+        "docs",
+        "bugs"
+      ],
+      "exitCode": 0,
+      "stderr": "",
+      "machineFilenameCount": 7,
+      "files": [
+        "docs/audit-2026-10-17-round4/coding.md",
+        "docs/audit-2026-10-17-round4/evidence/coding-receipts.json",
+        "docs/audit-2026-10-17-round7/providers.md",
+        "docs/audit-2026-10-17-round4/evidence/coding-dedup.json",
+        "docs/review-remaining-2026-10-12/README.md",
+        "docs/review-remaining-2026-10-12/findings.json",
+        "docs/audit-2026-10-17-round10/evidence/root-dedup.json"
+      ],
+      "scope": "Filename-only old metadata locators; not semantic reading of matched documents."
+    }
+  ]
+}

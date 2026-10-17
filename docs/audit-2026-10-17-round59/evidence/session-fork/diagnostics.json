@@ -1,0 +1,17 @@
+{
+  "metadataFailures": [],
+  "productFailures": [],
+  "toolOutputTruncations": [],
+  "normalNoMatchResults": [],
+  "firstInventoryRaw": "inventory.first.stdout/stderr/exit.json actual bytes retained, exit0.",
+  "productExecutionAttempts": 0,
+  "testsExecuted": 0,
+  "gitCalls": 0,
+  "networkCalls": 0,
+  "nativeCalls": 0,
+  "realSessionOrFSOperations": 0,
+  "historyLimits": "6010 dated MD/JSON frozen58 included59+ excluded;4291442 recursive value scalars+archives are Root machine visits not personal semantic reads or added runtime. manager609/transcript548 each only first100 retainedcap100. Provenance preview220characters per visible hit; selected exactR9/R32objects and boundedMD read separately.",
+  "metadataTiming": "Old-session-R9, R9canonical, CTX4 and R32canonical byte hashes recorded before bounded outputs and before product bodies. Earlier4old MD keyword searches had no initial hashes; late metadata explicitlyinitial=null. No source pin backfilled.",
+  "oldEvidencePolicy": "Old report commands/pass counts are historical prose only. Permanent failed model/native/CLI/mobile/context routes not executed or recovered. No old author script run.",
+  "sourceReadingEnded": "After final actual summary-return source read5e6b35; finalizer only captures already-displayed ranges/byte hashes and writes metadata."
+}

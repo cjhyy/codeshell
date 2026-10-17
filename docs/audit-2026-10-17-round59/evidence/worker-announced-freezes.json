@@ -1,0 +1,95 @@
+{
+  "checks": [
+    {
+      "path": "lsp-root/report.md",
+      "bytes": 3317,
+      "sha256": "626af198016e990aefa707c093ac0b4156bf1ce10f1f7248e18796a6ae5df798",
+      "announcement": "Agent terminal message or Root148 own freeze output"
+    },
+    {
+      "path": "lsp-root/source-manifest.json",
+      "bytes": 13665,
+      "sha256": "3199d3b45561a1cdd61a390dd5e68c5b5ff59d5f7f4f1a048e0065604fede629",
+      "announcement": "Agent terminal message or Root148 own freeze output"
+    },
+    {
+      "path": "lsp-root/reviewer-receipt.json",
+      "bytes": 2954,
+      "sha256": "eddcb57cd069e9dff5a4ead39dae632f9d991359f85ed2065b65dc081a117f16",
+      "announcement": "Agent terminal message or Root148 own freeze output"
+    },
+    {
+      "path": "session-fork/report.md",
+      "bytes": 3086,
+      "sha256": "a42e6f5ba249092273634e054bc5448e23d3d88fdc17fefc28973dfdfc35d86f",
+      "announcement": "Agent terminal message or Root148 own freeze output"
+    },
+    {
+      "path": "session-fork/source-manifest.json",
+      "bytes": 20304,
+      "sha256": "5017fdad034f01042f4f6195459ab4d959556eee5391c5add16b1a125387b93b",
+      "announcement": "Agent terminal message or Root148 own freeze output"
+    },
+    {
+      "path": "session-fork/artifact-receipt.json",
+      "bytes": 3717,
+      "sha256": "2273a7eecb27dcd83c9b6b5be7130c4fc558cf7ae8151553d93baa3a1c76ee7b",
+      "announcement": "Agent terminal message or Root148 own freeze output"
+    },
+    {
+      "path": "session-usage/report.md",
+      "bytes": 5389,
+      "sha256": "b542b8f48c7c9d59d5d75c4b814b2ab96d7d53e61f03071a5e9d58d5154112ec",
+      "announcement": "Agent terminal message or Root148 own freeze output"
+    },
+    {
+      "path": "session-usage/source-manifest.json",
+      "bytes": 18112,
+      "sha256": "b25df1056ee6686a0c2a8553400362a95c1511020be2b948484cb693d8fe54b0",
+      "announcement": "Agent terminal message or Root148 own freeze output"
+    },
+    {
+      "path": "session-usage/reviewer-receipt.json",
+      "bytes": 3276,
+      "sha256": "e10e28c0cdeafc77a9bdc1fbc1337d29ccff9a67452b9b8de9bed98b798a37ab",
+      "announcement": "Agent terminal message or Root148 own freeze output"
+    },
+    {
+      "path": "root-subagent-continuation/report.md",
+      "bytes": 2202,
+      "sha256": "fef0226d0780d9a0e5c3c50314e2a81e331324a15156818bab82cea081fee30c",
+      "announcement": "Agent terminal message or Root148 own freeze output"
+    },
+    {
+      "path": "root-subagent-continuation/source-manifest.json",
+      "bytes": 11798,
+      "sha256": "c9ab15c5dc34193661a73efed36760d1248a6e16d986fd91a8538c912ecb0169",
+      "announcement": "Agent terminal message or Root148 own freeze output"
+    },
+    {
+      "path": "root-subagent-continuation/artifact-receipt.json",
+      "bytes": 4609,
+      "sha256": "c334e8e1ac5474fa31c4fcf1f97604690a00c013725d9e239544d550d896c12a",
+      "announcement": "Agent terminal message or Root148 own freeze output"
+    },
+    {
+      "path": "subagent-continuation-review/report.md",
+      "bytes": 3079,
+      "sha256": "21b8c5e52e8d5f4ce7f9d26d74acd5252cd8ebcdde30d0cd4757eeaa0d2794d9",
+      "announcement": "Agent terminal message or Root148 own freeze output"
+    },
+    {
+      "path": "subagent-continuation-review/source-manifest.json",
+      "bytes": 12902,
+      "sha256": "b5d0f56d7dc78e6bc3c7fb6402040d2c2d8efb8daedb529ee3da2911dc889a98",
+      "announcement": "Agent terminal message or Root148 own freeze output"
+    },
+    {
+      "path": "subagent-continuation-review/reviewer-receipt.json",
+      "bytes": 2691,
+      "sha256": "aad153721e7e13af549516721475ec4a32af675886e143a95db73c7c376ffe34",
+      "announcement": "Agent terminal message or Root148 own freeze output"
+    }
+  ],
+  "expectedCount": 15
+}
