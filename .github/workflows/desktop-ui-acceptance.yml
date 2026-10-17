@@ -305,6 +305,7 @@ jobs:
         run: |
           set -euo pipefail
           node scripts/run-bun-test-shard.mjs --timeout 30000 packages/core/src/capability-control/service.literal-override.test.ts packages/core/src/capability-control/service.test.ts 2>&1 | tee "$ACCEPTANCE_ROOT/mcp-project-overrides.log"
+          node scripts/run-bun-test-shard.mjs --timeout 30000 packages/desktop/src/renderer/app/useTranscriptBuckets.goal-null.test.tsx packages/desktop/src/renderer/transcriptHydration.test.ts packages/desktop/src/renderer/transcriptsReducer.test.ts 2>&1 | tee "$ACCEPTANCE_ROOT/goal-hydration.log"
 
       - name: materialize production workspace packages
         timeout-minutes: 5
@@ -505,6 +506,7 @@ jobs:
             ${{ env.ACCEPTANCE_ROOT }}/review.log
             ${{ env.ACCEPTANCE_ROOT }}/operation-evidence-contracts.log
             ${{ env.ACCEPTANCE_ROOT }}/mcp-project-overrides.log
+            ${{ env.ACCEPTANCE_ROOT }}/goal-hydration.log
             ${{ env.ACCEPTANCE_ROOT }}/review-diagnostic-contracts.log
             ${{ env.ACCEPTANCE_ROOT }}/review-draft-contracts.log
             ${{ env.ACCEPTANCE_ROOT }}/review-draft-operations.log
@@ -624,6 +626,7 @@ jobs:
             ${{ env.ACCEPTANCE_ROOT }}/review.log
             ${{ env.ACCEPTANCE_ROOT }}/operation-evidence-contracts.log
             ${{ env.ACCEPTANCE_ROOT }}/mcp-project-overrides.log
+            ${{ env.ACCEPTANCE_ROOT }}/goal-hydration.log
             ${{ env.ACCEPTANCE_ROOT }}/review-diagnostic-contracts.log
             ${{ env.ACCEPTANCE_ROOT }}/review-draft-contracts.log
             ${{ env.ACCEPTANCE_ROOT }}/review-draft-operations.log
