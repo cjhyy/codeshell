@@ -181,6 +181,7 @@
     },
     "nsis": {
       "artifactName": "${productName}-Setup-${version}.${ext}",
+      "include": "nsis-uninstaller-init.nsh",
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
       "perMachine": false,

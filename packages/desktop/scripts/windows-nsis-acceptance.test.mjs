@@ -165,6 +165,8 @@ test("the committed production NSIS settings remain intact and reject unreviewed
     ["perMachine", true],
     ["packElevateHelper", false],
     ["script", "custom.nsi"],
+    ["include", "build/nsis-uninstaller-init.nsh"],
+    ["include", ["nsis-uninstaller-init.nsh"]],
     ["createDesktopShortcut", false],
   ]) {
     const copy = clone(pkg);

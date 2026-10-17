@@ -455,6 +455,8 @@ export async function runWindowsNsisAcceptance(args) {
     const artifactName = assertProductionNsis(pkg);
     for (const name of ["installer.nsh", "installer.nsi", "uninstallerIcon.ico"])
       await absent(join(desktop, "build", name));
+    const nsisUninstallerInit = join(desktop, "build", pkg.build.nsis.include);
+    const nsisUninstallerInitIdentity = await plainFile(nsisUninstallerInit);
     const observer = join(here, "windows-nsis-observe.ps1");
     const systemRoot = process.env.SystemRoot ?? process.env.SYSTEMROOT;
     assert.match(systemRoot ?? "", /^[a-z]:\\[^\r\n\0]+$/i);
@@ -479,6 +481,10 @@ export async function runWindowsNsisAcceptance(args) {
       return snapshot;
     };
     report.source = {
+      nsisUninstallerInit: {
+        include: pkg.build.nsis.include,
+        ...nsisUninstallerInitIdentity,
+      },
       directoryBuildReceiptSHA256: sha256(await readFile(options.buildReceipt)),
       directoryBuild: original,
       fixtureSHA256: Object.fromEntries(
@@ -577,6 +583,7 @@ export async function runWindowsNsisAcceptance(args) {
         BUDGETS.build,
       ),
     );
+    assert.deepEqual(await plainFile(nsisUninstallerInit), nsisUninstallerInitIdentity);
     assert.equal((await plainFile(builderCli)).sha256, report.toolchain.builderCli.sha256);
     report.phase = "payload-identity";
     checkpoint("stage-start");

@@ -55,8 +55,10 @@ export function assertProductionNsis(pkg) {
   assert.equal(pkg.name, "@cjhyy/code-shell-desktop");
   assert.match(pkg.version, /^\d+\.\d+\.\d+$/);
   assert.deepEqual(pkg.build.win.target, ["nsis"]);
+  assert.equal(pkg.build.directories.buildResources, "build");
   assert.deepEqual(pkg.build.nsis, {
     artifactName: "${productName}-Setup-${version}.${ext}",
+    include: "nsis-uninstaller-init.nsh",
     oneClick: false,
     allowToChangeInstallationDirectory: true,
     perMachine: false,
