@@ -230,7 +230,7 @@ export function ensureElectronKeychainContext({
     return { home: actualHome, referenceFile, receiptFile, reused: Boolean(pinned) };
   } catch (cause) {
     const error = new Error(
-      `macOS Keychain preflight failed while ${stages[stage]}. Check the existing default login Keychain and the fixture metadata, then retry. Electron was not started.`,
+      `macOS Keychain preflight failed while ${stages[stage]}. Check the existing default login Keychain and the fixture metadata, then retry. Electron was not started by this preflight invocation; this check does not launch new Electron processes.`,
       { cause },
     );
     Object.defineProperties(error, {

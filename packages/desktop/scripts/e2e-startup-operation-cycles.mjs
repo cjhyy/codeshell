@@ -202,6 +202,7 @@ export async function runStartupOperationCycles(args) {
       assertStartupCycleSettled(resource.proof);
       // The first launch pins metadata. Reuse that exact reference after each
       // shutdown; never refresh a changed identity or substitute native crypto.
+      resource.diagnostics.phase("startup-post-exit-keychain-preflight");
       const context = ensureElectronKeychainContext({
         home: isolated.home,
         environment: {
@@ -212,6 +213,7 @@ export async function runStartupOperationCycles(args) {
             process.env.CODESHELL_MACOS_DEFAULT_KEYCHAIN_REFERENCE,
         },
       });
+      resource.diagnostics.phase("startup-cycle-gates");
       if (process.platform === "darwin") assert.equal(context?.reused, true);
       resource.proof.keychainMetadataRechecked = process.platform === "darwin";
     } catch (error) {
@@ -293,6 +295,7 @@ for(const method of ["loadFile","loadURL"]){const original=BrowserWindow.prototy
       cycles.push(proof);
       const diagnostics = createElectronTestDiagnostics({
         ownedRoots: [repository, isolated.home],
+        additionalPhases: ["startup-post-exit-keychain-preflight"],
       });
       proof.diagnostics = diagnostics.receipt;
       const resource = (active = {
