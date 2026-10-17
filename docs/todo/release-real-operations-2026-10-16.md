@@ -36,6 +36,8 @@ Cross-platform fixture tests alone are not native acceptance.
 | Review diff paths and lines | Hunk body lines beginning with `+++`/`---` were mistaken for headers; rename and Git-quoted Unicode paths could target the wrong file. | Parse headers in their actual section, decode Git quoting and preserve real rename paths. Actual macOS Main/Review/preload/renderer passes four diff checks and four plain-click file previews against owned Git. Three-platform CI now includes this operation family. |
 | Host project case policy | A Web client lowercased POSIX paths and could create a session in the wrong case-distinct Linux project. | Project metadata carries the Host's case policy; grouping and session creation share that policy and prefer stable project IDs. Actual React handler and owned path-policy tests pass. This is not native Linux Host registration acceptance. |
 | Context forwarding after truncated history | Selecting RECENT from the actual 512 KiB history tail could forward OLD because visible groups used raw-history ordinals. | Preserve durable source event IDs and resolve the exact raw range; reject unknown, ambiguous or discontinuous mappings. Eight actual reader/fold/React-handler scenarios pass without invoking a fork or provider. |
+| Multiline annotations | Actual CommentBox typing and Save retained the full text, but its wire projection displayed only the first line and interpreted colon/fake-entry text as other fields. | Version only new multiline blocks and consume a bounded explicit line count. Actual CommentBox/codec/AnnotationsBlock passes eight browser sequences at 1000/390px, with whitespace and fake-format text preserved. Ordinary single-line wire stays byte-compatible; ambiguous historical unframed comments are not guessed. |
+| Web child-stream lifecycle | Background child detail changed a completed parent to running; a child error also cleared the parent's live output. Supported orphan tool results bypassed ordinary display cleanup. | Keep child activity in its own bucket, retain the parent's lifecycle and normalize both tool-result orders equally. Combined reducer/replay/controller regression passes 86 tests/242 assertions. Actual Workbench/ProtocolClient browser verification passes eight sequences at 1280/390, with real Send/Stop and expanded tool-result controls. |
 
 ## Evidence boundaries
 
@@ -70,7 +72,9 @@ packages on macOS, `windows-2022` and Ubuntu, then runs cold startup and the
 packaged UI sequence. It is limited to manual dispatch or a dedicated acceptance
 branch push, with read-only repository permissions. It uses no release identity,
 notarization, tag or publishing command. Linux gets an owned Xvfb/SecretService
-session and explicitly configured sandbox helpers; it does not use `--no-sandbox`.
+session and explicitly configured sandbox helpers. The later-discovered launcher
+default and its correction are recorded below; earlier UI success does not prove
+that Chromium sandboxing was enabled.
 The user authorized pushing the dedicated acceptance branch and running native CI;
 main, tags and publication remain outside that authorization. The branch is
 `codex/desktop/release-ui-acceptance-three-platforms-20261017`.
@@ -176,6 +180,76 @@ Desktop build and all 14 workspace typechecks pass. Combined regression passes
 six negative probes and zero runtime network attempts, plus seven guarded Core
 cache/tool-continuation tests (79 assertions). The next full native matrix remains
 in progress.
+
+Startup fixture commits `a8b6cfe05` and `d1abe3a46` replace the earlier premature
+success print with early spawn custody and per-cycle normal-exit/settlement
+requirements before another cold Main starts. Four focused Node tests and three
+actual evidence-path refusals pass. Its fresh macOS repeat passes seven real
+operations: three cold loads, three reloads and one production second window;
+all unchanged Pet IPC calls work, three Main exits are 0/no signal, observed
+custody is cleaned with zero remaining, and renderer/worker/deny ledgers are
+empty. Evidence: `/private/tmp/codeshell-startup-custody-proof-BkkNwKFd/verified-summary.json`.
+The first attempt's final Keychain inode mismatch correctly failed and retained
+its original HOME/pin. Its cause remains unknown. The passing repeat used one
+fresh HOME/pin; fixture-only `d1abe3a46` retained compiled hashes from `a8b6cfe05`.
+This is macOS proof and does not classify the Windows query failure.
+
+Annotation source `94aa7ab90` has a clean actual-browser red (four multiline
+failures, three controls) and a final eight-case green at
+`/private/tmp/codeshell-annotations-browser-final-003/receipt.json`.
+Actual typing/Save callbacks and production wire/display preserve blank lines,
+indentation, colons and entry-looking text at 1000/390px, while real textarea CRLF
+normalization and delimiter sanitation remain verified. Browser exit 0/no signal,
+no watchdog signals, nine observed incarnations cleaned, no renderer/network/deny
+attempts, and profile removal are recorded. Thirty-four guarded unit tests,
+Desktop no-emit types and three prelaunch evidence-path refusals pass. No actual
+chat send, Main, Core or provider operation is claimed by this local UI fixture.
+
+Installed Playwright `1.64.0` prepends `--no-sandbox` to Linux Electron launches
+unless `chromiumSandbox: true` is explicit. Earlier Linux native receipts prove
+their stated UI operations, but cannot prove enabled Chromium sandboxing despite
+the configured setuid helpers. Source harness now explicitly requests sandboxing,
+refuses an actual Linux `no-sandbox` switch in its pre-Core bootstrap and records
+the switch state; nine Node harness tests pass. Packaged directory/AppImage
+launchers receive the same requirement. There is no fallback flag or OS-wide
+policy change; the next actual Linux run must verify these stricter launches.
+
+Web child-state evidence is
+`/private/tmp/codeshell-web-subagent-browser-green-verified-20261017/verified-summary.json`.
+The same committed driver runs a frozen parent reducer and the corrected one;
+77 actual product inputs and CSS match except for that reducer. The old source
+has six product failures plus two ordinary-send controls; the new source passes
+eight cases with four actual `agent/run` requests and two actual cancellation
+requests, each checked again after shutdown. Both browsers exit 0/no signal,
+observed custody is cleaned, and renderer/deny/fixture errors are zero. These are
+owned HTTP/WS Host responses, not actual Engine/provider execution or the legacy
+paired Mobile adapter. Narrow Hub layout is explicitly the 390px boundary.
+
+Combined source after the multiline/child-state/Panel-Wasm repairs passes ten
+package tarballs/48 typed entries, root and Desktop builds, and all 14 workspace
+typechecks. Its focused combined comment/reducer/replay/controller shard passes
+120 tests/357 assertions with six pre-Core deny probes and zero runtime network
+attempts. AppImage/source custody changes combine with the earlier watchdog
+performance repair: 53 Node tests and 33 shared barrier/exit/launcher Bun tests
+(102 assertions) pass. Native AppImage cache reuse is still unverified locally.
+
+The real AppImage adapter builds from the verified directory payload, checks
+image/ASAR/managed-runtime/source identities, prepares only its owned extraction
+cache and exact sandbox helper, then lets the image runtime supply `APPIMAGE`
+and `APPDIR`. It distinguishes the launcher from its actual Main and binds the
+fresh Main incarnation before installing the first-JavaScript guard. An exited
+launcher cannot authorize disconnecting a still-paused Main; focused inspector
+fixtures cover this failure boundary. Original source/image/cache inventories
+and separate normal Main/launcher exits are mandatory. Actual Linux CI remains
+required before counting it as acceptance.
+
+Independent installed-Playwright review also found an existing Windows harness
+incompatibility: its Electron launcher uses a shell command and returns the shell
+PID, whereas early fixture capture expected a direct executable/Main PID. This is
+source evidence, not a new Windows runtime result or an explanation of run 5's
+shutdown-query failure. A narrow exact-vector direct-spawn transport and actual
+Main identity checks are being prepared before the next Windows job; no package
+patch, arbitrary shell parser or shell fallback is planned.
 
 Actual native preference evidence is
 `/private/tmp/codeshell-native-preferences-round-006/receipt.json`: one production

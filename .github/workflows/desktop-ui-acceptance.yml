@@ -23,7 +23,7 @@ permissions:
 jobs:
   web-ui:
     if: github.event_name != 'workflow_dispatch' || inputs.suite != 'native'
-    name: Web authentication, service worker and offline UI
+    name: browser authentication, background work and offline UI
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -67,6 +67,20 @@ jobs:
         run: |
           set -euo pipefail
           xvfb-run -a node scripts/run-isolated-node-smoke.mjs packages/web/scripts/test-auth-boundary-browser.mjs --evidence-dir "$ACCEPTANCE_ROOT/authentication" --headed 2>&1 | tee "$ACCEPTANCE_ROOT/authentication.log"
+
+      - name: actual Web child lifecycle, send, stop and tool-result display
+        timeout-minutes: 3
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/run-isolated-node-smoke.mjs packages/web/scripts/test-subagent-state-browser.mjs --evidence-dir "$ACCEPTANCE_ROOT/subagent-state" 2>&1 | tee "$ACCEPTANCE_ROOT/subagent-state.log"
+
+      - name: actual Desktop annotation input, save and narrow browser layout
+        timeout-minutes: 3
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/run-isolated-node-smoke.mjs packages/desktop/src/renderer/chat/Annotations.browser.fixture.mjs --evidence-dir "$ACCEPTANCE_ROOT/annotations" 2>&1 | tee "$ACCEPTANCE_ROOT/annotations.log"
       - name: retain public Web UI evidence
         if: always()
         uses: actions/upload-artifact@v7
@@ -79,6 +93,14 @@ jobs:
             ${{ env.ACCEPTANCE_ROOT }}/authentication.log
             ${{ env.ACCEPTANCE_ROOT }}/authentication/*.png
             ${{ env.ACCEPTANCE_ROOT }}/authentication/report.json
+            ${{ env.ACCEPTANCE_ROOT }}/subagent-state.log
+            ${{ env.ACCEPTANCE_ROOT }}/subagent-state/receipt.json
+            ${{ env.ACCEPTANCE_ROOT }}/subagent-state/*.png
+            ${{ env.ACCEPTANCE_ROOT }}/subagent-state/*.log
+            ${{ env.ACCEPTANCE_ROOT }}/annotations.log
+            ${{ env.ACCEPTANCE_ROOT }}/annotations/receipt.json
+            ${{ env.ACCEPTANCE_ROOT }}/annotations/*.png
+            ${{ env.ACCEPTANCE_ROOT }}/annotations/*.log
           if-no-files-found: error
           retention-days: 7
 
@@ -293,12 +315,19 @@ jobs:
             node packages/desktop/scripts/run-packaged-ui-acceptance.mjs --build-receipt "$ACCEPTANCE_ROOT/package/build-receipt.json" --evidence-dir "$ACCEPTANCE_ROOT/ui" 2>&1 | tee "$ACCEPTANCE_ROOT/packaged-ui.log"
           fi
 
+      - name: build real Linux AppImage from the verified directory payload
+        if: runner.os == 'Linux'
+        timeout-minutes: 12
+        run: |
+          set -euo pipefail
+          node packages/desktop/scripts/build-local-appimage.mjs --build-receipt "$ACCEPTANCE_ROOT/package/build-receipt.json" --output "$ACCEPTANCE_ROOT/appimage" 2>&1 | tee "$ACCEPTANCE_ROOT/appimage-build.log"
+
       - name: actual packaged update checks and recovery
         timeout-minutes: 8
         run: |
           set -euo pipefail
           if [[ "$RUNNER_OS" == Linux ]]; then
-            xvfb-run -a node packages/desktop/scripts/run-packaged-ui-acceptance.mjs --build-receipt "$ACCEPTANCE_ROOT/package/build-receipt.json" --evidence-dir "$ACCEPTANCE_ROOT/updater" --fixture updater 2>&1 | tee "$ACCEPTANCE_ROOT/updater.log"
+            xvfb-run -a node packages/desktop/scripts/run-packaged-ui-acceptance.mjs --build-receipt "$ACCEPTANCE_ROOT/package/build-receipt.json" --evidence-dir "$ACCEPTANCE_ROOT/updater" --fixture updater --appimage-build-receipt "$ACCEPTANCE_ROOT/appimage/appimage-build-receipt.json" 2>&1 | tee "$ACCEPTANCE_ROOT/updater.log"
           else
             node packages/desktop/scripts/run-packaged-ui-acceptance.mjs --build-receipt "$ACCEPTANCE_ROOT/package/build-receipt.json" --evidence-dir "$ACCEPTANCE_ROOT/updater" --fixture updater 2>&1 | tee "$ACCEPTANCE_ROOT/updater.log"
           fi
@@ -371,11 +400,23 @@ jobs:
             ${{ env.ACCEPTANCE_ROOT }}/ui/receipt.json
             ${{ env.ACCEPTANCE_ROOT }}/ui/operations.json
             ${{ env.ACCEPTANCE_ROOT }}/ui/launcher-receipt.json
+            ${{ env.ACCEPTANCE_ROOT }}/ui/launcher.*.log
             ${{ env.ACCEPTANCE_ROOT }}/updater.log
             ${{ env.ACCEPTANCE_ROOT }}/updater/*.png
             ${{ env.ACCEPTANCE_ROOT }}/updater/receipt.json
             ${{ env.ACCEPTANCE_ROOT }}/updater/operations.json
             ${{ env.ACCEPTANCE_ROOT }}/updater/launcher-receipt.json
+            ${{ env.ACCEPTANCE_ROOT }}/updater/launcher.*.log
+            ${{ env.ACCEPTANCE_ROOT }}/appimage-build.log
+            ${{ env.ACCEPTANCE_ROOT }}/appimage/appimage-build-receipt.json
+            ${{ env.ACCEPTANCE_ROOT }}/appimage/build.log
+            ${{ env.ACCEPTANCE_ROOT }}/appimage/electron-builder.appimage.json
+            ${{ env.ACCEPTANCE_ROOT }}/appimage/source-inventory-before.json
+            ${{ env.ACCEPTANCE_ROOT }}/appimage/source-inventory-after.json
+            ${{ env.ACCEPTANCE_ROOT }}/updater/appimage-runtime.json
+            ${{ env.ACCEPTANCE_ROOT }}/updater/appimage-extraction.log
+            ${{ env.ACCEPTANCE_ROOT }}/updater/appimage-cache-inventory-before.json
+            ${{ env.ACCEPTANCE_ROOT }}/updater/appimage-cache-inventory-after.json
             ${{ env.ACCEPTANCE_ROOT }}/dmg.log
             ${{ env.ACCEPTANCE_ROOT }}/dmg/receipt.json
             ${{ env.ACCEPTANCE_ROOT }}/dmg/mount-custody.json

@@ -58,16 +58,21 @@ export async function readPackagedUiBuildReceipt(
   return { ...receipt, output, appRoot };
 }
 
-export function parsePackagedUiAcceptanceArguments(args) {
+export function parsePackagedUiAcceptanceArguments(
+  args,
+  { platform = process.platform, arch = process.arch } = {},
+) {
   const options = new Map();
   for (let index = 0; index < args.length; index += 2) {
     const flag = args[index];
     const value = args[index + 1];
     assert.ok(
-      ["--build-receipt", "--evidence-dir", "--fixture"].includes(flag) &&
+      ["--build-receipt", "--evidence-dir", "--fixture", "--appimage-build-receipt"].includes(
+        flag,
+      ) &&
         value &&
         !options.has(flag),
-      "Expected --build-receipt <file>, --evidence-dir <new-directory>, [--fixture ui|updater]",
+      "Expected --build-receipt <file>, --evidence-dir <new-directory>, [--fixture ui|updater], [--appimage-build-receipt <file>]",
     );
     options.set(flag, flag === "--fixture" ? value : resolve(value));
   }
@@ -75,10 +80,17 @@ export function parsePackagedUiAcceptanceArguments(args) {
     assert.ok(options.has(key), "Build receipt and new evidence directory are required");
   const fixture = options.get("--fixture") ?? "ui";
   assert.ok(["ui", "updater"].includes(fixture), "Only reviewed packaged fixtures are allowed");
+  const appImageBuildReceipt = options.get("--appimage-build-receipt");
+  if (appImageBuildReceipt)
+    assert.ok(
+      fixture === "updater" && platform === "linux" && arch === "x64",
+      "AppImage receipt is only valid for native Linux x64 updater acceptance",
+    );
   return {
     buildReceipt: options.get("--build-receipt"),
     evidence: options.get("--evidence-dir"),
     fixture,
+    ...(appImageBuildReceipt ? { appImageBuildReceipt } : {}),
   };
 }
 
@@ -134,6 +146,8 @@ export async function runPackagedUiAcceptance(args) {
     "--evidence-dir",
     evidence,
   ];
+  if (options.appImageBuildReceipt)
+    childArgs.push("--appimage-build-receipt", options.appImageBuildReceipt);
   if (process.platform === "darwin") {
     const home = await realpath(userInfo().homedir);
     const reference = { version: 1, home, ...readDefaultKeychain(home) };
@@ -182,6 +196,25 @@ export async function runPackagedUiAcceptance(args) {
   // Keep this scratch on failure or success. A timeout is not authorization to
   // remove any descendant's private HOME; the native fixture owns that decision.
   await mkdir(evidence, { recursive: true, mode: 0o700 });
+  const launcherLogs = {};
+  for (const stream of ["stdout", "stderr"]) {
+    const input = await open(join(scratch, `ui.${stream}.log`), "r");
+    try {
+      const info = await input.stat();
+      assert.ok(info.isFile(), "Owned launcher log must be a regular file");
+      const size = Math.min(info.size, 1024 * 1024);
+      const bytes = Buffer.alloc(size);
+      const { bytesRead } = await input.read(bytes, 0, size, info.size - size);
+      const name = `launcher.${stream}.log`;
+      await writeFile(join(evidence, name), bytes.subarray(0, bytesRead), {
+        flag: "wx",
+        mode: 0o600,
+      });
+      launcherLogs[stream] = { name, bytes: bytesRead, truncated: info.size > size };
+    } finally {
+      await input.close();
+    }
+  }
   const passed =
     !result.error &&
     result.status === 0 &&
@@ -191,6 +224,7 @@ export async function runPackagedUiAcceptance(args) {
   const report = {
     status: passed ? "passed" : "failed",
     fixture: options.fixture,
+    ...(options.appImageBuildReceipt ? { appImageBuildReceipt: options.appImageBuildReceipt } : {}),
     sourceHead,
     platform: process.platform,
     arch: process.arch,
@@ -203,6 +237,7 @@ export async function runPackagedUiAcceptance(args) {
     processSettlement: processSettlement ?? null,
     observerFailures,
     retainedLauncherRoot: scratch,
+    launcherLogs,
     publishing: false,
     notarization: false,
     developerIdentity: false,

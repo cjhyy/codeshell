@@ -23,6 +23,31 @@ test("packaged entry defaults to UI and accepts only the reviewed updater altern
     expect(() => parsePackagedUiAcceptanceArguments(args)).toThrow();
 });
 
+test("AppImage receipt stays limited to the native Linux x64 updater fixture", () => {
+  const base = [
+    "--build-receipt",
+    "/owned/build.json",
+    "--evidence-dir",
+    "/owned/evidence",
+    "--appimage-build-receipt",
+    "/owned/image.json",
+  ];
+  const linux = { platform: "linux", arch: "x64" };
+  const args = [...base, "--fixture", "updater"];
+  expect(parsePackagedUiAcceptanceArguments(args, linux).appImageBuildReceipt).toBe(
+    "/owned/image.json",
+  );
+  for (const [input, target] of [
+    [base, linux],
+    [args, { platform: "darwin", arch: "x64" }],
+    [args, { platform: "win32", arch: "x64" }],
+    [args, { platform: "linux", arch: "arm64" }],
+    [[...args, "--appimage-build-receipt", "/other.json"], linux],
+    [[...args, "--appimage-build-receipt"], linux],
+  ])
+    expect(() => parsePackagedUiAcceptanceArguments(input, target)).toThrow();
+});
+
 const sourceHead = "a".repeat(40);
 let root;
 let file;
