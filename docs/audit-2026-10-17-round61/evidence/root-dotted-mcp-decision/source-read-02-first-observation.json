@@ -1,0 +1,9 @@
+{
+  "operation": "First numbered selected-source display metadata wrapper",
+  "exitCode": 1,
+  "observed": "IndexError: list index out of range at generator indexing source lines; no output file written and no source text emitted by that call.",
+  "originalScript": "Original inline stdin is in tool transcript, not archived as a standalone file.",
+  "rawOutput": "Tool-observed traceback only; no independent raw stdout/stderr capture existed.",
+  "productExecution": 0,
+  "repair": "Clamp requested source windows to actual EOF; preserve requested ranges and publish actual ranges separately."
+}

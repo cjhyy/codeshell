@@ -1,0 +1,16 @@
+packages/core/src/settings/schema.ts:88:export const SettingsSchema = z
+packages/core/src/settings/schema.ts:727:export type ValidatedSettings = z.infer<typeof SettingsSchema>;
+packages/core/src/settings/schema.ts:729:export function validateSettings(raw: unknown): ValidatedSettings {
+packages/core/src/settings/schema.ts:730:  return SettingsSchema.parse(raw);
+packages/core/src/settings/manager.ts:21:import { validateSettings, type ValidatedSettings } from "./schema.js";
+packages/core/src/settings/manager.ts:261:  load(
+packages/core/src/settings/manager.ts:403:   * so this load() already sees the migrated shape.
+packages/core/src/settings/manager.ts:443:    if (!this.merged) return this.load();
+packages/core/src/settings/manager.ts:502:    const validated = validateSettings(raw);
+packages/core/src/settings/manager.ts:639:      validateSettings(merge({}, current));
+packages/core/src/settings/manager.ts:701:  getForScope(scope: "user" | "project" | "local", cwd?: string): Partial<ValidatedSettings> {
+packages/core/src/settings/manager.ts:703:    // validateSettings applies defaults; for a scope view we want only the
+packages/core/src/settings/manager.ts:706:    const validated = validateSettings(normalized) as Record<string, unknown>;
+packages/core/src/settings/manager.ts:734:    // Same workspace-trust gate as load(): project/local scope reads bypass the
+packages/core/src/settings/manager.ts:795:    // scope views (getForScope) see hand-written YAML too. JSON still wins.
+packages/core/src/settings/manager.ts:961:      // validateSettings still sees (and rejects) it unchanged.

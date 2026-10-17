@@ -1,0 +1,15 @@
+packages/core/src/settings/manager.ts
+packages/core/src/settings/schema.ts
+packages/desktop/src/preload/index.ts
+packages/desktop/src/main/capability-modules-env.ts
+packages/desktop/src/main/panel-app-capabilities.ts
+packages/desktop/src/main/capability-modules-env.test.ts
+packages/desktop/src/main/capabilities-service.test.ts
+packages/desktop/src/main/capabilities-service.ts
+packages/desktop/src/main/panel-app-capabilities.test.ts
+packages/desktop/src/main/browser-runtime/index.ts
+packages/desktop/src/main/index.ts
+packages/desktop/src/main/browser-driver/index.ts
+packages/desktop/src/main/browser-host/index.ts
+packages/desktop/src/main/credentials-login/index.ts
+packages/desktop/src/main/pet/gateway-capability-drift.test.ts

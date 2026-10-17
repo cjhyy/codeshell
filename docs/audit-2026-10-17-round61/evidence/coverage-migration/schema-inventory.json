@@ -1,0 +1,3831 @@
+{
+  "metadataFiles": [
+    {
+      "path": "docs/audit-2026-10-17-round46/source-manifest.json",
+      "keys": [
+        "baseline",
+        "mainHead",
+        "files",
+        "workerSourceChecks",
+        "hashOnlyChecks",
+        "incidentalChecks",
+        "changedFromFrozenPaths",
+        "note"
+      ],
+      "primaryRows": 17,
+      "rowKeys": {
+        "path": 17,
+        "bytes": 17,
+        "sha256": 17,
+        "currentBytes": 17,
+        "currentSha256": 17,
+        "mainBytes": 17,
+        "mainSha256": 17,
+        "currentWorkingTreeMatchesFrozenBlob": 17,
+        "mainMatchesFrozenBlob": 17
+      },
+      "coverageValues": {
+        "NO_SCOPE": 17
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round46/evidence/panel-review/source-manifest.json",
+      "keys": [
+        "atUTC",
+        "role",
+        "readSourceContext",
+        "files",
+        "instructionPins",
+        "productSemanticLines",
+        "productDisplayedLines",
+        "fullProductFiles",
+        "selectedProductFiles",
+        "testsOpened",
+        "productRuns",
+        "gitSourceReads",
+        "gitMetadata"
+      ],
+      "primaryRows": 2,
+      "rowKeys": {
+        "path": 2,
+        "bytes": 2,
+        "sha256": 2,
+        "lineCount": 2,
+        "coverage": 2,
+        "selectedLineRanges": 2,
+        "semanticLines": 2,
+        "displayedLineRanges": 2,
+        "displayedLines": 2,
+        "scope": 2,
+        "beforeDedicatedRootBodyPin": 2
+      },
+      "coverageValues": {
+        "full": 1,
+        "selected": 1
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round46/evidence/prior-scope-gate/source-manifest.json",
+      "keys": [
+        "createdUTC",
+        "parentReportedContext",
+        "files",
+        "hashOnlyFiles",
+        "historicalMetadataReads",
+        "productSemanticFiles",
+        "productSemanticLines",
+        "productDisplayedLines",
+        "gateEvidence",
+        "runtime"
+      ],
+      "primaryRows": 0,
+      "rowKeys": {},
+      "coverageValues": {}
+    },
+    {
+      "path": "docs/audit-2026-10-17-round46/evidence/tool-card-review/source-manifest.json",
+      "keys": [
+        "createdAtUTC",
+        "role",
+        "rootReportedReadBaseline",
+        "rootReportedLaterContext",
+        "ownGit",
+        "files",
+        "instructionPins",
+        "counts",
+        "author54ReportRead",
+        "author54FindingsKnownBeforeConclusion",
+        "runtime"
+      ],
+      "primaryRows": 8,
+      "rowKeys": {
+        "path": 8,
+        "bytes": 8,
+        "sha256": 8,
+        "lineCount": 8,
+        "coverage": 8,
+        "selectedLineRanges": 8,
+        "coveredLineCount": 8,
+        "displayedLineRanges": 8,
+        "displayedLineCount": 8,
+        "additionalNavigationSnippetLines": 8,
+        "pinOrigin": 8,
+        "pinUTC": 8,
+        "firstDisplayToolChunks": 8,
+        "exactFirstDisplayUTC": 8,
+        "snapshotCaptureUTC": 8,
+        "snapshotPolicy": 8,
+        "scope": 8
+      },
+      "coverageValues": {
+        "full": 3,
+        "selected": 5
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round46/evidence/panel-frontier/source-manifest.json",
+      "keys": [
+        "capturedUTC",
+        "scope",
+        "rootContext",
+        "files",
+        "counts",
+        "displayRule"
+      ],
+      "primaryRows": 6,
+      "rowKeys": {
+        "path": 6,
+        "bytes": 6,
+        "sha256": 6,
+        "lineCount": 6,
+        "coverage": 6,
+        "selectedLineRanges": 6,
+        "coveredLineCount": 6,
+        "displayedBodyLineRanges": 6,
+        "additionalNavigationSnippetLines": 6,
+        "displayedLineRanges": 6,
+        "displayedLineCount": 6,
+        "initialFilesystemPin": 6,
+        "finishFilesystemSha256": 6,
+        "finishCapturedUTC": 6,
+        "unchangedFromInitial": 6,
+        "role": 6,
+        "initialSemanticReadSha256": 2
+      },
+      "coverageValues": {
+        "selected": 3,
+        "hash-only": 2,
+        "full": 1
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round46/evidence/tool-card-frontier/source-manifest.json",
+      "keys": [
+        "createdUTC",
+        "rootReportedInitialContext",
+        "rootReportedLaterContext",
+        "contextCertification",
+        "files",
+        "hashOnlyFiles",
+        "navigationOnlyFiles",
+        "semanticProductLines",
+        "displayedProductLines",
+        "fullFiles",
+        "selectedFiles",
+        "scope",
+        "noUniqueRepositoryCoverageClaim",
+        "runtime"
+      ],
+      "primaryRows": 8,
+      "rowKeys": {
+        "path": 8,
+        "bytes": 8,
+        "sha256": 8,
+        "initialSemanticReadSha256": 8,
+        "coverage": 8,
+        "selectedLineRanges": 8,
+        "displayedLineRanges": 8,
+        "semanticLineCount": 8,
+        "displayedLineCount": 8,
+        "scope": 8,
+        "pinOrigin": 8,
+        "pinUTC": 8,
+        "endingUTC": 8,
+        "endingBytes": 8,
+        "endingSha256": 8,
+        "unchanged": 8
+      },
+      "coverageValues": {
+        "full": 2,
+        "selected": 6
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round47/source-manifest.json",
+      "keys": [
+        "baseline",
+        "mainHead",
+        "files",
+        "workerSourceChecks",
+        "hashOnlyChecks",
+        "incidentalChecks",
+        "changedFromFrozenPaths",
+        "note"
+      ],
+      "primaryRows": 7,
+      "rowKeys": {
+        "path": 7,
+        "bytes": 7,
+        "sha256": 7,
+        "currentBytes": 7,
+        "currentSha256": 7,
+        "mainBytes": 7,
+        "mainSha256": 7,
+        "currentWorkingTreeMatchesFrozenBlob": 7,
+        "mainMatchesFrozenBlob": 7
+      },
+      "coverageValues": {
+        "NO_SCOPE": 7
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round47/evidence/coverage-adapter/source-manifest.json",
+      "keys": [
+        "files",
+        "productSemanticLines",
+        "scope",
+        "currentSourceCount",
+        "inventoryReconstruction",
+        "rootReportedContext"
+      ],
+      "primaryRows": 0,
+      "rowKeys": {},
+      "coverageValues": {}
+    },
+    {
+      "path": "docs/audit-2026-10-17-round47/evidence/web-message-frontier/source-manifest.json",
+      "keys": [
+        "capturedUTC",
+        "rootContext",
+        "repositoryRoot",
+        "files",
+        "semanticScopeCounts",
+        "rangeConvention",
+        "historicalReading",
+        "runs"
+      ],
+      "primaryRows": 7,
+      "rowKeys": {
+        "path": 7,
+        "bytes": 7,
+        "sha256": 7,
+        "lineCount": 7,
+        "coverage": 7,
+        "kind": 7,
+        "selectedLineRanges": 7,
+        "selectedLineCount": 7,
+        "bodyDisplayedLineRanges": 7,
+        "bodyDisplayedLineCount": 7,
+        "additionalNavigationSnippetLines": 7,
+        "displayedLineRanges": 7,
+        "displayedLineCount": 7,
+        "initialSha256": 7,
+        "initialPinUTC": 7,
+        "initialPinTiming": 7,
+        "endingSameSha256": 7,
+        "scope": 4,
+        "prepPinRow": 7
+      },
+      "coverageValues": {
+        "selected-static-ordinary-data; not-full semantic review": 4,
+        "hash-only; no new semantic source reading": 3
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round48/source-manifest.json",
+      "keys": [
+        "baseline",
+        "mainHead",
+        "files",
+        "workerSourceChecks",
+        "hashOnlyChecks",
+        "incidentalChecks",
+        "changedFromFrozenPaths",
+        "note"
+      ],
+      "primaryRows": 32,
+      "rowKeys": {
+        "path": 32,
+        "bytes": 32,
+        "sha256": 32,
+        "currentBytes": 32,
+        "currentSha256": 32,
+        "mainBytes": 32,
+        "mainSha256": 32,
+        "currentWorkingTreeMatchesFrozenBlob": 32,
+        "mainMatchesFrozenBlob": 32
+      },
+      "coverageValues": {
+        "NO_SCOPE": 32
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round48/evidence/chat-adapter-frontier/source-manifest.json",
+      "keys": [
+        "createdUTC",
+        "rootReportedContext",
+        "files",
+        "hashOnlyFiles",
+        "semanticProductLines",
+        "displayedProductLines",
+        "fullProductFiles",
+        "selectedProductFiles",
+        "noUniqueRepositoryCoverageClaim",
+        "runtime",
+        "scope"
+      ],
+      "primaryRows": 5,
+      "rowKeys": {
+        "path": 5,
+        "bytes": 5,
+        "sha256": 5,
+        "initialSemanticReadSha256": 5,
+        "coverage": 5,
+        "selectedLineRanges": 5,
+        "displayedLineRanges": 5,
+        "semanticLineCount": 5,
+        "displayedLineCount": 5,
+        "scope": 5,
+        "pinOrigin": 5,
+        "pinUTC": 5,
+        "endingUTC": 5,
+        "endingBytes": 5,
+        "endingSha256": 5,
+        "unchanged": 5
+      },
+      "coverageValues": {
+        "selected": 5
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round48/evidence/cost-context-frontier/source-manifest.json",
+      "keys": [
+        "capturedUTC",
+        "rootContext",
+        "repositoryRoot",
+        "files",
+        "semanticScopeCounts",
+        "rangeConvention",
+        "historyScope",
+        "runs"
+      ],
+      "primaryRows": 8,
+      "rowKeys": {
+        "path": 8,
+        "bytes": 8,
+        "sha256": 8,
+        "lineCount": 8,
+        "kind": 8,
+        "coverage": 8,
+        "selectedLineRanges": 8,
+        "selectedLineCount": 8,
+        "bodyDisplayedLineRanges": 8,
+        "bodyDisplayedLineCount": 8,
+        "additionalNavigationSnippetLines": 8,
+        "displayedLineRanges": 8,
+        "displayedLineCount": 8,
+        "initialSha256": 8,
+        "initialPinUTC": 8,
+        "initialPinTiming": 8,
+        "endingSameSha256": 8,
+        "scope": 6,
+        "prepPinRow": 8
+      },
+      "coverageValues": {
+        "selected-static-ordinary-data; not-full semantic review": 4,
+        "navigation-only; no semantic body review": 2,
+        "hash-only; no new semantic source reading": 2
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round48/evidence/root-elapsed-review/source-manifest.json",
+      "keys": [
+        "baseline",
+        "files",
+        "instructionsCarryForward",
+        "counts",
+        "timing"
+      ],
+      "primaryRows": 10,
+      "rowKeys": {
+        "path": 10,
+        "bytes": 10,
+        "sha256": 10,
+        "lines": 10,
+        "coverage": 10,
+        "selectedLineRanges": 10,
+        "semanticLines": 10,
+        "displayedLineCount": 10,
+        "initialPinArtifact": 10,
+        "initialCurrentVerificationSha256": 10,
+        "firstEverSemanticReadPin": 10,
+        "purpose": 10,
+        "scope": 10
+      },
+      "coverageValues": {
+        "selected": 10
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round48/evidence/session-title-frontier/source-manifest.json",
+      "keys": [
+        "capturedUTC",
+        "rootContext",
+        "repositoryRoot",
+        "files",
+        "semanticScopeCounts",
+        "rangeConvention",
+        "historyScope",
+        "runs"
+      ],
+      "primaryRows": 5,
+      "rowKeys": {
+        "path": 5,
+        "bytes": 5,
+        "sha256": 5,
+        "lineCount": 5,
+        "kind": 5,
+        "coverage": 5,
+        "selectedLineRanges": 5,
+        "selectedLineCount": 5,
+        "bodyDisplayedLineRanges": 5,
+        "bodyDisplayedLineCount": 5,
+        "additionalNavigationSnippetLines": 5,
+        "displayedLineRanges": 5,
+        "displayedLineCount": 5,
+        "initialSha256": 5,
+        "initialPinUTC": 5,
+        "initialPinTiming": 5,
+        "endingSameSha256": 5,
+        "scope": 3,
+        "prepPinRow": 5
+      },
+      "coverageValues": {
+        "selected-static-ordinary-title-data; not-full semantic review": 3,
+        "hash-only; no new semantic source reading": 2
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round48/evidence/elapsed-frontier/source-manifest.json",
+      "keys": [
+        "schema",
+        "createdUTC",
+        "rootReportedInitialContext",
+        "rootReportedLateContext",
+        "contextVerification",
+        "files",
+        "summary",
+        "historyReads",
+        "exclusions"
+      ],
+      "primaryRows": 5,
+      "rowKeys": {
+        "path": 5,
+        "bytes": 5,
+        "sha256": 5,
+        "lines": 5,
+        "pinnedBeforeDisplayUTC": 5,
+        "displayedLineRanges": 5,
+        "coverage": 5,
+        "selectedLineRanges": 5,
+        "semanticLineCount": 5,
+        "displayedLineCount": 5,
+        "purpose": 5,
+        "endingBytes": 5,
+        "endingSha256": 5,
+        "unchanged": 5,
+        "endingCheckedUTC": 5,
+        "initialSemanticReadSha256": 5,
+        "initialTextObservation": 5,
+        "additionalBeforeDisplayPinUTC": 1,
+        "additionalPinSha256": 1,
+        "lastAdditionalBeforeDisplayUTC": 3,
+        "lastAdditionalSha256": 3
+      },
+      "coverageValues": {
+        "selected": 4,
+        "full-test-declaration-text": 1
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round48/evidence/cost-context-review/source-manifest.json",
+      "keys": [
+        "capturedUTC",
+        "rootReportedContext",
+        "role",
+        "files",
+        "navigationOnlyFiles",
+        "instructionPins",
+        "instructionReadStatus",
+        "semanticFileCount",
+        "fullFileCount",
+        "selectedFileCount",
+        "semanticLines",
+        "semanticProductLines",
+        "semanticTestLines",
+        "displayedProductAndTestLinesIncludingNavigation",
+        "existingSemanticTestDeclarations",
+        "testExecutions",
+        "productExecution",
+        "gitOperations",
+        "nativeNetwork"
+      ],
+      "primaryRows": 7,
+      "rowKeys": {
+        "path": 7,
+        "bytes": 7,
+        "lines": 7,
+        "sha256": 7,
+        "capturedBeforeProductBody": 1,
+        "kind": 7,
+        "coverage": 7,
+        "selectedLineRanges": 7,
+        "coveredLineCount": 7,
+        "displayedLineRanges": 7,
+        "additionalNavigationSnippetLines": 7,
+        "displayedLineCountIncludingNavigation": 7,
+        "scope": 7,
+        "firstPinArtifact": 7,
+        "firstFilesystemSHA": 7,
+        "captureAtUTC": 7,
+        "captureTiming": 7,
+        "finishFilesystemSHA": 7,
+        "finishEqualsFirst": 7,
+        "pinBeforeBodyOrLineNavigation": 6
+      },
+      "coverageValues": {
+        "selected": 7
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round48/evidence/elapsed-review/source-manifest.json",
+      "keys": [
+        "capturedUTC",
+        "role",
+        "rootContextOnly",
+        "files",
+        "navigationOnlyFiles",
+        "instructionPins",
+        "instructionReadStatus",
+        "semanticFileCount",
+        "semanticLines",
+        "semanticProductLines",
+        "semanticTestLines",
+        "fullCount",
+        "selectedCount",
+        "displayedUniqueLinesPerFileSumIncludingNav",
+        "productExecution",
+        "Git"
+      ],
+      "primaryRows": 8,
+      "rowKeys": {
+        "path": 8,
+        "bytes": 8,
+        "lines": 8,
+        "sha256": 8,
+        "beforeBody": 2,
+        "firstPinArtifact": 8,
+        "kind": 8,
+        "coverage": 8,
+        "selectedLineRanges": 8,
+        "coveredLineCount": 8,
+        "displayedLineRanges": 8,
+        "additionalNavigationSnippetLines": 8,
+        "displayedLineCountIncludingNavigation": 8,
+        "scope": 8,
+        "finishFilesystemSHA": 8,
+        "finishEqualsInitial": 8,
+        "byteCaptureAtUTC": 8,
+        "byteCaptureTiming": 8,
+        "pinBeforeSourceBodyAndLineNavigation": 2,
+        "additionalReadAfterPrimaryCapture": 1,
+        "pinBeforeBodyAndLineNavigation": 2,
+        "beforeBodyAndNavigation": 2
+      },
+      "coverageValues": {
+        "selected": 7,
+        "full": 1
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/source-manifest.json",
+      "keys": [
+        "baseline",
+        "mainHead",
+        "files",
+        "workerSourceChecks",
+        "hashOnlyChecks",
+        "incidentalChecks",
+        "changedFromFrozenPaths",
+        "note"
+      ],
+      "primaryRows": 44,
+      "rowKeys": {
+        "path": 44,
+        "bytes": 44,
+        "sha256": 44,
+        "currentBytes": 44,
+        "currentSha256": 44,
+        "mainBytes": 44,
+        "mainSha256": 44,
+        "currentWorkingTreeMatchesFrozenBlob": 44,
+        "mainMatchesFrozenBlob": 44
+      },
+      "coverageValues": {
+        "NO_SCOPE": 44
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/model-display-gate/source-manifest.json",
+      "keys": [
+        "capturedUTC",
+        "rootReportedContext",
+        "files",
+        "semanticProductLines",
+        "testDeclarationLines",
+        "displayedProductSourceLines",
+        "newFullRows",
+        "newSelectedRows",
+        "hashOnlyRows",
+        "oldSameSHAFullExcludedPaths",
+        "scope",
+        "runs"
+      ],
+      "primaryRows": 4,
+      "rowKeys": {
+        "path": 4,
+        "bytes": 4,
+        "sha256": 4,
+        "lineCount": 4,
+        "coverage": 4,
+        "selectedLineRanges": 4,
+        "semanticLineCount": 4,
+        "displayedLineRanges": 4,
+        "displayedSourceLineCount": 4,
+        "kind": 4,
+        "initialSemanticReadSha256": 4,
+        "initialPinUTC": 4,
+        "pinTiming": 4,
+        "oldFullGateReferences": 4,
+        "endingSame": 4,
+        "prepPinRow": 4
+      },
+      "coverageValues": {
+        "hash-only; no new semantic/source body reading": 4
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/root-summary-review/source-manifest.json",
+      "keys": [
+        "baseline",
+        "files",
+        "hashOnlyFiles",
+        "instructionsCarryForward",
+        "counts",
+        "limitations"
+      ],
+      "primaryRows": 7,
+      "rowKeys": {
+        "path": 7,
+        "bytes": 7,
+        "sha256": 7,
+        "lines": 7,
+        "coverage": 7,
+        "selectedLineRanges": 7,
+        "semanticLines": 7,
+        "displayedLineCount": 7,
+        "initialPinArtifact": 7,
+        "initialCurrentVerificationSha256": 7,
+        "firstEverSemanticReadPin": 7,
+        "scope": 7
+      },
+      "coverageValues": {
+        "full": 1,
+        "selected": 5,
+        "selected-test-declaration-text": 1
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/complete-gate-review/source-manifest.json",
+      "keys": [
+        "files",
+        "newSourceSemanticFiles",
+        "newSourceSemanticLines",
+        "newSourceDisplayLines",
+        "hashOnlyProducts",
+        "canonicalMetadata",
+        "prep77Artifacts",
+        "scope",
+        "Git",
+        "productOrMethodOrFixtureExecutions"
+      ],
+      "primaryRows": 0,
+      "rowKeys": {},
+      "coverageValues": {}
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/web-format-gate/source-manifest.json",
+      "keys": [
+        "schema",
+        "rootReportedContext",
+        "contextVerification",
+        "files",
+        "hashOnlyFiles",
+        "instructionFiles",
+        "gateDecisions",
+        "historicalMetadataObjects",
+        "counts",
+        "scope"
+      ],
+      "primaryRows": 0,
+      "rowKeys": {},
+      "coverageValues": {}
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/agent-definition-gate/source-manifest.json",
+      "keys": [
+        "files",
+        "newSemanticProductFileCount",
+        "newSemanticProductLines",
+        "fullNewProductReads",
+        "selectedNewProductReads",
+        "navigationProductBodyLines",
+        "displayProductBodyLines",
+        "hashOnlyProducts",
+        "filenameOnlyNavigation",
+        "instructionsHashOnly",
+        "instructionStatus",
+        "canonicalCoverageMetadata",
+        "rootReportedContextOnly",
+        "scope",
+        "productsExecuted",
+        "Git"
+      ],
+      "primaryRows": 0,
+      "rowKeys": {},
+      "coverageValues": {}
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/title-gate/source-manifest.json",
+      "keys": [
+        "capturedUTC",
+        "files",
+        "semanticProductFileCount",
+        "semanticProductLines",
+        "fullProductReads",
+        "selectedProductReads",
+        "navigationProductBodyLines",
+        "displayProductBodyLines",
+        "hashOnlyProducts",
+        "instructionReads",
+        "instructionHashOnly",
+        "filenameNavigation",
+        "canonicalCoverageMetadata",
+        "rootReportedContextOnly",
+        "scope",
+        "productExecution",
+        "gitOperations"
+      ],
+      "primaryRows": 0,
+      "rowKeys": {},
+      "coverageValues": {}
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/latest-message-frontier/source-manifest.json",
+      "keys": [
+        "schema",
+        "rootReportedInitialOwnedContext",
+        "rootReportedLateContext",
+        "files",
+        "counts",
+        "historyGate",
+        "oldCauseBoundary",
+        "scope"
+      ],
+      "primaryRows": 6,
+      "rowKeys": {
+        "path": 6,
+        "bytes": 6,
+        "lines": 6,
+        "sha256": 6,
+        "pinnedBeforeDisplayUTC": 1,
+        "displayedLineRanges": 6,
+        "coverage": 6,
+        "selectedLineRanges": 6,
+        "semanticLineCount": 6,
+        "bodyDisplayedLineCount": 6,
+        "navigationLineRanges": 6,
+        "navigationLineCount": 6,
+        "displayedUnionIncludingNavigationLineCount": 6,
+        "purpose": 6,
+        "endingBytes": 6,
+        "endingSha256": 6,
+        "unchanged": 6,
+        "endingCheckedUTC": 6,
+        "initialSemanticReadSha256": 6,
+        "dedicatedSelectedReadSha256": 6,
+        "pinnedBeforeSelectedBodyUTC": 5,
+        "additionalBeforeDisplayUTC": 5,
+        "additionalSha256": 5,
+        "initialTextObservation": 1
+      },
+      "coverageValues": {
+        "selected": 5,
+        "full-test-declaration-text": 1
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/session-usage-gate/source-manifest.json",
+      "keys": [
+        "files",
+        "newSemanticProductFileCount",
+        "newSemanticProductLines",
+        "newFullProductReads",
+        "newSelectedProductReads",
+        "productBodyNavigationLines",
+        "productBodyDisplayLines",
+        "hashOnlyProducts",
+        "filenameOnlyNavigation",
+        "instructionHashOnly",
+        "instructionStatus",
+        "canonicalCoverageMetadata",
+        "actualClientDTOOrAppConsumerReadThisTask",
+        "testsDeclarationRead",
+        "testExecutions",
+        "rootReportedContextOnly",
+        "scope"
+      ],
+      "primaryRows": 0,
+      "rowKeys": {},
+      "coverageValues": {}
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/cost-review/source-manifest.json",
+      "keys": [
+        "capturedUTC",
+        "role",
+        "files",
+        "navigationOnlyFiles",
+        "instructionHashOnly",
+        "instructionStatus",
+        "semanticFileCount",
+        "fullFileCount",
+        "selectedFileCount",
+        "semanticProductLines",
+        "semanticTestLines",
+        "displayedLineUnionSumIncludingNav",
+        "testDeclarationsRead",
+        "testsExecuted",
+        "productionCallInventory",
+        "rootReportedContextOnly",
+        "oldFullAllowedScope"
+      ],
+      "primaryRows": 7,
+      "rowKeys": {
+        "path": 7,
+        "bytes": 7,
+        "lines": 7,
+        "sha256": 7,
+        "beforeBody": 3,
+        "firstPinArtifact": 7,
+        "coverage": 7,
+        "selectedLineRanges": 7,
+        "coveredLineCount": 7,
+        "displayedLineRanges": 7,
+        "additionalNavigationSnippetLines": 7,
+        "displayedLineCountIncludingNav": 7,
+        "scope": 7,
+        "finishFilesystemSHA": 7,
+        "finishEqualsInitial": 7,
+        "captureAtUTC": 7,
+        "captureTiming": 7,
+        "kind": 7,
+        "beforeBodyAndLineNavigation": 4
+      },
+      "coverageValues": {
+        "selected": 7
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/root-cost-review/source-manifest.json",
+      "keys": [
+        "baseline",
+        "files",
+        "instructionsCarryForward",
+        "counts",
+        "scope"
+      ],
+      "primaryRows": 6,
+      "rowKeys": {
+        "path": 6,
+        "bytes": 6,
+        "sha256": 6,
+        "lines": 6,
+        "coverage": 6,
+        "selectedLineRanges": 6,
+        "semanticLines": 6,
+        "displayedLines": 6,
+        "initialCurrentVerificationSha256": 6,
+        "firstEverSemanticReadPin": 6,
+        "pinArtifact": 6,
+        "scope": 6
+      },
+      "coverageValues": {
+        "selected": 6
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/preset-review/source-manifest.json",
+      "keys": [
+        "capturedUTC",
+        "rootReportedContext",
+        "files",
+        "scopeCounts",
+        "rangeConvention",
+        "historicalResolverScope",
+        "runs"
+      ],
+      "primaryRows": 9,
+      "rowKeys": {
+        "path": 9,
+        "bytes": 9,
+        "sha256": 9,
+        "lineCount": 9,
+        "kind": 9,
+        "coverage": 9,
+        "selectedLineRanges": 9,
+        "semanticLineCount": 9,
+        "bodyDisplayedLineRanges": 9,
+        "bodyDisplayedLineCount": 9,
+        "additionalNavigationSnippetLines": 9,
+        "displayedLineRanges": 9,
+        "displayedLineCount": 9,
+        "initialSemanticReadSha256": 9,
+        "initialPinUTC": 9,
+        "pinTiming": 9,
+        "endingSame": 9,
+        "scope": 9,
+        "prepPinRow": 9
+      },
+      "coverageValues": {
+        "selected-static-directed-ordinary-contract; no new whole-file or first-coverage claim": 5,
+        "navigation-only; no semantic body": 1,
+        "hash-only; no current source semantic reading": 3
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round49/evidence/trace-history-frontier/source-manifest.json",
+      "keys": [
+        "schema",
+        "rootReportedContext",
+        "contextVerification",
+        "files",
+        "counts",
+        "historyGate",
+        "instructionReuse",
+        "navigationOnlyUnreviewed",
+        "boundaries"
+      ],
+      "primaryRows": 5,
+      "rowKeys": {
+        "path": 5,
+        "bytes": 5,
+        "sha256": 5,
+        "lines": 5,
+        "beforeSelectedDisplayUTC": 5,
+        "displayedLineRanges": 5,
+        "coverage": 5,
+        "selectedLineRanges": 5,
+        "semanticLineCount": 5,
+        "displayedLineCount": 5,
+        "purpose": 5,
+        "endingBytes": 5,
+        "endingSha256": 5,
+        "unchanged": 5,
+        "endingCheckedUTC": 5,
+        "initialSemanticReadSha256": 5,
+        "dedicatedSelectedReadSha256": 5,
+        "initialTextObservation": 4
+      },
+      "coverageValues": {
+        "selected": 5
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round50/source-manifest.json",
+      "keys": [
+        "baseline",
+        "mainHead",
+        "files",
+        "workerSourceChecks",
+        "hashOnlyChecks",
+        "incidentalChecks",
+        "changedFromFrozenPaths",
+        "note"
+      ],
+      "primaryRows": 74,
+      "rowKeys": {
+        "path": 74,
+        "bytes": 74,
+        "sha256": 74,
+        "currentBytes": 74,
+        "currentSha256": 74,
+        "mainBytes": 74,
+        "mainSha256": 74,
+        "currentWorkingTreeMatchesFrozenBlob": 74,
+        "mainMatchesFrozenBlob": 74
+      },
+      "coverageValues": {
+        "NO_SCOPE": 74
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round50/evidence/param-controls/source-manifest.json",
+      "keys": [
+        "root",
+        "rootContextCommitExternal",
+        "GitOperations",
+        "files",
+        "instructionFiles",
+        "totals",
+        "rangeConvention",
+        "scope"
+      ],
+      "primaryRows": 16,
+      "rowKeys": {
+        "path": 16,
+        "bytes": 16,
+        "sha256": 16,
+        "lines": 16,
+        "pinnedUTC": 16,
+        "timing": 16,
+        "sourceKind": 16,
+        "coverage": 16,
+        "selectedLineRanges": 16,
+        "coveredLineCount": 16,
+        "bodyDisplayedLineRanges": 16,
+        "additionalNavigationSnippetLines": 16,
+        "displayedLineRanges": 16,
+        "displayedLineCount": 16,
+        "navigationOrIncidentalOnlyLineCount": 16,
+        "scope": 16,
+        "firstEverReadClaim": 16,
+        "pinBeforeCurrentBodyRead": 16,
+        "frozenGitBlobBoundByThisAuthor": 16,
+        "endingSha256": 16
+      },
+      "coverageValues": {
+        "full": 5,
+        "selected": 11
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round50/evidence/goal-progress/source-manifest.json",
+      "keys": [
+        "rootReportedReadBaseline",
+        "files",
+        "navigationOnlyFiles",
+        "instructionHashOnly",
+        "counts",
+        "historyReading",
+        "coverageLimit",
+        "productRuns"
+      ],
+      "primaryRows": 13,
+      "rowKeys": {
+        "path": 13,
+        "sha256": 13,
+        "bytes": 13,
+        "lines": 13,
+        "beforeCurrentBodyAndLineNavigation": 1,
+        "firstEverSemanticRead": 1,
+        "coverage": 13,
+        "selectedLineRanges": 13,
+        "semanticLineCount": 13,
+        "displayedLineRanges": 13,
+        "bodyDisplayedLineCount": 13,
+        "endingBytes": 13,
+        "endingSha256": 13,
+        "endingUTC": 13,
+        "currentSourceUnchanged": 13,
+        "scope": 13,
+        "beforeCurrentLineNavigationAndBody": 12,
+        "earlierAuditReadingExists": 2
+      },
+      "coverageValues": {
+        "full": 1,
+        "selected": 12
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round50/evidence/composer-suggestions/source-manifest.json",
+      "keys": [
+        "role",
+        "rootReportedBaselineOnly",
+        "ownGitOperations",
+        "files",
+        "instructionPins",
+        "instructionStatus",
+        "counts",
+        "consumerCoverageLimits",
+        "sourceExcerptTiming",
+        "capturedUTC"
+      ],
+      "primaryRows": 3,
+      "rowKeys": {
+        "path": 3,
+        "bytes": 3,
+        "lines": 3,
+        "sha256": 3,
+        "beforeBodyOrLineNavigation": 3,
+        "coverage": 3,
+        "selectedLineRanges": 3,
+        "semanticLines": 3,
+        "displayedLineRanges": 3,
+        "additionalNavigationSnippetLines": 3,
+        "uniqueDisplayedLines": 3,
+        "navigationOnlyDisplayedLineRanges": 3,
+        "scope": 3,
+        "initialSemanticReadSha256": 3,
+        "initialPinBeforeBodyOrLineNavigation": 3,
+        "finishSha256": 3,
+        "finishMatchesInitial": 3,
+        "fullFileReadingClaimed": 3,
+        "firstEverReadingClaimed": 3,
+        "knownCanonicalPriorSelectedOverlap": 1
+      },
+      "coverageValues": {
+        "selected": 3
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round50/evidence/packet-review/source-manifest.json",
+      "keys": [
+        "schema",
+        "role",
+        "files",
+        "hashOnlyProductSourceFiles",
+        "newProductSemanticLines",
+        "productSourceBodiesRead",
+        "productSourceHashesIndependentlyRechecked",
+        "metadataInputs",
+        "packetInputPinsIn",
+        "readTiming",
+        "scope",
+        "execution",
+        "sourceRangeCertification",
+        "globalCoverageChanged",
+        "checkedUTC"
+      ],
+      "primaryRows": 0,
+      "rowKeys": {},
+      "coverageValues": {}
+    },
+    {
+      "path": "docs/audit-2026-10-17-round50/evidence/root-scroll-review/source-manifest.json",
+      "keys": [
+        "schema",
+        "rootReportedReadBaseline",
+        "files",
+        "instructionHashOnly",
+        "counts",
+        "historicalMetadataReads",
+        "scope",
+        "productRuns"
+      ],
+      "primaryRows": 3,
+      "rowKeys": {
+        "path": 3,
+        "bytes": 3,
+        "sha256": 3,
+        "lines": 3,
+        "beforeRootCurrentScrollBodyAndNavigation": 2,
+        "firstEverSemanticReadPin": 2,
+        "coverage": 3,
+        "selectedLineRanges": 3,
+        "displayedLineRanges": 3,
+        "semanticLineCount": 3,
+        "bodyDisplayedLineCount": 3,
+        "purpose": 3,
+        "firstEverSemanticReadSha256": 3,
+        "initialSemanticReadSha256": 3,
+        "endingSha256": 3,
+        "endingBytes": 3,
+        "endingCheckedUTC": 3,
+        "unchanged": 3,
+        "beforeRootCurrentNavigationAndBody": 1
+      },
+      "coverageValues": {
+        "full": 1,
+        "selected": 2
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round50/evidence/plugin-presentation/source-manifest.json",
+      "keys": [
+        "schema",
+        "rootReportedContextOnly",
+        "files",
+        "hashOnlyFiles",
+        "counts",
+        "historyGate",
+        "causeQueryScope",
+        "mechanismBoundary",
+        "instructions"
+      ],
+      "primaryRows": 4,
+      "rowKeys": {
+        "path": 4,
+        "bytes": 4,
+        "lines": 4,
+        "sha256": 4,
+        "pinnedBeforeBodyDisplayUTC": 1,
+        "displayedLineRanges": 4,
+        "coverage": 4,
+        "selectedLineRanges": 4,
+        "semanticLineCount": 4,
+        "bodyDisplayedLineCount": 4,
+        "navigationLineRanges": 4,
+        "displayedUnionIncludingNavigationLineCount": 4,
+        "purpose": 4,
+        "initialSemanticReadSha256": 4,
+        "endingBytes": 4,
+        "endingSha256": 4,
+        "unchanged": 4,
+        "endingCheckedUTC": 4,
+        "pinnedBeforeSelectedBodyUTC": 3,
+        "additionalBeforeBodyUTC": 3,
+        "additionalSha256": 3
+      },
+      "coverageValues": {
+        "selected": 4
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round50/evidence/goal-extend-review/source-manifest.json",
+      "keys": [
+        "role",
+        "rootReportedBaselineOnly",
+        "ownGitOperations",
+        "files",
+        "navigationOnlyFiles",
+        "hashOnlyFiles",
+        "instructionPins",
+        "instructionStatus",
+        "counts",
+        "coverageCaveat",
+        "sourceExcerptTiming",
+        "capturedUTC"
+      ],
+      "primaryRows": 13,
+      "rowKeys": {
+        "path": 13,
+        "bytes": 13,
+        "lines": 13,
+        "sha256": 13,
+        "beforeBodyOrLineNavigation": 13,
+        "coverage": 13,
+        "selectedLineRanges": 13,
+        "semanticLines": 13,
+        "displayedLineRanges": 13,
+        "additionalNavigationSnippetLines": 13,
+        "uniqueDisplayedLines": 13,
+        "navigationOnlyDisplayedLineRanges": 13,
+        "purpose": 13,
+        "initialSemanticReadSha256": 13,
+        "firstEverSemanticReadClaim": 13,
+        "initialPinBeforeBodyOrLineNavigation": 13,
+        "finishSha256": 13,
+        "finishMatchesInitial": 13
+      },
+      "coverageValues": {
+        "full": 1,
+        "selected": 12
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round50/evidence/scroll-review/source-manifest.json",
+      "keys": [
+        "schema",
+        "rootReportedContext",
+        "contextVerification",
+        "files",
+        "counts",
+        "historicalMetadataReads",
+        "instructionStatus",
+        "scope",
+        "navigationOnlyUnopened",
+        "boundary"
+      ],
+      "primaryRows": 3,
+      "rowKeys": {
+        "path": 3,
+        "bytes": 3,
+        "lines": 3,
+        "sha256": 3,
+        "pinnedBeforeThisTaskBodyUTC": 2,
+        "readBeforeBodyPinConfirmedUTC": 2,
+        "currentReadSha256": 2,
+        "displayedLineRanges": 3,
+        "coverage": 3,
+        "selectedLineRanges": 3,
+        "semanticLineCount": 3,
+        "bodyDisplayedLineCount": 3,
+        "navigationLineRanges": 3,
+        "displayedUnionIncludingNavigationLineCount": 3,
+        "purpose": 3,
+        "initialSemanticReadSha256": 3,
+        "endingBytes": 3,
+        "endingSha256": 3,
+        "unchanged": 3,
+        "endingCheckedUTC": 3,
+        "prior83Comparison": 3,
+        "pinnedBeforeSelectedBodyUTC": 1,
+        "additionalBeforeDisplayUTC": 1,
+        "additionalSha256": 1
+      },
+      "coverageValues": {
+        "selected": 3
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round50/evidence/frontier-selection/source-manifest.json",
+      "keys": [
+        "root",
+        "rootContextCommitExternal",
+        "gitVerifiedByThisAuthor",
+        "files",
+        "totals",
+        "historicalMetadataReading",
+        "globalSemanticCoverageUpdate"
+      ],
+      "primaryRows": 30,
+      "rowKeys": {
+        "path": 30,
+        "bytes": 30,
+        "sha256": 30,
+        "lines": 30,
+        "pinnedUTC": 30,
+        "coverage": 30,
+        "selectedLineRanges": 30,
+        "displayedLineRanges": 30,
+        "semanticLineCount": 30,
+        "displayedLineCount": 30,
+        "initialPinIsSemanticReadProof": 30,
+        "endingSha256": 30
+      },
+      "coverageValues": {
+        "hash-only": 30
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round50/evidence/trace-query-review/source-manifest.json",
+      "keys": [
+        "role",
+        "rootReportedBaselineContextOnly",
+        "ownGitOperations",
+        "files",
+        "instructionPins",
+        "instructionReading",
+        "counts",
+        "capturedUTC",
+        "sourceExcerptsTiming"
+      ],
+      "primaryRows": 6,
+      "rowKeys": {
+        "path": 6,
+        "bytes": 6,
+        "lines": 6,
+        "sha256": 6,
+        "beforeBody": 6,
+        "coverage": 6,
+        "selectedLineRanges": 6,
+        "semanticLines": 6,
+        "sourceKind": 6,
+        "displayedLineRanges": 6,
+        "additionalNavigationSnippetLines": 6,
+        "uniqueDisplayedLines": 6,
+        "navigationOnlyDisplayedLineRanges": 6,
+        "purpose": 6,
+        "initialSemanticReadSha256": 6,
+        "initialPinBeforeBodyOrLineNavigation": 6,
+        "finishSha256": 6,
+        "finishMatchesInitial": 6,
+        "fullFileReadingClaimed": 6
+      },
+      "coverageValues": {
+        "selected": 6
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round51/source-manifest.json",
+      "keys": [
+        "baseline",
+        "mainHead",
+        "files",
+        "workerSourceChecks",
+        "hashOnlyChecks",
+        "incidentalChecks",
+        "changedFromFrozenPaths",
+        "note"
+      ],
+      "primaryRows": 26,
+      "rowKeys": {
+        "path": 26,
+        "bytes": 26,
+        "sha256": 26,
+        "currentBytes": 26,
+        "currentSha256": 26,
+        "mainBytes": 26,
+        "mainSha256": 26,
+        "currentWorkingTreeMatchesFrozenBlob": 26,
+        "mainMatchesFrozenBlob": 26
+      },
+      "coverageValues": {
+        "NO_SCOPE": 26
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round51/evidence/context-boundary/source-manifest.json",
+      "keys": [
+        "role",
+        "rootReportedBaselineOnly",
+        "ownGitOperations",
+        "files",
+        "instructionPins",
+        "instructionStatus",
+        "counts",
+        "coverageLimit",
+        "sourceExcerptTiming"
+      ],
+      "primaryRows": 7,
+      "rowKeys": {
+        "path": 7,
+        "bytes": 7,
+        "lines": 7,
+        "sha256": 7,
+        "beforeBodyOrLineNavigation": 7,
+        "coverage": 7,
+        "sourceKind": 7,
+        "selectedLineRanges": 7,
+        "semanticLines": 7,
+        "displayedLineRanges": 7,
+        "additionalNavigationSnippetLines": 7,
+        "uniqueDisplayedLines": 7,
+        "navigationOnlyDisplayedLineRanges": 7,
+        "purpose": 7,
+        "initialSemanticReadSha256": 7,
+        "initialPinBeforeBodyOrLineNavigation": 7,
+        "firstEverReadingClaimed": 7,
+        "finishSha256": 7,
+        "finishMatchesInitial": 7
+      },
+      "coverageValues": {
+        "full": 1,
+        "selected": 6
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round51/evidence/time-gate-review/source-manifest.json",
+      "keys": [
+        "files",
+        "hashOnlySourceRows",
+        "newProductSemanticLines",
+        "productSourceBodiesRead",
+        "testDeclarationsRead",
+        "Git",
+        "scope",
+        "metadataDiagnostic"
+      ],
+      "primaryRows": 0,
+      "rowKeys": {},
+      "coverageValues": {}
+    },
+    {
+      "path": "docs/audit-2026-10-17-round51/evidence/time-gate-review/source-manifest.first.json",
+      "keys": [
+        "files",
+        "hashOnlySourceRows",
+        "newProductSemanticLines",
+        "productSourceBodiesRead",
+        "testDeclarationsRead",
+        "Git",
+        "scope"
+      ],
+      "primaryRows": 0,
+      "rowKeys": {},
+      "coverageValues": {}
+    },
+    {
+      "path": "docs/audit-2026-10-17-round51/evidence/shortcuts-reference/source-manifest.json",
+      "keys": [
+        "root",
+        "rootContextCommitExternal",
+        "GitVerifiedByThisAuthor",
+        "files",
+        "instructionFiles",
+        "totals",
+        "rangeConvention",
+        "timingException",
+        "globalCoverageUpdated"
+      ],
+      "primaryRows": 7,
+      "rowKeys": {
+        "path": 7,
+        "bytes": 7,
+        "sha256": 7,
+        "lines": 7,
+        "pinnedUTC": 7,
+        "timing": 7,
+        "sourceKind": 7,
+        "coverage": 7,
+        "selectedLineRanges": 7,
+        "coveredLineCount": 7,
+        "bodyDisplayedLineRanges": 7,
+        "additionalNavigationSnippetLines": 7,
+        "displayedLineRanges": 7,
+        "displayedLineCount": 7,
+        "navigationOrIncidentalOnlyLines": 7,
+        "firstReadSha256": 7,
+        "firstSemanticReadSha256": 7,
+        "selectedBodyCaptureSha256": 7,
+        "firstEverReadClaim": 7,
+        "scope": 7,
+        "endingSha256": 7,
+        "firstNavigationReadSha256": 3,
+        "pinBeforeAnyNavigation": 3,
+        "pinBeforeSelectedBody": 3
+      },
+      "coverageValues": {
+        "full": 2,
+        "selected": 5
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round51/evidence/root-panel-resize/source-manifest.json",
+      "keys": [
+        "rootReportedReadBaseline",
+        "files",
+        "hashOnlyFiles",
+        "instructionHashOnly",
+        "counts",
+        "historyReading",
+        "productRuns",
+        "globalCoverageUpdated"
+      ],
+      "primaryRows": 5,
+      "rowKeys": {
+        "path": 5,
+        "bytes": 5,
+        "lines": 5,
+        "sha256": 5,
+        "beforeCurrentBodyAndLineNavigation": 1,
+        "firstEverReadClaim": 1,
+        "coverage": 5,
+        "selectedLineRanges": 5,
+        "displayedLineRanges": 5,
+        "semanticLineCount": 5,
+        "bodyDisplayedLineCount": 5,
+        "endingSha256": 5,
+        "endingBytes": 5,
+        "endingUTC": 5,
+        "scope": 5,
+        "beforeCurrentLineNavigationOrBody": 1,
+        "beforeCurrentLineNavigationAndBody": 3
+      },
+      "coverageValues": {
+        "selected": 5
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round51/evidence/time-full-gate/source-manifest.json",
+      "keys": [
+        "root",
+        "rootContextCommitExternal",
+        "GitVerifiedByThisAuthor",
+        "files",
+        "instructionFiles",
+        "totals",
+        "historicalGateRead",
+        "targetOldFullSourceExclusionOnly",
+        "globalCoverageUpdated",
+        "runtimeCoverageInferredFromOldFullSource",
+        "sourceHashNotSemanticRead"
+      ],
+      "primaryRows": 4,
+      "rowKeys": {
+        "path": 4,
+        "bytes": 4,
+        "sha256": 4,
+        "lines": 4,
+        "pinnedUTC": 4,
+        "timing": 4,
+        "endingSha256": 4,
+        "coverage": 4,
+        "selectedLineRanges": 4,
+        "bodyDisplayedLineRanges": 4,
+        "additionalNavigationSnippetLines": 4,
+        "displayedLineRanges": 4,
+        "semanticLineCount": 4,
+        "displayedLineCount": 4,
+        "firstEverReadClaim": 4,
+        "sourceKind": 4,
+        "scope": 4
+      },
+      "coverageValues": {
+        "hash-only": 4
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round51/evidence/context-ring/source-manifest.json",
+      "keys": [
+        "schema",
+        "rootReportedInitialContextOnly",
+        "rootLaterDocsOnlyContextNotification",
+        "GitIndependentlyVerified",
+        "files",
+        "counts",
+        "instructionPins",
+        "instructionReading",
+        "filenameOnlyUnopened",
+        "priorConsumerCoverageLimit",
+        "historyGateIn",
+        "scope",
+        "sourceExcerptTiming",
+        "capturedUTC"
+      ],
+      "primaryRows": 5,
+      "rowKeys": {
+        "path": 5,
+        "bytes": 5,
+        "lines": 5,
+        "sha256": 5,
+        "pinnedBeforeProductBodyOrLineNavigationUTC": 1,
+        "coverage": 5,
+        "selectedLineRanges": 5,
+        "semanticLineCount": 5,
+        "sourceKind": 5,
+        "displayedLineRanges": 5,
+        "bodyDisplayedLineCount": 5,
+        "navigationLineRanges": 5,
+        "displayedUnionIncludingNavigationLineCount": 5,
+        "navigationOnlyDisplayedLineRanges": 5,
+        "purpose": 5,
+        "initialSemanticReadSha256": 5,
+        "dedicatedInitialPinBeforeBodyAndLineNavigation": 5,
+        "endingSha256": 5,
+        "endingBytes": 5,
+        "unchanged": 5,
+        "fullFileReadingClaimed": 5,
+        "firstEverReadingClaimed": 5,
+        "pinnedBeforeBodyOrLineNavigationUTC": 4
+      },
+      "coverageValues": {
+        "selected": 5
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round52/source-manifest.json",
+      "keys": [
+        "baseline",
+        "mainHead",
+        "files",
+        "workerSourceChecks",
+        "hashOnlyChecks",
+        "incidentalChecks",
+        "changedFromFrozenPaths",
+        "note"
+      ],
+      "primaryRows": 26,
+      "rowKeys": {
+        "path": 26,
+        "bytes": 26,
+        "sha256": 26,
+        "currentBytes": 26,
+        "currentSha256": 26,
+        "mainBytes": 26,
+        "mainSha256": 26,
+        "currentWorkingTreeMatchesFrozenBlob": 26,
+        "mainMatchesFrozenBlob": 26
+      },
+      "coverageValues": {
+        "NO_SCOPE": 26
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round52/evidence/theme-preview/source-manifest.json",
+      "keys": [
+        "schema",
+        "rootReportedContextOnly",
+        "GitIndependentlyVerified",
+        "files",
+        "counts",
+        "instructionPins",
+        "instructionReading",
+        "globalCoverageUpdated",
+        "consumerPriorFullnessLimits",
+        "scope",
+        "sourceExcerptTiming",
+        "capturedUTC"
+      ],
+      "primaryRows": 4,
+      "rowKeys": {
+        "path": 4,
+        "bytes": 4,
+        "lines": 4,
+        "sha256": 4,
+        "pinnedBeforeBodyOrLineNavigationUTC": 1,
+        "coverage": 4,
+        "selectedLineRanges": 4,
+        "semanticLineCount": 4,
+        "displayedLineRanges": 4,
+        "bodyDisplayedLineCount": 4,
+        "navigationLineRanges": 4,
+        "displayedUnionIncludingNavigationLineCount": 4,
+        "navigationOnlyDisplayedLineRanges": 4,
+        "purpose": 4,
+        "initialSemanticReadSha256": 4,
+        "dedicatedInitialPinBeforeAnyBodyOrLineNavigation": 4,
+        "endingSha256": 4,
+        "endingBytes": 4,
+        "unchanged": 4,
+        "firstEverReadingClaimed": 4,
+        "pinnedBeforeBodyOrNavigationUTC": 3,
+        "knownPriorR45SelectedOverlap": 2
+      },
+      "coverageValues": {
+        "full": 2,
+        "selected": 2
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round52/evidence/live-activity/source-manifest.json",
+      "keys": [
+        "role",
+        "rootReportedBaselineOnly",
+        "ownGitOperations",
+        "files",
+        "instructionPins",
+        "instructionStatus",
+        "counts",
+        "filenameOnlyUnreviewed",
+        "coverageLimit",
+        "sourceExcerptTiming"
+      ],
+      "primaryRows": 10,
+      "rowKeys": {
+        "path": 10,
+        "bytes": 10,
+        "lines": 10,
+        "sha256": 10,
+        "beforeBodyOrLineNavigation": 10,
+        "coverage": 10,
+        "sourceKind": 10,
+        "selectedLineRanges": 10,
+        "semanticLines": 10,
+        "displayedLineRanges": 10,
+        "additionalNavigationSnippetLines": 10,
+        "uniqueDisplayedLines": 10,
+        "navigationOnlyDisplayedLineRanges": 10,
+        "purpose": 10,
+        "initialSemanticReadSha256": 10,
+        "initialPinBeforeBodyOrLineNavigation": 10,
+        "firstEverReadingClaimed": 10,
+        "finishSha256": 10,
+        "finishMatchesInitial": 10
+      },
+      "coverageValues": {
+        "full": 2,
+        "selected": 8
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round52/evidence/coverage-status/source-manifest.json",
+      "keys": [
+        "capturedUTC",
+        "root",
+        "reviewType",
+        "files",
+        "hashOnlyProductFiles",
+        "metadataFiles",
+        "metadataFilesRead",
+        "metadataLinesDisplayed",
+        "actualReadToolChunks",
+        "summaryStagePointer",
+        "sourceUniversePointer",
+        "adapterFrozenUTC",
+        "snapshotCounts",
+        "sourceEvidenceLines",
+        "currentProductShaChecks",
+        "currentProductBodyReadLines",
+        "wholeRepositoryOrHistoryRescan",
+        "authorMethodsExecuted",
+        "productRuns",
+        "GitOperations",
+        "oldReportsModified",
+        "globalCoverageRefreshed",
+        "preciseUnreadClaim",
+        "currentUnfixedCountClaim",
+        "metadataErrors",
+        "metadataTruncations"
+      ],
+      "primaryRows": 0,
+      "rowKeys": {},
+      "coverageValues": {}
+    },
+    {
+      "path": "docs/audit-2026-10-17-round52/evidence/image-sizing-review/source-manifest.json",
+      "keys": [
+        "role",
+        "rootReportedContextOnly",
+        "GitIndependentlyVerified",
+        "files",
+        "counts",
+        "instructionHashOnly",
+        "instructionStatus",
+        "externalDocumentation",
+        "priorOverlapLimit",
+        "excerptTiming"
+      ],
+      "primaryRows": 5,
+      "rowKeys": {
+        "path": 5,
+        "bytes": 5,
+        "lines": 5,
+        "sha256": 5,
+        "pinnedBeforeBodyOrLineNavigationUTC": 5,
+        "coverage": 5,
+        "selectedLineRanges": 5,
+        "semanticLineCount": 5,
+        "sourceKind": 5,
+        "displayedLineRanges": 5,
+        "bodyDisplayedLineCount": 5,
+        "navigationLineRanges": 5,
+        "displayedUnionIncludingNavigationLineCount": 5,
+        "navigationOnlyDisplayedLineRanges": 5,
+        "purpose": 5,
+        "initialSemanticReadSha256": 5,
+        "initialPinBeforeBodyOrLineNavigation": 5,
+        "endingSha256": 5,
+        "endingBytes": 5,
+        "unchanged": 5,
+        "firstEverReadingClaimed": 5
+      },
+      "coverageValues": {
+        "full": 2,
+        "selected": 3
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round52/evidence/character-theme-gate/source-manifest.json",
+      "keys": [
+        "root",
+        "rootContextCommitExternal",
+        "GitVerifiedByThisAuthor",
+        "files",
+        "instructionFiles",
+        "totals",
+        "historicalGateRead",
+        "targetOldFullSourceExclusion",
+        "consumerFullSeparatelyActivated",
+        "globalCoverageUpdated",
+        "oldFrozenPacketsChanged"
+      ],
+      "primaryRows": 2,
+      "rowKeys": {
+        "path": 2,
+        "bytes": 2,
+        "sha256": 2,
+        "lines": 2,
+        "pinnedUTC": 2,
+        "timing": 2,
+        "coverage": 2,
+        "selectedLineRanges": 2,
+        "bodyDisplayedLineRanges": 2,
+        "additionalNavigationSnippetLines": 2,
+        "displayedLineRanges": 2,
+        "semanticLineCount": 2,
+        "displayedLineCount": 2,
+        "firstEverReadClaim": 2,
+        "endingSha256": 2,
+        "sourceKind": 2,
+        "scope": 2
+      },
+      "coverageValues": {
+        "hash-only": 2
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round52/evidence/root-image-compress/source-manifest.json",
+      "keys": [
+        "rootReportedReadBaseline",
+        "files",
+        "instructionHashOnly",
+        "counts",
+        "historyReading",
+        "globalCoverageUpdated",
+        "productRuns"
+      ],
+      "primaryRows": 4,
+      "rowKeys": {
+        "path": 4,
+        "bytes": 4,
+        "lines": 4,
+        "sha256": 4,
+        "beforeCurrentBodyAndLineNavigation": 1,
+        "firstEverReadClaim": 1,
+        "coverage": 4,
+        "selectedLineRanges": 4,
+        "displayedLineRanges": 4,
+        "semanticLineCount": 4,
+        "bodyDisplayedLineCount": 4,
+        "endingSha256": 4,
+        "endingBytes": 4,
+        "endingUTC": 4,
+        "scope": 4,
+        "beforeCurrentLineNavigationAndBody": 3
+      },
+      "coverageValues": {
+        "selected": 4
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round53/source-manifest.json",
+      "keys": [
+        "baseline",
+        "mainHead",
+        "files",
+        "workerSourceChecks",
+        "hashOnlyChecks",
+        "incidentalChecks",
+        "changedFromFrozenPaths",
+        "note"
+      ],
+      "primaryRows": 38,
+      "rowKeys": {
+        "path": 38,
+        "bytes": 38,
+        "sha256": 38,
+        "currentBytes": 38,
+        "currentSha256": 38,
+        "mainBytes": 38,
+        "mainSha256": 38,
+        "currentWorkingTreeMatchesFrozenBlob": 38,
+        "mainMatchesFrozenBlob": 38
+      },
+      "coverageValues": {
+        "NO_SCOPE": 38
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round53/evidence/root-task-parse-gate/source-manifest.json",
+      "keys": [
+        "rootReportedReadBaseline",
+        "files",
+        "hashOnlyFiles",
+        "historicalReportReads",
+        "targetOldFullSourceExclusionOnly",
+        "consumerFullSeparatelyActivated",
+        "productRuns",
+        "globalCoverageUpdated"
+      ],
+      "primaryRows": 0,
+      "rowKeys": {},
+      "coverageValues": {}
+    },
+    {
+      "path": "docs/audit-2026-10-17-round53/evidence/root-windows-contract/source-manifest.json",
+      "keys": [
+        "rootReportedReadBaseline",
+        "files",
+        "metadataFiles",
+        "counts",
+        "sameRootAs111",
+        "priorRoot111ToolDisplayReadReused",
+        "newStandaloneFindingCount",
+        "productRuns",
+        "globalCoverageUpdated"
+      ],
+      "primaryRows": 1,
+      "rowKeys": {
+        "path": 1,
+        "bytes": 1,
+        "lines": 1,
+        "sha256": 1,
+        "beforeCurrentSelectedContractRead": 1,
+        "coverage": 1,
+        "selectedLineRanges": 1,
+        "displayedLineRanges": 1,
+        "semanticLineCount": 1,
+        "scope": 1,
+        "endingSha256": 1
+      },
+      "coverageValues": {
+        "selected": 1
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round53/evidence/web-format-gate/source-manifest.json",
+      "keys": [
+        "createdAt",
+        "parentContext",
+        "parentContextSource",
+        "files",
+        "hashOnlyFiles",
+        "instructionPins",
+        "gateDecisions",
+        "historicalMetadataSelected",
+        "historicalCanonicalObjects",
+        "productSemanticLineCount",
+        "productDisplayedLineCount",
+        "testDeclarationLineCount",
+        "methodLimits"
+      ],
+      "primaryRows": 0,
+      "rowKeys": {},
+      "coverageValues": {}
+    },
+    {
+      "path": "docs/audit-2026-10-17-round53/evidence/trace-history/source-manifest.json",
+      "keys": [
+        "createdUTC",
+        "role",
+        "rootReportedBaselineOnly",
+        "ownGitOperations",
+        "files",
+        "instructionPins",
+        "instructionReadStatus",
+        "totals",
+        "coverageBoundary"
+      ],
+      "primaryRows": 5,
+      "rowKeys": {
+        "path": 5,
+        "bytes": 5,
+        "lines": 5,
+        "sha256": 5,
+        "beforeBodyOrLineNavigation": 5,
+        "coverage": 5,
+        "selectedLineRanges": 5,
+        "semanticLines": 5,
+        "sourceKind": 5,
+        "displayedLineRanges": 5,
+        "additionalNavigationSnippetLines": 5,
+        "uniqueDisplayedLines": 5,
+        "navigationOnlyDisplayedLineRanges": 5,
+        "purpose": 5,
+        "initialSemanticReadSha256": 5,
+        "initialPinBeforeBodyOrLineNavigation": 5,
+        "finishSha256": 5,
+        "finishBytes": 5,
+        "finishMatchesInitial": 5,
+        "fullFileReadingClaimed": 5
+      },
+      "coverageValues": {
+        "selected": 5
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round53/evidence/root-tool-display/source-manifest.json",
+      "keys": [
+        "rootReportedReadBaseline",
+        "files",
+        "navigationOnlyFiles",
+        "historicalReportReads",
+        "instructionHashOnly",
+        "counts",
+        "historyReading",
+        "firstMetadataErrors",
+        "globalCoverageUpdated"
+      ],
+      "primaryRows": 4,
+      "rowKeys": {
+        "path": 4,
+        "bytes": 4,
+        "lines": 4,
+        "sha256": 4,
+        "beforeCurrentBodyAndLineNavigation": 4,
+        "firstEverReadClaim": 1,
+        "coverage": 4,
+        "selectedLineRanges": 4,
+        "displayedLineRanges": 4,
+        "semanticLineCount": 4,
+        "bodyDisplayedLineCount": 4,
+        "endingSha256": 4,
+        "endingBytes": 4,
+        "scope": 4
+      },
+      "coverageValues": {
+        "full": 1,
+        "selected": 3
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round53/evidence/cache-data/source-manifest.json",
+      "keys": [
+        "schema",
+        "rootReportedContextOnly",
+        "GitIndependentlyVerified",
+        "files",
+        "hashOnlyFiles",
+        "instructionHashOnly",
+        "instructionReading",
+        "counts",
+        "scope",
+        "priorCoverageLimit",
+        "sourceExcerptTiming"
+      ],
+      "primaryRows": 2,
+      "rowKeys": {
+        "path": 2,
+        "bytes": 2,
+        "lines": 2,
+        "sha256": 2,
+        "pinnedBeforeBodyOrLineNavigationUTC": 2,
+        "coverage": 2,
+        "selectedLineRanges": 2,
+        "semanticLineCount": 2,
+        "displayedLineRanges": 2,
+        "bodyDisplayedLineCount": 2,
+        "navigationLineRanges": 2,
+        "displayedUnionIncludingNavigationLineCount": 2,
+        "navigationOnlyDisplayedLineRanges": 2,
+        "sourceKind": 2,
+        "initialSemanticReadSha256": 2,
+        "initialPinBeforeBodyOrLineNavigation": 2,
+        "endingSha256": 2,
+        "endingBytes": 2,
+        "unchanged": 2,
+        "firstEverReadClaimed": 2,
+        "purpose": 2
+      },
+      "coverageValues": {
+        "selected": 2
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round53/evidence/windows-path-review/source-manifest.json",
+      "keys": [
+        "role",
+        "rootReportedContextOnly",
+        "GitVerified",
+        "files",
+        "contractMetadataFiles",
+        "instructionHashOnly",
+        "instructionReading",
+        "counts",
+        "priorScopeLimit",
+        "sourceExcerptTiming"
+      ],
+      "primaryRows": 4,
+      "rowKeys": {
+        "path": 4,
+        "bytes": 4,
+        "lines": 4,
+        "sha256": 4,
+        "pinnedBeforeBodyOrNavigationUTC": 1,
+        "coverage": 4,
+        "selectedLineRanges": 4,
+        "semanticLineCount": 4,
+        "sourceKind": 4,
+        "displayedLineRanges": 4,
+        "bodyDisplayedLineCount": 4,
+        "navigationLineRanges": 4,
+        "displayedUnionIncludingNavigationLineCount": 4,
+        "navigationOnlyDisplayedLineRanges": 4,
+        "purpose": 4,
+        "initialSemanticReadSha256": 4,
+        "initialPinBeforeBodyOrLineNavigation": 4,
+        "endingSha256": 4,
+        "endingBytes": 4,
+        "unchanged": 4,
+        "firstEverReadingClaimed": 4,
+        "pinnedBeforeBodyOrLineNavigationUTC": 3
+      },
+      "coverageValues": {
+        "selected": 4
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round53/evidence/glob-summary-review/source-manifest.json",
+      "keys": [
+        "createdAt",
+        "parentContext",
+        "parentContextSource",
+        "files",
+        "hashOnlyFiles",
+        "productSemanticLineCount",
+        "testDeclarationLineCount",
+        "semanticLineCount",
+        "displayedLineCount",
+        "coverageNotes"
+      ],
+      "primaryRows": 11,
+      "rowKeys": {
+        "path": 11,
+        "bytes": 11,
+        "sha256": 11,
+        "lineCount": 11,
+        "kind": 11,
+        "coverage": 11,
+        "selectedLineRanges": 11,
+        "semanticLineCount": 11,
+        "displayedBodyLineRanges": 11,
+        "additionalNavigationSnippetLines": 11,
+        "displayedLineRanges": 11,
+        "displayedLineCount": 11,
+        "firstPinUTC": 11,
+        "initialPinArtifact": 11,
+        "firstReadSha256": 11,
+        "endingSha256": 11,
+        "matchesInitial": 11,
+        "purpose": 11,
+        "testDeclarationLineCount": 2
+      },
+      "coverageValues": {
+        "targeted-selected ordinary DTO/display cause re-review; not first/full coverage": 11
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round54/source-manifest.json",
+      "keys": [
+        "baseline",
+        "mainHead",
+        "files",
+        "workerSourceChecks",
+        "hashOnlyChecks",
+        "incidentalChecks",
+        "changedFromFrozenPaths",
+        "note"
+      ],
+      "primaryRows": 33,
+      "rowKeys": {
+        "path": 33,
+        "bytes": 33,
+        "sha256": 33,
+        "currentBytes": 33,
+        "currentSha256": 33,
+        "mainBytes": 33,
+        "mainSha256": 33,
+        "currentWorkingTreeMatchesFrozenBlob": 33,
+        "mainMatchesFrozenBlob": 33
+      },
+      "coverageValues": {
+        "NO_SCOPE": 33
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round54/evidence/web-coverage-gate/source-manifest.json",
+      "keys": [
+        "createdAt",
+        "parentContext",
+        "parentContextSource",
+        "files",
+        "hashOnlyFiles",
+        "instructionPins",
+        "gateDecisions",
+        "originalCanonicalObjects",
+        "historicalMarkdownSelected",
+        "productSemanticLineCount",
+        "productDisplayedLineCount",
+        "testDeclarationLineCount",
+        "newFullCoverageClaims",
+        "globalCoverageUpdates",
+        "limits"
+      ],
+      "primaryRows": 0,
+      "rowKeys": {},
+      "coverageValues": {}
+    },
+    {
+      "path": "docs/audit-2026-10-17-round54/evidence/link-contracts/source-manifest.json",
+      "keys": [
+        "createdUTC",
+        "role",
+        "rootReportedBaselineOnly",
+        "ownGitOperations",
+        "files",
+        "hashOnlyFiles",
+        "instructionPins",
+        "instructionReadStatus",
+        "totals",
+        "firstPinLimitation",
+        "coverageBoundary"
+      ],
+      "primaryRows": 8,
+      "rowKeys": {
+        "path": 8,
+        "bytes": 8,
+        "lines": 8,
+        "sha256": 8,
+        "beforeBodyOrLineNavigation": 8,
+        "coverage": 8,
+        "selectedLineRanges": 8,
+        "semanticLines": 8,
+        "sourceKind": 8,
+        "displayedLineRanges": 8,
+        "additionalNavigationSnippetLines": 8,
+        "uniqueDisplayedLines": 8,
+        "navigationOnlyDisplayedLineRanges": 8,
+        "purpose": 8,
+        "initialSemanticReadSha256": 8,
+        "initialPinBeforeBodyOrLineNavigation": 8,
+        "dedicatedSelectedDisplaySha256": 8,
+        "finishSha256": 8,
+        "finishBytes": 8,
+        "finishMatchesDedicatedPin": 8,
+        "fullFileReadingClaimed": 8,
+        "note": 2
+      },
+      "coverageValues": {
+        "selected": 8
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round54/evidence/host-request-gate/source-manifest.json",
+      "keys": [
+        "createdUTC",
+        "role",
+        "rootReportedBaselineOnly",
+        "ownGitOperations",
+        "files",
+        "hashOnlyFiles",
+        "instructionPins",
+        "instructionStatus",
+        "totals",
+        "canonicalMetadataDocuments",
+        "scopeBoundary"
+      ],
+      "primaryRows": 0,
+      "rowKeys": {},
+      "coverageValues": {}
+    },
+    {
+      "path": "docs/audit-2026-10-17-round54/evidence/backup-format/source-manifest.json",
+      "keys": [
+        "round",
+        "root",
+        "rootReportedBaseline",
+        "independentlyGitVerified",
+        "files",
+        "hashOnlyFiles",
+        "instructionFiles",
+        "totals",
+        "priorOverlap"
+      ],
+      "primaryRows": 5,
+      "rowKeys": {
+        "path": 5,
+        "bytes": 5,
+        "sha256": 5,
+        "lines": 5,
+        "coverage": 5,
+        "selectedLineRanges": 5,
+        "displayedLineRanges": 5,
+        "semanticLineCount": 5,
+        "displayedBodyLineCount": 5,
+        "kind": 5,
+        "scope": 5,
+        "initialPinAt": 5,
+        "initialSemanticReadSha256": 5,
+        "endingSha256": 5,
+        "endingMatchesInitial": 5,
+        "navigationLineRanges": 5,
+        "navigationOnlyBeyondBodyCount": 5
+      },
+      "coverageValues": {
+        "selected": 5
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round54/evidence/root-link-validation/source-manifest.json",
+      "keys": [
+        "rootReportedReadBaseline",
+        "files",
+        "historicalReportReads",
+        "instructionHashOnly",
+        "counts",
+        "historyReading",
+        "productRuns",
+        "globalCoverageUpdated"
+      ],
+      "primaryRows": 5,
+      "rowKeys": {
+        "path": 5,
+        "bytes": 5,
+        "lines": 5,
+        "sha256": 5,
+        "beforeCurrentBodyAndLineNavigation": 5,
+        "firstEverReadClaim": 1,
+        "coverage": 5,
+        "selectedLineRanges": 5,
+        "displayedLineRanges": 5,
+        "semanticLineCount": 5,
+        "bodyDisplayedLineCount": 5,
+        "endingSha256": 5,
+        "scope": 5
+      },
+      "coverageValues": {
+        "selected": 5
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round54/evidence/chat-lifecycle-gate/source-manifest.json",
+      "keys": [
+        "createdAt",
+        "parentContext",
+        "parentContextSource",
+        "files",
+        "hashOnlyFiles",
+        "instructionPins",
+        "gateDecisions",
+        "originalCanonicalObjects",
+        "historicalMarkdownSelected",
+        "productSemanticLineCount",
+        "productDisplayedLineCount",
+        "testDeclarationLineCount",
+        "newFullCoverageClaims",
+        "globalCoverageUpdates",
+        "limits"
+      ],
+      "primaryRows": 0,
+      "rowKeys": {},
+      "coverageValues": {}
+    },
+    {
+      "path": "docs/audit-2026-10-17-round55/source-manifest.json",
+      "keys": [
+        "baseline",
+        "mainHead",
+        "files",
+        "workerSourceChecks",
+        "hashOnlyChecks",
+        "incidentalChecks",
+        "changedFromFrozenPaths",
+        "note"
+      ],
+      "primaryRows": 50,
+      "rowKeys": {
+        "path": 50,
+        "bytes": 50,
+        "sha256": 50,
+        "currentBytes": 50,
+        "currentSha256": 50,
+        "mainBytes": 50,
+        "mainSha256": 50,
+        "currentWorkingTreeMatchesFrozenBlob": 50,
+        "mainMatchesFrozenBlob": 50
+      },
+      "coverageValues": {
+        "NO_SCOPE": 50
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round55/evidence/root-strip-vision/source-manifest.json",
+      "keys": [
+        "files",
+        "totals",
+        "rootReportedBaseline",
+        "productExecution"
+      ],
+      "primaryRows": 5,
+      "rowKeys": {
+        "path": 5,
+        "bytes": 5,
+        "lines": 5,
+        "sha256": 5,
+        "coverage": 5,
+        "selectedLineRanges": 5,
+        "bodyDisplayedLineRanges": 5,
+        "semanticLines": 5,
+        "bodyDisplayedLines": 5,
+        "beforeBodyOrLineNavigation": 5,
+        "scope": 5,
+        "overlap": 5
+      },
+      "coverageValues": {
+        "full": 1,
+        "selected": 4
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round55/evidence/root-agent-registry/source-manifest.json",
+      "keys": [
+        "files",
+        "hashOnlyFiles",
+        "historicalReportReads",
+        "gateDecisions",
+        "totals",
+        "scope"
+      ],
+      "primaryRows": 0,
+      "rowKeys": {},
+      "coverageValues": {}
+    },
+    {
+      "path": "docs/audit-2026-10-17-round55/evidence/model-discovery/source-manifest.json",
+      "keys": [
+        "prep",
+        "root",
+        "rootReportedProductBaseline",
+        "GitVerification",
+        "files",
+        "navigationOnlyFiles",
+        "instructionHashOnlyFiles",
+        "totals",
+        "overlap"
+      ],
+      "primaryRows": 8,
+      "rowKeys": {
+        "path": 8,
+        "bytes": 8,
+        "lines": 8,
+        "sha256": 8,
+        "coverage": 8,
+        "selectedLineRanges": 8,
+        "displayedLineRanges": 8,
+        "navigationLineRanges": 8,
+        "kind": 8,
+        "scope": 8,
+        "semanticLineCount": 8,
+        "displayedBodyLineCount": 8,
+        "initialPinAt": 8,
+        "initialSemanticReadSha256": 8,
+        "endingSha256": 8,
+        "endingMatchesInitial": 8
+      },
+      "coverageValues": {
+        "selected": 8
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round55/evidence/cost-ledger/source-manifest.json",
+      "keys": [
+        "createdAt",
+        "rootReportedBaseline",
+        "gitCertified",
+        "files",
+        "hashOnlyFiles",
+        "instructionPins",
+        "productSemanticLineCount",
+        "testDeclarationLineCount",
+        "semanticLineCount",
+        "displayedLineCount",
+        "fullProductFiles",
+        "selectedProductFiles",
+        "selectedTestDeclarationFiles",
+        "rangeConvention",
+        "sourceReadingEndedBeforeFinalization",
+        "globalCoverageUpdated",
+        "limits"
+      ],
+      "primaryRows": 12,
+      "rowKeys": {
+        "path": 12,
+        "bytes": 12,
+        "sha256": 12,
+        "lineCount": 12,
+        "coverage": 12,
+        "kind": 12,
+        "selectedLineRanges": 12,
+        "semanticLineCount": 12,
+        "displayedBodyLineRanges": 12,
+        "additionalNavigationSnippetLines": 12,
+        "displayedLineRanges": 12,
+        "displayedLineCount": 12,
+        "purpose": 12,
+        "initialPinArtifact": 12,
+        "firstReadSha256": 12,
+        "firstPinUTC": 12,
+        "firstEverSemanticReadPin": 12,
+        "priorReadingOverlap": 12
+      },
+      "coverageValues": {
+        "full": 1,
+        "selected": 11
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round55/evidence/root-model-pool/source-manifest.json",
+      "keys": [
+        "files",
+        "totals",
+        "navigationNote",
+        "rootReportedBaselineOnly",
+        "productExecution"
+      ],
+      "primaryRows": 10,
+      "rowKeys": {
+        "path": 10,
+        "bytes": 10,
+        "sha256": 10,
+        "lines": 10,
+        "coverage": 10,
+        "selectedLineRanges": 10,
+        "bodyDisplayedLineRanges": 10,
+        "semanticLines": 10,
+        "bodyDisplayedLines": 10,
+        "role": 10,
+        "scope": 10,
+        "beforeBodyOrLineNavigation": 10,
+        "historicalOverlap": 10
+      },
+      "coverageValues": {
+        "full": 6,
+        "selected": 4
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round55/evidence/chat-media/source-manifest.json",
+      "keys": [
+        "createdUTC",
+        "role",
+        "rootReportedBaselineOnly",
+        "ownGitOperations",
+        "files",
+        "hashOnlyFiles",
+        "instructionPins",
+        "instructionReadStatus",
+        "totals",
+        "coverageBoundary"
+      ],
+      "primaryRows": 7,
+      "rowKeys": {
+        "path": 7,
+        "bytes": 7,
+        "lines": 7,
+        "sha256": 7,
+        "beforeBodyOrLineNavigation": 7,
+        "coverage": 7,
+        "selectedLineRanges": 7,
+        "semanticLines": 7,
+        "sourceKind": 7,
+        "displayedLineRanges": 7,
+        "additionalNavigationSnippetLines": 7,
+        "uniqueDisplayedLines": 7,
+        "navigationOnlyDisplayedLineRanges": 7,
+        "purpose": 7,
+        "initialSemanticReadSha256": 7,
+        "initialPinBeforeBodyOrLineNavigation": 7,
+        "finishSha256": 7,
+        "finishBytes": 7,
+        "finishMatchesInitial": 7,
+        "fullFileReadingClaimed": 7,
+        "priorOverlap": 7
+      },
+      "coverageValues": {
+        "selected": 7
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round55/evidence/coverage-current/source-manifest.json",
+      "keys": [
+        "createdAt",
+        "files",
+        "hashOnlySourceInventory",
+        "hashOnlySourceCount",
+        "sourceBodyDecodedOrExecuted",
+        "semanticSourceLines",
+        "metadataInputs",
+        "methodRead",
+        "reconstructionInputPins",
+        "rangesAndPurposeReferences",
+        "globalCoverageChanged",
+        "preciseUnreadOrCurrentUnfixedClaim",
+        "scope"
+      ],
+      "primaryRows": 0,
+      "rowKeys": {},
+      "coverageValues": {}
+    },
+    {
+      "path": "docs/audit-2026-10-17-round56/source-manifest.json",
+      "keys": [
+        "baseline",
+        "mainHead",
+        "files",
+        "workerSourceChecks",
+        "hashOnlyChecks",
+        "incidentalChecks",
+        "changedFromFrozenPaths",
+        "note"
+      ],
+      "primaryRows": 29,
+      "rowKeys": {
+        "path": 29,
+        "bytes": 29,
+        "sha256": 29,
+        "currentBytes": 29,
+        "currentSha256": 29,
+        "mainBytes": 29,
+        "mainSha256": 29,
+        "currentWorkingTreeMatchesFrozenBlob": 29,
+        "mainMatchesFrozenBlob": 29
+      },
+      "coverageValues": {
+        "NO_SCOPE": 29
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round56/evidence/image-window/source-manifest.json",
+      "keys": [
+        "createdAt",
+        "rootReportedBaseline",
+        "gitCertified",
+        "files",
+        "hashOnlyFiles",
+        "instructionPins",
+        "productSemanticLineCount",
+        "testDeclarationLineCount",
+        "semanticLineCount",
+        "displayedLineCount",
+        "physicalFullLeafRedisplay",
+        "oldSameShaFullOverlap",
+        "newUniqueCoverageClaim",
+        "globalCoverageUpdated",
+        "sourceReadingEnded",
+        "limits"
+      ],
+      "primaryRows": 4,
+      "rowKeys": {
+        "path": 4,
+        "bytes": 4,
+        "sha256": 4,
+        "lineCount": 4,
+        "kind": 4,
+        "coverage": 4,
+        "selectedLineRanges": 4,
+        "semanticLineCount": 4,
+        "displayedBodyLineRanges": 4,
+        "additionalNavigationSnippetLines": 4,
+        "displayedLineRanges": 4,
+        "displayedLineCount": 4,
+        "purpose": 4,
+        "firstPinUTC": 4,
+        "firstReadSha256": 4,
+        "initialPinArtifact": 4,
+        "firstEverSemanticReadPin": 4
+      },
+      "coverageValues": {
+        "targeted-selected old-full overlap": 1,
+        "selected": 2,
+        "full existing test source as declarations only": 1
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round56/evidence/trace-history/source-manifest.json",
+      "keys": [
+        "prep",
+        "root",
+        "rootReportedBaseline",
+        "GitVerified",
+        "files",
+        "instructionHashOnlyFiles",
+        "totals",
+        "oldOverlap"
+      ],
+      "primaryRows": 6,
+      "rowKeys": {
+        "path": 6,
+        "bytes": 6,
+        "lines": 6,
+        "sha256": 6,
+        "coverage": 6,
+        "selectedLineRanges": 6,
+        "displayedLineRanges": 6,
+        "navigationLineRanges": 6,
+        "sourceKind": 6,
+        "semanticLines": 6,
+        "displayedBodyLines": 6,
+        "purpose": 6,
+        "initialPinAt": 6,
+        "initialSemanticReadSha256": 6,
+        "endingSha256": 6,
+        "finishMatchesInitial": 6,
+        "fullFileReadingClaimed": 6
+      },
+      "coverageValues": {
+        "selected": 6
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round56/evidence/network-diagnostics/source-manifest.json",
+      "keys": [
+        "createdUTC",
+        "role",
+        "rootReportedBaselineOnly",
+        "ownGitOperations",
+        "files",
+        "instructionPins",
+        "instructionStatus",
+        "totals",
+        "boundary"
+      ],
+      "primaryRows": 8,
+      "rowKeys": {
+        "path": 8,
+        "bytes": 8,
+        "lines": 8,
+        "sha256": 8,
+        "beforeBodyOrLineNavigation": 8,
+        "coverage": 8,
+        "selectedLineRanges": 8,
+        "semanticLines": 8,
+        "sourceKind": 8,
+        "displayedLineRanges": 8,
+        "additionalNavigationSnippetLines": 8,
+        "uniqueDisplayedLines": 8,
+        "navigationOnlyDisplayedLineRanges": 8,
+        "purpose": 8,
+        "initialSemanticReadSha256": 8,
+        "initialPinBeforeBodyOrLineNavigation": 8,
+        "finishSha256": 8,
+        "finishBytes": 8,
+        "finishMatchesInitial": 8,
+        "fullFileReadingClaimed": 8,
+        "historicalOverlap": 8
+      },
+      "coverageValues": {
+        "selected": 8
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round56/evidence/root-tool-results/source-manifest.json",
+      "keys": [
+        "files",
+        "historicalMetadataSelected",
+        "totals",
+        "navigationNote",
+        "rootReportedBaseline",
+        "productExecution"
+      ],
+      "primaryRows": 5,
+      "rowKeys": {
+        "path": 5,
+        "bytes": 5,
+        "lines": 5,
+        "sha256": 5,
+        "coverage": 5,
+        "selectedLineRanges": 5,
+        "bodyDisplayedLineRanges": 5,
+        "semanticLines": 5,
+        "bodyDisplayedLines": 5,
+        "beforeBodyOrLineNavigation": 5,
+        "scope": 5,
+        "overlap": 5
+      },
+      "coverageValues": {
+        "selected": 5
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round57/source-manifest.json",
+      "keys": [
+        "baseline",
+        "mainHead",
+        "files",
+        "workerSourceChecks",
+        "hashOnlyChecks",
+        "incidentalChecks",
+        "changedFromFrozenPaths",
+        "note"
+      ],
+      "primaryRows": 70,
+      "rowKeys": {
+        "path": 70,
+        "bytes": 70,
+        "sha256": 70,
+        "currentBytes": 70,
+        "currentSha256": 70,
+        "mainBytes": 70,
+        "mainSha256": 70,
+        "currentWorkingTreeMatchesFrozenBlob": 70,
+        "mainMatchesFrozenBlob": 70
+      },
+      "coverageValues": {
+        "NO_SCOPE": 70
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round57/evidence/tool-jobs/source-manifest.json",
+      "keys": [
+        "createdUTC",
+        "role",
+        "rootReportedBaselineOnly",
+        "ownGitOperations",
+        "files",
+        "instructionPins",
+        "instructionStatus",
+        "totals",
+        "overlapBoundary",
+        "truncationBoundary"
+      ],
+      "primaryRows": 7,
+      "rowKeys": {
+        "path": 7,
+        "bytes": 7,
+        "lines": 7,
+        "sha256": 7,
+        "beforeBodyOrLineNavigation": 7,
+        "coverage": 7,
+        "selectedLineRanges": 7,
+        "semanticLines": 7,
+        "sourceKind": 7,
+        "displayedLineRanges": 7,
+        "additionalNavigationSnippetLines": 7,
+        "uniqueDisplayedLines": 7,
+        "displayCountKind": 7,
+        "displayCoverageComplete": 7,
+        "navigationOnlyDisplayedLineRanges": 7,
+        "purpose": 7,
+        "initialSemanticReadSha256": 7,
+        "initialPinBeforeBodyOrLineNavigation": 7,
+        "finishSha256": 7,
+        "finishBytes": 7,
+        "finishMatchesInitial": 7,
+        "fullFileReadingClaimed": 7
+      },
+      "coverageValues": {
+        "selected": 7
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round57/evidence/pet-closure-review/source-manifest.json",
+      "keys": [
+        "schema",
+        "createdAt",
+        "rootReportedBaseline",
+        "gitCertified",
+        "files",
+        "counts",
+        "rangeConvention",
+        "priorOverlap"
+      ],
+      "primaryRows": 27,
+      "rowKeys": {
+        "path": 27,
+        "bytes": 27,
+        "sha256": 27,
+        "lineCount": 27,
+        "kind": 27,
+        "coverage": 27,
+        "selectedLineRanges": 27,
+        "selectedLineCount": 27,
+        "bodyDisplayedLineRanges": 27,
+        "bodyDisplayedLineCount": 27,
+        "additionalNavigationSnippetLines": 27,
+        "displayedLineRanges": 27,
+        "displayedLineCount": 27,
+        "initialPinUTC": 27,
+        "initialSha256": 24,
+        "initialPinTiming": 24,
+        "scope": 27,
+        "originalPinRow": 27
+      },
+      "coverageValues": {
+        "targeted-static-selected; not-new-full": 21,
+        "selected-existing-test-declarations; execution0": 3,
+        "hash-only-this-packet": 2,
+        "instruction-read-full-this-packet": 1
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round57/evidence/mobile-path-review/source-manifest.json",
+      "keys": [
+        "createdUTC",
+        "role",
+        "rootReportedBaselineOnly",
+        "ownGitOperations",
+        "files",
+        "navigationOnlyFiles",
+        "hashOnlyFiles",
+        "instructionPins",
+        "instructionStatus",
+        "totals",
+        "coverageBoundary"
+      ],
+      "primaryRows": 9,
+      "rowKeys": {
+        "path": 9,
+        "bytes": 9,
+        "lines": 9,
+        "sha256": 9,
+        "beforeBodyOrLineNavigation": 9,
+        "coverage": 9,
+        "selectedLineRanges": 9,
+        "semanticLines": 9,
+        "sourceKind": 9,
+        "displayedLineRanges": 9,
+        "additionalNavigationSnippetLines": 9,
+        "uniqueDisplayedLines": 9,
+        "navigationOnlyDisplayedLineRanges": 9,
+        "purpose": 9,
+        "initialSemanticReadSha256": 9,
+        "initialPinBeforeBodyOrLineNavigation": 9,
+        "finishSha256": 9,
+        "finishBytes": 9,
+        "finishMatchesInitial": 9,
+        "fullFileReadingClaimed": 9
+      },
+      "coverageValues": {
+        "selected": 9
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round57/evidence/pet-topic/source-manifest.json",
+      "keys": [
+        "prep",
+        "root",
+        "rootReportedBaseline",
+        "GitVerified",
+        "files",
+        "navigationOrHashOnlyFiles",
+        "instructionHashOnlyFiles",
+        "totals",
+        "overlap"
+      ],
+      "primaryRows": 23,
+      "rowKeys": {
+        "path": 23,
+        "bytes": 23,
+        "lines": 23,
+        "sha256": 23,
+        "coverage": 23,
+        "selectedLineRanges": 23,
+        "displayedLineRanges": 23,
+        "navigationLineRanges": 23,
+        "sourceKind": 23,
+        "semanticLineCount": 23,
+        "uniqueBodyDisplayedLines": 23,
+        "scope": 23,
+        "initialPinAt": 23,
+        "initialSemanticReadSha256": 23,
+        "endingSha256": 23,
+        "endingMatchesInitial": 23
+      },
+      "coverageValues": {
+        "full": 3,
+        "selected": 20
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round57/evidence/root-static-files/source-manifest.json",
+      "keys": [
+        "prep",
+        "rootReportedBaseline",
+        "files",
+        "instructionHashOnlyFiles",
+        "overlap",
+        "fixtureArtifact",
+        "productAttempts"
+      ],
+      "primaryRows": 11,
+      "rowKeys": {
+        "path": 11,
+        "bytes": 11,
+        "lines": 11,
+        "sha256": 11,
+        "coverage": 11,
+        "sourceKind": 11,
+        "selectedLineRanges": 11,
+        "displayedLineRanges": 11,
+        "semanticLines": 11,
+        "scope": 11,
+        "initialPinReference": 11,
+        "endingSha256": 11
+      },
+      "coverageValues": {
+        "full": 1,
+        "selected": 5,
+        "full-finite-config": 2,
+        "full-finite-runner": 2,
+        "full-finite-preload": 1
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round57/evidence/session-titles/source-manifest.json",
+      "keys": [
+        "schema",
+        "createdAt",
+        "rootReportedBaseline",
+        "baselineIndependentlyGitCertified",
+        "files",
+        "counts",
+        "rangeConvention",
+        "overlap"
+      ],
+      "primaryRows": 11,
+      "rowKeys": {
+        "path": 11,
+        "bytes": 11,
+        "sha256": 11,
+        "lineCount": 11,
+        "kind": 11,
+        "coverage": 11,
+        "selectedLineRanges": 11,
+        "selectedLineCount": 11,
+        "bodyDisplayedLineRanges": 11,
+        "bodyDisplayedLineCount": 11,
+        "additionalNavigationSnippetLines": 11,
+        "displayedLineRanges": 11,
+        "displayedLineCount": 11,
+        "initialSha256": 9,
+        "initialPinUTC": 11,
+        "initialPinTiming": 9,
+        "scope": 9,
+        "originalPinRow": 11
+      },
+      "coverageValues": {
+        "selected-static; not-full semantic review": 8,
+        "selected-existing-test-declarations; execution0": 1,
+        "hash-only-this-packet; prior full instruction read reused": 2
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round58/source-manifest.json",
+      "keys": [
+        "baseline",
+        "mainHead",
+        "files",
+        "workerSourceChecks",
+        "hashOnlyChecks",
+        "incidentalChecks",
+        "changedFromFrozenPaths",
+        "note"
+      ],
+      "primaryRows": 66,
+      "rowKeys": {
+        "path": 66,
+        "bytes": 66,
+        "sha256": 66,
+        "currentBytes": 66,
+        "currentSha256": 66,
+        "mainBytes": 66,
+        "mainSha256": 66,
+        "currentWorkingTreeMatchesFrozenBlob": 66,
+        "mainMatchesFrozenBlob": 66
+      },
+      "coverageValues": {
+        "NO_SCOPE": 66
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round58/evidence/web-storage/source-manifest.json",
+      "keys": [
+        "schema",
+        "createdAtUTC",
+        "rootReportedBaseline",
+        "gitCertified",
+        "files",
+        "counts",
+        "rangeConvention",
+        "historyGateTiming"
+      ],
+      "primaryRows": 17,
+      "rowKeys": {
+        "path": 17,
+        "bytes": 17,
+        "sha256": 17,
+        "lineCount": 17,
+        "kind": 17,
+        "coverage": 17,
+        "selectedLineRanges": 17,
+        "selectedLineCount": 17,
+        "bodyDisplayedLineRanges": 17,
+        "bodyDisplayedLineCount": 17,
+        "additionalNavigationSnippetLines": 17,
+        "displayedLineRanges": 17,
+        "displayedLineCount": 17,
+        "initialSha256": 15,
+        "initialPinUTC": 17,
+        "initialPinTiming": 15,
+        "originalPinRow": 17,
+        "scope": 15
+      },
+      "coverageValues": {
+        "selected-static-purpose; not-full semantic review": 12,
+        "navigation-only; semantic0": 1,
+        "selected-existing-test-declarations; execution0": 2,
+        "hash-only-this-packet; same-SHA prior instruction read reused": 2
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round58/evidence/approval-replay-review/source-manifest.json",
+      "keys": [
+        "atUTC",
+        "role",
+        "rootReportedBaselineOnly",
+        "ownGitOperations",
+        "files",
+        "navigationOnlyFiles",
+        "instructionHashOnlyFiles",
+        "instructions",
+        "totals",
+        "displayLimitation",
+        "coverageOverlap",
+        "mechanismLimits"
+      ],
+      "primaryRows": 13,
+      "rowKeys": {
+        "path": 13,
+        "bytes": 13,
+        "lines": 13,
+        "sha256": 13,
+        "beforeBodyOrLineNavigation": 13,
+        "coverage": 13,
+        "selectedLineRanges": 13,
+        "semanticLines": 13,
+        "displayedLineRanges": 13,
+        "knownCapturedDisplayLines": 13,
+        "displayCountIsLowerBound": 13,
+        "displayCoverageComplete": 13,
+        "additionalNavigationSnippetLines": 13,
+        "navigationOnlyDisplayedLineRanges": 13,
+        "purpose": 13,
+        "newUniqueCoverageClaim": 13,
+        "initialSemanticReadSha256": 13,
+        "finishSha256": 13,
+        "finishMatchesInitial": 13
+      },
+      "coverageValues": {
+        "full": 1,
+        "selected": 12
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round58/evidence/root-pairing/source-manifest.json",
+      "keys": [
+        "prep",
+        "rootReportedBaseline",
+        "files",
+        "instructionHashOnlyFiles",
+        "totals",
+        "overlap"
+      ],
+      "primaryRows": 11,
+      "rowKeys": {
+        "path": 11,
+        "bytes": 11,
+        "lines": 11,
+        "sha256": 11,
+        "coverage": 11,
+        "sourceKind": 11,
+        "selectedLineRanges": 11,
+        "displayedLineRanges": 11,
+        "semanticLines": 11,
+        "uniqueDisplayedLines": 11,
+        "purpose": 11,
+        "initialPinBeforeBodyOrLineNavigation": 11,
+        "endingSha256": 11,
+        "endingMatchesInitial": 11
+      },
+      "coverageValues": {
+        "full": 2,
+        "selected": 8,
+        "full-existing-test-declaration": 1
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round58/evidence/delivery-shutdown-review/source-manifest.json",
+      "keys": [
+        "schema",
+        "atUTC",
+        "rootReportedBaseline",
+        "gitCertified",
+        "files",
+        "counts",
+        "rangeConvention",
+        "overlap"
+      ],
+      "primaryRows": 11,
+      "rowKeys": {
+        "path": 11,
+        "bytes": 11,
+        "sha256": 11,
+        "lineCount": 11,
+        "kind": 11,
+        "coverage": 11,
+        "selectedLineRanges": 11,
+        "selectedLineCount": 11,
+        "bodyDisplayedLineRanges": 11,
+        "bodyDisplayedLineCount": 11,
+        "additionalNavigationSnippetLines": 11,
+        "displayedLineRanges": 11,
+        "displayedLineCount": 11,
+        "initialSha256": 9,
+        "initialPinUTC": 11,
+        "initialPinTiming": 9,
+        "originalPinRow": 11,
+        "scope": 9
+      },
+      "coverageValues": {
+        "targeted-static-selected; not-new-full": 9,
+        "hash-only-this-packet; same-SHA prior instruction read reused": 2
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round58/evidence/relay-stream/source-manifest.json",
+      "keys": [
+        "atUTC",
+        "role",
+        "rootReportedBaselineOnly",
+        "ownGitOperations",
+        "files",
+        "navigationOnly",
+        "instructionHashOnly",
+        "instructionsCarried",
+        "counts",
+        "noUniqueNewCoverageClaim",
+        "authorityScope"
+      ],
+      "primaryRows": 7,
+      "rowKeys": {
+        "path": 7,
+        "bytes": 7,
+        "lines": 7,
+        "sha256": 7,
+        "beforeBodyOrLineNavigation": 7,
+        "coverage": 7,
+        "sourceKind": 7,
+        "selectedLineRanges": 7,
+        "semanticLines": 7,
+        "displayedLineRanges": 7,
+        "additionalNavigationSnippetLines": 7,
+        "uniqueDisplayedLines": 7,
+        "navigationOnlyDisplayedLineRanges": 7,
+        "purpose": 7,
+        "fullFileReadingClaimed": 7,
+        "finishSha256": 7,
+        "finishMatchesInitial": 7,
+        "initialSemanticReadSha256": 7,
+        "priorCoverage": 7
+      },
+      "coverageValues": {
+        "full": 1,
+        "selected": 6
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round58/evidence/delivery-queue/source-manifest.json",
+      "keys": [
+        "root",
+        "context",
+        "files",
+        "metadataFiles",
+        "hashOnlyFiles",
+        "historyReferences",
+        "sharedHistory",
+        "totals",
+        "limitations",
+        "endingAt"
+      ],
+      "primaryRows": 11,
+      "rowKeys": {
+        "path": 11,
+        "bytes": 11,
+        "lines": 11,
+        "sha256": 11,
+        "pinAt": 11,
+        "coverage": 11,
+        "initialPinArtifact": 11,
+        "sourceKind": 11,
+        "selectedLineRanges": 11,
+        "semanticLineCount": 11,
+        "displayedLineRanges": 11,
+        "displayedLineCount": 11,
+        "displayArtifacts": 11,
+        "scope": 11,
+        "endingSha256": 11,
+        "endingUnchanged": 11,
+        "newUniqueCoverageClaim": 11
+      },
+      "coverageValues": {
+        "selected": 10,
+        "full": 1
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round59/source-manifest.json",
+      "keys": [
+        "baseline",
+        "mainHead",
+        "files",
+        "workerSourceChecks",
+        "hashOnlyChecks",
+        "incidentalChecks",
+        "changedFromFrozenPaths",
+        "note"
+      ],
+      "primaryRows": 47,
+      "rowKeys": {
+        "path": 47,
+        "bytes": 47,
+        "sha256": 47,
+        "currentBytes": 47,
+        "currentSha256": 47,
+        "mainBytes": 47,
+        "mainSha256": 47,
+        "currentWorkingTreeMatchesFrozenBlob": 47,
+        "mainMatchesFrozenBlob": 47
+      },
+      "coverageValues": {
+        "NO_SCOPE": 47
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round59/evidence/session-usage/source-manifest.json",
+      "keys": [
+        "atUTC",
+        "rootReportedBaselineOnly",
+        "role",
+        "files",
+        "navigationOnly",
+        "hashOnly",
+        "instructionHashOnly",
+        "instructions",
+        "counts",
+        "scopeLimits"
+      ],
+      "primaryRows": 8,
+      "rowKeys": {
+        "path": 8,
+        "bytes": 8,
+        "lines": 8,
+        "sha256": 8,
+        "beforeBodyOrLineNavigation": 8,
+        "coverage": 8,
+        "sourceKind": 8,
+        "selectedLineRanges": 8,
+        "semanticLines": 8,
+        "displayedLineRanges": 8,
+        "additionalNavigationSnippetLines": 8,
+        "uniqueDisplayedLines": 8,
+        "navigationOnlyDisplayedLineRanges": 8,
+        "purpose": 8,
+        "fullFileReadingClaimed": 8,
+        "priorCoverage": 8,
+        "newUniqueCoverageClaim": 8,
+        "initialSemanticReadSha256": 8,
+        "finishSha256": 8,
+        "finishMatchesInitial": 8
+      },
+      "coverageValues": {
+        "full": 2,
+        "selected": 6
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round59/evidence/root-subagent-continuation/source-manifest.json",
+      "keys": [
+        "files",
+        "navigationOnly",
+        "historicalReportReads",
+        "instructionCarryForward",
+        "sourceSemanticReads",
+        "productExecution",
+        "history",
+        "scope"
+      ],
+      "primaryRows": 7,
+      "rowKeys": {
+        "path": 7,
+        "bytes": 7,
+        "lines": 7,
+        "sha256": 7,
+        "coverage": 7,
+        "selectedLineRanges": 7,
+        "bodyDisplayedLineRanges": 7,
+        "semanticLines": 7,
+        "bodyDisplayedLines": 7,
+        "beforeBodyOrLineNavigation": 7,
+        "scope": 7,
+        "overlap": 7
+      },
+      "coverageValues": {
+        "full": 1,
+        "selected": 6
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round59/evidence/session-fork/source-manifest.json",
+      "keys": [
+        "schema",
+        "atUTC",
+        "rootReportedBaseline",
+        "gitCertified",
+        "files",
+        "counts",
+        "rangeConvention",
+        "historyGate"
+      ],
+      "primaryRows": 11,
+      "rowKeys": {
+        "path": 11,
+        "bytes": 11,
+        "sha256": 11,
+        "lineCount": 11,
+        "kind": 11,
+        "coverage": 11,
+        "selectedLineRanges": 11,
+        "selectedLineCount": 11,
+        "bodyDisplayedLineRanges": 11,
+        "bodyDisplayedLineCount": 11,
+        "additionalNavigationSnippetLines": 11,
+        "displayedLineRanges": 11,
+        "displayedLineCount": 11,
+        "initialSha256": 9,
+        "initialPinUTC": 11,
+        "initialPinTiming": 9,
+        "originalPinRow": 11,
+        "scope": 9
+      },
+      "coverageValues": {
+        "targeted-static-selected; not-new-full": 5,
+        "selected-existing-test-declarations; execution0": 2,
+        "navigation-only;semantic0;body0": 2,
+        "hash-only-this-packet; sameSHA prior full instructions reused": 2
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round59/evidence/subagent-continuation-review/source-manifest.json",
+      "keys": [
+        "root",
+        "rootReportedHead",
+        "GitVerified",
+        "reviewType",
+        "files",
+        "hashOnlyFiles",
+        "metadataInputs",
+        "historicalMetadata",
+        "oldParserFullGate",
+        "historyScope",
+        "totals",
+        "executions",
+        "endingAt"
+      ],
+      "primaryRows": 7,
+      "rowKeys": {
+        "path": 7,
+        "bytes": 7,
+        "lines": 7,
+        "sha256": 7,
+        "pinAt": 7,
+        "coverage": 7,
+        "pinArtifact": 7,
+        "sourceKind": 7,
+        "selectedLineRanges": 7,
+        "semanticLineCount": 7,
+        "bodyDisplayedLineRanges": 7,
+        "bodyDisplayedLineCount": 7,
+        "displayArtifacts": 7,
+        "scope": 7,
+        "newUniqueCoverageClaim": 7,
+        "endingSha256": 7,
+        "endingUnchanged": 7
+      },
+      "coverageValues": {
+        "full": 1,
+        "selected": 6
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round59/evidence/lsp-root/source-manifest.json",
+      "keys": [
+        "root",
+        "rootReportedHead",
+        "branchReported",
+        "GitVerified",
+        "files",
+        "hashOnlyFiles",
+        "filenameOnlyReferences",
+        "historyReferences",
+        "sharedHistory",
+        "totals",
+        "executions",
+        "endingAt"
+      ],
+      "primaryRows": 8,
+      "rowKeys": {
+        "path": 8,
+        "bytes": 8,
+        "lines": 8,
+        "sha256": 8,
+        "pinAt": 8,
+        "coverage": 8,
+        "pinArtifact": 8,
+        "sourceKind": 8,
+        "selectedLineRanges": 8,
+        "semanticLineCount": 8,
+        "displayedLineRanges": 8,
+        "displayedLineCount": 8,
+        "displayArtifact": 8,
+        "scope": 8,
+        "endingSha256": 8,
+        "endingUnchanged": 8,
+        "newUniqueCoverageClaim": 8
+      },
+      "coverageValues": {
+        "full": 4,
+        "selected": 4
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round60/source-manifest.json",
+      "keys": [
+        "baseline",
+        "mainHead",
+        "files",
+        "workerSourceChecks",
+        "hashOnlyChecks",
+        "incidentalChecks",
+        "changedFromFrozenPaths",
+        "note"
+      ],
+      "primaryRows": 39,
+      "rowKeys": {
+        "path": 39,
+        "bytes": 39,
+        "sha256": 39,
+        "currentBytes": 39,
+        "currentSha256": 39,
+        "mainBytes": 39,
+        "mainSha256": 39,
+        "currentWorkingTreeMatchesFrozenBlob": 39,
+        "mainMatchesFrozenBlob": 39
+      },
+      "coverageValues": {
+        "NO_SCOPE": 39
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round60/evidence/build-meta/source-manifest.json",
+      "keys": [
+        "atUTC",
+        "rootReportedBaselineOnly",
+        "role",
+        "files",
+        "instructionHashOnlyFiles",
+        "instructions",
+        "totals",
+        "limits"
+      ],
+      "primaryRows": 6,
+      "rowKeys": {
+        "path": 6,
+        "bytes": 6,
+        "lines": 6,
+        "sha256": 6,
+        "beforeBodyOrLineNavigation": 6,
+        "coverage": 6,
+        "selectedLineRanges": 6,
+        "semanticLines": 6,
+        "displayedLineRanges": 3,
+        "uniqueDisplayedLines": 3,
+        "purpose": 6,
+        "sameShaOldFull": 3,
+        "newUniqueCoverageClaim": 6,
+        "finishSha256": 6,
+        "finishMatchesInitial": 6,
+        "selectedJsonPointers": 3
+      },
+      "coverageValues": {
+        "full": 3,
+        "selected-json-values": 3
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round60/evidence/copy-assets/source-manifest.json",
+      "keys": [
+        "root",
+        "rootReportedHead",
+        "branchReported",
+        "GitVerified",
+        "files",
+        "metadataFiles",
+        "hashOnlyFiles",
+        "filenameOnlySourceInputs",
+        "historicalMetadata",
+        "history",
+        "totals",
+        "executions"
+      ],
+      "primaryRows": 5,
+      "rowKeys": {
+        "path": 5,
+        "bytes": 5,
+        "lines": 5,
+        "sha256": 5,
+        "pinAt": 5,
+        "coverage": 5,
+        "pinArtifact": 5,
+        "sourceKind": 5,
+        "selectedLineRanges": 5,
+        "semanticLineCount": 5,
+        "bodyDisplayedLineRanges": 5,
+        "bodyDisplayedLineCount": 5,
+        "displayArtifact": 5,
+        "scope": 5,
+        "newUniqueCoverageClaim": 5,
+        "endingSha256": 5,
+        "endingUnchanged": 5
+      },
+      "coverageValues": {
+        "full": 1,
+        "selected": 4
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round60/evidence/root-release-audit-config/source-manifest.json",
+      "keys": [
+        "files",
+        "hashOnlyFiles",
+        "historicalReportReads",
+        "scope",
+        "executions",
+        "newUniqueCoverageClaim"
+      ],
+      "primaryRows": 6,
+      "rowKeys": {
+        "path": 6,
+        "bytes": 6,
+        "lines": 6,
+        "sha256": 6,
+        "coverage": 6,
+        "selectedLineRanges": 6,
+        "bodyDisplayedLineRanges": 3,
+        "semanticLines": 6,
+        "displayedLines": 3,
+        "beforeBodyOrLineNavigation": 6,
+        "scope": 6,
+        "overlap": 3,
+        "jsonPointers": 3
+      },
+      "coverageValues": {
+        "full": 1,
+        "selected": 2,
+        "selected-metadata": 3
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round60/evidence/release-versions/source-manifest.json",
+      "keys": [
+        "atUTC",
+        "rootReportedBaseline",
+        "gitCertified",
+        "purpose",
+        "files",
+        "summary"
+      ],
+      "primaryRows": 26,
+      "rowKeys": {
+        "path": 26,
+        "bytes": 26,
+        "lineCount": 26,
+        "sha256": 26,
+        "pinnedAtUTC": 26,
+        "timing": 26,
+        "category": 26,
+        "bodyDisplayedLineRanges": 26,
+        "bodyDisplayedLineCount": 26,
+        "additionalNavigationLineRanges": 26,
+        "selectedLineRanges": 26,
+        "semanticLineCount": 26,
+        "coverage": 26,
+        "semanticFull": 26,
+        "displayedLineRanges": 26,
+        "displayedLineCount": 26,
+        "oldCoverageLimitation": 26,
+        "instructionReuse": 2,
+        "semanticJsonPointers": 15,
+        "truncatedNavigation": 1,
+        "displayedLineCountLimitation": 15,
+        "displayedJsonPointers": 14,
+        "projectionDisplayNote": 14
+      },
+      "coverageValues": {
+        "hash-only": 2,
+        "full": 1,
+        "selected": 23
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round60/evidence/before-concurrent-refresh/source-manifest.json",
+      "keys": [
+        "baseline",
+        "mainHead",
+        "files",
+        "workerSourceChecks",
+        "hashOnlyChecks",
+        "incidentalChecks",
+        "changedFromFrozenPaths",
+        "note"
+      ],
+      "primaryRows": 39,
+      "rowKeys": {
+        "path": 39,
+        "bytes": 39,
+        "sha256": 39,
+        "currentBytes": 39,
+        "currentSha256": 39,
+        "mainBytes": 39,
+        "mainSha256": 39,
+        "currentWorkingTreeMatchesFrozenBlob": 39,
+        "mainMatchesFrozenBlob": 39
+      },
+      "coverageValues": {
+        "NO_SCOPE": 39
+      }
+    }
+  ],
+  "productFiles": []
+}

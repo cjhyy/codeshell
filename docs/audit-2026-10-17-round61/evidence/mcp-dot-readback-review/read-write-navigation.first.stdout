@@ -1,0 +1,21 @@
+186:export const DANGEROUS_PROJECT_FIELDS = [
+231:     * ({@link DANGEROUS_PROJECT_FIELDS}) are stripped before merge, so a cloned
+335:    // DANGEROUS_PROJECT_FIELDS and the `projectTrusted` ctor arg.
+340:        for (const field of DANGEROUS_PROJECT_FIELDS) {
+380:            this.atomicWriteJson(userPath, sanitized);
+426:      // migrated file — matches the normal save path (atomicWriteJson). The file
+431:        this.atomicWriteJson(path, sanitized);
+542:    // read (readJsonObject does not sanitize) so behaviour is unchanged apart
+558:      this.atomicWriteJson(path, current);
+575:    // Don't resurrect a deleted project root: atomicWriteJson's recursive mkdir
+672:    // "inherited" but the key still applies). readJsonObject resolves the sibling
+733:    const raw = options.strict ? this.readJsonObjectForMutation(path) : this.readJsonObject(path);
+738:      for (const field of DANGEROUS_PROJECT_FIELDS) delete raw[field];
+793:  private readJsonObject(path: string): Record<string, unknown> {
+802:   * Same resolution as readJsonObject (JSON wins, sibling YAML is folded in),
+807:  private readJsonObjectForMutation(path: string): Record<string, unknown> {
+834:  private atomicWriteJson(path: string, data: Record<string, unknown>): void {
+885:      const current = this.readJsonObjectForMutation(path);
+887:      this.atomicWriteJson(path, current);
+991:function parseConfigContent(path: string, content: string): Record<string, unknown> | null {
+1017:function readConfigFileForMutation(path: string): Record<string, unknown> | undefined {

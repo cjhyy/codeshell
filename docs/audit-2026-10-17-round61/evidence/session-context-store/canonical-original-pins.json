@@ -1,0 +1,16 @@
+[
+  {
+    "path": "docs/audit-2026-10-17/root.md",
+    "bytes": 18621,
+    "sha256": "dc064bda5b9669daa90cd0b1342c6e9d8b1e51b7571b70bb0e5bb9894a72d074",
+    "pinnedAtUTC": "2026-10-17T20:10:12.782217+00:00",
+    "timing": "before own original canonical metadata read"
+  },
+  {
+    "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+    "bytes": 841639,
+    "sha256": "12c53ba7d8a17673382d352a48a8ca3afc25a4913fcc96d63d22319e7a00b1eb",
+    "pinnedAtUTC": "2026-10-17T20:10:12.784420+00:00",
+    "timing": "before own original canonical metadata read"
+  }
+]

@@ -1,0 +1,25 @@
+{
+  "atUTC": "2026-10-17T20:08:57.908869+00:00",
+  "files": [
+    {
+      "path": "docs/audit-2026-10-17-round55/evidence/coverage-current/increment.first.py",
+      "bytes": 9276,
+      "sha256": "6d92eed1c2b6a95f4390d67d192b87f5d61b1545a11615b3f309e738bbd0e5dd",
+      "beforeMetadataParse": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round55/evidence/coverage-current/increment-summary.first.json",
+      "bytes": 1133,
+      "sha256": "7b3ab64dcc1d8c956f8a4e283e692d23bfa0c01d6e9f557324c1f41950396f90",
+      "beforeMetadataParse": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round55/evidence/coverage-current/metadata-diagnostics.json",
+      "bytes": 1675,
+      "sha256": "b875963bd49651974dff37060b6df5fb8f9199f2a8bf1b21af055bb0db307b8e",
+      "beforeMetadataParse": true
+    }
+  ],
+  "oldMethodsExecuted": false,
+  "oldFilesModified": false
+}

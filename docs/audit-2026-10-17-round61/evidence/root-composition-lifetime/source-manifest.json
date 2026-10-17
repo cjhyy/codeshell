@@ -1,0 +1,262 @@
+{
+  "files": [
+    {
+      "path": "packages/core/src/composition/lifetime.ts",
+      "bytes": 2868,
+      "lines": 95,
+      "sha256": "42b02192611a9d2290dc61d892c73823e71634031954dc6440e3ccf1b911518b",
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          95
+        ]
+      ],
+      "bodyDisplayedLineRanges": [
+        [
+          1,
+          95
+        ]
+      ],
+      "semanticLines": 95,
+      "bodyDisplayedLines": 95,
+      "beforeBodyOrLineNavigation": true,
+      "scope": "Ordinary scope ownership/activation result registration and direct Engine/runtime scheduling fields. Does not certify real hooks, MCP/native processes, permission, provider, cross-run concurrency or shutdown of arbitrary custom factories.",
+      "overlap": "Original R11 root rows selected; lifetime original hooks/files11 same-SHA full explicitly retained. No first/unread/new-unique coverage claim."
+    },
+    {
+      "path": "packages/core/src/composition/activation.ts",
+      "bytes": 4413,
+      "lines": 146,
+      "sha256": "fbb9f7fe70b413a8661ccc50f98ebbb557456a43101baf95753c634cba774374",
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          146
+        ]
+      ],
+      "bodyDisplayedLineRanges": [
+        [
+          1,
+          146
+        ]
+      ],
+      "semanticLines": 146,
+      "bodyDisplayedLines": 146,
+      "beforeBodyOrLineNavigation": true,
+      "scope": "Ordinary scope ownership/activation result registration and direct Engine/runtime scheduling fields. Does not certify real hooks, MCP/native processes, permission, provider, cross-run concurrency or shutdown of arbitrary custom factories.",
+      "overlap": "Original R11 root rows selected; lifetime original hooks/files11 same-SHA full explicitly retained. No first/unread/new-unique coverage claim."
+    },
+    {
+      "path": "packages/core/src/engine/engine.ts",
+      "bytes": 210666,
+      "lines": 5082,
+      "sha256": "cdbfc7a777e3e304b6d365988daf6a45ff24b7cd5b62f634e3b11908c701e2e0",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          647,
+          649
+        ],
+        [
+          818,
+          840
+        ],
+        [
+          844,
+          860
+        ],
+        [
+          863,
+          884
+        ],
+        [
+          1796,
+          1805
+        ],
+        [
+          4004,
+          4028
+        ]
+      ],
+      "bodyDisplayedLineRanges": [
+        [
+          640,
+          660
+        ],
+        [
+          800,
+          890
+        ],
+        [
+          1786,
+          1815
+        ],
+        [
+          1878,
+          1898
+        ],
+        [
+          4004,
+          4050
+        ]
+      ],
+      "semanticLines": 100,
+      "bodyDisplayedLines": 210,
+      "beforeBodyOrLineNavigation": true,
+      "scope": "Ordinary scope ownership/activation result registration and direct Engine/runtime scheduling fields. Does not certify real hooks, MCP/native processes, permission, provider, cross-run concurrency or shutdown of arbitrary custom factories.",
+      "overlap": "Original R11 root rows selected; lifetime original hooks/files11 same-SHA full explicitly retained. No first/unread/new-unique coverage claim."
+    },
+    {
+      "path": "packages/core/src/engine/runtime.ts",
+      "bytes": 6215,
+      "lines": 159,
+      "sha256": "9f04d688231ba7603e402f8b032ba94a24c82ec4705bdb59abc81460e1ad64ce",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          61,
+          64
+        ],
+        [
+          72,
+          78
+        ],
+        [
+          141,
+          158
+        ]
+      ],
+      "bodyDisplayedLineRanges": [
+        [
+          60,
+          84
+        ],
+        [
+          115,
+          159
+        ]
+      ],
+      "semanticLines": 29,
+      "bodyDisplayedLines": 70,
+      "beforeBodyOrLineNavigation": true,
+      "scope": "Ordinary scope ownership/activation result registration and direct Engine/runtime scheduling fields. Does not certify real hooks, MCP/native processes, permission, provider, cross-run concurrency or shutdown of arbitrary custom factories.",
+      "overlap": "Original R11 root rows selected; lifetime original hooks/files11 same-SHA full explicitly retained. No first/unread/new-unique coverage claim."
+    },
+    {
+      "path": "packages/core/src/composition/types.ts",
+      "bytes": 9117,
+      "lines": 221,
+      "sha256": "5fce8d8f3426f70762a8bee84c95f2982657cfd785d02c0d1d538f1d57f99e5e",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          44,
+          51
+        ],
+        [
+          62,
+          80
+        ]
+      ],
+      "bodyDisplayedLineRanges": [
+        [
+          42,
+          84
+        ]
+      ],
+      "semanticLines": 27,
+      "bodyDisplayedLines": 43,
+      "beforeBodyOrLineNavigation": true,
+      "scope": "Ordinary scope ownership/activation result registration and direct Engine/runtime scheduling fields. Does not certify real hooks, MCP/native processes, permission, provider, cross-run concurrency or shutdown of arbitrary custom factories.",
+      "overlap": "Original R11 root rows selected; lifetime original hooks/files11 same-SHA full explicitly retained. No first/unread/new-unique coverage claim."
+    }
+  ],
+  "hashOnlyFiles": [
+    {
+      "path": "packages/core/src/capability-control/overlay.ts",
+      "bytes": 7815,
+      "lines": 211,
+      "sha256": "75477176f70ab8d97f7669c0929dfdbcbc549f42121d46faa95766310e99e7c5",
+      "coverage": "hash-only",
+      "scope": "Shared path/SHA history target; semantic review delegated155/156."
+    },
+    {
+      "path": "packages/core/src/capability-control/service.ts",
+      "bytes": 7690,
+      "lines": 197,
+      "sha256": "22378bf6addc85ebdaf2aace6a85121545ecbb1481bddfc18ffc0d58545a7c4e",
+      "coverage": "hash-only",
+      "scope": "Shared path/SHA history target; semantic review delegated155/156."
+    },
+    {
+      "path": "packages/core/src/capability-control/project.ts",
+      "bytes": 5930,
+      "lines": 172,
+      "sha256": "df94303b6212824eedf24e98859fb5d955ce8fa97a21b200e2e8a524c99f5c7b",
+      "coverage": "hash-only",
+      "scope": "Shared path/SHA history target; semantic review delegated155/156."
+    },
+    {
+      "path": "packages/coding/src/external-runtimes/shared/session-context-store.ts",
+      "bytes": 6343,
+      "lines": 153,
+      "sha256": "956a4699d1167beefc694dbf5cdf1884bd17caee0f7f3ce689f2a1d37a2e56b3",
+      "coverage": "hash-only",
+      "scope": "Shared path/SHA history target; semantic review delegated155/156."
+    },
+    {
+      "path": "AGENTS.md",
+      "bytes": 206,
+      "lines": 5,
+      "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "coverage": "hash-only-instruction-carry-forward",
+      "scope": "Prior actual read reused after same-SHA check, not product semantic reading."
+    },
+    {
+      "path": "CODESHELL.md",
+      "bytes": 17639,
+      "lines": 217,
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "coverage": "hash-only-instruction-carry-forward",
+      "scope": "Prior actual read reused after same-SHA check, not product semantic reading."
+    }
+  ],
+  "historicalReportReads": [
+    {
+      "path": "docs/audit-2026-10-17-round11/evidence/root-source-manifest.json",
+      "bytes": 6593,
+      "lines": 131,
+      "sha256": "2fad2c50ead1bcdda50c866118c1f310e960cc8c1e46741ec3e21699cfa341d1",
+      "coverage": "selected-metadata",
+      "jsonPointers": [
+        "/files/9",
+        "/files/10"
+      ],
+      "pinTiming": "Recorded with/after actual selected metadata read; not invented before-read pin."
+    },
+    {
+      "path": "docs/audit-2026-10-17-round11/evidence/hooks-source-manifest.json",
+      "bytes": 5637,
+      "lines": 137,
+      "sha256": "ed1601cf0ddf7256f5f677ae5a09d46b2ce5110e35ea26c9c929789646c09005",
+      "coverage": "selected-metadata",
+      "jsonPointers": [
+        "/files/11"
+      ],
+      "pinTiming": "Recorded with/after actual selected metadata read; not invented before-read pin."
+    },
+    {
+      "path": "docs/audit-2026-10-17-round11/composition.md",
+      "bytes": 3502,
+      "lines": 25,
+      "sha256": "2fd9582e591856e48ed323dff0da827a3c344e5a761160752bd5f838433ac82b",
+      "coverage": "selected-metadata",
+      "jsonPointers": [],
+      "pinTiming": "Recorded with/after actual selected metadata read; not invented before-read pin."
+    }
+  ],
+  "scope": "Finite ordinary lifetime ownership/data chain; full static leaf labels remain purpose-bound, no executed lifecycle mechanism.",
+  "productExecution": 0
+}

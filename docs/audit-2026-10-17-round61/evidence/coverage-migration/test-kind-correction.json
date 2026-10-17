@@ -1,0 +1,53 @@
+{
+  "atUTC": "2026-10-17T20:16:57.860720+00:00",
+  "firstObservedTool": "7b729b NEW FULL TEST DECL12 vs validation text11",
+  "cause": "test-infrastructure sourceKind broadly matched substring test; packages/core/test-setup.ts is infrastructure, not a test case declaration.",
+  "preservedOriginals": {
+    "accepted-claims.json": {
+      "preservedAs": "accepted-claims.before-test-kind-correction.json",
+      "bytes": 878687,
+      "sha256": "8c3095eab25d069b9a33745b11036207e102e6f48c11b8699196713eb2443853"
+    },
+    "new-full-provenance.json": {
+      "preservedAs": "new-full-provenance.before-test-kind-correction.json",
+      "bytes": 48687,
+      "sha256": "9d37a486cfae522a7683ea9b3716dded39847be72ca04e24ac6bd0ca8f7573c5"
+    },
+    "report.md": {
+      "preservedAs": "report.before-test-kind-correction.md",
+      "bytes": 5983,
+      "sha256": "70e7e084b86701dfb522892a40fa7d52d9ddf64cd6e14130a51a48da20c0dd18"
+    },
+    "source-manifest.json": {
+      "preservedAs": "source-manifest.before-test-kind-correction.json",
+      "bytes": 48322,
+      "sha256": "4ffcc97265704cc0a44fed1a4418adb88523aca2aacbf1c6d124f28b945d556c"
+    },
+    "migrate-coverage.py": {
+      "preservedAs": "migrate-coverage.first.py",
+      "bytes": 11299,
+      "sha256": "5e2816e9071891361cef7a6e9b1da93762998a5cab17ba1d1d4923cd628e8ac0"
+    },
+    "artifact-receipt.json": {
+      "preservedAs": "artifact-receipt.before-test-kind-correction.json",
+      "bytes": 5398,
+      "sha256": "2cdcb31ebc73162f725f21e9f7f503d55ac02269ca31aeeb31b8c559376a76f1"
+    }
+  },
+  "correctedClaimIds": [
+    "claim-0373"
+  ],
+  "newFullTestDeclarations": 11,
+  "newFullTestInfrastructure": 1,
+  "coverageCountsUnchanged": {
+    "full": 355,
+    "selected": 354,
+    "unknown": 3934
+  },
+  "classificationRangesUnchanged": true,
+  "oldMethodsExecuted": false,
+  "metadataAdapterReexecuted": false,
+  "productSourceSemanticRead": 0,
+  "productExecution": 0,
+  "git": 0
+}

@@ -1,0 +1,8154 @@
+{
+  "statusTransitions": [
+    {
+      "path": "packages/chat/src/adapter-factory.ts",
+      "sha256": "009cb694059f29336460ca1d996ba2186171ba737864d37fdbaf0f3c2e86ebf7",
+      "from": "unknown",
+      "to": "selected",
+      "claimIds": [
+        "claim-0024"
+      ],
+      "representativeClaimId": "claim-0024",
+      "selectedRangeUnion": [
+        [
+          14,
+          31
+        ],
+        [
+          43,
+          59
+        ],
+        [
+          66,
+          114
+        ],
+        [
+          121,
+          130
+        ],
+        [
+          134,
+          189
+        ],
+        [
+          210,
+          274
+        ]
+      ],
+      "fullRequiresOneExplicitFullClaim": false
+    },
+    {
+      "path": "packages/chat/src/bound-session-chat.test.ts",
+      "sha256": "51fb1b92c9506431403e0883582a8c6e1be940a26deb3b9aeb567a774cd4e081",
+      "from": "unknown",
+      "to": "selected",
+      "claimIds": [
+        "claim-0444"
+      ],
+      "representativeClaimId": "claim-0444",
+      "selectedRangeUnion": [
+        [
+          68,
+          94
+        ]
+      ],
+      "fullRequiresOneExplicitFullClaim": false
+    },
+    {
+      "path": "packages/chat/src/bound-session-chat.ts",
+      "sha256": "3cfca7ed0caa2509102548f1e47a581e4d1e53423f5682c1f33f374a8ca0f4c7",
+      "from": "unknown",
+      "to": "full",
+      "claimIds": [
+        "claim-0422",
+        "claim-0435"
+      ],
+      "representativeClaimId": "claim-0435",
+      "selectedRangeUnion": [
+        [
+          1,
+          99
+        ]
+      ],
+      "fullRequiresOneExplicitFullClaim": true
+    },
+    {
+      "path": "packages/chat/src/cli.ts",
+      "sha256": "4a4c052a8433836583cd9300669f4c400f394d780645c75156c38b78d6e1d9ed",
+      "from": "unknown",
+      "to": "selected",
+      "claimIds": [
+        "claim-0026",
+        "claim-0423",
+        "claim-0437"
+      ],
+      "representativeClaimId": "claim-0026",
+      "selectedRangeUnion": [
+        [
+          1,
+          1
+        ],
+        [
+          66,
+          145
+        ],
+        [
+          317,
+          320
+        ]
+      ],
+      "fullRequiresOneExplicitFullClaim": false
+    },
+    {
+      "path": "packages/chat/src/config.ts",
+      "sha256": "f002a45bda4bffa7c222f039487ddfa74e4d0c22230075a97f7036acaffb01e7",
+      "from": "unknown",
+      "to": "selected",
+      "claimIds": [
+        "claim-0025",
+        "claim-0428"
+      ],
+      "representativeClaimId": "claim-0025",
+      "selectedRangeUnion": [
+        [
+          20,
+          36
+        ],
+        [
+          108,
+          120
+        ],
+        [
+          136,
+          139
+        ],
+        [
+          340,
+          352
+        ]
+      ],
+      "fullRequiresOneExplicitFullClaim": false
+    },
+    {
+      "path": "packages/chat/src/delivery-queue.test.ts",
+      "sha256": "14338213d386fd4ea2ff12c6202f6c1d2bbe4b7f8694f2182830bfe2e91228ff",
+      "from": "unknown",
+      "to": "selected",
+      "claimIds": [
+        "claim-0443"
+      ],
+      "representativeClaimId": "claim-0443",
+      "selectedRangeUnion": [
+        [
+          34,
+          104
+        ]
+      ],
+      "fullRequiresOneExplicitFullClaim": false
+    },
+    {
+      "path": "packages/chat/src/delivery-queue.ts",
+      "sha256": "e1f4f384af3dee66030bed6cd9a51bc7c3585e4aa320501d3e336686e0321393",
+      "from": "unknown",
+      "to": "selected",
+      "claimIds": [
+        "claim-0421",
+        "claim-0434"
+      ],
+      "representativeClaimId": "claim-0421",
+      "selectedRangeUnion": [
+        [
+          7,
+          57
+        ],
+        [
+          91,
+          315
+        ],
+        [
+          318,
+          338
+        ],
+        [
+          482,
+          603
+        ],
+        [
+          605,
+          620
+        ],
+        [
+          700,
+          721
+        ]
+      ],
+      "fullRequiresOneExplicitFullClaim": false
+    },
+    {
+      "path": "packages/chat/src/desktop-control-client.ts",
+      "sha256": "8647ab741d9b91ee5e043d8d8a02224598b42273f585e02bb5aef81ddc3541d1",
+      "from": "unknown",
+      "to": "selected",
+      "claimIds": [
+        "claim-0426",
+        "claim-0441"
+      ],
+      "representativeClaimId": "claim-0426",
+      "selectedRangeUnion": [
+        [
+          73,
+          82
+        ],
+        [
+          101,
+          131
+        ],
+        [
+          139,
+          148
+        ],
+        [
+          151,
+          190
+        ],
+        [
+          208,
+          218
+        ],
+        [
+          258,
+          263
+        ],
+        [
+          275,
+          321
+        ]
+      ],
+      "fullRequiresOneExplicitFullClaim": false
+    },
+    {
+      "path": "packages/chat/src/instance-lock.ts",
+      "sha256": "91f03a718482656bf0f0e82087865ec70dffcd8e619d330ff31fcded54bca742",
+      "from": "unknown",
+      "to": "selected",
+      "claimIds": [
+        "claim-0427",
+        "claim-0442"
+      ],
+      "representativeClaimId": "claim-0427",
+      "selectedRangeUnion": [
+        [
+          19,
+          31
+        ],
+        [
+          47,
+          110
+        ],
+        [
+          156,
+          159
+        ]
+      ],
+      "fullRequiresOneExplicitFullClaim": false
+    },
+    {
+      "path": "packages/chat/src/media.ts",
+      "sha256": "9cd43efac474d03615408fd8ab094c3136ef1972d399b72fc30c362487dabe14",
+      "from": "unknown",
+      "to": "selected",
+      "claimIds": [
+        "claim-0277"
+      ],
+      "representativeClaimId": "claim-0277",
+      "selectedRangeUnion": [
+        [
+          198,
+          222
+        ],
+        [
+          250,
+          272
+        ]
+      ],
+      "fullRequiresOneExplicitFullClaim": false
+    },
+    {
+      "path": "packages/chat/src/platform-media.test.ts",
+      "sha256": "b7da4a3fa5a122b61cb05eb501eee4f50da6fab0d8b799dab53062305c6eba61",
+      "from": "unknown",
+      "to": "selected",
+      "claimIds": [
+        "claim-0283"
+      ],
+      "representativeClaimId": "claim-0283",
+      "selectedRangeUnion": [
+        [
+          10,
+          20
+        ],
+        [
+          23,
+          49
+        ]
+      ],
+      "fullRequiresOneExplicitFullClaim": false
+    },
+    {
+      "path": "packages/chat/src/slack.ts",
+      "sha256": "64e9a881a428bc82edec00ff7dfd0811024b4846802fa802174dac2cb75231d8",
+      "from": "unknown",
+      "to": "selected",
+      "claimIds": [
+        "claim-0027"
+      ],
+      "representativeClaimId": "claim-0027",
+      "selectedRangeUnion": [
+        [
+          8,
+          14
+        ],
+        [
+          22,
+          22
+        ]
+      ],
+      "fullRequiresOneExplicitFullClaim": false
+    },
+    {
+      "path": "packages/chat/src/telegram.test.ts",
+      "sha256": "5da19870067e2e5c7db973f248e86e6713d1903c38b014625b26408b3b156145",
+      "from": "unknown",
+      "to": "selected",
+      "claimIds": [
+        "claim-0282"
+      ],
+      "representativeClaimId": "claim-0282",
+      "selectedRangeUnion": [
+        [
+          62,
+          79
+        ]
+      ],
+      "fullRequiresOneExplicitFullClaim": false
+    },
+    {
+      "path": "packages/chat/src/telegram.ts",
+      "sha256": "093491c212ceb29855f1588cc9b436315a7f05fe39c323614ad803eeef1cbc9e",
+      "from": "unknown",
+      "to": "selected",
+      "claimIds": [
+        "claim-0279",
+        "claim-0429",
+        "claim-0438"
+      ],
+      "representativeClaimId": "claim-0279",
+      "selectedRangeUnion": [
+        [
+          91,
+          133
+        ],
+        [
+          139,
+          146
+        ],
+        [
+          150,
+          200
+        ],
+        [
+          212,
+          222
+        ],
+        [
+          267,
+          280
+        ]
+      ],
+      "fullRequiresOneExplicitFullClaim": false
+    },
+    {
+      "path": "packages/coding/src/external-runtimes/codex/model-discovery.test.ts",
+      "sha256": "9089b7bf758ae3d7085c985ba971a981548963b0e5b527a7b60cac33744d6115",
+      "from": "unknown",
+      "to": "selected",
+      "claimIds": [
+        "claim-0254"
+      ],
+      "representativeClaimId": "claim-0254",
+      "selectedRangeUnion": [
+        [
+          66,
+          91
+        ],
+        [
+          106,
+          110
+        ]
+      ],
+      "fullRequiresOneExplicitFullClaim": false
+    },
+    {
+      "path": "packages/coding/src/external-runtimes/codex/model-discovery.ts",
+      "sha256": "08691432cb3fec0592aeb4a9e87f872df64459909948898c47a0ec70c44fa3bc",
+      "from": "unknown",
+      "to": "selected",
+      "claimIds": [
+        "claim-0247"
+      ],
+      "representativeClaimId": "claim-0247",
+      "selectedRangeUnion": [
+        [
+          4,
+          8
+        ],
+        [
+          10,
+          24
+        ],
+        [
+          56,
+          62
+        ],
+        [
+          65,
+          95
+        ]
+      ],
+      "fullRequiresOneExplicitFullClaim": false
+    },
+    {
+      "path": "packages/coding/src/index.capability.ts",
+      "sha256": "74cd003641b923e5f2fe0f69f015fed12fb4c7122188508126d501e92d8bf6c8",
+      "from": "unknown",
+      "to": "selected",
+      "claimIds": [
+        "claim-0479",
+        "claim-0486"
+      ],
+      "representativeClaimId": "claim-0479",
+      "selectedRangeUnion": [
+        [
+          190,
+          193
+        ],
+        [
+          198,
+          199
+        ],
+        [
+          320,
+          322
+        ]
+      ],
+      "fullRequiresOneExplicitFullClaim": false
+    },
+    {
+      "path": "packages/coding/src/lsp/client.ts",
+      "sha256": "7884e6ab61bbc5c82dbf7872941d602a3a4d2170b634932dcdb83b4dbe5aa31e",
+      "from": "unknown",
+      "to": "selected",
+      "claimIds": [
+        "claim-0478"
+      ],
+      "representativeClaimId": "claim-0478",
+      "selectedRangeUnion": [
+        [
+          40,
+          46
+        ],
+        [
+          68,
+          86
+        ],
+        [
+          130,
+          148
+        ],
+        [
+          150,
+          156
+        ]
+      ],
+      "fullRequiresOneExplicitFullClaim": false
+    },
+    {
+      "path": "packages/coding/src/lsp/manager-lifecycle.test.ts",
+      "sha256": "149d77a060427e6aac3eba6250b45540220d4c480a5f0b74dc93bd85b92073b4",
+      "from": "unknown",
+      "to": "full",
+      "claimIds": [
+        "claim-0481"
+      ],
+      "representativeClaimId": "claim-0481",
+      "selectedRangeUnion": [
+        [
+          1,
+          134
+        ]
+      ],
+      "fullRequiresOneExplicitFullClaim": true
+    },
+    {
+      "path": "packages/coding/src/lsp/manager.ts",
+      "sha256": "ff1a25879fd6a2ce725a9e82f501af543e2afa429ea99020be6513ef0c4e0b7d",
+      "from": "unknown",
+      "to": "selected",
+      "claimIds": [
+        "claim-0476"
+      ],
+      "representativeClaimId": "claim-0476",
+      "selectedRangeUnion": [
+        [
+          1,
+          128
+        ],
+        [
+          176,
+          279
+        ]
+      ],
+      "fullRequiresOneExplicitFullClaim": false
+    },
+    {
+      "path": "packages/coding/src/lsp/root-path.test.ts",
+      "sha256": "fcc79e191c841cf4466b17b97db2d7962a0424ca550f8b25c795fef2cf611991",
+      "from": "unknown",
+      "to": "full",
+      "claimIds": [
+        "claim-0480"
+      ],
+      "representativeClaimId": "claim-0480",
+      "selectedRangeUnion": [
+        [
+          1,
+          33
+        ]
+      ],
+      "fullRequiresOneExplicitFullClaim": true
+    },
+    {
+      "path": "packages/coding/src/lsp/root-path.ts",
+      "sha256": "11868a6f1b14f0b2a8b642ea741994784834ea9931cfd8b99910861aca415c3c",
+      "from": "unknown",
+      "to": "full",
+      "claimIds": [
+        "claim-0474"
+      ],
+      "representativeClaimId": "claim-0474",
+      "selectedRangeUnion": [
+        [
+          1,
+          13
+        ]
+      ],
+      "fullRequiresOneExplicitFullClaim": true
+    },
+    {
+      "path": "packages/coding/src/lsp/servers.ts",
+      "sha256": "91f5c21df41ebc75bbbf19d21ed7f4d7971c82d850c485b9288b1c688d8ea18c",
+      "from": "unknown",
+      "to": "full",
+      "claimIds": [
+        "claim-0475"
+      ],
+      "representativeClaimId": "claim-0475",
+      "selectedRangeUnion": [
+        [
+          1,
+          71
+        ]
+      ],
+      "fullRequiresOneExplicitFullClaim": true
+    },
+    {
+      "path": "packages/coding/src/tools/lsp.ts",
+      "sha256": "c2c3678fcd30d46761e151c716bb905944f3f44daa2312ab9636b5c657233eab",
+      "from": "unknown",
+      "to": "selected",
+      "claimIds": [
+        "claim-0477"
+      ],
+      "representativeClaimId": "claim-0477",
+      "selectedRangeUnion": [
+        [
+          5,
+          9
+        ],
+        [
+          34,
+          110
+        ]
+      ],
+      "fullRequiresOneExplicitFullClaim": false
+    },
+    {
+      "path": "packages/core/src/composition/compiler.test.ts",
+      "sha256": "af828ab85b5a7cd50102ad1021b2911f854148036523c35f10e3b4b59d067861",
+      "from": "unknown",
+      "to": "selected",
+      "claimIds": [
+        "claim-0096"
+      ],
+      "representativeClaimId": "claim-0096",
+      "selectedRangeUnion": [
+        [
+          135,
+          156
+        ]
+      ],
+      "fullRequiresOneExplicitFullClaim": false
+    },
+    {
+      "path": "packages/core/src/composition/compiler.ts",
+      "sha256": "4f122db1bc99dca479d77a5150f3e1e5feb429357da4182f8d81e9111c4f6993",
+      "from": "unknown",
+      "to": "selected",
+      "claimIds": [
+        "claim-0094"
+      ],
+      "representativeClaimId": "claim-0094",
+      "selectedRangeUnion": [
+        [
+          178,
+          245
+        ],
+        [
+          275,
+          278
+        ]
+      ],
+      "fullRequiresOneExplicitFullClaim": false
+    },
+    {
+      "path": "packages/core/src/composition/resolve-preset.ts",
+      "sha256": "042f6fe8f2b7b134c6287c96e9fe661a05ee92780435a757a7e816d1a2ec3d57",
+      "from": "unknown",
+      "to": "selected",
+      "claimIds": [
+        "claim-0092"
+      ],
+      "representativeClaimId": "claim-0092",
+      "selectedRangeUnion": [
+        [
+          13,
+          50
+        ]
+      ],
+      "fullRequiresOneExplicitFullClaim": false
+    },
+    {
+      "path": "packages/core/src/composition/types.ts",
+      "sha256": "5fce8d8f3426f70762a8bee84c95f2982657cfd785d02c0d1d538f1d57f99e5e",
+      "from": "unknown",
+      "to": "selected",
+      "claimIds": [
+        "claim-0093"
+      ],
+      "representativeClaimId": "claim-0093",
+      "selectedRangeUnion": [
+        [
+          62,
+          67
+        ],
+        [
+          107,
+          115
+        ],
+        [
+          125,
+          134
+        ]
+      ],
+      "fullRequiresOneExplicitFullClaim": false
+    },
+    {
+      "path": "packages/core/src/context/image-history-window.test.ts",
+      "sha256": "606acebf485d9b3117143b532fe5061ce90fe25ea07961d06b12de874796385a",
+      "from": "unknown",
+      "to": "full",
+      "claimIds": [
+        "claim-0287"
+      ],
+      "representativeClaimId": "claim-0287",
+      "selectedRangeUnion": [
+        [
+          1,
+          99
+        ]
+      ],
+      "fullRequiresOneExplicitFullClaim": true
+    },
+    {
+      "path": "packages/core/src/context/tool-output-budget.test.ts",
+      "sha256": "3ca5e4ce83fbcc8e4a2d86b17ab46d16b09d36505abed8eb89228c4f95a44b5c",
+      "from": "unknown",
+      "to": "selected",
+      "claimIds": [
+        "claim-0305"
+      ],
+      "representativeClaimId": "claim-0305",
+      "selectedRangeUnion": [
+        [
+          48,
+          91
+        ],
+        [
+          106,
+          118
+        ]
+      ],
+      "fullRequiresOneExplicitFullClaim": false
+    },
+    {
+      "path": "packages/core/src/cost-ledger/context.ts",
+      "sha256": "91ab442184ca82d512c2722c64205c27470db2a6c29bde1fe2883f24d96c99ee",
+      "from": "unknown",
+      "to": "selected",
+      "claimIds": [
+        "claim-0029",
+        "claim-0051",
+        "claim-0258"
+      ],
+      "representativeClaimId": "claim-0029",
+      "selectedRangeUnion": [
+        [
+          1,
+          1
+        ],
+        [
+          3,
+          3
+        ],
+        [
+          5,
+          133
+        ],
+        [
+          137,
+          167
+        ]
+      ],
+      "fullRequiresOneExplicitFullClaim": false
+    },
+    {
+      "path": "packages/core/src/cost-ledger/ledger.test.ts",
+      "sha256": "f5429b04ef5d4951ae5c57f0956d09e84c44e68100d9c216445703ec92751abe",
+      "from": "unknown",
+      "to": "selected",
+      "claimIds": [
+        "claim-0056",
+        "claim-0069",
+        "claim-0265"
+      ],
+      "representativeClaimId": "claim-0056",
+      "selectedRangeUnion": [
+        [
+          94,
+          105
+        ],
+        [
+          257,
+          270
+        ]
+      ],
+      "fullRequiresOneExplicitFullClaim": false
+    },
+    {
+      "path": "packages/core/src/cost-ledger/pricing.ts",
+      "sha256": "7584eb97d07fda14171917d093d16201521ba77ce7ce61cab0d08390da7e3640",
+      "from": "unknown",
+      "to": "full",
+      "claimIds": [
+        "claim-0255"
+      ],
+      "representativeClaimId": "claim-0255",
+      "selectedRangeUnion": [
+        [
+          1,
+          48
+        ]
+      ],
+      "fullRequiresOneExplicitFullClaim": true
+    },
+    {
+      "path": "packages/core/src/cost-ledger/store.ts",
+      "sha256": "1a3d88c4796d772cf5ad1244660d9b9b5abc9f71d83e8579a043aa37c2c91150",
+      "from": "unknown",
+      "to": "selected",
+      "claimIds": [
+        "claim-0032",
+        "claim-0068",
+        "claim-0261"
+      ],
+      "representativeClaimId": "claim-0032",
+      "selectedRangeUnion": [
+        [
+          15,
+          15
+        ],
+        [
+          52,
+          76
+        ],
+        [
+          99,
+          115
+        ],
+        [
+          214,
+          240
+        ],
+        [
+          248,
+          255
+        ],
+        [
+          259,
+          261
+        ],
+        [
+          265,
+          270
+        ],
+        [
+          352,
+          362
+        ],
+        [
+          424,
+          446
+        ]
+      ],
+      "fullRequiresOneExplicitFullClaim": false
+    },
+    {
+      "path": "packages/core/src/cost-ledger/summary.ts",
+      "sha256": "4ef61d2b0803899574adbaaa98e33f3fde2ae4da0250f452d6f72997936b07d6",
+      "from": "unknown",
+      "to": "full",
+      "claimIds": [
+        "claim-0066"
+      ],
+      "representativeClaimId": "claim-0066",
+      "selectedRangeUnion": [
+        [
+          1,
+          81
+        ]
+      ],
+      "fullRequiresOneExplicitFullClaim": true
+    },
+    {
+      "path": "packages/core/src/cost-ledger/types.ts",
+      "sha256": "e959b452be100019096dbb107fac861989764728690243d5c3b1402c1dc89989",
+      "from": "unknown",
+      "to": "selected",
+      "claimIds": [
+        "claim-0030",
+        "claim-0053",
+        "claim-0067",
+        "claim-0257"
+      ],
+      "representativeClaimId": "claim-0030",
+      "selectedRangeUnion": [
+        [
+          1,
+          86
+        ]
+      ],
+      "fullRequiresOneExplicitFullClaim": false
+    },
+    {
+      "path": "packages/core/src/cost-tracker.ts",
+      "sha256": "a2cf7a70e77c7dceb22a496f7919b1c25b04e83712d4a1fb62163758a3a7bfe5",
+      "from": "unknown",
+      "to": "selected",
+      "claimIds": [
+        "claim-0072",
+        "claim-0084",
+        "claim-0089"
+      ],
+      "representativeClaimId": "claim-0072",
+      "selectedRangeUnion": [
+        [
+          90,
+          97
+        ],
+        [
+          159,
+          162
+        ],
+        [
+          206,
+          221
+        ],
+        [
+          301,
+          307
+        ],
+        [
+          371,
+          371
+        ]
+      ],
+      "fullRequiresOneExplicitFullClaim": false
+    },
+    {
+      "path": "packages/core/src/data/model-metadata.ts",
+      "sha256": "34284ceaa39246c9589546860c2d6631124f80879d159e959f40a8402f70cd12",
+      "from": "unknown",
+      "to": "selected",
+      "claimIds": [
+        "claim-0259"
+      ],
+      "representativeClaimId": "claim-0259",
+      "selectedRangeUnion": [
+        [
+          26,
+          31
+        ],
+        [
+          78,
+          80
+        ],
+        [
+          102,
+          109
+        ]
+      ],
+      "fullRequiresOneExplicitFullClaim": false
+    },
+    {
+      "path": "packages/core/src/data/openrouter-models.ts",
+      "sha256": "535dcbb41dbb09bf365e1ec87b2b50f89ac3fe12e6caabf100b1927d419061d7",
+      "from": "unknown",
+      "to": "selected",
+      "claimIds": [
+        "claim-0260"
+      ],
+      "representativeClaimId": "claim-0260",
+      "selectedRangeUnion": [
+        [
+          24,
+          25
+        ],
+        [
+          30,
+          31
+        ],
+        [
+          84,
+          86
+        ]
+      ],
+      "fullRequiresOneExplicitFullClaim": false
+    },
+    {
+      "path": "packages/core/src/data/static-catalogs.ts",
+      "sha256": "1a68c79d7dc753c0bcbdc06110d6fb1891573aa2f8a2f905f61589d204b11394",
+      "from": "unknown",
+      "to": "selected",
+      "claimIds": [
+        "claim-0484"
+      ],
+      "representativeClaimId": "claim-0484",
+      "selectedRangeUnion": [
+        [
+          14,
+          17
+        ],
+        [
+          37,
+          42
+        ]
+      ],
+      "fullRequiresOneExplicitFullClaim": false
+    },
+    {
+      "path": "packages/core/src/engine/model-connections-pool.test.ts",
+      "sha256": "89f6432dbf5a32dccc996d4f5b7344d6e8dcc24b2ea4d6527482faa606e2fa87",
+      "from": "unknown",
+      "to": "selected",
+      "claimIds": [
+        "claim-0275"
+      ],
+      "representativeClaimId": "claim-0275",
+      "selectedRangeUnion": [
+        [
+          160,
+          229
+        ],
+        [
+          297,
+          321
+        ]
+      ],
+      "fullRequiresOneExplicitFullClaim": false
+    },
+    {
+      "path": "packages/core/src/engine/model-connections-pool.ts",
+      "sha256": "e5ee2a984a6d2f57eac155140873facca04d296d495af55f5f7f4edee52ce467",
+      "from": "unknown",
+      "to": "full",
+      "claimIds": [
+        "claim-0268"
+      ],
+      "representativeClaimId": "claim-0268",
+      "selectedRangeUnion": [
+        [
+          1,
+          80
+        ]
+      ],
+      "fullRequiresOneExplicitFullClaim": true
+    },
+    {
+      "path": "packages/core/src/engine/resolve-llm-config.test.ts",
+      "sha256": "892f5c259e4553d8508220bef233459f81f1d8106567c2e85bc5ee311de59f28",
+      "from": "unknown",
+      "to": "selected",
+      "claimIds": [
+        "claim-0276"
+      ],
+      "representativeClaimId": "claim-0276",
+      "selectedRangeUnion": [
+        [
+          50,
+          65
+        ]
+      ],
+      "fullRequiresOneExplicitFullClaim": false
+    },
+    {
+      "path": "packages/core/src/engine/resolve-llm-config.ts",
+      "sha256": "864b45aa4a8e41398d5191a974be7b9fb172137147109b1d2d0b05ae3335da8f",
+      "from": "unknown",
+      "to": "full",
+      "claimIds": [
+        "claim-0270"
+      ],
+      "representativeClaimId": "claim-0270",
+      "selectedRangeUnion": [
+        [
+          1,
+          74
+        ]
+      ],
+      "fullRequiresOneExplicitFullClaim": true
+    },
+    {
+      "path": "packages/core/src/engine/run-accounting.ts",
+      "sha256": "d31ce6cf6f14056ea549b94ab7146592d5ae223139cfa1585b026303fb13dac6",
+      "from": "unknown",
+      "to": "selected",
+      "claimIds": [
+        "claim-0333",
+        "claim-0446"
+      ],
+      "representativeClaimId": "claim-0333",
+      "selectedRangeUnion": [
+        [
+          21,
+          118
+        ],
+        [
+          145,
+          159
+        ]
+      ],
+      "fullRequiresOneExplicitFullClaim": false
+    },
+    {
+      "path": "packages/core/src/engine/run-session-open.ts",
+      "sha256": "7520474ab6efb36ff9b93fd60c1d743c8b746ec7723e80e990f7e2f578007799",
+      "from": "unknown",
+      "to": "selected",
+      "claimIds": [
+        "claim-0327",
+        "claim-0352",
+        "claim-0459",
+        "claim-0472"
+      ],
+      "representativeClaimId": "claim-0327",
+      "selectedRangeUnion": [
+        [
+          61,
+          69
+        ],
+        [
+          98,
+          115
+        ],
+        [
+          140,
+          142
+        ],
+        [
+          175,
+          181
+        ],
+        [
+          195,
+          207
+        ],
+        [
+          211,
+          218
+        ]
+      ],
+      "fullRequiresOneExplicitFullClaim": false
+    },
+    {
+      "path": "packages/core/src/engine/run-state-persistence.test.ts",
+      "sha256": "bbe61d2746ca76bd3b7b06eb74a96dcbcaec64b4f5ed562087a27a423d136e31",
+      "from": "unknown",
+      "to": "selected",
+      "claimIds": [
+        "claim-0451"
+      ],
+      "representativeClaimId": "claim-0451",
+      "selectedRangeUnion": [
+        [
+          27,
+          47
+        ],
+        [
+          54,
+          56
+        ],
+        [
+          61,
+          99
+        ]
+      ],
+      "fullRequiresOneExplicitFullClaim": false
+    },
+    {
+      "path": "packages/core/src/engine/run-state-persistence.ts",
+      "sha256": "1834ff88a225c3a685c9332f7d4ba92a458b7e711c2595624b01e36510badf4e",
+      "from": "unknown",
+      "to": "full",
+      "claimIds": [
+        "claim-0447"
+      ],
+      "representativeClaimId": "claim-0447",
+      "selectedRangeUnion": [
+        [
+          1,
+          110
+        ]
+      ],
+      "fullRequiresOneExplicitFullClaim": true
+    },
+    {
+      "path": "packages/core/src/engine/run-tooling.ts",
+      "sha256": "b8acbb44919eed707499c319c82534fbc6d7d0aff7aaf4ad9ab7980d7bf0da08",
+      "from": "unknown",
+      "to": "selected",
+      "claimIds": [
+        "claim-0041"
+      ],
+      "representativeClaimId": "claim-0041",
+      "selectedRangeUnion": [
+        [
+          173,
+          185
+        ]
+      ],
+      "fullRequiresOneExplicitFullClaim": false
+    },
+    {
+      "path": "packages/core/src/engine/runtime.ts",
+      "sha256": "9f04d688231ba7603e402f8b032ba94a24c82ec4705bdb59abc81460e1ad64ce",
+      "from": "unknown",
+      "to": "selected",
+      "claimIds": [
+        "claim-0081",
+        "claim-0088",
+        "claim-0272"
+      ],
+      "representativeClaimId": "claim-0081",
+      "selectedRangeUnion": [
+        [
+          18,
+          26
+        ],
+        [
+          49,
+          60
+        ],
+        [
+          80,
+          101
+        ]
+      ],
+      "fullRequiresOneExplicitFullClaim": false
+    },
+    {
+      "path": "packages/core/src/index.ts",
+      "sha256": "daa0c3cdc4270d18e0d7dac5f17db52459a5406b8c7e67850565daf862735b04",
+      "from": "unknown",
+      "to": "selected",
+      "claimIds": [
+        "claim-0494"
+      ],
+      "representativeClaimId": "claim-0494",
+      "selectedRangeUnion": [
+        [
+          7,
+          7
+        ]
+      ],
+      "fullRequiresOneExplicitFullClaim": false
+    },
+    {
+      "path": "packages/core/src/links/link-action-tool.ts",
+      "sha256": "c23f5ecc303cdf37dc07f54a5f33f80612a6b6bde36fdaf37ad8e4ec7f07a2d2",
+      "from": "unknown",
+      "to": "selected",
+      "claimIds": [
+        "claim-0227",
+        "claim-0240"
+      ],
+      "representativeClaimId": "claim-0227",
+      "selectedRangeUnion": [
+        [
+          400,
+          400
+        ],
+        [
+          404,
+          416
+        ],
+        [
+          613,
+          615
+        ],
+        [
+          688,
+          688
+        ],
+        [
+          695,
+          695
+        ],
+        [
+          698,
+          699
+        ]
+      ],
+      "fullRequiresOneExplicitFullClaim": false
+    },
+    {
+      "path": "packages/core/src/links/remote-adapters.ts",
+      "sha256": "fa0efd76239cd3194dda45a840231818ed042d513cdd72dea907e5f5ccae4606",
+      "from": "unknown",
+      "to": "selected",
+      "claimIds": [
+        "claim-0228"
+      ],
+      "representativeClaimId": "claim-0228",
+      "selectedRangeUnion": [
+        [
+          221,
+          226
+        ],
+        [
+          237,
+          244
+        ],
+        [
+          265,
+          265
+        ],
+        [
+          271,
+          272
+        ],
+        [
+          294,
+          295
+        ],
+        [
+          394,
+          400
+        ],
+        [
+          411,
+          412
+        ],
+        [
+          417,
+          418
+        ],
+        [
+          443,
+          448
+        ],
+        [
+          457,
+          459
+        ]
+      ],
+      "fullRequiresOneExplicitFullClaim": false
+    },
+    {
+      "path": "packages/core/src/links/remote.ts",
+      "sha256": "4834bb4cc18d4c65b0db24b43369a7e3637fae697592bec0226c15ce69065cd0",
+      "from": "unknown",
+      "to": "selected",
+      "claimIds": [
+        "claim-0229"
+      ],
+      "representativeClaimId": "claim-0229",
+      "selectedRangeUnion": [
+        [
+          794,
+          794
+        ],
+        [
+          952,
+          952
+        ],
+        [
+          1008,
+          1013
+        ]
+      ],
+      "fullRequiresOneExplicitFullClaim": false
+    },
+    {
+      "path": "packages/core/src/llm/client-base.ts",
+      "sha256": "619599cd6755a8391704f3247cd8ae250d8d36899e7411fdb0b811e813417d33",
+      "from": "unknown",
+      "to": "selected",
+      "claimIds": [
+        "claim-0031",
+        "claim-0052",
+        "claim-0264"
+      ],
+      "representativeClaimId": "claim-0031",
+      "selectedRangeUnion": [
+        [
+          13,
+          13
+        ],
+        [
+          34,
+          35
+        ],
+        [
+          59,
+          64
+        ],
+        [
+          75,
+          83
+        ],
+        [
+          90,
+          149
+        ]
+      ],
+      "fullRequiresOneExplicitFullClaim": false
+    },
+    {
+      "path": "packages/core/src/llm/model-cache.ts",
+      "sha256": "cbe291bac5c1401864c263b860faacb7c6d1472de6fdb57c08a9f00b38488d02",
+      "from": "unknown",
+      "to": "selected",
+      "claimIds": [
+        "claim-0207"
+      ],
+      "representativeClaimId": "claim-0207",
+      "selectedRangeUnion": [
+        [
+          1,
+          7
+        ],
+        [
+          13,
+          23
+        ],
+        [
+          27,
+          28
+        ],
+        [
+          32,
+          38
+        ],
+        [
+          40,
+          44
+        ],
+        [
+          46,
+          46
+        ],
+        [
+          48,
+          50
+        ],
+        [
+          52,
+          53
+        ]
+      ],
+      "fullRequiresOneExplicitFullClaim": false
+    },
+    {
+      "path": "packages/core/src/llm/model-fetcher.ts",
+      "sha256": "8d3ae009ba99976e30df911a58138a6923600f43dddabe8563d0418e61dc216b",
+      "from": "unknown",
+      "to": "selected",
+      "claimIds": [
+        "claim-0208"
+      ],
+      "representativeClaimId": "claim-0208",
+      "selectedRangeUnion": [
+        [
+          76,
+          85
+        ],
+        [
+          123,
+          124
+        ]
+      ],
+      "fullRequiresOneExplicitFullClaim": false
+    },
+    {
+      "path": "packages/core/src/llm/model-pool.test.ts",
+      "sha256": "19b494027ea63d1ca55ea489951e984f305f6d65128d537f868c37ee2ea953a7",
+      "from": "unknown",
+      "to": "full",
+      "claimIds": [
+        "claim-0274"
+      ],
+      "representativeClaimId": "claim-0274",
+      "selectedRangeUnion": [
+        [
+          1,
+          43
+        ]
+      ],
+      "fullRequiresOneExplicitFullClaim": true
+    },
+    {
+      "path": "packages/core/src/llm/model-pool.ts",
+      "sha256": "a49da3b3018aaaf92e80e488a4e9d338eb9f2b0f107919f9d521156a6c4137d3",
+      "from": "unknown",
+      "to": "full",
+      "claimIds": [
+        "claim-0267"
+      ],
+      "representativeClaimId": "claim-0267",
+      "selectedRangeUnion": [
+        [
+          1,
+          325
+        ]
+      ],
+      "fullRequiresOneExplicitFullClaim": true
+    },
+    {
+      "path": "packages/core/src/llm/provider-catalog.ts",
+      "sha256": "ec80becdb369165c233e38f60bd242aee86170232d8209b20dd9422a6499c642",
+      "from": "unknown",
+      "to": "full",
+      "claimIds": [
+        "claim-0269"
+      ],
+      "representativeClaimId": "claim-0269",
+      "selectedRangeUnion": [
+        [
+          1,
+          75
+        ]
+      ],
+      "fullRequiresOneExplicitFullClaim": true
+    },
+    {
+      "path": "packages/core/src/llm/providers/anthropic-usage.test.ts",
+      "sha256": "8047033b84165eba5acf21ff117bbe2030e5c80bf1f15442496c041abc740ffe",
+      "from": "unknown",
+      "to": "selected",
+      "claimIds": [
+        "claim-0266"
+      ],
+      "representativeClaimId": "claim-0266",
+      "selectedRangeUnion": [
+        [
+          34,
+          40
+        ],
+        [
+          67,
+          71
+        ]
+      ],
+      "fullRequiresOneExplicitFullClaim": false
+    },
+    {
+      "path": "packages/core/src/llm/providers/anthropic.ts",
+      "sha256": "0816e99de6261b41892ac4ecf3fbde76c7f2f94c12490752e412d27fa02079f3",
+      "from": "unknown",
+      "to": "selected",
+      "claimIds": [
+        "claim-0244",
+        "claim-0262"
+      ],
+      "representativeClaimId": "claim-0244",
+      "selectedRangeUnion": [
+        [
+          56,
+          72
+        ],
+        [
+          264,
+          267
+        ],
+        [
+          373,
+          374
+        ],
+        [
+          420,
+          426
+        ]
+      ],
+      "fullRequiresOneExplicitFullClaim": false
+    },
+    {
+      "path": "packages/core/src/llm/providers/openai.ts",
+      "sha256": "e45ff0572580ec70bbdba4f2bc95aa32f07c741e1b275e4000fa8b0cf2d25c81",
+      "from": "unknown",
+      "to": "selected",
+      "claimIds": [
+        "claim-0243",
+        "claim-0263"
+      ],
+      "representativeClaimId": "claim-0243",
+      "selectedRangeUnion": [
+        [
+          61,
+          75
+        ],
+        [
+          717,
+          725
+        ],
+        [
+          926,
+          932
+        ],
+        [
+          1036,
+          1040
+        ]
+      ],
+      "fullRequiresOneExplicitFullClaim": false
+    },
+    {
+      "path": "packages/core/src/llm/reasoning-setting.ts",
+      "sha256": "a00d2dee0e430bafb8b89a50a0a71f54cff8a6ab6766221d1dcccad3d551b11f",
+      "from": "unknown",
+      "to": "full",
+      "claimIds": [
+        "claim-0271"
+      ],
+      "representativeClaimId": "claim-0271",
+      "selectedRangeUnion": [
+        [
+          1,
+          46
+        ]
+      ],
+      "fullRequiresOneExplicitFullClaim": true
+    },
+    {
+      "path": "packages/core/src/llm/strip-vision.test.ts",
+      "sha256": "52b0ddbc2bc1d72a26becbba638832957a1c10824a8c7c8a6b0a6525d649fc7a",
+      "from": "unknown",
+      "to": "selected",
+      "claimIds": [
+        "claim-0246"
+      ],
+      "representativeClaimId": "claim-0246",
+      "selectedRangeUnion": [
+        [
+          13,
+          36
+        ],
+        [
+          51,
+          111
+        ]
+      ],
+      "fullRequiresOneExplicitFullClaim": false
+    },
+    {
+      "path": "packages/core/src/llm/strip-vision.ts",
+      "sha256": "d4c2b0f230941c255daefc838f893c8c10137d32595e0ccf6e1d5a7b74ed50c0",
+      "from": "unknown",
+      "to": "full",
+      "claimIds": [
+        "claim-0242"
+      ],
+      "representativeClaimId": "claim-0242",
+      "selectedRangeUnion": [
+        [
+          1,
+          107
+        ]
+      ],
+      "fullRequiresOneExplicitFullClaim": true
+    },
+    {
+      "path": "packages/core/src/model-catalog/builtin.ts",
+      "sha256": "ee8205a9970758c7ac1eef0f762f0d382d13e69ea33a0157a985271033e72d35",
+      "from": "unknown",
+      "to": "selected",
+      "claimIds": [
+        "claim-0109"
+      ],
+      "representativeClaimId": "claim-0109",
+      "selectedRangeUnion": [
+        [
+          46,
+          54
+        ],
+        [
+          62,
+          109
+        ]
+      ],
+      "fullRequiresOneExplicitFullClaim": false
+    },
+    {
+      "path": "packages/core/src/model-catalog/params.test.ts",
+      "sha256": "9bff9fc073f4101adf59ca651c57a4b8566aa154be4ca42028ab54d841081495",
+      "from": "unknown",
+      "to": "full",
+      "claimIds": [
+        "claim-0108"
+      ],
+      "representativeClaimId": "claim-0108",
+      "selectedRangeUnion": [
+        [
+          1,
+          76
+        ]
+      ],
+      "fullRequiresOneExplicitFullClaim": true
+    },
+    {
+      "path": "packages/core/src/model-catalog/params.ts",
+      "sha256": "df069d199a8baafa07502cab0f4577eb523e27e4d085ce0ede8fe01b410e8391",
+      "from": "unknown",
+      "to": "full",
+      "claimIds": [
+        "claim-0107"
+      ],
+      "representativeClaimId": "claim-0107",
+      "selectedRangeUnion": [
+        [
+          1,
+          55
+        ]
+      ],
+      "fullRequiresOneExplicitFullClaim": true
+    },
+    {
+      "path": "packages/core/src/model-catalog/types.ts",
+      "sha256": "5e587cf05befb277ad46060de5e5fb885f7b59208b98f41b10d0b62375a39fa1",
+      "from": "unknown",
+      "to": "selected",
+      "claimIds": [
+        "claim-0106"
+      ],
+      "representativeClaimId": "claim-0106",
+      "selectedRangeUnion": [
+        [
+          17,
+          20
+        ],
+        [
+          29,
+          31
+        ],
+        [
+          33,
+          59
+        ],
+        [
+          66,
+          74
+        ]
+      ],
+      "fullRequiresOneExplicitFullClaim": false
+    },
+    {
+      "path": "packages/core/src/model-request-boundary/accounting.test.ts",
+      "sha256": "4ac2ec636f1330e45bb83afbacacae8deedbaca54a94ce9b256d0582e139f740",
+      "from": "unknown",
+      "to": "selected",
+      "claimIds": [
+        "claim-0057"
+      ],
+      "representativeClaimId": "claim-0057",
+      "selectedRangeUnion": [
+        [
+          20,
+          36
+        ],
+        [
+          38,
+          40
+        ]
+      ],
+      "fullRequiresOneExplicitFullClaim": false
+    },
+    {
+      "path": "packages/core/src/model-traces/context.ts",
+      "sha256": "e759a2298fa15ed12f68329422db12291a73f2a20a7d567d631b57aa7d2f8202",
+      "from": "unknown",
+      "to": "selected",
+      "claimIds": [
+        "claim-0292"
+      ],
+      "representativeClaimId": "claim-0292",
+      "selectedRangeUnion": [
+        [
+          209,
+          212
+        ],
+        [
+          260,
+          272
+        ],
+        [
+          290,
+          315
+        ]
+      ],
+      "fullRequiresOneExplicitFullClaim": false
+    },
+    {
+      "path": "packages/core/src/model-traces/sessions.test.ts",
+      "sha256": "a7b0ed309b87a93f39eef3269cb6db43d1c6b52bda4fa7e5e288cfcc4eb7f346",
+      "from": "unknown",
+      "to": "selected",
+      "claimIds": [
+        "claim-0156"
+      ],
+      "representativeClaimId": "claim-0156",
+      "selectedRangeUnion": [
+        [
+          39,
+          49
+        ],
+        [
+          56,
+          81
+        ]
+      ],
+      "fullRequiresOneExplicitFullClaim": false
+    },
+    {
+      "path": "packages/core/src/model-traces/store.test.ts",
+      "sha256": "58fbf77e8021ee91211fc1275aff1fb0315934dbdbc7751342fd45677fdf012e",
+      "from": "unknown",
+      "to": "selected",
+      "claimIds": [
+        "claim-0155",
+        "claim-0293"
+      ],
+      "representativeClaimId": "claim-0155",
+      "selectedRangeUnion": [
+        [
+          119,
+          139
+        ]
+      ],
+      "fullRequiresOneExplicitFullClaim": false
+    },
+    {
+      "path": "packages/core/src/model-traces/store.ts",
+      "sha256": "4f05f5db8c1c216b2cce1dba339d464c7b64a597ba43f6602e634c9d0fcefb8f",
+      "from": "unknown",
+      "to": "selected",
+      "claimIds": [
+        "claim-0151",
+        "claim-0289"
+      ],
+      "representativeClaimId": "claim-0151",
+      "selectedRangeUnion": [
+        [
+          49,
+          57
+        ],
+        [
+          137,
+          170
+        ],
+        [
+          200,
+          201
+        ],
+        [
+          204,
+          216
+        ],
+        [
+          227,
+          442
+        ],
+        [
+          492,
+          494
+        ],
+        [
+          498,
+          498
+        ],
+        [
+          511,
+          516
+        ]
+      ],
+      "fullRequiresOneExplicitFullClaim": false
+    },
+    {
+      "path": "packages/core/src/model-traces/types.ts",
+      "sha256": "492cb4cdf536c4d63f1b3bac0ce733a30705d79a5de559da3ef6b47e79d5a1a6",
+      "from": "unknown",
+      "to": "selected",
+      "claimIds": [
+        "claim-0152",
+        "claim-0290"
+      ],
+      "representativeClaimId": "claim-0152",
+      "selectedRangeUnion": [
+        [
+          94,
+          105
+        ],
+        [
+          108,
+          145
+        ]
+      ],
+      "fullRequiresOneExplicitFullClaim": false
+    },
+    {
+      "path": "packages/core/src/prompt/section-loader.ts",
+      "sha256": "aafec0a8f91a7b9c6a54f10d337bcca74aa9c52c18e81cb6ab671e60c4c586bb",
+      "from": "unknown",
+      "to": "selected",
+      "claimIds": [
+        "claim-0483"
+      ],
+      "representativeClaimId": "claim-0483",
+      "selectedRangeUnion": [
+        [
+          1,
+          22
+        ]
+      ],
+      "fullRequiresOneExplicitFullClaim": false
+    },
+    {
+      "path": "packages/core/src/protocol/chat-session.ts",
+      "sha256": "042454b4e0c6ae5deadf81934f11b13392a61ec032b03903a8181592650265d9",
+      "from": "unknown",
+      "to": "selected",
+      "claimIds": [
+        "claim-0326",
+        "claim-0359"
+      ],
+      "representativeClaimId": "claim-0326",
+      "selectedRangeUnion": [
+        [
+          515,
+          528
+        ]
+      ],
+      "fullRequiresOneExplicitFullClaim": false
+    },
+    {
+      "path": "packages/core/src/protocol/dispatch.ts",
+      "sha256": "6e51a05a2232b47de3aaa8ab02db45dd5a12b7ce05214226513ac86d6dfef6b3",
+      "from": "unknown",
+      "to": "selected",
+      "claimIds": [
+        "claim-0360"
+      ],
+      "representativeClaimId": "claim-0360",
+      "selectedRangeUnion": [
+        [
+          111,
+          113
+        ]
+      ],
+      "fullRequiresOneExplicitFullClaim": false
+    },
+    {
+      "path": "packages/core/src/session/output-journal-backup-format.ts",
+      "sha256": "98aaf46c9aa750189927786e834e47c1e39ae6b52cb77ed185dda0ac604e876a",
+      "from": "unknown",
+      "to": "selected",
+      "claimIds": [
+        "claim-0232"
+      ],
+      "representativeClaimId": "claim-0232",
+      "selectedRangeUnion": [
+        [
+          6,
+          11
+        ],
+        [
+          32,
+          69
+        ],
+        [
+          79,
+          96
+        ],
+        [
+          120,
+          126
+        ],
+        [
+          130,
+          150
+        ],
+        [
+          160,
+          172
+        ],
+        [
+          212,
+          214
+        ],
+        [
+          248,
+          251
+        ],
+        [
+          281,
+          285
+        ],
+        [
+          308,
+          318
+        ],
+        [
+          322,
+          432
+        ],
+        [
+          438,
+          439
+        ]
+      ],
+      "fullRequiresOneExplicitFullClaim": false
+    },
+    {
+      "path": "packages/core/src/session/output-journal-manual-repair.ts",
+      "sha256": "beec5e4a415d9e80cbee11c680c0196334b137ef4410a1f6ececaf0003363d7a",
+      "from": "unknown",
+      "to": "selected",
+      "claimIds": [
+        "claim-0233"
+      ],
+      "representativeClaimId": "claim-0233",
+      "selectedRangeUnion": [
+        [
+          401,
+          410
+        ],
+        [
+          412,
+          417
+        ],
+        [
+          462,
+          465
+        ],
+        [
+          524,
+          539
+        ],
+        [
+          548,
+          558
+        ],
+        [
+          561,
+          562
+        ],
+        [
+          979,
+          979
+        ],
+        [
+          986,
+          989
+        ]
+      ],
+      "fullRequiresOneExplicitFullClaim": false
+    },
+    {
+      "path": "packages/core/src/session/output-journal.ts",
+      "sha256": "83e0817886d8184ba119c35ab332c854c38e38f17775dcb1b45f667ae3f157c0",
+      "from": "unknown",
+      "to": "selected",
+      "claimIds": [
+        "claim-0234"
+      ],
+      "representativeClaimId": "claim-0234",
+      "selectedRangeUnion": [
+        [
+          44,
+          47
+        ],
+        [
+          104,
+          113
+        ],
+        [
+          1101,
+          1139
+        ],
+        [
+          1186,
+          1205
+        ],
+        [
+          1225,
+          1233
+        ],
+        [
+          1247,
+          1254
+        ]
+      ],
+      "fullRequiresOneExplicitFullClaim": false
+    },
+    {
+      "path": "packages/core/src/session/output-publisher.ts",
+      "sha256": "9babc9a24d42d99d4bb4d823f3656f855f102946c853a89cbf0d5462b50dcd5d",
+      "from": "unknown",
+      "to": "selected",
+      "claimIds": [
+        "claim-0235"
+      ],
+      "representativeClaimId": "claim-0235",
+      "selectedRangeUnion": [
+        [
+          11,
+          15
+        ]
+      ],
+      "fullRequiresOneExplicitFullClaim": false
+    },
+    {
+      "path": "packages/core/src/session/session-manager.context-transfer.test.ts",
+      "sha256": "09b7b700527f9e26b6c126ab296895852f3f5743493ea6bc12ee865302eefc6e",
+      "from": "unknown",
+      "to": "selected",
+      "claimIds": [
+        "claim-0465"
+      ],
+      "representativeClaimId": "claim-0465",
+      "selectedRangeUnion": [
+        [
+          15,
+          54
+        ]
+      ],
+      "fullRequiresOneExplicitFullClaim": false
+    },
+    {
+      "path": "packages/core/src/session/session-manager.side-fork.test.ts",
+      "sha256": "1ac1df286552cd98c1ca228a5c655372d5b0547810730dffa4dcb27fe5c9d650",
+      "from": "unknown",
+      "to": "selected",
+      "claimIds": [
+        "claim-0466"
+      ],
+      "representativeClaimId": "claim-0466",
+      "selectedRangeUnion": [
+        [
+          19,
+          79
+        ],
+        [
+          194,
+          213
+        ]
+      ],
+      "fullRequiresOneExplicitFullClaim": false
+    },
+    {
+      "path": "packages/core/src/session/session-manager.ts",
+      "sha256": "3a0ac1691e1eaa8b948c31b2d9530ddc1be275992022128f48326043240b05af",
+      "from": "unknown",
+      "to": "selected",
+      "claimIds": [
+        "claim-0456",
+        "claim-0460",
+        "claim-0470"
+      ],
+      "representativeClaimId": "claim-0456",
+      "selectedRangeUnion": [
+        [
+          302,
+          325
+        ],
+        [
+          341,
+          366
+        ],
+        [
+          736,
+          769
+        ],
+        [
+          792,
+          817
+        ],
+        [
+          1043,
+          1053
+        ],
+        [
+          2137,
+          2233
+        ],
+        [
+          2235,
+          2333
+        ],
+        [
+          2335,
+          2351
+        ],
+        [
+          2477,
+          2544
+        ],
+        [
+          2546,
+          2566
+        ]
+      ],
+      "fullRequiresOneExplicitFullClaim": false
+    },
+    {
+      "path": "packages/core/src/session/subagent-continuation.ts",
+      "sha256": "d604ea3b2baf99c53fdf492f51797ca3b54b9975ed452de8a13d900ce035b26a",
+      "from": "unknown",
+      "to": "full",
+      "claimIds": [
+        "claim-0453",
+        "claim-0467"
+      ],
+      "representativeClaimId": "claim-0453",
+      "selectedRangeUnion": [
+        [
+          1,
+          63
+        ]
+      ],
+      "fullRequiresOneExplicitFullClaim": true
+    },
+    {
+      "path": "packages/core/src/session/usage.ts",
+      "sha256": "cec6ea891501f12ea35686ce5b409055ce76bcf7cea231f81ab03479aacd79cd",
+      "from": "unknown",
+      "to": "full",
+      "claimIds": [
+        "claim-0445"
+      ],
+      "representativeClaimId": "claim-0445",
+      "selectedRangeUnion": [
+        [
+          1,
+          149
+        ]
+      ],
+      "fullRequiresOneExplicitFullClaim": true
+    },
+    {
+      "path": "packages/core/src/tool-system/registry.ts",
+      "sha256": "215bf049bdb2ee276d2c1bc127968d48f23309e9abbb8356fbf1ed6e897471e0",
+      "from": "unknown",
+      "to": "selected",
+      "claimIds": [
+        "claim-0221"
+      ],
+      "representativeClaimId": "claim-0221",
+      "selectedRangeUnion": [
+        [
+          17,
+          17
+        ],
+        [
+          243,
+          244
+        ],
+        [
+          251,
+          267
+        ]
+      ],
+      "fullRequiresOneExplicitFullClaim": false
+    },
+    {
+      "path": "packages/core/src/utils/toolDisplay.ts",
+      "sha256": "41ba468c68cb9c564e1401d3c5cd310ab60a1e61600966c45166184871e6c000",
+      "from": "unknown",
+      "to": "full",
+      "claimIds": [
+        "claim-0203",
+        "claim-0209"
+      ],
+      "representativeClaimId": "claim-0203",
+      "selectedRangeUnion": [
+        [
+          1,
+          209
+        ]
+      ],
+      "fullRequiresOneExplicitFullClaim": true
+    },
+    {
+      "path": "packages/core/test-setup.ts",
+      "sha256": "a153ddcf1017389aef04b587fd1fe7d348190dc8232ca2cdba3914a46dce942d",
+      "from": "unknown",
+      "to": "full",
+      "claimIds": [
+        "claim-0373"
+      ],
+      "representativeClaimId": "claim-0373",
+      "selectedRangeUnion": [
+        [
+          1,
+          44
+        ]
+      ],
+      "fullRequiresOneExplicitFullClaim": true
+    },
+    {
+      "path": "packages/desktop/src/main/SessionSnapshotStore.ts",
+      "sha256": "d4b3f3841058ef82c1d4320a0cbd7ee29fc4816a68cde667e264713fd6680dca",
+      "from": "unknown",
+      "to": "selected",
+      "claimIds": [
+        "claim-0407"
+      ],
+      "representativeClaimId": "claim-0407",
+      "selectedRangeUnion": [
+        [
+          68,
+          68
+        ],
+        [
+          179,
+          205
+        ],
+        [
+          207,
+          217
+        ]
+      ],
+      "fullRequiresOneExplicitFullClaim": false
+    },
+    {
+      "path": "packages/desktop/src/main/agent-bridge.ts",
+      "sha256": "2ba6a48296c36b207ac799b4beaf0a1b9335d8711859245e3f246d6b88906d47",
+      "from": "unknown",
+      "to": "selected",
+      "claimIds": [
+        "claim-0401",
+        "claim-0420"
+      ],
+      "representativeClaimId": "claim-0401",
+      "selectedRangeUnion": [
+        [
+          435,
+          480
+        ],
+        [
+          1145,
+          1166
+        ],
+        [
+          1738,
+          1748
+        ],
+        [
+          1781,
+          1783
+        ],
+        [
+          1816,
+          1818
+        ],
+        [
+          2014,
+          2021
+        ],
+        [
+          2312,
+          2325
+        ],
+        [
+          2333,
+          2337
+        ]
+      ],
+      "fullRequiresOneExplicitFullClaim": false
+    },
+    {
+      "path": "packages/desktop/src/main/external-runtime-goal-rpc.ts",
+      "sha256": "9f21ee32db6ea4cb375711490b2138640d6a2b727979146fb387646b70180dff",
+      "from": "unknown",
+      "to": "selected",
+      "claimIds": [
+        "claim-0125"
+      ],
+      "representativeClaimId": "claim-0125",
+      "selectedRangeUnion": [
+        [
+          130,
+          148
+        ]
+      ],
+      "fullRequiresOneExplicitFullClaim": false
+    },
+    {
+      "path": "packages/desktop/src/main/external-runtime-model-service.ts",
+      "sha256": "fb19c731974164e7ec21f12be97c4caa68137a1a43fc959e522f92d21d6b422d",
+      "from": "unknown",
+      "to": "selected",
+      "claimIds": [
+        "claim-0248"
+      ],
+      "representativeClaimId": "claim-0248",
+      "selectedRangeUnion": [
+        [
+          14,
+          25
+        ],
+        [
+          27,
+          38
+        ],
+        [
+          40,
+          50
+        ],
+        [
+          54,
+          58
+        ],
+        [
+          62,
+          66
+        ],
+        [
+          71,
+          85
+        ],
+        [
+          90,
+          93
+        ]
+      ],
+      "fullRequiresOneExplicitFullClaim": false
+    },
+    {
+      "path": "packages/desktop/src/main/mobile-remote-orchestrator.ts",
+      "sha256": "40b62b4c9b912fd472d65d7077971e638a64109927a574ae8337cbc0f837e099",
+      "from": "unknown",
+      "to": "selected",
+      "claimIds": [
+        "claim-0399",
+        "claim-0413"
+      ],
+      "representativeClaimId": "claim-0399",
+      "selectedRangeUnion": [
+        [
+          124,
+          125
+        ],
+        [
+          245,
+          268
+        ],
+        [
+          332,
+          368
+        ],
+        [
+          380,
+          386
+        ]
+      ],
+      "fullRequiresOneExplicitFullClaim": false
+    },
+    {
+      "path": "packages/desktop/src/main/mobile-remote/external-runtime-commands.ts",
+      "sha256": "7188cabf3ae2de925cb2caa26e345df97dc8d3037102635849abedf1d1c9ceff",
+      "from": "unknown",
+      "to": "selected",
+      "claimIds": [
+        "claim-0406"
+      ],
+      "representativeClaimId": "claim-0406",
+      "selectedRangeUnion": [
+        [
+          9,
+          18
+        ],
+        [
+          56,
+          87
+        ],
+        [
+          91,
+          102
+        ]
+      ],
+      "fullRequiresOneExplicitFullClaim": false
+    },
+    {
+      "path": "packages/desktop/src/main/mobile-remote/output-recovery.ts",
+      "sha256": "1f8fafdb6d3a1fb0de0d9a5908e38c50ba1deb0e635622503739ab0c54ab35f9",
+      "from": "unknown",
+      "to": "selected",
+      "claimIds": [
+        "claim-0405"
+      ],
+      "representativeClaimId": "claim-0405",
+      "selectedRangeUnion": [
+        [
+          138,
+          154
+        ],
+        [
+          174,
+          185
+        ]
+      ],
+      "fullRequiresOneExplicitFullClaim": false
+    },
+    {
+      "path": "packages/desktop/src/main/pet/conversation-session-route-store.ts",
+      "sha256": "2966a715032d4c866f3411559c487338682a3ee043ddedbd7fcc1f1efce47a77",
+      "from": "unknown",
+      "to": "selected",
+      "claimIds": [
+        "claim-0347"
+      ],
+      "representativeClaimId": "claim-0347",
+      "selectedRangeUnion": [
+        [
+          27,
+          245
+        ],
+        [
+          248,
+          256
+        ],
+        [
+          278,
+          305
+        ]
+      ],
+      "fullRequiresOneExplicitFullClaim": false
+    },
+    {
+      "path": "packages/desktop/src/main/pet/pet-dispatch-service.ts",
+      "sha256": "b71da0deff3e9430838d3ffc616f8e4df148173319882cbb7e238dbd5d046ed7",
+      "from": "unknown",
+      "to": "selected",
+      "claimIds": [
+        "claim-0317",
+        "claim-0350"
+      ],
+      "representativeClaimId": "claim-0317",
+      "selectedRangeUnion": [
+        [
+          1051,
+          1075
+        ],
+        [
+          1078,
+          1103
+        ],
+        [
+          1178,
+          1204
+        ],
+        [
+          1991,
+          2020
+        ],
+        [
+          2139,
+          2147
+        ],
+        [
+          2185,
+          2223
+        ],
+        [
+          2338,
+          2349
+        ],
+        [
+          2368,
+          2398
+        ]
+      ],
+      "fullRequiresOneExplicitFullClaim": false
+    },
+    {
+      "path": "packages/desktop/src/main/pet/pet-follow-up-host.ts",
+      "sha256": "971ca012b1ac56ff3aead6b955ecffab67179bcd1f8f9b3a46b613128feb4edf",
+      "from": "unknown",
+      "to": "selected",
+      "claimIds": [
+        "claim-0320"
+      ],
+      "representativeClaimId": "claim-0320",
+      "selectedRangeUnion": [
+        [
+          24,
+          80
+        ]
+      ],
+      "fullRequiresOneExplicitFullClaim": false
+    },
+    {
+      "path": "packages/desktop/src/main/pet/pet-follow-up-runtime.ts",
+      "sha256": "d2ae596393ca74eef9e7c61f239ddfe1b6355cc1f8f1650240e4804f10a311fb",
+      "from": "unknown",
+      "to": "selected",
+      "claimIds": [
+        "claim-0319",
+        "claim-0353"
+      ],
+      "representativeClaimId": "claim-0319",
+      "selectedRangeUnion": [
+        [
+          17,
+          129
+        ]
+      ],
+      "fullRequiresOneExplicitFullClaim": false
+    },
+    {
+      "path": "packages/desktop/src/main/pet/pet-follow-up-wake-coordinator.ts",
+      "sha256": "aca155bc446ede568e52f5553137e4cbe8fb56673a2489f963e80b99722d1008",
+      "from": "unknown",
+      "to": "selected",
+      "claimIds": [
+        "claim-0318",
+        "claim-0357"
+      ],
+      "representativeClaimId": "claim-0318",
+      "selectedRangeUnion": [
+        [
+          90,
+          130
+        ],
+        [
+          145,
+          180
+        ]
+      ],
+      "fullRequiresOneExplicitFullClaim": false
+    },
+    {
+      "path": "packages/desktop/src/main/pet/pet-im-decisions.ts",
+      "sha256": "a8e8009b08ad0e07666714c795fdc0c3bfda7bc1db460195fa8bd1f89c1756ef",
+      "from": "unknown",
+      "to": "selected",
+      "claimIds": [
+        "claim-0404"
+      ],
+      "representativeClaimId": "claim-0404",
+      "selectedRangeUnion": [
+        [
+          121,
+          148
+        ],
+        [
+          156,
+          163
+        ]
+      ],
+      "fullRequiresOneExplicitFullClaim": false
+    },
+    {
+      "path": "packages/desktop/src/main/pet/pet-registered-follow-up-store.ts",
+      "sha256": "78ef46a4c15bb6a1133427122cc2e8b7ba7098888374737d1f17565c87ad9f07",
+      "from": "unknown",
+      "to": "selected",
+      "claimIds": [
+        "claim-0322",
+        "claim-0361"
+      ],
+      "representativeClaimId": "claim-0322",
+      "selectedRangeUnion": [
+        [
+          272,
+          305
+        ]
+      ],
+      "fullRequiresOneExplicitFullClaim": false
+    },
+    {
+      "path": "packages/desktop/src/main/pet/pet-segment-closure-service.test.ts",
+      "sha256": "c555bff5f27a2a3c360683658285df10ccb1e4106e2da3f04ce9d9c26d9688da",
+      "from": "unknown",
+      "to": "selected",
+      "claimIds": [
+        "claim-0336"
+      ],
+      "representativeClaimId": "claim-0336",
+      "selectedRangeUnion": [
+        [
+          80,
+          107
+        ],
+        [
+          212,
+          247
+        ]
+      ],
+      "fullRequiresOneExplicitFullClaim": false
+    },
+    {
+      "path": "packages/desktop/src/main/pet/pet-segment-closure-service.ts",
+      "sha256": "0ee16c96f37b0d7adc919a691390c1bfd3241a8092b46bb7247a7d65402eb9d8",
+      "from": "unknown",
+      "to": "selected",
+      "claimIds": [
+        "claim-0316",
+        "claim-0348"
+      ],
+      "representativeClaimId": "claim-0316",
+      "selectedRangeUnion": [
+        [
+          1,
+          15
+        ],
+        [
+          38,
+          51
+        ],
+        [
+          60,
+          111
+        ],
+        [
+          135,
+          302
+        ]
+      ],
+      "fullRequiresOneExplicitFullClaim": false
+    },
+    {
+      "path": "packages/desktop/src/main/pet/pet-segment-controller.ts",
+      "sha256": "cad2a887551e5e091abe42ed3b45462dee63c8f62eb09c6f792390640869e8b1",
+      "from": "unknown",
+      "to": "selected",
+      "claimIds": [
+        "claim-0315",
+        "claim-0346"
+      ],
+      "representativeClaimId": "claim-0315",
+      "selectedRangeUnion": [
+        [
+          10,
+          51
+        ],
+        [
+          53,
+          105
+        ],
+        [
+          108,
+          275
+        ]
+      ],
+      "fullRequiresOneExplicitFullClaim": false
+    },
+    {
+      "path": "packages/desktop/src/main/pet/pet-work-memory-store.ts",
+      "sha256": "bed3a277454daa8d018fe11e52d24f73a0a9991622d84ca6abbc9365928a85ca",
+      "from": "unknown",
+      "to": "selected",
+      "claimIds": [
+        "claim-0321",
+        "claim-0362"
+      ],
+      "representativeClaimId": "claim-0321",
+      "selectedRangeUnion": [
+        [
+          39,
+          43
+        ],
+        [
+          67,
+          87
+        ],
+        [
+          93,
+          119
+        ],
+        [
+          143,
+          153
+        ],
+        [
+          156,
+          160
+        ],
+        [
+          179,
+          188
+        ]
+      ],
+      "fullRequiresOneExplicitFullClaim": false
+    },
+    {
+      "path": "packages/desktop/src/main/pet/session-conversation-bridge.ts",
+      "sha256": "0832345e9ac09824f5f20abcec6f1309e63329288191e0c3a06b4d71129dad7f",
+      "from": "unknown",
+      "to": "selected",
+      "claimIds": [
+        "claim-0349"
+      ],
+      "representativeClaimId": "claim-0349",
+      "selectedRangeUnion": [
+        [
+          96,
+          178
+        ]
+      ],
+      "fullRequiresOneExplicitFullClaim": false
+    },
+    {
+      "path": "packages/desktop/src/main/session-titles-store.ts",
+      "sha256": "5c7ea7233f145105a79886d570d0735e8d66c1a90ab9495f9ed054d85bc374d7",
+      "from": "unknown",
+      "to": "selected",
+      "claimIds": [
+        "claim-0376"
+      ],
+      "representativeClaimId": "claim-0376",
+      "selectedRangeUnion": [
+        [
+          6,
+          7
+        ],
+        [
+          13,
+          14
+        ]
+      ],
+      "fullRequiresOneExplicitFullClaim": false
+    },
+    {
+      "path": "packages/desktop/src/main/trace-history-service.ts",
+      "sha256": "e84a9d63bfd29342fb6a6032a96c3659e541ccd77178094f243229ba25f02a8e",
+      "from": "unknown",
+      "to": "selected",
+      "claimIds": [
+        "claim-0101",
+        "claim-0200"
+      ],
+      "representativeClaimId": "claim-0101",
+      "selectedRangeUnion": [
+        [
+          6,
+          9
+        ],
+        [
+          11,
+          13
+        ]
+      ],
+      "fullRequiresOneExplicitFullClaim": false
+    },
+    {
+      "path": "packages/desktop/src/mobile/App.tsx",
+      "sha256": "f383b281a4bddc9a1c974c0b505f6ed0108fb37977a8c1bd26920fc1827280b0",
+      "from": "unknown",
+      "to": "selected",
+      "claimIds": [
+        "claim-0393"
+      ],
+      "representativeClaimId": "claim-0393",
+      "selectedRangeUnion": [
+        [
+          6,
+          6
+        ],
+        [
+          19,
+          21
+        ]
+      ],
+      "fullRequiresOneExplicitFullClaim": false
+    },
+    {
+      "path": "packages/desktop/src/mobile/main.tsx",
+      "sha256": "effc599f30214112e15c0ee4fc26ce9149055997227f964b78e7dcfe230673e9",
+      "from": "unknown",
+      "to": "selected",
+      "claimIds": [
+        "claim-0340"
+      ],
+      "representativeClaimId": "claim-0340",
+      "selectedRangeUnion": [
+        [
+          3,
+          4
+        ],
+        [
+          17,
+          17
+        ]
+      ],
+      "fullRequiresOneExplicitFullClaim": false
+    },
+    {
+      "path": "packages/desktop/src/renderer/TopBar.tsx",
+      "sha256": "f49c82911bb653ea455040ea56e14e8488581ba94837ab0a67412a173db8e38a",
+      "from": "unknown",
+      "to": "selected",
+      "claimIds": [
+        "claim-0186"
+      ],
+      "representativeClaimId": "claim-0186",
+      "selectedRangeUnion": [
+        [
+          232,
+          232
+        ],
+        [
+          402,
+          413
+        ]
+      ],
+      "fullRequiresOneExplicitFullClaim": false
+    },
+    {
+      "path": "packages/desktop/src/renderer/activity/ModelTracesView.tsx",
+      "sha256": "e0b46dbdc946fb86651fd4e5d9b710fc54862f3be040a9891f79584438af1de4",
+      "from": "unknown",
+      "to": "selected",
+      "claimIds": [
+        "claim-0100",
+        "claim-0154",
+        "claim-0201",
+        "claim-0291"
+      ],
+      "representativeClaimId": "claim-0100",
+      "selectedRangeUnion": [
+        [
+          250,
+          258
+        ],
+        [
+          299,
+          306
+        ],
+        [
+          372,
+          382
+        ]
+      ],
+      "fullRequiresOneExplicitFullClaim": false
+    },
+    {
+      "path": "packages/desktop/src/renderer/app/panelResize.ts",
+      "sha256": "5b675510d786e7ff066a37d640a82b81e7a424625b71356dbbf42c2231cea1eb",
+      "from": "unknown",
+      "to": "selected",
+      "claimIds": [
+        "claim-0169"
+      ],
+      "representativeClaimId": "claim-0169",
+      "selectedRangeUnion": [
+        [
+          1,
+          21
+        ],
+        [
+          29,
+          40
+        ],
+        [
+          78,
+          113
+        ],
+        [
+          117,
+          138
+        ]
+      ],
+      "fullRequiresOneExplicitFullClaim": false
+    },
+    {
+      "path": "packages/desktop/src/renderer/app/useExternalRuntimeModels.ts",
+      "sha256": "66f10e3f160bfb62a2e990cfa635f61936410e36fb727632e1c53ff9fd79ba04",
+      "from": "unknown",
+      "to": "selected",
+      "claimIds": [
+        "claim-0250"
+      ],
+      "representativeClaimId": "claim-0250",
+      "selectedRangeUnion": [
+        [
+          2,
+          18
+        ],
+        [
+          22,
+          41
+        ],
+        [
+          69,
+          72
+        ]
+      ],
+      "fullRequiresOneExplicitFullClaim": false
+    },
+    {
+      "path": "packages/desktop/src/renderer/chat/ComposerSuggestions.tsx",
+      "sha256": "511aabd34ad08cb0559d0cdaa6d4ba998f7439f11f10d2af58e4b227ef13fd12",
+      "from": "unknown",
+      "to": "selected",
+      "claimIds": [
+        "claim-0129"
+      ],
+      "representativeClaimId": "claim-0129",
+      "selectedRangeUnion": [
+        [
+          11,
+          30
+        ],
+        [
+          54,
+          101
+        ]
+      ],
+      "fullRequiresOneExplicitFullClaim": false
+    },
+    {
+      "path": "packages/desktop/src/renderer/chat/ContextRing.tsx",
+      "sha256": "b28fbfc2e74fdb645cc5b2cb935eb0fb6a5e1f896b6150a121a75294013baa3d",
+      "from": "unknown",
+      "to": "selected",
+      "claimIds": [
+        "claim-0174"
+      ],
+      "representativeClaimId": "claim-0174",
+      "selectedRangeUnion": [
+        [
+          6,
+          46
+        ],
+        [
+          52,
+          65
+        ],
+        [
+          91,
+          130
+        ],
+        [
+          134,
+          163
+        ],
+        [
+          173,
+          234
+        ],
+        [
+          242,
+          247
+        ]
+      ],
+      "fullRequiresOneExplicitFullClaim": false
+    },
+    {
+      "path": "packages/desktop/src/renderer/chat/MentionPopover.tsx",
+      "sha256": "4fe200271695211ca7c602019026a7d90acdb03535fe195308da0bd412122429",
+      "from": "unknown",
+      "to": "selected",
+      "claimIds": [
+        "claim-0130"
+      ],
+      "representativeClaimId": "claim-0130",
+      "selectedRangeUnion": [
+        [
+          31,
+          34
+        ],
+        [
+          47,
+          53
+        ],
+        [
+          158,
+          193
+        ],
+        [
+          199,
+          370
+        ]
+      ],
+      "fullRequiresOneExplicitFullClaim": false
+    },
+    {
+      "path": "packages/desktop/src/renderer/chat/compactFeedback.test.ts",
+      "sha256": "cf8c432525d72eb8547b04baf07af4fcbba719245d4d807c2d8ae52c0e4c0b65",
+      "from": "unknown",
+      "to": "selected",
+      "claimIds": [
+        "claim-0161"
+      ],
+      "representativeClaimId": "claim-0161",
+      "selectedRangeUnion": [
+        [
+          31,
+          51
+        ]
+      ],
+      "fullRequiresOneExplicitFullClaim": false
+    },
+    {
+      "path": "packages/desktop/src/renderer/chat/compactFeedback.ts",
+      "sha256": "3a149cfd7df17d5d642a6f47d221e478e645c027898b7cf5be0542b8fc4a39e5",
+      "from": "unknown",
+      "to": "selected",
+      "claimIds": [
+        "claim-0159"
+      ],
+      "representativeClaimId": "claim-0159",
+      "selectedRangeUnion": [
+        [
+          1,
+          33
+        ],
+        [
+          39,
+          42
+        ],
+        [
+          55,
+          67
+        ],
+        [
+          82,
+          88
+        ]
+      ],
+      "fullRequiresOneExplicitFullClaim": false
+    },
+    {
+      "path": "packages/desktop/src/renderer/components/ui/button.tsx",
+      "sha256": "c49a019df145d3a28aa938095cd3a83970e61dc473230336beaf75f2b60bbfff",
+      "from": "unknown",
+      "to": "selected",
+      "claimIds": [
+        "claim-0114"
+      ],
+      "representativeClaimId": "claim-0114",
+      "selectedRangeUnion": [
+        [
+          43,
+          51
+        ]
+      ],
+      "fullRequiresOneExplicitFullClaim": false
+    },
+    {
+      "path": "packages/desktop/src/renderer/components/ui/input.tsx",
+      "sha256": "cdf74059418d587217b808c9bafe47cd8c830a8616f44b685766ba9e81f25394",
+      "from": "unknown",
+      "to": "full",
+      "claimIds": [
+        "claim-0113"
+      ],
+      "representativeClaimId": "claim-0113",
+      "selectedRangeUnion": [
+        [
+          1,
+          21
+        ]
+      ],
+      "fullRequiresOneExplicitFullClaim": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/extensions/PluginDetailView.tsx",
+      "sha256": "88aa0ed20a682216164830e5fb59834563d35090d3d5682fbd1735281b519015",
+      "from": "unknown",
+      "to": "selected",
+      "claimIds": [
+        "claim-0136"
+      ],
+      "representativeClaimId": "claim-0136",
+      "selectedRangeUnion": [
+        [
+          52,
+          52
+        ],
+        [
+          63,
+          64
+        ],
+        [
+          66,
+          69
+        ],
+        [
+          71,
+          73
+        ],
+        [
+          104,
+          105
+        ],
+        [
+          229,
+          249
+        ],
+        [
+          509,
+          527
+        ]
+      ],
+      "fullRequiresOneExplicitFullClaim": false
+    },
+    {
+      "path": "packages/desktop/src/renderer/extensions/pluginPresentation.ts",
+      "sha256": "2e2b95da77c0ba13553078f79ef500061686413aed6c59c0c9fe7aa2594cd5fc",
+      "from": "unknown",
+      "to": "selected",
+      "claimIds": [
+        "claim-0134"
+      ],
+      "representativeClaimId": "claim-0134",
+      "selectedRangeUnion": [
+        [
+          34,
+          58
+        ]
+      ],
+      "fullRequiresOneExplicitFullClaim": false
+    },
+    {
+      "path": "packages/desktop/src/renderer/messages/ContextBoundaryView.tsx",
+      "sha256": "bff0c43715622ace107ab48493754d34304fb013120d013e6d52768a18e24699",
+      "from": "unknown",
+      "to": "full",
+      "claimIds": [
+        "claim-0157"
+      ],
+      "representativeClaimId": "claim-0157",
+      "selectedRangeUnion": [
+        [
+          1,
+          103
+        ]
+      ],
+      "fullRequiresOneExplicitFullClaim": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/messages/GoalProgressView.tsx",
+      "sha256": "86d6e311e888c6eee11e3f3b38f8cdc7bc2e7f573f68579288cd2f0743cb8ffb",
+      "from": "unknown",
+      "to": "full",
+      "claimIds": [
+        "claim-0118",
+        "claim-0138"
+      ],
+      "representativeClaimId": "claim-0118",
+      "selectedRangeUnion": [
+        [
+          1,
+          130
+        ]
+      ],
+      "fullRequiresOneExplicitFullClaim": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/messages/LiveActivityLine.tsx",
+      "sha256": "433814c6c51d8deebbf17d985ca2009a6bab10930a21929e64594c7c646f21b1",
+      "from": "unknown",
+      "to": "full",
+      "claimIds": [
+        "claim-0184"
+      ],
+      "representativeClaimId": "claim-0184",
+      "selectedRangeUnion": [
+        [
+          1,
+          26
+        ]
+      ],
+      "fullRequiresOneExplicitFullClaim": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/messages/ToolGroupCard.tsx",
+      "sha256": "c4e30acf0be148683b65cabf4fd570a2c309696a2b7528a9269db0cca1e2b987",
+      "from": "unknown",
+      "to": "selected",
+      "claimIds": [
+        "claim-0017"
+      ],
+      "representativeClaimId": "claim-0017",
+      "selectedRangeUnion": [
+        [
+          30,
+          47
+        ],
+        [
+          75,
+          80
+        ]
+      ],
+      "fullRequiresOneExplicitFullClaim": false
+    },
+    {
+      "path": "packages/desktop/src/renderer/messages/TurnUsageMessageView.tsx",
+      "sha256": "4f941fcbec7d2f0c8e225df7e3e661da27acf6bb8b02cf2ee65f8640f563bb8b",
+      "from": "unknown",
+      "to": "selected",
+      "claimIds": [
+        "claim-0178"
+      ],
+      "representativeClaimId": "claim-0178",
+      "selectedRangeUnion": [
+        [
+          4,
+          4
+        ],
+        [
+          7,
+          50
+        ]
+      ],
+      "fullRequiresOneExplicitFullClaim": false
+    },
+    {
+      "path": "packages/desktop/src/renderer/messages/agentGroup.ts",
+      "sha256": "52529df60ce7729cc27f8b0f39aef6c8092b3c0434802de1331f8e76db1565c6",
+      "from": "unknown",
+      "to": "selected",
+      "claimIds": [
+        "claim-0148"
+      ],
+      "representativeClaimId": "claim-0148",
+      "selectedRangeUnion": [
+        [
+          85,
+          132
+        ]
+      ],
+      "fullRequiresOneExplicitFullClaim": false
+    },
+    {
+      "path": "packages/desktop/src/renderer/messages/streamGroups.ts",
+      "sha256": "47ecdb6af4221c5aa6d2ab306dc990d77a58dab0bb49878d96f079323079b5ea",
+      "from": "unknown",
+      "to": "selected",
+      "claimIds": [
+        "claim-0127",
+        "claim-0145"
+      ],
+      "representativeClaimId": "claim-0127",
+      "selectedRangeUnion": [
+        [
+          219,
+          226
+        ],
+        [
+          306,
+          308
+        ],
+        [
+          413,
+          517
+        ],
+        [
+          519,
+          546
+        ]
+      ],
+      "fullRequiresOneExplicitFullClaim": false
+    },
+    {
+      "path": "packages/desktop/src/renderer/messages/toolDisclosureState.test.tsx",
+      "sha256": "df3358b4e65fc456d1bcffa6251e67096091286bf45382a600647f61ed5f8409",
+      "from": "unknown",
+      "to": "selected",
+      "claimIds": [
+        "claim-0009"
+      ],
+      "representativeClaimId": "claim-0009",
+      "selectedRangeUnion": [
+        [
+          18,
+          20
+        ],
+        [
+          37,
+          54
+        ],
+        [
+          78,
+          121
+        ]
+      ],
+      "fullRequiresOneExplicitFullClaim": false
+    },
+    {
+      "path": "packages/desktop/src/renderer/panels/PanelArea.tsx",
+      "sha256": "cae897bb3073a68df32282d2228123dfcbade14fc3bc3d5192f52e95b218af2a",
+      "from": "unknown",
+      "to": "selected",
+      "claimIds": [
+        "claim-0002",
+        "claim-0012",
+        "claim-0173"
+      ],
+      "representativeClaimId": "claim-0002",
+      "selectedRangeUnion": [
+        [
+          258,
+          274
+        ],
+        [
+          483,
+          485
+        ],
+        [
+          490,
+          500
+        ],
+        [
+          540,
+          557
+        ],
+        [
+          570,
+          571
+        ],
+        [
+          573,
+          586
+        ],
+        [
+          590,
+          619
+        ],
+        [
+          696,
+          706
+        ],
+        [
+          720,
+          727
+        ],
+        [
+          907,
+          923
+        ]
+      ],
+      "fullRequiresOneExplicitFullClaim": false
+    },
+    {
+      "path": "packages/desktop/src/renderer/panels/PanelTabStrip.test.tsx",
+      "sha256": "82061aa01ddeb1f2ecb3b0ca9ca1c6cc100e13de7fe807c4ae0a6d496af87940",
+      "from": "unknown",
+      "to": "selected",
+      "claimIds": [
+        "claim-0013"
+      ],
+      "representativeClaimId": "claim-0013",
+      "selectedRangeUnion": [
+        [
+          108,
+          184
+        ]
+      ],
+      "fullRequiresOneExplicitFullClaim": false
+    },
+    {
+      "path": "packages/desktop/src/renderer/panels/PanelTabStrip.tsx",
+      "sha256": "980334fe3022d1ee8139150cb3705550263af6a2668611804fd84fd61b62a405",
+      "from": "unknown",
+      "to": "full",
+      "claimIds": [
+        "claim-0001",
+        "claim-0011"
+      ],
+      "representativeClaimId": "claim-0001",
+      "selectedRangeUnion": [
+        [
+          1,
+          142
+        ]
+      ],
+      "fullRequiresOneExplicitFullClaim": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/pet/PetStateProvider.tsx",
+      "sha256": "f12a0eefbebbcf8923940e0d3025d983023ca9a4a8b7d49b852ae5bc578c5c35",
+      "from": "unknown",
+      "to": "selected",
+      "claimIds": [
+        "claim-0409"
+      ],
+      "representativeClaimId": "claim-0409",
+      "selectedRangeUnion": [
+        [
+          523,
+          532
+        ]
+      ],
+      "fullRequiresOneExplicitFullClaim": false
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/AdvancedSections.tsx",
+      "sha256": "3a18e0123775066a6ba3178934ed1bac9e1bc9f48d74dee3842ec422204fa014",
+      "from": "unknown",
+      "to": "selected",
+      "claimIds": [
+        "claim-0164"
+      ],
+      "representativeClaimId": "claim-0164",
+      "selectedRangeUnion": [
+        [
+          281,
+          281
+        ]
+      ],
+      "fullRequiresOneExplicitFullClaim": false
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/ConnectionInstanceCard.tsx",
+      "sha256": "05320244bcb035a92c23e7fa9699edff74b8d9dc84f4c8e2f6265c13bdb4c466",
+      "from": "unknown",
+      "to": "selected",
+      "claimIds": [
+        "claim-0104"
+      ],
+      "representativeClaimId": "claim-0104",
+      "selectedRangeUnion": [
+        [
+          21,
+          24
+        ],
+        [
+          29,
+          29
+        ],
+        [
+          63,
+          63
+        ],
+        [
+          159,
+          166
+        ],
+        [
+          178,
+          180
+        ]
+      ],
+      "fullRequiresOneExplicitFullClaim": false
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/ConversationSettingsSection.tsx",
+      "sha256": "1a6892f40f4ae355f7575921c4748b1fb3c3c1da32b430e6e082e60f8fd725df",
+      "from": "unknown",
+      "to": "selected",
+      "claimIds": [
+        "claim-0010"
+      ],
+      "representativeClaimId": "claim-0010",
+      "selectedRangeUnion": [
+        [
+          1,
+          17
+        ],
+        [
+          49,
+          56
+        ],
+        [
+          59,
+          74
+        ],
+        [
+          76,
+          90
+        ]
+      ],
+      "fullRequiresOneExplicitFullClaim": false
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/ParamControls.test.tsx",
+      "sha256": "48d2598c43074f9da649208ea111f6730b71c16c97574176f850fc5f5e0cac2b",
+      "from": "unknown",
+      "to": "full",
+      "claimIds": [
+        "claim-0103"
+      ],
+      "representativeClaimId": "claim-0103",
+      "selectedRangeUnion": [
+        [
+          1,
+          62
+        ]
+      ],
+      "fullRequiresOneExplicitFullClaim": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/ParamControls.tsx",
+      "sha256": "6076e25165aa527836ae31d99fe1c2c7250e12518d0a43dd7daf6572459c5c6c",
+      "from": "unknown",
+      "to": "full",
+      "claimIds": [
+        "claim-0102"
+      ],
+      "representativeClaimId": "claim-0102",
+      "selectedRangeUnion": [
+        [
+          1,
+          103
+        ]
+      ],
+      "fullRequiresOneExplicitFullClaim": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/ShortcutsSection.test.tsx",
+      "sha256": "ba16076628e88e408a0b7dfcb9566b597e12949c20b89ecfcd421029f918db02",
+      "from": "unknown",
+      "to": "full",
+      "claimIds": [
+        "claim-0163"
+      ],
+      "representativeClaimId": "claim-0163",
+      "selectedRangeUnion": [
+        [
+          1,
+          67
+        ]
+      ],
+      "fullRequiresOneExplicitFullClaim": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/ShortcutsSection.tsx",
+      "sha256": "ee9161604475561743cab550fe144c9f0bd8fa045fe18d1ef8664d5c851dc1a4",
+      "from": "unknown",
+      "to": "full",
+      "claimIds": [
+        "claim-0162"
+      ],
+      "representativeClaimId": "claim-0162",
+      "selectedRangeUnion": [
+        [
+          1,
+          110
+        ]
+      ],
+      "fullRequiresOneExplicitFullClaim": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/TextConnectionsPanel.tsx",
+      "sha256": "05229ff4405261230ca97076d60588e9adb8a458dcdd96d49a041954a5388356",
+      "from": "unknown",
+      "to": "selected",
+      "claimIds": [
+        "claim-0110"
+      ],
+      "representativeClaimId": "claim-0110",
+      "selectedRangeUnion": [
+        [
+          229,
+          233
+        ],
+        [
+          238,
+          238
+        ],
+        [
+          241,
+          241
+        ]
+      ],
+      "fullRequiresOneExplicitFullClaim": false
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/ThemePackPreview.tsx",
+      "sha256": "650ad8738df56473178c35241bbe675753b84958db0534fb6798da633cc09ada",
+      "from": "unknown",
+      "to": "full",
+      "claimIds": [
+        "claim-0179"
+      ],
+      "representativeClaimId": "claim-0179",
+      "selectedRangeUnion": [
+        [
+          1,
+          121
+        ]
+      ],
+      "fullRequiresOneExplicitFullClaim": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/connUi.tsx",
+      "sha256": "7239fdbb620eba31a00ac410b5bd07a4dc9ab1e9f05adf05e5560a9d4d2417e5",
+      "from": "unknown",
+      "to": "selected",
+      "claimIds": [
+        "claim-0115"
+      ],
+      "representativeClaimId": "claim-0115",
+      "selectedRangeUnion": [
+        [
+          23,
+          43
+        ]
+      ],
+      "fullRequiresOneExplicitFullClaim": false
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/textConnections.ts",
+      "sha256": "4a9a67e24e0c6dbbb3aceb9f9f94493a4150de80c8f01a815715f5e50730979e",
+      "from": "unknown",
+      "to": "selected",
+      "claimIds": [
+        "claim-0112"
+      ],
+      "representativeClaimId": "claim-0112",
+      "selectedRangeUnion": [
+        [
+          27,
+          27
+        ],
+        [
+          85,
+          98
+        ],
+        [
+          104,
+          105
+        ],
+        [
+          117,
+          141
+        ]
+      ],
+      "fullRequiresOneExplicitFullClaim": false
+    },
+    {
+      "path": "packages/desktop/src/renderer/theme-appearance.ts",
+      "sha256": "7a33b00e4a4b726495d638220c4eb42fa3f559d8c0d58d1b12c5bd091e071039",
+      "from": "unknown",
+      "to": "full",
+      "claimIds": [
+        "claim-0180"
+      ],
+      "representativeClaimId": "claim-0180",
+      "selectedRangeUnion": [
+        [
+          1,
+          35
+        ]
+      ],
+      "fullRequiresOneExplicitFullClaim": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/tool-cards/ToolCardShell.test.tsx",
+      "sha256": "e0bf0346d69e48c3b08b99b4c6eace299550c57f091a8316954ea88b87320f0f",
+      "from": "unknown",
+      "to": "full",
+      "claimIds": [
+        "claim-0005"
+      ],
+      "representativeClaimId": "claim-0005",
+      "selectedRangeUnion": [
+        [
+          1,
+          35
+        ]
+      ],
+      "fullRequiresOneExplicitFullClaim": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/tool-cards/ToolCardShell.tsx",
+      "sha256": "4a8597d1e9f055fc855f9b4a601da7e0289df3102a8309ab598e12ccb716f3ea",
+      "from": "unknown",
+      "to": "full",
+      "claimIds": [
+        "claim-0003",
+        "claim-0014"
+      ],
+      "representativeClaimId": "claim-0003",
+      "selectedRangeUnion": [
+        [
+          1,
+          133
+        ]
+      ],
+      "fullRequiresOneExplicitFullClaim": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/tool-cards/utils.ts",
+      "sha256": "1eaf0e8ed14d32d4ad68807342d76ab59fee7991d367c160e5d029b15d3b5bcf",
+      "from": "unknown",
+      "to": "selected",
+      "claimIds": [
+        "claim-0008",
+        "claim-0018",
+        "claim-0191"
+      ],
+      "representativeClaimId": "claim-0008",
+      "selectedRangeUnion": [
+        [
+          11,
+          19
+        ],
+        [
+          27,
+          42
+        ],
+        [
+          65,
+          72
+        ]
+      ],
+      "fullRequiresOneExplicitFullClaim": false
+    },
+    {
+      "path": "packages/desktop/src/renderer/topbar/StatusPopover.tsx",
+      "sha256": "79f0cab3d1e0e5a56bcebc69c3ff401ddc33426dd0dc80701fc721a056c830cc",
+      "from": "unknown",
+      "to": "selected",
+      "claimIds": [
+        "claim-0187"
+      ],
+      "representativeClaimId": "claim-0187",
+      "selectedRangeUnion": [
+        [
+          6,
+          10
+        ],
+        [
+          22,
+          40
+        ],
+        [
+          70,
+          76
+        ]
+      ],
+      "fullRequiresOneExplicitFullClaim": false
+    },
+    {
+      "path": "packages/desktop/src/renderer/topbar/liveActivity.test.ts",
+      "sha256": "2eac012a698703372f238c9a4afb5828faf492437f12aafec7602930a417052c",
+      "from": "unknown",
+      "to": "selected",
+      "claimIds": [
+        "claim-0190"
+      ],
+      "representativeClaimId": "claim-0190",
+      "selectedRangeUnion": [
+        [
+          21,
+          94
+        ]
+      ],
+      "fullRequiresOneExplicitFullClaim": false
+    },
+    {
+      "path": "packages/desktop/src/renderer/topbar/liveActivity.ts",
+      "sha256": "9dc23e4bf020d6cf5d6ed3cf654f8130d6747d13750762e3c9b8bc2ffd310cab",
+      "from": "unknown",
+      "to": "full",
+      "claimIds": [
+        "claim-0183"
+      ],
+      "representativeClaimId": "claim-0183",
+      "selectedRangeUnion": [
+        [
+          1,
+          183
+        ]
+      ],
+      "fullRequiresOneExplicitFullClaim": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/types.ts",
+      "sha256": "6d7b173656e7ebe22d5c9347b7097d2040793610135c1f797d76139aa6f69845",
+      "from": "unknown",
+      "to": "selected",
+      "claimIds": [
+        "claim-0119",
+        "claim-0144",
+        "claim-0158",
+        "claim-0177",
+        "claim-0188"
+      ],
+      "representativeClaimId": "claim-0119",
+      "selectedRangeUnion": [
+        [
+          35,
+          51
+        ],
+        [
+          82,
+          94
+        ],
+        [
+          149,
+          163
+        ],
+        [
+          189,
+          202
+        ],
+        [
+          362,
+          376
+        ],
+        [
+          534,
+          618
+        ],
+        [
+          1097,
+          1098
+        ],
+        [
+          1258,
+          1278
+        ],
+        [
+          1290,
+          1302
+        ],
+        [
+          1305,
+          1324
+        ],
+        [
+          1350,
+          1374
+        ],
+        [
+          1398,
+          1416
+        ],
+        [
+          1483,
+          1491
+        ],
+        [
+          1509,
+          1523
+        ],
+        [
+          1752,
+          1772
+        ],
+        [
+          1774,
+          1818
+        ],
+        [
+          1821,
+          1867
+        ],
+        [
+          1869,
+          1935
+        ]
+      ],
+      "fullRequiresOneExplicitFullClaim": false
+    },
+    {
+      "path": "packages/desktop/src/renderer/ui/StatusDot.tsx",
+      "sha256": "363fbdd51a9f07839f1e87e21c5afa08aba185e22a9cfed47ce3540b00b85ff9",
+      "from": "unknown",
+      "to": "full",
+      "claimIds": [
+        "claim-0004",
+        "claim-0019"
+      ],
+      "representativeClaimId": "claim-0004",
+      "selectedRangeUnion": [
+        [
+          1,
+          22
+        ]
+      ],
+      "fullRequiresOneExplicitFullClaim": true
+    },
+    {
+      "path": "packages/desktop/src/shared/external-runtime-models.ts",
+      "sha256": "727e006d443d74a7c763dfa76d438986600459e6f849b80c7c4a6e3d04aaa880",
+      "from": "unknown",
+      "to": "selected",
+      "claimIds": [
+        "claim-0249"
+      ],
+      "representativeClaimId": "claim-0249",
+      "selectedRangeUnion": [
+        [
+          1,
+          23
+        ],
+        [
+          25,
+          42
+        ],
+        [
+          51,
+          55
+        ],
+        [
+          90,
+          93
+        ],
+        [
+          100,
+          160
+        ]
+      ],
+      "fullRequiresOneExplicitFullClaim": false
+    },
+    {
+      "path": "packages/desktop/src/shared/plugin-media.ts",
+      "sha256": "4efa59a2b34bb0cac370d1ab4cc38b0154c620102faf4c2b4cd371f58b647de9",
+      "from": "unknown",
+      "to": "selected",
+      "claimIds": [
+        "claim-0137"
+      ],
+      "representativeClaimId": "claim-0137",
+      "selectedRangeUnion": [
+        [
+          1,
+          6
+        ],
+        [
+          9,
+          14
+        ]
+      ],
+      "fullRequiresOneExplicitFullClaim": false
+    },
+    {
+      "path": "packages/desktop/vite.mobile.config.ts",
+      "sha256": "69719a4c2ac93a63d9b41ed3bcbaf9b46cdc254f85ff41f3038d6f7a64ad1d51",
+      "from": "unknown",
+      "to": "full",
+      "claimIds": [
+        "claim-0339",
+        "claim-0372"
+      ],
+      "representativeClaimId": "claim-0372",
+      "selectedRangeUnion": [
+        [
+          1,
+          40
+        ]
+      ],
+      "fullRequiresOneExplicitFullClaim": true
+    },
+    {
+      "path": "packages/link/src/operation-validation.ts",
+      "sha256": "0aa6e812a889f8563f42c4a86114676fb46502a3fd43e4de38bc17435a5d10dd",
+      "from": "unknown",
+      "to": "selected",
+      "claimIds": [
+        "claim-0237"
+      ],
+      "representativeClaimId": "claim-0237",
+      "selectedRangeUnion": [
+        [
+          9,
+          146
+        ]
+      ],
+      "fullRequiresOneExplicitFullClaim": false
+    },
+    {
+      "path": "packages/link/src/operations.test.ts",
+      "sha256": "46fdf8b6575c41f5ddfae2d75fce03a41d3fae167010bc1245157d73f8ba978c",
+      "from": "unknown",
+      "to": "selected",
+      "claimIds": [
+        "claim-0231",
+        "claim-0241"
+      ],
+      "representativeClaimId": "claim-0231",
+      "selectedRangeUnion": [
+        [
+          27,
+          61
+        ],
+        [
+          85,
+          99
+        ],
+        [
+          181,
+          201
+        ]
+      ],
+      "fullRequiresOneExplicitFullClaim": false
+    },
+    {
+      "path": "packages/link/src/operations.ts",
+      "sha256": "a8b18b58eb56825f603d33b4031dcdf170ed5e05f5ddf84fcf93501a5b2190a3",
+      "from": "unknown",
+      "to": "selected",
+      "claimIds": [
+        "claim-0224",
+        "claim-0239"
+      ],
+      "representativeClaimId": "claim-0224",
+      "selectedRangeUnion": [
+        [
+          8,
+          43
+        ],
+        [
+          82,
+          90
+        ],
+        [
+          96,
+          96
+        ],
+        [
+          98,
+          105
+        ],
+        [
+          107,
+          146
+        ],
+        [
+          148,
+          180
+        ],
+        [
+          286,
+          310
+        ],
+        [
+          333,
+          345
+        ],
+        [
+          569,
+          584
+        ]
+      ],
+      "fullRequiresOneExplicitFullClaim": false
+    },
+    {
+      "path": "packages/pet/src/conversation-session-route.test.ts",
+      "sha256": "98604e965e244ef566e7b926403a27ce0b5f515e2ab429cb5a0e8a903304b4fa",
+      "from": "unknown",
+      "to": "selected",
+      "claimIds": [
+        "claim-0365"
+      ],
+      "representativeClaimId": "claim-0365",
+      "selectedRangeUnion": [
+        [
+          83,
+          120
+        ]
+      ],
+      "fullRequiresOneExplicitFullClaim": false
+    },
+    {
+      "path": "packages/pet/src/conversation-session-route.ts",
+      "sha256": "5c87bb342284c4a90c77fde336cc08cc0325dd79a49555dbb13e6e13c3f75f8b",
+      "from": "unknown",
+      "to": "full",
+      "claimIds": [
+        "claim-0345"
+      ],
+      "representativeClaimId": "claim-0345",
+      "selectedRangeUnion": [
+        [
+          1,
+          369
+        ]
+      ],
+      "fullRequiresOneExplicitFullClaim": true
+    },
+    {
+      "path": "packages/pet/src/follow-ups.ts",
+      "sha256": "8860a778f2cc19195a4ec012033701c5d9db3c84948e65aa3b8520efa9febd8a",
+      "from": "unknown",
+      "to": "selected",
+      "claimIds": [
+        "claim-0355"
+      ],
+      "representativeClaimId": "claim-0355",
+      "selectedRangeUnion": [
+        [
+          79,
+          128
+        ]
+      ],
+      "fullRequiresOneExplicitFullClaim": false
+    },
+    {
+      "path": "packages/pet/src/registered-follow-ups.ts",
+      "sha256": "0fbbd797269c0b12725bb5b452c7c72c1cb22da41f7f76948df571f162d70606",
+      "from": "unknown",
+      "to": "selected",
+      "claimIds": [
+        "claim-0323",
+        "claim-0356"
+      ],
+      "representativeClaimId": "claim-0323",
+      "selectedRangeUnion": [
+        [
+          100,
+          102
+        ],
+        [
+          129,
+          168
+        ]
+      ],
+      "fullRequiresOneExplicitFullClaim": false
+    },
+    {
+      "path": "packages/pet/src/segment-closure.test.ts",
+      "sha256": "eec69801ba7ece0d52f6be0bca6369540392c4033d26a0b1dd210d02ab9dda60",
+      "from": "unknown",
+      "to": "selected",
+      "claimIds": [
+        "claim-0335",
+        "claim-0364"
+      ],
+      "representativeClaimId": "claim-0335",
+      "selectedRangeUnion": [
+        [
+          9,
+          46
+        ]
+      ],
+      "fullRequiresOneExplicitFullClaim": false
+    },
+    {
+      "path": "packages/pet/src/segment-closure.ts",
+      "sha256": "217004168aec035af4eae14bcefa5199962c01ca2238785c59259f8af64410cf",
+      "from": "unknown",
+      "to": "full",
+      "claimIds": [
+        "claim-0314",
+        "claim-0344"
+      ],
+      "representativeClaimId": "claim-0344",
+      "selectedRangeUnion": [
+        [
+          1,
+          154
+        ]
+      ],
+      "fullRequiresOneExplicitFullClaim": true
+    },
+    {
+      "path": "packages/pet/src/topic-segment.test.ts",
+      "sha256": "e971c41e29258ee866f46cba6d7856eef33f9dc5bb45b4ad261bf138bb31f5eb",
+      "from": "unknown",
+      "to": "selected",
+      "claimIds": [
+        "claim-0334",
+        "claim-0363"
+      ],
+      "representativeClaimId": "claim-0334",
+      "selectedRangeUnion": [
+        [
+          6,
+          14
+        ]
+      ],
+      "fullRequiresOneExplicitFullClaim": false
+    },
+    {
+      "path": "packages/pet/src/topic-segment.ts",
+      "sha256": "bb8877ffdc0877a33e3d4702cc32bb9c173e46b9e475369b8913fa006a87287b",
+      "from": "unknown",
+      "to": "full",
+      "claimIds": [
+        "claim-0313",
+        "claim-0343"
+      ],
+      "representativeClaimId": "claim-0343",
+      "selectedRangeUnion": [
+        [
+          1,
+          75
+        ]
+      ],
+      "fullRequiresOneExplicitFullClaim": true
+    },
+    {
+      "path": "packages/server/src/environment-identity.ts",
+      "sha256": "e15810d73ed7a91cfdc8d1416e8536036208ba087d0e98d799d95f2887127e7f",
+      "from": "unknown",
+      "to": "selected",
+      "claimIds": [
+        "claim-0394"
+      ],
+      "representativeClaimId": "claim-0394",
+      "selectedRangeUnion": [
+        [
+          58,
+          69
+        ]
+      ],
+      "fullRequiresOneExplicitFullClaim": false
+    },
+    {
+      "path": "packages/server/src/hub/session-management.ts",
+      "sha256": "a9af1264f7afd374da8e13a955999cfb78b4c5a892fec8bbfb058dfa62a5dacf",
+      "from": "unknown",
+      "to": "selected",
+      "claimIds": [
+        "claim-0044",
+        "claim-0378"
+      ],
+      "representativeClaimId": "claim-0044",
+      "selectedRangeUnion": [
+        [
+          155,
+          157
+        ],
+        [
+          181,
+          202
+        ],
+        [
+          205,
+          213
+        ],
+        [
+          227,
+          251
+        ],
+        [
+          275,
+          278
+        ],
+        [
+          309,
+          332
+        ],
+        [
+          338,
+          339
+        ],
+        [
+          341,
+          356
+        ]
+      ],
+      "fullRequiresOneExplicitFullClaim": false
+    },
+    {
+      "path": "packages/server/src/index.storage.ts",
+      "sha256": "8ababaae09596d1877ef047b6b8d33fc673f66ebe2ee200e8929b0f5ca827a2a",
+      "from": "unknown",
+      "to": "selected",
+      "claimIds": [
+        "claim-0375"
+      ],
+      "representativeClaimId": "claim-0375",
+      "selectedRangeUnion": [
+        [
+          11,
+          11
+        ]
+      ],
+      "fullRequiresOneExplicitFullClaim": false
+    },
+    {
+      "path": "packages/server/src/links/providers/defaults.ts",
+      "sha256": "5018a7d16dc3d5b3bd740dafd62bc8389f430110c819801a9739f767e40e9a72",
+      "from": "unknown",
+      "to": "selected",
+      "claimIds": [
+        "claim-0230"
+      ],
+      "representativeClaimId": "claim-0230",
+      "selectedRangeUnion": [
+        [
+          235,
+          236
+        ],
+        [
+          241,
+          254
+        ]
+      ],
+      "fullRequiresOneExplicitFullClaim": false
+    },
+    {
+      "path": "packages/server/src/links/runtime/operation.ts",
+      "sha256": "ab20cf800ad31d91e0fe25405bf4e70e5d434c5ab1afe337d125980f89b3b447",
+      "from": "unknown",
+      "to": "selected",
+      "claimIds": [
+        "claim-0226"
+      ],
+      "representativeClaimId": "claim-0226",
+      "selectedRangeUnion": [
+        [
+          9,
+          13
+        ],
+        [
+          16,
+          24
+        ],
+        [
+          27,
+          27
+        ],
+        [
+          30,
+          32
+        ]
+      ],
+      "fullRequiresOneExplicitFullClaim": false
+    },
+    {
+      "path": "packages/server/src/mobile-remote/mobile-static.test.ts",
+      "sha256": "8d41c5a205118a03d9d5633ccd3eb40f380b1af5ad5b68a7b09acb40bfecff75",
+      "from": "unknown",
+      "to": "selected",
+      "claimIds": [
+        "claim-0342",
+        "claim-0371"
+      ],
+      "representativeClaimId": "claim-0342",
+      "selectedRangeUnion": [
+        [
+          8,
+          67
+        ]
+      ],
+      "fullRequiresOneExplicitFullClaim": false
+    },
+    {
+      "path": "packages/server/src/mobile-remote/mobile-static.ts",
+      "sha256": "78e25110fe1adeac816d218dc858915c85bc77bd731c386b23a8760e92190ce5",
+      "from": "unknown",
+      "to": "selected",
+      "claimIds": [
+        "claim-0337",
+        "claim-0367"
+      ],
+      "representativeClaimId": "claim-0337",
+      "selectedRangeUnion": [
+        [
+          24,
+          44
+        ],
+        [
+          46,
+          51
+        ],
+        [
+          73,
+          167
+        ],
+        [
+          177,
+          202
+        ]
+      ],
+      "fullRequiresOneExplicitFullClaim": false
+    },
+    {
+      "path": "packages/server/src/mobile-remote/pairing.test.ts",
+      "sha256": "76935704b1443dab971196d1e9952804a4b46b76042176f57b21acaf59d97c3f",
+      "from": "unknown",
+      "to": "full",
+      "claimIds": [
+        "claim-0416"
+      ],
+      "representativeClaimId": "claim-0416",
+      "selectedRangeUnion": [
+        [
+          1,
+          85
+        ]
+      ],
+      "fullRequiresOneExplicitFullClaim": true
+    },
+    {
+      "path": "packages/server/src/mobile-remote/pairing.ts",
+      "sha256": "19777b68d1ad6297b9ea182298dd457077340dc4b1977433b60192fdc24af5ca",
+      "from": "unknown",
+      "to": "full",
+      "claimIds": [
+        "claim-0410"
+      ],
+      "representativeClaimId": "claim-0410",
+      "selectedRangeUnion": [
+        [
+          1,
+          70
+        ]
+      ],
+      "fullRequiresOneExplicitFullClaim": true
+    },
+    {
+      "path": "packages/server/src/mobile-remote/pending-approvals.test.ts",
+      "sha256": "a5ccceb55dfdcf39f9132b0624de40d11a2a5d2f18ec311dd72f459fcc1055e6",
+      "from": "unknown",
+      "to": "selected",
+      "claimIds": [
+        "claim-0417"
+      ],
+      "representativeClaimId": "claim-0417",
+      "selectedRangeUnion": [
+        [
+          84,
+          147
+        ]
+      ],
+      "fullRequiresOneExplicitFullClaim": false
+    },
+    {
+      "path": "packages/server/src/mobile-remote/pending-approvals.ts",
+      "sha256": "1503d41f1535224c972a23ada25238644394fc2a1e696668729c0f6263b989ac",
+      "from": "unknown",
+      "to": "full",
+      "claimIds": [
+        "claim-0397",
+        "claim-0411"
+      ],
+      "representativeClaimId": "claim-0397",
+      "selectedRangeUnion": [
+        [
+          1,
+          69
+        ]
+      ],
+      "fullRequiresOneExplicitFullClaim": true
+    },
+    {
+      "path": "packages/server/src/mobile-remote/remote-host-manager.ts",
+      "sha256": "e7956da57e9d9b1581909a78492dd3834a0cf916af26131f6c8cfdba31e005ca",
+      "from": "unknown",
+      "to": "selected",
+      "claimIds": [
+        "claim-0338",
+        "claim-0368",
+        "claim-0412"
+      ],
+      "representativeClaimId": "claim-0338",
+      "selectedRangeUnion": [
+        [
+          66,
+          86
+        ],
+        [
+          108,
+          120
+        ],
+        [
+          180,
+          229
+        ],
+        [
+          421,
+          433
+        ],
+        [
+          439,
+          466
+        ]
+      ],
+      "fullRequiresOneExplicitFullClaim": false
+    },
+    {
+      "path": "packages/server/src/mobile-remote/trusted-device-store.ts",
+      "sha256": "6cdee911aba2713e2d8fa8f058018687577e3dc8b070fdefae9a169aa1cb2ef1",
+      "from": "unknown",
+      "to": "selected",
+      "claimIds": [
+        "claim-0418"
+      ],
+      "representativeClaimId": "claim-0418",
+      "selectedRangeUnion": [
+        [
+          43,
+          74
+        ],
+        [
+          133,
+          147
+        ]
+      ],
+      "fullRequiresOneExplicitFullClaim": false
+    },
+    {
+      "path": "packages/server/src/model-trace-history.ts",
+      "sha256": "2bf60f9f830be0d04e9e96b20dfc86f7f24ed5a8d5d0f44e8c8115b2206c7dfb",
+      "from": "unknown",
+      "to": "selected",
+      "claimIds": [
+        "claim-0097",
+        "claim-0153",
+        "claim-0198",
+        "claim-0288"
+      ],
+      "representativeClaimId": "claim-0097",
+      "selectedRangeUnion": [
+        [
+          14,
+          18
+        ],
+        [
+          20,
+          35
+        ],
+        [
+          47,
+          52
+        ],
+        [
+          54,
+          90
+        ],
+        [
+          203,
+          206
+        ],
+        [
+          213,
+          218
+        ],
+        [
+          223,
+          229
+        ]
+      ],
+      "fullRequiresOneExplicitFullClaim": false
+    },
+    {
+      "path": "packages/server/src/model-trace-http.test.ts",
+      "sha256": "efbd633353aeccb8ba90e25ef98d5aae74549f48367de2c2e7962f99c053deb1",
+      "from": "unknown",
+      "to": "selected",
+      "claimIds": [
+        "claim-0202"
+      ],
+      "representativeClaimId": "claim-0202",
+      "selectedRangeUnion": [
+        [
+          264,
+          288
+        ],
+        [
+          352,
+          369
+        ]
+      ],
+      "fullRequiresOneExplicitFullClaim": false
+    },
+    {
+      "path": "packages/server/src/model-trace-http.ts",
+      "sha256": "c6b8f27dece9e41d0a9919d33973a7c8adb68802cd03ba081384d6318bf64d67",
+      "from": "unknown",
+      "to": "selected",
+      "claimIds": [
+        "claim-0098",
+        "claim-0199"
+      ],
+      "representativeClaimId": "claim-0098",
+      "selectedRangeUnion": [
+        [
+          20,
+          22
+        ],
+        [
+          24,
+          38
+        ],
+        [
+          73,
+          74
+        ]
+      ],
+      "fullRequiresOneExplicitFullClaim": false
+    },
+    {
+      "path": "packages/server/src/panels/runtime.ts",
+      "sha256": "ca4967fc5531b17780c12fb25d02ca3b8f7ae1194c9959a7941f66809fa9fc2a",
+      "from": "unknown",
+      "to": "selected",
+      "claimIds": [
+        "claim-0309"
+      ],
+      "representativeClaimId": "claim-0309",
+      "selectedRangeUnion": [
+        [
+          757,
+          784
+        ],
+        [
+          787,
+          838
+        ],
+        [
+          925,
+          983
+        ]
+      ],
+      "fullRequiresOneExplicitFullClaim": false
+    },
+    {
+      "path": "packages/server/src/panels/shared-tool-jobs.ts",
+      "sha256": "f762637c6ab5d43f6b5502d74655229405060d2ef347a43e4829322d31680566",
+      "from": "unknown",
+      "to": "selected",
+      "claimIds": [
+        "claim-0308"
+      ],
+      "representativeClaimId": "claim-0308",
+      "selectedRangeUnion": [
+        [
+          16,
+          28
+        ],
+        [
+          44,
+          67
+        ],
+        [
+          82,
+          84
+        ]
+      ],
+      "fullRequiresOneExplicitFullClaim": false
+    },
+    {
+      "path": "packages/server/src/panels/tool-jobs-storage.ts",
+      "sha256": "42b534c5aeadbb9299bc892c79154ffa7b3b9357a3effc1adf4c460ef34a6c01",
+      "from": "unknown",
+      "to": "selected",
+      "claimIds": [
+        "claim-0307"
+      ],
+      "representativeClaimId": "claim-0307",
+      "selectedRangeUnion": [
+        [
+          122,
+          145
+        ],
+        [
+          187,
+          193
+        ]
+      ],
+      "fullRequiresOneExplicitFullClaim": false
+    },
+    {
+      "path": "packages/server/src/panels/tool-jobs.test.ts",
+      "sha256": "5a69a680c113eb70b0742741b1675ebdf070d60967382cc20bcd1a30e7400932",
+      "from": "unknown",
+      "to": "selected",
+      "claimIds": [
+        "claim-0312"
+      ],
+      "representativeClaimId": "claim-0312",
+      "selectedRangeUnion": [
+        [
+          484,
+          524
+        ],
+        [
+          574,
+          593
+        ]
+      ],
+      "fullRequiresOneExplicitFullClaim": false
+    },
+    {
+      "path": "packages/server/src/panels/tool-jobs.ts",
+      "sha256": "6588b4f61611b9cc09a88642b162e00de8c4e3b29f79a7d856cc73c112f622b2",
+      "from": "unknown",
+      "to": "selected",
+      "claimIds": [
+        "claim-0306"
+      ],
+      "representativeClaimId": "claim-0306",
+      "selectedRangeUnion": [
+        [
+          70,
+          159
+        ],
+        [
+          281,
+          341
+        ],
+        [
+          378,
+          450
+        ],
+        [
+          469,
+          495
+        ],
+        [
+          536,
+          885
+        ],
+        [
+          887,
+          963
+        ]
+      ],
+      "fullRequiresOneExplicitFullClaim": false
+    },
+    {
+      "path": "packages/server/src/project-runtime/control-server.ts",
+      "sha256": "0f4afbdbd9bf02d787d5b0076b04b8ddf32fb91c30212164cf3250e5be2e9346",
+      "from": "unknown",
+      "to": "selected",
+      "claimIds": [
+        "claim-0370"
+      ],
+      "representativeClaimId": "claim-0370",
+      "selectedRangeUnion": [
+        [
+          289,
+          334
+        ]
+      ],
+      "fullRequiresOneExplicitFullClaim": false
+    },
+    {
+      "path": "packages/server/src/remote-relay/byte-stream.ts",
+      "sha256": "829b793b34e5c8046284aba433b6323f471f983c2fc9efab16eaa6cb117aa639",
+      "from": "unknown",
+      "to": "full",
+      "claimIds": [
+        "claim-0430"
+      ],
+      "representativeClaimId": "claim-0430",
+      "selectedRangeUnion": [
+        [
+          1,
+          65
+        ]
+      ],
+      "fullRequiresOneExplicitFullClaim": true
+    },
+    {
+      "path": "packages/server/src/remote-relay/connector.ts",
+      "sha256": "1ba87d2d8e966bd53556307c86e326be4d6353ed20154597a70816eeecce12a9",
+      "from": "unknown",
+      "to": "selected",
+      "claimIds": [
+        "claim-0433"
+      ],
+      "representativeClaimId": "claim-0433",
+      "selectedRangeUnion": [
+        [
+          1,
+          3
+        ],
+        [
+          17,
+          24
+        ],
+        [
+          37,
+          44
+        ],
+        [
+          153,
+          153
+        ],
+        [
+          159,
+          164
+        ],
+        [
+          192,
+          203
+        ],
+        [
+          214,
+          240
+        ],
+        [
+          254,
+          256
+        ],
+        [
+          261,
+          275
+        ]
+      ],
+      "fullRequiresOneExplicitFullClaim": false
+    },
+    {
+      "path": "packages/server/src/remote-relay/local-stream.ts",
+      "sha256": "b0842c3047f6e5d3fe36fa9e89a5287889cfe2be49ef4a1db0d971eb9672d718",
+      "from": "unknown",
+      "to": "selected",
+      "claimIds": [
+        "claim-0431"
+      ],
+      "representativeClaimId": "claim-0431",
+      "selectedRangeUnion": [
+        [
+          13,
+          87
+        ],
+        [
+          97,
+          125
+        ]
+      ],
+      "fullRequiresOneExplicitFullClaim": false
+    },
+    {
+      "path": "packages/server/src/remote-relay/protocol.ts",
+      "sha256": "75273db331577ffa448e057134f2897593065b1d62efd9291cf9324d42244672",
+      "from": "unknown",
+      "to": "selected",
+      "claimIds": [
+        "claim-0432"
+      ],
+      "representativeClaimId": "claim-0432",
+      "selectedRangeUnion": [
+        [
+          2,
+          17
+        ],
+        [
+          38,
+          70
+        ]
+      ],
+      "fullRequiresOneExplicitFullClaim": false
+    },
+    {
+      "path": "packages/server/src/serve/headless-server.ts",
+      "sha256": "dda2af52d1cf136ae0c7ff6ed9697216b603a5b8beb66e204582d3c532098376",
+      "from": "unknown",
+      "to": "selected",
+      "claimIds": [
+        "claim-0369"
+      ],
+      "representativeClaimId": "claim-0369",
+      "selectedRangeUnion": [
+        [
+          697,
+          760
+        ]
+      ],
+      "fullRequiresOneExplicitFullClaim": false
+    },
+    {
+      "path": "packages/server/src/session-titles-store.test.ts",
+      "sha256": "1ef950d056f96694b39ea14d06c92bfc3839202d226c5a92ac16b81fe35055f2",
+      "from": "unknown",
+      "to": "selected",
+      "claimIds": [
+        "claim-0045",
+        "claim-0382"
+      ],
+      "representativeClaimId": "claim-0045",
+      "selectedRangeUnion": [
+        [
+          19,
+          29
+        ],
+        [
+          31,
+          44
+        ],
+        [
+          46,
+          51
+        ],
+        [
+          71,
+          81
+        ]
+      ],
+      "fullRequiresOneExplicitFullClaim": false
+    },
+    {
+      "path": "packages/server/src/static-files.ts",
+      "sha256": "57c8cdc35db7ffa8abe80f54a9fafe5a115dcb75108b84b2c6f2848eb940d17a",
+      "from": "unknown",
+      "to": "full",
+      "claimIds": [
+        "claim-0366"
+      ],
+      "representativeClaimId": "claim-0366",
+      "selectedRangeUnion": [
+        [
+          1,
+          27
+        ]
+      ],
+      "fullRequiresOneExplicitFullClaim": true
+    },
+    {
+      "path": "packages/tui/src/cli/commands/builtin/core-commands.ts",
+      "sha256": "f6384010955e7f271864131d6bedb1549d353e67c9302b727379558c8417f65f",
+      "from": "unknown",
+      "to": "selected",
+      "claimIds": [
+        "claim-0071",
+        "claim-0083",
+        "claim-0091"
+      ],
+      "representativeClaimId": "claim-0071",
+      "selectedRangeUnion": [
+        [
+          5,
+          7
+        ],
+        [
+          89,
+          104
+        ],
+        [
+          620,
+          624
+        ],
+        [
+          691,
+          697
+        ]
+      ],
+      "fullRequiresOneExplicitFullClaim": false
+    },
+    {
+      "path": "packages/tui/src/cli/commands/builtin/init/index.ts",
+      "sha256": "ff409c8c09d92a0ad9d05e763311410e14fcba2fe5bf09c8c119649b1dc0eb8b",
+      "from": "unknown",
+      "to": "selected",
+      "claimIds": [
+        "claim-0485"
+      ],
+      "representativeClaimId": "claim-0485",
+      "selectedRangeUnion": [
+        [
+          19,
+          33
+        ]
+      ],
+      "fullRequiresOneExplicitFullClaim": false
+    },
+    {
+      "path": "packages/tui/src/cli/output/renderer.test.ts",
+      "sha256": "ef51ee33912b0d347ea7fdead6731bc417a9205061086c1bf1d98cd86665a1e4",
+      "from": "unknown",
+      "to": "selected",
+      "claimIds": [
+        "claim-0223"
+      ],
+      "representativeClaimId": "claim-0223",
+      "selectedRangeUnion": [
+        [
+          86,
+          93
+        ],
+        [
+          95,
+          110
+        ]
+      ],
+      "fullRequiresOneExplicitFullClaim": false
+    },
+    {
+      "path": "packages/tui/src/ui/components/CommandInput.tsx",
+      "sha256": "53dbcf557487814747ac14945f103d844f7affef3de29f196c9d4610d37081fc",
+      "from": "unknown",
+      "to": "selected",
+      "claimIds": [
+        "claim-0038",
+        "claim-0064"
+      ],
+      "representativeClaimId": "claim-0038",
+      "selectedRangeUnion": [
+        [
+          150,
+          176
+        ],
+        [
+          232,
+          238
+        ]
+      ],
+      "fullRequiresOneExplicitFullClaim": false
+    },
+    {
+      "path": "packages/tui/src/ui/components/StatusLine.test.tsx",
+      "sha256": "5a3815583a7441e150ce28b9cda95f187e42890311409727690731740bfc16dc",
+      "from": "unknown",
+      "to": "full",
+      "claimIds": [
+        "claim-0048",
+        "claim-0065"
+      ],
+      "representativeClaimId": "claim-0048",
+      "selectedRangeUnion": [
+        [
+          1,
+          23
+        ]
+      ],
+      "fullRequiresOneExplicitFullClaim": true
+    },
+    {
+      "path": "packages/tui/src/ui/components/StatusLine.tsx",
+      "sha256": "59bef2bd5014ce72d2d2d63e24ed7e10c20efb7e2355601a0264202cf8582c43",
+      "from": "unknown",
+      "to": "selected",
+      "claimIds": [
+        "claim-0034",
+        "claim-0046",
+        "claim-0059"
+      ],
+      "representativeClaimId": "claim-0034",
+      "selectedRangeUnion": [
+        [
+          17,
+          52
+        ],
+        [
+          69,
+          101
+        ],
+        [
+          125,
+          128
+        ],
+        [
+          136,
+          146
+        ],
+        [
+          157,
+          177
+        ],
+        [
+          180,
+          227
+        ]
+      ],
+      "fullRequiresOneExplicitFullClaim": false
+    },
+    {
+      "path": "packages/tui/src/ui/components/TuiControlSurface.tsx",
+      "sha256": "9b77bae957fd6b978f39d57bdcbccc8b34efca9bd3e07657320110f794bdab28",
+      "from": "unknown",
+      "to": "selected",
+      "claimIds": [
+        "claim-0037",
+        "claim-0063"
+      ],
+      "representativeClaimId": "claim-0037",
+      "selectedRangeUnion": [
+        [
+          353,
+          370
+        ]
+      ],
+      "fullRequiresOneExplicitFullClaim": false
+    },
+    {
+      "path": "packages/web/app/DesktopApp.tsx",
+      "sha256": "b20bfff8716b4a987eb1acb12db43cde66ec63e18ea41c092f8422a3a6ac43da",
+      "from": "unknown",
+      "to": "selected",
+      "claimIds": [
+        "claim-0390"
+      ],
+      "representativeClaimId": "claim-0390",
+      "selectedRangeUnion": [
+        [
+          24,
+          32
+        ],
+        [
+          66,
+          73
+        ]
+      ],
+      "fullRequiresOneExplicitFullClaim": false
+    },
+    {
+      "path": "packages/web/app/EnvironmentMenu.tsx",
+      "sha256": "9948e9d1fd7863aa2f9d9984ef54d0d8d19d7b68ec275c30a9b09f8078722c61",
+      "from": "unknown",
+      "to": "selected",
+      "claimIds": [
+        "claim-0389"
+      ],
+      "representativeClaimId": "claim-0389",
+      "selectedRangeUnion": [
+        [
+          14,
+          35
+        ],
+        [
+          38,
+          69
+        ],
+        [
+          79,
+          92
+        ],
+        [
+          131,
+          173
+        ]
+      ],
+      "fullRequiresOneExplicitFullClaim": false
+    },
+    {
+      "path": "packages/web/app/HubSessions.tsx",
+      "sha256": "ba90415e1a7e30b42fe478fc9a525423da949f31c45906429559bb3e73ee005f",
+      "from": "unknown",
+      "to": "selected",
+      "claimIds": [
+        "claim-0381"
+      ],
+      "representativeClaimId": "claim-0381",
+      "selectedRangeUnion": [
+        [
+          284,
+          309
+        ],
+        [
+          359,
+          426
+        ],
+        [
+          428,
+          455
+        ],
+        [
+          556,
+          565
+        ],
+        [
+          632,
+          644
+        ],
+        [
+          711,
+          716
+        ]
+      ],
+      "fullRequiresOneExplicitFullClaim": false
+    },
+    {
+      "path": "packages/web/app/MessageContent.test.tsx",
+      "sha256": "aa4590f3e190b592eb2afa1d806e338ce4f0d80b6960fc7fab9074682c943111",
+      "from": "unknown",
+      "to": "selected",
+      "claimIds": [
+        "claim-0023"
+      ],
+      "representativeClaimId": "claim-0023",
+      "selectedRangeUnion": [
+        [
+          10,
+          39
+        ],
+        [
+          60,
+          65
+        ],
+        [
+          83,
+          103
+        ]
+      ],
+      "fullRequiresOneExplicitFullClaim": false
+    },
+    {
+      "path": "packages/web/app/MessageContent.tsx",
+      "sha256": "76d03d244e420ffef0921946267aa7f508b394ec78a5db356b4c827424ece87e",
+      "from": "unknown",
+      "to": "selected",
+      "claimIds": [
+        "claim-0020"
+      ],
+      "representativeClaimId": "claim-0020",
+      "selectedRangeUnion": [
+        [
+          65,
+          117
+        ],
+        [
+          177,
+          295
+        ]
+      ],
+      "fullRequiresOneExplicitFullClaim": false
+    },
+    {
+      "path": "packages/web/app/Workbench.tsx",
+      "sha256": "b260b9479cc62be8c15d22b482a01f2026c9b6a322ed53df6235819a3bb6e9b0",
+      "from": "unknown",
+      "to": "selected",
+      "claimIds": [
+        "claim-0021",
+        "claim-0074",
+        "claim-0133",
+        "claim-0150"
+      ],
+      "representativeClaimId": "claim-0021",
+      "selectedRangeUnion": [
+        [
+          18,
+          18
+        ],
+        [
+          61,
+          98
+        ],
+        [
+          155,
+          164
+        ],
+        [
+          283,
+          288
+        ],
+        [
+          342,
+          348
+        ],
+        [
+          360,
+          364
+        ],
+        [
+          755,
+          788
+        ],
+        [
+          806,
+          849
+        ],
+        [
+          861,
+          894
+        ]
+      ],
+      "fullRequiresOneExplicitFullClaim": false
+    },
+    {
+      "path": "packages/web/app/api-context.ts",
+      "sha256": "684933352b87dd2477b9f27784435f8dd6af82e1e8728f829f40d269c8ec0037",
+      "from": "unknown",
+      "to": "selected",
+      "claimIds": [
+        "claim-0388"
+      ],
+      "representativeClaimId": "claim-0388",
+      "selectedRangeUnion": [
+        [
+          17,
+          39
+        ],
+        [
+          42,
+          74
+        ]
+      ],
+      "fullRequiresOneExplicitFullClaim": false
+    },
+    {
+      "path": "packages/web/app/environments.test.ts",
+      "sha256": "783d0c9a371790b55baaef41397926876eecbc91770c14c92b92112c3f2b1f62",
+      "from": "unknown",
+      "to": "selected",
+      "claimIds": [
+        "claim-0396"
+      ],
+      "representativeClaimId": "claim-0396",
+      "selectedRangeUnion": [
+        [
+          11,
+          90
+        ]
+      ],
+      "fullRequiresOneExplicitFullClaim": false
+    },
+    {
+      "path": "packages/web/app/environments.ts",
+      "sha256": "788bc33467203f6c90cb78495af2e548e6b8b12602e3c5b04e3aed6fffe53563",
+      "from": "unknown",
+      "to": "selected",
+      "claimIds": [
+        "claim-0387"
+      ],
+      "representativeClaimId": "claim-0387",
+      "selectedRangeUnion": [
+        [
+          3,
+          11
+        ],
+        [
+          14,
+          29
+        ],
+        [
+          31,
+          67
+        ],
+        [
+          69,
+          110
+        ]
+      ],
+      "fullRequiresOneExplicitFullClaim": false
+    },
+    {
+      "path": "packages/web/app/register-service-worker.ts",
+      "sha256": "1a2a975a9d214489ba1991673d60ffaca0509ab74f524a1931a86c5cfbb9d0f5",
+      "from": "unknown",
+      "to": "selected",
+      "claimIds": [
+        "claim-0341"
+      ],
+      "representativeClaimId": "claim-0341",
+      "selectedRangeUnion": [
+        [
+          1,
+          3
+        ]
+      ],
+      "fullRequiresOneExplicitFullClaim": false
+    },
+    {
+      "path": "packages/web/app/useHubController.tsx",
+      "sha256": "0191b979a16b367d2d4876b4efd8fcb1f8e2d01da4b93da023bf9c4a25f59808",
+      "from": "unknown",
+      "to": "selected",
+      "claimIds": [
+        "claim-0078"
+      ],
+      "representativeClaimId": "claim-0078",
+      "selectedRangeUnion": [
+        [
+          62,
+          62
+        ],
+        [
+          500,
+          500
+        ],
+        [
+          584,
+          584
+        ],
+        [
+          586,
+          586
+        ],
+        [
+          605,
+          605
+        ],
+        [
+          607,
+          607
+        ],
+        [
+          811,
+          811
+        ]
+      ],
+      "fullRequiresOneExplicitFullClaim": false
+    },
+    {
+      "path": "packages/web/app/useLatestMessages.test.ts",
+      "sha256": "52967504b00db4c8271c53d67822d9e867d8937323e97d707dff6d07a768f049",
+      "from": "unknown",
+      "to": "full",
+      "claimIds": [
+        "claim-0076"
+      ],
+      "representativeClaimId": "claim-0076",
+      "selectedRangeUnion": [
+        [
+          1,
+          50
+        ]
+      ],
+      "fullRequiresOneExplicitFullClaim": true
+    },
+    {
+      "path": "packages/web/app/useLatestMessages.ts",
+      "sha256": "d0938a8b58bff0aaba7bc301b5f9c5a5cc4a8f306cc9ab3a3d424782e647ed71",
+      "from": "unknown",
+      "to": "full",
+      "claimIds": [
+        "claim-0073",
+        "claim-0132",
+        "claim-0149"
+      ],
+      "representativeClaimId": "claim-0132",
+      "selectedRangeUnion": [
+        [
+          1,
+          173
+        ]
+      ],
+      "fullRequiresOneExplicitFullClaim": true
+    },
+    {
+      "path": "packages/web/app/workbench-types.ts",
+      "sha256": "e3f7ffe701fd94f6aa98b9f59b595014d2fcfddfded627ba7162705f5f536933",
+      "from": "unknown",
+      "to": "selected",
+      "claimIds": [
+        "claim-0077"
+      ],
+      "representativeClaimId": "claim-0077",
+      "selectedRangeUnion": [
+        [
+          20,
+          22
+        ]
+      ],
+      "fullRequiresOneExplicitFullClaim": false
+    },
+    {
+      "path": "packages/web/src/index.ts",
+      "sha256": "a4aadb47552c2fb565e4c9da40282179f47b6bc11b828eafe491c99ff6651d17",
+      "from": "unknown",
+      "to": "selected",
+      "claimIds": [
+        "claim-0392"
+      ],
+      "representativeClaimId": "claim-0392",
+      "selectedRangeUnion": [
+        [
+          12,
+          27
+        ]
+      ],
+      "fullRequiresOneExplicitFullClaim": false
+    },
+    {
+      "path": "packages/web/src/lib/deviceCredential.test.ts",
+      "sha256": "f829c4daa6a45b83f1e33c7717bb28937bbd80b82ec3f3c9a22e54ad09b6d856",
+      "from": "unknown",
+      "to": "selected",
+      "claimIds": [
+        "claim-0395"
+      ],
+      "representativeClaimId": "claim-0395",
+      "selectedRangeUnion": [
+        [
+          4,
+          20
+        ]
+      ],
+      "fullRequiresOneExplicitFullClaim": false
+    },
+    {
+      "path": "packages/web/src/lib/deviceCredential.ts",
+      "sha256": "c9b1bb11317bf0b11310d6731024e80c262ba684712b4240f498be0dec22ab20",
+      "from": "unknown",
+      "to": "selected",
+      "claimIds": [
+        "claim-0384"
+      ],
+      "representativeClaimId": "claim-0384",
+      "selectedRangeUnion": [
+        [
+          14,
+          22
+        ]
+      ],
+      "fullRequiresOneExplicitFullClaim": false
+    },
+    {
+      "path": "packages/web/src/lib/environment.ts",
+      "sha256": "33d294cc0f39d392b94594401e2b4341c1f0ca02592179ba268c6b3d82a75351",
+      "from": "unknown",
+      "to": "selected",
+      "claimIds": [
+        "claim-0385"
+      ],
+      "representativeClaimId": "claim-0385",
+      "selectedRangeUnion": [
+        [
+          2,
+          14
+        ],
+        [
+          16,
+          32
+        ],
+        [
+          34,
+          43
+        ]
+      ],
+      "fullRequiresOneExplicitFullClaim": false
+    },
+    {
+      "path": "packages/web/src/lib/storage.ts",
+      "sha256": "86312680d2363fc3b69945527aeaa24130bfddbfff620404c99e189fea87237d",
+      "from": "unknown",
+      "to": "selected",
+      "claimIds": [
+        "claim-0383"
+      ],
+      "representativeClaimId": "claim-0383",
+      "selectedRangeUnion": [
+        [
+          9,
+          13
+        ],
+        [
+          23,
+          55
+        ]
+      ],
+      "fullRequiresOneExplicitFullClaim": false
+    },
+    {
+      "path": "packages/web/src/model-trace-api.ts",
+      "sha256": "2f633c6185edfb58bdeb5954468e6a63814ab34fc0018a7a68c2278ea8698c1f",
+      "from": "unknown",
+      "to": "selected",
+      "claimIds": [
+        "claim-0099"
+      ],
+      "representativeClaimId": "claim-0099",
+      "selectedRangeUnion": [
+        [
+          25,
+          29
+        ],
+        [
+          35,
+          40
+        ],
+        [
+          43,
+          54
+        ]
+      ],
+      "fullRequiresOneExplicitFullClaim": false
+    },
+    {
+      "path": "scripts/package-release-audit-config.ts",
+      "sha256": "fa66cf447bbb63c213f848363e415ed540a2a891027ce5c6efa3b5fb28b242a2",
+      "from": "unknown",
+      "to": "full",
+      "claimIds": [
+        "claim-0487",
+        "claim-0491"
+      ],
+      "representativeClaimId": "claim-0487",
+      "selectedRangeUnion": [
+        [
+          1,
+          297
+        ]
+      ],
+      "fullRequiresOneExplicitFullClaim": true
+    },
+    {
+      "path": "scripts/package-release-smoke.ts",
+      "sha256": "4d4504c2991695d33d8b58a1e39aa8b6361f6a5ede10d304db792b079dac07a7",
+      "from": "unknown",
+      "to": "selected",
+      "claimIds": [
+        "claim-0488"
+      ],
+      "representativeClaimId": "claim-0488",
+      "selectedRangeUnion": [
+        [
+          112,
+          145
+        ],
+        [
+          335,
+          349
+        ],
+        [
+          391,
+          419
+        ],
+        [
+          422,
+          442
+        ]
+      ],
+      "fullRequiresOneExplicitFullClaim": false
+    },
+    {
+      "path": "scripts/publish-release-packages.ts",
+      "sha256": "640ce2719b67f9ee63b1c7febe3a751af6144025e8838b47a7d7d5c658d1d9e9",
+      "from": "unknown",
+      "to": "selected",
+      "claimIds": [
+        "claim-0489",
+        "claim-0493"
+      ],
+      "representativeClaimId": "claim-0489",
+      "selectedRangeUnion": [
+        [
+          388,
+          407
+        ],
+        [
+          410,
+          432
+        ],
+        [
+          435,
+          447
+        ],
+        [
+          459,
+          470
+        ]
+      ],
+      "fullRequiresOneExplicitFullClaim": false
+    },
+    {
+      "path": "scripts/release.ts",
+      "sha256": "c2cc6e0ea1b1ac6997825c779eeaae6747ea3d96e5d5bea8f1ff7f10ee345ec7",
+      "from": "unknown",
+      "to": "selected",
+      "claimIds": [
+        "claim-0492"
+      ],
+      "representativeClaimId": "claim-0492",
+      "selectedRangeUnion": [
+        [
+          45,
+          182
+        ]
+      ],
+      "fullRequiresOneExplicitFullClaim": false
+    },
+    {
+      "path": "scripts/verify-release-versions.ts",
+      "sha256": "21307e60af60337ef90ba804e750c9b7016967d9f720c530ee6a542cdeeec609",
+      "from": "unknown",
+      "to": "full",
+      "claimIds": [
+        "claim-0490"
+      ],
+      "representativeClaimId": "claim-0490",
+      "selectedRangeUnion": [
+        [
+          1,
+          189
+        ]
+      ],
+      "fullRequiresOneExplicitFullClaim": true
+    },
+    {
+      "path": "tests/output-journal-manual-repair.test.ts",
+      "sha256": "f4f7eb4aacce0795e6d6610243b64e79c460eb515e0aff877cd657a77721a10f",
+      "from": "unknown",
+      "to": "selected",
+      "claimIds": [
+        "claim-0236"
+      ],
+      "representativeClaimId": "claim-0236",
+      "selectedRangeUnion": [
+        [
+          200,
+          229
+        ],
+        [
+          290,
+          318
+        ]
+      ],
+      "fullRequiresOneExplicitFullClaim": false
+    },
+    {
+      "path": "tests/package-boundaries.test.ts",
+      "sha256": "2c368697e1389113fc61448aa5843354922edd9a950e66006a4b5a7fdbee96c7",
+      "from": "unknown",
+      "to": "selected",
+      "claimIds": [
+        "claim-0495"
+      ],
+      "representativeClaimId": "claim-0495",
+      "selectedRangeUnion": [
+        [
+          239,
+          306
+        ]
+      ],
+      "fullRequiresOneExplicitFullClaim": false
+    },
+    {
+      "path": "tests/tool-result-storage.test.ts",
+      "sha256": "981b173c003d48477547c69967d4a67f5f2cf376bbac98f89de1d81445419607",
+      "from": "unknown",
+      "to": "selected",
+      "claimIds": [
+        "claim-0304"
+      ],
+      "representativeClaimId": "claim-0304",
+      "selectedRangeUnion": [
+        [
+          98,
+          117
+        ],
+        [
+          266,
+          282
+        ]
+      ],
+      "fullRequiresOneExplicitFullClaim": false
+    }
+  ],
+  "currentVersionDowngrades": [],
+  "rangeOrProvenanceAugmentationsWithoutStatusChange": [
+    {
+      "path": "packages/browser-devtools/src/contracts.ts",
+      "statusUnchanged": "full",
+      "claimIds": [
+        "claim-0295"
+      ],
+      "rangeUnion": [
+        [
+          1,
+          17
+        ],
+        [
+          24,
+          36
+        ]
+      ]
+    },
+    {
+      "path": "packages/browser-devtools/src/inspector.test.ts",
+      "statusUnchanged": "full",
+      "claimIds": [
+        "claim-0300"
+      ],
+      "rangeUnion": [
+        [
+          18,
+          31
+        ],
+        [
+          36,
+          49
+        ]
+      ]
+    },
+    {
+      "path": "packages/browser-devtools/src/inspector.ts",
+      "statusUnchanged": "full",
+      "claimIds": [
+        "claim-0294"
+      ],
+      "rangeUnion": [
+        [
+          3,
+          3
+        ],
+        [
+          5,
+          13
+        ],
+        [
+          15,
+          20
+        ],
+        [
+          34,
+          38
+        ],
+        [
+          51,
+          67
+        ],
+        [
+          96,
+          106
+        ],
+        [
+          118,
+          124
+        ],
+        [
+          221,
+          223
+        ]
+      ]
+    },
+    {
+      "path": "packages/chat/src/channel.ts",
+      "statusUnchanged": "full",
+      "claimIds": [
+        "claim-0028",
+        "claim-0278",
+        "claim-0439"
+      ],
+      "rangeUnion": [
+        [
+          109,
+          119
+        ],
+        [
+          121,
+          139
+        ],
+        [
+          141,
+          164
+        ]
+      ]
+    },
+    {
+      "path": "packages/chat/src/chat-gateway.ts",
+      "statusUnchanged": "selected",
+      "claimIds": [
+        "claim-0281",
+        "claim-0424",
+        "claim-0436"
+      ],
+      "rangeUnion": [
+        [
+          54,
+          61
+        ],
+        [
+          79,
+          95
+        ],
+        [
+          102,
+          186
+        ],
+        [
+          199,
+          231
+        ]
+      ]
+    },
+    {
+      "path": "packages/chat/src/gateway.ts",
+      "statusUnchanged": "selected",
+      "claimIds": [
+        "claim-0280",
+        "claim-0425",
+        "claim-0440"
+      ],
+      "rangeUnion": [
+        [
+          129,
+          185
+        ],
+        [
+          197,
+          260
+        ],
+        [
+          263,
+          265
+        ]
+      ]
+    },
+    {
+      "path": "packages/core/src/context/compaction.ts",
+      "statusUnchanged": "full",
+      "claimIds": [
+        "claim-0285",
+        "claim-0464"
+      ],
+      "rangeUnion": [
+        [
+          40,
+          58
+        ],
+        [
+          60,
+          88
+        ],
+        [
+          107,
+          179
+        ],
+        [
+          891,
+          944
+        ],
+        [
+          946,
+          968
+        ]
+      ]
+    },
+    {
+      "path": "packages/core/src/context/image-history-window.ts",
+      "statusUnchanged": "full",
+      "claimIds": [
+        "claim-0284"
+      ],
+      "rangeUnion": [
+        [
+          1,
+          2
+        ],
+        [
+          4,
+          84
+        ]
+      ]
+    },
+    {
+      "path": "packages/core/src/context/manager.ts",
+      "statusUnchanged": "full",
+      "claimIds": [
+        "claim-0303"
+      ],
+      "rangeUnion": [
+        [
+          385,
+          385
+        ],
+        [
+          780,
+          794
+        ]
+      ]
+    },
+    {
+      "path": "packages/core/src/context/tool-output-budget.ts",
+      "statusUnchanged": "full",
+      "claimIds": [
+        "claim-0302"
+      ],
+      "rangeUnion": [
+        [
+          14,
+          46
+        ],
+        [
+          64,
+          106
+        ]
+      ]
+    },
+    {
+      "path": "packages/core/src/context/tool-result-storage.ts",
+      "statusUnchanged": "full",
+      "claimIds": [
+        "claim-0301"
+      ],
+      "rangeUnion": [
+        [
+          57,
+          109
+        ],
+        [
+          187,
+          218
+        ],
+        [
+          255,
+          270
+        ],
+        [
+          287,
+          306
+        ],
+        [
+          330,
+          437
+        ],
+        [
+          440,
+          475
+        ]
+      ]
+    },
+    {
+      "path": "packages/core/src/engine/engine.ts",
+      "statusUnchanged": "selected",
+      "claimIds": [
+        "claim-0042",
+        "claim-0055",
+        "claim-0095",
+        "claim-0273",
+        "claim-0329",
+        "claim-0448",
+        "claim-0457",
+        "claim-0462",
+        "claim-0473"
+      ],
+      "rangeUnion": [
+        [
+          663,
+          666
+        ],
+        [
+          691,
+          691
+        ],
+        [
+          695,
+          707
+        ],
+        [
+          904,
+          952
+        ],
+        [
+          1028,
+          1031
+        ],
+        [
+          1040,
+          1056
+        ],
+        [
+          1239,
+          1260
+        ],
+        [
+          1281,
+          1308
+        ],
+        [
+          1319,
+          1339
+        ],
+        [
+          1341,
+          1346
+        ],
+        [
+          1383,
+          1409
+        ],
+        [
+          1417,
+          1424
+        ],
+        [
+          1776,
+          1786
+        ],
+        [
+          1957,
+          1961
+        ],
+        [
+          1966,
+          1968
+        ],
+        [
+          2083,
+          2087
+        ],
+        [
+          2092,
+          2098
+        ],
+        [
+          2116,
+          2119
+        ],
+        [
+          2141,
+          2141
+        ],
+        [
+          2245,
+          2249
+        ],
+        [
+          2251,
+          2269
+        ],
+        [
+          2284,
+          2287
+        ],
+        [
+          2616,
+          2648
+        ],
+        [
+          2771,
+          2778
+        ],
+        [
+          2790,
+          2794
+        ],
+        [
+          3402,
+          3413
+        ],
+        [
+          3480,
+          3481
+        ],
+        [
+          3555,
+          3569
+        ],
+        [
+          3583,
+          3593
+        ],
+        [
+          3642,
+          3668
+        ],
+        [
+          3890,
+          3919
+        ],
+        [
+          3955,
+          3965
+        ],
+        [
+          4070,
+          4071
+        ],
+        [
+          4343,
+          4345
+        ]
+      ]
+    },
+    {
+      "path": "packages/core/src/engine/model-facade.ts",
+      "statusUnchanged": "selected",
+      "claimIds": [
+        "claim-0331",
+        "claim-0449"
+      ],
+      "rangeUnion": [
+        [
+          174,
+          183
+        ],
+        [
+          258,
+          265
+        ],
+        [
+          273,
+          305
+        ],
+        [
+          307,
+          309
+        ]
+      ]
+    },
+    {
+      "path": "packages/core/src/engine/run-finalize.ts",
+      "statusUnchanged": "selected",
+      "claimIds": [
+        "claim-0332",
+        "claim-0450"
+      ],
+      "rangeUnion": [
+        [
+          224,
+          224
+        ],
+        [
+          360,
+          370
+        ],
+        [
+          383,
+          393
+        ]
+      ]
+    },
+    {
+      "path": "packages/core/src/engine/subagent-spawner.ts",
+      "statusUnchanged": "selected",
+      "claimIds": [
+        "claim-0458",
+        "claim-0471"
+      ],
+      "rangeUnion": [
+        [
+          30,
+          40
+        ],
+        [
+          328,
+          375
+        ],
+        [
+          414,
+          430
+        ]
+      ]
+    },
+    {
+      "path": "packages/core/src/engine/turn-loop.ts",
+      "statusUnchanged": "selected",
+      "claimIds": [
+        "claim-0040",
+        "claim-0128",
+        "claim-0147",
+        "claim-0286",
+        "claim-0330",
+        "claim-0452"
+      ],
+      "rangeUnion": [
+        [
+          45,
+          45
+        ],
+        [
+          91,
+          91
+        ],
+        [
+          294,
+          294
+        ],
+        [
+          454,
+          478
+        ],
+        [
+          495,
+          497
+        ],
+        [
+          572,
+          574
+        ],
+        [
+          581,
+          582
+        ],
+        [
+          657,
+          657
+        ],
+        [
+          731,
+          733
+        ],
+        [
+          763,
+          765
+        ],
+        [
+          816,
+          834
+        ],
+        [
+          836,
+          889
+        ],
+        [
+          1054,
+          1056
+        ],
+        [
+          1058,
+          1061
+        ],
+        [
+          1141,
+          1141
+        ],
+        [
+          1202,
+          1206
+        ],
+        [
+          1232,
+          1233
+        ],
+        [
+          1320,
+          1330
+        ],
+        [
+          1547,
+          1562
+        ],
+        [
+          1731,
+          1735
+        ],
+        [
+          1765,
+          1799
+        ],
+        [
+          2044,
+          2052
+        ],
+        [
+          2063,
+          2068
+        ],
+        [
+          2148,
+          2156
+        ],
+        [
+          2204,
+          2211
+        ],
+        [
+          2293,
+          2297
+        ]
+      ]
+    },
+    {
+      "path": "packages/core/src/index.internal.ts",
+      "statusUnchanged": "selected",
+      "claimIds": [
+        "claim-0039",
+        "claim-0062"
+      ],
+      "rangeUnion": [
+        [
+          247,
+          247
+        ]
+      ]
+    },
+    {
+      "path": "packages/core/src/protocol/server.ts",
+      "statusUnchanged": "selected",
+      "claimIds": [
+        "claim-0126",
+        "claim-0143",
+        "claim-0325",
+        "claim-0358",
+        "claim-0415",
+        "claim-0463"
+      ],
+      "rangeUnion": [
+        [
+          1396,
+          1497
+        ],
+        [
+          1512,
+          1557
+        ],
+        [
+          1559,
+          1649
+        ],
+        [
+          1809,
+          1824
+        ],
+        [
+          1987,
+          2002
+        ],
+        [
+          2231,
+          2295
+        ],
+        [
+          3877,
+          3883
+        ],
+        [
+          3979,
+          3987
+        ],
+        [
+          4089,
+          4095
+        ],
+        [
+          4217,
+          4224
+        ],
+        [
+          4283,
+          4290
+        ],
+        [
+          4418,
+          4425
+        ],
+        [
+          4513,
+          4520
+        ],
+        [
+          4576,
+          4580
+        ]
+      ]
+    },
+    {
+      "path": "packages/core/src/session/transcript.ts",
+      "statusUnchanged": "selected",
+      "claimIds": [
+        "claim-0328",
+        "claim-0354",
+        "claim-0461"
+      ],
+      "rangeUnion": [
+        [
+          368,
+          401
+        ],
+        [
+          407,
+          418
+        ],
+        [
+          527,
+          571
+        ],
+        [
+          883,
+          891
+        ],
+        [
+          1154,
+          1182
+        ]
+      ]
+    },
+    {
+      "path": "packages/core/src/settings/schema.ts",
+      "statusUnchanged": "selected",
+      "claimIds": [
+        "claim-0116"
+      ],
+      "rangeUnion": [
+        [
+          258,
+          259
+        ]
+      ]
+    },
+    {
+      "path": "packages/core/src/tool-system/browser-bridge.ts",
+      "statusUnchanged": "selected",
+      "claimIds": [
+        "claim-0297"
+      ],
+      "rangeUnion": [
+        [
+          210,
+          225
+        ]
+      ]
+    },
+    {
+      "path": "packages/core/src/tool-system/builtin/agent-registry.ts",
+      "statusUnchanged": "selected",
+      "claimIds": [
+        "claim-0035",
+        "claim-0049",
+        "claim-0060"
+      ],
+      "rangeUnion": [
+        [
+          118,
+          133
+        ],
+        [
+          148,
+          157
+        ],
+        [
+          175,
+          177
+        ],
+        [
+          360,
+          362
+        ],
+        [
+          369,
+          371
+        ],
+        [
+          374,
+          376
+        ],
+        [
+          380,
+          382
+        ],
+        [
+          387,
+          389
+        ],
+        [
+          392,
+          394
+        ],
+        [
+          445,
+          445
+        ]
+      ]
+    },
+    {
+      "path": "packages/core/src/tool-system/builtin/agent.ts",
+      "statusUnchanged": "selected",
+      "claimIds": [
+        "claim-0036",
+        "claim-0050",
+        "claim-0061",
+        "claim-0455",
+        "claim-0469"
+      ],
+      "rangeUnion": [
+        [
+          51,
+          104
+        ],
+        [
+          230,
+          236
+        ],
+        [
+          269,
+          273
+        ],
+        [
+          366,
+          366
+        ],
+        [
+          403,
+          467
+        ],
+        [
+          471,
+          476
+        ],
+        [
+          487,
+          500
+        ],
+        [
+          537,
+          544
+        ],
+        [
+          575,
+          582
+        ],
+        [
+          594,
+          597
+        ],
+        [
+          711,
+          723
+        ],
+        [
+          844,
+          861
+        ],
+        [
+          880,
+          900
+        ],
+        [
+          1463,
+          1515
+        ],
+        [
+          1525,
+          1569
+        ]
+      ]
+    },
+    {
+      "path": "packages/core/src/tool-system/builtin/browser-inspect.ts",
+      "statusUnchanged": "full",
+      "claimIds": [
+        "claim-0296"
+      ],
+      "rangeUnion": [
+        [
+          5,
+          7
+        ],
+        [
+          10,
+          14
+        ],
+        [
+          16,
+          25
+        ],
+        [
+          28,
+          50
+        ]
+      ]
+    },
+    {
+      "path": "packages/core/src/tool-system/builtin/glob.test.ts",
+      "statusUnchanged": "full",
+      "claimIds": [
+        "claim-0222"
+      ],
+      "rangeUnion": [
+        [
+          24,
+          34
+        ],
+        [
+          88,
+          91
+        ]
+      ]
+    },
+    {
+      "path": "packages/core/src/tool-system/builtin/glob.ts",
+      "statusUnchanged": "full",
+      "claimIds": [
+        "claim-0205",
+        "claim-0214"
+      ],
+      "rangeUnion": [
+        [
+          13,
+          27
+        ],
+        [
+          29,
+          34
+        ],
+        [
+          84,
+          86
+        ],
+        [
+          103,
+          117
+        ]
+      ]
+    },
+    {
+      "path": "packages/core/src/tool-system/builtin/index.ts",
+      "statusUnchanged": "selected",
+      "claimIds": [
+        "claim-0220"
+      ],
+      "rangeUnion": [
+        [
+          26,
+          26
+        ],
+        [
+          196,
+          197
+        ],
+        [
+          206,
+          209
+        ],
+        [
+          403,
+          404
+        ],
+        [
+          413,
+          413
+        ]
+      ]
+    },
+    {
+      "path": "packages/core/src/tool-system/builtin/read.ts",
+      "statusUnchanged": "full",
+      "claimIds": [
+        "claim-0197",
+        "claim-0212"
+      ],
+      "rangeUnion": [
+        [
+          8,
+          8
+        ],
+        [
+          27,
+          35
+        ],
+        [
+          50,
+          54
+        ]
+      ]
+    },
+    {
+      "path": "packages/core/src/types.ts",
+      "statusUnchanged": "selected",
+      "claimIds": [
+        "claim-0054",
+        "claim-0245",
+        "claim-0256",
+        "claim-0454",
+        "claim-0468"
+      ],
+      "rangeUnion": [
+        [
+          8,
+          23
+        ],
+        [
+          27,
+          50
+        ],
+        [
+          488,
+          494
+        ]
+      ]
+    },
+    {
+      "path": "packages/desktop/src/browser-library/browser-inspector.ts",
+      "statusUnchanged": "full",
+      "claimIds": [
+        "claim-0298"
+      ],
+      "rangeUnion": [
+        [
+          9,
+          10
+        ]
+      ]
+    },
+    {
+      "path": "packages/desktop/src/browser-library/puppeteer-browser-driver.ts",
+      "statusUnchanged": "selected",
+      "claimIds": [
+        "claim-0299"
+      ],
+      "rangeUnion": [
+        [
+          624,
+          624
+        ],
+        [
+          628,
+          629
+        ],
+        [
+          631,
+          631
+        ],
+        [
+          633,
+          633
+        ]
+      ]
+    },
+    {
+      "path": "packages/desktop/src/main/activity-history-ipc.ts",
+      "statusUnchanged": "full",
+      "claimIds": [
+        "claim-0377"
+      ],
+      "rangeUnion": [
+        [
+          27,
+          35
+        ]
+      ]
+    },
+    {
+      "path": "packages/desktop/src/main/index.ts",
+      "statusUnchanged": "selected",
+      "claimIds": [
+        "claim-0252",
+        "claim-0324",
+        "claim-0351",
+        "claim-0398",
+        "claim-0419"
+      ],
+      "rangeUnion": [
+        [
+          1823,
+          1843
+        ],
+        [
+          2094,
+          2107
+        ],
+        [
+          2127,
+          2133
+        ],
+        [
+          2163,
+          2181
+        ],
+        [
+          2211,
+          2231
+        ],
+        [
+          2597,
+          2638
+        ],
+        [
+          6099,
+          6102
+        ],
+        [
+          6914,
+          6914
+        ],
+        [
+          6957,
+          6967
+        ]
+      ]
+    },
+    {
+      "path": "packages/desktop/src/main/mobile-remote/handle-client-event.ts",
+      "statusUnchanged": "selected",
+      "claimIds": [
+        "claim-0400",
+        "claim-0414"
+      ],
+      "rangeUnion": [
+        [
+          236,
+          319
+        ],
+        [
+          567,
+          590
+        ]
+      ]
+    },
+    {
+      "path": "packages/desktop/src/preload/index.ts",
+      "statusUnchanged": "selected",
+      "claimIds": [
+        "claim-0123",
+        "claim-0141",
+        "claim-0253"
+      ],
+      "rangeUnion": [
+        [
+          609,
+          626
+        ],
+        [
+          1600,
+          1602
+        ],
+        [
+          1605,
+          1606
+        ]
+      ]
+    },
+    {
+      "path": "packages/desktop/src/preload/types.d.ts",
+      "statusUnchanged": "selected",
+      "claimIds": [
+        "claim-0105",
+        "claim-0124",
+        "claim-0142"
+      ],
+      "rangeUnion": [
+        [
+          1120,
+          1140
+        ],
+        [
+          2649,
+          2670
+        ]
+      ]
+    },
+    {
+      "path": "packages/desktop/src/renderer/App.tsx",
+      "statusUnchanged": "selected",
+      "claimIds": [
+        "claim-0120",
+        "claim-0140",
+        "claim-0166",
+        "claim-0171",
+        "claim-0176",
+        "claim-0185",
+        "claim-0194",
+        "claim-0251"
+      ],
+      "rangeUnion": [
+        [
+          275,
+          277
+        ],
+        [
+          353,
+          356
+        ],
+        [
+          368,
+          371
+        ],
+        [
+          390,
+          393
+        ],
+        [
+          906,
+          911
+        ],
+        [
+          1051,
+          1069
+        ],
+        [
+          1139,
+          1140
+        ],
+        [
+          1150,
+          1150
+        ],
+        [
+          1387,
+          1387
+        ],
+        [
+          1389,
+          1389
+        ],
+        [
+          1402,
+          1414
+        ],
+        [
+          1416,
+          1418
+        ],
+        [
+          1531,
+          1535
+        ],
+        [
+          1819,
+          1822
+        ],
+        [
+          2230,
+          2230
+        ],
+        [
+          2578,
+          2580
+        ],
+        [
+          2657,
+          2657
+        ],
+        [
+          2660,
+          2660
+        ],
+        [
+          2672,
+          2684
+        ],
+        [
+          2764,
+          2765
+        ],
+        [
+          2853,
+          2855
+        ],
+        [
+          2868,
+          2868
+        ]
+      ]
+    },
+    {
+      "path": "packages/desktop/src/renderer/ChatView.tsx",
+      "statusUnchanged": "selected",
+      "claimIds": [
+        "claim-0121",
+        "claim-0131",
+        "claim-0146",
+        "claim-0167",
+        "claim-0175",
+        "claim-0192",
+        "claim-0195"
+      ],
+      "rangeUnion": [
+        [
+          218,
+          225
+        ],
+        [
+          271,
+          278
+        ],
+        [
+          433,
+          440
+        ],
+        [
+          780,
+          784
+        ],
+        [
+          842,
+          872
+        ],
+        [
+          953,
+          985
+        ],
+        [
+          1225,
+          1278
+        ],
+        [
+          1295,
+          1302
+        ],
+        [
+          1308,
+          1312
+        ],
+        [
+          1317,
+          1318
+        ],
+        [
+          1322,
+          1322
+        ],
+        [
+          1324,
+          1325
+        ],
+        [
+          1331,
+          1334
+        ],
+        [
+          1341,
+          1407
+        ],
+        [
+          1409,
+          1440
+        ],
+        [
+          1764,
+          1765
+        ],
+        [
+          1801,
+          1803
+        ],
+        [
+          2149,
+          2226
+        ],
+        [
+          2230,
+          2233
+        ],
+        [
+          2253,
+          2258
+        ],
+        [
+          2406,
+          2420
+        ]
+      ]
+    },
+    {
+      "path": "packages/desktop/src/renderer/app/SessionPanelDock.tsx",
+      "statusUnchanged": "selected",
+      "claimIds": [
+        "claim-0172"
+      ],
+      "rangeUnion": [
+        [
+          45,
+          46
+        ],
+        [
+          207,
+          208
+        ]
+      ]
+    },
+    {
+      "path": "packages/desktop/src/renderer/app/useHostSubscriptions.ts",
+      "statusUnchanged": "selected",
+      "claimIds": [
+        "claim-0408"
+      ],
+      "rangeUnion": [
+        [
+          966,
+          989
+        ],
+        [
+          1054,
+          1083
+        ]
+      ]
+    },
+    {
+      "path": "packages/desktop/src/renderer/app/usePanelBuckets.ts",
+      "statusUnchanged": "selected",
+      "claimIds": [
+        "claim-0170"
+      ],
+      "rangeUnion": [
+        [
+          734,
+          766
+        ],
+        [
+          1019,
+          1021
+        ]
+      ]
+    },
+    {
+      "path": "packages/desktop/src/renderer/app/useRunController.ts",
+      "statusUnchanged": "selected",
+      "claimIds": [
+        "claim-0122",
+        "claim-0139",
+        "claim-0189"
+      ],
+      "rangeUnion": [
+        [
+          700,
+          700
+        ],
+        [
+          709,
+          714
+        ],
+        [
+          731,
+          733
+        ],
+        [
+          1114,
+          1127
+        ]
+      ]
+    },
+    {
+      "path": "packages/desktop/src/renderer/app/useSessionHistorySync.ts",
+      "statusUnchanged": "selected",
+      "claimIds": [
+        "claim-0380"
+      ],
+      "rangeUnion": [
+        [
+          40,
+          64
+        ]
+      ]
+    },
+    {
+      "path": "packages/desktop/src/renderer/chat/attachments.ts",
+      "statusUnchanged": "full",
+      "claimIds": [
+        "claim-0193",
+        "claim-0196"
+      ],
+      "rangeUnion": [
+        [
+          18,
+          73
+        ],
+        [
+          81,
+          88
+        ],
+        [
+          90,
+          155
+        ]
+      ]
+    },
+    {
+      "path": "packages/desktop/src/renderer/extensions/PluginsTab.tsx",
+      "statusUnchanged": "selected",
+      "claimIds": [
+        "claim-0135"
+      ],
+      "rangeUnion": [
+        [
+          84,
+          97
+        ],
+        [
+          99,
+          103
+        ],
+        [
+          511,
+          530
+        ]
+      ]
+    },
+    {
+      "path": "packages/desktop/src/renderer/i18n/ns/settings.ts",
+      "statusUnchanged": "selected",
+      "claimIds": [
+        "claim-0168"
+      ],
+      "rangeUnion": [
+        [
+          945,
+          962
+        ],
+        [
+          2195,
+          2214
+        ]
+      ]
+    },
+    {
+      "path": "packages/desktop/src/renderer/sessions/SessionsView.tsx",
+      "statusUnchanged": "selected",
+      "claimIds": [
+        "claim-0379"
+      ],
+      "rangeUnion": [
+        [
+          101,
+          112
+        ],
+        [
+          116,
+          140
+        ],
+        [
+          254,
+          278
+        ],
+        [
+          282,
+          284
+        ]
+      ]
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/AppearanceSection.tsx",
+      "statusUnchanged": "selected",
+      "claimIds": [
+        "claim-0182"
+      ],
+      "rangeUnion": [
+        [
+          24,
+          30
+        ],
+        [
+          211,
+          212
+        ],
+        [
+          287,
+          290
+        ],
+        [
+          292,
+          311
+        ]
+      ]
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/SettingsPage.tsx",
+      "statusUnchanged": "selected",
+      "claimIds": [
+        "claim-0165"
+      ],
+      "rangeUnion": [
+        [
+          365,
+          365
+        ],
+        [
+          507,
+          509
+        ],
+        [
+          835,
+          835
+        ]
+      ]
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/useModelConnections.ts",
+      "statusUnchanged": "selected",
+      "claimIds": [
+        "claim-0111"
+      ],
+      "rangeUnion": [
+        [
+          149,
+          163
+        ],
+        [
+          232,
+          236
+        ],
+        [
+          256,
+          257
+        ],
+        [
+          261,
+          267
+        ]
+      ]
+    },
+    {
+      "path": "packages/desktop/src/renderer/settingsBus.ts",
+      "statusUnchanged": "full",
+      "claimIds": [
+        "claim-0117"
+      ],
+      "rangeUnion": [
+        [
+          22,
+          29
+        ]
+      ]
+    },
+    {
+      "path": "packages/desktop/src/renderer/theme-packs.ts",
+      "statusUnchanged": "selected",
+      "claimIds": [
+        "claim-0181"
+      ],
+      "rangeUnion": [
+        [
+          1,
+          9
+        ],
+        [
+          54,
+          54
+        ],
+        [
+          83,
+          128
+        ],
+        [
+          131,
+          136
+        ],
+        [
+          165,
+          180
+        ]
+      ]
+    },
+    {
+      "path": "packages/desktop/src/renderer/tool-cards/GenericToolCard.tsx",
+      "statusUnchanged": "full",
+      "claimIds": [
+        "claim-0006",
+        "claim-0016"
+      ],
+      "rangeUnion": [
+        [
+          14,
+          27
+        ],
+        [
+          30,
+          38
+        ],
+        [
+          46,
+          51
+        ],
+        [
+          88,
+          97
+        ],
+        [
+          100,
+          103
+        ],
+        [
+          117,
+          128
+        ]
+      ]
+    },
+    {
+      "path": "packages/desktop/src/renderer/tool-cards/index.tsx",
+      "statusUnchanged": "full",
+      "claimIds": [
+        "claim-0007",
+        "claim-0015"
+      ],
+      "rangeUnion": [
+        [
+          12,
+          17
+        ],
+        [
+          19,
+          35
+        ],
+        [
+          131,
+          149
+        ]
+      ]
+    },
+    {
+      "path": "packages/desktop/src/renderer/transcripts.ts",
+      "statusUnchanged": "selected",
+      "claimIds": [
+        "claim-0160"
+      ],
+      "rangeUnion": [
+        [
+          62,
+          82
+        ]
+      ]
+    },
+    {
+      "path": "packages/link/src/operation-types.ts",
+      "statusUnchanged": "selected",
+      "claimIds": [
+        "claim-0225",
+        "claim-0238"
+      ],
+      "rangeUnion": [
+        [
+          2,
+          19
+        ],
+        [
+          43,
+          67
+        ]
+      ]
+    },
+    {
+      "path": "packages/server/src/panels/process-service.ts",
+      "statusUnchanged": "selected",
+      "claimIds": [
+        "claim-0311"
+      ],
+      "rangeUnion": [
+        [
+          854,
+          887
+        ],
+        [
+          898,
+          916
+        ],
+        [
+          977,
+          1065
+        ]
+      ]
+    },
+    {
+      "path": "packages/server/src/panels/tool-executor.ts",
+      "statusUnchanged": "selected",
+      "claimIds": [
+        "claim-0310"
+      ],
+      "rangeUnion": [
+        [
+          284,
+          438
+        ],
+        [
+          549,
+          609
+        ],
+        [
+          648,
+          666
+        ]
+      ]
+    },
+    {
+      "path": "packages/server/src/session-titles-store.ts",
+      "statusUnchanged": "selected",
+      "claimIds": [
+        "claim-0043",
+        "claim-0374"
+      ],
+      "rangeUnion": [
+        [
+          9,
+          11
+        ],
+        [
+          13,
+          24
+        ],
+        [
+          36,
+          55
+        ],
+        [
+          121,
+          150
+        ],
+        [
+          169,
+          189
+        ]
+      ]
+    },
+    {
+      "path": "packages/tui/src/cli/commands/repl.ts",
+      "statusUnchanged": "selected",
+      "claimIds": [
+        "claim-0080",
+        "claim-0087"
+      ],
+      "rangeUnion": [
+        [
+          3,
+          6
+        ],
+        [
+          10,
+          17
+        ],
+        [
+          22,
+          22
+        ],
+        [
+          26,
+          26
+        ],
+        [
+          42,
+          54
+        ],
+        [
+          69,
+          69
+        ],
+        [
+          214,
+          225
+        ],
+        [
+          227,
+          235
+        ],
+        [
+          257,
+          258
+        ],
+        [
+          267,
+          272
+        ],
+        [
+          280,
+          281
+        ],
+        [
+          322,
+          331
+        ]
+      ]
+    },
+    {
+      "path": "packages/tui/src/cli/commands/run.ts",
+      "statusUnchanged": "selected",
+      "claimIds": [
+        "claim-0217"
+      ],
+      "rangeUnion": [
+        [
+          26,
+          26
+        ],
+        [
+          232,
+          236
+        ]
+      ]
+    },
+    {
+      "path": "packages/tui/src/cli/main.ts",
+      "statusUnchanged": "selected",
+      "claimIds": [
+        "claim-0079",
+        "claim-0086"
+      ],
+      "rangeUnion": [
+        [
+          7,
+          7
+        ],
+        [
+          10,
+          10
+        ],
+        [
+          13,
+          13
+        ],
+        [
+          54,
+          64
+        ],
+        [
+          70,
+          74
+        ],
+        [
+          76,
+          83
+        ],
+        [
+          118,
+          124
+        ],
+        [
+          177,
+          188
+        ],
+        [
+          192,
+          198
+        ],
+        [
+          200,
+          207
+        ],
+        [
+          232,
+          235
+        ]
+      ]
+    },
+    {
+      "path": "packages/tui/src/cli/output/renderer.ts",
+      "statusUnchanged": "selected",
+      "claimIds": [
+        "claim-0206",
+        "claim-0211",
+        "claim-0215"
+      ],
+      "rangeUnion": [
+        [
+          6,
+          6
+        ],
+        [
+          14,
+          29
+        ],
+        [
+          57,
+          74
+        ],
+        [
+          119,
+          125
+        ],
+        [
+          138,
+          162
+        ]
+      ]
+    },
+    {
+      "path": "packages/tui/src/ui/App.tsx",
+      "statusUnchanged": "selected",
+      "claimIds": [
+        "claim-0033",
+        "claim-0047",
+        "claim-0058",
+        "claim-0070",
+        "claim-0085",
+        "claim-0218"
+      ],
+      "rangeUnion": [
+        [
+          22,
+          22
+        ],
+        [
+          46,
+          46
+        ],
+        [
+          73,
+          73
+        ],
+        [
+          143,
+          149
+        ],
+        [
+          157,
+          167
+        ],
+        [
+          212,
+          218
+        ],
+        [
+          292,
+          293
+        ],
+        [
+          355,
+          363
+        ],
+        [
+          389,
+          394
+        ],
+        [
+          436,
+          446
+        ],
+        [
+          701,
+          705
+        ],
+        [
+          711,
+          711
+        ],
+        [
+          739,
+          741
+        ],
+        [
+          800,
+          803
+        ],
+        [
+          883,
+          905
+        ],
+        [
+          1063,
+          1063
+        ],
+        [
+          1066,
+          1066
+        ],
+        [
+          1070,
+          1073
+        ],
+        [
+          1078,
+          1082
+        ],
+        [
+          1543,
+          1544
+        ],
+        [
+          1547,
+          1547
+        ],
+        [
+          1558,
+          1564
+        ],
+        [
+          1626,
+          1629
+        ],
+        [
+          1636,
+          1652
+        ],
+        [
+          1666,
+          1681
+        ],
+        [
+          1716,
+          1721
+        ],
+        [
+          1814,
+          1819
+        ],
+        [
+          1829,
+          1857
+        ],
+        [
+          2166,
+          2177
+        ],
+        [
+          2227,
+          2227
+        ],
+        [
+          2262,
+          2272
+        ],
+        [
+          2286,
+          2297
+        ]
+      ]
+    },
+    {
+      "path": "packages/tui/src/ui/app-helpers.tsx",
+      "statusUnchanged": "full",
+      "claimIds": [
+        "claim-0216"
+      ],
+      "rangeUnion": [
+        [
+          15,
+          15
+        ],
+        [
+          232,
+          235
+        ],
+        [
+          261,
+          272
+        ]
+      ]
+    },
+    {
+      "path": "packages/tui/src/ui/components/ToolCall.tsx",
+      "statusUnchanged": "full",
+      "claimIds": [
+        "claim-0204",
+        "claim-0210",
+        "claim-0213"
+      ],
+      "rangeUnion": [
+        [
+          19,
+          28
+        ],
+        [
+          32,
+          32
+        ],
+        [
+          36,
+          60
+        ],
+        [
+          82,
+          88
+        ],
+        [
+          98,
+          174
+        ],
+        [
+          195,
+          202
+        ],
+        [
+          244,
+          263
+        ]
+      ]
+    },
+    {
+      "path": "packages/tui/src/ui/components/VirtualMessageList.tsx",
+      "statusUnchanged": "selected",
+      "claimIds": [
+        "claim-0219"
+      ],
+      "rangeUnion": [
+        [
+          34,
+          34
+        ],
+        [
+          41,
+          42
+        ],
+        [
+          86,
+          86
+        ],
+        [
+          166,
+          167
+        ],
+        [
+          235,
+          236
+        ]
+      ]
+    },
+    {
+      "path": "packages/tui/src/ui/hooks/useSessionUsage.ts",
+      "statusUnchanged": "full",
+      "claimIds": [
+        "claim-0090"
+      ],
+      "rangeUnion": [
+        [
+          23,
+          44
+        ]
+      ]
+    },
+    {
+      "path": "packages/tui/src/ui/index.tsx",
+      "statusUnchanged": "selected",
+      "claimIds": [
+        "claim-0082"
+      ],
+      "rangeUnion": [
+        [
+          21,
+          27
+        ],
+        [
+          42,
+          42
+        ],
+        [
+          67,
+          79
+        ]
+      ]
+    },
+    {
+      "path": "packages/web/src/hooks/useRemoteApp.ts",
+      "statusUnchanged": "selected",
+      "claimIds": [
+        "claim-0391",
+        "claim-0403"
+      ],
+      "rangeUnion": [
+        [
+          521,
+          533
+        ],
+        [
+          735,
+          753
+        ],
+        [
+          1251,
+          1289
+        ],
+        [
+          1291,
+          1295
+        ],
+        [
+          1349,
+          1378
+        ]
+      ]
+    },
+    {
+      "path": "packages/web/src/hooks/useRemoteSocket.ts",
+      "statusUnchanged": "selected",
+      "claimIds": [
+        "claim-0386",
+        "claim-0402"
+      ],
+      "rangeUnion": [
+        [
+          3,
+          6
+        ],
+        [
+          43,
+          56
+        ],
+        [
+          76,
+          84
+        ],
+        [
+          139,
+          143
+        ],
+        [
+          153,
+          185
+        ],
+        [
+          189,
+          198
+        ],
+        [
+          213,
+          239
+        ],
+        [
+          245,
+          253
+        ],
+        [
+          272,
+          280
+        ]
+      ]
+    },
+    {
+      "path": "packages/web/src/lib/streamReducer.ts",
+      "statusUnchanged": "selected",
+      "claimIds": [
+        "claim-0022",
+        "claim-0075"
+      ],
+      "rangeUnion": [
+        [
+          37,
+          67
+        ],
+        [
+          189,
+          241
+        ],
+        [
+          243,
+          271
+        ],
+        [
+          273,
+          294
+        ],
+        [
+          327,
+          361
+        ],
+        [
+          381,
+          389
+        ],
+        [
+          392,
+          408
+        ],
+        [
+          463,
+          476
+        ],
+        [
+          479,
+          492
+        ],
+        [
+          564,
+          585
+        ],
+        [
+          588,
+          612
+        ]
+      ]
+    },
+    {
+      "path": "scripts/build-meta.ts",
+      "statusUnchanged": "full",
+      "claimIds": [
+        "claim-0482"
+      ],
+      "rangeUnion": [
+        [
+          1,
+          38
+        ]
+      ]
+    }
+  ]
+}

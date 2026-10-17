@@ -1,0 +1,14 @@
+{
+  "startedUTC": "2026-10-17T20:11:57.025817+00:00",
+  "finishedUTC": "2026-10-17T20:11:57.235328+00:00",
+  "exitCode": 0,
+  "methodBytes": 11299,
+  "methodSha256": "5e2816e9071891361cef7a6e9b1da93762998a5cab17ba1d1d4923cd628e8ac0",
+  "stdoutBytes": 2216,
+  "stdoutSha256": "e46b8add80a9ede070a65b133717dee5f2fff1712d99050b25b54de7e5aca649",
+  "stderrBytes": 0,
+  "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "productExecution": 0,
+  "oldMethodExecuted": false,
+  "note": "First adapter output/exit saved before review; metadata only."
+}

@@ -1,0 +1,76 @@
+{
+  "formalHistoricalRecords": 118,
+  "formalUniqueIDs": 118,
+  "formalPriorities": {
+    "P2": 45,
+    "P3": 73
+  },
+  "mdRecords": 118,
+  "mdUniqueIDs": 118,
+  "IDSetSame": true,
+  "allTitlePriorityCanonicalMappingsSame": false,
+  "mismatches": [
+    {
+      "id": "A11",
+      "catalog": {
+        "id": "A11",
+        "priority": "P2",
+        "title": "[P2，静态确认] release --push 在任务分支可能推送未合入 main 的标签",
+        "sourceRound": 1,
+        "canonicalFindings": "docs/audit-2026-10-16/findings.json"
+      },
+      "MD": {
+        "id": "A11",
+        "canonicalLink": "/Users/admin/Documents/个人学习/代码学习/codeshell/docs/audit-2026-10-16/findings.json",
+        "priority": "P2",
+        "title": "release --push 在任务分支可能推送未合入 main 的标签"
+      },
+      "normalizedTarget": "docs/audit-2026-10-16/findings.json"
+    },
+    {
+      "id": "CHAT-R58-01",
+      "catalog": {
+        "id": "CHAT-R58-01",
+        "priority": "P2",
+        "title": "网关停机释放租约后仍写旧收件箱快照，覆盖新进程已确认消息",
+        "sourceRound": 58,
+        "canonicalFindings": "docs/audit-2026-10-17-round58/findings.json"
+      },
+      "MD": {
+        "id": "CHAT-R58-01",
+        "canonicalLink": "findings.json",
+        "priority": "P2",
+        "title": "网关停机释放租约后仍写旧收件箱快照，覆盖新进程已确认消息"
+      },
+      "normalizedTarget": "findings.json"
+    }
+  ],
+  "coverage": {
+    "originalDenominator": 4643,
+    "currentFilenameInventory": 4644,
+    "uniqueCurrentNames": 4644,
+    "addedNames": [
+      "docs/audit-2026-10-17-round57/evidence/static-path.test.ts"
+    ],
+    "removedNames": [],
+    "commandExit": 0,
+    "coverage": {
+      "unknown": 3934,
+      "full": 355,
+      "selected": 354
+    },
+    "notFullInOriginalDenominator": 4288,
+    "currentAddedEvidenceNotProductFull": "Do not add the extra audit evidence fixture to original product coverage denominator."
+  },
+  "candidateHistory": {
+    "inputFiles": 55,
+    "rawOccurrences": 42,
+    "uniqueOriginalIDs": 42,
+    "recordsWithoutID": 0,
+    "duplicateIDOccurrencesBeyondFirst": 0
+  },
+  "candidateCountDiscrepancies": [],
+  "productExecution": 0,
+  "sourceBodyReads": 0,
+  "git": 0
+}

@@ -1,0 +1,231 @@
+{
+  "exactArtifacts": [
+    {
+      "path": "docs/audit-2026-10-17-round61/evidence/root-composition-lifetime/source-read-01.txt",
+      "source": "/tmp/codeshell-audit-round157-composition-lifetime/source-read-01.txt",
+      "bytes": 8361,
+      "sha256": "8e2280a19f3e3cfa2ef15a9fe60b0c06e640e8615db3a943cfd5b15748a74ac3",
+      "trailingLineNumbers": [
+        9,
+        14,
+        21,
+        25,
+        32,
+        38,
+        42,
+        84,
+        109,
+        122,
+        137,
+        170
+      ],
+      "newBlankLineAtEof": false,
+      "preservation": "Frozen provenance artifact bytes; never product runtime log or product source mutation."
+    },
+    {
+      "path": "docs/audit-2026-10-17-round61/evidence/root-composition-lifetime/source-read-02.txt",
+      "source": "/tmp/codeshell-audit-round157-composition-lifetime/source-read-02.txt",
+      "bytes": 9377,
+      "sha256": "768cacb60f1163f4f75e82a83551351fbdad158078c30b94fe551b2ba06ee2f7",
+      "trailingLineNumbers": [
+        21,
+        68,
+        72,
+        87,
+        110,
+        166,
+        183,
+        192,
+        213
+      ],
+      "newBlankLineAtEof": false,
+      "preservation": "Frozen provenance artifact bytes; never product runtime log or product source mutation."
+    },
+    {
+      "path": "docs/audit-2026-10-17-round61/evidence/root-composition-lifetime/source-read-03.txt",
+      "source": "/tmp/codeshell-audit-round157-composition-lifetime/source-read-03.txt",
+      "bytes": 5686,
+      "sha256": "bb4a42bb4909d390cdb7207907cb07541905bc9acd4c5d64f898c3a41d3ebee0",
+      "trailingLineNumbers": [
+        8,
+        12,
+        21,
+        41,
+        101
+      ],
+      "newBlankLineAtEof": false,
+      "preservation": "Frozen provenance artifact bytes; never product runtime log or product source mutation."
+    },
+    {
+      "path": "docs/audit-2026-10-17-round61/evidence/root-dotted-mcp-decision/source-read-01.txt",
+      "source": "/tmp/codeshell-audit-round159-dotted-mcp-decision/source-read-01.txt",
+      "bytes": 19660,
+      "sha256": "9005e8daedd523713ec7d4ec45d91c042f2f4c1194bdb509556a844f702617ca",
+      "trailingLineNumbers": [
+        9,
+        25,
+        48,
+        55,
+        70,
+        76,
+        88,
+        134,
+        143,
+        146,
+        150,
+        161,
+        179,
+        192,
+        203,
+        205,
+        226,
+        229,
+        250,
+        293,
+        326,
+        373,
+        393,
+        397,
+        403,
+        405,
+        411,
+        414,
+        416,
+        418,
+        420,
+        430,
+        432,
+        441,
+        443
+      ],
+      "newBlankLineAtEof": false,
+      "preservation": "Frozen provenance artifact bytes; never product runtime log or product source mutation."
+    },
+    {
+      "path": "docs/audit-2026-10-17-round61/evidence/root-dotted-mcp-decision/source-read-02.txt",
+      "source": "/tmp/codeshell-audit-round159-dotted-mcp-decision/source-read-02.txt",
+      "bytes": 16180,
+      "sha256": "c48739aace910034a137818e122008a5d9cc592de5ccb6aa01a01c3d8a3553ea",
+      "trailingLineNumbers": [
+        38,
+        46,
+        69,
+        78,
+        92,
+        113,
+        177,
+        218,
+        226,
+        294,
+        297,
+        310,
+        339,
+        344
+      ],
+      "newBlankLineAtEof": false,
+      "preservation": "Frozen provenance artifact bytes; never product runtime log or product source mutation."
+    },
+    {
+      "path": "docs/audit-2026-10-17-round61/evidence/root-dotted-mcp-decision/source-read-03.txt",
+      "source": "/tmp/codeshell-audit-round159-dotted-mcp-decision/source-read-03.txt",
+      "bytes": 6978,
+      "sha256": "ed0f179984031b78ca7943c04663690b46d161ece65bc9fabb417cb6d42104b6",
+      "trailingLineNumbers": [
+        4,
+        16,
+        42,
+        76,
+        78,
+        100,
+        115,
+        118,
+        133,
+        156
+      ],
+      "newBlankLineAtEof": false,
+      "preservation": "Frozen provenance artifact bytes; never product runtime log or product source mutation."
+    },
+    {
+      "path": "docs/audit-2026-10-17-round61/evidence/root-dotted-mcp-decision/source-read-04.txt",
+      "source": "/tmp/codeshell-audit-round159-dotted-mcp-decision/source-read-04.txt",
+      "bytes": 7915,
+      "sha256": "387eec61ab681946b9eea58951c9a2cdf6b6a922d65ceca41286acd87a24d5d3",
+      "trailingLineNumbers": [
+        11,
+        14,
+        57,
+        60,
+        103,
+        116,
+        121,
+        139,
+        163
+      ],
+      "newBlankLineAtEof": false,
+      "preservation": "Frozen provenance artifact bytes; never product runtime log or product source mutation."
+    },
+    {
+      "path": "docs/audit-2026-10-17-round61/evidence/mcp-dot-history/broader-original-windows.first.stdout.txt",
+      "source": "/tmp/codeshell-audit-round160-mcp-dot-history/broader-original-windows.first.stdout.txt",
+      "bytes": 3665,
+      "sha256": "a558a74879e4e1cdb600decf7b8a172a97b4fdb6b800ed86ad68a3f3abd81b9d",
+      "trailingLineNumbers": [
+        17,
+        20
+      ],
+      "newBlankLineAtEof": false,
+      "preservation": "Frozen provenance artifact bytes; never product runtime log or product source mutation."
+    },
+    {
+      "path": "docs/audit-2026-10-17-round61/evidence/mcp-dot-history/original-and-catalog.first.stdout.txt",
+      "source": "/tmp/codeshell-audit-round160-mcp-dot-history/original-and-catalog.first.stdout.txt",
+      "bytes": 2031,
+      "sha256": "8f03f6eb6eb2efc793179c70aeceb8babcb2f51d8ef2e4bfb88898e7779be75e",
+      "trailingLineNumbers": [
+        3,
+        9,
+        11,
+        17,
+        20,
+        23
+      ],
+      "newBlankLineAtEof": false,
+      "preservation": "Frozen provenance artifact bytes; never product runtime log or product source mutation."
+    },
+    {
+      "path": "docs/audit-2026-10-17-round61/evidence/mcp-dot-history/precise-windows-1.first.stdout.txt",
+      "source": "/tmp/codeshell-audit-round160-mcp-dot-history/precise-windows-1.first.stdout.txt",
+      "bytes": 5322,
+      "sha256": "628415f955dd27b5d7d3d71e76a1a6e11558c78b76791465743f815e669b088b",
+      "trailingLineNumbers": [
+        3
+      ],
+      "newBlankLineAtEof": false,
+      "preservation": "Frozen provenance artifact bytes; never product runtime log or product source mutation."
+    },
+    {
+      "path": "docs/audit-2026-10-17-round61/evidence/mcp-dot-history/precise-windows-2.first.stdout.txt",
+      "source": "/tmp/codeshell-audit-round160-mcp-dot-history/precise-windows-2.first.stdout.txt",
+      "bytes": 5153,
+      "sha256": "e5628756ad828367604bf0bc14b3c17a6a4b50f1862affc3064670d369068d46",
+      "trailingLineNumbers": [
+        11
+      ],
+      "newBlankLineAtEof": true,
+      "preservation": "Frozen provenance artifact bytes; never product runtime log or product source mutation."
+    },
+    {
+      "path": "docs/audit-2026-10-17-round61/evidence/mcp-dot-history/precise-windows-3.first.stdout.txt",
+      "source": "/tmp/codeshell-audit-round160-mcp-dot-history/precise-windows-3.first.stdout.txt",
+      "bytes": 4967,
+      "sha256": "99e949c4e3558f64feb9036a9c29c9a32ba3c1f9526d135bb9e300d13371fb16",
+      "trailingLineNumbers": [
+        64
+      ],
+      "newBlankLineAtEof": false,
+      "preservation": "Frozen provenance artifact bytes; never product runtime log or product source mutation."
+    }
+  ],
+  "productRuns": 0,
+  "scope": "Only frozen copied provenance. All other files must pass ordinary whitespace check; full check actual exit retained."
+}

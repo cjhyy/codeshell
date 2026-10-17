@@ -1,0 +1,42 @@
+{
+  "formalHistoricalRecords": 118,
+  "formalUniqueIDs": 118,
+  "formalPriorities": {
+    "P2": 45,
+    "P3": 73
+  },
+  "mdRecords": 118,
+  "mdUniqueIDs": 118,
+  "IDSetSame": true,
+  "allTitlePriorityCanonicalMappingsSame": true,
+  "mismatches": [],
+  "coverage": {
+    "originalDenominator": 4643,
+    "currentFilenameInventory": 4644,
+    "uniqueCurrentNames": 4644,
+    "addedNames": [
+      "docs/audit-2026-10-17-round57/evidence/static-path.test.ts"
+    ],
+    "removedNames": [],
+    "commandExit": 0,
+    "coverage": {
+      "unknown": 3934,
+      "full": 355,
+      "selected": 354
+    },
+    "notFullInOriginalDenominator": 4288,
+    "currentAddedEvidenceNotProductFull": "Do not add the extra audit evidence fixture to original product coverage denominator."
+  },
+  "candidateHistory": {
+    "inputFiles": 55,
+    "rawOccurrences": 42,
+    "uniqueOriginalIDs": 42,
+    "recordsWithoutID": 0,
+    "duplicateIDOccurrencesBeyondFirst": 0
+  },
+  "candidateCountDiscrepancies": [],
+  "productExecution": 0,
+  "sourceBodyReads": 0,
+  "git": 0,
+  "normalizationClarification": "Original title prefix including dated evidence qualifier removed only for display comparison; catalog raw values untouched. Relative Markdown canonical target resolved at formal58 directory."
+}

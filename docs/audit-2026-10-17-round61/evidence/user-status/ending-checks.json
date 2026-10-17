@@ -1,0 +1,369 @@
+{
+  "atUTC": "2026-10-17T20:27:42.902660+00:00",
+  "metadataFiles": [
+    {
+      "path": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17-round58/recorded-findings-catalog.json",
+      "initialSha256": "db4370c2544acbe67b6400d3b740d95cc3b170690184be1accc00120bc4a53ac",
+      "endingSha256": "db4370c2544acbe67b6400d3b740d95cc3b170690184be1accc00120bc4a53ac",
+      "sameBytesAndSha256": true
+    },
+    {
+      "path": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17-round58/ALL-ISSUES.md",
+      "initialSha256": "accf0323cae4898ee4c202ca8201402b60b434192567b954351940113a0ecad6",
+      "endingSha256": "accf0323cae4898ee4c202ca8201402b60b434192567b954351940113a0ecad6",
+      "sameBytesAndSha256": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round154-coverage-migration/unified-current-index.json",
+      "initialSha256": "249c7298280d2ff1f3bde4333c98f4d831c27e24a725dc7d9b0d818ed8db9671",
+      "endingSha256": "249c7298280d2ff1f3bde4333c98f4d831c27e24a725dc7d9b0d818ed8db9671",
+      "sameBytesAndSha256": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round154-coverage-migration/current-source-inventory.json",
+      "initialSha256": "8e3c78d9cbbaae82af49ccacad450cc8b6b91012343cdee2c32bf717d5dad317",
+      "endingSha256": "8e3c78d9cbbaae82af49ccacad450cc8b6b91012343cdee2c32bf717d5dad317",
+      "sameBytesAndSha256": true
+    },
+    {
+      "path": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17-round6/candidates.json",
+      "initialSha256": "fdc74ed839ae986af13cce2d9c06592d90f58375a582502dfead161fa4c7c976",
+      "endingSha256": "fdc74ed839ae986af13cce2d9c06592d90f58375a582502dfead161fa4c7c976",
+      "sameBytesAndSha256": true
+    },
+    {
+      "path": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17-round7/candidates.json",
+      "initialSha256": "e91a592837b3eee4c1eb294e02e5fda90e7b84cdf3de0c49ce13f4c2c0ff39da",
+      "endingSha256": "e91a592837b3eee4c1eb294e02e5fda90e7b84cdf3de0c49ce13f4c2c0ff39da",
+      "sameBytesAndSha256": true
+    },
+    {
+      "path": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17-round8/candidates.json",
+      "initialSha256": "7caf27a9fbe8ddb745599e61a6b4089f3777ef0443bc1ebe855a07b8cecb3c81",
+      "endingSha256": "7caf27a9fbe8ddb745599e61a6b4089f3777ef0443bc1ebe855a07b8cecb3c81",
+      "sameBytesAndSha256": true
+    },
+    {
+      "path": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17-round9/candidates.json",
+      "initialSha256": "1a98504797183b662aa55c0df58407955c32d83691ee672a1fc0cfc375f0061c",
+      "endingSha256": "1a98504797183b662aa55c0df58407955c32d83691ee672a1fc0cfc375f0061c",
+      "sameBytesAndSha256": true
+    },
+    {
+      "path": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17-round10/candidates.json",
+      "initialSha256": "99cc80daf093225220473419bfdccf4300a611f2729d617d032c8df579366faa",
+      "endingSha256": "99cc80daf093225220473419bfdccf4300a611f2729d617d032c8df579366faa",
+      "sameBytesAndSha256": true
+    },
+    {
+      "path": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17-round11/candidates.json",
+      "initialSha256": "3ec505f6668df7e062f361d2c7d69fd61862a1d573f26354f188200560cfa68f",
+      "endingSha256": "3ec505f6668df7e062f361d2c7d69fd61862a1d573f26354f188200560cfa68f",
+      "sameBytesAndSha256": true
+    },
+    {
+      "path": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17-round12/candidates.json",
+      "initialSha256": "bcbca122c89a92a7c4673cb17264ad416084aedf9a7f3a15fd595ec67451c28c",
+      "endingSha256": "bcbca122c89a92a7c4673cb17264ad416084aedf9a7f3a15fd595ec67451c28c",
+      "sameBytesAndSha256": true
+    },
+    {
+      "path": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17-round13/candidates.json",
+      "initialSha256": "4492a55b99ee993e6b63e142105ed719fe90b82d573b903f2a2b95a084fdd071",
+      "endingSha256": "4492a55b99ee993e6b63e142105ed719fe90b82d573b903f2a2b95a084fdd071",
+      "sameBytesAndSha256": true
+    },
+    {
+      "path": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17-round14/candidates.json",
+      "initialSha256": "b65882914ad35cfcf4851c837cc38e28ae9202bb60f35741e0510ee84115ddfc",
+      "endingSha256": "b65882914ad35cfcf4851c837cc38e28ae9202bb60f35741e0510ee84115ddfc",
+      "sameBytesAndSha256": true
+    },
+    {
+      "path": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17-round15/candidates.json",
+      "initialSha256": "47ae1267c64938c89c217d28499757a0c9daacab080928e40443b3517d8ec7ad",
+      "endingSha256": "47ae1267c64938c89c217d28499757a0c9daacab080928e40443b3517d8ec7ad",
+      "sameBytesAndSha256": true
+    },
+    {
+      "path": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17-round16/candidates.json",
+      "initialSha256": "cc15eca43b30c86f68da41bbec40cc71b088fa17c64e151d068bba073c9c348e",
+      "endingSha256": "cc15eca43b30c86f68da41bbec40cc71b088fa17c64e151d068bba073c9c348e",
+      "sameBytesAndSha256": true
+    },
+    {
+      "path": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17-round17/candidates.json",
+      "initialSha256": "c617abd4867190300326d0beda02488207ed62b59e2436617a3645bef05a2d7f",
+      "endingSha256": "c617abd4867190300326d0beda02488207ed62b59e2436617a3645bef05a2d7f",
+      "sameBytesAndSha256": true
+    },
+    {
+      "path": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17-round18/candidates.json",
+      "initialSha256": "7a385da93cd5e96c7e0385c3393791c3b346954eb7c7dfefe54c8dd18b39f2c5",
+      "endingSha256": "7a385da93cd5e96c7e0385c3393791c3b346954eb7c7dfefe54c8dd18b39f2c5",
+      "sameBytesAndSha256": true
+    },
+    {
+      "path": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17-round19/candidates.json",
+      "initialSha256": "aac952dd219d94958a6cce96701a0f236c2fd2ffd88f94076a172a5b84414d96",
+      "endingSha256": "aac952dd219d94958a6cce96701a0f236c2fd2ffd88f94076a172a5b84414d96",
+      "sameBytesAndSha256": true
+    },
+    {
+      "path": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17-round20/candidates.json",
+      "initialSha256": "68cdad29fb003cb82a26bccd9432294e664feb4e5f7f8235e40b215a81663eb7",
+      "endingSha256": "68cdad29fb003cb82a26bccd9432294e664feb4e5f7f8235e40b215a81663eb7",
+      "sameBytesAndSha256": true
+    },
+    {
+      "path": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17-round21/candidates.json",
+      "initialSha256": "246aa0f5cf6c4baf45e8e0aefe0fd639039b6978d4cad68950395f51ae219cc9",
+      "endingSha256": "246aa0f5cf6c4baf45e8e0aefe0fd639039b6978d4cad68950395f51ae219cc9",
+      "sameBytesAndSha256": true
+    },
+    {
+      "path": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17-round22/candidates.json",
+      "initialSha256": "07e2b5f3485cb624315368d6803e90761f7145e849a716dfe2ed65c72f75a652",
+      "endingSha256": "07e2b5f3485cb624315368d6803e90761f7145e849a716dfe2ed65c72f75a652",
+      "sameBytesAndSha256": true
+    },
+    {
+      "path": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17-round23/candidates.json",
+      "initialSha256": "11b04cc6ee99a10656b59e9fb0354081e4ad736944163bbd4da649eb93f8c32f",
+      "endingSha256": "11b04cc6ee99a10656b59e9fb0354081e4ad736944163bbd4da649eb93f8c32f",
+      "sameBytesAndSha256": true
+    },
+    {
+      "path": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17-round24/candidates.json",
+      "initialSha256": "b9a8951d20ac6dfc8c0951c42cb6b1d931251865049cbdf70daf0e671fe08c09",
+      "endingSha256": "b9a8951d20ac6dfc8c0951c42cb6b1d931251865049cbdf70daf0e671fe08c09",
+      "sameBytesAndSha256": true
+    },
+    {
+      "path": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17-round25/candidates.json",
+      "initialSha256": "655781b7cbf725653f4131a7a3da360d827417acb5cac4a18f659e54afeb85bc",
+      "endingSha256": "655781b7cbf725653f4131a7a3da360d827417acb5cac4a18f659e54afeb85bc",
+      "sameBytesAndSha256": true
+    },
+    {
+      "path": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17-round26/candidates.json",
+      "initialSha256": "6c755c4202a232be5b9712392cef4782fd49c0da90559f19239fd79d47f7ada6",
+      "endingSha256": "6c755c4202a232be5b9712392cef4782fd49c0da90559f19239fd79d47f7ada6",
+      "sameBytesAndSha256": true
+    },
+    {
+      "path": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17-round27/candidates.json",
+      "initialSha256": "2fcdc68ad7c76ddbe02a61373cd902d753c49370b0dd583aa0a3e606a886d6bc",
+      "endingSha256": "2fcdc68ad7c76ddbe02a61373cd902d753c49370b0dd583aa0a3e606a886d6bc",
+      "sameBytesAndSha256": true
+    },
+    {
+      "path": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17-round28/candidates.json",
+      "initialSha256": "0930c20db4bc3030d263aa03f0064574931b3f520abaf9611504ba037f940e6a",
+      "endingSha256": "0930c20db4bc3030d263aa03f0064574931b3f520abaf9611504ba037f940e6a",
+      "sameBytesAndSha256": true
+    },
+    {
+      "path": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17-round29/candidates.json",
+      "initialSha256": "3cce5bceafd3209525f0d83a9140d4cf4f4f85974fc5899e83105d4bb35e95f4",
+      "endingSha256": "3cce5bceafd3209525f0d83a9140d4cf4f4f85974fc5899e83105d4bb35e95f4",
+      "sameBytesAndSha256": true
+    },
+    {
+      "path": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17-round30/candidates.json",
+      "initialSha256": "12faa21afef6b0c1ed9a617dbaab246a9654b5de5b8c97ca5971a91d2ab83a87",
+      "endingSha256": "12faa21afef6b0c1ed9a617dbaab246a9654b5de5b8c97ca5971a91d2ab83a87",
+      "sameBytesAndSha256": true
+    },
+    {
+      "path": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17-round31/candidates.json",
+      "initialSha256": "5a511ee9fdebf44befb2e77e540fa4fe343298953ad73658003fe3a245d37b0d",
+      "endingSha256": "5a511ee9fdebf44befb2e77e540fa4fe343298953ad73658003fe3a245d37b0d",
+      "sameBytesAndSha256": true
+    },
+    {
+      "path": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17-round32/candidates.json",
+      "initialSha256": "a8bbfde4c91c58d3870b1df3643cfe4e59157aca34a61a8501818fd1e1c45c9f",
+      "endingSha256": "a8bbfde4c91c58d3870b1df3643cfe4e59157aca34a61a8501818fd1e1c45c9f",
+      "sameBytesAndSha256": true
+    },
+    {
+      "path": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17-round33/candidates.json",
+      "initialSha256": "e947683c07a3b5fd94924032e01046ede78112489337786289e973398a88bbe3",
+      "endingSha256": "e947683c07a3b5fd94924032e01046ede78112489337786289e973398a88bbe3",
+      "sameBytesAndSha256": true
+    },
+    {
+      "path": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17-round34/candidates.json",
+      "initialSha256": "a4c9a0f805f1dea7b5143e83f6b4c5da47f8d6d56b7121de421174014c5ebde8",
+      "endingSha256": "a4c9a0f805f1dea7b5143e83f6b4c5da47f8d6d56b7121de421174014c5ebde8",
+      "sameBytesAndSha256": true
+    },
+    {
+      "path": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17-round35/candidates.json",
+      "initialSha256": "8a477b21b66f25438667d3b95649731af7a88d9835813a9d3999d22c3ee2d1f6",
+      "endingSha256": "8a477b21b66f25438667d3b95649731af7a88d9835813a9d3999d22c3ee2d1f6",
+      "sameBytesAndSha256": true
+    },
+    {
+      "path": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17-round36/candidates.json",
+      "initialSha256": "d178e873d53af9a46f338e6f5d1703f21ef4cd3a78983482ed4fb00d001f6fdc",
+      "endingSha256": "d178e873d53af9a46f338e6f5d1703f21ef4cd3a78983482ed4fb00d001f6fdc",
+      "sameBytesAndSha256": true
+    },
+    {
+      "path": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17-round37/candidates.json",
+      "initialSha256": "ca292a6814cd4619e3be1ee784676484da1e427899b5d136e3c3d9cb4542b273",
+      "endingSha256": "ca292a6814cd4619e3be1ee784676484da1e427899b5d136e3c3d9cb4542b273",
+      "sameBytesAndSha256": true
+    },
+    {
+      "path": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17-round38/candidates.json",
+      "initialSha256": "72074e9efa0360a8ae948296cedbcb02d6f732469e4c67001148e569634f7b36",
+      "endingSha256": "72074e9efa0360a8ae948296cedbcb02d6f732469e4c67001148e569634f7b36",
+      "sameBytesAndSha256": true
+    },
+    {
+      "path": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17-round39/candidates.json",
+      "initialSha256": "1c498725e8db1231a106fcbd65a804b6e6e3cd923f6edefec53a619bb932c243",
+      "endingSha256": "1c498725e8db1231a106fcbd65a804b6e6e3cd923f6edefec53a619bb932c243",
+      "sameBytesAndSha256": true
+    },
+    {
+      "path": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17-round40/candidates.json",
+      "initialSha256": "7724c7458acf5b70e5a2284a1ace43f60cdb34a084ebf24718649026ccf57a00",
+      "endingSha256": "7724c7458acf5b70e5a2284a1ace43f60cdb34a084ebf24718649026ccf57a00",
+      "sameBytesAndSha256": true
+    },
+    {
+      "path": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17-round41/candidates.json",
+      "initialSha256": "061017e1bb5bc676dee8fb8c85261a217fe43bd3d8f28e405b28ff971b488d0f",
+      "endingSha256": "061017e1bb5bc676dee8fb8c85261a217fe43bd3d8f28e405b28ff971b488d0f",
+      "sameBytesAndSha256": true
+    },
+    {
+      "path": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17-round42/candidates.json",
+      "initialSha256": "d093c5f1ba9ec3af35e442e53759c19e17cafb302acb62ef40cef780d62b7c70",
+      "endingSha256": "d093c5f1ba9ec3af35e442e53759c19e17cafb302acb62ef40cef780d62b7c70",
+      "sameBytesAndSha256": true
+    },
+    {
+      "path": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17-round43/candidates.json",
+      "initialSha256": "b1a73ded2501d6de9712aebe0a47c0a219e5cd95bba3a63ae30cbccebce3da92",
+      "endingSha256": "b1a73ded2501d6de9712aebe0a47c0a219e5cd95bba3a63ae30cbccebce3da92",
+      "sameBytesAndSha256": true
+    },
+    {
+      "path": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17-round44/candidates.json",
+      "initialSha256": "f0856fe0e539d7b7b865d245425cc300610b938cfc20ad463c27210659654908",
+      "endingSha256": "f0856fe0e539d7b7b865d245425cc300610b938cfc20ad463c27210659654908",
+      "sameBytesAndSha256": true
+    },
+    {
+      "path": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17-round45/candidates.json",
+      "initialSha256": "7996b1eec1edf0d8ee75d18474e5ecdaa8828753983118fd60841a7d47f62595",
+      "endingSha256": "7996b1eec1edf0d8ee75d18474e5ecdaa8828753983118fd60841a7d47f62595",
+      "sameBytesAndSha256": true
+    },
+    {
+      "path": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17-round46/candidates.json",
+      "initialSha256": "5b969f088a3969a882fb7f09555512212585038022a627b127e38a1ab4937310",
+      "endingSha256": "5b969f088a3969a882fb7f09555512212585038022a627b127e38a1ab4937310",
+      "sameBytesAndSha256": true
+    },
+    {
+      "path": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17-round47/candidates.json",
+      "initialSha256": "cfc2452e0c28001a20ec5d033a35cba1da0d9956251220a5a68247f38e041194",
+      "endingSha256": "cfc2452e0c28001a20ec5d033a35cba1da0d9956251220a5a68247f38e041194",
+      "sameBytesAndSha256": true
+    },
+    {
+      "path": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17-round48/candidates.json",
+      "initialSha256": "a592ace4ab3195a4c5d6abf59ab3a494253d95a7d2c4e63403577d49a64ab43f",
+      "endingSha256": "a592ace4ab3195a4c5d6abf59ab3a494253d95a7d2c4e63403577d49a64ab43f",
+      "sameBytesAndSha256": true
+    },
+    {
+      "path": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17-round49/candidates.json",
+      "initialSha256": "b14443c4aa9cc6504bb8a6573d3c5b3e09aea99fe85db4286eac616af455802a",
+      "endingSha256": "b14443c4aa9cc6504bb8a6573d3c5b3e09aea99fe85db4286eac616af455802a",
+      "sameBytesAndSha256": true
+    },
+    {
+      "path": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17-round50/candidates.json",
+      "initialSha256": "c32f13b0fcb869d9cf6395119311c6f207fdcbf02e78467f063ac61c77ae562d",
+      "endingSha256": "c32f13b0fcb869d9cf6395119311c6f207fdcbf02e78467f063ac61c77ae562d",
+      "sameBytesAndSha256": true
+    },
+    {
+      "path": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17-round51/candidates.json",
+      "initialSha256": "c84c3585e2587d1e01cf9827b68ebe744b90a0b8034291d33452669d8aed9199",
+      "endingSha256": "c84c3585e2587d1e01cf9827b68ebe744b90a0b8034291d33452669d8aed9199",
+      "sameBytesAndSha256": true
+    },
+    {
+      "path": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17-round52/candidates.json",
+      "initialSha256": "083553e4e1191c78d20cb411b9620379d508b0db97041d264134a73dd95ff59f",
+      "endingSha256": "083553e4e1191c78d20cb411b9620379d508b0db97041d264134a73dd95ff59f",
+      "sameBytesAndSha256": true
+    },
+    {
+      "path": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17-round53/candidates.json",
+      "initialSha256": "c6f2b3ec9520589135e217ab2c03c811b9a8a26d91b77b87ef771b1e3c5ea4e6",
+      "endingSha256": "c6f2b3ec9520589135e217ab2c03c811b9a8a26d91b77b87ef771b1e3c5ea4e6",
+      "sameBytesAndSha256": true
+    },
+    {
+      "path": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17-round54/candidates.json",
+      "initialSha256": "169f2ac332ae290788ff0a05785e491a518e4578228d3d700c4e33cc831a15a2",
+      "endingSha256": "169f2ac332ae290788ff0a05785e491a518e4578228d3d700c4e33cc831a15a2",
+      "sameBytesAndSha256": true
+    },
+    {
+      "path": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17-round55/candidates.json",
+      "initialSha256": "096003abd31d0c4f21b8a2a6605f597e8ec52601cfcd6f3f2d20db3abd9df068",
+      "endingSha256": "096003abd31d0c4f21b8a2a6605f597e8ec52601cfcd6f3f2d20db3abd9df068",
+      "sameBytesAndSha256": true
+    },
+    {
+      "path": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17-round56/candidates.json",
+      "initialSha256": "12c6dd7881deef77851df3bfb9b9596b45447ab3beb914b0c34d750cb9e703ce",
+      "endingSha256": "12c6dd7881deef77851df3bfb9b9596b45447ab3beb914b0c34d750cb9e703ce",
+      "sameBytesAndSha256": true
+    },
+    {
+      "path": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17-round57/candidates.json",
+      "initialSha256": "2008088d0b58fe327e9be0adce16fc684408f62710764b862cede5a95f44a140",
+      "endingSha256": "2008088d0b58fe327e9be0adce16fc684408f62710764b862cede5a95f44a140",
+      "sameBytesAndSha256": true
+    },
+    {
+      "path": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17-round58/candidates.json",
+      "initialSha256": "1f6f98811de45345e18701333073b53e908a6e975c7e193277998ee64731a035",
+      "endingSha256": "1f6f98811de45345e18701333073b53e908a6e975c7e193277998ee64731a035",
+      "sameBytesAndSha256": true
+    },
+    {
+      "path": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17-round59/candidates.json",
+      "initialSha256": "885048408cc0061b4552db671bedb4e08dd3657073cde2f5f53918e57f9ec00d",
+      "endingSha256": "885048408cc0061b4552db671bedb4e08dd3657073cde2f5f53918e57f9ec00d",
+      "sameBytesAndSha256": true
+    },
+    {
+      "path": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17-round60/candidates.json",
+      "initialSha256": "4c40ede0dc2cc97187a54b1b31f025ea3ef976ab624fd46733bc09dc7acd46e6",
+      "endingSha256": "4c40ede0dc2cc97187a54b1b31f025ea3ef976ab624fd46733bc09dc7acd46e6",
+      "sameBytesAndSha256": true
+    }
+  ],
+  "all59InputPinsSame": true,
+  "filenameOnlyEndingCheck": {
+    "exitCode": 0,
+    "names": 4644,
+    "sameNameSetAsFirst": true,
+    "stdoutSha256": "3d28c17bf76da3bbae8d2f061319e5a7a6ac1c2900778216f34732ed35ef7a88"
+  },
+  "sourceBytesOrBodyRead": false,
+  "productExecution": 0,
+  "git": 0
+}

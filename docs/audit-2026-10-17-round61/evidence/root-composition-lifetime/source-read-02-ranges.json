@@ -1,0 +1,32 @@
+[
+  [
+    "packages/core/src/engine/engine.ts",
+    [
+      [
+        640,
+        660
+      ],
+      [
+        800,
+        890
+      ],
+      [
+        1786,
+        1815
+      ],
+      [
+        1878,
+        1898
+      ]
+    ]
+  ],
+  [
+    "packages/core/src/composition/types.ts",
+    [
+      [
+        42,
+        84
+      ]
+    ]
+  ]
+]

@@ -1,0 +1,13 @@
+{
+  "checks": {
+    "files": []
+  },
+  "productSourceSemanticRead": 0,
+  "productImportsExecution": 0,
+  "productHelpersFixturesTestsRun": 0,
+  "modelClockNativeNetworkGit": 0,
+  "allowedSourceOperation": "Raw bytes, SHA256 and line-count inventory only on original4643 declared source paths plus one named evidence fixture.",
+  "metadataChecks": "Original base and all new rows/pointers/ranges/status transitions recomputed; no author/old normalizer method executed.",
+  "testDeclarationHandling": "11 of51 newly-classified-full paths are existing test declaration texts, not tests executed or passing; other full totals also retain original purposes.",
+  "wholeRepositoryConclusion": false
+}

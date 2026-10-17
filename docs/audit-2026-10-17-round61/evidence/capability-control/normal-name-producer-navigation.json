@@ -1,0 +1,35 @@
+[
+  {
+    "command": [
+      "rg",
+      "-n",
+      "validate|trim\\(|serverName|name=|name:|setName|onChange.*name|nameError",
+      "packages/desktop/src/renderer/settings/McpSection.tsx"
+    ],
+    "exitCode": 0,
+    "stdout": "22:  name: string;\n92: * `<pluginName>:<serverName>` (core loadPluginMcp), so the owner is the prefix.\n293:      name: s.name,\n349:  const removeServer = async (name: string) =>\n353:        message: t(\"settingsX.mcp.confirmRemoveMsg\", { name: truncateTitle(name) }),\n359:      await window.codeshell.invalidateMcpProbeCache(name);\n384:          await window.codeshell.invalidateMcpProbeCache(s.name);\n409:        await window.codeshell.invalidateMcpProbeCache(s.name);\n461:        await window.codeshell.invalidateMcpProbeCache(originalName);\n463:      await window.codeshell.invalidateMcpProbeCache(next.name);\n473:  const saveOverride = async (name: string, next: McpServer) =>\n485:      await window.codeshell.invalidateMcpProbeCache(name);\n498:            name: s.name,\n599:              key={`${entry.installKey}:${entry.serverNames.join(\",\")}:${index}`}\n616:                      count: entry.serverNames.length,\n620:                    {entry.serverNames.map((name) => `${entry.plugin}:${name}`).join(\", \")}\n1137:  const [name, setName] = useState(initial?.name ?? \"\");\n1271:      const serverName = name.trim();\n1272:      const serverUrl = url.trim();\n1273:      if (!serverName) throw new Error(t(\"settingsX.mcp.nameEmpty\"));\n1282:        serverName,\n1285:        clientId: oauthClientId.trim() || undefined,\n1286:        authorizationEndpoint: oauthAuthorizationEndpoint.trim() || undefined,\n1287:        tokenEndpoint: oauthTokenEndpoint.trim() || undefined,\n1321:    const trimmedName = name.trim();\n1329:        if (!command.trim()) return setValidationError(t(\"settingsX.mcp.stdioNeedsCommand\"));\n1331:        if (!url.trim()) return setValidationError(t(\"settingsX.mcp.needsUrl\", { transport }));\n1333:          new URL(url.trim());\n1366:    const nextBearerEnvVar = includeBearerAuth ? bearerEnvVar.trim() || undefined : undefined;\n1377:          name: trimmedName,\n1394:          name: trimmedName,\n1401:                command: command.trim(),\n1407:                    : args.trim()\n1408:                      ? splitArgs(args.trim())\n1414:                url: url.trim(),\n1443:            ? t(\"settingsX.mcp.overrideTitle\", { name: initial?.name ?? \"\" })\n1445:              ? t(\"settingsX.mcp.editTitle\", { name: initial.name })\n1464:            onChange={(e) => setName(e.target.value)}\n1817:  const { name: _, ...rest } = s;\n1838:    const line = raw.trim();\n1845:    const k = line.slice(0, idx).trim();\n1846:    const v = line.slice(idx + 1).trim();\n1857:    const line = raw.trim();\n1879:    const line = raw.trim();\n",
+    "stderr": ""
+  },
+  {
+    "command": [
+      "rg",
+      "-n",
+      "capabilityOverrides|mcpServers|McpServer|mcp:|plugins:|z.record",
+      "packages/core/src/settings/schema.ts"
+    ],
+    "exitCode": 0,
+    "stdout": "50: * mcpServers.<name>.enabled / disabledAgents). NOT a second denylist:\n62:    skills: z.record(CapabilityOverrideSchema).optional(),\n63:    plugins: z.record(CapabilityOverrideSchema).optional(),\n64:    agents: z.record(CapabilityOverrideSchema).optional(),\n65:    mcp: z.record(CapabilityOverrideSchema).optional(),\n66:    builtin: z.record(CapabilityOverrideSchema).optional(),\n68:    pet: z.record(CapabilityOverrideSchema).optional(),\n76:    pluginHooks: z.record(CapabilityOverrideSchema).optional(),\n259:          paramValues: z.record(z.string(), z.unknown()).optional(),\n288:              argsPattern: z.record(z.string()).optional(),\n351:    mcpServers: z\n370:        z.record(\n378:            env: z.record(z.string()).optional(),\n381:            headers: z.record(z.string()).optional(),\n386:            envHeaders: z.record(z.string()).optional(), // (HTTP) header-name → env-var-name\n405:     * time (mergePluginMcpServers). Only server/tool policy + env/credential\n418:            env: z.record(z.string()).optional(),\n422:            envHeaders: z.record(z.string()).optional(),\n461:    panelAppOverrides: z.record(CapabilityOverrideSchema).default({}),\n477:    capabilityOverrides: CapabilityOverridesSchema,\n483:     * 用户手写 capabilityOverrides 之下（用户按 key 永远赢，见 overlay.ts\n509:    featureFlags: z.record(z.string(), z.boolean()).default({}),\n630:    env: z.record(z.string()).optional(),\n657:        env: z.record(z.string()).optional(),\n",
+    "stderr": ""
+  },
+  {
+    "command": [
+      "rg",
+      "-n",
+      "^function setDottedSetting|parseDottedSettingKey",
+      "packages/core/src/settings/manager.ts"
+    ],
+    "exitCode": 0,
+    "stdout": "83:function parseDottedSettingKey(key: string): string[] {\n149:  const parts = parseDottedSettingKey(key);\n677:      const parts = parseDottedSettingKey(key);\n",
+    "stderr": ""
+  }
+]

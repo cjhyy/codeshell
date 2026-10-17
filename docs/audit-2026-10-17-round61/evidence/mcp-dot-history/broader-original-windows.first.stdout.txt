@@ -1,0 +1,31 @@
+mcp-nested-path 3 docs/archive/review-2026-07-09/14-remaining-observations-verification.md /text line 44
+core/src/protocol/server.ts:1908`、`packages/core/src/protocol/server.ts:1911`、`packages/core/src/protocol/server.ts:1919`、`packages/core/src/protocol/server.ts:1937`、`packages/core/src/protocol/server.ts:1938`。
+- 但 server 合成的 AskUser notification 只在 envelope 上带 `sessionId`，嵌套 `request` 没有 `sessionId` 字段：`packages/core/src/protocol/server.ts:1981`、`packages/core/src/protocol/server.ts:1982`、`packages/core/src/protocol/server.ts:1984`、`packages/core/src/protocol/server.ts:1985`。
+- browser / cr
+mcp-nested-path 4 docs/archive/review-2026-07-09/14-remaining-observations-verification.md /text line 45
+d`，嵌套 `request` 没有 `sessionId` 字段：`packages/core/src/protocol/server.ts:1981`、`packages/core/src/protocol/server.ts:1982`、`packages/core/src/protocol/server.ts:1984`、`packages/core/src/protocol/server.ts:1985`。
+- browser / credential / workspace 合成请求同样只在 envelope 带 `sessionId`，嵌套 request 无 sessionId：`packages/core/src/protocol/server.ts:2096`、`packages/core/src/protocol/server.ts:2097`、`packages/core/src/protocol/server.ts:2099`；`packages/core/src/protocol/server.ts:2152`、`packages/core/src/prot
+mcp-nested-path 5 docs/archive/review-2026-07-09/14-remaining-observations-verification.md /text line 52
+`、`packages/desktop/src/renderer/App.tsx:1899`。
+
+### 4. 结论
+
+确证，但范围需要收窄：原观察对 SDK approval event surface 成立，尤其是 AskUser/browser/credential/workspace 这类 server 合成请求；普通工具审批因为 `request.sessionId` 可能随嵌套 request 一起到达，SDK consumer 可以自行读取 `request.sessionId` 作为临时绕路，但这不是 `AgentClientEvents.approvalRequest` 明确承诺的 envelope 契约。`approvalResolved` 不处理为完全确证。
+
+### 5. 严重度校准
+
+P2。desktop 主路径已有 preload/renderer raw envelope 保护，不是全产品 
+mcp-nested-path 7 docs/archive/todo/fix-batch-3-2026-07-08.md /text line 16
+/mcp-manager.test.ts`: `uses CODE_SHELL_HOME as the final CodeShell home` | Failing regression observed, then `bun test packages/core/src/tool-system/mcp-manager.test.ts` passed before commit; final run also passed after formatting. |
+| Background shell artifacts use nested home | `review-master-2026-07-08.md`, CONFIRMED-LIVE row, `packages/core/src/runtime/background-shell.ts:139` | `55ae9cf832d6b7a2176804e56ed2e0ad6b68ca25` | `packages/core/src/runtime/background-shell.test.ts`: `stores 
+mcp-nested-path 8 docs/archive/todo/review-core-2026-07-08.md /text line 79
+images go to `/tmp/csh/.code-shell/mcp_images` while sessions and memory go to `/tmp/csh/...`.
+
+Impact: Hosts/tests that relocate CodeShell state get MCP images in an unexpected nested directory, so cleanup, backup, and isolation logic can miss them.
+
+Suggested fix: Centralize a `codeShellHome()` helper and use it for MCP image spills. The default should be `CODE_SHELL_HOME` when set, otherwise `join(
+mcp-nested-path 9 docs/archive/todo/review-uncommitted-correctness-2026-07-08.md /text line 73
+background shells | 🟢 | Moves artifacts under `codeShellHome()` directly; tests cover path layout. |
+| `053ceaae` fix(core): honor codeshell home for mcp images | 🟢 | Same home-resolution correction for image spills; test covers non-nested layout. |
+| `4fd4a12f` fix(core): expose marketplace tool in presets | 🟢 | Simple preset whitelist addition with direct test. |
+| `e32c0fb7` fix(core): clean up failed mcp discovery | 🟢 | Discovery failures now disconne

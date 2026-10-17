@@ -1,0 +1,31 @@
+{
+  "atUTC": "2026-10-17T20:13:59.046821+00:00",
+  "checks": {
+    "files": []
+  },
+  "oldBaseReproduced": {
+    "unknown": 4171,
+    "full": 304,
+    "selected": 168
+  },
+  "updatedIndexCounts": {
+    "unknown": 3934,
+    "full": 355,
+    "selected": 354
+  },
+  "denominatorUnchanged": true,
+  "accepted495CanonicalPointersRangeAndShaRebound": true,
+  "all51NewFullExplicitOriginalFullCoverageAndCurrentEOF": true,
+  "all186NewSelectedHaveExplicitSemanticRanges": true,
+  "statusTransitionsExactly237": true,
+  "authorReviewerOverlapDoesNotIncreasePathCount": true,
+  "selectedUnionNeverPromotesFull": true,
+  "constraintsPreserved": true,
+  "rowsDeferred": 0,
+  "documentsDeferred": 0,
+  "limitedSchemaScope": "Only77 nonempty canonical standard .files author/root/reviewer lists; aggregate binding15/empty-gate17/inactive2 skipped. Earlier MD-only/other noncanonical formats outside this incremental scope remain unclassified.",
+  "productSourceSemanticRead": 0,
+  "productExecution": 0,
+  "oldMethodsExecuted": false,
+  "git": 0
+}

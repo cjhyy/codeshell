@@ -1,0 +1,68 @@
+19:describe("SessionContextStore", () => {
+20:  test("resolves a registered thread to its own host", () => {
+24:    store.register("thread-a", a);
+25:    store.register("thread-b", b);
+27:    expect(store.resolve({ threadId: "thread-a", generation: 1 })).toEqual({ ok: true, host: a });
+28:    expect(store.resolve({ threadId: "thread-b", generation: 1 })).toEqual({ ok: true, host: b });
+31:  test("fails closed on a missing thread id", () => {
+33:    store.register("thread-a", fakeHost("sess-a"));
+34:    const result = store.resolve({ threadId: undefined, generation: 1 });
+39:  test("fails closed on an unregistered thread, even when exactly one is registered", () => {
+44:    store.register("thread-a", fakeHost("sess-a"));
+45:    const result = store.resolve({ threadId: "thread-zzz", generation: 1 });
+50:  test("fails closed after the thread is unregistered", () => {
+52:    store.register("thread-a", fakeHost("sess-a"));
+53:    store.unregister("thread-a");
+54:    const result = store.resolve({ threadId: "thread-a", generation: 1 });
+59:  test("generation fencing rejects a late request from a previous app-server", () => {
+60:    // An app-server restart re-registers threads under a new generation. A
+64:    store.register("thread-a", fakeHost("sess-old"));
+65:    store.bumpGeneration();
+66:    store.register("thread-a", fakeHost("sess-new"));
+68:    const stale = store.resolve({ threadId: "thread-a", generation: 1 });
+70:    expect(stale.ok === false && stale.reason).toBe("stale_generation");
+72:    const fresh = store.resolve({ threadId: "thread-a", generation: 2 });
+76:  test("registering one thread never changes another thread's reachability", () => {
+77:    // An earlier revision took `generation` as a register() parameter and raised
+79:    // reachability for everyone: registering at a LOWER generation stranded the
+80:    // new thread immediately, and registering at a HIGHER one silently evicted
+84:    store.register("thread-a", fakeHost("sess-a"));
+85:    expect(store.resolve({ threadId: "thread-a", generation: store.generation }).ok).toBe(true);
+88:    store.register("thread-b", fakeHost("sess-b"));
+89:    store.register("thread-c", fakeHost("sess-c"));
+90:    expect(store.resolve({ threadId: "thread-a", generation: store.generation }).ok).toBe(true);
+91:    expect(store.resolve({ threadId: "thread-b", generation: store.generation }).ok).toBe(true);
+92:    // …and the generation must not drift as a side effect of registering.
+93:    expect(store.generation).toBe(1);
+96:  test("a caller cannot resurrect a stale entry by passing the old generation", () => {
+97:    // `resolve` must check BOTH sides against the store's own generation. If it
+100:    // app-server generation is live.
+102:    store.register("thread-a", fakeHost("sess-old"));
+103:    const staleGeneration = store.generation;
+104:    store.bumpGeneration();
+106:    const resurrected = store.resolve({ threadId: "thread-a", generation: staleGeneration });
+110:  test("bumpGeneration drops entries it just made unreachable", () => {
+115:    store.register("thread-a", fakeHost("sess-a"));
+116:    store.register("thread-b", fakeHost("sess-b"));
+119:    store.bumpGeneration();
+124:  test("a batch spanning two threads is rejected wholesale", () => {
+128:    store.register("thread-a", fakeHost("sess-a"));
+129:    store.register("thread-b", fakeHost("sess-b"));
+131:    const single = store.resolveBatch(["thread-a", "thread-a"], store.generation);
+134:    const mixed = store.resolveBatch(["thread-a", "thread-b"], store.generation);
+139:  test("a batch with any missing thread id is rejected", () => {
+141:    store.register("thread-a", fakeHost("sess-a"));
+142:    const result = store.resolveBatch(["thread-a", undefined], store.generation);
+147:  test("an empty batch is rejected rather than treated as trivially fine", () => {
+154:    store.register("thread-a", fakeHost("sess-a"));
+155:    const result = store.resolveBatch([], store.generation);
+160:  test("re-registering a thread replaces the host instead of accumulating", () => {
+164:    store.register("thread-a", first);
+165:    store.register("thread-a", second);
+166:    expect(store.resolve({ threadId: "thread-a", generation: 1 })).toEqual({
+173:  test("clear() drops every mapping", () => {
+175:    store.register("thread-a", fakeHost("sess-a"));
+176:    store.register("thread-b", fakeHost("sess-b"));
+179:    expect(store.resolve({ threadId: "thread-a", generation: 1 }).ok).toBe(false);
+182:  test("never serializes a host — the store is memory-only", () => {
+185:    store.register("thread-a", fakeHost("sess-a"));

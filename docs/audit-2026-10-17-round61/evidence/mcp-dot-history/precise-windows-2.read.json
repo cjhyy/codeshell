@@ -1,0 +1,177 @@
+[
+  {
+    "query": "overlay-token-path",
+    "savedIndex": 1,
+    "documentPin": {
+      "path": "docs/superpowers/plans/2026-07-15-workspace-profile-mvp.md",
+      "bytes": 67481,
+      "sha256": "4d1485acf87aede949a29e311f676a65f8f65e0e78d41dac73b2cb54906bd1ce",
+      "pinAt": "2026-10-17T20:19:50.218857+00:00"
+    },
+    "hit": {
+      "document": "docs/superpowers/plans/2026-07-15-workspace-profile-mvp.md",
+      "location": "/text",
+      "matchStart": 19778,
+      "matchEnd": 19808,
+      "windowStart": 19628,
+      "windowEnd": 20028,
+      "wholeValueCharacters": 60659,
+      "window": "`bun test packages/core/src/profile/activation.test.ts`\nExpected: PASS（5 pass）\n\n注意：若 `saveProjectSetting` 因 dotted-key 语义把 `\"profile\"` 当路径处理出问题（它内部用 `setDottedSetting`），值本身是对象、键无点号，应当直接落为顶层键；如失败，读 `settings/manager.ts:443-461` 确认行为后修测试或实现，不要改 manager 的通用语义。\n\n- [ ] **Step 5: Commit**\n\n```bash\ngit add packages/core/src/profile/activation.ts packages/core/src/profile/activation.test.ts\ngit commit -m ",
+      "windowTruncated": true,
+      "matchStartLine": 561,
+      "windowStartLine": 558
+    },
+    "readAt": "2026-10-17T20:19:50.224838+00:00",
+    "scope": "Only this saved bounded window read; not whole giant JSON scalar or document."
+  },
+  {
+    "query": "overlay-token-path",
+    "savedIndex": 2,
+    "documentPin": {
+      "path": "docs/superpowers/specs/2026-06-01-project-scoped-capabilities-and-session-isolation-design.md",
+      "bytes": 37509,
+      "sha256": "27f512cb38ed5df5985e268749f8e65561bb270c36fd8c43f58ca95817ad4671",
+      "pinAt": "2026-10-17T20:19:50.225743+00:00"
+    },
+    "hit": {
+      "document": "docs/superpowers/specs/2026-06-01-project-scoped-capabilities-and-session-isolation-design.md",
+      "location": "/text",
+      "matchStart": 20596,
+      "matchEnd": 20628,
+      "windowStart": 20446,
+      "windowEnd": 20848,
+      "wholeValueCharacters": 25610,
+      "window": "ay schema\n\n- `SettingsManager.saveProjectSetting(key, value, cwd)`。\n- `SettingsManager.deleteProjectSetting(key, cwd)` 或等价删除能力。\n- settings schema 增加 `capabilityOverrides`。\n- 单元测试覆盖点号路径写入、目录创建、原子写、invalidate。\n\n### Phase 2：能力控制层 project overlay\n\n- `CapabilityService.setEnabled()` 增加 scope/cwd。\n- 新增 `setOverride()` 或等价 API 表达 `inherit/on/off`。\n- descriptor 返回 `globalEnabled`、`projectOverride`、`effectiv",
+      "windowTruncated": true,
+      "matchStartLine": 549,
+      "windowStartLine": 545
+    },
+    "readAt": "2026-10-17T20:19:50.229820+00:00",
+    "scope": "Only this saved bounded window read; not whole giant JSON scalar or document."
+  },
+  {
+    "query": "overlay-token-path",
+    "savedIndex": 3,
+    "documentPin": {
+      "path": "docs/todo/claude-repository-optimization-2026-08-30.md",
+      "bytes": 52506,
+      "sha256": "21f0c339cb08e50941831e8d95bbc0fc127014b8d409d57c16c86218dc3d7acc",
+      "pinAt": "2026-10-17T20:19:50.230849+00:00"
+    },
+    "hit": {
+      "document": "docs/todo/claude-repository-optimization-2026-08-30.md",
+      "location": "/text",
+      "matchStart": 15462,
+      "matchEnd": 15497,
+      "windowStart": 15312,
+      "windowEnd": 15717,
+      "wholeValueCharacters": 36316,
+      "window": "\n> `SettingsManager.saveProjectSetting(key, value, cwd)` —— 它已经做了锁内重读 +\n> 原子 temp+rename + 缓存失效，**不新建第二套 lock/atomic 实现**。key 校验提前到落盘前\n> （在丢弃对象上跑同一个 `setDottedSetting` 验证器），保住「非法 dotted key 不创建\n> settings.json」的既有契约；「不复活已删除项目根」的前置检查原样保留。\n> 引入 `makeConfigTool(deps)` 工厂（对齐 `configure-model-connection.ts` 的\n> `DEFAULT_DEPS` 惯例）作为最窄注入点。\n>\n> **并发语义（已测）**：\n>\n> - **不同 key 并发** —— 全部保留，任何一个都不会被别人的陈旧快照覆盖。\n> - *",
+      "windowTruncated": true,
+      "matchStartLine": 354,
+      "windowStartLine": 351
+    },
+    "readAt": "2026-10-17T20:19:50.234956+00:00",
+    "scope": "Only this saved bounded window read; not whole giant JSON scalar or document."
+  },
+  {
+    "query": "dot-name-generic",
+    "savedIndex": 0,
+    "documentPin": {
+      "path": "docs/archive/bug-followups-2026-08-13.md",
+      "bytes": 7166,
+      "sha256": "e507cbffb8bc635ced3d2db518ea02cfdfa86b196e91f721021e27996cd54241",
+      "pinAt": "2026-10-17T20:19:50.235586+00:00"
+    },
+    "hit": {
+      "document": "docs/archive/bug-followups-2026-08-13.md",
+      "location": "/text",
+      "matchStart": 1139,
+      "matchEnd": 1272,
+      "windowStart": 989,
+      "windowEnd": 1492,
+      "wholeValueCharacters": 4426,
+      "window": "mplates.ts:35-46`），所以**软链\n  manifest 无法真正被调度执行**；但运维人员在 `InstallCapability` 的 inspect\n  输出里看到的是未加固数据。\n- 建议：复用 `pluginCatalog` 的读取函数，删掉这条独立路径。\n\n### 2. 带点号的插件/Skill 名会静默 no-op 却报告成功\n\n- 位置：`packages/core/src/tool-system/builtin/install-capability.ts:556-560`、`791-797`\n- 现状：`SAFE_PLUGIN_SEGMENT_RE`(`:34`)/`SAFE_SKILL_NAME_RE`(`:35`) 允许 `.`，\n  名字被插进点分设置键 `capabilityOverrides.plugins.${plugin}`；\n  `setDottedSetting`（`settings/manager.ts:137-148`）按 `.` 拆成嵌套对象\n  `{plugins:{a:{b:\"off\"}}}`，而读取端 `capability-c",
+      "windowTruncated": true,
+      "matchStartLine": 36,
+      "windowStartLine": 31
+    },
+    "readAt": "2026-10-17T20:19:50.239399+00:00",
+    "scope": "Only this saved bounded window read; not whole giant JSON scalar or document."
+  },
+  {
+    "query": "dot-name-generic",
+    "savedIndex": 1,
+    "documentPin": {
+      "path": "docs/archive/bug-followups-2026-08-13.md",
+      "bytes": 7166,
+      "sha256": "e507cbffb8bc635ced3d2db518ea02cfdfa86b196e91f721021e27996cd54241",
+      "pinAt": "2026-10-17T20:19:50.239801+00:00"
+    },
+    "hit": {
+      "document": "docs/archive/bug-followups-2026-08-13.md",
+      "location": "/text",
+      "matchStart": 1388,
+      "matchEnd": 1489,
+      "windowStart": 1238,
+      "windowEnd": 1709,
+      "wholeValueCharacters": 4426,
+      "window": "6-560`、`791-797`\n- 现状：`SAFE_PLUGIN_SEGMENT_RE`(`:34`)/`SAFE_SKILL_NAME_RE`(`:35`) 允许 `.`，\n  名字被插进点分设置键 `capabilityOverrides.plugins.${plugin}`；\n  `setDottedSetting`（`settings/manager.ts:137-148`）按 `.` 拆成嵌套对象\n  `{plugins:{a:{b:\"off\"}}}`，而读取端 `capability-control/overlay.ts:22-26`\n  期望扁平 `Record<name,\"on\"|\"off\">`，非法结构被归一化为 inherit。\n- 结果：`disable plugin a.b` 返回「Disabled ...」但插件依然启用。\n- 建议：禁止名字中的 `.`，或改用非点分的键写入方式。\n\n### 3. 三个 `files:*Turn` IPC handler 未接入统一会话校验\n\n- 位置：`packa",
+      "windowTruncated": true,
+      "matchStartLine": 41,
+      "windowStartLine": 38
+    },
+    "readAt": "2026-10-17T20:19:50.243577+00:00",
+    "scope": "Only this saved bounded window read; not whole giant JSON scalar or document."
+  },
+  {
+    "query": "dot-name-generic",
+    "savedIndex": 2,
+    "documentPin": {
+      "path": "docs/archive/todo/review-core-v2.md",
+      "bytes": 5400,
+      "sha256": "b293394fa8a4f8bab19ee52d69fe2018767b5c7b3c3cd5b94d7ee4efea56a4fe",
+      "pinAt": "2026-10-17T20:19:50.244407+00:00"
+    },
+    "hit": {
+      "document": "docs/archive/todo/review-core-v2.md",
+      "location": "/text",
+      "matchStart": 115,
+      "matchEnd": 272,
+      "windowStart": 0,
+      "windowEnd": 492,
+      "wholeValueCharacters": 5400,
+      "window": "## Core Engine Review\n\n### Strengths (file:line specific)\n- `packages/core/src/settings/manager.ts:65-118` hardens dotted setting writes against prototype-pollution segments and inherited-object descent before `Config`/settings writes use them.\n- `packages/core/src/plugins/installer/sourcePath.ts:18-60` adds relative-path, realpath, and symlink-escape checks for marketplace/plugin source subpaths.\n- `packages/core/src/run/ids.ts:1-25`, `packages/core/src/run/FileRunStore.ts:38-50`, and `",
+      "windowTruncated": true,
+      "matchStartLine": 4,
+      "windowStartLine": 1
+    },
+    "readAt": "2026-10-17T20:19:50.248213+00:00",
+    "scope": "Only this saved bounded window read; not whole giant JSON scalar or document."
+  },
+  {
+    "query": "dot-name-generic",
+    "savedIndex": 3,
+    "documentPin": {
+      "path": "docs/audit-2026-10-17-round10/evidence/cross-review-catalog.md",
+      "bytes": 1388,
+      "sha256": "00c992794baacc60c7ad850cbd48d510867f34e1f044b9fbd5423b4ac6349a0b",
+      "pinAt": "2026-10-17T20:19:50.249008+00:00"
+    },
+    "hit": {
+      "document": "docs/audit-2026-10-17-round10/evidence/cross-review-catalog.md",
+      "location": "/text",
+      "matchStart": 454,
+      "matchEnd": 601,
+      "windowStart": 304,
+      "windowEnd": 762,
+      "wholeValueCharacters": 762,
+      "window": "模型能力改动 304781e52c0ab18b79514d8e51c6dbf9da672421 是冻结基线祖先；这些断言只是冻结仓库内部一致，不能替代厂商窗口/vision 事实验证。\n\nfocused 数据没有网络或凭证：false/0/空字符串与 undefined 的参数投影、同一对象下不同 dotted paths、schema 通过的 vendor/model:revision 替换与原数组保持、参数文档输出均与所读函数契约相符。没有把任意父子 wire conflict 配置当作正常生产 bug。\n\n缓存方向仅证明首次 backfill 和 explicit override 保留，refresh inferred 值没有新的明确契约；已归档的 provenance 设计与错误调用链读取也明确披露。错误路径后的 && 读取未执行，不能作为验证通过或失败 Bun shard。保存/删除、并发/链接、真实 provider/Host/UI 和共享 dist 都没有超范围成功声明。无需改动报告。\n",
+      "windowTruncated": true,
+      "matchStartLine": 7,
+      "windowStartLine": 5
+    },
+    "readAt": "2026-10-17T20:19:50.253422+00:00",
+    "scope": "Only this saved bounded window read; not whole giant JSON scalar or document."
+  }
+]

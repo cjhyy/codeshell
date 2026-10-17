@@ -1,0 +1,16 @@
+[
+  {
+    "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-claims.json",
+    "bytes": 12061422,
+    "sha256": "8112dabd759c40406c76b3f0f9e40185d4682c05151eedc95919fd568628999f",
+    "pinnedAtUTC": "2026-10-17T20:09:39.622695+00:00",
+    "timing": "before own bounded canonical metadata read"
+  },
+  {
+    "path": "docs/audit-2026-10-17-round44/evidence/coverage-frontier/coverage-index.json",
+    "bytes": 2055917,
+    "sha256": "78e65550fef49fec2bd688455b17edf6de8465486cd9651634b4cd483f5aacda",
+    "pinnedAtUTC": "2026-10-17T20:09:39.684758+00:00",
+    "timing": "before own bounded canonical metadata read"
+  }
+]

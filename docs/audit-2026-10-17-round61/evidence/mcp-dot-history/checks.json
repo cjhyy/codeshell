@@ -1,0 +1,23 @@
+{
+  "checkedAt": "2026-10-17T20:24:16.696118+00:00",
+  "files": [],
+  "sourceSemanticReads": 0,
+  "sourceHashOnlyReads": 0,
+  "historyFiles": 6244,
+  "jsonValueScalarsVisited": 4350476,
+  "jsonStringValuesVisited": 2937254,
+  "errors": [],
+  "boundedWindowReads": 28,
+  "selectedCatalogTitleObjects": 4,
+  "uniqueSelectedMetadataDocuments": 16,
+  "all6244EndingHashesUnchanged": true,
+  "reportInternalLinks": 11,
+  "ordinaryLinkTargetsPresent": true,
+  "receiptGeneratedLast": true,
+  "rawFirstStreamExecutions": 13,
+  "rawStreamsPresent": true,
+  "noMetadataException": true,
+  "nonzeroIsCatalogNoMatchOnly": true,
+  "productAndTestExecutions": 0,
+  "GitCalls": 0
+}

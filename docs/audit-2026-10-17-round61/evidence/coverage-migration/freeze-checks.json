@@ -1,0 +1,171 @@
+{
+  "atUTC": "2026-10-17T20:16:02.115015+00:00",
+  "role": "Author metadata finalization only",
+  "checks": {
+    "files": []
+  },
+  "links": [
+    {
+      "target": "unified-current-index.json",
+      "insideOwnedDir": true,
+      "existsOrPlannedSelfGenerated": true
+    },
+    {
+      "target": "transitions.json",
+      "insideOwnedDir": true,
+      "existsOrPlannedSelfGenerated": true
+    },
+    {
+      "target": "accepted-claims.json",
+      "insideOwnedDir": true,
+      "existsOrPlannedSelfGenerated": true
+    },
+    {
+      "target": "new-full-provenance.json",
+      "insideOwnedDir": true,
+      "existsOrPlannedSelfGenerated": true
+    },
+    {
+      "target": "migrate-coverage.py",
+      "insideOwnedDir": true,
+      "existsOrPlannedSelfGenerated": true
+    },
+    {
+      "target": "excluded-deferred.json",
+      "insideOwnedDir": true,
+      "existsOrPlannedSelfGenerated": true
+    },
+    {
+      "target": "old-first-preservation-pins.json",
+      "insideOwnedDir": true,
+      "existsOrPlannedSelfGenerated": true
+    },
+    {
+      "target": "old-first-extra-pins.json",
+      "insideOwnedDir": true,
+      "existsOrPlannedSelfGenerated": true
+    },
+    {
+      "target": "schema-probe-diagnostic.json",
+      "insideOwnedDir": true,
+      "existsOrPlannedSelfGenerated": true
+    },
+    {
+      "target": "migration-first.stdout",
+      "insideOwnedDir": true,
+      "existsOrPlannedSelfGenerated": true
+    },
+    {
+      "target": "migration-first.stderr",
+      "insideOwnedDir": true,
+      "existsOrPlannedSelfGenerated": true
+    },
+    {
+      "target": "migration-first-exit.json",
+      "insideOwnedDir": true,
+      "existsOrPlannedSelfGenerated": true
+    },
+    {
+      "target": "metadata-presentation-diagnostics.json",
+      "insideOwnedDir": true,
+      "existsOrPlannedSelfGenerated": true
+    },
+    {
+      "target": "accepted-claims.first.json",
+      "insideOwnedDir": true,
+      "existsOrPlannedSelfGenerated": true
+    },
+    {
+      "target": "preserve-constraints.py",
+      "insideOwnedDir": true,
+      "existsOrPlannedSelfGenerated": true
+    },
+    {
+      "target": "constraint-preservation.json",
+      "insideOwnedDir": true,
+      "existsOrPlannedSelfGenerated": true
+    },
+    {
+      "target": "verify-migration.py",
+      "insideOwnedDir": true,
+      "existsOrPlannedSelfGenerated": true
+    },
+    {
+      "target": "verification-checks.json",
+      "insideOwnedDir": true,
+      "existsOrPlannedSelfGenerated": true
+    },
+    {
+      "target": "current-source-inventory.json",
+      "insideOwnedDir": true,
+      "existsOrPlannedSelfGenerated": true
+    },
+    {
+      "target": "ending-source-inventory.json",
+      "insideOwnedDir": true,
+      "existsOrPlannedSelfGenerated": true
+    },
+    {
+      "target": "source-manifest.json",
+      "insideOwnedDir": true,
+      "existsOrPlannedSelfGenerated": true
+    },
+    {
+      "target": "ending-checks.json",
+      "insideOwnedDir": true,
+      "existsOrPlannedSelfGenerated": true
+    },
+    {
+      "target": "initial-pins.json",
+      "insideOwnedDir": true,
+      "existsOrPlannedSelfGenerated": true
+    },
+    {
+      "target": "manifest-inventory-pins.json",
+      "insideOwnedDir": true,
+      "existsOrPlannedSelfGenerated": true
+    },
+    {
+      "target": "schema-inventory.json",
+      "insideOwnedDir": true,
+      "existsOrPlannedSelfGenerated": true
+    },
+    {
+      "target": "migration-summary.json",
+      "insideOwnedDir": true,
+      "existsOrPlannedSelfGenerated": true
+    },
+    {
+      "target": "classification.json",
+      "insideOwnedDir": true,
+      "existsOrPlannedSelfGenerated": true
+    },
+    {
+      "target": "validation.json",
+      "insideOwnedDir": true,
+      "existsOrPlannedSelfGenerated": true
+    },
+    {
+      "target": "artifact-receipt.json",
+      "insideOwnedDir": true,
+      "existsOrPlannedSelfGenerated": true
+    }
+  ],
+  "plannedSelfGenerated": [
+    "artifact-receipt.json"
+  ],
+  "baseCounts": {
+    "full": 304,
+    "selected": 168,
+    "unknown": 4171
+  },
+  "finalCounts": {
+    "unknown": 3934,
+    "full": 355,
+    "selected": 354
+  },
+  "denominator": 4643,
+  "productSourceSemanticRead": 0,
+  "oldMethodsExecuted": false,
+  "git": 0
+}

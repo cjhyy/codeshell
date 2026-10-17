@@ -1,0 +1,24 @@
+[
+  {
+    "command": [
+      "rg",
+      "-n",
+      "saveProjectSetting|deleteProjectSetting|saveUserSetting|setNested|setByPath|key.split|path.split|set\\(",
+      "packages/core/src/settings/manager.ts"
+    ],
+    "exitCode": 0,
+    "stdout": "72:  const root = key.split(\".\")[0] ?? \"\";\n84:  const parts = key.split(\".\");\n536:  saveUserSetting(key: string, value: unknown): void {\n570:   * cache invalidation mirror saveUserSetting.\n572:  saveProjectSetting(key: string, value: unknown, cwd: string): void {\n650:  deleteProjectSetting(key: string, cwd: string): void {\n669:    // Must be YAML-aware, symmetric with saveProjectSetting: a project with only\n842:    // saveUserSetting above and credentials/store.ts.\n",
+    "stderr": ""
+  },
+  {
+    "command": [
+      "rg",
+      "-n",
+      "projectOverride|effectiveSource|setOverride|setEnabled|capabilities|toggle",
+      "packages/desktop/src/renderer/settings/CapabilitiesOverviewSection.tsx"
+    ],
+    "exitCode": 0,
+    "stdout": "15: * overrides the global baseline (descriptor.effectiveSource === \"project\").\n49:} from \"./capabilitiesOverview\";\n121:  if (cap.projectOverride === \"on\") return t(\"settingsX.capOverview.projectOn\");\n122:  if (cap.projectOverride === \"off\") return t(\"settingsX.capOverview.projectOff\");\n157:  // Kinds the user manually toggled away from their default collapse state.\n159:  const [toggled, setToggled] = useState<Set<CapabilityKind>>(() => new Set());\n171:  const toggleGroup = (kind: CapabilityKind) =>\n222:    // A scope change must not leave the previous scope's toggles visible under\n234:  // The synthetic 浏览器 row fans a single toggle out to its three real tool\n316:    const overridden = caps.filter((c) => c.effectiveSource === \"project\").length;\n390:            const collapsed = isGroupCollapsed(toggled, g.kind);\n398:                  onClick={() => toggleGroup(g.kind)}\n414:                    const overridden = cap.effectiveSource === \"project\";\n490:                            aria-label={t(\"settingsX.capOverview.projectOverrideAria\", {\n496:                              const active = (cap.projectOverride ?? \"inherit\") === state;\n",
+    "stderr": ""
+  }
+]

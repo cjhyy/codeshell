@@ -1,0 +1,36 @@
+{
+  "actuallyRead": [
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+      "pointer": "/files/186",
+      "value": {
+        "path": "packages/coding/src/external-runtimes/shared/session-context-store.ts",
+        "bytes": 6343,
+        "lines": 153,
+        "sha256": "956a4699d1167beefc694dbf5cdf1884bd17caee0f7f3ce689f2a1d37a2e56b3"
+      },
+      "interpretation": "Path/bytes/lines/SHA inventory only; no semantic scope or full claim."
+    },
+    {
+      "path": "docs/audit-2026-10-17/root.md",
+      "bodyLineRanges": [
+        [
+          7,
+          15
+        ]
+      ],
+      "additionalNavigationLines": [
+        35,
+        41,
+        123
+      ],
+      "oldCause": "R2-01 Claude project encodeCwd collision in discovery/history. No reader/import/CLI rerun or old pass borrowed."
+    }
+  ],
+  "derivedCanonicalObjects": "canonical-read.json",
+  "sharedProjection": "history-projection.json",
+  "gateDecision": "25 machine path/SHA hits fully retained cap100. Personally read derived claims929/930,index495 and original R28/files186: no explicit semantic-full scope in those objects. Unknown/inventory-only is not historical unread or first-reading proof. Existing undocumented or differently described historical overlap remains possible.",
+  "permanentlySkipped": [
+    "SDK resolver/session-import failed dynamic directions; no import, fixture, CLI, runtime or replacement-entry validation."
+  ]
+}

@@ -1,0 +1,24 @@
+7: * bringing the object up to CURRENT_CONFIG_VERSION. Pure + ordered so it's
+17:export const CONFIG_VERSION_KEY = "configVersion";
+49:      if (!p || typeof p !== "object" || Array.isArray(p)) return p;
+51:      if (typeof rec.catalogId === "string") return p;
+53:      if (!entry) return p;
+55:      return { ...rec, catalogId: entry.id };
+59:  return next;
+72:  if (!sb || typeof sb !== "object" || Array.isArray(sb)) return config;
+81:  if (!isMisWritten) return config;
+84:  return next;
+88: * Registered migrations, in ascending `from` order. New breaking changes
+89: * append a step here; CURRENT_CONFIG_VERSION follows automatically.
+91:export const MIGRATIONS: readonly MigrationStep[] = [
+97:export const CURRENT_CONFIG_VERSION = MIGRATIONS.reduce((max, m) => Math.max(max, m.to), 0);
+101:  const v = config[CONFIG_VERSION_KEY];
+102:  return typeof v === "number" && Number.isFinite(v) && v >= 0 ? Math.floor(v) : 0;
+113: * Bring a raw config up to CURRENT_CONFIG_VERSION by applying each registered
+119:export function migrateConfig(
+121:  migrations: readonly MigrationStep[] = MIGRATIONS,
+123:  const target = migrations.reduce((max, m) => Math.max(max, m.to), 0);
+133:    const step = migrations.find((m) => m.from === v);
+140:  const alreadyStamped = input[CONFIG_VERSION_KEY] === target;
+141:  config[CONFIG_VERSION_KEY] = target;
+143:  return {

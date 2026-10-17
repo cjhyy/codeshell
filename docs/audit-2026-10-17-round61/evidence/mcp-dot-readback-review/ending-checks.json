@@ -1,0 +1,86 @@
+{
+  "atUTC": "2026-10-17T20:24:33.392036+00:00",
+  "files": [
+    {
+      "path": "CODESHELL.md",
+      "beforeSha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "endingSha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "endingBytes": 17639,
+      "unchanged": true
+    },
+    {
+      "path": "AGENTS.md",
+      "beforeSha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "endingSha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "endingBytes": 206,
+      "unchanged": true
+    },
+    {
+      "path": "packages/core/src/settings/manager.ts",
+      "beforeSha256": "0c92e26bbbf252d1f6bbc0859d91bdae40c846aa9d9f597812a35c829ba629ec",
+      "endingSha256": "0c92e26bbbf252d1f6bbc0859d91bdae40c846aa9d9f597812a35c829ba629ec",
+      "endingBytes": 46928,
+      "unchanged": true
+    },
+    {
+      "path": "packages/core/src/settings/schema.ts",
+      "beforeSha256": "2496b8aefd8ea32f7fc7ac23b26878475809be952a5fdbd8ac247cf0d40b3139",
+      "endingSha256": "2496b8aefd8ea32f7fc7ac23b26878475809be952a5fdbd8ac247cf0d40b3139",
+      "endingBytes": 29767,
+      "unchanged": true
+    },
+    {
+      "path": "packages/desktop/src/main/index.ts",
+      "beforeSha256": "105b2b49a28e0a7ef10980ac5feaa3a07ff81e7197f5acbefd95feb2498224c0",
+      "endingSha256": "105b2b49a28e0a7ef10980ac5feaa3a07ff81e7197f5acbefd95feb2498224c0",
+      "endingBytes": 299337,
+      "unchanged": true
+    },
+    {
+      "path": "packages/desktop/src/preload/index.ts",
+      "beforeSha256": "05dbc9b534bdc68c30f255f53a96617e50fb0c445ce2fc1bde4be31e3f8a6901",
+      "endingSha256": "05dbc9b534bdc68c30f255f53a96617e50fb0c445ce2fc1bde4be31e3f8a6901",
+      "endingBytes": 86436,
+      "unchanged": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/CapabilitiesOverviewSection.tsx",
+      "beforeSha256": "0bc7f4d26156dcfb5c117af4f4dc27d7898859248f64a9dcd6cff1d17113b709",
+      "endingSha256": "0bc7f4d26156dcfb5c117af4f4dc27d7898859248f64a9dcd6cff1d17113b709",
+      "endingBytes": 26939,
+      "unchanged": true
+    },
+    {
+      "path": "packages/desktop/src/main/capabilities-service.ts",
+      "beforeSha256": "029af36987fe6ae5dce537e54b32ba9f64a01a2230ed6fa735d39aa1c1e55ebb",
+      "endingSha256": "029af36987fe6ae5dce537e54b32ba9f64a01a2230ed6fa735d39aa1c1e55ebb",
+      "endingBytes": 4475,
+      "unchanged": true
+    },
+    {
+      "path": "packages/core/src/capability-control/service.ts",
+      "beforeSha256": "22378bf6addc85ebdaf2aace6a85121545ecbb1481bddfc18ffc0d58545a7c4e",
+      "endingSha256": "22378bf6addc85ebdaf2aace6a85121545ecbb1481bddfc18ffc0d58545a7c4e",
+      "endingBytes": 7690,
+      "unchanged": true
+    },
+    {
+      "path": "packages/core/src/capability-control/overlay.ts",
+      "beforeSha256": "75477176f70ab8d97f7669c0929dfdbcbc549f42121d46faa95766310e99e7c5",
+      "endingSha256": "75477176f70ab8d97f7669c0929dfdbcbc549f42121d46faa95766310e99e7c5",
+      "endingBytes": 7815,
+      "unchanged": true
+    },
+    {
+      "path": "packages/core/src/settings/migrate-config.ts",
+      "beforeSha256": "d47ac81e8bb7894d1162df3d54fc6569abed4e5af7906a131113e56b1deeb6dc",
+      "endingSha256": "d47ac81e8bb7894d1162df3d54fc6569abed4e5af7906a131113e56b1deeb6dc",
+      "endingBytes": 5819,
+      "unchanged": true
+    }
+  ],
+  "sourceInstructionChecks": 11,
+  "allUnchanged": true,
+  "gitOrFrozenBlobVerification": false,
+  "scope": "Own pins only; no full-history ending scan, archive reread or certification of foreign packet current SHA."
+}

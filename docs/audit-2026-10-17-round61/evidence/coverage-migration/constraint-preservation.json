@@ -1,0 +1,18 @@
+{
+  "atUTC": "2026-10-17T20:13:28.046447+00:00",
+  "scope": "Metadata constraint preservation and checks only, no reclassification or new product reading",
+  "firstAcceptedClaimsSha256": "f8b65ef528bd6149fab2465538c44f94eb99411aefc75f172b78eabbad09645c",
+  "finalAcceptedClaimsSha256": "8c3095eab25d069b9a33745b11036207e102e6f48c11b8699196713eb2443853",
+  "claimCountUnchanged": true,
+  "documentDecisionCounts": {
+    "aggregate-source-byte-bindings-without-per-row-semantic-coverage-not-new-reading": 15,
+    "primary-standard-semantic-files-list-inspected": 77,
+    "empty-semantic-files-no-gate-replay-upgrade": 17,
+    "inactive-first-or-concurrent-refresh-snapshot-not-a-second-reading": 2
+  },
+  "conservativelyDowngradedFullClaims": 0,
+  "rowDeferredCount": 0,
+  "deferredDocuments": [],
+  "productExecution": 0,
+  "oldMethodsExecuted": false
+}

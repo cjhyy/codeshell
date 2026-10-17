@@ -1,0 +1,29 @@
+packages/core/src/settings/manager.ts:26:  readSettingsHookSnapshot,
+packages/core/src/settings/manager.ts:206:  readonly name: SettingsSourceName;
+packages/core/src/settings/manager.ts:210:  readonly origin?: SettingsHookSourceSnapshot;
+packages/core/src/settings/manager.ts:219:  private hookOrigins: readonly (SettingsHookOrigin | undefined)[] = Object.freeze([]);
+packages/core/src/settings/manager.ts:227:    private readonly scope: SettingsScope = "project",
+packages/core/src/settings/manager.ts:281:      // 2. User — only ~/.code-shell/. We used to also read ~/.claude/settings.json
+packages/core/src/settings/manager.ts:354:    // not read — let alone rewrite — the host's ~/.code-shell/settings.json.
+packages/core/src/settings/manager.ts:459:  getHookOrigins(): readonly (SettingsHookOrigin | undefined)[] {
+packages/core/src/settings/manager.ts:540:    // Lock spans read → modify → write; see mutateSettingsFile for why the
+packages/core/src/settings/manager.ts:546:      // Strict read: an existing-but-unreadable user settings file must abort
+packages/core/src/settings/manager.ts:568:   * file at ${cwd}/.code-shell/settings.json. This is where capabilityOverrides
+packages/core/src/settings/manager.ts:581:    this.mutateSettingsFile(path, (current) => {
+packages/core/src/settings/manager.ts:599:    this.mutateSettingsFile(path, (current) => {
+packages/core/src/settings/manager.ts:632:    this.mutateSettingsFile(path, (current) => {
+packages/core/src/settings/manager.ts:676:    this.mutateSettingsFile(path, (current) => {
+packages/core/src/settings/manager.ts:872:  private mutateSettingsFile(
+packages/core/src/settings/manager.ts:896:        const snapshot = readSettingsHookSnapshot(path);
+packages/core/src/settings/schema.ts:477:    capabilityOverrides: CapabilityOverridesSchema,
+packages/core/src/settings/schema.ts:483:     * 用户手写 capabilityOverrides 之下（用户按 key 永远赢，见 overlay.ts
+packages/core/src/capability-control/overlay.ts:18:/** Buckets in capabilityOverrides. */
+packages/core/src/capability-control/overlay.ts:28:/** Which capabilityOverrides bucket a descriptor kind writes to. */
+packages/core/src/capability-control/overlay.ts:162: * 合并两层三态 overlay：`top`（用户手写 capabilityOverrides）按 key 赢过
+packages/core/src/capability-control/overlay.ts:182: * 经这里读，不得再直接 getForScope().capabilityOverrides。
+packages/core/src/capability-control/overlay.ts:192:      capabilityOverrides?: CapabilityOverrides;
+packages/core/src/capability-control/overlay.ts:196:      capabilityOverrides?: CapabilityOverrides;
+packages/core/src/capability-control/overlay.ts:200:    const direct = mergeCapabilityOverrides(scoped.capabilityOverrides, {
+packages/core/src/capability-control/overlay.ts:201:      ...local.capabilityOverrides,
+packages/core/src/capability-control/overlay.ts:203:        ...scoped.capabilityOverrides?.pet,
+packages/core/src/capability-control/overlay.ts:204:        ...local.capabilityOverrides?.pet,

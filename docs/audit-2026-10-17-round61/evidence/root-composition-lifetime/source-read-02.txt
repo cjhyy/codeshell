@@ -1,0 +1,215 @@
+packages/core/src/engine/engine.ts:640–660
+640:       config.usageLedger ??
+641:       this.runtime?.usageLedger ??
+642:       new UsageLedger({
+643:         storageDir: config.sessionStorageDir
+644:           ? join(config.sessionStorageDir, ".usage-ledger")
+645:           : undefined,
+646:       });
+647:     const hostScope =
+648:       config.lifetimeScope ?? this.runtime?.lifetime ?? new LifetimeScope("host", "standalone");
+649:     this.lifetime = hostScope.child("engine", `engine-${Math.random().toString(36).slice(2)}`);
+650:     try {
+651:       this.runEnvironmentResolver = new RunEnvironmentResolver({
+652:         config: () => this.config,
+653:         settings: () => this.getSettingsManager(),
+654:         credentialAccess: {
+655:           envExposures: (cwd, scope) => getCredentialAccess().envExposures(cwd, scope),
+656:         },
+657:         ...(this.runtime ? { runtime: this.runtime } : {}),
+658:       });
+659: 
+660:       if (config.composition && config.modules) {
+
+packages/core/src/engine/engine.ts:800–890
+800:       this.modelPool = config.runtime?.modelPool ?? new ModelPool();
+801:       this.auxiliaryPipeline = new AuxiliaryPipeline({
+802:         config: () => this.config,
+803:         settings: () => this.getSettingsManager(),
+804:         modelPool: () => this.modelPool,
+805:         toolRegistry: () => this.toolRegistry,
+806:         toolContext: () => this.buildToolContext(),
+807:       });
+808:       if (!config.runtime) {
+809:         this.populateModelPoolFromSettings();
+810:       }
+811:       if (
+812:         config.isSubAgent !== true &&
+813:         this.config.llm.modelKey &&
+814:         this.modelPool.has(this.config.llm.modelKey)
+815:       ) {
+816:         this.boundModelKey = this.config.llm.modelKey;
+817:       }
+818:       this.lifetime.own(() => (this.runtime?.mcpPool ?? this.mcpManager)?.unregisterOwner(this));
+819:       const serviceHost = this.moduleServiceHost();
+820:       this.moduleReady = createPrivateServices(
+821:         this.composition.engine.toolServices,
+822:         "engine",
+823:         this.lifetime,
+824:         serviceHost,
+825:         this.engineServices,
+826:       )
+827:         .then(() => activateEngineModules(this.composition, this.lifetime, serviceHost))
+828:         .finally(() => {
+829:           this.moduleActivationPending = false;
+830:         });
+831:       if (this.runtime) this.lifetime.own(this.runtime.ownEngine(() => this.dispose()));
+832:       // Constructors remain synchronous. run()/ready()/dispose() observe the same failure.
+833:       void this.moduleReady.catch(() => {});
+834:     } catch (error) {
+835:       void this.lifetime
+836:         .dispose()
+837:         .catch((cleanup) =>
+838:           logger.warn("engine.constructor_rollback_failed", { error: String(cleanup) }),
+839:         );
+840:       throw error;
+841:     }
+842:   }
+843: 
+844:   ready(): Promise<void> {
+845:     return this.moduleReady;
+846:   }
+847: 
+848:   private moduleServiceHost(sessionId?: string) {
+849:     return Object.freeze({
+850:       ...(sessionId ? { sessionId } : {}),
+851:       isSubAgent: this.config.isSubAgent === true,
+852:       settings: this.getSettingsManager(),
+853:       resolveSandbox: (cwd: string) =>
+854:         this.runEnvironmentResolver.resolveSandbox({
+855:           cwd,
+856:           workspaceContext: legacySingleRootWorkspace(cwd),
+857:         }),
+858:       readShellEnv: (cwd: string) => this.runEnvironmentResolver.readShellEnv(cwd),
+859:       getSessionManager: () => this.sessionManager,
+860:     });
+861:   }
+862: 
+863:   private async openSessionLifetime(
+864:     sessionId: string,
+865:     signal?: AbortSignal,
+866:   ): Promise<{ scope: LifetimeScope; services: Record<string, unknown> }> {
+867:     signal?.throwIfAborted();
+868:     const current = this.sessionLifetimes.get(sessionId);
+869:     if (current) return current;
+870:     const record = { scope: this.lifetime.child("session", sessionId), services: {} };
+871:     this.sessionLifetimes.set(sessionId, record);
+872:     record.scope.own(() => {
+873:       this.sessionLifetimes.delete(sessionId);
+874:     });
+875:     await createPrivateServices(
+876:       this.composition.engine.toolServices,
+877:       "session",
+878:       record.scope,
+879:       this.moduleServiceHost(sessionId),
+880:       record.services,
+881:       signal,
+882:     );
+883:     return record;
+884:   }
+885: 
+886:   private registerGoalHook(handler: HookHandler): Dispose {
+887:     const dispose = this.hooks.register("on_stop", handler, 0, "goal-stop");
+888:     this.activeGoalRegistration = dispose;
+889:     this.activeRunScope!.own(dispose);
+890:     return dispose;
+
+packages/core/src/engine/engine.ts:1786–1815
+1786:     };
+1787:     const failClaimedRun = createRunFailureHandler({
+1788:       session,
+1789:       options,
+1790:       runId,
+1791:       sealForFinalization: () =>
+1792:         toolCtx.operations?.controller.ledger.sealForFinalization(session.state.sessionId),
+1793:       persistFinalRunState: (state) => this.persistFinalRunState(state),
+1794:     });
+1795:     this.failClaimedRun = failClaimedRun;
+1796:     const sessionLifetime = await this.openSessionLifetime(
+1797:       session.state.sessionId,
+1798:       options?.signal,
+1799:     );
+1800:     this.activeRunScope = sessionLifetime.scope.child("run", runId);
+1801:     this.activeRunScope.own(wrappedOnStream.finish);
+1802:     toolCtx.capabilityServices = Object.freeze({
+1803:       ...this.engineServices,
+1804:       ...sessionLifetime.services,
+1805:     });
+1806:     const batchAuthority =
+1807:       options?.operationBatchToken && this.config.operationBatchAuthority
+1808:         ? createRunBatchAuthority({
+1809:             request: this.config.operationBatchAuthority,
+1810:             token: options.operationBatchToken,
+1811:             sessionId: session.state.sessionId,
+1812:             runId,
+1813:             originIntent: () => toolCtx.originClientMessageId ?? runId,
+1814:             signal: toolCtx.signal,
+1815:           })
+
+packages/core/src/engine/engine.ts:1878–1898
+1878:           ]
+1879:         : [];
+1880:     });
+1881:     const disposeWatch = () => {
+1882:       for (const dispose of watchDisposers) dispose();
+1883:     };
+1884:     this.instructionWatches.set(session.state.sessionId, disposeWatch);
+1885:     if (!hadInstructionWatch)
+1886:       sessionLifetime.scope.own(() => {
+1887:         this.instructionWatches.get(session.state.sessionId)?.();
+1888:         this.instructionWatches.delete(session.state.sessionId);
+1889:       });
+1890:     toolCtx.contextStrategy = this.resolveContextStrategy(profile);
+1891:     const contextNotes =
+1892:       toolCtx.contextStrategy === "notes" ? new SessionContextNotes(session.transcript) : undefined;
+1893:     toolCtx.contextNotes = contextNotes;
+1894: 
+1895:     // A host-owned time/topic boundary must be applied only after the current
+1896:     // user message exists in the transcript (it is the exclusive end anchor),
+1897:     // yet before this turn assembles prompts or calls the model. Doing this as
+1898:     // a separate host query races both sides of that boundary: too early and
+
+packages/core/src/composition/types.ts:42–84
+42:   Readonly<CapabilityToolServiceHost>
+43: >;
+44: export interface ModuleServiceHost extends CapabilityToolServiceHost {
+45:   readonly sessionId?: string;
+46: }
+47: export interface AgentModulePrivateServiceContribution {
+48:   readonly scope: "engine" | "session";
+49:   create(host: ModuleServiceHost): unknown | Promise<unknown>;
+50:   dispose?(value: unknown): void | Promise<void>;
+51: }
+52: 
+53: /**
+54:  * One tool contribution with explicit exposure:
+55:  * - "preset-tags": full BuiltinTool metadata; joins the composed catalog.
+56:  * - "always": plain ExtensionTool; registered directly, always visible.
+57:  */
+58: export type AgentModuleToolContribution =
+59:   | { readonly kind: "preset-tags"; readonly tool: BuiltinTool }
+60:   | { readonly kind: "always"; readonly tool: ExtensionTool };
+61: 
+62: export interface AgentEngineContributions {
+63:   readonly tools?: readonly AgentModuleToolContribution[];
+64:   readonly presets?: readonly AgentPreset[];
+65:   /** Preset used when the host does not choose one. At most one module may declare it. */
+66:   readonly defaultPreset?: string;
+67:   readonly promptSections?: Readonly<Record<string, string>>;
+68:   readonly dynamicContextProviders?: readonly CapabilityDynamicContextProvider[];
+69:   readonly instructionBoundary?: CapabilityInstructionBoundaryFinder;
+70:   readonly instructionBindings?: import("../skills/instruction-bindings.js").InstructionBindingProvider;
+71:   readonly artifactDetectors?: readonly CapabilityArtifactDetector[];
+72:   readonly fileHistory?: readonly CapabilityFileHistoryContribution[];
+73:   readonly sessionWorkspace?: SessionWorkspaceCapability;
+74:   readonly hooks?: readonly CapabilityEngineHookContribution[];
+75:   readonly behaviorProfiles?: readonly RunBehaviorProfile[];
+76:   readonly adjustToolSelection?: (
+77:     names: Set<string>,
+78:     context: CapabilityToolSelectionContext,
+79:   ) => void;
+80:   readonly privateService?: AgentModulePrivateServiceContribution;
+81: }
+82: 
+83: export interface AgentProtocolContributions {
+84:   readonly queries?: Readonly<Record<string, ExtensionQueryHandler>>;

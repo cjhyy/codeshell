@@ -1,0 +1,61 @@
+{
+  "atUTC": "2026-10-17T20:16:13.123026+00:00",
+  "files": [
+    {
+      "path": "packages/core/src/capability-control/service.ts",
+      "bytes": 7690,
+      "lines": 197,
+      "sha256": "22378bf6addc85ebdaf2aace6a85121545ecbb1481bddfc18ffc0d58545a7c4e",
+      "beforeBodyOrLineNavigation": true
+    },
+    {
+      "path": "packages/core/src/capability-control/overlay.ts",
+      "bytes": 7815,
+      "lines": 211,
+      "sha256": "75477176f70ab8d97f7669c0929dfdbcbc549f42121d46faa95766310e99e7c5",
+      "beforeBodyOrLineNavigation": true
+    },
+    {
+      "path": "packages/core/src/capability-control/project.ts",
+      "bytes": 5930,
+      "lines": 172,
+      "sha256": "df94303b6212824eedf24e98859fb5d955ce8fa97a21b200e2e8a524c99f5c7b",
+      "beforeBodyOrLineNavigation": true
+    },
+    {
+      "path": "packages/core/src/settings/manager.ts",
+      "bytes": 46928,
+      "lines": 1139,
+      "sha256": "0c92e26bbbf252d1f6bbc0859d91bdae40c846aa9d9f597812a35c829ba629ec",
+      "beforeBodyOrLineNavigation": true
+    },
+    {
+      "path": "packages/core/src/settings/schema.ts",
+      "bytes": 29767,
+      "lines": 731,
+      "sha256": "2496b8aefd8ea32f7fc7ac23b26878475809be952a5fdbd8ac247cf0d40b3139",
+      "beforeBodyOrLineNavigation": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/McpSection.tsx",
+      "bytes": 75595,
+      "lines": 1918,
+      "sha256": "228d18e442ddc37752407383cf311050df4409972e78ea7e029ea21665d67334",
+      "beforeBodyOrLineNavigation": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/CapabilitiesOverviewSection.tsx",
+      "bytes": 26939,
+      "lines": 623,
+      "sha256": "0bc7f4d26156dcfb5c117af4f4dc27d7898859248f64a9dcd6cff1d17113b709",
+      "beforeBodyOrLineNavigation": true
+    },
+    {
+      "path": "docs/archive/bug-followups-2026-08-13.md",
+      "bytes": 7166,
+      "lines": 116,
+      "sha256": "e507cbffb8bc635ced3d2db518ea02cfdfa86b196e91f721021e27996cd54241",
+      "beforeBodyOrLineNavigation": true
+    }
+  ]
+}

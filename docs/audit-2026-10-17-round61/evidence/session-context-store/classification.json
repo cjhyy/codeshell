@@ -1,0 +1,26 @@
+{
+  "counts": {
+    "formal": 0,
+    "candidates": 0,
+    "newRelated": 0
+  },
+  "formal": [],
+  "candidates": [],
+  "newRelated": [],
+  "oldExcluded": [
+    {
+      "id": "R2-01",
+      "canonical": "docs/audit-2026-10-17/root.md:7",
+      "cause": "Claude project bucket encoding collision; not this in-memory pinned host map",
+      "countedAsNewRelated": false
+    }
+  ],
+  "negative": "No normal producer/consumer mismatch established in the selected in-memory key/value routing and option-forwarding chain. This is not persistent context recovery or identity/authorization certification.",
+  "counterevidence": [
+    "Actual factory creates a fresh store and per-session bridge; one codeshell-${businessSessionId} key is passed both as bridge pin and registration key. No cwd encoding or persisted context record in this store.",
+    "Factory registers before runtime startup and close path invokes unregister first; actual execution/close failures were not tested or fully certified.",
+    "Pinned bridge resolves its pin and current store generation before host tools/list/tools/call branches. External metadata authenticity is outside scope.",
+    "Desktop passes a persisted runtimeSessionId only when selected kind/cwd/model conditions match. Binding reader/writer internals and resumed-runtime behavior were not semantically reviewed.",
+    "Helper offers bumpGeneration, but no actual restart-generation contract is inferred from comments/tests. The personally read production factory uses a fresh store."
+  ]
+}

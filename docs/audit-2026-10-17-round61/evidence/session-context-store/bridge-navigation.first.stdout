@@ -1,0 +1,29 @@
+12: *  - Thread identity arrives in the JSON-RPC body as `_meta.threadId` (and
+24:import type { SessionContextStore, SessionContextMissReason } from "./session-context-store.js";
+39:  store: SessionContextStore<BridgeToolHost>;
+46:   * Codex injects `_meta.threadId`, which is what lets one shared bridge serve
+94:export function threadIdFromMeta(params: unknown): string | undefined {
+98:  const direct = (meta as { threadId?: unknown }).threadId;
+110:function missMessage(reason: SessionContextMissReason): string {
+116:    case "stale_generation":
+117:      return "Refused: this thread belongs to a previous host generation and is no longer valid.";
+139:   * pin wins outright — a runtime that sends no `_meta.threadId` must not be able
+142:  const threadIdFor = (params: unknown): string | undefined =>
+143:    pinnedThreadId ?? threadIdFromMeta(params);
+206:    // (§11.3), and `store.resolveBatch()` exists for the day batching is added.
+208:      const threadIds = parsed.map((entry) =>
+209:        threadIdFor((entry as { params?: unknown } | null)?.params),
+211:      const batch = store.resolveBatch(threadIds, store.generation);
+277:      const resolved = store.resolve({
+278:        threadId: threadIdFor(message.params),
+279:        generation: store.generation,
+286:        // run carries no `_meta.threadId` at all — the thread does not exist yet —
+318:      const threadId = threadIdFor(message.params);
+319:      const resolved = store.resolve({ threadId, generation: store.generation });
+323:          threadIdPrefix: threadId?.slice(0, 8),
+341:        threadIdPrefix: threadId?.slice(0, 8),
+375:      resolve();
+385:      await new Promise<void>((resolve) => server.close(() => resolve()));
+404:        resolve(null);
+410:      if (!aborted) resolve(Buffer.concat(chunks).toString("utf8"));
+413:      if (!aborted) resolve("");

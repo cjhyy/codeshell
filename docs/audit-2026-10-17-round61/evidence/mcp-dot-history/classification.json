@@ -1,0 +1,42 @@
+{
+  "formalFindings": [],
+  "newCandidates": [],
+  "counts": {
+    "formal": 0,
+    "candidate": 0,
+    "newRelated": 0
+  },
+  "reviewDisposition": "bounded-old-cause-check-supports-not-automatically-excluding-current-MCP-by-completed-plugin-skill-record",
+  "oldReference": {
+    "document": "docs/archive/bug-followups-2026-08-13.md",
+    "completedHeaderLines": [
+      1,
+      7
+    ],
+    "problemLines": [
+      36,
+      45
+    ],
+    "scope": "Archive marks eight prior items completed. The dotted-name paragraph specifically identifies install-capability plugin/Skill entry and capabilityOverrides.plugins name interpolation. It is a related historical write/read-shape cause, not a documented successful repair of all possible MCP name producers.",
+    "productFixImplementationRead": false
+  },
+  "actualOldMetadataConclusion": "No same legal dotted MCP server name → project capability override split-key failed input contract was established in the28 read windows, direct archive paragraph or4 filtered formal catalog title objects. This is bounded, not a global absence/newness proof.",
+  "notAutomaticDuplicate": [
+    "Common setDottedSetting helper and analogous split-token shape do not establish coverage of a separate normal MCP producer when old repair may reject plugin/Skill dotted names.",
+    "Old SET-02 window concerns invalid type/single-field shape validation, not a documented legal MCP name input failure.",
+    "Selected MCP-R38-01 and MCP-R39-01 title records concern argument boundaries and rename non-editor fields; title reading is not full old root-cause audit."
+  ],
+  "author155Boundary": "155 remains frozen at its original0/0/0 opinion. Its old-cause exclusion was too broad if used to conclude current MCP is already recorded/fixed. This followup preserves the relationship but does not change frozen155 bytes/counts.",
+  "rootDecisionBoundary": "Current producer/IPC behavior, severity and any formal ID belong to Root159/current source review. This metadata packet does not certify current product mechanism or promote an issue itself.",
+  "executions": {
+    "productSourceReads": 0,
+    "productFunctions": 0,
+    "imports": 0,
+    "tests": 0,
+    "fixtures": 0,
+    "realSettings": 0,
+    "Host": 0,
+    "network": 0,
+    "Git": 0
+  }
+}

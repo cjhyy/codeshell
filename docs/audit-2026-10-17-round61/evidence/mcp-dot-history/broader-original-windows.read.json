@@ -1,0 +1,152 @@
+[
+  {
+    "query": "mcp-nested-path",
+    "savedIndex": 3,
+    "documentPin": {
+      "path": "docs/archive/review-2026-07-09/14-remaining-observations-verification.md",
+      "bytes": 28851,
+      "sha256": "3131a9f24c1380fdd86e4dd7fd03d6c53845978e7a6dfe4f4da0094193b0a640",
+      "pinAt": "2026-10-17T20:21:26.778413+00:00"
+    },
+    "hit": {
+      "document": "docs/archive/review-2026-07-09/14-remaining-observations-verification.md",
+      "location": "/text",
+      "matchStart": 5432,
+      "matchEnd": 5558,
+      "windowStart": 5282,
+      "windowEnd": 5778,
+      "wholeValueCharacters": 23397,
+      "window": "core/src/protocol/server.ts:1908`、`packages/core/src/protocol/server.ts:1911`、`packages/core/src/protocol/server.ts:1919`、`packages/core/src/protocol/server.ts:1937`、`packages/core/src/protocol/server.ts:1938`。\n- 但 server 合成的 AskUser notification 只在 envelope 上带 `sessionId`，嵌套 `request` 没有 `sessionId` 字段：`packages/core/src/protocol/server.ts:1981`、`packages/core/src/protocol/server.ts:1982`、`packages/core/src/protocol/server.ts:1984`、`packages/core/src/protocol/server.ts:1985`。\n- browser / cr",
+      "windowTruncated": true,
+      "matchStartLine": 44,
+      "windowStartLine": 44
+    },
+    "readAt": "2026-10-17T20:21:26.784438+00:00",
+    "scope": "Only this saved bounded window read; not whole giant JSON scalar or document."
+  },
+  {
+    "query": "mcp-nested-path",
+    "savedIndex": 4,
+    "documentPin": {
+      "path": "docs/archive/review-2026-07-09/14-remaining-observations-verification.md",
+      "bytes": 28851,
+      "sha256": "3131a9f24c1380fdd86e4dd7fd03d6c53845978e7a6dfe4f4da0094193b0a640",
+      "pinAt": "2026-10-17T20:21:26.784873+00:00"
+    },
+    "hit": {
+      "document": "docs/archive/review-2026-07-09/14-remaining-observations-verification.md",
+      "location": "/text",
+      "matchStart": 5703,
+      "matchEnd": 5833,
+      "windowStart": 5553,
+      "windowEnd": 6053,
+      "wholeValueCharacters": 23397,
+      "window": "d`，嵌套 `request` 没有 `sessionId` 字段：`packages/core/src/protocol/server.ts:1981`、`packages/core/src/protocol/server.ts:1982`、`packages/core/src/protocol/server.ts:1984`、`packages/core/src/protocol/server.ts:1985`。\n- browser / credential / workspace 合成请求同样只在 envelope 带 `sessionId`，嵌套 request 无 sessionId：`packages/core/src/protocol/server.ts:2096`、`packages/core/src/protocol/server.ts:2097`、`packages/core/src/protocol/server.ts:2099`；`packages/core/src/protocol/server.ts:2152`、`packages/core/src/prot",
+      "windowTruncated": true,
+      "matchStartLine": 45,
+      "windowStartLine": 45
+    },
+    "readAt": "2026-10-17T20:21:26.789969+00:00",
+    "scope": "Only this saved bounded window read; not whole giant JSON scalar or document."
+  },
+  {
+    "query": "mcp-nested-path",
+    "savedIndex": 5,
+    "documentPin": {
+      "path": "docs/archive/review-2026-07-09/14-remaining-observations-verification.md",
+      "bytes": 28851,
+      "sha256": "3131a9f24c1380fdd86e4dd7fd03d6c53845978e7a6dfe4f4da0094193b0a640",
+      "pinAt": "2026-10-17T20:21:26.791983+00:00"
+    },
+    "hit": {
+      "document": "docs/archive/review-2026-07-09/14-remaining-observations-verification.md",
+      "location": "/text",
+      "matchStart": 7102,
+      "matchEnd": 7148,
+      "windowStart": 6952,
+      "windowEnd": 7368,
+      "wholeValueCharacters": 23397,
+      "window": "`、`packages/desktop/src/renderer/App.tsx:1899`。\n\n### 4. 结论\n\n确证，但范围需要收窄：原观察对 SDK approval event surface 成立，尤其是 AskUser/browser/credential/workspace 这类 server 合成请求；普通工具审批因为 `request.sessionId` 可能随嵌套 request 一起到达，SDK consumer 可以自行读取 `request.sessionId` 作为临时绕路，但这不是 `AgentClientEvents.approvalRequest` 明确承诺的 envelope 契约。`approvalResolved` 不处理为完全确证。\n\n### 5. 严重度校准\n\nP2。desktop 主路径已有 preload/renderer raw envelope 保护，不是全产品 ",
+      "windowTruncated": true,
+      "matchStartLine": 52,
+      "windowStartLine": 48
+    },
+    "readAt": "2026-10-17T20:21:26.795838+00:00",
+    "scope": "Only this saved bounded window read; not whole giant JSON scalar or document."
+  },
+  {
+    "query": "mcp-nested-path",
+    "savedIndex": 7,
+    "documentPin": {
+      "path": "docs/archive/todo/fix-batch-3-2026-07-08.md",
+      "bytes": 4116,
+      "sha256": "6573480a1a4d7822227ed6c47539052d1a9b9f45ec2cecd4f4dc2150eb9e72c1",
+      "pinAt": "2026-10-17T20:21:26.796784+00:00"
+    },
+    "hit": {
+      "document": "docs/archive/todo/fix-batch-3-2026-07-08.md",
+      "location": "/text",
+      "matchStart": 2267,
+      "matchEnd": 2391,
+      "windowStart": 2117,
+      "windowEnd": 2611,
+      "wholeValueCharacters": 4116,
+      "window": "/mcp-manager.test.ts`: `uses CODE_SHELL_HOME as the final CodeShell home` | Failing regression observed, then `bun test packages/core/src/tool-system/mcp-manager.test.ts` passed before commit; final run also passed after formatting. |\n| Background shell artifacts use nested home | `review-master-2026-07-08.md`, CONFIRMED-LIVE row, `packages/core/src/runtime/background-shell.ts:139` | `55ae9cf832d6b7a2176804e56ed2e0ad6b68ca25` | `packages/core/src/runtime/background-shell.test.ts`: `stores ",
+      "windowTruncated": true,
+      "matchStartLine": 16,
+      "windowStartLine": 16
+    },
+    "readAt": "2026-10-17T20:21:26.800892+00:00",
+    "scope": "Only this saved bounded window read; not whole giant JSON scalar or document."
+  },
+  {
+    "query": "mcp-nested-path",
+    "savedIndex": 8,
+    "documentPin": {
+      "path": "docs/archive/todo/review-core-2026-07-08.md",
+      "bytes": 15808,
+      "sha256": "54c1bdfbcf5c7694239cd2d0e05abeadfed215436956ac59d401929fdceaf5dd",
+      "pinAt": "2026-10-17T20:21:26.801678+00:00"
+    },
+    "hit": {
+      "document": "docs/archive/todo/review-core-2026-07-08.md",
+      "location": "/text",
+      "matchStart": 11710,
+      "matchEnd": 11744,
+      "windowStart": 11560,
+      "windowEnd": 11964,
+      "wholeValueCharacters": 15799,
+      "window": "images go to `/tmp/csh/.code-shell/mcp_images` while sessions and memory go to `/tmp/csh/...`.\n\nImpact: Hosts/tests that relocate CodeShell state get MCP images in an unexpected nested directory, so cleanup, backup, and isolation logic can miss them.\n\nSuggested fix: Centralize a `codeShellHome()` helper and use it for MCP image spills. The default should be `CODE_SHELL_HOME` when set, otherwise `join(",
+      "windowTruncated": true,
+      "matchStartLine": 79,
+      "windowStartLine": 77
+    },
+    "readAt": "2026-10-17T20:21:26.805569+00:00",
+    "scope": "Only this saved bounded window read; not whole giant JSON scalar or document."
+  },
+  {
+    "query": "mcp-nested-path",
+    "savedIndex": 9,
+    "documentPin": {
+      "path": "docs/archive/todo/review-uncommitted-correctness-2026-07-08.md",
+      "bytes": 11426,
+      "sha256": "649b67b9aae864b096c620ae536fb4a6371c8a7d48066a7707b6f8003d98ef2a",
+      "pinAt": "2026-10-17T20:21:26.806322+00:00"
+    },
+    "hit": {
+      "document": "docs/archive/todo/review-uncommitted-correctness-2026-07-08.md",
+      "location": "/text",
+      "matchStart": 9245,
+      "matchEnd": 9334,
+      "windowStart": 9095,
+      "windowEnd": 9554,
+      "wholeValueCharacters": 11244,
+      "window": "background shells | 🟢 | Moves artifacts under `codeShellHome()` directly; tests cover path layout. |\n| `053ceaae` fix(core): honor codeshell home for mcp images | 🟢 | Same home-resolution correction for image spills; test covers non-nested layout. |\n| `4fd4a12f` fix(core): expose marketplace tool in presets | 🟢 | Simple preset whitelist addition with direct test. |\n| `e32c0fb7` fix(core): clean up failed mcp discovery | 🟢 | Discovery failures now disconne",
+      "windowTruncated": true,
+      "matchStartLine": 73,
+      "windowStartLine": 72
+    },
+    "readAt": "2026-10-17T20:21:26.810207+00:00",
+    "scope": "Only this saved bounded window read; not whole giant JSON scalar or document."
+  }
+]

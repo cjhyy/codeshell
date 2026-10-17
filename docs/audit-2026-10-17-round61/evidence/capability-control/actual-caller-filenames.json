@@ -1,0 +1,17 @@
+{
+  "command": [
+    "rg",
+    "-l",
+    "new CapabilityService|setCapabilityOverride|listCapabilities",
+    "packages/desktop/src",
+    "packages/core/src",
+    "-g",
+    "*.ts",
+    "-g",
+    "*.tsx"
+  ],
+  "exitCode": 0,
+  "stdout": "packages/desktop/src/preload/index.ts\npackages/desktop/src/preload/configuration-authority.contract.test.ts\npackages/desktop/src/preload/types.d.ts\npackages/core/src/capability-control/service.test.ts\npackages/desktop/src/main/capabilities-service.ts\npackages/desktop/src/main/capabilities-service.test.ts\npackages/desktop/src/main/index.ts\npackages/desktop/src/renderer/settings/CapabilitiesOverviewSection.interaction.fixture.tsx\npackages/desktop/src/renderer/settings/CapabilitiesOverviewSection.tsx\npackages/desktop/src/renderer/settings/capabilitiesOverview.ts\npackages/desktop/src/renderer/settings/ConversationSettingsSection.tsx\n",
+  "stderr": "",
+  "scope": "Filename-only actual producer/caller candidates; not lifecycle/permission certification."
+}

@@ -1,0 +1,34 @@
+[
+  {
+    "path": "packages/desktop/src/renderer/settings/CapabilitiesOverviewSection.tsx",
+    "bytes": 26939,
+    "lineCount": 623,
+    "sha256": "0bc7f4d26156dcfb5c117af4f4dc27d7898859248f64a9dcd6cff1d17113b709",
+    "pinnedAtUTC": "2026-10-17T20:20:15.061130+00:00",
+    "timing": "before own prep161 body/nav; actual paths supplied by parent inventory"
+  },
+  {
+    "path": "packages/desktop/src/main/capabilities-service.ts",
+    "bytes": 4475,
+    "lineCount": 120,
+    "sha256": "029af36987fe6ae5dce537e54b32ba9f64a01a2230ed6fa735d39aa1c1e55ebb",
+    "pinnedAtUTC": "2026-10-17T20:20:15.062779+00:00",
+    "timing": "before own prep161 body/nav; actual paths supplied by parent inventory"
+  },
+  {
+    "path": "packages/core/src/capability-control/service.ts",
+    "bytes": 7690,
+    "lineCount": 197,
+    "sha256": "22378bf6addc85ebdaf2aace6a85121545ecbb1481bddfc18ffc0d58545a7c4e",
+    "pinnedAtUTC": "2026-10-17T20:20:15.063617+00:00",
+    "timing": "before own prep161 body/nav; actual paths supplied by parent inventory"
+  },
+  {
+    "path": "packages/core/src/capability-control/overlay.ts",
+    "bytes": 7815,
+    "lineCount": 211,
+    "sha256": "75477176f70ab8d97f7669c0929dfdbcbc549f42121d46faa95766310e99e7c5",
+    "pinnedAtUTC": "2026-10-17T20:20:15.064519+00:00",
+    "timing": "before own prep161 body/nav; actual paths supplied by parent inventory"
+  }
+]

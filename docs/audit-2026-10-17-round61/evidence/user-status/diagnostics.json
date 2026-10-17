@@ -1,0 +1,28 @@
+{
+  "firstOutputs": [
+    "status-first.stdout",
+    "status-first.stderr",
+    "status-first-exit.json",
+    "inventory-first.stdout",
+    "inventory-first.stderr",
+    "inventory-first-exit.json"
+  ],
+  "firstExtractionExit": 0,
+  "firstInventoryExit": 0,
+  "initialComparisonDifferences": {
+    "count": 2,
+    "record": "checks.first.json",
+    "clarification": "A11 bracketed priority+dated evidence qualifier and CHAT-R58-01 relative canonical link, correctly normalized later. Not original-record inconsistency or product failure.",
+    "recordedMethod": "catalog-normalization.json"
+  },
+  "firstCandidateSchemaDisplay": {
+    "chunk": "63d3e7",
+    "originalTokens": 4056,
+    "maxOutputTokens": 2600,
+    "lines": 77,
+    "handling": "First tool presentation truncated; no all-object human semantic review claimed. Standard-library extraction preserves every original object into JSON, counts/missing fields unchanged."
+  },
+  "productAttempts": 0,
+  "testsRun": 0,
+  "git": 0
+}

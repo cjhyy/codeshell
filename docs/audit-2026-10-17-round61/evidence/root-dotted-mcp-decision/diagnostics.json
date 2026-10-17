@@ -1,0 +1,6 @@
+{
+  "firstSourceRead02": "Requested range ended133 but actual file EOF120. First metadata wrapper raised IndexError before emitting a body file; original observed diagnostic and requested ranges preserved. Clamped actual ranges then saved; no product was run.",
+  "laterRead": "One shell metadata read used a nonexistent renderer/components/settings path. sed stderr observed in tool transcript; aggregate shell exit0 because later commands succeeded. Correct renderer/settings path was already pinned/read in01 and was displayed in04. No fabricated standalone raw stdout/stderr.",
+  "presentation": "A combined template/catalog metadata display exceeded tool output budget; only bounded follow-up template/key/row reads count as human inspection.",
+  "productFailureOrRerun": 0
+}
