@@ -271,14 +271,18 @@ SHA256 `ed3b8940a913979c2e2b5ce0f35aa579c7c8c517009485912c8bf336d4039aea`.
 This proves that cleanup segment's filesystem behavior, not full browser execution.
 The known final-report-write-after-successful-HOME-removal limitation remains.
 
-Prepared task `fb04bc8d0` adds a separate expected-negative CI run of that fixed
+Reviewed tasks `fb04bc8d0` and `b34c16cd0` add a separate expected-negative CI run of that fixed
 old reducer, retaining the normal current-reducer eight-case run. Its verifier
 requires exactly the two passing controls/six known UI failures, normal Chrome
 exit, cleaned observed custody with no query/truncation/late ledger failures,
 current source fingerprints and a physically retained owned HOME/profile.
 The old real report is correctly rejected because its HOME was deleted, with
-the original report bytes unchanged. Syntax/lint/format and 24 workflow paths
-pass; two jobs/35 Bash blocks/five inline Node blocks parse. This new browser
+the original report bytes unchanged. The pipeline now captures both `PIPESTATUS`
+values before any other command and requires Node=1 plus tee=0. Six harmless
+actual Bash exit combinations accept only 1/0; the former 2/1 false-positive
+combination is rejected. The frozen proof SHA256 is
+`da49036428a563dfe21ac47ec6784b532b785df2eeab3dda0c90a39a7db038f9`.
+This new browser
 failure proof is still pending remote execution and is not counted among the
 normal 31 passing browser behaviors. Only precise receipts/logs/screenshots are
 uploaded; the retained private profile is excluded.
@@ -294,7 +298,22 @@ participate in login, SW operations or focus. The former default headless-shell
 binary selection must also be preserved. No new lifecycle fields are treated
 as passing before actual CI evidence.
 
-Windows installer acceptance is also being prepared: the current 83/12 evidence
+The reviewed implementation is now integrated: shared browser custody
+`caec1ce9f`, locked browser selection `b2e73de73`, SW driver `e6029e6eb` and
+Auth driver `cda1f797d` (integrated as `8f2859fac`). Original SW eleven-operation
+and proxy syntax trees, Auth four callbacks/order/HTTP behavior, incognito
+options, trusted native focus sequence and original operation/watch deadlines
+remain protected by frozen-source contracts. Root's final combined guarded
+Node run passes **64 tests / 0 fail / 0 skip**: 38 custody, nine resolver,
+eight Auth and nine SW contracts. Its raw log is
+`/private/tmp/codeshell-real-operation-cycles-20261016/ci15-combined-web-lifecycle-node-20261017.log`,
+SHA256 `e54e45b0b357dc53bcc2bb896ba095be5c090cd9394877eee54710856b133cba`.
+Locked lint/format pass. These are pure fault/path/source-preservation tests,
+not 64 additional real browser operations. Actual new lifecycle execution
+still awaits CI; the latest verified 31-browser-operation run remains CI14.
+
+Windows installer acceptance is now implemented and reviewed in `8343027c4`:
+the current CI14 83/12 evidence
 covers a directory package, not production NSIS install/replace/uninstall. The
 implementation is restricted to the authorized disposable hosted Windows CI
 VM and must reject existing product processes/keys/shortcuts/cache, preserve
@@ -303,7 +322,36 @@ then verify two installed-copy UI runs and actual same-version replacement and
 uninstall. Product HKCU keys, shortcuts and updater cache are real temporary CI
 account side effects, not HOME-isolated data. Production NSIS can invoke
 basename-based process termination; our watcher does not turn that installer
-into an OS sandbox. No native installer has been built or run for this addition.
+into an OS sandbox. The runner uses a real CI-environment gate before any
+product observation, then scrubs its children; it must therefore run directly
+under Node rather than through the outer environment-scrubbing smoke wrapper.
+Additive `2c6819621` records actual existing watchdog signal requests, allowing
+each new installed-copy UI receipt to prove no observed Main-root signal request;
+that new field cannot be retroactively attributed to CI14.
+
+Root's integrated Windows contract run passes **22 pure Node tests / 0 fail /
+0 skip** (12 finite NSIS contracts, two signal diagnostics and eight fake-process/
+CLI refusal contracts). Raw log SHA256 is
+`f4f9bda4fcbdeae888b115ed133163cd7fea334f1bfd6eaae677800450bda9f3` at
+`/private/tmp/codeshell-real-operation-cycles-20261016/ci15-combined-nsis-node-20261017.log`.
+No local PowerShell, installer, Electron or browser was run. The first fake
+process failures were fixture-only macOS `/var` aliases, preserved in the author's
+proof directory; production path refusal was kept strict. Native install,
+same-build replacement, uninstall and two additional 13-operation UI runs remain
+unverified until their actual hosted Windows CI receipts exist. Both UI runs use
+fresh HOME and do not prove user-data migration or signed distribution behavior.
+
+Workflow `b3c7165ba` composes those gates while preserving the original native
+83/12 and Web 31 scopes. All 31 literal workflow test paths exist; two jobs,
+38 Bash blocks and five inline Node blocks parse, with locked format passing.
+The expected-red pipeline contract is also rechecked in that final workflow
+(summary SHA256 `63662916a5b60dc6e4ebbdd3598a35e4b1c1e6f1a73001adc4660cee0e9dc7ad`).
+Only the new NSIS step gets a 40-minute outer budget, covering its fixed
+29-minute process ceilings plus bounded metadata queries; Windows job capacity
+is 65 minutes, while macOS/Linux stay 45. Existing UI/operation/watch timeouts
+and no-retry policy are unchanged. Uploads enumerate public receipts/logs/PNGs
+and exclude profiles, HOME, staging, installers and cache payloads. Nothing from
+this new acceptance scope has yet been pushed or executed remotely.
 
 Windows CI11's frozen summary is
 `ci-39012279115-windows-20261017/verified-summary.json` (SHA256
