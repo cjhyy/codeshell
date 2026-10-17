@@ -107,6 +107,7 @@ import { createRunUsageAccounting, wireRunModelFacade } from "./run-accounting.j
 import {
   persistRunState,
   sessionCumulativeUsageUpdate,
+  subtractUsage,
   type RunningSessionState,
 } from "./run-state-persistence.js";
 import { logger, runWithSid } from "../logging/logger.js";
@@ -1779,6 +1780,7 @@ export class Engine {
       runId,
       state: session.state,
       committedUsage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 },
+      committedCacheUsage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 },
       committedAnchor: structuredClone(session.state.contextUsageAnchor),
       finalized: false,
     };
@@ -2081,6 +2083,7 @@ export class Engine {
           if (this.runningSession?.runId === runId) {
             this.runningSession.ownUsage = () =>
               foldRunUsage({ promptTokens: 0, completionTokens: 0, totalTokens: 0 }, getRunUsage());
+            this.runningSession.ownCacheUsage = accounting.getRunCacheUsage;
           }
 
           let result: Awaited<ReturnType<typeof turnLoop.run>>;
@@ -2189,6 +2192,7 @@ export class Engine {
     } = args;
     const sourceRunId = this.runIds.get(session.state);
     return finalizeRunSuccess({
+      getRunCacheUsage: accounting.getRunCacheUsage,
       session,
       result,
       firstGoalTermination,
@@ -2915,7 +2919,6 @@ export class Engine {
       sessionManager: this.sessionManager,
       persistGoalTerminal: (state, goal, reason) => this.persistGoalTerminal(state, goal, reason),
       getJudgeContext: () => latestGoalJudgeContext,
-      recordCumulativeUsage,
       recordGoalJudgeUsage: (usage) => turnLoop.recordGoalJudgeUsage(usage),
     });
 
@@ -3787,6 +3790,7 @@ export class Engine {
       summary: live.summary,
       tokenUsage: live.tokenUsage,
       contextUsageAnchor: live.contextUsageAnchor,
+      cacheUsageVersion: live.cacheUsageVersion,
       cumulativePromptTokens: live.cumulativePromptTokens,
       cumulativeCacheReadTokens: live.cumulativeCacheReadTokens,
       cumulativeCacheCreationTokens: live.cumulativeCacheCreationTokens,
@@ -3848,6 +3852,7 @@ export class Engine {
         !finalizer.commit(() => ({
           fields: this.finalRunStateFields(running.state),
           usageDelta: this.uncommittedRunUsage(running),
+          cacheUsageDelta: this.uncommittedRunCacheUsage(running),
           previousContextUsageAnchor: running.committedAnchor,
         }))
       ) {
@@ -3874,19 +3879,17 @@ export class Engine {
   }
 
   private uncommittedRunUsage(running: NonNullable<Engine["runningSession"]>): TokenUsage {
-    const current = running.ownUsage?.() ?? {
-      promptTokens: 0,
-      completionTokens: 0,
-      totalTokens: 0,
-    };
-    const previous = running.committedUsage;
-    return {
-      promptTokens: current.promptTokens - previous.promptTokens,
-      completionTokens: current.completionTokens - previous.completionTokens,
-      totalTokens: current.totalTokens - previous.totalTokens,
-      cacheReadTokens: (current.cacheReadTokens ?? 0) - (previous.cacheReadTokens ?? 0),
-      cacheCreationTokens: (current.cacheCreationTokens ?? 0) - (previous.cacheCreationTokens ?? 0),
-    };
+    return subtractUsage(
+      running.ownUsage?.() ?? { promptTokens: 0, completionTokens: 0, totalTokens: 0 },
+      running.committedUsage,
+    );
+  }
+
+  private uncommittedRunCacheUsage(running: NonNullable<Engine["runningSession"]>): TokenUsage {
+    return subtractUsage(
+      running.ownCacheUsage?.() ?? { promptTokens: 0, completionTokens: 0, totalTokens: 0 },
+      running.committedCacheUsage,
+    );
   }
 
   private finalRunStateFields(
@@ -3900,6 +3903,7 @@ export class Engine {
       turnCount: state.turnCount,
       turnSeq: state.turnSeq,
       tokenUsage: usage,
+      cacheUsageVersion: state.cacheUsageVersion,
       cumulativePromptTokens: state.cumulativePromptTokens,
       cumulativeCacheReadTokens: state.cumulativeCacheReadTokens,
       cumulativeCacheCreationTokens: state.cumulativeCacheCreationTokens,
@@ -3937,6 +3941,7 @@ export class Engine {
       turnCount: state.turnCount,
       turnSeq: state.turnSeq,
       tokenUsage: state.tokenUsage,
+      cacheUsageVersion: state.cacheUsageVersion,
       cumulativePromptTokens: state.cumulativePromptTokens,
       cumulativeCacheReadTokens: state.cumulativeCacheReadTokens,
       cumulativeCacheCreationTokens: state.cumulativeCacheCreationTokens,

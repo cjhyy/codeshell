@@ -98,6 +98,7 @@ const RUN_FINAL_STATE_FIELDS = [
   "turnCount",
   "turnSeq",
   "tokenUsage",
+  "cacheUsageVersion",
   "cumulativePromptTokens",
   "cumulativeCacheReadTokens",
   "cumulativeCacheCreationTokens",
@@ -118,6 +119,7 @@ export interface SessionClosingRunFinalizer {
     readFinal: () => {
       fields: SessionRunFinalStatePatch;
       usageDelta: TokenUsage;
+      cacheUsageDelta?: TokenUsage;
       previousContextUsageAnchor: SessionState["contextUsageAnchor"];
     },
   ) => boolean;
@@ -660,14 +662,24 @@ export class SessionManager {
             if (latest.runId !== runId) return false;
             // Read after settlement and on every CAS retry, including a fresh
             // ledger serialization. Do not freeze usage/cost before end hooks.
-            const { fields: partial, usageDelta, previousContextUsageAnchor } = readFinal();
+            const {
+              fields: partial,
+              usageDelta,
+              previousContextUsageAnchor,
+              cacheUsageDelta = { promptTokens: 0, completionTokens: 0, totalTokens: 0 },
+            } = readFinal();
             if (typeof partial.status !== "string" || partial.status === "active") return false;
             // Project at runtime too: a cast/JavaScript caller cannot smuggle
             // domain metadata or a new run identity through the narrow lease.
             const fields = Object.fromEntries(
               RUN_FINAL_STATE_FIELDS.map((field) => [field, structuredClone(partial[field])]),
             );
-            if (Object.values(usageDelta).some((n) => !Number.isFinite(n) || n < 0)) return false;
+            if (
+              [...Object.values(usageDelta), ...Object.values(cacheUsageDelta)].some(
+                (n) => !Number.isFinite(n) || n < 0,
+              )
+            )
+              return false;
             // This delta belongs only to the revoked run's uncommitted usage.
             // Other owners' pre/post-close auxiliary usage stays in latest.
             fields.tokenUsage = addTokenUsage(latest.tokenUsage, usageDelta);
@@ -675,7 +687,7 @@ export class SessionManager {
               fields,
               addCumulativeUsage(
                 normalizeCumulativeUsageCounters(latest, latest.tokenUsage),
-                usageDelta,
+                cacheUsageDelta,
               ),
             );
             // An independent owner may have advanced context before close too.
@@ -735,6 +747,7 @@ export class SessionManager {
       model,
       provider,
       tokenUsage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 },
+      cacheUsageVersion: 1,
       cumulativePromptTokens: 0,
       cumulativeCacheReadTokens: 0,
       cumulativeCacheCreationTokens: 0,
@@ -1678,7 +1691,8 @@ export class SessionManager {
   /**
    * Atomically add one billed auxiliary request to the latest source state.
    * This field-level read/add/write avoids publishing a detached stale state
-   * snapshot and accounts prompt, completion, total, cache, and cost together.
+   * snapshot and accounts every billed token and cost. Foreground cache metrics
+   * remain unchanged; helper requests have a separate prompt/cache namespace.
    */
   recordAuxiliaryUsage(
     sessionId: string,
@@ -1687,6 +1701,7 @@ export class SessionManager {
   ): Pick<
     SessionState,
     | "tokenUsage"
+    | "cacheUsageVersion"
     | "cumulativePromptTokens"
     | "cumulativeCacheReadTokens"
     | "cumulativeCacheCreationTokens"
@@ -1698,7 +1713,6 @@ export class SessionManager {
     for (let attempt = 0; attempt <= SESSION_STATE_LOCK_RETRY_DELAYS_MS.length; attempt++) {
       const state = this.readPersistedState(sessionId);
       Object.assign(state, normalizeCumulativeUsageCounters(state, state.tokenUsage));
-      Object.assign(state, addCumulativeUsage(state, capturedUsage));
       state.tokenUsage = addTokenUsage(state.tokenUsage, capturedUsage);
       if (costState !== undefined) {
         state.costState = typeof costState === "function" ? costState() : costState;
@@ -1707,6 +1721,7 @@ export class SessionManager {
       if (result.ok) {
         return {
           tokenUsage: state.tokenUsage,
+          cacheUsageVersion: state.cacheUsageVersion,
           cumulativePromptTokens: state.cumulativePromptTokens,
           cumulativeCacheReadTokens: state.cumulativeCacheReadTokens,
           cumulativeCacheCreationTokens: state.cumulativeCacheCreationTokens,
@@ -2474,6 +2489,7 @@ export function buildForkState(
     model: source.model,
     provider: source.provider,
     tokenUsage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 },
+    cacheUsageVersion: 1,
     cumulativePromptTokens: 0,
     cumulativeCacheReadTokens: 0,
     cumulativeCacheCreationTokens: 0,

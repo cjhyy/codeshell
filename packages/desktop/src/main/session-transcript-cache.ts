@@ -1,8 +1,8 @@
 import { createHash } from "node:crypto";
 import { rmSync } from "node:fs";
 import { join } from "node:path";
-import { codeShellHome } from "@cjhyy/code-shell-core";
-import { mutateJsonFile } from "@cjhyy/code-shell-core/internal";
+import { codeShellHome, SessionManager } from "@cjhyy/code-shell-core";
+import { mutateJsonFile, normalizeCumulativeUsageCounters } from "@cjhyy/code-shell-core/internal";
 import type {
   SessionTranscriptCacheKey,
   SessionTranscriptCacheRead,
@@ -23,6 +23,7 @@ interface CacheFile {
 export interface SessionTranscriptCacheOptions {
   directory?: string;
   legacyDirectory?: string;
+  sessionsDirectory?: string;
 }
 
 /**
@@ -34,11 +35,14 @@ export class SessionTranscriptCache {
   private readonly directory: string;
   private readonly legacyDirectory: string;
   private pending: Promise<unknown> = Promise.resolve();
+  private readonly sessionsDirectory?: string;
+  private sessionManager?: SessionManager;
 
   constructor(options: SessionTranscriptCacheOptions = {}) {
     const desktop = join(codeShellHome(), "desktop");
     this.directory = options.directory ?? join(desktop, "transcript-cache");
     this.legacyDirectory = options.legacyDirectory ?? join(desktop, "legacy-transcript-cache");
+    this.sessionsDirectory = options.sessionsDirectory;
   }
 
   async flush(): Promise<void> {
@@ -99,11 +103,45 @@ export class SessionTranscriptCache {
     return this.enqueue(() => {
       let result: SessionTranscriptCacheRead = { value: null, hasEarlier: false };
       this.mutate(key, (current) => {
-        if (current?.state && !current.deleted) result = tailSnapshot(current.state, maxBytes);
+        if (current?.state && !current.deleted) {
+          result = tailSnapshot(this.projectCacheUsage(current.state), maxBytes);
+        }
         return undefined;
       });
       return result;
     });
+  }
+
+  private projectCacheUsage(state: CachedState): CachedState {
+    if (typeof state.sessionId !== "string") return state;
+    this.sessionManager ??= new SessionManager(this.sessionsDirectory);
+    const durable = this.sessionManager.readSessionState(state.sessionId);
+    if (!durable) return state;
+    const counters = normalizeCumulativeUsageCounters(durable, durable.tokenUsage);
+    const count = (key: keyof typeof counters) =>
+      state.cacheUsageVersion === 1 && typeof state[key] === "number"
+        ? Math.max(state[key], counters[key] ?? 0)
+        : counters[key];
+    const prompt = count("cumulativePromptTokens");
+    const read = count("cumulativeCacheReadTokens");
+    const creation = count("cumulativeCacheCreationTokens");
+    return {
+      ...state,
+      cacheUsageVersion: 1,
+      cumulativePromptTokens: prompt,
+      cumulativeCacheReadTokens: read,
+      cumulativeCacheCreationTokens: creation,
+      sessionPromptTokens: prompt,
+      sessionCacheReadTokens: read,
+      sessionCacheCreationTokens: creation,
+      ...(state.cacheUsageVersion !== 1
+        ? {
+            singleTurnPromptTokens: 0,
+            singleTurnCacheReadTokens: 0,
+            singleTurnCacheCreationTokens: 0,
+          }
+        : {}),
+    };
   }
 
   delete(input: SessionTranscriptCacheKey): Promise<void> {
@@ -197,6 +235,25 @@ function checkedState(value: unknown): CachedState {
 /** A tail hydrated into a renderer must not erase its earlier cached history. */
 function mergeSnapshot(previous: CachedState, incoming: CachedState): CachedState {
   [previous, incoming] = alignSteerClientIds(previous, incoming);
+  if (previous.cacheUsageVersion === 1 && incoming.cacheUsageVersion !== 1) {
+    incoming = {
+      ...incoming,
+      ...Object.fromEntries(
+        [
+          "cacheUsageVersion",
+          "cumulativePromptTokens",
+          "cumulativeCacheReadTokens",
+          "cumulativeCacheCreationTokens",
+          "sessionPromptTokens",
+          "sessionCacheReadTokens",
+          "sessionCacheCreationTokens",
+          "singleTurnPromptTokens",
+          "singleTurnCacheReadTokens",
+          "singleTurnCacheCreationTokens",
+        ].map((key) => [key, previous[key]]),
+      ),
+    };
+  }
   if (incoming.messages.length === 0) {
     return repairPointers({
       ...previous,

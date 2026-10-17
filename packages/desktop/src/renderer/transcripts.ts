@@ -689,6 +689,7 @@ function parseTranscriptSnapshot(raw: string | null): MessagesReducerState {
       // Whole-session cache/prompt totals: persisted so the cumulative hit-rate
       // tooltip survives a refresh / localStorage reload. Legacy saved
       // transcripts used session* names, so fall back to those.
+      ...(parsed.cacheUsageVersion === 1 ? { cacheUsageVersion: 1 } : {}),
       cumulativePromptTokens: parsed.cumulativePromptTokens ?? parsed.sessionPromptTokens ?? 0,
       cumulativeCacheReadTokens:
         parsed.cumulativeCacheReadTokens ?? parsed.sessionCacheReadTokens ?? 0,

@@ -31,9 +31,11 @@ export interface RunningSessionState {
   runId: string;
   state: SessionState;
   committedUsage: TokenUsage;
+  committedCacheUsage: TokenUsage;
   committedAnchor: SessionState["contextUsageAnchor"];
   finalized: boolean;
   ownUsage?: () => TokenUsage;
+  ownCacheUsage?: () => TokenUsage;
 }
 
 /** Merge only this run's uncommitted usage, preserving other owners' durable additions. */
@@ -54,16 +56,17 @@ export function persistRunState(args: {
   const capturedUsage = structuredClone(
     running.ownUsage?.() ?? { promptTokens: 0, completionTokens: 0, totalTokens: 0 },
   );
-  const previous = running.committedUsage;
-  const delta: TokenUsage = {
-    promptTokens: capturedUsage.promptTokens - previous.promptTokens,
-    completionTokens: capturedUsage.completionTokens - previous.completionTokens,
-    totalTokens: capturedUsage.totalTokens - previous.totalTokens,
-    cacheReadTokens: (capturedUsage.cacheReadTokens ?? 0) - (previous.cacheReadTokens ?? 0),
-    cacheCreationTokens:
-      (capturedUsage.cacheCreationTokens ?? 0) - (previous.cacheCreationTokens ?? 0),
-  };
-  if (Object.values(delta).some((value) => !Number.isFinite(value) || value < 0)) return false;
+  const delta = subtractUsage(capturedUsage, running.committedUsage);
+  const capturedCacheUsage = structuredClone(
+    running.ownCacheUsage?.() ?? { promptTokens: 0, completionTokens: 0, totalTokens: 0 },
+  );
+  const cacheDelta = subtractUsage(capturedCacheUsage, running.committedCacheUsage);
+  if (
+    [...Object.values(delta), ...Object.values(cacheDelta)].some(
+      (value) => !Number.isFinite(value) || value < 0,
+    )
+  )
+    return false;
   const previousAnchor = structuredClone(running.committedAnchor);
   let committedFields: SessionStateFieldPatch | undefined;
   try {
@@ -73,7 +76,10 @@ export function persistRunState(args: {
       committedFields = {
         ...fields,
         tokenUsage: addTokenUsage(latest.tokenUsage, delta),
-        ...addCumulativeUsage(normalizeCumulativeUsageCounters(latest, latest.tokenUsage), delta),
+        ...addCumulativeUsage(
+          normalizeCumulativeUsageCounters(latest, latest.tokenUsage),
+          cacheDelta,
+        ),
         contextUsageAnchor: isDeepStrictEqual(latest.contextUsageAnchor, previousAnchor)
           ? fields.contextUsageAnchor
           : latest.contextUsageAnchor,
@@ -83,9 +89,21 @@ export function persistRunState(args: {
     });
     Object.assign(state, committedFields, { stateRevision });
     running.committedUsage = capturedUsage;
+    running.committedCacheUsage = capturedCacheUsage;
     running.committedAnchor = structuredClone(state.contextUsageAnchor);
     return true;
   } catch {
     return false;
   }
+}
+
+/** Separate checkpoints keep billed auxiliary input out of foreground cache deltas. */
+export function subtractUsage(current: TokenUsage, previous: TokenUsage): TokenUsage {
+  return {
+    promptTokens: current.promptTokens - previous.promptTokens,
+    completionTokens: current.completionTokens - previous.completionTokens,
+    totalTokens: current.totalTokens - previous.totalTokens,
+    cacheReadTokens: (current.cacheReadTokens ?? 0) - (previous.cacheReadTokens ?? 0),
+    cacheCreationTokens: (current.cacheCreationTokens ?? 0) - (previous.cacheCreationTokens ?? 0),
+  };
 }

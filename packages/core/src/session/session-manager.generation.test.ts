@@ -109,6 +109,16 @@ describe("closing run finalization lease", () => {
             (fields.tokenUsage.cacheCreationTokens ?? 0) -
             (stale.tokenUsage.cacheCreationTokens ?? 0),
         },
+        cacheUsageDelta: {
+          promptTokens: (fields.cumulativePromptTokens ?? 0) - (stale.cumulativePromptTokens ?? 0),
+          completionTokens: 0,
+          totalTokens: 0,
+          cacheReadTokens:
+            (fields.cumulativeCacheReadTokens ?? 0) - (stale.cumulativeCacheReadTokens ?? 0),
+          cacheCreationTokens:
+            (fields.cumulativeCacheCreationTokens ?? 0) -
+            (stale.cumulativeCacheCreationTokens ?? 0),
+        },
         previousContextUsageAnchor: stale.contextUsageAnchor,
       }));
     return { writer, stale, closingEpoch, lease, commit, host, sid };
@@ -234,6 +244,23 @@ describe("closing run finalization lease", () => {
     expect(f.writer.createClosingRunFinalizer(f.sid, f.closingEpoch, "old-run")).toBeUndefined();
   });
 
+  it("treats a legacy closing caller's unspecified cache delta as unknown, not its bill", () => {
+    const f = activeRun("close-legacy-cache-caller");
+    expect(
+      f.lease.commit(() => ({
+        fields: finalFields,
+        usageDelta: finalFields.tokenUsage,
+        previousContextUsageAnchor: f.stale.contextUsageAnchor,
+      })),
+    ).toBe(true);
+    expect(f.host.resume(f.sid).state).toMatchObject({
+      tokenUsage: { promptTokens: 11, cacheReadTokens: 4 },
+      cacheUsageVersion: 1,
+      cumulativePromptTokens: 0,
+      cumulativeCacheReadTokens: 0,
+    });
+  });
+
   for (const phase of ["before", "after", "both"] as const) {
     it(`preserves independent auxiliary counters and anchor written ${phase} close capture`, () => {
       const sid = `close-run-aux-${phase}`;
@@ -270,9 +297,64 @@ describe("closing run finalization lease", () => {
       const total = 120 + (phase !== "after" ? 30 : 0) + (phase !== "before" ? 40 : 0);
       expect(f.host.readSessionState(sid)).toMatchObject({
         tokenUsage: { promptTokens: total, totalTokens: total },
-        cumulativePromptTokens: total,
+        cacheUsageVersion: 1,
+        cumulativePromptTokens: 120,
         contextUsageAnchor: newestAnchor,
       });
     });
   }
+});
+
+it("migrates a legacy Session cache scope from its complete purpose history on resume", () => {
+  const storageDir = mkdtempSync(join(tmpdir(), "session-legacy-cache-"));
+  tempDirs.push(storageDir);
+  const manager = new SessionManager(storageDir);
+  const { state } = manager.create("/tmp/project", "model", "provider", "legacy-cache");
+  delete state.cacheUsageVersion;
+  state.tokenUsage = {
+    promptTokens: 1500,
+    completionTokens: 20,
+    totalTokens: 1520,
+    cacheReadTokens: 800,
+  };
+  state.cumulativePromptTokens = 1500;
+  state.cumulativeCacheReadTokens = 800;
+  state.costState = {
+    kind: "usage-ledger",
+    version: 1,
+    historicalCoverageIncomplete: false,
+    summary: {
+      version: 1,
+      scope: "session",
+      includesChildren: false,
+      partial: false,
+      unknownUsageRequests: 0,
+      invalidReceipts: 0,
+      persistenceErrors: 0,
+      byPurpose: [
+        { purpose: "main", promptTokens: 1000, cacheReadTokens: 800, cacheCreationTokens: 0 },
+        { purpose: "tool_summary", promptTokens: 500, cacheReadTokens: 0, cacheCreationTokens: 0 },
+      ],
+    },
+  };
+  expect(manager.saveState(state)).toBe(true);
+  const resumed = manager.resume(state.sessionId).state;
+  expect(resumed).toMatchObject({
+    tokenUsage: { promptTokens: 1500, totalTokens: 1520 },
+    cacheUsageVersion: 1,
+    cumulativePromptTokens: 1000,
+    cumulativeCacheReadTokens: 800,
+  });
+  expect(manager.saveState(resumed)).toBe(true);
+  manager.recordAuxiliaryUsage(state.sessionId, {
+    promptTokens: 250,
+    completionTokens: 10,
+    totalTokens: 260,
+  });
+  expect(new SessionManager(storageDir).resume(state.sessionId).state).toMatchObject({
+    tokenUsage: { promptTokens: 1750, totalTokens: 1780 },
+    cacheUsageVersion: 1,
+    cumulativePromptTokens: 1000,
+    cumulativeCacheReadTokens: 800,
+  });
 });

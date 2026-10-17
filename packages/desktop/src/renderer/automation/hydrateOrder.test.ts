@@ -4,7 +4,14 @@ import { applyStreamEvent, INITIAL_STATE, type Message, type MessagesReducerStat
 
 const stateOf = (m: Message[]): MessagesReducerState => ({ ...INITIAL_STATE, messages: m });
 const user = (id: string, text: string): Message => ({ kind: "user", id, text });
-const tool = (id: string, n: string, a: string): Message => ({ kind: "tool", id, toolName: n, args: a, status: "ok", startedAt: 0 });
+const tool = (id: string, n: string, a: string): Message => ({
+  kind: "tool",
+  id,
+  toolName: n,
+  args: a,
+  status: "ok",
+  startedAt: 0,
+});
 
 describe("chooseHydrateBase", () => {
   it("uses disk (merged) when disk has messages — local-only redundant tools don't tail", () => {
@@ -22,8 +29,43 @@ describe("chooseHydrateBase", () => {
 });
 
 describe("mergeHistoryIntoLive", () => {
+  it.each([true, false])(
+    "prefers main-call cache counts across legacy snapshots (%s)",
+    (mainIsHistory) => {
+      const main = {
+        ...stateOf([user("user", "question")]),
+        cacheUsageVersion: 1 as const,
+        cumulativePromptTokens: 1000,
+        cumulativeCacheReadTokens: 800,
+        singleTurnPromptTokens: 1000,
+        singleTurnCacheReadTokens: 800,
+      };
+      const mixed = {
+        ...stateOf([user("user", "question")]),
+        cumulativePromptTokens: 1500,
+        cumulativeCacheReadTokens: 900,
+        singleTurnPromptTokens: 1500,
+        singleTurnCacheReadTokens: 900,
+      };
+      for (const merge of [mergeHistoryIntoLive, chooseHydrateBase]) {
+        expect(merge(mainIsHistory ? main : mixed, mainIsHistory ? mixed : main)).toMatchObject({
+          cacheUsageVersion: 1,
+          cumulativePromptTokens: 1000,
+          cumulativeCacheReadTokens: 800,
+          sessionPromptTokens: 1000,
+          sessionCacheReadTokens: 800,
+          singleTurnPromptTokens: 1000,
+          singleTurnCacheReadTokens: 800,
+        });
+      }
+    },
+  );
+
   const assistant = (id: string, text: string): Message => ({
-    kind: "assistant", id, text, done: true,
+    kind: "assistant",
+    id,
+    text,
+    done: true,
   });
 
   it("keeps newer durable turns when the live bucket only contains an old cached turn", () => {

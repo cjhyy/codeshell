@@ -278,6 +278,11 @@ test("ephemeral Engine runs and out-of-run summary/compact helpers respect expli
     expect(packaged.summary).toBe("A compact fixture summary.");
     const compacted = await value.forceCompact(sessionId);
     expect(compacted.after).toBeLessThan(compacted.before);
+    expect(manager.resume(sessionId).state).toMatchObject({
+      cacheUsageVersion: 1,
+      cumulativePromptTokens: 20,
+      tokenUsage: { promptTokens: 60, totalTokens: 75 },
+    });
     expect(existsSync(join(root, "sessions", sessionId))).toBe(false);
     return result;
   };

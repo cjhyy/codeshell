@@ -161,3 +161,98 @@ describe("single-turn prompt-cache usage", () => {
     expect(cacheHitRateFromUsage(currentTurn)).toBeCloseTo(0.2, 5);
   });
 });
+
+describe("foreground cache accounting migration", () => {
+  const legacyUsage: TokenUsage = {
+    promptTokens: 1500,
+    completionTokens: 30,
+    totalTokens: 1530,
+    cacheReadTokens: 900,
+    cacheCreationTokens: 10,
+  };
+  const costState = {
+    kind: "usage-ledger",
+    version: 1,
+    historicalCoverageIncomplete: false,
+    summary: {
+      version: 1,
+      scope: "session",
+      includesChildren: false,
+      partial: false,
+      unknownUsageRequests: 0,
+      invalidReceipts: 0,
+      persistenceErrors: 0,
+      byPurpose: [
+        { purpose: "main", promptTokens: 1000, cacheReadTokens: 800, cacheCreationTokens: 0 },
+        { purpose: "subagent", promptTokens: 200, cacheReadTokens: 160, cacheCreationTokens: 0 },
+        { purpose: "tool_summary", promptTokens: 300, cacheReadTokens: 0, cacheCreationTokens: 10 },
+        { purpose: "goal_judge", promptTokens: 100, cacheReadTokens: 0, cacheCreationTokens: 0 },
+      ],
+    },
+  };
+
+  it("rebuilds complete legacy history from foreground purposes without changing bills", () => {
+    const counters = normalizeCumulativeUsageCounters(
+      {
+        costState,
+        cumulativePromptTokens: 1600,
+        cumulativeCacheReadTokens: 960,
+      },
+      legacyUsage,
+    );
+    expect(counters).toEqual({
+      cacheUsageVersion: 1,
+      cumulativePromptTokens: 1200,
+      cumulativeCacheReadTokens: 960,
+      cumulativeCacheCreationTokens: 0,
+    });
+    expect(cumulativeCacheHitRate(counters)).toBe(0.8);
+    expect(legacyUsage.promptTokens).toBe(1500);
+  });
+
+  it.each([
+    undefined,
+    { ...costState, historicalCoverageIncomplete: true },
+    {
+      ...costState,
+      summary: { ...costState.summary, partial: true },
+    },
+    {
+      ...costState,
+      summary: { ...costState.summary, unknownUsageRequests: 1 },
+    },
+    {
+      ...costState,
+      summary: { ...costState.summary, includesChildren: true },
+    },
+  ])("starts known foreground usage at zero when historical coverage is unknown", (history) => {
+    const counters = normalizeCumulativeUsageCounters(
+      {
+        costState: history,
+        cumulativePromptTokens: 1500,
+        cumulativeCacheReadTokens: 900,
+      },
+      legacyUsage,
+    );
+    expect(counters).toEqual({
+      cacheUsageVersion: 1,
+      cumulativePromptTokens: 0,
+      cumulativeCacheReadTokens: 0,
+      cumulativeCacheCreationTokens: 0,
+    });
+    expect(cumulativeCacheHitRate(counters)).toBeUndefined();
+  });
+
+  it("keeps migrated counters independent of future or reset billing snapshots", () => {
+    const migrated = normalizeCumulativeUsageCounters({ costState });
+    const next = addCumulativeUsage(migrated, {
+      promptTokens: 500,
+      completionTokens: 10,
+      totalTokens: 510,
+      cacheReadTokens: 400,
+    });
+    expect(normalizeCumulativeUsageCounters({ ...next, costState }, legacyUsage)).toEqual(next);
+    expect(next.cumulativePromptTokens).toBe(1700);
+    expect(cumulativeCacheHitRate(next)).toBe(0.8);
+  });
+});
