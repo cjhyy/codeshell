@@ -8,11 +8,12 @@ The release target is macOS, Windows, Linux Desktop and Web. Authorized native C
 has now executed; its passing and incomplete boundaries are recorded below.
 Cross-platform fixture tests alone are not native acceptance.
 
-The latest completed run, CI31, **FAILED** overall: Web, macOS and Linux pass;
-the Windows matrix fails a portable-path fixture and independent Windows NSIS
-times out during replacement. See the [CI31 actual results](#ci31--completed-five-job-results).
-The subsequent attachment ID and test-path repairs pass finite local checks;
-source-bound CI32 is pending. Installer timeout cause remains unknown.
+The latest completed run, CI32, **FAILED** overall: Web, macOS, Linux and the
+Windows matrix pass; independent Windows NSIS times out during replacement.
+See the [CI32 actual results](#ci32--completed-five-job-results-and-attachment-ui-follow-up).
+The matrix completes installation, replacement and uninstall acceptance with the
+configured hook. The independent timeout cause remains unknown; this is not a
+release-ready result.
 
 CI29 failed overall across five jobs; its original result remains unchanged. macOS, Linux
 and Web pass their stated audited scopes. The original Windows matrix accepts
@@ -24,7 +25,7 @@ thirteen installed UI operations, then times out during replacement. Replacement
 UI, uninstall, cache cleanup and final OS-state validation are not reached.
 See the [CI29 actual record](#ci29--actual-five-job-results-paused-goal-deletion-and-two-windows-failures).
 CI28/27/26/25/24 failures and their unknown causes remain in their original
-records. The NSIS hook still lacks successful full native uninstall validation.
+records.
 
 CI14 remains the latest fully passing matrix in its earlier, narrower scope,
 before expanded NSIS acceptance. The
@@ -3784,3 +3785,91 @@ original attachment shard also passes 22/85 with both the UUID product repair
 and portable fixture present. No full native Desktop build is inferred from
 these local static commands. CI32 has not yet been pushed at this checkpoint.
 CI31 remains failed and this record does not authorize or establish a release.
+
+
+## CI32 — completed five-job results and attachment UI follow-up
+
+[Run 39076696510](https://github.com/cjhyy/codeshell/actions/runs/39076696510),
+push attempt one at `e2958ab5cbc4b0e459d896ac659d883d9ee48977`, completes with
+four passing jobs and one failure. The preceding CI31 result and the CI32
+not-yet-pushed checkpoint above remain historical records.
+
+| Job | Actual result and boundary |
+| --- | --- |
+| Web, 117525207452 | Pass: service worker 11, authentication 4, child work 8 and annotations 8; 31 browser operations. |
+| macOS, 117525207628 | Pass: original 83 operations/12 normal Mains; separate Review drafts 3/1; Goal 1 in the existing third Preferences Main; separate DMG UI 13+13/two Mains. |
+| Linux, 117525207636 | Pass: original 83/12, separate drafts 3/1 and Goal 1 in an existing Preferences Main; actual AppImage runtime and ten owned update GETs pass. |
+| Windows matrix, 117525207641 | Pass: original 83/12, separate drafts 3/1 and Goal 1 in an existing Preferences Main. Matrix NSIS completes all 16 phases, six normal native/controller roots and installed/replaced UI 13+13/two actual Mains, with installation/sibling absence, registry/shortcuts/default paths, cache and final OS-state gates passing. |
+| Independent Windows NSIS, 117525207611 | Fail: ten phases and first installed UI 13/one normal Main complete; replacement exceeds the original 180,000 ms watchdog budget. Replacement and the remaining identity/UI/uninstall/cache/final-integrity phases are not accepted. |
+
+The matrix's source and post-build receipt bind the configured 181-byte CRLF
+`customUnInit` include, and its actual uninstall passes the original absence
+predicate. This supplies full native uninstall acceptance for this source-bound
+run. It is not a macro-execution trace or proof that the hook caused success,
+and it does not resolve any independent or historical failure.
+
+The independent job records watchdog failure, then SIGTERM request, exit
+`1/null` and the later exit-code assertion. Exit one does not prove a crash
+before cleanup. Its advisory role observer reports no fault; retained early
+observations include two owned temporary old-uninstaller candidates, but path
+roles do not identify loaded images, reached NSIS branches, dialogs or the
+reason for the timeout. The remaining six phases are incomplete, not passing.
+
+Frozen evidence for the five separate scopes:
+
+- [Web freeze](/private/tmp/codeshell-real-operation-cycles-20261016/ci-39076696510-web-root-20261018/Root-Web-final-source-and-evidence-freeze.json).
+- [macOS freeze](/private/tmp/codeshell-real-operation-cycles-20261016/ci-39076696510-mac-independent-20261018/final-evidence-freeze.json).
+- [Linux freeze](/private/tmp/codeshell-real-operation-cycles-20261016/ci-39076696510-linux-panel-independent-20261018/final-independent-freeze.json).
+- [Windows matrix freeze](/private/tmp/codeshell-real-operation-cycles-20261016/ci-39076696510-windows-matrix-independent-20261018/final-evidence-freeze.json).
+- [Independent NSIS failed-scope freeze](/private/tmp/codeshell-real-operation-cycles-20261016/ci-39076696510-independent-windows-nsis-panel-peer-20261018/final-independent-freeze.json).
+
+Finite pure counts remain separate: Goal 40/85 across three files, attachment
+retention 5/32, original attachments 22/85 and cold-module attachments 4/22.
+The product shard passes 445 tests across 32 files; expectations differ by
+platform (macOS 3,550, Linux 3,547, Windows 3,541). Native matrix operation-
+evidence contracts have 49 tests; these are not additional native operations.
+Root separately [checks and views three Windows images](/private/tmp/codeshell-real-operation-cycles-20261016/ci32-Root-three-Windows-PNG-visual-review-20261018.json):
+replaced narrow settings, Review draft scope and the wrapped generated-image
+path. This is not a view or PNG-chunk check of all 49 Windows images, and the
+Review screenshot alone does not establish session-isolation behavior.
+
+### Attachment UI follow-up — finite local checkpoint
+
+A later renderer-only candidate captures attachment ownership before async
+work and rejects stale attachment results or errors after selection changes.
+Its final formatted ownership shard passes 11 tests/158 expectations, and the
+existing quick-chat lifecycle shard separately passes 8/18. Both have zero
+failures/skips and run in distinct guarded Bun processes with inert bridge,
+staging and media substitutes. Four-file ESLint passes with zero warnings.
+These tests do not add native operations, browser decoding or real Main/provider
+coverage to CI32, whose source predates the candidate.
+
+The first Desktop typecheck then fails with 50 diagnostics; mobile typecheck
+and renderer Vite build are not reached. Missing or stale workspace declaration
+output is a source/input explanation to verify, not a proven explanation for
+all errors or a typecheck pass. Declaration restoration and subsequent combined
+validation remain pending at this checkpoint. The first failure and earlier
+fixture-setup/authoring errors remain retained in the
+[local first-stop record](/private/tmp/codeshell-attachment-async-owner-proof-20261018/final-validation-first-stop-observed-outcome.json).
+A [source-only hosted-gate candidate](/private/tmp/codeshell-ui-attachment-owner-hosted-gate-source-20261018/source-plan-v2.json)
+adds the two separate guarded commands and their two public logs to each native
+upload list (early/final 106/181); existing budgets and predicates remain.
+That proposal is not a pushed workflow or hosted validation. No new release
+readiness claim follows from these local results.
+
+
+### Subsequent private static checkpoint
+
+The first fifty type diagnostics remain retained. At unchanged four-file source
+`d64ef44078440162764a655695335061dd50d6d9`, six later authorized commands pass:
+private-worktree Link/Core/coding JavaScript and declaration compilation,
+Desktop and mobile no-emit checks, then the static renderer Vite bundle. The
+[actual six-command result](/private/tmp/codeshell-attachment-async-owner-proof-20261018/standard-tsc-recovery-six-command-outcome.json)
+binds their logs and unchanged source pins. Renderer `index` is 1,469.92 kB,
+retaining the warning above the 1,000 kB threshold.
+
+These are private-output static checks, without package clean/assets scripts,
+emitted-code execution, full application runtime or native acceptance. The
+renderer repair and hosted gates are locally combined at `00b0dc510da2ca0c85cacc82d35138167fa2d5a4`;
+no follow-up acceptance push or native UI validation is claimed at this checkpoint.
+CI32's completed failed result and all earlier checkpoints remain unchanged.
