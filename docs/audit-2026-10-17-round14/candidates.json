@@ -1,0 +1,111 @@
+{
+  "baseline": "badc2262a90966f6f903977b849adf1f22b55e9f",
+  "count": 4,
+  "candidates": [
+    {
+      "id": "UTIL-R14-C1",
+      "title": "sliceAnsi uses UTF-16 indexes where ordinary consumers pass display columns",
+      "source": "packages/core/src/utils/sliceAnsi.ts",
+      "lines": [
+        25,
+        37,
+        42,
+        58,
+        67
+      ],
+      "status": "static-candidate-runtime-skipped",
+      "severity": null,
+      "normalProducer": "TUI wrapText truncate-start/middle calculates start/end using stringWidth; Output horizontal clipping passes x/column bounds. Ordinary CJK text is permitted.",
+      "contract": "Header says display-column positions; however header also explicitly limits full fidelity for wide characters.",
+      "staticPrediction": {
+        "input": "中文XYZ",
+        "start": 4,
+        "end": 7,
+        "expectedByColumnContract": "XYZ",
+        "predictedBySource": "Z"
+      },
+      "limits": [
+        "First fixture import failed before loading production source; no runtime observation supports this prediction.",
+        "No TUI, terminal, screen, or actual renderer was executed.",
+        "Existing width-overflow retry only tightens end and does not rebase the incorrect start index (static consumer trace)."
+      ],
+      "evidence": [
+        "evidence/utils-slice-columns.first.raw.log",
+        "evidence/utils-slice-columns.first.exit.json",
+        "evidence/utils-skip-note.md"
+      ],
+      "dedup": "Compared full historical MD and parsed JSON leaves. Older render-border finding concerns direct substring splitting ANSI codes, not this helper column/UTF-16 mismatch."
+    },
+    {
+      "id": "UTIL-R14-C2",
+      "title": "sliceAnsi stops before a trailing SGR reset even for an entire basic styled string",
+      "source": "packages/core/src/utils/sliceAnsi.ts",
+      "lines": [
+        42,
+        47,
+        67
+      ],
+      "status": "static-candidate-runtime-skipped",
+      "severity": null,
+      "normalProducer": "Ordinary pre-rendered SGR-styled text enters truncation/clipping helpers.",
+      "contract": "Slice helper says it preserves escape sequences; basic SGR is recognized by its own regex.",
+      "staticPrediction": {
+        "input": "\\x1b[31mXYZ\\x1b[39m",
+        "start": 0,
+        "end": "omitted",
+        "predictedBySource": "\\x1b[31mXYZ"
+      },
+      "limits": [
+        "First fixture import failed before loading source; test body did not run.",
+        "No actual style leak to another node, terminal, or external output was established; consumer parser state may bound the effect."
+      ],
+      "evidence": [
+        "evidence/utils-slice-columns.first.raw.log",
+        "evidence/utils-slice-columns.first.exit.json",
+        "evidence/utils-skip-note.md"
+      ],
+      "dedup": "Historical render-border substring ANSI corruption is a different source mechanism; no duplicate formal trailing-reset record found in full corpus."
+    },
+    {
+      "id": "WEB-R14-C1",
+      "status": "candidate",
+      "severity": null,
+      "title": "Ordinary user XML can be mistaken for internal attachment plumbing",
+      "evidenceLevel": "static only; first focused fixture failed import before any test body, entire display direction skipped",
+      "source": [
+        {
+          "path": "packages/web/src/lib/userMessageDisplay.ts",
+          "line": 85
+        },
+        {
+          "path": "packages/web/src/lib/userMessageDisplay.ts",
+          "line": 97
+        }
+      ],
+      "normalTrigger": "Plain user XML example with attached-directory or attached-image-paths, no actual attachments and no explicit displayText",
+      "contract": "Existing transcriptReplay test explicitly preserves ordinary user-written XML, with attached-file control only",
+      "dedup": "all docs/bugs MD and recursive JSON string leaves excluding round14; distinct from R84 missing legacy projection",
+      "limits": [
+        "No observed product output",
+        "No assertions or controls from the focused fixture executed",
+        "No original transcript, image-byte, model-input, permission or file-access loss claim"
+      ],
+      "report": "web.md",
+      "fixture": "evidence/web-user-display.test.ts",
+      "firstRawLog": "evidence/web-user-display.first.raw.log",
+      "firstExitReceipt": "evidence/web-user-display.first.exit.json"
+    },
+    {
+      "id": "BYTES-R14-C1",
+      "title": "JPEG SOF3 识别与全局 DQT 前提可能不一致",
+      "sourceBase": "badc2262a90966f6f903977b849adf1f22b55e9f",
+      "file": "packages/server/src/image-byte-probe.ts",
+      "line": 119,
+      "report": "docs/audit-2026-10-17-round14/bytes.md",
+      "evidenceLevel": "Real pure probe rejection of self-built SOF3 marker sequence; format source read; candidate only",
+      "reason": "Recognized SOF set includes lossless SOF3, but EOI requires DQT independently of frame coding mode.",
+      "limits": "No independent pixel-decoder proof of sample validity or normal downstream lossless JPEG support/contract; no stage/upload/file/native/runtime/network/UI exercised. No severity or confirmed bug claim."
+    }
+  ],
+  "note": "Three source-only candidates after first import failures; one actual byte rejection lacking independently valid sample/downstream support contract."
+}

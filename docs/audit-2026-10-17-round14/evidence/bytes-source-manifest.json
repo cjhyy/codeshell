@@ -1,0 +1,76 @@
+{
+  "frozenSource": "badc2262a90966f6f903977b849adf1f22b55e9f",
+  "files": [
+    {
+      "path": "CODESHELL.md",
+      "frozenSha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "frozenBytes": 17639,
+      "currentEqualsFrozen": true
+    },
+    {
+      "path": "scripts/run-bun-test-shard.mjs",
+      "frozenSha256": "dd2b245afbcb5aa7c798c8674d34edb8e02bb42be0be320050adf9be5ed2fd7d",
+      "sha256": "dd2b245afbcb5aa7c798c8674d34edb8e02bb42be0be320050adf9be5ed2fd7d",
+      "frozenBytes": 233,
+      "currentEqualsFrozen": true
+    },
+    {
+      "path": "packages/server/src/image-byte-probe.ts",
+      "frozenSha256": "e744a050a06249ea20f04d6b0bdf37c00e9c317ec024341d1530214b8b0bd133",
+      "sha256": "e744a050a06249ea20f04d6b0bdf37c00e9c317ec024341d1530214b8b0bd133",
+      "frozenBytes": 12022,
+      "currentEqualsFrozen": true
+    },
+    {
+      "path": "packages/server/src/attachment-service.ts",
+      "frozenSha256": "8f6e0f70bf8f0fe3fa33d836a396af8ca49c9daf118c4d093e90ee51639a4d23",
+      "sha256": "8f6e0f70bf8f0fe3fa33d836a396af8ca49c9daf118c4d093e90ee51639a4d23",
+      "frozenBytes": 27944,
+      "currentEqualsFrozen": true
+    },
+    {
+      "path": "packages/server/src/attachment-service.test.ts",
+      "frozenSha256": "cb4350577683f589a1273cb547865598105681f913fb5396e954b36fcf7c75ca",
+      "sha256": "cb4350577683f589a1273cb547865598105681f913fb5396e954b36fcf7c75ca",
+      "frozenBytes": 17409,
+      "currentEqualsFrozen": true
+    },
+    {
+      "path": "packages/server/src/remote-relay/byte-stream.ts",
+      "frozenSha256": "829b793b34e5c8046284aba433b6323f471f983c2fc9efab16eaa6cb117aa639",
+      "sha256": "829b793b34e5c8046284aba433b6323f471f983c2fc9efab16eaa6cb117aa639",
+      "frozenBytes": 2440,
+      "currentEqualsFrozen": true
+    },
+    {
+      "path": "packages/server/src/remote-relay/protocol.ts",
+      "frozenSha256": "75273db331577ffa448e057134f2897593065b1d62efd9291cf9324d42244672",
+      "sha256": "75273db331577ffa448e057134f2897593065b1d62efd9291cf9324d42244672",
+      "frozenBytes": 2805,
+      "currentEqualsFrozen": true
+    },
+    {
+      "path": "packages/server/src/mobile-remote/codex-parse.ts",
+      "frozenSha256": "a7a7604e92ea7fcde75a77a52f3d9d1925ce7d4ad3a8619d910cb61508e7483c",
+      "sha256": "a7a7604e92ea7fcde75a77a52f3d9d1925ce7d4ad3a8619d910cb61508e7483c",
+      "frozenBytes": 5410,
+      "currentEqualsFrozen": true
+    },
+    {
+      "path": "packages/server/src/mobile-remote/codex-parse.test.ts",
+      "frozenSha256": "544ac5d8b544c76154c53d4a517a89275b6bac6a327d41a3f149a82a0e38fd13",
+      "sha256": "544ac5d8b544c76154c53d4a517a89275b6bac6a327d41a3f149a82a0e38fd13",
+      "frozenBytes": 6319,
+      "currentEqualsFrozen": true
+    },
+    {
+      "path": "docs/device-relay.md",
+      "frozenSha256": "d6f7d5db6fd6d8299fd51560e6fee0e57bd6e376a2aa622a1a477e92f50c2ebd",
+      "sha256": "d6f7d5db6fd6d8299fd51560e6fee0e57bd6e376a2aa622a1a477e92f50c2ebd",
+      "frozenBytes": 9706,
+      "currentEqualsFrozen": true
+    }
+  ],
+  "scope": "Selected read source plus actual pure probe runtime. Manifest does not imply execution of service/stream/Codex runtime; failed guessed upload-store path excluded per navigation skip."
+}

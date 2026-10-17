@@ -1,0 +1,70 @@
+{
+  "purpose": "Task-owned Web material hashes; own manifest excludes itself, no test execution",
+  "files": [
+    {
+      "path": "web.md",
+      "bytes": 5851,
+      "sha256": "f9e183bfe5312dda37973ead3b942f4b14a4ac445220c7e18ae9304a355c1575"
+    },
+    {
+      "path": "evidence/web-candidates.json",
+      "bytes": 1347,
+      "sha256": "a52cfcabfd58cfbe7879515c35ff1f85f072d143edb2a91e7c015327551bb169"
+    },
+    {
+      "path": "evidence/web-dedup.json",
+      "bytes": 65923,
+      "sha256": "4fac52f58f4b0b7e0d2345b0c18f5715a4fe7b4d8a60eede695ed623dbe98ca8"
+    },
+    {
+      "path": "evidence/web-findings.json",
+      "bytes": 3,
+      "sha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570"
+    },
+    {
+      "path": "evidence/web-history-inventory.txt",
+      "bytes": 109681,
+      "sha256": "cab660d22a6d1948b1bb979778fc8c57dbbce158011663f863c78ad16b6b8709"
+    },
+    {
+      "path": "evidence/web-room-history.first.exit.json",
+      "bytes": 638,
+      "sha256": "784aa162ce82303ff515c437b52ed4110f509ba8617996aca6e1a81a2439f154"
+    },
+    {
+      "path": "evidence/web-room-history.first.raw.log",
+      "bytes": 500,
+      "sha256": "3da37ec6595211fcd84370e0f30d8199aab13ea7809718cdbf0a6c32d75bdd8c"
+    },
+    {
+      "path": "evidence/web-run-first.py",
+      "bytes": 1095,
+      "sha256": "cf2a5678528d92e4ecbd373f8b693ac42c0296127e70985bc11019e5bb73da98"
+    },
+    {
+      "path": "evidence/web-source-manifest.json",
+      "bytes": 6249,
+      "sha256": "cf23cc2ca19734446851da458d34b67ffec080604e86b01d47a4dc1d45cc9df9"
+    },
+    {
+      "path": "evidence/web-user-display.first.exit.json",
+      "bytes": 684,
+      "sha256": "64cba4a18bd69e139fb5fa736b6e131ef141a01f2e8758993b4ba8d315e1851c"
+    },
+    {
+      "path": "evidence/web-user-display.first.raw.log",
+      "bytes": 496,
+      "sha256": "5ea8f0c8538679395f20284290366429e735807311d9016218c44c3ad656e126"
+    },
+    {
+      "path": "evidence/web-user-display.test.ts",
+      "bytes": 4692,
+      "sha256": "cab29f128598b0fecd66a692817455adc3af4dffe96f3b2c79c12180413d431a"
+    },
+    {
+      "path": "evidence/web-validation.json",
+      "bytes": 1716,
+      "sha256": "c700e2c2d4579b0dc10e7fd528e492de7cfabc1c832d13743ee86508b710e7ab"
+    }
+  ]
+}

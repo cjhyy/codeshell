@@ -1,0 +1,160 @@
+{
+  "frozenCommit": "badc2262a90966f6f903977b849adf1f22b55e9f",
+  "purpose": "read-only source and directly inspected historical contract/dedup evidence; no current package build provenance claim",
+  "files": [
+    {
+      "path": "CODESHELL.md",
+      "gitBlobSha": "50671f6297598a14ad4710b61ab103747fa7676a",
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "currentEqualsFrozen": true,
+      "lines": 217
+    },
+    {
+      "path": "packages/web/src/lib/format.ts",
+      "gitBlobSha": "26655abc6970d8583afa73c23a68ea2f45a1903e",
+      "sha256": "c1c2d582d623ba99a738b7d43c483358e6826cae24010ef7994b5d4708310f33",
+      "currentEqualsFrozen": true,
+      "lines": 140
+    },
+    {
+      "path": "packages/web/src/lib/format.test.ts",
+      "gitBlobSha": "f25ab6f0017bd099ee840adb94a6df3adf92484f",
+      "sha256": "c60b2edeb1e467f8a452304487e7203e4c54352578e98b6bed53683fd1f17c33",
+      "currentEqualsFrozen": true,
+      "lines": 135
+    },
+    {
+      "path": "packages/web/src/lib/userMessageDisplay.ts",
+      "gitBlobSha": "38f38026b764afb3c42744f1886e96b297d18ea5",
+      "sha256": "628fb9130fccc1022c1448ccba8ed21fe145cfeb072167ab57f76411473a0391",
+      "currentEqualsFrozen": true,
+      "lines": 164
+    },
+    {
+      "path": "packages/web/src/lib/roomHistory.ts",
+      "gitBlobSha": "62dfc6f2a94f8e688bf201a2b346face93b18b07",
+      "sha256": "15f2f2035b59392fecd67e3b09767129813af7c408a642f65584e82e8b063bc7",
+      "currentEqualsFrozen": true,
+      "lines": 76
+    },
+    {
+      "path": "packages/web/src/lib/roomHistory.test.ts",
+      "gitBlobSha": "75dc31cd73234ebb8e202bf9bcddc3732f844743",
+      "sha256": "47040bc0835a960d745974a61fc75a13066c40ca66ba9befe94015f530860f5c",
+      "currentEqualsFrozen": true,
+      "lines": 42
+    },
+    {
+      "path": "packages/web/src/lib/messageMappers.ts",
+      "gitBlobSha": "cbc05671c8242881a34e6cd2a02f75d985db47a7",
+      "sha256": "5118cb3792afac2c5b81bf239af4183800404bed4818d197b41c560c16076a38",
+      "currentEqualsFrozen": true,
+      "lines": 144
+    },
+    {
+      "path": "packages/web/src/lib/transcriptReplay.ts",
+      "gitBlobSha": "46065ddd90ccbc770cdf7b08efc685e62603c9aa",
+      "sha256": "621ff5259b69a14b2a63987a5aab45fdce360517b74420b16b4af7f1bb27cf4e",
+      "currentEqualsFrozen": true,
+      "lines": 207
+    },
+    {
+      "path": "packages/web/src/lib/transcriptReplay.test.ts",
+      "gitBlobSha": "6fbe93ded0687cf8c19adf3a30978b2004f12732",
+      "sha256": "b5dba5d941df9c8d40d65d647e4eb8572586fa14f98c7c41648c4cd5c02a8d88",
+      "currentEqualsFrozen": true,
+      "lines": 229
+    },
+    {
+      "path": "packages/web/src/lib/streamReducer.ts",
+      "gitBlobSha": "8f0adc2123de9022e9c2c295100536b031bd3b4b",
+      "sha256": "f17fb28fee4a1f29b8e5845342f191058cdcda954bd0e3efd66fc8a9fb003ed1",
+      "currentEqualsFrozen": true,
+      "lines": 800
+    },
+    {
+      "path": "packages/core/src/engine/input-attachments.ts",
+      "gitBlobSha": "4df44ddcb6dbf10da5932bef0c808d541af1031b",
+      "sha256": "5ea44b23c9764bf2aa3177b4f5cddc74e969e8cbe551a79397cba91ed3b44cc5",
+      "currentEqualsFrozen": true,
+      "lines": 522
+    },
+    {
+      "path": "packages/core/src/engine/run-image-input.ts",
+      "gitBlobSha": "c7bace2cafc5a999d32f139932140c6e3dbf7112",
+      "sha256": "0ff0d1d149ac28e9c25a87a52bb6a1fffbeb6db5f8154265418cb49c6097802e",
+      "currentEqualsFrozen": true,
+      "lines": 243
+    },
+    {
+      "path": "packages/core/src/engine/run-session-open.ts",
+      "gitBlobSha": "ad581e1e804afbac544cbb797f5b4168922834cc",
+      "sha256": "7520474ab6efb36ff9b93fd60c1d743c8b746ec7723e80e990f7e2f578007799",
+      "currentEqualsFrozen": true,
+      "lines": 292
+    },
+    {
+      "path": "packages/core/src/engine/run-output-user-message.ts",
+      "gitBlobSha": "49d857fe23956ce1027fec77dae90ee0e75d7748",
+      "sha256": "4b670627e7a3b4229955670b74eee4c1c52d473fcfaed2cefcd34b866f757c01",
+      "currentEqualsFrozen": true,
+      "lines": 74
+    },
+    {
+      "path": "packages/core/src/session/transcript.ts",
+      "gitBlobSha": "b5203d37c99ecb387ce5d7a206610441cc98b23f",
+      "sha256": "0d2e32dd2e530200c626dd2f94f563d3268f9ae9ad2e37e3497d1a849669d829",
+      "currentEqualsFrozen": true,
+      "lines": 1377
+    },
+    {
+      "path": "packages/desktop/src/mobile/components/MessageStream.tsx",
+      "gitBlobSha": "130d3dba97d0d75c2378fd8bcd897f601a6dc93a",
+      "sha256": "93a577ddfd1e793dc1dda211a430bb198f8ab026473a75545fe041fe141493e4",
+      "currentEqualsFrozen": true,
+      "lines": 259
+    },
+    {
+      "path": "docs/todo/durable-output-journal-delivery.md",
+      "gitBlobSha": "cd428cee90b8a0b3e8066462ba18b3bf5c0c71f6",
+      "sha256": "2adca92728572362a97a8bb697114f812d0f5e9c2291c44a957b495830c8fe77",
+      "currentEqualsFrozen": true,
+      "lines": 196
+    },
+    {
+      "path": "docs/review-2026-10-12/legacy-history-round24.md",
+      "gitBlobSha": "82ccebbf7b17224a378ee1579f8393218ec0d5ff",
+      "sha256": "f6d718b8ffbc74b33c86c69f4091171bd4d8659ff709af57fb200a65ad0384b0",
+      "currentEqualsFrozen": true,
+      "lines": 42
+    },
+    {
+      "path": "docs/review-2026-10-12/legacy-history-quality-round24.md",
+      "gitBlobSha": "a8f006936e23bb39dea8a980374370aca6243e73",
+      "sha256": "5b8e893648235dd1c7caec7bf5810946b8216afe4b921ad9baab9210e988685e",
+      "currentEqualsFrozen": true,
+      "lines": 87
+    },
+    {
+      "path": "docs/review-2026-10-12/modern-desktop-image-quality-round25.md",
+      "gitBlobSha": "38d2ef5ba7fc234f03536018f735608a487abe53",
+      "sha256": "36d4892b31b9342551911b38aa236d77d058db58547f8b54e6a8394e512b918d",
+      "currentEqualsFrozen": true,
+      "lines": 74
+    },
+    {
+      "path": "docs/audit-2026-10-17-round8/web.md",
+      "gitBlobSha": "a6c1a39c05d61000e5d4b9e2b0f5978418aded37",
+      "sha256": "3ecb7e29d33ae46a5aa4a30692bbd0245dd82ca6bd628b0cdada44a168ce023e",
+      "currentEqualsFrozen": true,
+      "lines": 38
+    },
+    {
+      "path": "docs/audit-2026-10-17/desktop-data.md",
+      "gitBlobSha": "0c4cb7d98285edb8290fcb871fe2eeee7c15641d",
+      "sha256": "71e9ee030f1e0bb0945f67407051fff6238a58b8c054784dd81009af55988ce3",
+      "currentEqualsFrozen": true,
+      "lines": 78
+    }
+  ]
+}

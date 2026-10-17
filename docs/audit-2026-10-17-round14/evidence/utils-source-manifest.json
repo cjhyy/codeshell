@@ -1,0 +1,165 @@
+{
+  "frozenBase": "badc2262a90966f6f903977b849adf1f22b55e9f",
+  "sources": [
+    {
+      "path": "packages/core/src/utils/semver.ts",
+      "frozenBytes": 398,
+      "bytes": 398,
+      "sha256": "94d3f2a74fe43631be54459ebc8a985089b613db8be4be13e65e1fd66c94897e",
+      "frozenSha256": "94d3f2a74fe43631be54459ebc8a985089b613db8be4be13e65e1fd66c94897e",
+      "currentSha256": "94d3f2a74fe43631be54459ebc8a985089b613db8be4be13e65e1fd66c94897e",
+      "currentMatchesFrozen": true,
+      "scope": "static only; Slice source was not loaded"
+    },
+    {
+      "path": "packages/core/src/utils/memoize.ts",
+      "frozenBytes": 1329,
+      "bytes": 1329,
+      "sha256": "5dc6b8193c577fe6d401a4eff5afac9a7d9eccc77b891c2a1d3673f42151f075",
+      "frozenSha256": "5dc6b8193c577fe6d401a4eff5afac9a7d9eccc77b891c2a1d3673f42151f075",
+      "currentSha256": "5dc6b8193c577fe6d401a4eff5afac9a7d9eccc77b891c2a1d3673f42151f075",
+      "currentMatchesFrozen": true,
+      "scope": "static only; Slice source was not loaded"
+    },
+    {
+      "path": "packages/core/src/utils/sliceAnsi.ts",
+      "frozenBytes": 1792,
+      "bytes": 1792,
+      "sha256": "f163cee9bfec96b8b6f24aaa15fb48355be33d9d7b9d5406d692e318989e2d36",
+      "frozenSha256": "f163cee9bfec96b8b6f24aaa15fb48355be33d9d7b9d5406d692e318989e2d36",
+      "currentSha256": "f163cee9bfec96b8b6f24aaa15fb48355be33d9d7b9d5406d692e318989e2d36",
+      "currentMatchesFrozen": true,
+      "scope": "static only; Slice source was not loaded"
+    },
+    {
+      "path": "packages/core/src/utils/format.ts",
+      "frozenBytes": 9304,
+      "bytes": 9304,
+      "sha256": "39d3fa4786f19681e53ec4a42cf9c5ee0bffc818d4c95c4bc151d3ea705c85b6",
+      "frozenSha256": "39d3fa4786f19681e53ec4a42cf9c5ee0bffc818d4c95c4bc151d3ea705c85b6",
+      "currentSha256": "39d3fa4786f19681e53ec4a42cf9c5ee0bffc818d4c95c4bc151d3ea705c85b6",
+      "currentMatchesFrozen": true,
+      "scope": "formatDuration baseline only; other exports not exercised"
+    },
+    {
+      "path": "packages/core/src/utils/toolDisplay.ts",
+      "frozenBytes": 6985,
+      "bytes": 6985,
+      "sha256": "41ba468c68cb9c564e1401d3c5cd310ab60a1e61600966c45166184871e6c000",
+      "frozenSha256": "41ba468c68cb9c564e1401d3c5cd310ab60a1e61600966c45166184871e6c000",
+      "currentSha256": "41ba468c68cb9c564e1401d3c5cd310ab60a1e61600966c45166184871e6c000",
+      "currentMatchesFrozen": true,
+      "scope": "static only; Slice source was not loaded"
+    },
+    {
+      "path": "packages/core/src/utils/format.test.ts",
+      "frozenBytes": 922,
+      "bytes": 922,
+      "sha256": "0d98bafb8aa96ec47298b739d55e22449f3a1e7aef9f78cb46857e22bba825e1",
+      "frozenSha256": "0d98bafb8aa96ec47298b739d55e22449f3a1e7aef9f78cb46857e22bba825e1",
+      "currentSha256": "0d98bafb8aa96ec47298b739d55e22449f3a1e7aef9f78cb46857e22bba825e1",
+      "currentMatchesFrozen": true,
+      "scope": "existing six-test baseline executed"
+    },
+    {
+      "path": "packages/core/src/utils/intl.ts",
+      "frozenBytes": 2824,
+      "bytes": 2824,
+      "sha256": "e1b714b7279fe2fc808678afd80f95a476bb1e0bc3f8c0ad18dae6c2a3f60f89",
+      "frozenSha256": "e1b714b7279fe2fc808678afd80f95a476bb1e0bc3f8c0ad18dae6c2a3f60f89",
+      "currentSha256": "e1b714b7279fe2fc808678afd80f95a476bb1e0bc3f8c0ad18dae6c2a3f60f89",
+      "currentMatchesFrozen": true,
+      "scope": "statically read; imported dependency only; no independent Intl verification"
+    },
+    {
+      "path": "packages/core/src/plugins/pluginCommandsLoader.ts",
+      "frozenBytes": 11605,
+      "bytes": 11605,
+      "sha256": "2a516d6ed9ba4e1035d41c58b5b06b03de08c3f41cc0d10793567d8d8b89f2a9",
+      "frozenSha256": "2a516d6ed9ba4e1035d41c58b5b06b03de08c3f41cc0d10793567d8d8b89f2a9",
+      "currentSha256": "2a516d6ed9ba4e1035d41c58b5b06b03de08c3f41cc0d10793567d8d8b89f2a9",
+      "currentMatchesFrozen": true,
+      "scope": "static only; Slice source was not loaded"
+    },
+    {
+      "path": "packages/core/src/skills/scanner.ts",
+      "frozenBytes": 16891,
+      "bytes": 16891,
+      "sha256": "22b278b115f2c86e1deee9cfbc5488dde27de587a8914ea6f34d45e9a2067543",
+      "frozenSha256": "22b278b115f2c86e1deee9cfbc5488dde27de587a8914ea6f34d45e9a2067543",
+      "currentSha256": "22b278b115f2c86e1deee9cfbc5488dde27de587a8914ea6f34d45e9a2067543",
+      "currentMatchesFrozen": true,
+      "scope": "static only; Slice source was not loaded"
+    },
+    {
+      "path": "packages/tui/src/render/wrap-text.ts",
+      "frozenBytes": 1820,
+      "bytes": 1820,
+      "sha256": "52c0fa9622efb87026ef9e89d62332ef32be664692eeb571736fdefdf9addbed",
+      "frozenSha256": "52c0fa9622efb87026ef9e89d62332ef32be664692eeb571736fdefdf9addbed",
+      "currentSha256": "52c0fa9622efb87026ef9e89d62332ef32be664692eeb571736fdefdf9addbed",
+      "currentMatchesFrozen": true,
+      "scope": "static only; Slice source was not loaded"
+    },
+    {
+      "path": "packages/tui/src/render/render-border.ts",
+      "frozenBytes": 6929,
+      "bytes": 6929,
+      "sha256": "73a2c6e71d8ef54ad830a47bbb5a901493a635542fd90507bc5422a3b4a8be0a",
+      "frozenSha256": "73a2c6e71d8ef54ad830a47bbb5a901493a635542fd90507bc5422a3b4a8be0a",
+      "currentSha256": "73a2c6e71d8ef54ad830a47bbb5a901493a635542fd90507bc5422a3b4a8be0a",
+      "currentMatchesFrozen": true,
+      "scope": "static only; Slice source was not loaded"
+    },
+    {
+      "path": "packages/tui/src/render/output.ts",
+      "frozenBytes": 27146,
+      "bytes": 27146,
+      "sha256": "aa3caa98bfe9af0cf4215f877e08d914b48c715554a53df4bfcbd6a239fcdaef",
+      "frozenSha256": "aa3caa98bfe9af0cf4215f877e08d914b48c715554a53df4bfcbd6a239fcdaef",
+      "currentSha256": "aa3caa98bfe9af0cf4215f877e08d914b48c715554a53df4bfcbd6a239fcdaef",
+      "currentMatchesFrozen": true,
+      "scope": "static only; Slice source was not loaded"
+    },
+    {
+      "path": "packages/tui/src/render/wrapAnsi.ts",
+      "frozenBytes": 398,
+      "bytes": 398,
+      "sha256": "65f7656af5067c5652d7ecfe8a41882e2fddab105674a59e7c2ca4f3b6547c61",
+      "frozenSha256": "65f7656af5067c5652d7ecfe8a41882e2fddab105674a59e7c2ca4f3b6547c61",
+      "currentSha256": "65f7656af5067c5652d7ecfe8a41882e2fddab105674a59e7c2ca4f3b6547c61",
+      "currentMatchesFrozen": true,
+      "scope": "static only; Slice source was not loaded"
+    },
+    {
+      "path": "packages/tui/src/render/stringWidth.ts",
+      "frozenBytes": 7186,
+      "bytes": 7186,
+      "sha256": "278150fbb17d545715e00b545c77791fb72dd7eed35a8a01b55dce76b4e60463",
+      "frozenSha256": "278150fbb17d545715e00b545c77791fb72dd7eed35a8a01b55dce76b4e60463",
+      "currentSha256": "278150fbb17d545715e00b545c77791fb72dd7eed35a8a01b55dce76b4e60463",
+      "currentMatchesFrozen": true,
+      "scope": "static only; Slice source was not loaded"
+    },
+    {
+      "path": "packages/tui/src/cli/output/renderer.ts",
+      "frozenBytes": 5744,
+      "bytes": 5744,
+      "sha256": "2ed6d93112ae5ab123fc2b93964b04bc37ec21b3e286ceec93ddab68c1bb22d7",
+      "frozenSha256": "2ed6d93112ae5ab123fc2b93964b04bc37ec21b3e286ceec93ddab68c1bb22d7",
+      "currentSha256": "2ed6d93112ae5ab123fc2b93964b04bc37ec21b3e286ceec93ddab68c1bb22d7",
+      "currentMatchesFrozen": true,
+      "scope": "static only; Slice source was not loaded"
+    },
+    {
+      "path": "packages/tui/src/ui/components/ToolCall.tsx",
+      "frozenBytes": 13567,
+      "bytes": 13567,
+      "sha256": "ad36b061a8c6856d63ce8b85169164d8df60d38da91e196e70ee9bc5120868f8",
+      "frozenSha256": "ad36b061a8c6856d63ce8b85169164d8df60d38da91e196e70ee9bc5120868f8",
+      "currentSha256": "ad36b061a8c6856d63ce8b85169164d8df60d38da91e196e70ee9bc5120868f8",
+      "currentMatchesFrozen": true,
+      "scope": "static only; Slice source was not loaded"
+    }
+  ]
+}

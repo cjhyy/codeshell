@@ -1,0 +1,17 @@
+{
+  "command": [
+    "node",
+    "scripts/run-bun-test-shard.mjs",
+    "--timeout",
+    "30000",
+    "packages/core/src/utils/format.test.ts"
+  ],
+  "cwd": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell",
+  "startedAt": "2026-10-17T07:09:14.671444+00:00",
+  "exitCode": 0,
+  "rawLog": "docs/audit-2026-10-17-round14/evidence/utils-format-existing.first.raw.log",
+  "rawBytes": 649,
+  "rawSha256": "c57d556a4b03d3bd5c2cacf98035bdf1c1093c4745d2062ea4c3e2a59b2ff416",
+  "firstOnly": true,
+  "reruns": 0
+}

@@ -1,0 +1,17 @@
+{
+  "command": [
+    "node",
+    "scripts/run-bun-test-shard.mjs",
+    "--timeout",
+    "30000",
+    "docs/audit-2026-10-17-round14/evidence/utils-slice-columns.test.ts"
+  ],
+  "cwd": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell",
+  "startedAt": "2026-10-17T07:08:47.061801+00:00",
+  "exitCode": 1,
+  "rawLog": "docs/audit-2026-10-17-round14/evidence/utils-slice-columns.first.raw.log",
+  "rawBytes": 497,
+  "rawSha256": "d8cdd4fea84b2aec613adba982ac420f09737d3ab14e890ab0395fcfc8386409",
+  "firstOnly": true,
+  "reruns": 0
+}

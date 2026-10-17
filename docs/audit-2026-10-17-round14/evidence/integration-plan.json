@@ -1,0 +1,15 @@
+{
+  "frozenSource": "badc2262a90966f6f903977b849adf1f22b55e9f",
+  "reviewedMain": "badc2262a90966f6f903977b849adf1f22b55e9f",
+  "originMain": "02d5d9a9ecbbb206d5f3d8a1d367e7081d937101",
+  "endFetchCompleted": true,
+  "mainAdvancedSinceFreeze": false,
+  "taskBranch": "codex/audit/text-bytes-utilities-round14-20261017",
+  "incomingOwnedDirectory": "docs/audit-2026-10-17-round14",
+  "primaryDirtyStateMatchesInitial": true,
+  "untrackedRegularFiles": 4,
+  "selectedSourceAndContractPins": 62,
+  "sourceDisposition": "All selected current bytes match frozen blobs; no runtime retest",
+  "worktreeRetained": "Needed for ongoing repository audit",
+  "pushRequested": false
+}

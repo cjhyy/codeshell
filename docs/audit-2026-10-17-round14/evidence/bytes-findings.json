@@ -1,0 +1,5 @@
+{
+  "sourceBase": "badc2262a90966f6f903977b849adf1f22b55e9f",
+  "findings": [],
+  "reason": "No new ordinary-producer defect with all requested contract/runtime/consumer evidence."
+}

@@ -1,0 +1,31 @@
+[
+  {
+    "id": "WEB-R14-C1",
+    "status": "candidate",
+    "severity": null,
+    "title": "Ordinary user XML can be mistaken for internal attachment plumbing",
+    "evidenceLevel": "static only; first focused fixture failed import before any test body, entire display direction skipped",
+    "source": [
+      {
+        "path": "packages/web/src/lib/userMessageDisplay.ts",
+        "line": 85
+      },
+      {
+        "path": "packages/web/src/lib/userMessageDisplay.ts",
+        "line": 97
+      }
+    ],
+    "normalTrigger": "Plain user XML example with attached-directory or attached-image-paths, no actual attachments and no explicit displayText",
+    "contract": "Existing transcriptReplay test explicitly preserves ordinary user-written XML, with attached-file control only",
+    "dedup": "all docs/bugs MD and recursive JSON string leaves excluding round14; distinct from R84 missing legacy projection",
+    "limits": [
+      "No observed product output",
+      "No assertions or controls from the focused fixture executed",
+      "No original transcript, image-byte, model-input, permission or file-access loss claim"
+    ],
+    "report": "web.md",
+    "fixture": "evidence/web-user-display.test.ts",
+    "firstRawLog": "evidence/web-user-display.first.raw.log",
+    "firstExitReceipt": "evidence/web-user-display.first.exit.json"
+  }
+]
