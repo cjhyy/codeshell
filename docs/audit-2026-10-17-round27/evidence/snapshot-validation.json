@@ -1,0 +1,19 @@
+{
+  "baseline": "9b667863e8a8eb91db7b1f99eb9876169dcf19ec",
+  "runs": [],
+  "productRuns": 0,
+  "testRuns": 0,
+  "runtimeImports": 0,
+  "fixturesWritten": 0,
+  "vmAstEvaluation": 0,
+  "reactBrowserRuns": 0,
+  "nativeRuns": 0,
+  "gitCommands": 0,
+  "networkRuns": 0,
+  "passedTests": 0,
+  "expectations": 0,
+  "productReruns": 0,
+  "sourceTestDeclarationsOnly": true,
+  "rootOwnedAttemptExcludedFromAuthorTotals": true,
+  "note": "Root first shard is separately documented as failed; existing16/54 is not this author execution and does not validate snapshot/Viewer/Panel. No product or fixture changes."
+}

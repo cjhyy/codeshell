@@ -1,0 +1,16 @@
+{
+  "productAttempts": 0,
+  "notes": [
+    {
+      "chunk": "eb3bac",
+      "exitCode": 2,
+      "kind": "metadata locator only",
+      "diagnostics": [
+        "rg: docs/audit-2026-10-17-round11/notification.md: No such file or directory (os error 2)",
+        "rg: docs/audit-2026-10-17-round6/skills.md: No such file or directory (os error 2)"
+      ],
+      "capture": "Manually transcribed exact diagnostic excerpts from recorded tool response, not raw product process output.",
+      "action": "Stop guessed old paths; use rg inventory. No runtime or product recovery."
+    }
+  ]
+}

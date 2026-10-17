@@ -1,0 +1,6 @@
+{
+  "baseline": "9b667863e8a8eb91db7b1f99eb9876169dcf19ec",
+  "count": 0,
+  "observations": [],
+  "note": "Prior capFiles candidate, R26 sentinel collision and review prompt families treated as exclusions/counterevidence, not new related findings. Cross-cwd producer questions handed to aggregator author; no duplicate classification."
+}

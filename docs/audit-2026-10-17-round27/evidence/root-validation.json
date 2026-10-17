@@ -1,0 +1,70 @@
+{
+  "baseline": "9b667863e8a8eb91db7b1f99eb9876169dcf19ec",
+  "formalCount": 0,
+  "candidateOwnedBy": "compose-report.md / COMPOSE-R27-C1",
+  "guardedRuns": [
+    {
+      "baseline": "9b667863e8a8eb91db7b1f99eb9876169dcf19ec",
+      "argv": [
+        "node",
+        "scripts/run-bun-test-shard.mjs",
+        "--timeout",
+        "30000",
+        "packages/desktop/src/renderer/diff/composeFileEdits.test.ts",
+        "docs/audit-2026-10-17-round27/evidence/root-containment.test.ts"
+      ],
+      "attempt": 1,
+      "exitCode": 1,
+      "elapsedSeconds": 0.258,
+      "raw": "docs/audit-2026-10-17-round27/evidence/root-containment-first.raw.log",
+      "rawBytes": 2272,
+      "rawSha256": "3419b38917c264fa865bcca06aa7160da25216f1b056c713ceb57a42f6a33a48",
+      "combinedStdoutStderr": true,
+      "rawAndExitSavedBeforeInspection": true,
+      "productReruns": 0,
+      "completedGuard": false,
+      "reportedPass": 16,
+      "reportedFail": 1,
+      "reportedErrors": 1,
+      "reportedExpectations": 54,
+      "reportedTestCount": 17,
+      "existingPassedTests": 16,
+      "focusedDeclaredTests": 3,
+      "focusedEnteredTests": 0,
+      "focusedPassedTests": 0,
+      "status": "SKIP after first failed direction",
+      "failureKind": "Root-owned fixture relative module locator error, before its production-leaf import; not a missing repository module or product bug.",
+      "failureDiagnostic": "Cannot find module '../../../../packages/desktop/src/renderer/diff/composeFileEdits'",
+      "fixtureChangedAfterFailure": false,
+      "productRetried": false,
+      "alternateValidationAttempted": false
+    }
+  ],
+  "totals": {
+    "firstBunShards": 1,
+    "completedCleanShards": 0,
+    "failedBunShards": 1,
+    "productAttempts": 1,
+    "testAttempts": 1,
+    "reportedPassedTests": 16,
+    "reportedExpectations": 54,
+    "reportedFailedTests": 1,
+    "reportedErrors": 1,
+    "focusedEnteredTests": 0,
+    "focusedPassedTests": 0,
+    "productReruns": 0
+  },
+  "actualScope": [
+    "Only guarded runner executed; existing compose test module completed 16 tests/54 expectations using actual composeFileEdits and parseUnifiedDiff leaves.",
+    "Focused test module could not resolve the Root-authored relative import; none of its three test bodies or console evidence executed."
+  ],
+  "staticOnly": [
+    "Actual Edit matching/writing contract and aggregator flow fully read; no Edit invocation or real file editing.",
+    "The ASCII fixture model and expected/wrong-output literals are authored/static evidence, not observed values."
+  ],
+  "limitations": [
+    "The whole shard failed; existing16pass does not prove focus or completion. No green completion gate.",
+    "COMPOSE-R27-C1 remains static candidate; no fix, retry, fixture edit, import recovery or alternate runtime."
+  ],
+  "productChanges": false
+}

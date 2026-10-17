@@ -1,0 +1,60 @@
+{
+  "baseline": "9b667863e8a8eb91db7b1f99eb9876169dcf19ec",
+  "scan": "evidence/compose-dedup.json",
+  "totals": {
+    "files": 2596,
+    "markdown": 1250,
+    "json": 1346,
+    "stringLeaves": 468104,
+    "scalarLeaves": 676635,
+    "archivePaths": 169,
+    "parseErrors": 0
+  },
+  "matchCounts": {
+    "compose-leaf": 5,
+    "aggregation-snapshot": 148,
+    "outer-proof": 0,
+    "old-boundaries": 242
+  },
+  "retainedContextCounts": {
+    "compose-leaf": 5,
+    "aggregation-snapshot": 148,
+    "outer-proof": 0,
+    "old-boundaries": 160
+  },
+  "historyReads": [
+    {
+      "path": "docs/audit-2026-10-17-round13/groups.md",
+      "bytes": 7742,
+      "sha256": "f476375c2755ae844859fdc3b047bc271cf33b11cf4b5f60c9afb98208d8922d",
+      "coverage": "full",
+      "note": "Static history reading only; no old command rerun."
+    },
+    {
+      "path": "docs/audit-2026-10-17-round13/evidence/groups-validation.json",
+      "bytes": 4723,
+      "sha256": "c06b6043f610d39adb5a8bf2074764c0ec3c001b11c0488f000dc817166fa4e2",
+      "coverage": "full",
+      "note": "Static history reading only; no old command rerun."
+    }
+  ],
+  "decisions": [
+    {
+      "subject": "compose name/outer proof",
+      "decision": "Candidate only. 5name matches are 1 old search pattern containing syntheticSnippetDiff plus4 Round26 concurrent-main path inventory values; none is a prior outer-containment finding. Targeted outer-proof0 is navigation only, not proof of absence."
+    },
+    {
+      "subject": "GROUPS-R13-C1/C2/R1 and DESKTOP-R12-R1",
+      "decision": "Old header-only Delete / V4A prefix filtering / Move / unified-parser routes remain excluded. R13 focused fixture failed at import, all7 bodies unexecuted, whole direction remains SKIP. Do not reopen or upgrade using the new compose consumer."
+    },
+    {
+      "subject": "old countLines trailing newline",
+      "decision": "Same old family, current source12–17 explicitly excludes phantom trailing line. No new countLines finding or execution."
+    },
+    {
+      "subject": "Root first focused failure",
+      "decision": "3new focused bodies unexecuted; preserve candidate rather than formal/dynamic claim, even though existing16 tests actually passed in same failed shard."
+    }
+  ],
+  "keywordLimit": "All MD and recursive JSON value scalars scanned including169 archive paths; capped contexts are not semantic exhaustion."
+}

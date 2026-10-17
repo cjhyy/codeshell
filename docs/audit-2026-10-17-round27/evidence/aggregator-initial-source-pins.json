@@ -1,0 +1,63 @@
+{
+  "parentReportedFreeze": "9b667863e8a8eb91db7b1f99eb9876169dcf19ec",
+  "gitComparisonPerformed": false,
+  "gitCommands": 0,
+  "files": [
+    {
+      "path": "packages/desktop/src/renderer/messages/fileChangeAggregator.ts",
+      "bytes": 13565,
+      "lineCount": 396,
+      "sha256": "90ffda89cf0cb2d05751bb8370056793591be41c358477de8bd9f12db447bc2d",
+      "semanticRead": "pending except CODESHELL already read; first byte pin before assigned source reading"
+    },
+    {
+      "path": "packages/desktop/src/renderer/messages/fileChangeAggregator.test.ts",
+      "bytes": 14527,
+      "lineCount": 377,
+      "sha256": "f6b406ec220edbdf065e548189aea7a16988b365a339e1046d47afd55589f8a3",
+      "semanticRead": "pending except CODESHELL already read; first byte pin before assigned source reading"
+    },
+    {
+      "path": "packages/desktop/src/renderer/messages/fileChangeAggregator.count.test.ts",
+      "bytes": 878,
+      "lineCount": 27,
+      "sha256": "e89e1cfbf5dcc6d05770b47aa4bbdeb4954e0d66071578c3931804121afd32c8",
+      "semanticRead": "pending except CODESHELL already read; first byte pin before assigned source reading"
+    },
+    {
+      "path": "packages/desktop/src/renderer/messages/FilesChangedCard.tsx",
+      "bytes": 16212,
+      "lineCount": 420,
+      "sha256": "15d7d4a53188869aa3af554bbc9e9b4a429af44578135f2576ef718f1dec3fbf",
+      "semanticRead": "pending except CODESHELL already read; first byte pin before assigned source reading"
+    },
+    {
+      "path": "packages/desktop/src/renderer/messages/FilesChangedCard.test.tsx",
+      "bytes": 2750,
+      "lineCount": 78,
+      "sha256": "5a3d481f43aa035358b7f5ea623254231468a0bedbf6dcb702fdb51600147b83",
+      "semanticRead": "pending except CODESHELL already read; first byte pin before assigned source reading"
+    },
+    {
+      "path": "packages/desktop/src/renderer/app/usePanelBuckets.ts",
+      "bytes": 40459,
+      "lineCount": 1033,
+      "sha256": "77cfff3fd385f1630540b5b19bc2bac4fbc21e2a593ff4cf4209c8bdea91de8f",
+      "semanticRead": "pending except CODESHELL already read; first byte pin before assigned source reading"
+    },
+    {
+      "path": "packages/desktop/src/renderer/types.ts",
+      "bytes": 86699,
+      "lineCount": 2289,
+      "sha256": "645de29eb12c5cc3a84ba68e9d5ece4020f2a272eca1191f3120a2f7620b7f3f",
+      "semanticRead": "pending except CODESHELL already read; first byte pin before assigned source reading"
+    },
+    {
+      "path": "CODESHELL.md",
+      "bytes": 17639,
+      "lineCount": 217,
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "semanticRead": "pending except CODESHELL already read; first byte pin before assigned source reading"
+    }
+  ]
+}

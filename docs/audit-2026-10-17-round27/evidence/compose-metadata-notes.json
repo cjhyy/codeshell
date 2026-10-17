@@ -1,0 +1,22 @@
+{
+  "authorProductRuns": 0,
+  "authorGitCommands": 0,
+  "metadataEvents": [
+    {
+      "chunk": "90ab8e",
+      "outerExitCode": 0,
+      "event": "Tool result was display-truncated between test/Edit sources.",
+      "action": "Explicit filesystem reread test157–203 and Edit1–139 in chunkf5ba0d; full coverage claims use both actual reads. No product call or retry."
+    },
+    {
+      "event": "Resumed after interrupted agent",
+      "action": "Preserved exact4 prep files and their initial/read-time flags. New read-time manifests are separate, parent-reported baseline is not independently Git-verified by this author."
+    },
+    {
+      "event": "Root failed fixture cross-reference",
+      "action": "Read existing raw/exit/plan/fixture only after Root had saved evidence. Author made no changes to those Root-owned artifacts or product files."
+    }
+  ],
+  "metadataCollectorFailures": 0,
+  "productReruns": 0
+}
