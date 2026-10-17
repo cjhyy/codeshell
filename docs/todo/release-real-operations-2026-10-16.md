@@ -92,6 +92,71 @@ main, tags and publication remain outside that authorization. The branch is
 | [39008016212](https://github.com/cjhyy/codeshell/actions/runs/39008016212), source `1b4b3340f`                     | Web passes all 31 operations again. The complete macOS job passes, including updater and DMG, with 78 independent receipt checks. Windows now passes three cold Main launches/reloads/second-window and Review 8, then exposes a real Files UI defect: the comment title displays the full Windows path instead of `alpha.txt`. Main exits normally with zero remaining owned processes and no transport fallback. Linux passes all six source suites, sandbox-requested directory UI and the actual AppImage build; its updater fixture fails after successful extraction because a LICENSE file's mode changes from 0600 to 0644 while bytes match. No AppImage Main or updater request starts. Both first failures are retained, and neither incomplete platform is counted as fully accepted.                   |
 | [39009261349](https://github.com/cjhyy/codeshell/actions/runs/39009261349), source `ec17b2054`                     | Web 31 and the complete macOS job pass again. Linux source suites, directory UI and real AppImage build pass; extraction passes the previous LICENSE comparison but now fails its stricter directory check at `locales`. Source mode is 0755; this receipt omitted the extracted mode, so no new directory conversion is assumed. Main/update requests remain zero. Windows fails in its first Main evaluation with “Resulting promise was garbage collected”, before any of the seven startup operations. Its final exit is 1/no signal, observed 32 incarnations settle cleaned/zero remaining with no query/transport/deny/worker failures, and HOME remains. The receipt does not establish whether that exit precedes fixture cleanup. Windows UI repairs and real AppImage runtime acceptance remain pending. |
 | [39010572108](https://github.com/cjhyy/codeshell/actions/runs/39010572108), source `9cbd3a34c`                     | Windows completes all eight suites for the first time: 78 recorded checks and 12 actual Main launches, each with exit 0/no signal, observed custody cleaned/zero remaining/no query failure, and all eight suite HOMEs removed. This includes the actual Files short comment title. Web passes 31 behavior checks. Linux passes source suites, directory UI and real AppImage build; its new before-validation inventories prove 73 source directories change from 0755 to private 0700. The strict check stops before AppImage Main/update requests. macOS passes source and directory UI suites, then packaged updater metadata evaluation reports a garbage-collected promise before any updater operation; DMG is skipped. The overall matrix remains failed.                                                   |
+| [39012279115](https://github.com/cjhyy/codeshell/actions/runs/39012279115), source `badc2262a`                     | All four jobs complete successfully for the first time. Web passes 31 behavior checks; Linux runs the actual AppImage Main and all ten updater manifest GETs; macOS completes updater and DMG install/replacement. The new complete-path PNG/history/collapse cases pass in all three native panel steps, adding two to the prior 18. Independent Mac/Linux receipts are checked; Windows receipt review is in progress. Linux screenshots still show Chinese glyph boxes, so Chinese visual acceptance remains open despite the green job.                                                                                                                                                                                                                                                                         |
+
+CI11's exact clean source is `badc2262a90966f6f903977b849adf1f22b55e9f`.
+Mac's independent receipt audit passes 98 consistency/acceptance checks
+(`ci-39012279115-mac/receipt-audit.json`, SHA256
+`39c7527924c2f0f65516640868b1f952391103899955fa40adac3ffe276b52e7`).
+Its actual image IPC decodes the owned 292,788-byte, 512×512 PNG, with one card,
+complete path and collapse/reopen behavior. Actual Main processes close normally,
+observed custody settles cleaned/zero remaining, and required HOMEs are removed.
+Updater records ten manifest GETs and no download/model/native-secret calls;
+both same-build DMG UI copies pass 13 operations and their readonly mounts detach.
+This successful metadata read does not explain or replace CI10's GC failure.
+
+Linux's independent summary is `ci-39012279115-linux-independent-audit.json`
+(SHA256 `f65614714b1fc916fd44d95ff17218788aa0f82b4baee52c002296f717b3e8f7`).
+Its actual AppImage runtime parent and paused Main have separate fresh identities;
+APPIMAGE, APPDIR, private HOME and exact executable match. Pre-import guard and
+seven negative probes precede startup; Chromium sandbox is requested and Main
+reports no `no-sandbox` switch. The reviewed 73 directory conversions and two
+file conversions match the preserved inventories. Source/cache bytes and full
+07777 modes remain unchanged after execution, including the separately configured
+root-owned sandbox identity and bytes. Main and runtime exit 0/no signal; observed
+custody settles cleaned/zero remaining and HOME is removed. Updater performs
+five error scenarios and five explicit healthy retries, exactly ten manifest
+GETs, with no asset download, Engine/Worker or native-secret calls. Directory UI
+13 and panel 20 operations also pass. These are owned runtime/update-check
+sequences, not a Linux installed update or Wayland acceptance.
+
+Web's independent CI11 summary is `ci-39012279115-web-independent-audit.json`
+(SHA256 `f77525a687f1b9af6afa25a73fdf0f33c5c36f9b416b8494ce0aab52c96006c4`).
+All 31 behavior checks, 88 recorded source hashes and 25 PNG structural checks
+pass. Actual 390px multiline and logout screenshots remain readable. The SW/Auth
+lifecycle receipt gaps described for CI10 remain unchanged. Two read-only audit
+checker schema/path errors are retained in `ci11-web-audit-schema-diagnostic.txt`;
+the checker was corrected against the existing report/source schemas, without
+modifying or repeating any browser run or skipping a hash comparison.
+
+Linux's actual CI11 screenshots show Chinese text as boxes while English and
+the owned image remain readable. That observation alone does not identify a
+product font defect or establish the runner's installed fonts. The next workflow
+records bounded `fc-match :lang=zh-cn` metadata before and after installing the
+CI prerequisite `fonts-noto-cjk`, then requires Chinese language coverage before
+native visual checks. Its exclusive 0600 JSON receipts are limited to 16 KiB;
+the query has a ten-second/16 KiB output limit. Product CSS and native gates stay
+unchanged. Actual font receipts and new screenshots remain pending; no local
+font query, installation or native launch was performed.
+
+WEB-R8-02 is repaired after CI11's frozen source. The `image/jpg` alias now wraps
+the same Blob bytes as `image/jpeg` before the existing size/conversion decision,
+preserving filename and timestamp without an extra full-buffer copy. Oversized
+aliases convert under the ordinary rules; a still-oversized result rejects before
+upload. The original red has two failures and three normal controls; nine final
+tests/45 assertions pass, including existing inline budgets and upload ordering.
+These use synthetic bytes, controlled canvas conversion and upload callbacks,
+so they do not establish real JPEG decoding or server upload acceptance. Package
+release smoke passes ten tarballs/48 typed entries; Desktop builds and all 14
+workspace typechecks pass after the clean package build. The next Web CI retains
+this nine-test shard separately from the 31 browser behavior checks.
+
+The final updated workflow parses as two jobs, 33 Bash run blocks and five inline
+Node blocks. The first syntax checker treated an existing module heredoc as CJS;
+its original extracted scripts and diagnostic remain, and the corrected checker
+uses each command's actual input-type flag. These are syntax checks, not Linux
+font or native execution. Other audit rounds remain frozen and are not implicitly
+repaired by these changes.
 
 The CI10 Windows evidence summary is
 `ci-39010572108-windows-20261017/verified-summary.json` under the private operation
