@@ -141,16 +141,30 @@ async function openSession(session) {
   await composer().waitFor();
 }
 async function reviewPanel() {
-  const toggle = win.locator('[data-panel-action="toggle"]');
+  const toggle = win.locator('[data-panel-action="toggle"]:visible');
   if ((await toggle.getAttribute("aria-pressed")) !== "true") await toggle.click();
-  const slot = win.locator('[data-panel-id="review"]');
+  // Inactive Session docks retain their DOM with opacity zero; visibility alone
+  // does not exclude them. Keep every action inside the one active, visible dock.
+  const dock = win.locator(
+    '[data-theme-surface="panel"]:not([aria-hidden="true"]):not([inert]):visible',
+  );
+  await dock.waitFor();
+  // A Review body in this dock may be inactive: its visible tab reactivates it.
+  const slot = dock.locator('[data-panel-id="review"]');
   if (await slot.count())
-    await win.locator(`[id="${await slot.getAttribute("aria-labelledby")}"]`).click();
+    await dock
+      .locator(`[role="tab"][id="${await slot.getAttribute("aria-labelledby")}"]:visible`)
+      .click();
   else {
-    await win.locator('[data-panel-action="new-tab"]').click();
-    await win.locator('[data-panel-menu-kind="review"]').click();
+    await dock.locator('[data-panel-action="new-tab"]:visible').click();
+    await dock
+      .locator('[data-panel-launcher]:not([aria-hidden="true"]):not([inert]):visible')
+      .locator('[data-panel-menu-kind="review"]:visible')
+      .click();
   }
-  const panel = win.locator('[data-panel-id="review"][data-panel-active="true"]');
+  const panel = dock.locator(
+    '[data-panel-id="review"][data-panel-active="true"]:not([aria-hidden="true"]):not([inert]):visible',
+  );
   await panel.waitFor();
   return panel;
 }

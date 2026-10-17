@@ -955,3 +955,218 @@ test("all native evaluate payloads use the second parameter while Page signature
   assert.equal(waits[0].arguments[1].parameters.length, 2);
   assert.equal(waits[0].arguments[3].getText(parsed), "{ timeout: 5000, polling: 50 }");
 });
+
+function actualReviewPanel(win) {
+  const { parsed } = electronEvaluationSource();
+  const declaration = parsed.statements.find(
+    (node) => ts.isFunctionDeclaration(node) && node.name.text === "reviewPanel",
+  );
+  assert.ok(declaration);
+  return vm.runInNewContext(`(${declaration.getText(parsed)})`, { win, assert });
+}
+
+/** Pure locator contract, not Playwright/browser execution. Opacity alone is visible. */
+function panelLocatorTree() {
+  const clicks = [];
+  const node = (attrs = {}, style = {}) => ({ attrs, style, children: [], parent: null });
+  const root = node();
+  const add = (parent, child) => {
+    child.parent = parent;
+    parent.children.push(child);
+    return child;
+  };
+  const descendants = (parent) =>
+    parent.children.flatMap((child) => [child, ...descendants(child)]);
+  const visible = (item) =>
+    !item ||
+    (item.style.display !== "none" && item.style.visibility !== "hidden" && visible(item.parent));
+  const inert = (item) => item && ("inert" in item.attrs || inert(item.parent));
+  function matches(item, selector) {
+    const attribute = /^\[([\w-]+)(?:="([^"]*)")?\]$/;
+    const attr = (text) => {
+      const match = attribute.exec(text);
+      assert.ok(match, `unsupported attribute ${text}`);
+      return (
+        match[1] in item.attrs && (match[2] === undefined || item.attrs[match[1]] === match[2])
+      );
+    };
+    let match = true;
+    const rest = selector
+      .replace(/:not\((\[[^\]]+\])\)/g, (_all, condition) => {
+        match &&= !attr(condition);
+        return "";
+      })
+      .replace(/:visible/g, () => {
+        match &&= visible(item);
+        return "";
+      })
+      .replace(/\[[^\]]+\]/g, (condition) => {
+        match &&= attr(condition);
+        return "";
+      });
+    assert.equal(rest, "", `unsupported selector ${selector}`);
+    return match;
+  }
+  function locator(select) {
+    const one = () => {
+      const found = select();
+      assert.equal(found.length, 1, `strict locator resolved to ${found.length} elements`);
+      return found[0];
+    };
+    return {
+      locator: (selector) =>
+        locator(() =>
+          select()
+            .flatMap(descendants)
+            .filter((item) => matches(item, selector)),
+        ),
+      count: async () => select().length,
+      getAttribute: async (name) => one().attrs[name] ?? null,
+      waitFor: async () => assert.ok(visible(one()), "locator not visible"),
+      click: async () => {
+        const item = one();
+        assert.ok(visible(item) && !inert(item), "locator not actionable");
+        clicks.push(item.name);
+        item.onClick?.();
+      },
+    };
+  }
+  const toggle = add(root, node({ "data-panel-action": "toggle", "aria-pressed": "true" }));
+  toggle.name = "toggle";
+  function dock(name, { hidden = false, review = false, activeReview = true } = {}) {
+    const surface = add(
+      root,
+      node(
+        { "data-theme-surface": "panel", ...(hidden ? { "aria-hidden": "true", inert: "" } : {}) },
+        hidden ? { opacity: 0, pointerEvents: "none" } : {},
+      ),
+    );
+    const plus = add(surface, node({ "data-panel-action": "new-tab" }));
+    plus.name = `${name}:new-tab`;
+    const launcher = add(surface, node({ "data-panel-launcher": "" }));
+    const pick = add(launcher, node({ "data-panel-menu-kind": "review" }));
+    pick.name = `${name}:pick-review`;
+    let slot, tab;
+    const activateReview = () => {
+      if (!slot) {
+        slot = add(surface, node({ "data-panel-id": "review", "aria-labelledby": `${name}-tab` }));
+        tab = add(surface, node({ role: "tab", id: `${name}-tab` }));
+        tab.name = `${name}:review-tab`;
+        tab.onClick = activateReview;
+      }
+      Object.assign(slot.attrs, { "data-panel-active": "true", "aria-hidden": "false" });
+      delete slot.attrs.inert;
+      slot.style.opacity = 1;
+      Object.assign(launcher.attrs, { "aria-hidden": "true", inert: "" });
+    };
+    plus.onClick = () => {
+      delete launcher.attrs["aria-hidden"];
+      delete launcher.attrs.inert;
+    };
+    pick.onClick = activateReview;
+    if (review) {
+      activateReview();
+      if (!activeReview) {
+        Object.assign(slot.attrs, {
+          "data-panel-active": "false",
+          "aria-hidden": "true",
+          inert: "",
+        });
+        slot.style.opacity = 0;
+      }
+    }
+    return {
+      surface,
+      plus,
+      launcher,
+      pick,
+      get slot() {
+        return slot;
+      },
+      get tab() {
+        return tab;
+      },
+    };
+  }
+  return { win: locator(() => [root]), dock, clicks, add, node, root, toggle };
+}
+
+test("actual panel helper excludes the retained opacity-zero Session dock before creating B Review", async () => {
+  const tree = panelLocatorTree();
+  tree.dock("A", { hidden: true });
+  tree.dock("B");
+  const panel = await actualReviewPanel(tree.win)();
+  assert.equal(await panel.getAttribute("aria-labelledby"), "B-tab");
+  assert.deepEqual(tree.clicks, ["B:new-tab", "B:pick-review"]);
+});
+
+test("actual panel helper ignores a hidden Session Review slot and selects only B's launcher", async () => {
+  const tree = panelLocatorTree();
+  tree.dock("A", { hidden: true, review: true });
+  tree.dock("B");
+  const panel = await actualReviewPanel(tree.win)();
+  assert.equal(await panel.getAttribute("aria-labelledby"), "B-tab");
+  assert.deepEqual(tree.clicks, ["B:new-tab", "B:pick-review"]);
+});
+
+test("actual panel helper activates an existing inactive Review tab only in the visible Session", async () => {
+  const tree = panelLocatorTree();
+  tree.dock("A", { review: true, activeReview: false });
+  tree.dock("B", { hidden: true, review: true });
+  const panel = await actualReviewPanel(tree.win)();
+  assert.equal(await panel.getAttribute("aria-labelledby"), "A-tab");
+  assert.deepEqual(tree.clicks, ["A:review-tab"]);
+});
+
+test("actual panel helper preserves strict refusal for zero or two visible docks and toggles", async () => {
+  for (const count of [0, 2]) {
+    const tree = panelLocatorTree();
+    tree.dock("hidden", { hidden: true });
+    for (let i = 0; i < count; i++) tree.dock(`visible-${i}`);
+    await assert.rejects(actualReviewPanel(tree.win)());
+    assert.deepEqual(tree.clicks, []);
+  }
+  for (const count of [0, 2]) {
+    const tree = panelLocatorTree();
+    tree.dock("visible");
+    if (!count) tree.root.children.splice(tree.root.children.indexOf(tree.toggle), 1);
+    else tree.add(tree.root, tree.node({ "data-panel-action": "toggle", "aria-pressed": "true" }));
+    await assert.rejects(actualReviewPanel(tree.win)());
+    assert.deepEqual(tree.clicks, []);
+  }
+});
+
+test("actual panel helper never picks the first of zero or two visible new-tab controls", async () => {
+  for (const count of [0, 2]) {
+    const tree = panelLocatorTree(),
+      dock = tree.dock("visible");
+    if (!count) dock.surface.children.splice(dock.surface.children.indexOf(dock.plus), 1);
+    else tree.add(dock.surface, tree.node({ "data-panel-action": "new-tab" }));
+    await assert.rejects(actualReviewPanel(tree.win)());
+    assert.deepEqual(tree.clicks, []);
+  }
+});
+
+test("actual panel helper keeps strict tab, launcher and Review-body uniqueness within the active dock", async () => {
+  for (const count of [0, 2]) {
+    const tree = panelLocatorTree(),
+      dock = tree.dock("visible", { review: true, activeReview: false });
+    if (!count) dock.surface.children.splice(dock.surface.children.indexOf(dock.tab), 1);
+    else tree.add(dock.surface, tree.node({ role: "tab", id: "visible-tab" }));
+    await assert.rejects(actualReviewPanel(tree.win)());
+    assert.deepEqual(tree.clicks, []);
+  }
+  for (const count of [0, 2]) {
+    const tree = panelLocatorTree(),
+      dock = tree.dock("visible");
+    if (!count) dock.launcher.children.splice(dock.launcher.children.indexOf(dock.pick), 1);
+    else tree.add(dock.launcher, tree.node({ "data-panel-menu-kind": "review" }));
+    await assert.rejects(actualReviewPanel(tree.win)());
+    assert.deepEqual(tree.clicks, ["visible:new-tab"]);
+  }
+  const tree = panelLocatorTree(),
+    dock = tree.dock("visible", { review: true });
+  tree.add(dock.surface, tree.node({ "data-panel-id": "review", "data-panel-active": "true" }));
+  await assert.rejects(actualReviewPanel(tree.win)());
+  assert.deepEqual(tree.clicks, []);
+});
