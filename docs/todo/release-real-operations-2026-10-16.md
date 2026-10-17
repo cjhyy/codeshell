@@ -4,8 +4,9 @@ Status: in progress. A passing row covers its stated fixture and boundary; this
 is not a claim that every platform, external account, or packaged release works.
 Continue the loop: operate the current interface, retain the failure, fix the
 cause, repeat the operation, then check the combined build.
-The release target is macOS, Windows, Linux Desktop and Web. Native Windows/Linux
-execution is still pending; cross-platform fixture tests are not native acceptance.
+The release target is macOS, Windows, Linux Desktop and Web. Authorized native CI
+has now executed; its passing and incomplete boundaries are recorded below.
+Cross-platform fixture tests alone are not native acceptance.
 
 ## Reproduced and repaired
 
@@ -29,6 +30,9 @@ execution is still pending; cross-platform fixture tests are not native acceptan
 | Web question drafts | Switching sessions while an answer was pending unmounted its form and lost the answer on failure. | Keep unresolved forms by request and hide other sessions accessibly. |
 | Ordinary-session write recovery | Background filtering hid the only uncertain-write review entry for a normal conversation. | Add the existing review UI to conversation management, loaded only on request. Native cancellation, read-only reconciliation, manual uncertainty acceptance and cold Main/Engine recovery preserve the original unknown result and never replay its write. |
 | Execution trace keyboard access | At 820px the focused final type filter was clipped; retrying a failed detail dropped focus to the page body. | Scroll the focused filter into view and move retry focus to the stable detail heading. Native geometry, hit testing and focus checks at 1280/820/390px in light/dark themes. |
+| Web authentication | A real tab status check invalidated an outstanding successful login. An old device-revocation 401 could also expire a newer login. | Suppress status reads during login and bind authentication-loss callbacks to the initiating login identity. Actual cookie HTTP/WebSocket browser sequences cover both races, explicit logout with pending chat work, and a current-login 401 after closing its dialog. Native Linux tab-focus coverage remains under investigation; retain its first failure. |
+| Language and theme preferences | The selected language card stayed stale, another same-origin window did not follow language changes, and switching a manually booted theme to System missed later media changes. | Use the language provider as the selected-card authority, listen to native storage events, and retain the media listener while checking the current stored mode on every event. Seven focused scenarios and six real-browser sequences pass. Actual Electron multiwindow/cold-Main verification is still running. |
+| Packaged update checks | The installed updater emitted an error event and then rejected its promise: a real missing-manifest 404 changed from not-available to error. Filename-only classification also hid 401/403/500/invalid YAML. | Use one error policy for events and promise rejection; only an actual 404 status denotes a missing manifest. Actual packaged Main/preload/Settings/electron-updater verifies five response classes and five healthy retries, ten exact manifest GETs, no asset/download/install action. |
 
 ## Evidence boundaries
 
@@ -64,7 +68,58 @@ packaged UI sequence. It is limited to manual dispatch or a dedicated acceptance
 branch push, with read-only repository permissions. It uses no release identity,
 notarization, tag or publishing command. Linux gets an owned Xvfb/SecretService
 session and explicitly configured sandbox helpers; it does not use `--no-sandbox`.
-No remote run has been triggered at this audit checkpoint.
+The user authorized pushing the dedicated acceptance branch and running native CI;
+main, tags and publication remain outside that authorization. The branch is
+`codex/desktop/release-ui-acceptance-three-platforms-20261017`.
+
+| Remote run | Actual result and retained failure |
+| --- | --- |
+| [38940934896](https://github.com/cjhyy/codeshell/actions/runs/38940934896), source `ab8b03f86` | Workflow validation rejected job-level `runner.temp`; no native jobs ran. Owned evidence paths now initialize in a step via `RUNNER_TEMP` and `GITHUB_ENV`. |
+| [38941376217](https://github.com/cjhyy/codeshell/actions/runs/38941376217), source `2b3f60185` | Web ServiceWorker 11 and the complete macOS native job passed. Ubuntu startup/panels/composer passed, then a metadata `app.evaluate` reported a garbage-collected promise before memory UI operations. Windows failed its initial bounded process query during directory packaging; cleanup remained unproven. |
+| [38943220744](https://github.com/cjhyy/codeshell/actions/runs/38943220744), source `68677b058` | Web ServiceWorker 11 and complete macOS native job passed again. Ubuntu memory 7 also passed; packaged UI failed before App launch because the expected `code-shell` binary was absent. Windows' 30-second diagnostic returned valid identity rows after 17,743ms, but its immediately following normal five-second query failed. This is not accepted native Windows coverage. |
+| [38982907208](https://github.com/cjhyy/codeshell/actions/runs/38982907208), source `6054fa9b6` | Complete macOS native job passed again. Ubuntu startup/panels/composer/memory passed; packaged UI still failed before launch because the first corrected name `code-shell-desktop` also omitted the npm scope. The locked builder actually computes `@cjhyycode-shell-desktop`; the subsequent repair derives its name from that builder and records actual package root entries plus executable hash. Web ServiceWorker and authentication cases 2–4 passed, while case 1 timed out waiting for a trusted native tab focus/visibility event before releasing login. Windows transport/profile timing diagnostics completed, but the original custody query still failed before packaging. |
+
+Artifacts are downloaded as ZIPs under the private operation evidence root,
+with individual reports inspected directly. First-failure Main logs missing from
+the early Ubuntu memory artifact were a coverage gap; subsequent runs explicitly
+retain them. A later successful launch does not classify that earlier GC failure.
+
+The combined source passed 35 auth/preferences tests (144 assertions), 12 package
+layout/integrity tests (65 assertions), six actual preference browser sequences,
+and four local actual authentication browser sequences. The first two preference
+browser attempts failed before launching because no Chromium existed at the
+selected cache path; the successful run used the installed Chrome binary with a
+new owned profile. Package release verification again passed 10 tarballs and 48
+typed entries. Counts describe separate suites, not a deduplicated total.
+
+Updater evidence is frozen separately: the old immutable package reproduced the
+404 event/rejection conflict; a second launch then hit a navigation fixture
+assumption, so that red run covers only 404 and its healthy retry. The fixed
+package passed all five modes and retries in one actual Main before its normal
+30-second periodic timer. Receipt:
+`/private/tmp/codeshell-updater-packaged-green-final-20261017/receipt.json`.
+Its ASAR is `baffabc296b3fede963f5504952dc26b7779f18732b06fdcfdb084137d9603c7`;
+the package build source is `f196a4783`, with driver-only follow-up `1945c07fd`.
+Main exit 0/no signal, observed custody cleaned with zero remaining, no workers,
+native storage or renderer/feed errors, ten GETs, unchanged full inventories,
+deep strict signature and original metadata pins are recorded. The first fixed
+run's second inspector handshake GC failure remains a separate failed receipt;
+switching to a single Main for these feed modes does not explain it.
+
+The native tab test now disables Playwright's implicit focus override for both
+tabs and observes an actual blur before bringing the login tab forward, avoiding
+coalesced front operations. The local actual Chrome run passes all four cases,
+recording `focused=false` followed by a trusted focus event. Its headed Mac probe
+also failed the event wait and is retained separately; no headed/WM workaround or
+synthetic focus dispatch is accepted as the fix. Linux must verify the final
+ordering change in the next CI run.
+
+A passive metadata observation paused owned App/browser launches for 60 seconds:
+239 `lstat` samples returned one unchanged default-Keychain file identity. Build
+CLI activity was allowed. No items were read or explicit Keychain writes made;
+this bounded observation neither identifies the earlier intermittent writer nor
+proves that writes did not occur. Receipt: `passive-keychain-observation.json` in
+the private operation evidence root.
 
 `smoke-local-package.mjs` retains the three production resource/signing hooks,
 records their hashes, and runs the builder from a new private working directory
@@ -96,8 +151,9 @@ process.
 Linux's wrapper records a fresh private bus/keyring reference. The reader verifies
 owned private directories, bounded metadata, process start ticks, executables,
 ancestry and current D-Bus/SecretService PIDs. It never adopts the operator bus
-or reads stored items. Actual Linux bus execution remains pending; Mac fixture
-parsing/refusal tests do not establish it. Xvfb alone does not verify window-manager
+or reads stored items. The Ubuntu native startup/panel/composer/memory runs now
+exercise that owned session; Mac fixture parsing alone did not establish it.
+Xvfb alone does not verify window-manager
 behavior or Wayland. Windows native window, shortcut, PTY and encryption behavior
 also remain separate from the portable parser tests.
 
