@@ -1,0 +1,12 @@
+{
+  "baseline": "9b667863e8a8eb91db7b1f99eb9876169dcf19ec",
+  "count": 0,
+  "observations": [],
+  "excludedOldItems": [
+    "GROUPS-R13-C1 header-only Delete",
+    "GROUPS-R13-C2 +++/--- content filtering",
+    "GROUPS-R13-R1 Move destination family",
+    "R26 sentinel and branch findings"
+  ],
+  "note": "Excluded old mechanisms are provenance, not newly counted related observations."
+}

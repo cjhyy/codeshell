@@ -1,0 +1,12 @@
+{
+  "baseline": "9b667863e8a8eb91db7b1f99eb9876169dcf19ec",
+  "inventoryFilesRehashed": 2596,
+  "inventorySource": "snapshot-dedup.json",
+  "inventorySha256": "edb92e744877bacccbf51a6a68c4583299511c7d2a4ff262bbfd1fed69e4bbb3",
+  "allUnchanged": true,
+  "archivePathCount": 174,
+  "metadataOnly": true,
+  "productAttempts": 0,
+  "gitCommands": 0,
+  "note": "Independent read-only filesystem rehash; no new full semantic history claim. Pattern counts remain existing snapshot; current27 excluded."
+}

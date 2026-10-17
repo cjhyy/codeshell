@@ -1,0 +1,70 @@
+{
+  "baseline": "9b667863e8a8eb91db7b1f99eb9876169dcf19ec",
+  "totals": {
+    "firstBunShards": 1,
+    "completedCleanShards": 0,
+    "failedBunShards": 1,
+    "productAttempts": 1,
+    "testAttempts": 1,
+    "reportedPassedTests": 16,
+    "reportedExpectations": 54,
+    "reportedFailedTests": 1,
+    "reportedErrors": 1,
+    "focusedEnteredTests": 0,
+    "focusedPassedTests": 0,
+    "productReruns": 0,
+    "fixturesAuthored": 1,
+    "focusedDeclaredTests": 3
+  },
+  "runs": [
+    {
+      "log": "evidence/root-containment-first.raw.log",
+      "baseline": "9b667863e8a8eb91db7b1f99eb9876169dcf19ec",
+      "argv": [
+        "node",
+        "scripts/run-bun-test-shard.mjs",
+        "--timeout",
+        "30000",
+        "packages/desktop/src/renderer/diff/composeFileEdits.test.ts",
+        "docs/audit-2026-10-17-round27/evidence/root-containment.test.ts"
+      ],
+      "attempt": 1,
+      "exitCode": 1,
+      "elapsedSeconds": 0.258,
+      "raw": "docs/audit-2026-10-17-round27/evidence/root-containment-first.raw.log",
+      "rawBytes": 2272,
+      "rawSha256": "3419b38917c264fa865bcca06aa7160da25216f1b056c713ceb57a42f6a33a48",
+      "combinedStdoutStderr": true,
+      "rawAndExitSavedBeforeInspection": true,
+      "productReruns": 0,
+      "completedGuard": false,
+      "reportedPass": 16,
+      "reportedFail": 1,
+      "reportedErrors": 1,
+      "reportedExpectations": 54,
+      "reportedTestCount": 17,
+      "existingPassedTests": 16,
+      "focusedDeclaredTests": 3,
+      "focusedEnteredTests": 0,
+      "focusedPassedTests": 0,
+      "status": "SKIP after first failed direction",
+      "failureKind": "Root-owned fixture relative module locator error, before its production-leaf import; not a missing repository module or product bug.",
+      "failureDiagnostic": "Cannot find module '../../../../packages/desktop/src/renderer/diff/composeFileEdits'",
+      "fixtureChangedAfterFailure": false,
+      "productRetried": false,
+      "alternateValidationAttempted": false
+    }
+  ],
+  "staticAuthors": [
+    "compose",
+    "snapshot",
+    "aggregator",
+    "root-frontier"
+  ],
+  "notes": [
+    "One failed shard: existing16 passed/54 expectations, focused0 entered, no completed guard.",
+    "Root fixture import locator failure is not a product missing-module bug. No repair, retry or alternate runtime.",
+    "The worktree path formal is independent static producer/consumer evidence, not this failed dynamic direction.",
+    "The compose item remains a static candidate and entire dynamic direction SKIP."
+  ]
+}

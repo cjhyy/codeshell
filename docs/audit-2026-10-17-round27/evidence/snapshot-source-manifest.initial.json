@@ -1,0 +1,172 @@
+{
+  "baseline": "9b667863e8a8eb91db7b1f99eb9876169dcf19ec",
+  "branchProvidedByRoot": "codex/audit/compose-frontier-round27-20261017",
+  "files": [
+    {
+      "path": "CODESHELL.md",
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          217
+        ]
+      ],
+      "bytes": 17639,
+      "lineCount": 217,
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "runtimeExecuted": false
+    },
+    {
+      "path": "packages/desktop/src/renderer/diff/UnifiedDiffViewer.tsx",
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          449
+        ]
+      ],
+      "bytes": 17458,
+      "lineCount": 449,
+      "sha256": "31d77cfe853aceaa92f16bd91a9a63779b9e7ea079adf5831410c63abd82d220",
+      "runtimeExecuted": false
+    },
+    {
+      "path": "packages/desktop/src/renderer/diff/UnifiedDiffViewer.review.test.ts",
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          41
+        ]
+      ],
+      "bytes": 1594,
+      "lineCount": 41,
+      "sha256": "1ced46ca3ff825d24a15d74b0d14afde16cb4beefe986a105f3823108ae40b93",
+      "runtimeExecuted": false
+    },
+    {
+      "path": "packages/desktop/src/renderer/diff/reviewSnapshot.ts",
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          47
+        ]
+      ],
+      "bytes": 1903,
+      "lineCount": 47,
+      "sha256": "616db299d2eea30218c7996cd2bb89f579472ed57bb053bb014d31ee9b07658e",
+      "runtimeExecuted": false
+    },
+    {
+      "path": "packages/desktop/src/renderer/diff/reviewSnapshot.test.ts",
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          48
+        ]
+      ],
+      "bytes": 2395,
+      "lineCount": 48,
+      "sha256": "71a2811fc2060194ea1a1641da91749a76357920b33c0385c329a2adfb0e392c",
+      "runtimeExecuted": false
+    },
+    {
+      "path": "packages/desktop/src/renderer/panels/ReviewPanel.tsx",
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          441
+        ]
+      ],
+      "bytes": 18347,
+      "lineCount": 441,
+      "sha256": "88ce19d0b9d5b358c09e76300080fdaa0c1f50a3f4d926c6c86ada9520656d08",
+      "runtimeExecuted": false
+    },
+    {
+      "path": "packages/desktop/src/renderer/types.ts",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          285,
+          326
+        ]
+      ],
+      "bytes": 86699,
+      "lineCount": 2289,
+      "sha256": "645de29eb12c5cc3a84ba68e9d5ece4020f2a272eca1191f3120a2f7620b7f3f",
+      "runtimeExecuted": false
+    },
+    {
+      "path": "packages/desktop/src/renderer/messages/FilesChangedCard.tsx",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          78,
+          96
+        ],
+        [
+          174,
+          194
+        ],
+        [
+          292,
+          312
+        ]
+      ],
+      "bytes": 16212,
+      "lineCount": 420,
+      "sha256": "15d7d4a53188869aa3af554bbc9e9b4a429af44578135f2576ef718f1dec3fbf",
+      "runtimeExecuted": false
+    },
+    {
+      "path": "packages/desktop/src/renderer/app/usePanelBuckets.ts",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          827,
+          845
+        ]
+      ],
+      "bytes": 40459,
+      "lineCount": 1033,
+      "sha256": "77cfff3fd385f1630540b5b19bc2bac4fbc21e2a593ff4cf4209c8bdea91de8f",
+      "runtimeExecuted": false
+    },
+    {
+      "path": "packages/desktop/src/renderer/panels/ReviewPanel.workspace.test.tsx",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          1,
+          80
+        ],
+        [
+          223,
+          321
+        ],
+        [
+          366,
+          413
+        ]
+      ],
+      "bytes": 13600,
+      "lineCount": 413,
+      "sha256": "a06d87548ca73be6235dd81953b64a75a5564488a84038067f6f954d441b4591",
+      "runtimeExecuted": false
+    }
+  ],
+  "sourcePinCount": 10,
+  "primaryFullFiles": 5,
+  "primaryFullLines": 1026,
+  "instructionFullLines": 217,
+  "readTimeUtc": "2026-10-17T11:00:15.891048+00:00",
+  "frozenGitCompared": false,
+  "gitCommands": 0,
+  "productAttempts": 0,
+  "testAttempts": 0,
+  "scope": "Filesystem hashes at Root-provided frozen checkout context;no Git commands or product execution. Exact full/selected scopes;full hashes not full semantic coverage. composeFileEdits implementation and aggregator implementation belong to other authors and are not imported/read here."
+}

@@ -1,0 +1,182 @@
+{
+  "baseline": "9b667863e8a8eb91db7b1f99eb9876169dcf19ec",
+  "count": 1,
+  "findings": [
+    {
+      "id": "AGGREGATOR-R27-01",
+      "priority": "P3",
+      "title": "Isolated DriveAgent changed-file links lose their cwd and open the parent chat file",
+      "source": "packages/desktop/src/renderer/messages/fileChangeAggregator.ts",
+      "lineStart": 295,
+      "lineEnd": 300,
+      "classification": "formal static source finding; no dynamic UI or native validation",
+      "ordinaryTrigger": "A local Desktop chat at /repo starts a normal DriveAgent with isolation:worktree (explicit or automatic for a parallel writable run), retains that worktree with cleanup:keep or default auto with changes, and the agent reports a known changed file src/a.ts from /isolated/src/a.ts.",
+      "contract": "The file-change row names a file touched by that DriveAgent. Its click target must preserve the reported file identity. DriveAgent explicitly supports separate launch worktrees; the main chat need not switch its own workspace.",
+      "cause": "The completion carries correct cwd and files, and the aggregator resolves an absolute identity, but displayExternalPath strips the cwd. consume stores only that display path in FileEditEntry, whose type has no cwd. MessageStream supplies the owning chat cwd to FilesChangedCard; the row passes that cwd with the stripped relative path to openFileTarget.",
+      "staticValueFlow": [
+        {
+          "path": "packages/coding/src/tools/drive-agent.ts",
+          "ranges": [
+            [
+              104,
+              126
+            ],
+            [
+              1068,
+              1097
+            ],
+            [
+              1164,
+              1177
+            ],
+            [
+              1246,
+              1270
+            ]
+          ],
+          "meaning": "Ordinary explicit or automatic isolation selects a different launch cwd and passes it into background completion."
+        },
+        {
+          "path": "packages/coding/src/tools/drive-agent.ts",
+          "ranges": [
+            [
+              246,
+              250
+            ],
+            [
+              316,
+              354
+            ],
+            [
+              453,
+              465
+            ],
+            [
+              784,
+              806
+            ]
+          ],
+          "meaning": "Normalization returns cwd-relative path plus the correct job cwd. cleanup keep/default auto-with-changes preserves the isolated worktree without merging or copying it to parent."
+        },
+        {
+          "path": "packages/desktop/src/renderer/types.ts",
+          "ranges": [
+            [
+              167,
+              173
+            ],
+            [
+              1986,
+              2015
+            ],
+            [
+              282,
+              297
+            ],
+            [
+              630,
+              643
+            ]
+          ],
+          "meaning": "Event retains cwd until aggregation; published file entry has path only."
+        },
+        {
+          "path": "packages/desktop/src/renderer/messages/fileChangeAggregator.ts",
+          "ranges": [
+            [
+              81,
+              84
+            ],
+            [
+              288,
+              300
+            ],
+            [
+              325,
+              336
+            ],
+            [
+              366,
+              372
+            ]
+          ],
+          "meaning": "Absolute identity is correctly distinct internally, then emitted as stripped display path with no root."
+        },
+        {
+          "path": "packages/desktop/src/renderer/ChatView.tsx",
+          "ranges": [
+            [
+              1818,
+              1820
+            ]
+          ],
+          "meaning": "Chat passes its own conversationRoot to MessageStream."
+        },
+        {
+          "path": "packages/desktop/src/renderer/MessageStream.tsx",
+          "ranges": [
+            [
+              609,
+              617
+            ]
+          ],
+          "meaning": "Every file-change card receives owning chat cwd."
+        },
+        {
+          "path": "packages/desktop/src/renderer/messages/FilesChangedCard.tsx",
+          "ranges": [
+            [
+              258,
+              265
+            ]
+          ],
+          "meaning": "Clickable row uses stripped f.path with owning chat cwd."
+        },
+        {
+          "path": "packages/desktop/src/renderer/chat/openWith.ts",
+          "ranges": [
+            [
+              28,
+              55
+            ]
+          ],
+          "meaning": "Plain click forwards the same path/cwd through open-file event; modified click also passes the wrong cwd to default-open."
+        },
+        {
+          "path": "packages/desktop/src/renderer/app/usePanelBuckets.ts",
+          "ranges": [
+            [
+              918,
+              944
+            ]
+          ],
+          "meaning": "Event consumer preserves the incorrect pair in revealFile."
+        },
+        {
+          "path": "packages/desktop/src/renderer/panels/FilesPanel.tsx",
+          "ranges": [
+            [
+              228,
+              233
+            ]
+          ],
+          "meaning": "Relative reveal path is joined against revealFile.cwd, which is the parent chat root."
+        }
+      ],
+      "expectedStaticScope": "/isolated/src/a.ts from the external completion.",
+      "actualStaticScope": "A normal row click computes /repo/src/a.ts. If that parent file exists the request names another file; otherwise the intended isolated file cannot be opened by this row.",
+      "impact": "The external file-change card points at another workspace. Two normal external roots with the same relative path also emit indistinguishable row paths/keys, but that is secondary to the same lost-root cause and is not a second finding.",
+      "counterevidence": [
+        "Same-cwd ordinary external edits remain correctly addressed. External paths outside their job cwd remain absolute and do not take this stripping branch.",
+        "Default auto cleanup retains changed worktrees; explicit keep is an even narrower ordinary supported trigger. No assumption that changes have been merged into the parent is needed.",
+        "External completion markers retain the original cwd, and the job/lifecycle note may expose a recovery path; the defect is the emitted file-row identity, not deleted metadata or data loss.",
+        "The owner chat can correctly resolve its own main/session workspace and this failure still occurs because the child job is a different workspace.",
+        "LocalRuntimeActionsContext defaults true; the cloud surface sets false. This finding is restricted to normal local Desktop rows.",
+        "No actual existing user repository, DriveAgent process, worktree creation, Git business call, UI render/key warning, click, disk open or data-loss observation was made."
+      ],
+      "validation": "Static only:0author product/import/test/fixture/React/browser/native/network/Git attempts. Root compose shard failure is separate and provides no evidence for this finding.",
+      "dedup": "2596 prior docs/bugs MD+recursive JSON scalar files, archives included, current27 excluded. Directed worktree-open7/external-path-loss17/empty-external-preview50 matches all retained. Old main-session wrong-cwd and external-agent self-migration/launch-cwd visibility have different causes; old R13 failed ApplyPatch directions stay skipped.",
+      "fixed": false
+    }
+  ]
+}

@@ -1,0 +1,27 @@
+{
+  "baseline": "32c633e58c20b3853f49bb0e43264b4577281eac",
+  "files": [
+    {
+      "path": "coverage-report.md",
+      "bytes": 2898,
+      "sha256": "6e863a1d908f6da7436e50f55b488cbc237a16b3340b7160996cc6a4567dc5f9"
+    },
+    {
+      "path": "evidence/coverage-prep-copy-receipt.json",
+      "bytes": 2937,
+      "sha256": "37435070c818688a6992788db4f682694b2ca7527725cc4156ad38582558041a"
+    },
+    {
+      "path": "evidence/coverage-current-recheck.json",
+      "bytes": 473,
+      "sha256": "8ff073eedb24e7a97b901c8a2224f785ad14936d6f2e3a04c46f9de13093bdac"
+    },
+    {
+      "path": "evidence/coverage-validation.json",
+      "bytes": 346,
+      "sha256": "cc722bd565c2cff258592a56e8d6ec2df281fbf3a3ce917c0244e05dd8bb8ef4"
+    }
+  ],
+  "sourceSemanticCoverageAdded": 0,
+  "productExecution": false
+}

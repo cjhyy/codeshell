@@ -1,0 +1,230 @@
+{
+  "parentReportedBaseline": "32c633e58c20b3853f49bb0e43264b4577281eac",
+  "files": [
+    {
+      "path": "packages/desktop/src/renderer/markdown/splitStreamingMarkdown.ts",
+      "bytes": 5799,
+      "sha256": "1fbe136ecda36e905f0cde204ceaa20dfae4939f49c1519d95ca98101dc14995",
+      "initialFilesystemSha256": "1fbe136ecda36e905f0cde204ceaa20dfae4939f49c1519d95ca98101dc14995",
+      "finishFilesystemSha256": "1fbe136ecda36e905f0cde204ceaa20dfae4939f49c1519d95ca98101dc14995",
+      "firstPinTiming": "Dedicated independent-review metadata pin captured before this review rereads the declared source ranges; not a retroactive original-author/read-time claim.",
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          124
+        ]
+      ],
+      "lineCount": 124,
+      "coveredLineCount": 124,
+      "gitComparisonPerformed": false,
+      "semanticReadStatus": "Declared full or selected ranges now read; existing test/fixture code was not executed."
+    },
+    {
+      "path": "packages/desktop/src/renderer/messages/StreamingMarkdown.tsx",
+      "bytes": 6319,
+      "sha256": "0266a93fc16536d2b6afaca57aad13a0d9182ad60dc65329d866f1da60b5f3a7",
+      "initialFilesystemSha256": "0266a93fc16536d2b6afaca57aad13a0d9182ad60dc65329d866f1da60b5f3a7",
+      "finishFilesystemSha256": "0266a93fc16536d2b6afaca57aad13a0d9182ad60dc65329d866f1da60b5f3a7",
+      "firstPinTiming": "Dedicated independent-review metadata pin captured before this review rereads the declared source ranges; not a retroactive original-author/read-time claim.",
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          173
+        ]
+      ],
+      "lineCount": 173,
+      "coveredLineCount": 173,
+      "gitComparisonPerformed": false,
+      "semanticReadStatus": "Declared full or selected ranges now read; existing test/fixture code was not executed."
+    },
+    {
+      "path": "packages/desktop/src/renderer/messages/AssistantMessageView.tsx",
+      "bytes": 3880,
+      "sha256": "b08bd86c993873f10902024d091628d99a0d60a42dce74a3938fa2287f8bfe86",
+      "initialFilesystemSha256": "b08bd86c993873f10902024d091628d99a0d60a42dce74a3938fa2287f8bfe86",
+      "finishFilesystemSha256": "b08bd86c993873f10902024d091628d99a0d60a42dce74a3938fa2287f8bfe86",
+      "firstPinTiming": "Dedicated independent-review metadata pin captured before this review rereads the declared source ranges; not a retroactive original-author/read-time claim.",
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          98
+        ]
+      ],
+      "lineCount": 98,
+      "coveredLineCount": 98,
+      "gitComparisonPerformed": false,
+      "semanticReadStatus": "Declared full or selected ranges now read; existing test/fixture code was not executed."
+    },
+    {
+      "path": "packages/desktop/src/renderer/types.ts",
+      "bytes": 86699,
+      "sha256": "645de29eb12c5cc3a84ba68e9d5ece4020f2a272eca1191f3120a2f7620b7f3f",
+      "initialFilesystemSha256": "645de29eb12c5cc3a84ba68e9d5ece4020f2a272eca1191f3120a2f7620b7f3f",
+      "finishFilesystemSha256": "645de29eb12c5cc3a84ba68e9d5ece4020f2a272eca1191f3120a2f7620b7f3f",
+      "firstPinTiming": "Dedicated independent-review metadata pin captured before this review rereads the declared source ranges; not a retroactive original-author/read-time claim.",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          1065,
+          1110
+        ],
+        [
+          1153,
+          1210
+        ],
+        [
+          1807,
+          1872
+        ]
+      ],
+      "lineCount": 2289,
+      "coveredLineCount": 170,
+      "gitComparisonPerformed": false,
+      "semanticReadStatus": "Declared full or selected ranges now read; existing test/fixture code was not executed."
+    },
+    {
+      "path": "packages/desktop/src/renderer/markdown/splitStreamingMarkdown.test.ts",
+      "bytes": 6015,
+      "sha256": "c56fcfddac15a1d113524b34652aa96e89c3dd644b5838f3edd1d26fc932b214",
+      "initialFilesystemSha256": "c56fcfddac15a1d113524b34652aa96e89c3dd644b5838f3edd1d26fc932b214",
+      "finishFilesystemSha256": "c56fcfddac15a1d113524b34652aa96e89c3dd644b5838f3edd1d26fc932b214",
+      "firstPinTiming": "Dedicated independent-review metadata pin captured before this review rereads the declared source ranges; not a retroactive original-author/read-time claim.",
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          151
+        ]
+      ],
+      "lineCount": 151,
+      "coveredLineCount": 151,
+      "gitComparisonPerformed": false,
+      "semanticReadStatus": "Declared full or selected ranges now read; existing test/fixture code was not executed."
+    },
+    {
+      "path": "packages/desktop/src/renderer/messages/StreamingMarkdown.test.tsx",
+      "bytes": 3302,
+      "sha256": "5cb1e0edd182ab70069011a2e0fc7762fa2cd9fd9f1906704faf272ce023028b",
+      "initialFilesystemSha256": "5cb1e0edd182ab70069011a2e0fc7762fa2cd9fd9f1906704faf272ce023028b",
+      "finishFilesystemSha256": "5cb1e0edd182ab70069011a2e0fc7762fa2cd9fd9f1906704faf272ce023028b",
+      "firstPinTiming": "Dedicated independent-review metadata pin captured before this review rereads the declared source ranges; not a retroactive original-author/read-time claim.",
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          83
+        ]
+      ],
+      "lineCount": 83,
+      "coveredLineCount": 83,
+      "gitComparisonPerformed": false,
+      "semanticReadStatus": "Declared full or selected ranges now read; existing test/fixture code was not executed."
+    },
+    {
+      "path": "packages/desktop/src/renderer/Markdown.tsx",
+      "bytes": 33964,
+      "sha256": "e76bb702eb4d5c9904be912942f6ba054561238f4cf5a86f1db7f7fb7552409b",
+      "initialFilesystemSha256": "e76bb702eb4d5c9904be912942f6ba054561238f4cf5a86f1db7f7fb7552409b",
+      "finishFilesystemSha256": "e76bb702eb4d5c9904be912942f6ba054561238f4cf5a86f1db7f7fb7552409b",
+      "firstPinTiming": "Dedicated independent-review metadata pin captured before this review rereads the declared source ranges; not a retroactive original-author/read-time claim.",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          155,
+          190
+        ]
+      ],
+      "lineCount": 873,
+      "coveredLineCount": 36,
+      "gitComparisonPerformed": false,
+      "semanticReadStatus": "Declared full or selected ranges now read; existing test/fixture code was not executed."
+    },
+    {
+      "path": "docs/archive/todo/desktop-streaming-markdown-autoscroll-plan.md",
+      "bytes": 38155,
+      "sha256": "aec33c3537ce4be1fb546bd31c56601fbdaecc892188e962882fd12e41f43553",
+      "initialFilesystemSha256": "aec33c3537ce4be1fb546bd31c56601fbdaecc892188e962882fd12e41f43553",
+      "finishFilesystemSha256": "aec33c3537ce4be1fb546bd31c56601fbdaecc892188e962882fd12e41f43553",
+      "firstPinTiming": "Dedicated independent-review metadata pin captured before this review rereads the declared source ranges; not a retroactive original-author/read-time claim.",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          608,
+          628
+        ]
+      ],
+      "lineCount": 667,
+      "coveredLineCount": 21,
+      "gitComparisonPerformed": false,
+      "semanticReadStatus": "Declared full or selected ranges now read; existing test/fixture code was not executed."
+    },
+    {
+      "path": "docs/archive/review-2026-07-09/02-desktop-stream-walkthrough.md",
+      "bytes": 29720,
+      "sha256": "80e1961a7272034ac06360753353aef510c5068eb26098b5b701923ef1a4afac",
+      "initialFilesystemSha256": "80e1961a7272034ac06360753353aef510c5068eb26098b5b701923ef1a4afac",
+      "finishFilesystemSha256": "80e1961a7272034ac06360753353aef510c5068eb26098b5b701923ef1a4afac",
+      "firstPinTiming": "Dedicated independent-review metadata pin captured before this review rereads the declared source ranges; not a retroactive original-author/read-time claim.",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          126,
+          155
+        ]
+      ],
+      "lineCount": 334,
+      "coveredLineCount": 30,
+      "gitComparisonPerformed": false,
+      "semanticReadStatus": "Declared full or selected ranges now read; existing test/fixture code was not executed."
+    },
+    {
+      "path": "docs/audit-2026-10-17-round19/reviewprompt-report.md",
+      "bytes": 6054,
+      "sha256": "d1777afcb05e843bd8ffe968e03d58459e06a77d396e830d3664e07c4b57c3b4",
+      "initialFilesystemSha256": "d1777afcb05e843bd8ffe968e03d58459e06a77d396e830d3664e07c4b57c3b4",
+      "finishFilesystemSha256": "d1777afcb05e843bd8ffe968e03d58459e06a77d396e830d3664e07c4b57c3b4",
+      "firstPinTiming": "Dedicated independent-review metadata pin captured before this review rereads the declared source ranges; not a retroactive original-author/read-time claim.",
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          27
+        ]
+      ],
+      "lineCount": 27,
+      "coveredLineCount": 27,
+      "gitComparisonPerformed": false,
+      "semanticReadStatus": "Declared full or selected ranges now read; existing test/fixture code was not executed."
+    },
+    {
+      "path": "docs/audit-2026-10-17-round15/evidence/docinput-preflight-skip.md",
+      "bytes": 1212,
+      "sha256": "16595db8fb9eb24a4863c7f19c76575902ffc6a9dabcf97b3640909c1fc3fe51",
+      "initialFilesystemSha256": "16595db8fb9eb24a4863c7f19c76575902ffc6a9dabcf97b3640909c1fc3fe51",
+      "finishFilesystemSha256": "16595db8fb9eb24a4863c7f19c76575902ffc6a9dabcf97b3640909c1fc3fe51",
+      "firstPinTiming": "Dedicated independent-review metadata pin captured before this review rereads the declared source ranges; not a retroactive original-author/read-time claim.",
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          13
+        ]
+      ],
+      "lineCount": 13,
+      "coveredLineCount": 13,
+      "gitComparisonPerformed": false,
+      "semanticReadStatus": "Declared full or selected ranges now read; existing test/fixture code was not executed."
+    }
+  ],
+  "sourcePinCount": 11,
+  "rootFrozenBindingNotBorrowed": true,
+  "productAttempts": 0,
+  "gitCommands": 0,
+  "note": "First byte capture only at initial write; finish/status updated after exact declared review reading. No product/parser/test/helper invoked.",
+  "finishAllMatch": true,
+  "declaredProductReadLines": 835,
+  "declaredHistoryReadLines": 91
+}

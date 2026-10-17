@@ -1,0 +1,327 @@
+{
+  "baseline": "9b667863e8a8eb91db7b1f99eb9876169dcf19ec",
+  "corpusInventory": "root-frontier-dedup.json/inventory",
+  "filesRehashed": 2596,
+  "stats": {
+    "markdownFiles": 1250,
+    "jsonFiles": 1346,
+    "stringLeaves": 468104,
+    "scalarLeaves": 676635
+  },
+  "patterns": {
+    "exactProducerLoss": "displayExternalPath|identityForToolPath|externalFileChanges.{0,70}(?:cwd|path)|(?:cwd|path).{0,70}externalFileChanges",
+    "worktreeFileOpen": "(?:worktree|工作树).{0,100}(?:file|文件|path|cwd)|(?:错(?:误)?[的地]?|wrong).{0,60}(?:open|文件|cwd)|files_changed.{0,70}cwd"
+  },
+  "totalMatches": {
+    "exactProducerLoss": 0,
+    "worktreeFileOpen": 2352
+  },
+  "capPerQuery": 60,
+  "contexts": {
+    "exactProducerLoss": [],
+    "worktreeFileOpen": [
+      {
+        "path": "docs/architecture/11-feature-inventory.md",
+        "at": "$",
+        "context": "、单次审批、用户问答、附件上传和取消复用当前桌面窗口中的原生会话界面；云端会话使用包含关联 ID 的 UI 标识，不写入本地会话目录或侧栏目录。断线恢复只核对远端历史，不重发运行请求。切换位置会显示各自的历史，不自动迁移本地对话、上下文或文件；云端文件路径不会调用本机文件、Git、撤销或面板接口。云端暂不提供本地专属的目标、压缩、后续变更、插件命令、Git 工作树和文件面板操作。活动记录继续提供本地会话历史、运行记录、审批和日志。\n\n主进程读模型位于 `packages/desktop/src/main/task-inbox/`，页面位于 `packages/desktop/src/renderer/task-inbox/TaskInboxPage.tsx`。投影写入 `<userData>/task-inbox/v1.json`（0600），保留全部非终态与最近 2,000 条终态，损坏文件隔离后从来源重建；不迁移权威任务存储。`featureFlags.taskInboxV1: false` 可停用。本功能限本地桌面端。\n\n详见[设计](../superpowers/specs/2026-09-01-local-task-center-design.md)和[实施与验证记录](../superpowers/plans/2026-09-01-local-task-center.md)。\n\n## 五、优化实验室 P1a（2026-10-08 补充）\n\nDesktop 的默认关闭用户级 `optimization_lab` 开关加载私有能力包。最小页面支持样本 JSON 校验、冻结计划、选择 Skill/模型连接、原生预算授权、开始/停止/撤销/显式继续、人工评分文件导入导出和不可变报告。引擎运行原版开发集、一次反思生成有限正文候选、开发筛选和固定"
+      },
+      {
+        "path": "docs/archive/architecture/15-current-review-and-bug-inventory.md",
+        "at": "$",
+        "context": "cess.cwd()` instead of `ToolContext.cwd`\n\n**Paths:** `ApplyPatch`, `REPL`, `PowerShell`, `Skill`, plus default paths in `Glob`/`Grep`\n\nMulti-engine, sub-agent, desktop worker, and worktree scenarios depend on consistent `cwd` propagation. Bash already uses `ctx.cwd`; other tools are not fully aligned.\n\n**Fix direction:** pass and use `ToolContext.cwd` consistently in all built-in executors and add cwd-focused tests.\n\n#### I4. Explicit sandbox misconfiguration can fail open\n\n**Paths:** `packages/core/src/engine/engine.ts`, `packages/core/src/tool-system/sandbox`\n\nSandbox `auto` may reasonably degrade to off, but an explicit `seatbelt`/`bwrap` request should fail closed if unavailable. Current engine wiring can catch backend resolution errors and continue with sandbox off.\n\n**Fix direction:** only `auto` should degrade; explicit sandbox modes should fail "
+      },
+      {
+        "path": "docs/archive/automation/2026-06-02-unattended-loop-survey.md",
+        "at": "$",
+        "context": "ns.ts`(proposed→under_review→verified/contested/rejected) + `arena/types.ts:227-288`(ClaimRecord/confidence/adjudication)。不是从零，是\"接上\"。 |\n| 10 | 建分支/修复/提交 PR 只有抽象，无真实接线 | 部分属实，需细分 | worktree **真实可用**(`git/worktree.ts:38-130` 真 execFileSync)，commit/add 真实(`git/utils.ts:90-106`)；**但** `git push` 无执行代码、`gh pr create` **全仓库不存在** |\n| 11 | 预览发布链路基本缺失 | ✅ 属实（0%） | 无任何 Vercel/Netlify/Actions deployment / URL 回写代码，仅注释里提过 \"deployment agent\" 示例 |\n\n### `HeadlessApprovalBackend` 三种模式（`tool-system/permission.ts:19`）\n`approve-all` / `deny-all` / `approve-read-only`。automation 当前固定第三种，只放行 Read/Glob/Grep/WebSearch/WebFetch/ToolSearch，写/bash/git 全拒。\n\n### 一句话现状\n**\"长时只读自动化 + 运行历史\"** 已是活的（66 pass / 0 fail）。距离 **\"无人值守写代码 + 提 PR + 发预览\"** 的闭环，缺的不是架构，是把几段已存在的桥焊起来 + 两段全新链路（push/PR、预览）。\n\n---\n\n## 二、缺口分级（按\"焊接\" vs \"新建\"）\n\n**A. 焊接已有桥（成本低，最高优先级）**\n- 权限贯通：让"
+      },
+      {
+        "path": "docs/archive/automation-plan-2026-05-31.md",
+        "at": "$",
+        "context": "`gh pr create`(经 Bash,需 `full` 权限 + 沙箱网络放行)。\n4. **prompt injection 防护**:读外部输入的内容与指令分隔(包进明确的「不可信内容」标记),\n   限制写型任务可执行的动作面。\n\n### 测试\n- read-only job 试图 Write 被拒;workspace-write job 能改 worktree 内文件、改 worktree 外被拒。\n- worktree 隔离:写型 job 不污染主工作区。\n- 注入防护:外部输入里的「请删除所有文件」式指令不被当作命令执行(回归用例)。\n\n### 验收\n- 配一个「读 issue → 改代码 → 提 PR」的 job,触发后在隔离 worktree 改动并开出 PR,主工作区无变化。\n\n---\n\n## Phase 6 — 薄服务端:网络 transport + serve 入口【P2,服务器部署】\n\n**目标**:同一份 `startAutomation` 模块由一层薄服务端引用,headless 常驻部署。§0 已论证其薄。\n\n### 改动\n1. **网络 transport**:`protocol/tcp-transport.ts`(或 ws),实现 `Transport` 三方法,照 `StdioTransport` 抄。\n2. **serve 入口**:`code-shell automation serve` —— 复制 `agent-server-stdio.ts` 的 bootstrap,\n   末行换 `new TcpTransport(port)`,并 `startAutomation({...})`。核心逻辑不动。\n3. **v1 安全边界**:仅监听 localhost / 走 SSH 隧道;鉴权(token/TLS)留"
+      },
+      {
+        "path": "docs/archive/beta-prep-audit-2026-06-23.md",
+        "at": "$",
+        "context": "假设事件严格有序/必达,无 fallback);storage = 裸 unguarded-IO。\n\n### 1e) Workflow Review 第四轮:合并进来的引擎/协议代码,2026-06-23 v2\n\n> **起因**:我一度说「renderer 全扫无盲区」,但那只对**合并前**基线成立。用户 session 期间又 merge 了 5 个 worktree(删 legacy 模型存储 / steer / send_input / 插件 MCP 覆盖层 / installer),未推 diff 从 67 涨到 **104 个生产文件**——多出 ~37 个前三轮没审的 core 代码。第四个 workflow `review-merged-core`(4 域 13 agent)专审最高危的引擎/协议子集,确认 **8 真问题**,但**我没全修**——逐条按设计意图复核后,只修可确定项,证伪 1 个,留 4 个不擅改用户设计决策。\n\n| 处置 | 文件:行 | 问题 | 结论 |\n|---|---|---|---|\n| ✅修 | `protocol/client.ts` | 缺 steer()/unsteer()(server+preload 有,SDK client 漏·request() 私有调不到)→协议不对称 | 补两方法+对称性测(commit 见下) |\n| ✅修 | `protocol/server.ts:742` handleGoalGet | sessionId 缺失返 SessionClosed 语义错 | 改 InvalidParams |\n| ✅修 | `resolve-llm-config.ts:39` | default/preferred 连接(catalogId 被删)被静默过滤→悄悄回退 entries[0]「换模型不告诉你」 | 不改回退行为,加 warn 让静默替换可见 |\n| ❌证伪 | `generate-video.ts:345` pollToCompletion "
+      },
+      {
+        "path": "docs/archive/core-complete-review.md",
+        "at": "$",
+        "context": "压缩尝试，但 TUI 剪贴板/完整图片输入体验可能仍不是同一层问题。\n\n### 4.5 `patch-orphaned-tools.ts`\n\n用于修复 transcript 中不完整 tool pair：\n\n- assistant 有 `tool_use`，但后续缺少对应 `tool_result`。\n- resume 时这种历史会导致 provider 报错，尤其 OpenAI tool-call pairing 很严格。\n- patch 会插入 synthetic error result 或修复消息结构。\n\n### 4.6 `session-title.ts`\n\n在 run 完成后 fire-and-forget 生成 session 标题。它不阻塞主结果返回；失败通常只记录 debug/log。\n\n### 4.7 `streaming-tool-queue.ts`\n\nTurnLoop 用它执行一轮中的多个 tool calls。它封装 tool execution queue，支持 concurrency-safe 工具提前执行/排队/drain。\n\n### 4.8 `token-budget.ts`、`reactive-threshold.ts`\n\n- `token-budget.ts` 判断输出是否接近当前 turn budget，需要继续、提醒或停止。\n- `reactive-threshold.ts` 监控 streaming 中 token 跨过阈值的情况，目前主要用于 warning/标记，不在 streaming 中立即 compact。\n\n### 4.9 `tool-summary.ts`\n\n工具调用后可 fire-and-forget 生成 summary。风险和其他后台任务一样：进程退出会丢，错误处理偏弱。\n\n## 5. T"
+      },
+      {
+        "path": "docs/archive/core-complete-review.md",
+        "at": "$",
+        "context": " Runtime / Utils 支撑模块\n\n这些模块不是主循环中心，但支撑核心功能。\n\n### 18.1 Git\n\n`src/git/**` 包括：\n\n- `worktree.ts`：worktree 创建/管理/删除。\n- `utils.ts`：git 辅助函数。\n- `parse-log.ts`：解析 git log。\n\n用于会话隔离、历史、diff、工作树等功能。当前产品设计偏好是 session-scoped file-change ledger，而不是直接用全局 git diff 推导 session 文件变化。\n\n### 18.2 LSP\n\n`src/lsp/**` 包括：\n\n- `manager.ts`：LSP manager。\n- `client.ts`：LSP client。\n- `servers.ts`：server 定义。\n- `root-path.ts`：root path 解析。\n\nLSP 能力可用于代码智能、诊断、符号等。\n\n### 18.3 Runtime safe spawn\n\n`src/runtime/safe-spawn.ts` 封装安全子进程执行。Hook runner、plugin、git、shell 工具等需要执行外部命令时应优先走这类封装，避免环境变量、cwd、stdio、信号处理不一致。\n\n### 18.4 Utils\n\n`src/utils/**` 是通用工具集合，包括：\n\n- `format.ts`\n- `theme.ts`\n- `toolDisplay.ts`\n- `debug.ts`\n- `env.ts`\n- `envUtils.ts`\n- `execFileNoThrow.ts`\n- `lockfile.ts`\n- `memoize.ts`\n- `semver.ts`\n- `sliceAnsi.ts`\n- `intl.ts`\n- `earlyInput.ts`\n- `systemTheme.ts`\n- `task-sanitizer.ts"
+      },
+      {
+        "path": "docs/archive/core-complete-review.md",
+        "at": "$",
+        "context": "old_string/new_string/file_path | 修改文件；要求 old_string 唯一，减少误改 |\n| `notebook-edit.ts` / `NotebookEdit` | notebook cell 编辑 | notebook/cell 定位和替换 | 修改文件；在 acceptEdits allowlist 内 |\n| `worktree.ts` / `EnterWorktree`、`ExitWorktree` | 进入/退出工作树 | 由模型调用工作树工具 | 改变执行上下文，需注意 cwd/session 状态 |\n\n细节：`read.ts` 在读文件前先做 path policy，避免敏感路径存在性侧信道；FileHistory 当前只在 Engine `on_tool_start` hook 中覆盖 `Write`/`Edit`，未覆盖 `ApplyPatch` 和 shell 修改。\n\n### 24.2 执行环境类\n\n| 工具/文件 | 功能 | 使用方式 | 权限/风险 |\n|---|---|---|---|\n| `bash.ts` / `Bash` | 执行 shell 命令 | command + 可选 timeout/description | 走 Bash permission classifier；可接 sandbox backend |\n| `powershell.ts` / `PowerShell` | 执行 PowerShell | command + timeout | 跨平台但主要面向 Windows/PowerShell Core |\n| `repl.ts` / `REPL` | 执行 JS/TS/Python/Ruby snippets | language + code | 代码执行能力，需权限控制 |\n| `sleep.ts` / `Sleep` | 暂停 | seconds | 长等待会占用 turn；最大 300s |\n\n`B"
+      },
+      {
+        "path": "docs/archive/core-modules/git.md",
+        "at": "$",
+        "context": "le(): boolean\nfunction ghPrComments(cwd: string, prUrl: string): string          // requires gh CLI\n```\n\n### `worktree.ts`\n```ts\ninterface WorktreeSession {\n  originalCwd: string; worktreePath: string; worktreeName: string;\n  worktreeBranch: string; originalBranch?: string; sessionId: string; createdAt: number;\n}\ninterface PlatformScripts { default?: string; macos?: string; linux?: string; windows?: string }\ninterface WorktreeSetupResult { skipped: boolean; ok: boolean; output: string; exitCode?: number | null }\n\nfunction selectPlatformScript(scripts: PlatformScripts | undefined, platform?: NodeJS.Platform): string | undefined\nfunction validateWorktreeSlug(slug: string): void                  // throws on bad slug\nfunction findGitRoot(cwd: string): string                          /"
+      },
+      {
+        "path": "docs/archive/core-modules/git.md",
+        "at": "$",
+        "context": "eSlug(slug: string): void                  // throws on bad slug\nfunction findGitRoot(cwd: string): string                          // git rev-parse --show-toplevel\nfunction createWorktree(cwd: string, slug: string, sessionId: string): WorktreeSession\nfunction runWorktreeSetup(worktreePath: string, script: string | undefined,\n  opts?: { sandbox?: SandboxBackend; shellEnv?: Record<string,string>; timeoutMs?: number; signal?: AbortSignal }\n): Promise<WorktreeSetupResult>\nfunction removeWorktree(worktreePath: string, removeBranch?: boolean): void\nfunction listWorktrees(cwd: string): Array<{ path: string; branch: string; head: string }>\n```\n\n### `parse-log.ts`\n```ts\ninterface GitLogEntry { hash: string; message: string; author: string; date: string }\nfunction parseGitLog(raw: string): "
+      },
+      {
+        "path": "docs/archive/core-modules/git.md",
+        "at": "$",
+        "context": "t(cwd: string): string                          // git rev-parse --show-toplevel\nfunction createWorktree(cwd: string, slug: string, sessionId: string): WorktreeSession\nfunction runWorktreeSetup(worktreePath: string, script: string | undefined,\n  opts?: { sandbox?: SandboxBackend; shellEnv?: Record<string,string>; timeoutMs?: number; signal?: AbortSignal }\n): Promise<WorktreeSetupResult>\nfunction removeWorktree(worktreePath: string, removeBranch?: boolean): void\nfunction listWorktrees(cwd: string): Array<{ path: string; branch: string; head: string }>\n```\n\n### `parse-log.ts`\n```ts\ninterface GitLogEntry { hash: string; message: string; author: string; date: string }\nfunction parseGitLog(raw: string): GitLogEntry[]\n```\n\n## 怎么用 / How to use\n\n**1. Porcelain helpers in a `/git` slash command** (real c"
+      },
+      {
+        "path": "docs/archive/core-modules/git.md",
+        "at": "$",
+        "context": "tring | undefined,\n  opts?: { sandbox?: SandboxBackend; shellEnv?: Record<string,string>; timeoutMs?: number; signal?: AbortSignal }\n): Promise<WorktreeSetupResult>\nfunction removeWorktree(worktreePath: string, removeBranch?: boolean): void\nfunction listWorktrees(cwd: string): Array<{ path: string; branch: string; head: string }>\n```\n\n### `parse-log.ts`\n```ts\ninterface GitLogEntry { hash: string; message: string; author: string; date: string }\nfunction parseGitLog(raw: string): GitLogEntry[]\n```\n\n## 怎么用 / How to use\n\n**1. Porcelain helpers in a `/git` slash command** (real call site: `packages/tui/src/cli/commands/builtin/git-commands.ts`). These are re-exported from the package root, so hosts import them from `@code-shell/core`:\n\n```ts\nimport { isGitRepo, getGitStatus, getGitDiff, getGitLo"
+      },
+      {
+        "path": "docs/archive/core-modules/git.md",
+        "at": "$",
+        "context": "string,string>; timeoutMs?: number; signal?: AbortSignal }\n): Promise<WorktreeSetupResult>\nfunction removeWorktree(worktreePath: string, removeBranch?: boolean): void\nfunction listWorktrees(cwd: string): Array<{ path: string; branch: string; head: string }>\n```\n\n### `parse-log.ts`\n```ts\ninterface GitLogEntry { hash: string; message: string; author: string; date: string }\nfunction parseGitLog(raw: string): GitLogEntry[]\n```\n\n## 怎么用 / How to use\n\n**1. Porcelain helpers in a `/git` slash command** (real call site: `packages/tui/src/cli/commands/builtin/git-commands.ts`). These are re-exported from the package root, so hosts import them from `@code-shell/core`:\n\n```ts\nimport { isGitRepo, getGitStatus, getGitDiff, getGitLog, gitCommit } from \"@code-shell/core\";\n\nif (!isGitRepo(ctx.cwd)) return \"Not a git repos"
+      },
+      {
+        "path": "docs/archive/core-modules/git.md",
+        "at": "$",
+        "context": "/tool-system/builtin/worktree.ts`):\n\n```ts\nimport {\n  createWorktree, runWorktreeSetup, selectPlatformScript, type WorktreeSession,\n} from \"../../git/worktree.js\";\n\nconst session: WorktreeSession = createWorktree(cwd, slug, sessionId);\n\n// Run the project's localEnvironment.setupScripts once, in the fresh worktree.\nconst script = selectPlatformScript(ctx.engine?.readWorktreeSetupScripts(cwd));\nif (script) {\n  const setup = await runWorktreeSetup(session.worktreePath, script, {\n    sandbox: ctx.sandbox, shellEnv: ctx.shellEnv, signal: ctx.signal,\n  });\n  if (!setup.ok) {/* warn-but-continue: setup.output, setup.exitCode */}\n}\n// later, on exit:  removeWorktree(session.worktreePath, /* removeBranch */ true);\n```\n\n## 注意 / Gotchas\n\n- **Synchronous & throwing.** Every `utils.ts` helper and most of `worktree.ts"
+      },
+      {
+        "path": "docs/archive/core-modules/git.md",
+        "at": "$",
+        "context": "ession = createWorktree(cwd, slug, sessionId);\n\n// Run the project's localEnvironment.setupScripts once, in the fresh worktree.\nconst script = selectPlatformScript(ctx.engine?.readWorktreeSetupScripts(cwd));\nif (script) {\n  const setup = await runWorktreeSetup(session.worktreePath, script, {\n    sandbox: ctx.sandbox, shellEnv: ctx.shellEnv, signal: ctx.signal,\n  });\n  if (!setup.ok) {/* warn-but-continue: setup.output, setup.exitCode */}\n}\n// later, on exit:  removeWorktree(session.worktreePath, /* removeBranch */ true);\n```\n\n## 注意 / Gotchas\n\n- **Synchronous & throwing.** Every `utils.ts` helper and most of `worktree.ts` use `execFileSync` — they block the event loop and **throw** on non-zero exit. `isGitRepo`, `getRemoteUrl`, and `ghAvailable` swallow errors and return a sentinel; everything "
+      },
+      {
+        "path": "docs/archive/core-modules/git.md",
+        "at": "$",
+        "context": "s localEnvironment.setupScripts once, in the fresh worktree.\nconst script = selectPlatformScript(ctx.engine?.readWorktreeSetupScripts(cwd));\nif (script) {\n  const setup = await runWorktreeSetup(session.worktreePath, script, {\n    sandbox: ctx.sandbox, shellEnv: ctx.shellEnv, signal: ctx.signal,\n  });\n  if (!setup.ok) {/* warn-but-continue: setup.output, setup.exitCode */}\n}\n// later, on exit:  removeWorktree(session.worktreePath, /* removeBranch */ true);\n```\n\n## 注意 / Gotchas\n\n- **Synchronous & throwing.** Every `utils.ts` helper and most of `worktree.ts` use `execFileSync` — they block the event loop and **throw** on non-zero exit. `isGitRepo`, `getRemoteUrl`, and `ghAvailable` swallow errors and return a sentinel; everything else propagates. Callers in the main/Electron process must keep these off hot"
+      },
+      {
+        "path": "docs/archive/core-modules/git.md",
+        "at": "$",
+        "context": " {\n    sandbox: ctx.sandbox, shellEnv: ctx.shellEnv, signal: ctx.signal,\n  });\n  if (!setup.ok) {/* warn-but-continue: setup.output, setup.exitCode */}\n}\n// later, on exit:  removeWorktree(session.worktreePath, /* removeBranch */ true);\n```\n\n## 注意 / Gotchas\n\n- **Synchronous & throwing.** Every `utils.ts` helper and most of `worktree.ts` use `execFileSync` — they block the event loop and **throw** on non-zero exit. `isGitRepo`, `getRemoteUrl`, and `ghAvailable` swallow errors and return a sentinel; everything else propagates. Callers in the main/Electron process must keep these off hot paths (the module is designed for short, on-demand slash-command / tool use, not per-turn polling). `runWorktreeSetup` is the one async function (it goes through `safeSpawnShell`).\n- **argv-only, never strings — don't"
+      },
+      {
+        "path": "docs/archive/core-modules/git.md",
+        "at": "$",
+        "context": "e */}\n}\n// later, on exit:  removeWorktree(session.worktreePath, /* removeBranch */ true);\n```\n\n## 注意 / Gotchas\n\n- **Synchronous & throwing.** Every `utils.ts` helper and most of `worktree.ts` use `execFileSync` — they block the event loop and **throw** on non-zero exit. `isGitRepo`, `getRemoteUrl`, and `ghAvailable` swallow errors and return a sentinel; everything else propagates. Callers in the main/Electron process must keep these off hot paths (the module is designed for short, on-demand slash-command / tool use, not per-turn polling). `runWorktreeSetup` is the one async function (it goes through `safeSpawnShell`).\n- **argv-only, never strings — don't \"fix\" it.** Args are passed as separate argv tokens precisely so user input can't be interpolated into a shell. `gitCommit` once used `JSON.st"
+      },
+      {
+        "path": "docs/archive/core-modules/git.md",
+        "at": "$",
+        "context": "onally **not** auto-run on exit.\n- **`createWorktree` places worktrees at `<repo>/../.worktrees/<slug>-<8charSession>`** and branches at `worktree/<slug>-<8charSession>`. `validateWorktreeSlug` (≤64 chars, `[a-zA-Z0-9._-]` only, no leading `.` / no `..`) guards path traversal — call it (or let `createWorktree` call it) before trusting a slug.\n- **Symlinking large dirs is best-effort.** `node_modules`/`.venv`/`vendor`/`.pnpm-store` are symlinked (NTFS `junction` on win32, `dir` elsewhere) from the main repo into the new worktree; failure (e.g. EPERM without Developer Mode) is swallowed — the worktree just uses more disk.\n- **`ghPrComments` / `ghAvailable` need the `gh` CLI** installed and authenticated; gate on `ghAvailable()` before offering PR-comment features.\n- **`getGitLog` validates `n`** — non-finite or `<= 0` falls back to 10, so it's safe to forw"
+      },
+      {
+        "path": "docs/archive/review-2026-05-30/confirmed.json",
+        "at": "$[8].detail",
+        "context": "After line 89 removes the worktree with `--force`, the removeWorktree function attempts to run `git branch --show-current` at line 97 with `cwd: worktreePath`. Since the worktree directory was just deleted, this git command will fail (no .git/worktrees directory). The try-catch silently swallows this, but the branch is never deleted when removeBranch=true."
+      },
+      {
+        "path": "docs/archive/review-2026-05-30/confirmed.json",
+        "at": "$[8].verify_reason",
+        "context": "The code removes the worktree directory at line 89 with `git worktree remove worktreePath --force`. Then at lines 97-101, it attempts to run `git branch --show-current` with `cwd: worktreePath`. Since the worktree directory no longer exists after removal, execFileSync will fail when attempting to set the current working directory. The nested try-catch (lines 96-107) catches this error silently, preventing the branch deletion code at line 103 from ever executing. This means when removeBranch=true, the branch is never actually deleted due to the failed git command in a non-existent directory."
+      },
+      {
+        "path": "docs/archive/review-2026-05-30/confirmed.json",
+        "at": "$[8].verify_reason",
+        "context": "The code removes the worktree directory at line 89 with `git worktree remove worktreePath --force`. Then at lines 97-101, it attempts to run `git branch --show-current` with `cwd: worktreePath`. Since the worktree directory no longer exists after removal, execFileSync will fail when attempting to set the current working directory. The nested try-catch (lines 96-107) catches this error silently, preventing the branch deletion code at line 103 from ever executing. This means when removeBranch=true, the branch is never actually deleted due to the failed git command in a non-existent directory."
+      },
+      {
+        "path": "docs/archive/review-2026-05-30/findings.json",
+        "at": "$[48].detail",
+        "context": "After line 89 removes the worktree with `--force`, the removeWorktree function attempts to run `git branch --show-current` at line 97 with `cwd: worktreePath`. Since the worktree directory was just deleted, this git command will fail (no .git/worktrees directory). The try-catch silently swallows this, but the branch is never deleted when removeBranch=true."
+      },
+      {
+        "path": "docs/archive/review-2026-07-09/18-fix-code-review.md",
+        "at": "$",
+        "context": "ers/admin/Documents/个人学习/代码学习/codeshell-n03`，分支 `fix/n03-dup-turn-complete`\n- N-06：`/Users/admin/Documents/个人学习/代码学习/codeshell-n06`，分支 `fix/n06-session-approval-cache`\n\n本次只读审查两个修复 worktree，未修改两个 worktree，未 commit。唯一写入文件为本报告。\n\n## N-03：`max_turns` 双发 `turn_complete`\n\n结论：**APPROVE with nits**\n\n验证结果：\n\n- `bun test packages/core/src/engine/turn-loop`：32 pass，0 fail\n- `bun test packages/core/src/engine/engine.max-turns-stream.test.ts`：2 pass，0 fail\n- 合计：34 pass，0 fail\n\n设计对照：\n\n- 修复实现符合设计方案 A。`/Users/admin/Documents/个人学习/代码学习/codeshell-n03/packages/core/src/engine/turn-loop.ts:1261` 到 `:1268` 保留 maxTurns summary 的 `assistant_message` 和 `{ reason: \"max_turns\" }` 返回，但已经移除 TurnLoop 内部 `turn_complete(max_turns)`。\n- Engine 仍在 epilogue 统一发 terminal event，位置是 `/Users/admin/Documents/个人学习/代码学习/codeshell-n03/packages/core/src"
+      },
+      {
+        "path": "docs/archive/review-2026-07-09/21-test-coverage-gaps.md",
+        "at": "$",
+        "context": "k_upgrade_rejected|updatedInput\" packages/core/src/tool-system -g '*test.ts'` 未命中执行器测试；现有覆盖主要是 `hooks/decision-merge.test.ts` 的合并规则和 `executor-abort.test.ts` 的 abort 快路径。 | 若回归，恶意或错误 hook 可能直接放行本应询问/拒绝的 Bash、文件写入或外部路径操作，用户无确认即执行。 | `ToolExecutor pre_tool_use allow cannot bypass classifier ask/deny`：注册 `pre_tool_use -> allow`，classifier 返回 `ask/deny`，断言 handler 不会无确认执行；`ToolExecutor on_permission_check rejects allow upgrade but accepts deny/ask downgrade`：分别断言升级被钳制、降级生效。 | 高 |\n| `packages/core/src/engine/turn-loop.ts:697` | `ContextLimitError` 后最多 3 次 `dropOldestRounds` 恢复；失败后发 `error` 并返回 `prompt_too_long`。 | 上下文超限恢复与终态，直接决定长会话是否能继续、是否给 UI 正确终态。 | `rg \"ContextLimitError|prompt_too_long|ptl_recovery|dropOldestRounds\" packages/core/src packages/desktop/src -g '*test.*'` 只命中 `packages/desktop/src/rende"
+      },
+      {
+        "path": "docs/archive/review-2026-07-09/22-test-quality-audit.md",
+        "at": "$",
+        "context": "# 新增测试质量审查报告\n\n## 概述\n\n本次按独立测试质量审查口径，只看测试本身，不审被测实现是否正确。覆盖用户列出的 9 个隔离 worktree、16 个测试文件。\n\n方法：\n\n- 读取主仓 `CODESHELL.md`，并对照 `docs/archive/review-2026-07-09/08-N03-fix-design.md`、`12-N06-fix-design.md`、`15-p2-fix-checklist.md`、`17-fix-execution-plan.md`、`21-test-coverage-gaps.md` 的目标契约。\n- 对每个测试文件阅读 diff 和断言逻辑，再读取对应实现路径，判断 mock 边界是否保留目标语义。\n- 对关键测试逐项做反事实推理：如果删除对应实现、恢复旧 bug、或改坏目标行为，测试是否会红。\n- 只读抽跑所有列出的目标测试文件，未修改测试/源码，未 commit。\n\n抽跑结果：全部通过，共 150 个测试。\n\n- `codeshell-n03`: `bun test packages/core/src/engine/engine.max-turns-stream.test.ts packages/core/src/engine/turn-loop-max-turns.test.ts`，6 pass。\n- `codeshell-n06`: `bun test packages/core/src/tool-system/permission.session-cache.test.ts p"
+      },
+      {
+        "path": "docs/archive/todo/desktop-streaming-markdown-autoscroll-plan.md",
+        "at": "$",
+        "context": "iew 时重点核这条。\n- **误判用户滚动**:程序贴底触发 scroll 事件被当成用户上滑 → 需 `isProgrammaticRef`\n  防护(§6.2),否则出现\"跟随一下就自己停\"。\n- **两处丢 `cwd`** 修复后,`AgentMessageView` 若确实无 workspace 上下文,保持相对图降级\n  为链接的现有语义,别硬塞错误 `cwd`。\n\n**回滚**\n- 阶段 1(滚动)与阶段 2(流式 Markdown)物理解耦,可各自回滚。\n- 流式富渲染带 `streamingRichRender` feature flag(默认 true);出问题**关 flag 即回到\n  今天的纯 `<pre>` 行为**,无需 revert 代码。\n- `StreamingMarkdown` 的 `done`/空态语义与今天逐字等价,阶段 0 重构本身零行为变更,\n  是安全的回滚锚点。\n- git 层面:按记忆 `feedback_git_commit_on_main`,此为功能改动 → 走 worktree,别动 main。\n\n---\n\n## 十、落地顺序小结\n\n1. 阶段 0a:抽 `StreamingMarkdown`(**逐字等价,零行为变更**)+ 补组件测试基线。\n   阶段 0b:补 `cwd`(**有意行为变更,独立提交+测试**)。见 §11-S1。\n2. 阶段 1:滚动状态机 + 发送 re-arm + 流内跟随 + 跳底按钮(**先交付验收**)。\n3. 阶段 2:`splitStreamingMarkdown` + `StreamingMarkdownBody` + 窄管线 + 节流\n   (feature flag 默认开)。\n4. 阶段 3(可选):活跃代码块分块高亮、桌面/移动滚动统一。\n\n-"
+      },
+      {
+        "path": "docs/archive/todo/plan-group-c-worktree-panels.md",
+        "at": "$",
+        "context": "`packages/desktop/src/renderer/chat/BranchPicker.tsx:102`、`:120`：切分支后只更新 BranchPicker 自己的 state，没有通知 WorkspaceIndicator。\n\n### 当前实现分析\n\n`SessionWorkspace.kind` 表示“当前会话在 main root 还是 worktree path”，不是 Git HEAD 分支名。当前 label 把 `kind:\"main\"` 直接等同于 branch `main`，用户在主仓库切到 `release/foo` 后顶栏仍显示 `main`，语义错误。\n\n### 具体改动步骤\n\n1. `WorkspaceIndicator` 增加 main branch state。\n\n```ts\nconst [mainBranch, setMainBranch] = useState<string | null>(null);\n\nfunction normalizeCurrentBranch(current: string | null): string | null {\n  if (!current || current === \"HEAD\") return null;\n  return current;\n}\n```\n\n2. 在现有 git repo probe 中保存 `current`。\n\n```ts\nwindow.codeshell.getGitBranches(repoPath).then((res) => {\n  if (cancelled) return;\n  setIsGitRepo(res.isRepo === true);\n  setMainBranch(res.isRepo ? normalizeCurrentBr"
+      },
+      {
+        "path": "docs/archive/todo/plan-group-c-worktree-panels.md",
+        "at": "$",
+        "context": "`:130`：`listWorktreesFast()` 已可返回 `occupiedBySessionIds` / `occupiedByOtherSession`。\n\n### 当前实现分析\n\n下拉里所有 worktree 混在一个列表里。当前项只是 disabled + tooltip，视觉上和“不可切换项”混在一起；main、CodeShell 管理 worktree、外部/ detached worktree 没分组。对于“这个 worktree 是当前会话正在用、另一个会话占用、还是只是一个可切换目标”，用户需要靠 path 和 badge 猜。\n\n### 具体改动步骤\n\n1. 在 `WorkspaceIndicator` 渲染前派生分组。\n\n```ts\nconst rows = list?.worktrees ?? [];\nconst mainRows = rows.filter((r) => r.isMain);\nconst managedRows = rows.filter((r) => !r.isMain && r.isManaged);\nconst externalRows = rows.filter((r) => !r.isMain && !r.isManaged);\n```\n\n渲染结构：\n\n```tsx\n<WorkspaceGroup title={t(\"topbar.workspace.groupMain\")}>{mainRows.map(...)}</WorkspaceGroup>\n<WorkspaceGroup title={t(\"topbar.workspace.groupWorktrees\")}>{managedRows.map(...)}</WorkspaceGroup>\n{externalRows.length > 0 && <WorkspaceGroup title={t(\"topbar.workspace.groupExternal\")}>...</WorkspaceG"
+      },
+      {
+        "path": "docs/archive/todo/plan-group-c-worktree-panels.md",
+        "at": "$",
+        "context": " && <Badge>{t(\"topbar.workspace.thisSession\")}</Badge>}\n```\n\n4. main row 与 worktree row 文案区分。\n\n- main row 主标题显示 `⑃ <mainBranch>`（来自 feature 3）或 `topbar.workspace.main` fallback。\n- worktree row 主标题显示 branch，副标题显示 compact path。\n- `title` / `aria-label` 写成“当前工作区：...”或“切换到：...”，但不要在 UI 中塞长说明。\n\n5. cleanup action 与 disabled reason 保持。\n\n当前项 disabled 是对的，但需要看起来是 selected，而不是“灰掉不可用”。实现上把 active 样式和 disabled opacity 拆开：\n\n```ts\nconst switchDisabled = disabledReason !== null || switching;\nconst visuallyMuted = switchDisabled && !active;\n```\n\n### IPC / 状态 / i18n\n\n- IPC：不必新增；复用 `occupiedBySessionIds`。\n- 状态：无新持久状态。\n- i18n 新增：\n  - `topbar.workspace.groupMain`\n  - `topbar.workspace.groupWorktrees`\n  - `topbar.workspace.groupExternal`\n  - `topbar.workspace.currentBadge`\n  - `topbar.workspace.thisSession`\n\n### 风险与边界情况\n\n- detached w"
+      },
+      {
+        "path": "docs/archive/todo/plan-group-c-worktree-panels.md",
+        "at": "$",
+        "context": "有：\n\n1. `<repo>/../.worktrees/<name>` 是目录。\n2. 目录 mtime 早于 grace cutoff。\n3. 当前 branch 存在且是 CodeShell managed prefix。\n4. branch 不是主 worktree 当前 branch。\n\n满足后直接：\n\n```bash\ngit -C <root> worktree remove --force <wtPath>\ngit -C <root> branch -D <branch>\n```\n\n这会静默丢掉未提交改动，也会强删未合并 commit。`fs.rm(..., force:true)` fallback 还会绕过 Git worktree lock，数据安全风险更高。\n\n### 护栏逻辑\n\n删除前每个候选都必须通过三层检查：\n\n1. 工作区必须干净。\n\n```bash\ngit -C <wtPath> status --porcelain=v1 --untracked-files=all\n```\n\nstdout 非空则跳过，reason=`dirty`。\n\n2. 比较基准必须可确定。\n\n优先用主 worktree 当前分支 `rootBranch`；为空时 fallback `main`、`master`、`origin/main`、`origin/master` 中第一个存在的 commit ref。\n\n```bash\ngit -C <root> rev-parse --verify --quiet <baseRef>^{commit}\n```\n\n找不到 base 则跳过，reason=`base_unknown`。\n\n3. branch 必须已经合并到 base。\n\n```bash\ngit -C <root> rev-list --count <baseRef>..<branch>"
+      },
+      {
+        "path": "docs/archive/todo/plan-group-c-worktree-panels.md",
+        "at": "$",
+        "context": "oot> rev-list --count <baseRef>..<branch>\n```\n\ncount > 0 则跳过，reason=`unmerged_commits`。  \ncount = 0 才允许删除。这个命令表示“branch 上有多少 commit 不可从 base 到达”。\n\n通过后才执行删除：\n\n```bash\ngit -C <root> worktree remove --force <wtPath>\ngit -C <root> branch -D <branch>\n```\n\n建议把 branch 删除进一步收紧为 `git branch -d <branch>`；如果保留 `-D`，也必须只在 `rev-list` 通过后执行。\n\n### 具体改动步骤\n\n1. 定义返回结构，保留 skip reason。\n\n```ts\nexport type StaleWorktreeSkipReason =\n  | \"dirty\"\n  | \"unmerged_commits\"\n  | \"base_unknown\"\n  | \"inspect_failed\"\n  | \"remove_failed\";\n\nexport interface StaleWorktreeCleanupResult {\n  removed: string[];\n  skipped: Array<{\n    path: string;\n    branch: string;\n    reason: StaleWorktreeSkipReason;\n    detail?: string;\n  }>;\n}\n```\n\n如果不想破坏现有调用，可新增 `cleanupStaleWorktreesDetailed()`，让旧 `cleanupStaleWorktrees()` 包一层只返回 `removed`。但当前只有 main"
+      },
+      {
+        "path": "docs/archive/todo/plan-group-c-worktree-panels.md",
+        "at": "$",
+        "context": "upStaleWorktreesDetailed()`，让旧 `cleanupStaleWorktrees()` 包一层只返回 `removed`。但当前只有 main sweep 和测试调用，直接改返回结构也可控。\n\n2. 在 `cleanupStaleWorktrees()` 内加 guard helper。\n\n```ts\nasync function worktreeDeletionGuard(root: string, wtPath: string, branch: string, rootBranch: string | null) {\n  const status = await gitRun(wtPath, [\"status\", \"--porcelain=v1\", \"--untracked-files=all\"]);\n  if (status.trim()) return { ok: false as const, reason: \"dirty\" as const };\n\n  const baseRef = await resolveCleanupBaseRef(root, rootBranch);\n  if (!baseRef) return { ok: false as const, reason: \"base_unknown\" as const };\n\n  const raw = await gitRun(root, [\"rev-list\", \"--count\", `${baseRef}..${branch}`]);\n  const ahead = Number.parseInt(raw.trim() || \"0\", 10);\n  if (!Number.isFinite(ahead) || ahead > 0) {\n    return { ok: false as const, reason:"
+      },
+      {
+        "path": "docs/archive/todo/plan-overall-small-features.md",
+        "at": "$",
+        "context": "--\n\n## 2. 推荐执行顺序（串行 codex，独立新 session，每个自带验证）\n\n按「先 core 独立项 → 数据安全 → desktop 同文件聚合批」排：\n\n| 序 | Feature | 组 | 体量 | 文件热点 | 说明 |\n|----|---------|----|------|----------|------|\n| 1 | 🔴 worktree 自动清理护栏 | C-5 | S-M | `desktop-services.ts` | 数据安全，最高优先，独立文件 |\n| 2 | TodoWrite resume 测试 | A-1 | S(纯测试) | `task.test.ts`/`engine.todo-resume.test.ts` | 0 生产代码，先落防回归 |\n| 3 | skill scanner 兼容 `.agents/skills/` | A-3 | S | `skills/scanner.ts` | 3-8 行 + 测试，独立 |\n| 4 | 压缩 token 估算元数据（一阶段） | A-2 | S-M | `types.ts`/`manager.ts`/`engine.ts`/`turn-loop.ts` | 只加 source/confidence 元数据，第二阶段 tokenizer 延后 |\n| 5 | compact 进行中 UI + ring 修正 | B-1 + B-2 | S-M | `App.tsx`/`ChatView.tsx`/`compactFeedback.ts` | 同 `compactActiveSession()`，一次做完 |\n| 6 | 压缩完成横幅 UI | B-3 | S | `ContextBoundaryView.tsx`/`compactFeedback.ts`/`i18n` | 纯展示，解耦 |\n| 7 | 后台面板「来源 session」徽标 | C-1 | S~S+ "
+      },
+      {
+        "path": "docs/archive/todo/plan-overall-small-features.md",
+        "at": "$",
+        "context": "etached/读不到才回退 `\"main\"`。\n- BranchPicker 切分支后派 `codeshell:git-branches-changed` 事件让徽标即时刷新；popover open / files-changed 时兜底 refresh。\n\n### C-4 worktree 切换器分组/语义\n- 分组渲染：main / managed worktrees / external；`WorkspaceRow` 显式算 `active`（path === current.root）与 `ownedByCurrentSession`（`occupiedBySessionIds.includes(sessionId)`，传 sessionId 进 row）。\n- active row 高亮 + `aria-current` + `currentBadge`；owned 非 active 显 `thisSession` badge；当前项「selected」样式与 disabled opacity 拆开（不再看着像灰掉不可用）。\n- main row 标题用 C-3 的 `⑃ <mainBranch>`。新增 i18n：`groupMain/groupWorktrees/groupExternal/currentBadge/thisSession`。\n\n---\n\n## 4. 风险分级\n\n- **高（数据安全）**：C-5。护栏逻辑必须先写测试再改（TDD），删除 `fs.rm(force)` 尤其要覆盖 remove 失败分支。\n- **中（token 数字语义）**：B-2 baseline 计算 + A-2 估算来源。B-2 helper 必须单测；注释标明依赖 `forceCompact()` 返回的是 `estimateTokens()`，若 core 语义变更需同步删 baseline。\n- **中（跨 session"
+      },
+      {
+        "path": "docs/archive/todo/review-core-v2.md",
+        "at": "$",
+        "context": "k at `:51-52`, old `{slug:\"...\"}` callers now fail. Make the schema accept either `target` or `slug`, or remove the claimed compatibility.\n- `packages/core/src/tool-system/builtin/worktree.ts:272-293` allows a session to attach to an existing worktree by branch/path, and tests cover shared attachment, but `ExitWorktree` removes it at `:198-205` without checking other session owners. The owner metadata exists in `packages/core/src/git/worktree.ts:403-423`; use it before `detach`/`discard` or one session can strand another with a missing workspace root.\n- `packages/core/src/session/session-manager.ts:350-351` treats any existing path as a valid worktree resume cwd. A file, symlink, or non-git directory at the old worktree path will be accepted and fail later in engine/tool setup. Check `statSync(...).isDirectory()` and ideally verify it is still the expect"
+      },
+      {
+        "path": "docs/archive/todo/review-core-v2.md",
+        "at": "$",
+        "context": "re `detach`/`discard` or one session can strand another with a missing workspace root.\n- `packages/core/src/session/session-manager.ts:350-351` treats any existing path as a valid worktree resume cwd. A file, symlink, or non-git directory at the old worktree path will be accepted and fail later in engine/tool setup. Check `statSync(...).isDirectory()` and ideally verify it is still the expected git worktree/branch.\n- `packages/core/src/run/RunApprovalBackend.ts:74-96` exposes a waiting approval through `onApprovalNeeded()` before `pendingApproval` is installed, while `packages/core/src/run/RunManager.ts:229-234` ignores `handle.resolveApproval()`'s boolean. A fast subscriber/automation resume can transition the run back to running before the backend has a resolver, after which the backend installs a pending approval that can hang until timeout. Instal"
+      },
+      {
+        "path": "docs/archive/todo/review-core-v2.md",
+        "at": "$",
+        "context": "nally unsupported, document/test that; otherwise allow equal-to-root for copy sources.\n\n### Assessment (Ready to tag? No)\nThe session/workspace work removes the old process-global worktree state, but the new implementation crosses a trust boundary by reading hidden `__sessionId`/`__cwd` values from model-controlled tool args. Those are release-blocking because they enable cross-session workspace mutation and out-of-workspace settings writes. After stripping/trusting internal fields correctly, also fix the shared-worktree removal guard and resume validation before tagging.\n"
+      },
+      {
+        "path": "docs/audit-2026-10-16/coverage.md",
+        "at": "$",
+        "context": "App、真实Chrome/OS事件、Panel全方法和native tools |\n| Server | mobile remote、Hub auth/files/uploads/replay/approval、session catalog、headless lifecycle、Link接线 | 首次 121 pass + 1 缺dist环境失败；仅构建本worktree server后单文件 11 pass 补证；catalog新3项 | 全 Server suite 未整体重跑；真实公网、Docker/tunnel、长期恢复 |\n| Web | socket/reconnect、输出journal、approval/auth/api scope、Panel upload/polling/environment | 121 项 baseline | 完整浏览器/手机E2E与所有React组件状态组合 |\n| Chat | queue/gateway/lifecycle/ingress/config、adapter factory、各主要渠道的消息路径 | 71 项 baseline；新6项（账号/附件4、Matrix2） | 真实平台ACK/消息/账号、未抽到的各adapter分支 |\n| Link | 合约、browser handoff、OAuth broker/service、operation/runtime接口 | 与CDP/devtools合并104项baseline；Server Link HTTP补证 | 真实账号/授权/外部provider全生命周期 |\n| CDP / browser-devtools | helper/inspector和生产消费接线 | 合并baseline同上 | 真实浏览器与全站点适配 |\n| Arena | retaine"
+      },
+      {
+        "path": "docs/audit-2026-10-16/desktop.md",
+        "at": "$",
+        "context": "de 文件名搜索并返回可读取的相对路径。实际：`searchFiles(root, \"报告\")` 为 `[]`；空查询返回带引号和八进制转义的不存在路径。带换行文件名同样变为 `\"line\\nbreak.md\"`，不能读取。ASCII 文件及非 Git 目录中的相同中文文件均通过对照。\n- 影响：中文文件常见项目无法使用 @ 引用；空查询选择这些候选还会插入错误路径。没有推导任意文件读取或安全绕过。\n- 验证层级：**真实生产 service + 临时磁盘 + 真实 Git 子进程**，未运行 Electron 端到端。独立源码相对导入，无 workspace `dist` 替代；所有磁盘在 owned 临时目录，afterEach 清理。`desktop-file-search.test.ts` 中前两个测试。\n- 是否已知：针对旧 `docs/review-*` 的 `file-search`、`quotePath`、`git ls-files`、中文搜索关键词查重，未找到同根因已记录项。现有 `file-search-service.test.ts` 只测试非 Git 目录。\n\n### D02 / P2：多根项目先全局截断，再筛当前根，使当前根匹配文件无故消失\n\n- 位置：`packages/desktop/src/main/file-search-service.ts:231-233` 全局 top30；`packages/desktop/src/renderer/chat/MentionPopover.tsx:109-110` 再按 `rootId` 筛选。\n- 触发：正常挂载的多根项目中，选中根 A 有 `a-long-directory/needle-document.md`，另一个根 B 有 30 个得分更高的 `needle-00.md` 至"
+      },
+      {
+        "path": "docs/audit-2026-10-16/quality.md",
+        "at": "$",
+        "context": " cursor 的 `>` 次序不一致；fixture 用 utimes 强制相等目录 mtime。自然生产相等 mtime 未验证，不能消除条件标记或计为全新根因。 |\n| C04 / P2 | 保留 | 真实 ToolExecutor/Write/history hook/FileHistory，自有 Host 与 workspace 两个 cwd；备份错指 Host 文件，FileHistory undo 成功后 workspace 仍是修改后正文。Edit 为同一 hook 与 ctx.cwd 定位的静态核验；未执行 TUI `/undo` 命令或额外制造无关文件覆盖。 |\n\n根目录当前最终专项收据合计 6 文件 / 12 tests / 45 expect，Desktop 指定范围为 2 文件 / 6 tests / 54 expect；均在已读日志内为 0 fail、0 skipped、Completed。这些是既有缺陷复现收据，不是本复核新增执行，也不代表修复通过。SWC 三份会话转录摘录为 4/2/3 pass、9/19/10 expect，合计 9 tests / 38 expect，均含 Completed；本复核核对了摘录与 fixture 的项目/数量对应，但不能替代未留存的原始 raw/JUnit。C04 的 [round3 日志](evidence/core-providers-policy-round3.log) 包含该测试的 5 个断言及零网络 attempt 清理行，整份为 6 pass / 25 expect / 0 fail/skip / Completed；前五项不属于此次质量复核范围，不能把它们当作本复核已完成的独立质量结论。\n\n## 位置精度\n\n以下为当前源码更直接的定位，建议主报告更新；这是报告定位修订，不改"
+      },
+      {
+        "path": "docs/audit-2026-10-17/chat-data.md",
+        "at": "$",
+        "context": "是附件正文丢失。按 P3 记录并保留长标签前提。\n- **动态证据**：`evidence/chat-text-metadata.test.ts` 真实 `remoteAttachment/safeAttachmentName/materializeChatAttachments`；字节 loader 是返回 1 byte 的内存回调，fetch 若调用即抛错且没有被调用。短 Unicode 标签正常对照保持不变；同文件还验证普通分块在 max 2/17/1800 下不丢 Unicode 或空白。`chat-text-metadata.log`：2 tests / 16 expectations / 0 failures。\n- **边界/已知与否**：只证明共享函数与 bridge payload 数据，不证明某个真实平台允许/返回上述长标签；没有真实平台或文件发送。旧 audit/review 按 safeAttachmentName/附件名 Unicode/filename surrogate 有限查重无命中（`chat-metadata-dedup.log`，rg 1）。\n\n## 候选和排除\n\n- Discord `discord.ts:108-110` interaction 分支的每次 send 都 editReply，没有按 replied 在后续切换 follow-up，长回复可能覆盖前块。首次 fixture 在测试文件顶层 import `discord.js` 时依赖解析失败，未进入生产断言，故保留静态候选；不移除 import、不加 link、不改路径、不重跑（`chat-discord-chunks.log`：0 pass / 1 fail / 1 error，无 Completed）。\n- Bound Session bridge 的输入类型只携带 text，附件没有投影"
+      },
+      {
+        "path": "docs/audit-2026-10-17/desktop-data.md",
+        "at": "$",
+        "context": "\"/srv/example\")` 返回小写项目；各项目会话分别分组。\n- 实际：`isSameOrInside` 无条件把路径转小写，两根都匹配，同长度只保留首项。实际匹配为大写项目；反转列表则结果反转。实际 `groupByProject` 把两边会话归到一个 `Upper project` 分组。\n- 影响：Web/Mobile 项目标题/过滤/会话归属错误。`packages/web/app/DesktopApp.tsx:117–121` 的生产 `targetForCwd` 还用这个结果构建 `{ projectId }`，小写 cwd 在错误项目中没有精确 root，因而会落入错误项目的主根作为新会话目标；这段影响是静态接线，未运行创建会话或真实 Host。Mobile `SessionList.tsx:50–63` 实际消费错误分组与 currentProject。\n- 证据：guarded 源码相对导入纯函数，`evidence/ui-web-project-case.test.ts` 三项：错误归属/列表顺序影响、两个会话合成一组、普通不同根与最长前缀正常对照。没有使用真实磁盘或模拟 Host 平台来验证目录注册；结论明确以大小写敏感 Host 为条件。生产 `packages/core/src/workspace/canonical-key.ts:4,32–34` 只在 darwin/win32 小写化，Linux 的 ProjectStore 根比较保留大小写（静态核对）。\n- 旧记录核查：2026-10-16 findings、2026-10-12 Web 主报告与 remaining 主报告未找到 `projectForCwd` / 项目大小写同项（有限查重）；SWC-06 是磁盘会话分页排序，与此处不同。\n\n## 第四轮：历史尾窗口与上下文选择映射\n\n`evidence/ui-context-tail-selection.test"
+      },
+      {
+        "path": "docs/audit-2026-10-17/evidence/quality-ops-review.md",
+        "at": "$",
+        "context": "I-02 保留条件 P2。** 必须明确是大小写敏感文件系统 Host（例如 Linux），且存在两个仅大小写不同的合法注册项目根。当前纯函数运行在本机并不能证明 Linux 项目注册已实际完成；报告已限定这一点。静态 `canonicalKey` 只对 darwin/win32 转小写，Linux 保留大小写，与条件相容。`targetForCwd` 使用错误的 `projectForCwd` 返回值并在无精确 root 时只传错误 projectId，后续主根选择是静态接线，不可改称新会话实际创建/工具实际写错项目。\n3. **UI-03 保留 P2，限定合法 legacy、无 output journal、tail 不完整。** 512 KiB 来自生产常量；真实自有 tmp transcript reader 返回 hasMore=true，显示首任务为 RECENT，完整 raw 首任务为 OLD，而 UI 用同一零基 index 取 raw turn。fixture/原始日志与 MessageStream 点击及 fork 提交接线吻合。现代 journal 路径有 exact legacy base/replay，不能笼统说“所有长会话”；当前报告已作正确收窄。没有实际 fork/provider 或真实内容外发，不宜使用已泄漏用户资料等措辞。\n\n## 与本分审的重复/失败边界\n\n- UI-02 的 Web path lowercase 与本分审 OM5 的 Core memory 分隔符编码碰撞是两个不同生产 key、两个独立修复点；不能因都涉及项目归属而互相当作复现，也不应重复计同一个 fixture。\n- 本分审 OM2 已因 pending 快照契约不明确降候选；本分审首次 round1 的 1 pass/3 fail 日志不能加进上述两个报告的 "
+      },
+      {
+        "path": "docs/audit-2026-10-17/evidence/quality-ui-review.md",
+        "at": "$",
+        "context": "一正常queued边界，不是两个bug。 |\n| OM5 / P2 | `memory.ts:143–144` project-scoped store契约与 `:189–191` 有损路径key冲突明确；自然嵌套根/连字符根共享持久目录，并使“Project memories(this repo)”出现别项目事实。P2合理，无需把它包装成安全越权或声称执行错误文件操作。 | `ops-memory-project-key-round4.test.ts` 真目录/manager/cold reload/index，日志先B看A再B看两项，与6断言一致；1 pass / 6 expect / Completed。 |\n\n## 需修正 / 汇总时必须保留\n\n1. **R2-03 定位已更正。** 初读报告 `export-md.ts:129–132` 未包含出错 fence模板；主审收到清单后，复核末次只读确认现报告为 `:130–134`。准确模板在 `:134`，最终 findings 的 line=134。\n2. **OM3 完成状态不能升级。** 整组失败且没有完整JUnit完成门禁；只有第一测试通过的局部观察。现 operations-memory.md 已正确披露。汇总/validation/evidence index须继续标 partial observation + failed shard，而不是4测试通过或clean focused dynamic receipt。不要求重跑。\n3. **OM1 预期建议补明确源码契约。** 推荐附 `memory-orchestrator.ts:613–615,661–663` 作为 ADD不能替换另一事实的依据；这能排除“name是canonical key，gate有意refresh”"
+      },
+      {
+        "path": "docs/audit-2026-10-17/evidence/quality-ui-review.md",
+        "at": "$",
+        "context": "mit函数只给diff/show、no-color/unified/root等参数，没有quotePath false。生产packages检索未找到统一quotePath设置。`UnifiedDiffViewer:82`直接parse；`:181–182`按真实onlyPath比较，`:261`title、`:346`打开、`:405–411`评论定位消费错误路径，无下游解码。中文文件默认配置下review定位不可用，P2与现有10-16 D01严重程度一致。\n- **R2-11fixture与默认配置须分清。** 脚本明确 `-c core.quotePath=true` 构造escaped路径、再 `false`对照，并非依靠operator全局Git配置。官方[core.quotePath](https://git-scm.com/docs/git-config#Documentation/git-config.txt-corequotePath)确认默认true；false仅不把高字节作为unusual，双引号/反斜杠/控制字符仍需escape。官方[patch格式](https://git-scm.com/docs/diff-format#_generating_patch_text_with_p)也明确路径引用规则及rename from/to。报告“默认quotePath=true”语义正确，不应扩大为所有配置、所有特殊路径均已动态测过。\n\n三项共享唯一完整shard：4 pass /13 expect /0 fail/skip /Completed，第四项ASCII正常对照。不能各累计4个测试。日志原样保存了raw Git diff与生产AST，足以支持三个不同parser缺口；没有新质量复现。\n\n查重：10-16的A01是执行rename丢mo"
+      },
+      {
+        "path": "docs/audit-2026-10-17/operations-memory.md",
+        "at": "$",
+        "context": "ectHash` 对两个路径产生同一 key。A 保存一条后 B 立即读到；B 再保存另一条，冷重建 B manager 仍读到两条；B `buildInjectionIndex` 的 “Project memories (this repo)” 同时包含 A schema-v1 与 B schema-v2 的事实。\n- 影响：自然项目命名导致持久数据混合、错误项目事实注入；相同 ID 更新/删除的更严重后果未执行，不声称已证明原文覆盖、模型误改文件或安全越权。\n- 证据：`evidence/ops-memory-project-key-round4.test.ts`、原始 `evidence/ops-memory-project-key-round4.log`；**1 pass / 0 fail / 6 expect / Completed**。真实本地 MemoryManager/冷重建/注入索引，无网络、真实模型、权限实验。\n- 查重：旧审查检索未发现此自然路径 key 碰撞；与 Desktop 的模型切换状态、Web 项目归属大小写问题不同。已与 Desktop 分审协调，该项未被其重复覆盖。\n\n## 基线与首次失败记录\n\n- 独立既有 operations 基线：`node scripts/run-bun-test-shard.mjs --timeout 30000 --test-name-pattern '^(schema2 reclaims|readonly lookup|a fresh verification|an unrelated real write|a schema2 orphan|unknowns, attempts|all legal encrypted|an archived unsent|original private recovery|only successful independent"
+      },
+      {
+        "path": "docs/audit-2026-10-17/root.md",
+        "at": "$",
+        "context": " `+++ after` 的合法删除/新增行。\n- 预期/实际：应保持 sample.txt 路径并显示一行删除和一行新增；真实 parser 把 oldPath 改成 before、newPath 改成 after，hunk 中没有任何 add/del，后续 context 行号也错位。\n- 影响：Review 展示遗漏真正改动，文件标题、计数和后续行定位错误。打开文件/添加评论会使用错误 AST 路径是静态接线结论，未执行 UI 点击或真实评论。\n- 证据：`evidence/root-unified-diff.test.ts` 第一项在自有临时 Git repo 中生成真实 diff（关闭 hooks/签名、无网络），调用生产 parser；最后一项普通 ASCII 改动为正常对照。首次 `root-unified-diff.log` 为 4 pass / 13 expect / 0 fail/skip / Completed，也包含 R2-10/11。\n- 生产接线：`UnifiedDiffViewer.tsx:82` 对 Review service 和 turn snapshot 的 diff 使用该 parser，`:261` / `:346` 使用路径显示/打开。仅 parser 动态验证，没有运行 Electron。\n- 查重：旧主 findings / root / Desktop 报告和 10-12 remaining 审查有限查重未发现同根因确认项；旧 Git argv 问题不同。\n\n### R2-10 [P3] Review 中纯重命名文件丢失两个路径\n\n- 位置：`packages/desktop/src/renderer/diff/parseUnifiedDiff.ts:48-57` 忽略 diff --git 的文件"
+      },
+      {
+        "path": "docs/audit-2026-10-17/root.md",
+        "at": "$",
+        "context": "/。\n- 触发：默认 core.quotePath=true，已跟踪 `中文.txt` 有普通内容修改。Git 的 +++ 路径为带双引号和 UTF-8 八进制转义的 b/ 路径。\n- 预期/实际：应得到文件相对路径 `中文.txt`；真实 parser 保留整段双引号/b前缀/八进制转义。禁用 quotePath 的同一文件正常对照可解析。\n- 影响：标题错误，onlyPath=真实文件名时过滤为空，构造的文件打开/评论路径不对应实际文件。后两项为 renderer 源码接线推论，未操作实际文件打开或评论。\n- 生产接线：ReviewService 使用 desktop-services 的 getGitDiffForReview / range / commit diff，未对 core.quotePath 设置 false，也未在返回前解码；UnifiedDiffViewer 直接使用 parser。引号/控制字符即便 quotePath=false 仍需处理，未另行动态扩展该边界。\n- 证据：`root-unified-diff.test.ts` 第三项，自有临时 Git repo 的真实 quoted diff + 真实 parser；原始收据同 R2-09。没有读取用户 Git 状态或修改产品代码。\n- 语义依据：Git 的路径引号/八进制转义及默认 true 见 [git-config core.quotePath](https://git-scm.com/docs/git-config#Documentation/git-config.txt-corequotePath)，patch 同样采用该形式见 [diff-format](https://git-scm.com/docs/diff-format#_generating_patch_text_with_p)。\n- 查重：旧报告 file-sear"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round10/evidence/pet-dedup.json",
+        "at": "$.matches[20].hits[3].excerpt",
+        "context": "态证据**：`evidence/chat-text-metadata.test.ts` 真实 `remoteAttachment/safeAttachmentName/materializeChatAttachments`；字节 loader 是返回 1 byte 的内存回调，fetch 若调用即抛错且没有被调用。短 Unicode 标签正常对照保持不变；同文件还验证普通分块在 max 2/17/1800 下不丢 Unicode 或空白。`chat-text-metadata.log`：2 tests / 16 expectations / 0 failures。"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round10/evidence/pet-dedup.json",
+        "at": "$.matches[30].hits[0].excerpt",
+        "context": " Unicode 路径已有基线保证。自有临时工作区中的实际文件为 `<tmp>/project with spaces/.code-shell/generated_images/1782-audit.png`，生产 detector 返回 `spaces/.code-shell/generated_images/1782-audit.png`。原文件存在，把错误 card path 按同一个 cwd 解析后得到另一条不存在的路径。另一个同根因变体是 `/fixture/project/final report.png` 被完全漏掉；相邻 `final-report.png` 正常。"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round10/evidence/pet-dedup.json",
+        "at": "$.matches[41].hits[4].excerpt",
+        "context": "态证据**：`evidence/chat-text-metadata.test.ts` 真实 `remoteAttachment/safeAttachmentName/materializeChatAttachments`；字节 loader 是返回 1 byte 的内存回调，fetch 若调用即抛错且没有被调用。短 Unicode 标签正常对照保持不变；同文件还验证普通分块在 max 2/17/1800 下不丢 Unicode 或空白。`chat-text-metadata.log`：2 tests / 16 expectations / 0 failures。"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round10/evidence/root-dedup.json",
+        "at": "$.hits.history_identity[11].context",
+        "context": "能仍不是同一层问题。\n\n### 4.5 `patch-orphaned-tools.ts`\n\n用于修复 transcript 中不完整 tool pair：\n\n- assistant 有 `tool_use`，但后续缺少对应 `tool_result`。\n- resume 时这种历史会导致 provider 报错，尤其 OpenAI tool-call pairing 很严格。\n- patch 会插入 synthetic error result 或修复消息结构。\n\n### 4.6 `session-title.ts`\n\n在 run 完成后 fire-and-forget 生成 session 标题。它不阻塞主结果返回；失败通常只记录 debug/log。\n\n### 4.7 `streaming-tool-queue.ts`\n\nTurnLoop 用它执行一轮中的多个 tool calls。它封装 tool execution queue，支持 concur"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round10/evidence/root-dedup.json",
+        "at": "$.hits.history_identity[13].context",
+        "context": " Runtime / Utils 支撑模块\n\n这些模块不是主循环中心，但支撑核心功能。\n\n### 18.1 Git\n\n`src/git/**` 包括：\n\n- `worktree.ts`：worktree 创建/管理/删除。\n- `utils.ts`：git 辅助函数。\n- `parse-log.ts`：解析 git log。\n\n用于会话隔离、历史、diff、工作树等功能。当前产品设计偏好是 session-scoped file-change ledger，而不是直接用全局 git diff 推导"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round10/evidence/root-dedup.json",
+        "at": "$.hits.history_identity[59].context",
+        "context": "P3 限定为活动状态错误及不符合既有门禁的归档，历史列表当前行隐藏。没有证明 follow-up 被停止、回答丢失、权限扩大、文件/历史删除、模型重复执行，不能升为 P2 安全或数据损坏问题。服务写 marker 使用 [SessionManager.setSessionArchived:1158–1159](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/session/session-manager.ts:1158) → field patch [1561–1566/1585–1603](/Users/admin/.codex/worktrees/review-latest-202"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round10/evidence/root-dedup.json",
+        "at": "$.hits.history_identity[63].context",
+        "context": "P3 限定为活动状态错误及不符合既有门禁的归档，历史列表当前行隐藏。没有证明 follow-up 被停止、回答丢失、权限扩大、文件/历史删除、模型重复执行，不能升为 P2 安全或数据损坏问题。服务写 marker 使用 [SessionManager.setSessionArchived:1158–1159](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/core/src/session/session-manager.ts:1158) → field patch [1561–1566/1585–1603](/Users/admin/.codex/worktrees/review-latest-202"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round10/evidence/root-dedup.json",
+        "at": "$.inventory[595].path",
+        "context": "docs/research/driveagent-worktree-cwd-visibility-gap.md"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round10/evidence/root-dedup.json",
+        "at": "$.inventory[1523].path",
+        "context": "docs/todo/small-features-2026-07-10/review-panel-wrong-cwd.md"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round11/README.md",
+        "at": "$",
+        "context": "/FIFO、平台上限等排除。关键词/散列查重不代表全历史逐行语义穷尽。\n\n静态猜测文件/目录/glob、官方资料访问失败均标记并跳过相应方向，与真实测试日志分开；未用替代产品验证恢复旧失败路线。Root 含管道的首个导航工具整体 exit 0 但部分 rg 路径失败，也在[转录](evidence/root-navigation-skip.md)中准确区分。错误地址不会被当成产品文件缺失或已读源码。\n\n四份只读交叉复审：[Chat](evidence/cross-review-chat.md)、[Hooks](evidence/cross-review-hooks.md)、[Host](evidence/cross-review-host.md)、[组合配置](evidence/cross-review-composition.md)。复审没有新增测试或产品修改；Chat 全量历史补充及最终 16 件 artifact delta 亦经核对。[最终材料检查](evidence/final-quality.md)记录日志、来源、收据和整合边界。\n\n整合前 main 前进至 `9cbd3a34c8c3249d87a2a31b2edf538e0448c365`，8 个路径属于其他任务的 Desktop acceptance harness、AppImage/startup、CI 和文档。首次完整 snapshot 相等检查因此拒绝继续，已保留[metadata 诊断](evidence/root-integration-refresh-note.md)和[当时状态](evidence/integration-current-observed.json)，随后仅快进当前任务分支。本批直接缺陷/候选源码未变，见 [main source review](evidence"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round11/chat.md",
+        "at": "$",
+        "context": " fences、DeliveryQueue FIFO/ACK | 已有记录，排除重复；本批没有重复动态验证。 |\n| 猜测 `packages/chat/src/package.json` 的静态导航 | 首次工具 exit 1；[明确标记的响应转录](evidence/chat-navigation-skip.md) 保留。不修路径重试该方向，不把审查导航错误当成产品文件缺失。 |\n| File store 权限/符号链接/custody 测试 | 只读源码说明边界，没有运行相关既有测试或自造实验。 |\n\n## 首次验证和覆盖限制\n\n| 首次 guarded shard | pass | expect | fail/skip | 结果 |\n| --- | ---: | ---: | --- | --- |\n| [progress load fixture](evidence/chat-progress-load.first.log) | 4 | 33 | 0 / 0 | Completed、exit 0 |\n| [channel existing baseline](evidence/chat-channel-baseline.first.log) | 2 | 58 | 0 / 0 | Completed、exit 0 |\n| 合计 | **6** | **91** | **0 / 0** | 2 clean shards |\n\n每次仅运行 `node scripts/run-bun-test-shard.mjs --timeout 30000 FILE`；FIRST 合并 stdout/stderr 和 exit 均先完整落盘再读取，没有修 fixture 或重跑。4 项 focused 中包括 1 项缺陷 characterization、2 "
+      }
+    ]
+  },
+  "parseErrors": [],
+  "productExecution": false
+}

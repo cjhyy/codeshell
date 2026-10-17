@@ -1,0 +1,85 @@
+{
+  "atUTC": "2026-10-17T11:20:42.335589+00:00",
+  "parentReportedBaseline": "32c633e58c20b3853f49bb0e43264b4577281eac",
+  "gitCommands": 0,
+  "independentGitBlobVerification": false,
+  "files": [
+    {
+      "path": "CODESHELL.md",
+      "bytes": 17639,
+      "lineCount": 217,
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "firstPinBeforeThisTaskSourceRead": false,
+      "firstSemanticReadSha256": null,
+      "coveragePrepEarlierFilesystemSha256": null,
+      "coveragePrepEarlierPinIsNotSemanticReadProof": true,
+      "note": "First dedicated author pin captured after this source was read; do not claim earlier semantic-read SHA."
+    },
+    {
+      "path": "packages/desktop/src/renderer/markdown/splitStreamingMarkdown.ts",
+      "bytes": 5799,
+      "lineCount": 124,
+      "sha256": "1fbe136ecda36e905f0cde204ceaa20dfae4939f49c1519d95ca98101dc14995",
+      "firstPinBeforeThisTaskSourceRead": false,
+      "firstSemanticReadSha256": null,
+      "coveragePrepEarlierFilesystemSha256": "1fbe136ecda36e905f0cde204ceaa20dfae4939f49c1519d95ca98101dc14995",
+      "coveragePrepEarlierPinIsNotSemanticReadProof": true,
+      "note": "First dedicated author pin captured after this source was read; do not claim earlier semantic-read SHA."
+    },
+    {
+      "path": "packages/desktop/src/renderer/markdown/splitStreamingMarkdown.test.ts",
+      "bytes": 6015,
+      "lineCount": 151,
+      "sha256": "c56fcfddac15a1d113524b34652aa96e89c3dd644b5838f3edd1d26fc932b214",
+      "firstPinBeforeThisTaskSourceRead": false,
+      "firstSemanticReadSha256": null,
+      "coveragePrepEarlierFilesystemSha256": "c56fcfddac15a1d113524b34652aa96e89c3dd644b5838f3edd1d26fc932b214",
+      "coveragePrepEarlierPinIsNotSemanticReadProof": true,
+      "note": "First dedicated author pin captured after this source was read; do not claim earlier semantic-read SHA."
+    },
+    {
+      "path": "packages/desktop/src/renderer/messages/StreamingMarkdown.tsx",
+      "bytes": 6319,
+      "lineCount": 173,
+      "sha256": "0266a93fc16536d2b6afaca57aad13a0d9182ad60dc65329d866f1da60b5f3a7",
+      "firstPinBeforeThisTaskSourceRead": false,
+      "firstSemanticReadSha256": null,
+      "coveragePrepEarlierFilesystemSha256": "0266a93fc16536d2b6afaca57aad13a0d9182ad60dc65329d866f1da60b5f3a7",
+      "coveragePrepEarlierPinIsNotSemanticReadProof": true,
+      "note": "First dedicated author pin captured after this source was read; do not claim earlier semantic-read SHA."
+    },
+    {
+      "path": "packages/desktop/src/renderer/messages/StreamingMarkdown.test.tsx",
+      "bytes": 3302,
+      "lineCount": 83,
+      "sha256": "5cb1e0edd182ab70069011a2e0fc7762fa2cd9fd9f1906704faf272ce023028b",
+      "firstPinBeforeThisTaskSourceRead": false,
+      "firstSemanticReadSha256": null,
+      "coveragePrepEarlierFilesystemSha256": "5cb1e0edd182ab70069011a2e0fc7762fa2cd9fd9f1906704faf272ce023028b",
+      "coveragePrepEarlierPinIsNotSemanticReadProof": true,
+      "note": "First dedicated author pin captured after this source was read; do not claim earlier semantic-read SHA."
+    },
+    {
+      "path": "packages/desktop/src/renderer/messages/AssistantMessageView.tsx",
+      "bytes": 3880,
+      "lineCount": 98,
+      "sha256": "b08bd86c993873f10902024d091628d99a0d60a42dce74a3938fa2287f8bfe86",
+      "firstPinBeforeThisTaskSourceRead": true,
+      "firstSemanticReadSha256": "b08bd86c993873f10902024d091628d99a0d60a42dce74a3938fa2287f8bfe86",
+      "coveragePrepEarlierFilesystemSha256": "b08bd86c993873f10902024d091628d99a0d60a42dce74a3938fa2287f8bfe86",
+      "coveragePrepEarlierPinIsNotSemanticReadProof": true,
+      "note": "Pinned before this author selected read."
+    },
+    {
+      "path": "packages/desktop/src/renderer/types.ts",
+      "bytes": 86699,
+      "lineCount": 2289,
+      "sha256": "645de29eb12c5cc3a84ba68e9d5ece4020f2a272eca1191f3120a2f7620b7f3f",
+      "firstPinBeforeThisTaskSourceRead": true,
+      "firstSemanticReadSha256": "645de29eb12c5cc3a84ba68e9d5ece4020f2a272eca1191f3120a2f7620b7f3f",
+      "coveragePrepEarlierFilesystemSha256": "645de29eb12c5cc3a84ba68e9d5ece4020f2a272eca1191f3120a2f7620b7f3f",
+      "coveragePrepEarlierPinIsNotSemanticReadProof": true,
+      "note": "Pinned before this author selected read."
+    }
+  ]
+}

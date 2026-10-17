@@ -1,0 +1,717 @@
+{
+  "baseline": "9b667863e8a8eb91db7b1f99eb9876169dcf19ec",
+  "parentReportedFreeze": "9b667863e8a8eb91db7b1f99eb9876169dcf19ec",
+  "files": [
+    {
+      "path": "CODESHELL.md",
+      "bytes": 17639,
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "currentFilesystemSha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "finishFilesystemSha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "lineCount": 217,
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          217
+        ]
+      ],
+      "coveredLineCount": 217,
+      "initialPredecessorPinSha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "matchesPredecessorPin": true,
+      "gitComparisonPerformed": false,
+      "firstPinTiming": "Predecessor saved initial byte pin before assigned read; resumed author re-read declared ranges and verified same bytes.",
+      "role": "instruction"
+    },
+    {
+      "path": "AGENTS.md",
+      "bytes": 206,
+      "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "currentFilesystemSha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "finishFilesystemSha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "lineCount": 5,
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          5
+        ]
+      ],
+      "coveredLineCount": 5,
+      "initialPredecessorPinSha256": null,
+      "matchesPredecessorPin": null,
+      "gitComparisonPerformed": false,
+      "firstPinTiming": "First durable resumed-author hash captured after semantic selected/full read; no invented read-start hash.",
+      "role": "instruction"
+    },
+    {
+      "path": "packages/desktop/src/renderer/messages/fileChangeAggregator.ts",
+      "bytes": 13565,
+      "sha256": "90ffda89cf0cb2d05751bb8370056793591be41c358477de8bd9f12db447bc2d",
+      "currentFilesystemSha256": "90ffda89cf0cb2d05751bb8370056793591be41c358477de8bd9f12db447bc2d",
+      "finishFilesystemSha256": "90ffda89cf0cb2d05751bb8370056793591be41c358477de8bd9f12db447bc2d",
+      "lineCount": 396,
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          396
+        ]
+      ],
+      "coveredLineCount": 396,
+      "initialPredecessorPinSha256": "90ffda89cf0cb2d05751bb8370056793591be41c358477de8bd9f12db447bc2d",
+      "matchesPredecessorPin": true,
+      "gitComparisonPerformed": false,
+      "firstPinTiming": "Predecessor saved initial byte pin before assigned read; resumed author re-read declared ranges and verified same bytes.",
+      "role": "product-or-test-contract"
+    },
+    {
+      "path": "packages/desktop/src/renderer/messages/fileChangeAggregator.test.ts",
+      "bytes": 14527,
+      "sha256": "f6b406ec220edbdf065e548189aea7a16988b365a339e1046d47afd55589f8a3",
+      "currentFilesystemSha256": "f6b406ec220edbdf065e548189aea7a16988b365a339e1046d47afd55589f8a3",
+      "finishFilesystemSha256": "f6b406ec220edbdf065e548189aea7a16988b365a339e1046d47afd55589f8a3",
+      "lineCount": 377,
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          377
+        ]
+      ],
+      "coveredLineCount": 377,
+      "initialPredecessorPinSha256": "f6b406ec220edbdf065e548189aea7a16988b365a339e1046d47afd55589f8a3",
+      "matchesPredecessorPin": true,
+      "gitComparisonPerformed": false,
+      "firstPinTiming": "Predecessor saved initial byte pin before assigned read; resumed author re-read declared ranges and verified same bytes.",
+      "role": "product-or-test-contract"
+    },
+    {
+      "path": "packages/desktop/src/renderer/messages/fileChangeAggregator.count.test.ts",
+      "bytes": 878,
+      "sha256": "e89e1cfbf5dcc6d05770b47aa4bbdeb4954e0d66071578c3931804121afd32c8",
+      "currentFilesystemSha256": "e89e1cfbf5dcc6d05770b47aa4bbdeb4954e0d66071578c3931804121afd32c8",
+      "finishFilesystemSha256": "e89e1cfbf5dcc6d05770b47aa4bbdeb4954e0d66071578c3931804121afd32c8",
+      "lineCount": 27,
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          27
+        ]
+      ],
+      "coveredLineCount": 27,
+      "initialPredecessorPinSha256": "e89e1cfbf5dcc6d05770b47aa4bbdeb4954e0d66071578c3931804121afd32c8",
+      "matchesPredecessorPin": true,
+      "gitComparisonPerformed": false,
+      "firstPinTiming": "Predecessor saved initial byte pin before assigned read; resumed author re-read declared ranges and verified same bytes.",
+      "role": "product-or-test-contract"
+    },
+    {
+      "path": "packages/desktop/src/renderer/messages/FilesChangedCard.tsx",
+      "bytes": 16212,
+      "sha256": "15d7d4a53188869aa3af554bbc9e9b4a429af44578135f2576ef718f1dec3fbf",
+      "currentFilesystemSha256": "15d7d4a53188869aa3af554bbc9e9b4a429af44578135f2576ef718f1dec3fbf",
+      "finishFilesystemSha256": "15d7d4a53188869aa3af554bbc9e9b4a429af44578135f2576ef718f1dec3fbf",
+      "lineCount": 420,
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          420
+        ]
+      ],
+      "coveredLineCount": 420,
+      "initialPredecessorPinSha256": "15d7d4a53188869aa3af554bbc9e9b4a429af44578135f2576ef718f1dec3fbf",
+      "matchesPredecessorPin": true,
+      "gitComparisonPerformed": false,
+      "firstPinTiming": "Predecessor saved initial byte pin before assigned read; resumed author re-read declared ranges and verified same bytes.",
+      "role": "product-or-test-contract"
+    },
+    {
+      "path": "packages/desktop/src/renderer/messages/FilesChangedCard.test.tsx",
+      "bytes": 2750,
+      "sha256": "5a3d481f43aa035358b7f5ea623254231468a0bedbf6dcb702fdb51600147b83",
+      "currentFilesystemSha256": "5a3d481f43aa035358b7f5ea623254231468a0bedbf6dcb702fdb51600147b83",
+      "finishFilesystemSha256": "5a3d481f43aa035358b7f5ea623254231468a0bedbf6dcb702fdb51600147b83",
+      "lineCount": 78,
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          78
+        ]
+      ],
+      "coveredLineCount": 78,
+      "initialPredecessorPinSha256": "5a3d481f43aa035358b7f5ea623254231468a0bedbf6dcb702fdb51600147b83",
+      "matchesPredecessorPin": true,
+      "gitComparisonPerformed": false,
+      "firstPinTiming": "Predecessor saved initial byte pin before assigned read; resumed author re-read declared ranges and verified same bytes.",
+      "role": "product-or-test-contract"
+    },
+    {
+      "path": "packages/desktop/src/renderer/chat/openWith.ts",
+      "bytes": 3038,
+      "sha256": "22c7db69e59cd73df03a58fe293ab4b5a83cf5d915bd63f1e878204c4dee2e1a",
+      "currentFilesystemSha256": "22c7db69e59cd73df03a58fe293ab4b5a83cf5d915bd63f1e878204c4dee2e1a",
+      "finishFilesystemSha256": "22c7db69e59cd73df03a58fe293ab4b5a83cf5d915bd63f1e878204c4dee2e1a",
+      "lineCount": 77,
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          77
+        ]
+      ],
+      "coveredLineCount": 77,
+      "initialPredecessorPinSha256": null,
+      "matchesPredecessorPin": null,
+      "gitComparisonPerformed": false,
+      "firstPinTiming": "First durable resumed-author hash captured after semantic selected/full read; no invented read-start hash.",
+      "role": "product-or-test-contract"
+    },
+    {
+      "path": "packages/desktop/src/renderer/runtime/RuntimeCapabilities.tsx",
+      "bytes": 295,
+      "sha256": "374e9c433d4288fe6063f5fefa497ff26266ef96d5a46b2a17dc9ac4871b1b2b",
+      "currentFilesystemSha256": "374e9c433d4288fe6063f5fefa497ff26266ef96d5a46b2a17dc9ac4871b1b2b",
+      "finishFilesystemSha256": "374e9c433d4288fe6063f5fefa497ff26266ef96d5a46b2a17dc9ac4871b1b2b",
+      "lineCount": 7,
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          7
+        ]
+      ],
+      "coveredLineCount": 7,
+      "initialPredecessorPinSha256": null,
+      "matchesPredecessorPin": null,
+      "gitComparisonPerformed": false,
+      "firstPinTiming": "First durable resumed-author hash captured after semantic selected/full read; no invented read-start hash.",
+      "role": "product-or-test-contract"
+    },
+    {
+      "path": "packages/desktop/src/renderer/diff/reviewSnapshot.ts",
+      "bytes": 1903,
+      "sha256": "616db299d2eea30218c7996cd2bb89f579472ed57bb053bb014d31ee9b07658e",
+      "currentFilesystemSha256": "616db299d2eea30218c7996cd2bb89f579472ed57bb053bb014d31ee9b07658e",
+      "finishFilesystemSha256": "616db299d2eea30218c7996cd2bb89f579472ed57bb053bb014d31ee9b07658e",
+      "lineCount": 47,
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          47
+        ]
+      ],
+      "coveredLineCount": 47,
+      "initialPredecessorPinSha256": null,
+      "matchesPredecessorPin": null,
+      "gitComparisonPerformed": false,
+      "firstPinTiming": "First durable resumed-author hash captured after semantic selected/full read; no invented read-start hash.",
+      "role": "product-or-test-contract"
+    },
+    {
+      "path": "packages/desktop/src/renderer/app/usePanelBuckets.ts",
+      "bytes": 40459,
+      "sha256": "77cfff3fd385f1630540b5b19bc2bac4fbc21e2a593ff4cf4209c8bdea91de8f",
+      "currentFilesystemSha256": "77cfff3fd385f1630540b5b19bc2bac4fbc21e2a593ff4cf4209c8bdea91de8f",
+      "finishFilesystemSha256": "77cfff3fd385f1630540b5b19bc2bac4fbc21e2a593ff4cf4209c8bdea91de8f",
+      "lineCount": 1033,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          804,
+          846
+        ],
+        [
+          891,
+          947
+        ]
+      ],
+      "coveredLineCount": 100,
+      "initialPredecessorPinSha256": "77cfff3fd385f1630540b5b19bc2bac4fbc21e2a593ff4cf4209c8bdea91de8f",
+      "matchesPredecessorPin": true,
+      "gitComparisonPerformed": false,
+      "firstPinTiming": "Predecessor saved initial byte pin before assigned read; resumed author re-read declared ranges and verified same bytes.",
+      "role": "product-or-test-contract"
+    },
+    {
+      "path": "packages/desktop/src/renderer/types.ts",
+      "bytes": 86699,
+      "sha256": "645de29eb12c5cc3a84ba68e9d5ece4020f2a272eca1191f3120a2f7620b7f3f",
+      "currentFilesystemSha256": "645de29eb12c5cc3a84ba68e9d5ece4020f2a272eca1191f3120a2f7620b7f3f",
+      "finishFilesystemSha256": "645de29eb12c5cc3a84ba68e9d5ece4020f2a272eca1191f3120a2f7620b7f3f",
+      "lineCount": 2289,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          142,
+          185
+        ],
+        [
+          272,
+          320
+        ],
+        [
+          630,
+          700
+        ],
+        [
+          1970,
+          2038
+        ]
+      ],
+      "coveredLineCount": 233,
+      "initialPredecessorPinSha256": "645de29eb12c5cc3a84ba68e9d5ece4020f2a272eca1191f3120a2f7620b7f3f",
+      "matchesPredecessorPin": true,
+      "gitComparisonPerformed": false,
+      "firstPinTiming": "Predecessor saved initial byte pin before assigned read; resumed author re-read declared ranges and verified same bytes.",
+      "role": "product-or-test-contract"
+    },
+    {
+      "path": "packages/desktop/src/renderer/types.test.ts",
+      "bytes": 68234,
+      "sha256": "94e3c01c3ab28fc08b516b272e64f2e923cee03ef420d9d50936d5be7e23031d",
+      "currentFilesystemSha256": "94e3c01c3ab28fc08b516b272e64f2e923cee03ef420d9d50936d5be7e23031d",
+      "finishFilesystemSha256": "94e3c01c3ab28fc08b516b272e64f2e923cee03ef420d9d50936d5be7e23031d",
+      "lineCount": 1776,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          1280,
+          1321
+        ],
+        [
+          1370,
+          1425
+        ]
+      ],
+      "coveredLineCount": 98,
+      "initialPredecessorPinSha256": null,
+      "matchesPredecessorPin": null,
+      "gitComparisonPerformed": false,
+      "firstPinTiming": "First durable resumed-author hash captured after semantic selected/full read; no invented read-start hash.",
+      "role": "product-or-test-contract"
+    },
+    {
+      "path": "packages/coding/src/tools/drive-agent.ts",
+      "bytes": 72074,
+      "sha256": "7e64fa7df67103bc83510c05dc03068f0cd848d17cd04991c2b2354f0004976d",
+      "currentFilesystemSha256": "7e64fa7df67103bc83510c05dc03068f0cd848d17cd04991c2b2354f0004976d",
+      "finishFilesystemSha256": "7e64fa7df67103bc83510c05dc03068f0cd848d17cd04991c2b2354f0004976d",
+      "lineCount": 1714,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          42,
+          160
+        ],
+        [
+          246,
+          261
+        ],
+        [
+          285,
+          410
+        ],
+        [
+          430,
+          475
+        ],
+        [
+          735,
+          875
+        ],
+        [
+          927,
+          986
+        ],
+        [
+          1040,
+          1115
+        ],
+        [
+          1148,
+          1204
+        ],
+        [
+          1215,
+          1288
+        ]
+      ],
+      "coveredLineCount": 715,
+      "initialPredecessorPinSha256": null,
+      "matchesPredecessorPin": null,
+      "gitComparisonPerformed": false,
+      "firstPinTiming": "First durable resumed-author hash captured after semantic selected/full read; no invented read-start hash.",
+      "role": "product-or-test-contract"
+    },
+    {
+      "path": "packages/coding/src/tools/drive-agent-worktree.test.ts",
+      "bytes": 16251,
+      "sha256": "b90f96732eeac406580f6f91fb5dd97435a796aa67d1c1c46ded7a70da90431c",
+      "currentFilesystemSha256": "b90f96732eeac406580f6f91fb5dd97435a796aa67d1c1c46ded7a70da90431c",
+      "finishFilesystemSha256": "b90f96732eeac406580f6f91fb5dd97435a796aa67d1c1c46ded7a70da90431c",
+      "lineCount": 410,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          42,
+          100
+        ],
+        [
+          169,
+          230
+        ]
+      ],
+      "coveredLineCount": 121,
+      "initialPredecessorPinSha256": null,
+      "matchesPredecessorPin": null,
+      "gitComparisonPerformed": false,
+      "firstPinTiming": "First durable resumed-author hash captured after semantic selected/full read; no invented read-start hash.",
+      "role": "product-or-test-contract"
+    },
+    {
+      "path": "packages/coding/src/git/worktree.ts",
+      "bytes": 284,
+      "sha256": "7f844e53af88666f16eece9f8bbb2b76a0b7d48dcf372d9a0a9249db5f857536",
+      "currentFilesystemSha256": "7f844e53af88666f16eece9f8bbb2b76a0b7d48dcf372d9a0a9249db5f857536",
+      "finishFilesystemSha256": "7f844e53af88666f16eece9f8bbb2b76a0b7d48dcf372d9a0a9249db5f857536",
+      "lineCount": 5,
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          5
+        ]
+      ],
+      "coveredLineCount": 5,
+      "initialPredecessorPinSha256": null,
+      "matchesPredecessorPin": null,
+      "gitComparisonPerformed": false,
+      "firstPinTiming": "First durable resumed-author hash captured after semantic selected/full read; no invented read-start hash.",
+      "role": "product-or-test-contract"
+    },
+    {
+      "path": "packages/coding/src/git/worktree/index.ts",
+      "bytes": 198,
+      "sha256": "b98ea8849996560d36ae2a68207d4ed3233328205e590dfc8b61d8138f94c74d",
+      "currentFilesystemSha256": "b98ea8849996560d36ae2a68207d4ed3233328205e590dfc8b61d8138f94c74d",
+      "finishFilesystemSha256": "b98ea8849996560d36ae2a68207d4ed3233328205e590dfc8b61d8138f94c74d",
+      "lineCount": 6,
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          6
+        ]
+      ],
+      "coveredLineCount": 6,
+      "initialPredecessorPinSha256": null,
+      "matchesPredecessorPin": null,
+      "gitComparisonPerformed": false,
+      "firstPinTiming": "First durable resumed-author hash captured after semantic selected/full read; no invented read-start hash.",
+      "role": "product-or-test-contract"
+    },
+    {
+      "path": "packages/coding/src/git/worktree/crud.ts",
+      "bytes": 19959,
+      "sha256": "f7b913cdb9ce309bfdb4fc3428c1549da79a153ecdc718c4ac38471b1c2f59fb",
+      "currentFilesystemSha256": "f7b913cdb9ce309bfdb4fc3428c1549da79a153ecdc718c4ac38471b1c2f59fb",
+      "finishFilesystemSha256": "f7b913cdb9ce309bfdb4fc3428c1549da79a153ecdc718c4ac38471b1c2f59fb",
+      "lineCount": 574,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          1,
+          50
+        ],
+        [
+          413,
+          443
+        ]
+      ],
+      "coveredLineCount": 81,
+      "initialPredecessorPinSha256": null,
+      "matchesPredecessorPin": null,
+      "gitComparisonPerformed": false,
+      "firstPinTiming": "First durable resumed-author hash captured after semantic selected/full read; no invented read-start hash.",
+      "role": "product-or-test-contract"
+    },
+    {
+      "path": "packages/desktop/src/renderer/MessageStream.tsx",
+      "bytes": 37921,
+      "sha256": "f74d19bddcdc48c0de2e63921ba598d733e2f1c3d58f68e7c8c0b32046ddbd4c",
+      "currentFilesystemSha256": "f74d19bddcdc48c0de2e63921ba598d733e2f1c3d58f68e7c8c0b32046ddbd4c",
+      "finishFilesystemSha256": "f74d19bddcdc48c0de2e63921ba598d733e2f1c3d58f68e7c8c0b32046ddbd4c",
+      "lineCount": 928,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          108,
+          129
+        ],
+        [
+          600,
+          625
+        ]
+      ],
+      "coveredLineCount": 48,
+      "initialPredecessorPinSha256": null,
+      "matchesPredecessorPin": null,
+      "gitComparisonPerformed": false,
+      "firstPinTiming": "First durable resumed-author hash captured after semantic selected/full read; no invented read-start hash.",
+      "role": "product-or-test-contract"
+    },
+    {
+      "path": "packages/desktop/src/renderer/ChatView.tsx",
+      "bytes": 106169,
+      "sha256": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+      "currentFilesystemSha256": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+      "finishFilesystemSha256": "f9581b0772281f87120e94821e51d4b6d7335fb8cecd1ede98feddd8ff2f8ee7",
+      "lineCount": 2622,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          231,
+          242
+        ],
+        [
+          370,
+          390
+        ],
+        [
+          1760,
+          1777
+        ],
+        [
+          1809,
+          1824
+        ]
+      ],
+      "coveredLineCount": 67,
+      "initialPredecessorPinSha256": null,
+      "matchesPredecessorPin": null,
+      "gitComparisonPerformed": false,
+      "firstPinTiming": "First durable resumed-author hash captured after semantic selected/full read; no invented read-start hash.",
+      "role": "product-or-test-contract"
+    },
+    {
+      "path": "packages/desktop/src/renderer/App.tsx",
+      "bytes": 122863,
+      "sha256": "02ae12bfccf26878226720ad90282a6a11a1fdc3e05efd1ce54a09d256d5d715",
+      "currentFilesystemSha256": "02ae12bfccf26878226720ad90282a6a11a1fdc3e05efd1ce54a09d256d5d715",
+      "finishFilesystemSha256": "02ae12bfccf26878226720ad90282a6a11a1fdc3e05efd1ce54a09d256d5d715",
+      "lineCount": 2924,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          2675,
+          2707
+        ],
+        [
+          2804,
+          2821
+        ]
+      ],
+      "coveredLineCount": 51,
+      "initialPredecessorPinSha256": null,
+      "matchesPredecessorPin": null,
+      "gitComparisonPerformed": false,
+      "firstPinTiming": "First durable resumed-author hash captured after semantic selected/full read; no invented read-start hash.",
+      "role": "product-or-test-contract"
+    },
+    {
+      "path": "packages/desktop/src/renderer/runtime/CloudProjectWorkspace.tsx",
+      "bytes": 7864,
+      "sha256": "65ce189dad29adddcbfd1ff3bac74802e7a7c1f0c64da87757daa33effcdd004",
+      "currentFilesystemSha256": "65ce189dad29adddcbfd1ff3bac74802e7a7c1f0c64da87757daa33effcdd004",
+      "finishFilesystemSha256": "65ce189dad29adddcbfd1ff3bac74802e7a7c1f0c64da87757daa33effcdd004",
+      "lineCount": 201,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          1,
+          30
+        ],
+        [
+          57,
+          70
+        ]
+      ],
+      "coveredLineCount": 44,
+      "initialPredecessorPinSha256": null,
+      "matchesPredecessorPin": null,
+      "gitComparisonPerformed": false,
+      "firstPinTiming": "First durable resumed-author hash captured after semantic selected/full read; no invented read-start hash.",
+      "role": "product-or-test-contract"
+    },
+    {
+      "path": "docs/research/driveagent-worktree-cwd-visibility-gap.md",
+      "bytes": 24462,
+      "sha256": "d0ffe269a25a71f448da13aaf2f6f783d1182cb3d58762980322942a05ca9dac",
+      "currentFilesystemSha256": "d0ffe269a25a71f448da13aaf2f6f783d1182cb3d58762980322942a05ca9dac",
+      "finishFilesystemSha256": "d0ffe269a25a71f448da13aaf2f6f783d1182cb3d58762980322942a05ca9dac",
+      "lineCount": 293,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          1,
+          40
+        ],
+        [
+          188,
+          239
+        ]
+      ],
+      "coveredLineCount": 92,
+      "initialPredecessorPinSha256": null,
+      "matchesPredecessorPin": null,
+      "gitComparisonPerformed": false,
+      "firstPinTiming": "First durable resumed-author hash captured after semantic selected/full read; no invented read-start hash.",
+      "role": "historical-contract"
+    },
+    {
+      "path": "docs/todo/small-features-2026-07-10/review-panel-wrong-cwd.md",
+      "bytes": 15898,
+      "sha256": "171cc6cab7750b1f435d1e4d5e3835f6806c3ee1207fc637122247b81c089808",
+      "currentFilesystemSha256": "171cc6cab7750b1f435d1e4d5e3835f6806c3ee1207fc637122247b81c089808",
+      "finishFilesystemSha256": "171cc6cab7750b1f435d1e4d5e3835f6806c3ee1207fc637122247b81c089808",
+      "lineCount": 208,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          1,
+          26
+        ],
+        [
+          112,
+          130
+        ]
+      ],
+      "coveredLineCount": 45,
+      "initialPredecessorPinSha256": null,
+      "matchesPredecessorPin": null,
+      "gitComparisonPerformed": false,
+      "firstPinTiming": "First durable resumed-author hash captured after semantic selected/full read; no invented read-start hash.",
+      "role": "historical-contract"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round13/groups.md",
+      "bytes": 7742,
+      "sha256": "f476375c2755ae844859fdc3b047bc271cf33b11cf4b5f60c9afb98208d8922d",
+      "currentFilesystemSha256": "f476375c2755ae844859fdc3b047bc271cf33b11cf4b5f60c9afb98208d8922d",
+      "finishFilesystemSha256": "f476375c2755ae844859fdc3b047bc271cf33b11cf4b5f60c9afb98208d8922d",
+      "lineCount": 43,
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          43
+        ]
+      ],
+      "coveredLineCount": 43,
+      "initialPredecessorPinSha256": null,
+      "matchesPredecessorPin": null,
+      "gitComparisonPerformed": false,
+      "firstPinTiming": "First durable resumed-author hash captured after semantic selected/full read; no invented read-start hash.",
+      "role": "historical-contract"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round13/evidence/groups-skip-note.md",
+      "bytes": 1507,
+      "sha256": "1641b325b358b6b8b135c539024f69907c2129d855b7a707910f9adf1c5e594b",
+      "currentFilesystemSha256": "1641b325b358b6b8b135c539024f69907c2129d855b7a707910f9adf1c5e594b",
+      "finishFilesystemSha256": "1641b325b358b6b8b135c539024f69907c2129d855b7a707910f9adf1c5e594b",
+      "lineCount": 9,
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          9
+        ]
+      ],
+      "coveredLineCount": 9,
+      "initialPredecessorPinSha256": null,
+      "matchesPredecessorPin": null,
+      "gitComparisonPerformed": false,
+      "firstPinTiming": "First durable resumed-author hash captured after semantic selected/full read; no invented read-start hash.",
+      "role": "historical-contract"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round13/evidence/groups-candidates.json",
+      "bytes": 2192,
+      "sha256": "6b6de34f9f4da5fa44e4a654fdf12d9bdebc8f349d29ea832c5a7a2f665b6ba4",
+      "currentFilesystemSha256": "6b6de34f9f4da5fa44e4a654fdf12d9bdebc8f349d29ea832c5a7a2f665b6ba4",
+      "finishFilesystemSha256": "6b6de34f9f4da5fa44e4a654fdf12d9bdebc8f349d29ea832c5a7a2f665b6ba4",
+      "lineCount": 35,
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          35
+        ]
+      ],
+      "coveredLineCount": 35,
+      "initialPredecessorPinSha256": null,
+      "matchesPredecessorPin": null,
+      "gitComparisonPerformed": false,
+      "firstPinTiming": "First durable resumed-author hash captured after semantic selected/full read; no invented read-start hash.",
+      "role": "historical-contract"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round13/evidence/groups-related.json",
+      "bytes": 661,
+      "sha256": "1da7e1cc04dcdf5fc910de6a14f287feecd827cdb6560db17e4fccaac0fff548",
+      "currentFilesystemSha256": "1da7e1cc04dcdf5fc910de6a14f287feecd827cdb6560db17e4fccaac0fff548",
+      "finishFilesystemSha256": "1da7e1cc04dcdf5fc910de6a14f287feecd827cdb6560db17e4fccaac0fff548",
+      "lineCount": 16,
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          16
+        ]
+      ],
+      "coveredLineCount": 16,
+      "initialPredecessorPinSha256": null,
+      "matchesPredecessorPin": null,
+      "gitComparisonPerformed": false,
+      "firstPinTiming": "First durable resumed-author hash captured after semantic selected/full read; no invented read-start hash.",
+      "role": "historical-contract"
+    },
+    {
+      "path": "packages/desktop/src/renderer/panels/FilesPanel.tsx",
+      "bytes": 42096,
+      "sha256": "a6baf2b503aee4ffbe492fc609d6cb77ff7c3b58dc0b8fc394c8286c5267c263",
+      "currentFilesystemSha256": "a6baf2b503aee4ffbe492fc609d6cb77ff7c3b58dc0b8fc394c8286c5267c263",
+      "finishFilesystemSha256": "a6baf2b503aee4ffbe492fc609d6cb77ff7c3b58dc0b8fc394c8286c5267c263",
+      "lineCount": 1072,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          220,
+          243
+        ]
+      ],
+      "coveredLineCount": 24,
+      "initialPredecessorPinSha256": null,
+      "matchesPredecessorPin": null,
+      "gitComparisonPerformed": false,
+      "firstPinTiming": "First durable resumed-author hash captured after selected semantic read; no invented read-start hash.",
+      "role": "product-or-test-contract"
+    }
+  ],
+  "sourcePinCount": 29,
+  "fullSourceCount": 16,
+  "selectedSourceCount": 13,
+  "coveredLineCount": 3484,
+  "gitCommands": 0,
+  "rootFrozenBlobBindingRequired": true,
+  "limitations": [
+    "Byte hashes pin whole files; only declared ranges were read. No Git command was executed by either author. Parent must independently bind these SHA values to its frozen Git blobs.",
+    "Large multi-file outputs sometimes truncated; final source coverage uses bounded rereads for finding anchors and full Card. No claim of full large App/types/DriveAgent reading or compose implementation reading."
+  ]
+}

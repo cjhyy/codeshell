@@ -1,0 +1,28 @@
+{
+  "parentReportedHead": "9b667863e8a8eb91db7b1f99eb9876169dcf19ec",
+  "status": "negative static frontier prep",
+  "formalCount": 0,
+  "candidateCount": 0,
+  "newRelatedCount": 0,
+  "oldExcludedIds": [
+    "LAB-R3-01"
+  ],
+  "newOrdinaryContractGap": null,
+  "preferredNextAction": "Do not re-run old Lab/Arena directions. If Root chooses a new Lab audit branch, independently bind current source hashes then continue genuinely uncovered ordinary query/report rendering ranges; no dynamic runtime is needed by this prep.",
+  "smallestCurrentDependencySet": [
+    "packages/optimization-lab/src/report.ts",
+    "packages/optimization-lab/src/assertions.ts",
+    "packages/optimization-lab/src/grading.ts",
+    "packages/optimization-lab/src/overfit-hints.ts",
+    "packages/optimization-lab/src/contracts/eval-case.ts",
+    "packages/optimization-lab/src/report.test.ts",
+    "packages/optimization-lab/src/grading.test.ts"
+  ],
+  "newCoverage": [
+    "Fresh exact full helper/test ranges declared in source-manifest.json; prior history has mostly hash-only per-file rows under explicitly selected report-level coverage."
+  ],
+  "prohibitedExecuted": false,
+  "round27Included": false,
+  "conclusion": "No independent ordinary-contract bug established in the selected pure scoring/report data transformations. Keep previous issue exclusions and feature-default-off/private scope.",
+  "productAttempts": 0
+}

@@ -1,0 +1,13 @@
+{
+  "parentReportedHead": "9b667863e8a8eb91db7b1f99eb9876169dcf19ec",
+  "argv": [
+    "rg",
+    "--files",
+    "packages/optimization-lab/src"
+  ],
+  "exitCode": 0,
+  "stdout": "packages/optimization-lab/src/store.ts\npackages/optimization-lab/src/report.test.ts\npackages/optimization-lab/src/store-paths.test.ts\npackages/optimization-lab/src/runner.ts\npackages/optimization-lab/src/controller.ts\npackages/optimization-lab/src/grading.ts\npackages/optimization-lab/src/overfit-hints.ts\npackages/optimization-lab/src/index.ts\npackages/optimization-lab/src/strategy.test.ts\npackages/optimization-lab/src/grading.test.ts\npackages/optimization-lab/src/test-fixtures/foundation.ts\npackages/optimization-lab/src/evidence.test.ts\npackages/optimization-lab/src/ledger.ts\npackages/optimization-lab/src/store-paths.ts\npackages/optimization-lab/src/strategy.ts\npackages/optimization-lab/src/module.test.ts\npackages/optimization-lab/src/lease.test.ts\npackages/optimization-lab/src/index.exports.test.ts\npackages/optimization-lab/src/assertions.ts\npackages/optimization-lab/src/controller.test.ts\npackages/optimization-lab/src/ledger.test.ts\npackages/optimization-lab/src/index.capability.ts\npackages/optimization-lab/src/providers/transport.test.ts\npackages/optimization-lab/src/providers/connection.ts\npackages/optimization-lab/src/providers/metered-fetch.ts\npackages/optimization-lab/src/assertions.test.ts\npackages/optimization-lab/src/store.test.ts\npackages/optimization-lab/src/queries.test.ts\npackages/optimization-lab/src/overfit-hints.test.ts\npackages/optimization-lab/src/evidence.ts\npackages/optimization-lab/src/candidate.test.ts\npackages/optimization-lab/src/lease.ts\npackages/optimization-lab/src/candidate.ts\npackages/optimization-lab/src/module.ts\npackages/optimization-lab/src/queries.ts\npackages/optimization-lab/src/report.ts\npackages/optimization-lab/src/contracts/dataset-freeze.test.ts\npackages/optimization-lab/src/contracts/verdict-policy.ts\npackages/optimization-lab/src/contracts/verdict-policy.test.ts\npackages/optimization-lab/src/contracts/dataset-loader.test.ts\npackages/optimization-lab/src/contracts/dataset.test.ts\npackages/optimization-lab/src/contracts/canonical-json.test.ts\npackages/optimization-lab/src/contracts/eval-case.ts\npackages/optimization-lab/src/contracts/experiment.ts\npackages/optimization-lab/src/contracts/experiment.test.ts\npackages/optimization-lab/src/contracts/grant.ts\npackages/optimization-lab/src/contracts/dataset.ts\npackages/optimization-lab/src/contracts/canonical-json.ts\n",
+  "stderr": "",
+  "productAttempts": 0,
+  "gitCommands": 0
+}

@@ -1,0 +1,80 @@
+{
+  "atUTC": "2026-10-17T11:19:39.342785+00:00",
+  "files": [
+    {
+      "path": "/tmp/codeshell-audit-round28-coverage-frontier/README.md",
+      "name": "README.md",
+      "bytes": 4471,
+      "sha256": "583dd8022a324ba7eb36e463a53fd4ba2d240cba3e0e292ca0daa74641ae67da"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round28-coverage-frontier/coverage-index.json",
+      "name": "coverage-index.json",
+      "bytes": 1891704,
+      "sha256": "6cfb5a8d1a6c08e6fb587e339fd78a3d4f023dc65b7ccc466f4eadbb68df7d45"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round28-coverage-frontier/coverage-method.py",
+      "name": "coverage-method.py",
+      "bytes": 9287,
+      "sha256": "669b17c5a61fd5d166659b7b30386678a5b2031a3de640172609c19bcb0af5e0"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round28-coverage-frontier/coverage-ranking.json",
+      "name": "coverage-ranking.json",
+      "bytes": 129321,
+      "sha256": "4f0b565e75ad98d810622a90d22063111d779f8211cdc86c908a761de9ff048b"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round28-coverage-frontier/package-inventory.json",
+      "name": "package-inventory.json",
+      "bytes": 841639,
+      "sha256": "12c53ba7d8a17673382d352a48a8ca3afc25a4913fcc96d63d22319e7a00b1eb"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round28-coverage-frontier/shortlist-history.json",
+      "name": "shortlist-history.json",
+      "bytes": 507177,
+      "sha256": "01c11771bcfb550707e63be5c9df654cea4fe8300068f1165e2dd3afa7575779"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round28-coverage-frontier/source-manifest-inventory.json",
+      "name": "source-manifest-inventory.json",
+      "bytes": 33231,
+      "sha256": "96e49468479f3fe23f25180e245f9e16636ca5a97fe62409886862e654133e6e"
+    }
+  ],
+  "fileCount": 7,
+  "totalBytes": 3416830,
+  "selfExcluded": true,
+  "productAttempts": 0,
+  "gitCommands": 0,
+  "recommendedFrontiers": [
+    {
+      "path": "packages/desktop/src/renderer/markdown/splitStreamingMarkdown.ts",
+      "bytes": 5799,
+      "lines": 124,
+      "sha256": "1fbe136ecda36e905f0cde204ceaa20dfae4939f49c1519d95ca98101dc14995",
+      "coverageStatus": "no matching explicit source-manifest row",
+      "rootStaticReadingRequired": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/ui/dialogState.ts",
+      "bytes": 2385,
+      "lines": 78,
+      "sha256": "b7a6b81ccff93ebdd63bd96816373ead1d94d9bc793588312f492f31ac4c28f4",
+      "coverageStatus": "no matching explicit source-manifest row",
+      "rootStaticReadingRequired": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/sessionStatus.ts",
+      "bytes": 813,
+      "lines": 26,
+      "sha256": "b5a119fa35ecd9cb594d04d1673f63fbc9e20a25e97304b45eb8fcfc94d8f4d5",
+      "coverageStatus": "no matching explicit source-manifest row",
+      "rootStaticReadingRequired": true
+    }
+  ],
+  "semanticSourceSelectionReadLines": 286,
+  "sourceInventoryIsNotSemanticReview": true
+}

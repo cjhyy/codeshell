@@ -1,0 +1,34 @@
+{
+  "productAttempts": 0,
+  "productReruns": 0,
+  "notes": [
+    {
+      "kind": "Metadata locator only",
+      "toolResponse": "Read consumer files and then rg guessed messages/MessageList.tsx and messages/MessageItem.tsx",
+      "diagnostics": [
+        "rg: packages/desktop/src/renderer/messages/MessageList.tsx: No such file or directory (os error 2)",
+        "rg: packages/desktop/src/renderer/messages/MessageItem.tsx: No such file or directory (os error 2)"
+      ],
+      "outerExitCode": null,
+      "exitReason": "The wrapper printed output text only; original numeric result was not serialized. No inner/outer code is invented.",
+      "captureKind": "Manual diagnostic excerpt from original displayed tool response; not product raw output.",
+      "action": "Used rg inventory to locate MessageStream.tsx, then read actual consumer."
+    },
+    {
+      "kind": "Metadata locator only",
+      "toolResponse": "Python source locator assumed inspectWorktreeChanges was directly defined in worktree.ts",
+      "diagnostics": [
+        "Traceback (most recent call last):",
+        "StopIteration"
+      ],
+      "outerExitCode": null,
+      "exitReason": "Only output text was retained by wrapper, no numeric process result serialized.",
+      "captureKind": "Manual diagnostic excerpt from first displayed tool response; not product raw output.",
+      "action": "rg inventory found worktree/crud.ts:413 through re-export barrel; selected actual implementation read. No product/Git execution or retry."
+    },
+    {
+      "kind": "Output size boundary",
+      "action": "Some multi-file reads exceeded display budget. Declared source coverage uses bounded re-reads for key anchors and final full FilesChangedCard-only read. No whole large-source coverage inferred from hashes."
+    }
+  ]
+}
