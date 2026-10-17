@@ -10,23 +10,27 @@ import { Script } from "node:vm";
 // The test never imports the environment creator or calls a real child/fs writer.
 const url = new URL("./run-isolated-node-smoke.mjs", import.meta.url);
 const source = readFileSync(url, "utf8");
-const imports = source.match(/^import[^;]+;$/gm) ?? [];
-assert.deepEqual(
-  imports,
-  [
-    'import { spawn } from "node:child_process";',
-    'import { lstatSync, mkdtempSync, rmSync } from "node:fs";',
-    'import { tmpdir } from "node:os";',
-    'import { join } from "node:path";',
-    'import { fileURLToPath } from "node:url";',
-    'import { createBunTestEnvironment } from "./bun-test-completion.mjs";',
-  ],
-  "Review any changed wrapper imports before executing this VM",
-);
-const body = source
-  .replace(/^import[^;]+;\n/gm, "")
-  .replaceAll("import.meta.url", JSON.stringify(url.href));
-const script = new Script(`(async () => {\n${body}\n})()`, { filename: url.pathname });
+function compileWrapper(rawSource) {
+  const source = rawSource.replace(/\r\n/g, "\n");
+  const imports = source.match(/^import[^;]+;$/gm) ?? [];
+  assert.deepEqual(
+    imports,
+    [
+      'import { spawn } from "node:child_process";',
+      'import { lstatSync, mkdtempSync, rmSync } from "node:fs";',
+      'import { tmpdir } from "node:os";',
+      'import { join } from "node:path";',
+      'import { fileURLToPath } from "node:url";',
+      'import { createBunTestEnvironment } from "./bun-test-completion.mjs";',
+    ],
+    "Review any changed wrapper imports before executing this VM",
+  );
+  const body = source
+    .replace(/^import[^;]+;\n/gm, "")
+    .replaceAll("import.meta.url", JSON.stringify(url.href));
+  return new Script(`(async () => {\n${body}\n})()`, { filename: url.pathname });
+}
+const script = compileWrapper(source);
 
 async function invoke(
   args,
@@ -37,6 +41,7 @@ async function invoke(
     close = { code: 0, signal: null },
     spawnError = null,
   } = {},
+  selectedScript = script,
 ) {
   const calls = [];
   const errors = [];
@@ -66,7 +71,7 @@ async function invoke(
       calls.push(["remove", ...args]);
     },
   };
-  await script.runInNewContext({
+  await selectedScript.runInNewContext({
     ...fakeFs,
     join,
     fileURLToPath,
@@ -100,6 +105,29 @@ function refused(value) {
     "refusal must precede all HOME/spawn/cleanup effects",
   );
 }
+
+test("actual LF and CRLF wrapper bytes execute the same guarded VM paths", async () => {
+  const lf = source.replace(/\r\n/g, "\n");
+  const crlf = lf.replace(/\n/g, "\r\n");
+  assert.notEqual(lf, crlf);
+  const snapshots = [];
+  for (const text of [lf, crlf]) {
+    const selected = compileWrapper(text);
+    const value = await invoke(["--test", "one.test.mjs"], {}, selected);
+    assert.equal(value.exitCode, undefined);
+    assert.deepEqual(value.errors, []);
+    assert.deepEqual(Array.from(value.calls.find(([kind]) => kind === "spawn")[2]), [
+      "--test",
+      "one.test.mjs",
+    ]);
+    snapshots.push(JSON.parse(JSON.stringify(value.calls)));
+    const bare = await invoke(["--test"], {}, selected);
+    refused(bare);
+    assert.equal(bare.calls.length, 0);
+    refused(await invoke(["--test", "--watch", "one.test.mjs"], {}, selected));
+  }
+  assert.deepEqual(snapshots[0], snapshots[1]);
+});
 
 test("bare/options-only test mode refuses before HOME and spawn", async () => {
   for (const args of [
