@@ -8,10 +8,11 @@ The release target is macOS, Windows, Linux Desktop and Web. Authorized native C
 has now executed; its passing and incomplete boundaries are recorded below.
 Cross-platform fixture tests alone are not native acceptance.
 
-The latest completed run, CI30, **FAILED** overall: three jobs pass and two fail.
-See the [CI30 actual record](#ci30--actual-five-job-results-and-pending-follow-ups).
-The subsequent Goal, attachment and advisory diagnostic fixes have finite local
-regressions; [CI31 is now running](#ci31--actual-dispatch-with-native-results-pending).
+The latest completed run, CI31, **FAILED** overall: Web, macOS and Linux pass;
+the Windows matrix fails a portable-path fixture and independent Windows NSIS
+times out during replacement. See the [CI31 actual results](#ci31--completed-five-job-results).
+The subsequent attachment ID and test-path repairs pass finite local checks;
+source-bound CI32 is pending. Installer timeout cause remains unknown.
 
 CI29 failed overall across five jobs; its original result remains unchanged. macOS, Linux
 and Web pass their stated audited scopes. The original Windows matrix accepts
@@ -3680,3 +3681,106 @@ baseline failures, not native restart acceptance; repair validation remains
 pending at this checkpoint. CI30 remains failed, and older native failures and
 the historical accidental-discovery effects remain unknown in their recorded
 scopes. This dispatch is not release readiness.
+
+
+## CI31 — completed five-job results
+
+[Run 39073589399](https://github.com/cjhyy/codeshell/actions/runs/39073589399),
+push attempt one at `309a4fd134acf46cd535fd602da1f8defc3ce466`, completed with
+three passing jobs and two failures. The preceding dispatch checkpoint remains
+historical. Root independently binds all five scope freezes and final run/jobs/
+artifact APIs in `ci31-Root-final-five-scope-result-20261018.json` under
+`/private/tmp/codeshell-real-operation-cycles-20261016`, SHA-256
+`a3acc491eb19df9f3147f7a8c9dfc1e68729f7017188817531d791f19e205d49`.
+
+| Job | Actual result and boundary |
+| --- | --- |
+| Web, job 117516056006 | Pass. Thirty-one operations: service worker 11, authentication 4, child work 8 and annotations 8. Six complete RPC arrays are independently cross-checked; this does not cover Desktop native behavior. |
+| macOS, job 117516056211 | Pass. Original 83 operations/12 normal Mains; separate Review drafts 3/1; separate Goal deletion/reload 1 in the existing third Preferences Main; separate DMG installation/replacement UI 13+13/two Mains. |
+| Linux, job 117516056146 | Pass. Original 83/12 plus separate drafts 3/1 and Goal 1 in an existing Preferences Main. Actual AppImage runtime Main 9691/launcher 9687, ten owned HTTP GETs, sandbox mode/identity, cache and private-HOME checks pass. |
+| Windows matrix, job 117516056271 | Fail at step 22. The original attachment pure shard has 20 passes/two failures/82 expectations; native operations and native Mains are both zero. Desktop build ran earlier; native/package materialization did not run. |
+| Independent Windows NSIS, job 117516056195 | Fail during replacement. Ten phases and first installed UI 13/one normal Main 7936 complete. Replacement UI, uninstall, cache cleanup and final OS-state checks are not reached. |
+
+On macOS and Linux the separately reported finite source shards pass Goal
+40/85 across three files, attachment retention 5/32 and original attachments
+22/85. Native matrix operation-evidence contracts have 45 tests. These are
+pure/owned-file checks and are not added to native operation counts. Recorded
+custody maps/parent edges are 27/284 on macOS and 22/245 on Linux with no recorded
+chronology contradictions. Their process precision and ownership boundaries
+remain those of the supplied platform snapshots.
+
+All admitted offline evidence readers ran once and passed. Linux's first fixed
+GET failed with EOF before any response/ZIP was saved; the original error is
+retained, followed by an explicitly reviewed recovery in a fresh namespace.
+Its source-whitespace SyntaxWarning and two later summary-projection TypeErrors
+are also retained separately; no reader or native rerun was used to hide them.
+The final Linux summary uses the already observed integer Composer count nine.
+Agents checked PNG chunk CRCs rather than viewing images. Root separately viewed
+two fixed Web images and six fixed native images: narrow settings, Review draft
+scope, reinstalled DMG settings, Linux 401 detail, wrapped generated path and
+Linux settings. Those views show no visible clipping in the supplied captures;
+this is not a visual review of every image or screen.
+
+The Windows pure failures are a POSIX-only suffix assertion and inconsistent
+canonical temporary-path representation. The test already used synchronous
+`realpathSync`; exact old cwd/short-name alias bytes are absent from the log.
+The source-level alias explanation is an inference. The first failing assertions
+are retained; neither a product attachment failure nor native Windows success
+is inferred from them.
+
+The independent NSIS receipt records replacement Setup 2792, parent 7888, birth
+`2026-10-17T22:16:10.6199300Z`. The actual journal order is watchdog failure after
+180,000 ms, SIGTERM request, exit `1/null`, then assertion `1 != 0`; exit one
+does not establish an installer crash before cleanup or signal delivery.
+The repaired advisory observer records 184 samples with `observerFault=false`.
+Its saved failure sample is existing query 180, watching, age 321.9683 ms, with
+one Setup path-role row. Earlier owned children 2796/7128 are remembered in the
+custody receipt while early role samples have rolled out. This does not prove
+that no old uninstaller started, OS-wide child absence, an atomic deadline
+snapshot, loaded-image identity, a window/dialog, or the timeout cause.
+
+Read-only source investigation identifies two reachable paths worth
+separating: the vendor's old-uninstaller `ExecWait` and a prompt-capable
+nonzero-result branch. Neither is established as the reached failing path.
+No production installer change, budget increase or weakened predicate follows
+from this evidence. The `customUnInit` hook still lacks full successful native
+uninstall validation. Earlier unknown GC/native failures remain unchanged.
+
+### CI32 source repairs and finite local checks
+
+Attachment commit `315fccffd507abd61d53f8e6e78fb1253e210c86` replaces the
+module-lifetime counter suffix with a UUID for both image and ordinary-file IDs.
+Two cold evaluations of the original service can generate the same ID for the
+same session/path, allowing a newer draft manifest entry to replace a sent
+reference. The image baseline is zero passes/two meaningful failures/seven
+expectations. Later physical-file checks were not reached in that baseline;
+no separate ordinary-file baseline failure is claimed. The final four-case
+cold-module shard passes 22 expectations, retention passes 5/32 and the original
+shard passes 22/85 in separate guarded processes. UUID uniqueness is
+probabilistic and this repair does not recover previously overwritten metadata
+or deleted bytes, or establish native restart/concurrent-write behavior.
+
+Test-only commit `c19e4e1ea352d2e2079e64f135350f66e8782f09` uses the same async
+canonical-path API as the service and checks full native-path equality with
+`join(cwd, relPath)`. All 22 test names/order and all 62 static expectation sites
+remain. Its guarded local shard passes 22/85; actual Windows validation awaits
+CI32. The earlier source-authoring assertion error is retained separately and
+is not a product regression or a test rerun.
+
+Workflow commit `6359e8404faa0bfd3ebfbbd0b0b1e80884e313a9` adds the separate
+four-case cold-module guarded command and its public log to both native upload
+phases. Native early/final public patterns are now 104/179; Web 28 and independent
+NSIS 59 remain. Existing required gates, budgets and failure handling remain.
+
+Fresh combined source `1b546eef9e3346e0b1b3903df14b283a81530629` passes all
+seventeen finite static commands: non-Desktop dependency build, fourteen
+workspace commands/sixteen TypeScript configs, renderer and mobile bundles.
+The verified static result has SHA-256
+`d27277d854cf4cab682ffea843bc64b589cb5274a9e124d47b299af07786d188` at
+`/private/tmp/codeshell-ci32-uuid-portable-static-root-20261018/verified-final-static-result.json`.
+Existing bundle warnings remain Web 773.23 kB, mobile 741.23 kB and renderer
+1,468.78 kB. At `6359e8404faa0bfd3ebfbbd0b0b1e80884e313a9`, a fresh combined
+original attachment shard also passes 22/85 with both the UUID product repair
+and portable fixture present. No full native Desktop build is inferred from
+these local static commands. CI32 has not yet been pushed at this checkpoint.
+CI31 remains failed and this record does not authorize or establish a release.
