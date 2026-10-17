@@ -738,8 +738,15 @@ test("only Electron argument binding changes the original three UI operation bod
   const start = source.indexOf('  diagnostics.phase("review-ui-operations");');
   const end = source.indexOf("\n} catch (error) {", start);
   assert.ok(start > 0 && end > start);
+  const measurementStart = source.indexOf("  report.rendererSeedObservation =", start);
+  const measurementEnd = source.indexOf("  assert.deepEqual(", measurementStart);
+  const measurement = measurementStart < 0 ? "" : source.slice(measurementStart, measurementEnd);
   const originalBody = source
     .slice(start, end)
+    .replace(
+      measurement || "no-metric-replacement",
+      "  report.rendererSeedEvents = await win.evaluate(() => window.__ownedReviewSeedEvents);\n",
+    )
     .replaceAll("app.evaluate((_electron, { id })", "app.evaluate(({ id })");
   assert.equal(
     createHash("sha256").update(originalBody).digest("hex"),
@@ -1169,4 +1176,235 @@ test("actual panel helper keeps strict tab, launcher and Review-body uniqueness 
   tree.add(dock.surface, tree.node({ "data-panel-id": "review", "data-panel-active": "true" }));
   await assert.rejects(actualReviewPanel(tree.win)());
   assert.deepEqual(tree.clicks, []);
+});
+
+function actualSeedProtocol(observerFirst, schedule = queueMicrotask) {
+  const { source, parsed } = electronEvaluationSource();
+  const window = new globalThis.EventTarget();
+  const drafts = { A: "old A", B: "old B" };
+  const activeBucketRef = { current: "A" };
+  const context = vm.createContext({
+    window,
+    CustomEvent: globalThis.CustomEvent,
+    queueMicrotask: schedule,
+    assert,
+    exports: {},
+    activeBucketRef,
+    resolveEngineSessionIdForBucket: (bucket) => `owned-${bucket.toLowerCase()}`,
+    appendReviewDraft: (bucket, text) => {
+      drafts[bucket] += "\n\n" + text;
+    },
+    setViewMode: () => {},
+    seedComposer: () => {},
+  });
+  const bridgeSource = readFileSync(
+    new URL("../src/renderer/chat/composerSeed.ts", import.meta.url),
+    "utf8",
+  );
+  vm.runInContext(
+    ts.transpileModule(bridgeSource, {
+      compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 },
+    }).outputText,
+    context,
+  );
+  const appSource = readFileSync(
+    new URL("../src/renderer/app/usePanelBuckets.ts", import.meta.url),
+    "utf8",
+  );
+  const app = ts.createSourceFile(
+    "app.ts",
+    appSource,
+    ts.ScriptTarget.Latest,
+    true,
+    ts.ScriptKind.TS,
+  );
+  const consumers = [],
+    scripts = [];
+  function findConsumer(node) {
+    if (ts.isCallExpression(node) && node.expression.getText(app) === "onComposerSeedRequest")
+      consumers.push(node.arguments[0]);
+    ts.forEachChild(node, findConsumer);
+  }
+  function findScript(node) {
+    if (ts.isCallExpression(node) && node.expression.getText(parsed) === "win.addInitScript")
+      scripts.push(node.arguments[0]);
+    ts.forEachChild(node, findScript);
+  }
+  findConsumer(app);
+  findScript(parsed);
+  assert.equal(consumers.length, 1);
+  assert.equal(scripts.length, 1);
+  const consumer = vm.runInContext(`(${consumers[0].getText(app)})`, context);
+  const script = scripts[0];
+  const declarations = parsed.statements.filter(
+    (node) =>
+      ts.isFunctionDeclaration(node) &&
+      ["installReviewSeedObserver", "reconcileReviewSeedObservation"].includes(node.name.text),
+  );
+  vm.runInContext(declarations.map((node) => node.getText(parsed)).join("\n"), context);
+  const observe = () => vm.runInContext(`(${script.getText(parsed)})()`, context);
+  if (observerFirst) observe();
+  context.exports.onComposerSeedRequest(consumer);
+  if (!observerFirst) observe();
+  const calls = [
+    { id: 1, sessionId: "owned-a", response: { prompt: "staged A" } },
+    { id: 3, sessionId: "owned-a", response: { prompt: "unstaged A" } },
+    { id: 5, sessionId: "owned-b", response: { prompt: "staged B" } },
+    { id: 4, sessionId: "owned-a", response: { prompt: "staged A" } },
+  ];
+  vm.runInContext(
+    `var [first,currentScope,currentSession,oldSession]=${JSON.stringify(calls)}; var report={};`,
+    context,
+  );
+  context.win = { evaluate: async (callback) => callback() };
+  const firstMetric = source.indexOf("  report.rendererSeedObservation =");
+  const start = firstMetric < 0 ? source.indexOf("  report.rendererSeedEvents =") : firstMetric;
+  const end = source.indexOf("  assert.equal(operations.length, 3);", start);
+  assert.ok(start > 0 && end > start);
+  return {
+    window,
+    context,
+    drafts,
+    activeBucketRef,
+    calls,
+    publish: (index) =>
+      context.exports.requestComposerSeed({
+        source: "code-review",
+        sessionId: calls[index].sessionId,
+        text: calls[index].response.prompt,
+      }),
+    metrics: () =>
+      vm.runInContext(`(async()=>{${source.slice(start, end)};return report;})()`, context),
+  };
+}
+
+for (const observerFirst of [true, false]) {
+  test(`actual source seed metrics distinguish App-rejected late A with observer ${observerFirst ? "before" : "after"} consumer`, async () => {
+    const h = actualSeedProtocol(observerFirst);
+    assert.equal(h.publish(0), true);
+    assert.equal(h.publish(1), true);
+    h.activeBucketRef.current = "B";
+    const before = { ...h.drafts };
+    assert.equal(h.publish(3), false, "actual App bucket guard rejects A while B is active");
+    assert.deepEqual(h.drafts, before, "rejected event cannot append to either draft");
+    assert.equal(h.publish(2), true);
+    await tick();
+    const report = await h.metrics();
+    assert.equal(report.rendererSeedEvents.length, 3);
+    assert.equal(report.rendererSeedAttempts.length, 4);
+    assert.deepEqual(
+      Array.from(report.rendererSeedAttempts, (row) => row.accepted),
+      [true, true, false, true],
+    );
+  });
+}
+
+test("actual seed metrics accept exactly three acknowledgements when no late attempt is dispatched", async () => {
+  const h = actualSeedProtocol(true);
+  assert.equal(h.publish(0), true);
+  assert.equal(h.publish(1), true);
+  h.activeBucketRef.current = "B";
+  assert.equal(h.publish(2), true);
+  await tick();
+  const report = await h.metrics();
+  assert.equal(report.rendererSeedEvents.length, 3);
+  assert.equal(report.rendererSeedAttempts.length, 3);
+  assert.equal(report.rendererSeedObservation.pending, 0);
+});
+
+test("actual seed metrics fail closed for every other rejection, duplicate or extra acknowledgement", async () => {
+  for (const extra of [
+    "wrong-text",
+    "foreign-session",
+    "plugin",
+    "duplicate-rejection",
+    "extra-acceptance",
+  ]) {
+    const h = actualSeedProtocol(true);
+    h.publish(0);
+    h.publish(1);
+    if (extra === "extra-acceptance") h.publish(0);
+    h.activeBucketRef.current = "B";
+    if (extra === "duplicate-rejection") {
+      h.publish(3);
+      h.publish(3);
+    } else if (extra !== "extra-acceptance") {
+      h.window.dispatchEvent(
+        new globalThis.CustomEvent("codeshell:composer-seed-request", {
+          cancelable: true,
+          detail:
+            extra === "plugin"
+              ? { source: "plugin-starter-prompt", text: "extra plugin" }
+              : {
+                  source: "code-review",
+                  sessionId: extra === "foreign-session" ? "foreign" : "owned-a",
+                  text: "unexpected",
+                },
+        }),
+      );
+    }
+    h.publish(2);
+    await tick();
+    await assert.rejects(h.metrics(), undefined, extra);
+    assert.ok(h.window.__ownedReviewSeedObservation.attempts.length >= 4);
+  }
+});
+
+test("seed acknowledgement remains pending until the dispatch microtask and copies detail synchronously", async () => {
+  const tasks = [],
+    h = actualSeedProtocol(true, (callback) => tasks.push(callback));
+  const detail = { source: "code-review", sessionId: "owned-a", text: "staged A" };
+  h.window.dispatchEvent(
+    new globalThis.CustomEvent("codeshell:composer-seed-request", { detail, cancelable: true }),
+  );
+  detail.text = "mutated after dispatch";
+  h.publish(1);
+  h.activeBucketRef.current = "B";
+  h.publish(2);
+  const state = h.window.__ownedReviewSeedObservation;
+  assert.equal(state.pending, 3);
+  assert.equal(state.attempts[0].text, "staged A");
+  assert.equal(state.attempts[0].accepted, null);
+  await assert.rejects(h.metrics(), /3 !== 0/);
+  tasks.splice(0).forEach((callback) => callback());
+  const report = await h.metrics();
+  assert.equal(report.rendererSeedObservation.pending, 0);
+  assert.ok(report.rendererSeedAttempts.every((row) => row.accepted));
+});
+
+test("bounded seed observation refuses overflow, invalid events and failed microtask scheduling", async () => {
+  const tasks = [],
+    h = actualSeedProtocol(true, (callback) => tasks.push(callback));
+  for (let i = 0; i < 9; i++) h.publish(0);
+  const state = h.window.__ownedReviewSeedObservation;
+  assert.equal(state.observed, 9);
+  assert.equal(state.attempts.length, 8);
+  assert.equal(state.pending, 8);
+  assert.equal(state.overflow, true);
+  tasks.splice(0).forEach((callback) => callback());
+  assert.equal(state.pending, 0);
+  await assert.rejects(h.metrics());
+  const broken = actualSeedProtocol(true, () => {
+    throw Error("owned schedule failure");
+  });
+  broken.publish(0);
+  assert.equal(broken.window.__ownedReviewSeedObservation.pending, 0);
+  assert.equal(broken.window.__ownedReviewSeedObservation.failures.length, 1);
+  await assert.rejects(broken.metrics());
+  for (const event of [
+    new globalThis.CustomEvent("codeshell:composer-seed-request", {
+      detail: null,
+      cancelable: true,
+    }),
+    new globalThis.CustomEvent("codeshell:composer-seed-request", {
+      detail: { source: "code-review", sessionId: "owned-a", text: "staged A" },
+    }),
+  ]) {
+    const invalid = actualSeedProtocol(true);
+    invalid.window.dispatchEvent(event);
+    await tick();
+    assert.equal(invalid.window.__ownedReviewSeedObservation.pending, 0);
+    assert.ok(invalid.window.__ownedReviewSeedObservation.failures.length);
+    await assert.rejects(invalid.metrics());
+  }
 });

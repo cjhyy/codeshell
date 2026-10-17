@@ -140,6 +140,100 @@ async function openSession(session) {
   await waitForSessionCatalogSelection(win, session.project.id, session.id);
   await composer().waitFor();
 }
+function installReviewSeedObserver() {
+  const state = (window.__ownedReviewSeedObservation = {
+    schemaVersion: 1,
+    maxAttempts: 8,
+    observed: 0,
+    pending: 0,
+    attempts: [],
+    failures: [],
+    overflow: false,
+  });
+  const fail = (message) => {
+    if (state.failures.length < 8) state.failures.push(message);
+    else state.overflow = true;
+  };
+  window.addEventListener("codeshell:composer-seed-request", (event) => {
+    state.observed++;
+    if (state.attempts.length >= state.maxAttempts) {
+      state.overflow = true;
+      fail("Composer seed attempt cap exceeded");
+      return;
+    }
+    let row,
+      pending = false;
+    try {
+      const { source, sessionId, text } = event.detail ?? {};
+      if (
+        typeof source !== "string" ||
+        source.length > 64 ||
+        (sessionId !== undefined && (typeof sessionId !== "string" || sessionId.length > 1024)) ||
+        typeof text !== "string" ||
+        !text.trim() ||
+        text.length > 32768
+      ) {
+        fail("Malformed composer seed attempt");
+        return;
+      }
+      // Copy metadata synchronously; only the acknowledgement is read later.
+      row = { source, sessionId: sessionId ?? null, text, accepted: null };
+      state.attempts.push(row);
+      if (!event.cancelable) fail("Composer seed event is not cancelable");
+      state.pending++;
+      pending = true;
+      queueMicrotask(() => {
+        try {
+          row.accepted = event.defaultPrevented === true;
+        } catch {
+          fail("Composer seed acknowledgement unavailable");
+        } finally {
+          pending = false;
+          state.pending--;
+        }
+      });
+    } catch {
+      if (pending) state.pending--;
+      fail("Composer seed observation failed");
+    }
+  });
+}
+function reconcileReviewSeedObservation(state, calls, lateCall) {
+  assert.equal(state.schemaVersion, 1);
+  assert.equal(state.maxAttempts, 8);
+  assert.equal(state.pending, 0);
+  assert.equal(state.overflow, false);
+  assert.deepEqual(state.failures, []);
+  assert.equal(state.observed, state.attempts.length);
+  assert.ok(state.attempts.length >= 3 && state.attempts.length <= 4);
+  const metadata = ({ source, sessionId, text }) => ({ source, sessionId, text });
+  const expected = (call) => ({
+    source: "code-review",
+    sessionId: call.sessionId,
+    text: call.response.prompt,
+  });
+  assert.deepEqual(
+    calls.map((call) => call.id),
+    [1, 3, 5],
+  );
+  assert.equal(lateCall.id, 4);
+  assert.equal(lateCall.sessionId, calls[0].sessionId);
+  for (const row of state.attempts) {
+    assert.deepEqual(Object.keys(row).sort(), ["accepted", "sessionId", "source", "text"]);
+    assert.equal(typeof row.accepted, "boolean");
+  }
+  const accepted = state.attempts.filter((row) => row.accepted).map(metadata);
+  assert.deepEqual(accepted, calls.map(expected));
+  const rejected = state.attempts.filter((row) => !row.accepted);
+  assert.ok(rejected.length <= 1);
+  if (rejected.length) {
+    assert.deepEqual(metadata(rejected[0]), expected(lateCall));
+    assert.ok(state.attempts.indexOf(rejected[0]) >= 2);
+  }
+  // Events carry no Main request ID. The optional rejection is cross-bound by
+  // tuple/order, the real five-call ledger and the complete A/B draft assertions.
+  return accepted;
+}
 async function reviewPanel() {
   const toggle = win.locator('[data-panel-action="toggle"]:visible');
   if ((await toggle.getAttribute("aria-pressed")) !== "true") await toggle.click();
@@ -398,13 +492,7 @@ state.probing=false;
   diagnostics.phase("review-find-renderer");
   win = await findCodeShellWindow(app);
   win.setDefaultTimeout(10000);
-  await win.addInitScript(() => {
-    window.__ownedReviewSeedEvents = [];
-    window.addEventListener("codeshell:composer-seed-request", (event) => {
-      const { source, sessionId, text } = event.detail;
-      window.__ownedReviewSeedEvents.push({ source, sessionId, text });
-    });
-  });
+  await win.addInitScript(installReviewSeedObserver);
   rendererErrors.push(captureRendererErrors(win));
   await win.setViewportSize({ width: 1440, height: 960 });
   for (const session of sessions) {
@@ -578,7 +666,13 @@ state.probing=false;
   });
   diagnostics.caseCompleted(operations.at(-1).action, operations.length);
   await win.screenshot({ path: join(evidence, "review-draft-session-fence.png") });
-  report.rendererSeedEvents = await win.evaluate(() => window.__ownedReviewSeedEvents);
+  report.rendererSeedObservation = await win.evaluate(() => window.__ownedReviewSeedObservation);
+  report.rendererSeedAttempts = report.rendererSeedObservation.attempts;
+  report.rendererSeedEvents = reconcileReviewSeedObservation(
+    report.rendererSeedObservation,
+    [first, currentScope, currentSession],
+    oldSession,
+  );
   assert.deepEqual(
     report.rendererSeedEvents,
     [first, currentScope, currentSession].map((call) => ({
