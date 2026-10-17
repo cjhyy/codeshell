@@ -14,10 +14,10 @@ import { join, resolve } from "node:path";
 import { TURN_DIFF_LIMITS, TurnDiffTracker } from "./turn-diff.js";
 
 const directories: string[] = [];
-function fixture() {
+function fixture(filename = "a.ts") {
   const cwd = realpathSync.native(mkdtempSync(join(tmpdir(), "turn-diff-")));
   directories.push(cwd);
-  const path = join(cwd, "a.ts");
+  const path = join(cwd, filename);
   const tracker = new TurnDiffTracker({ cwd, turnId: "turn-1" });
   return { cwd, path, tracker };
 }
@@ -79,14 +79,14 @@ function update(
 
 describe("TurnDiffTracker", () => {
   it("replaces repeated operations with one original-to-final full-file diff", () => {
-    const { path, tracker } = fixture();
+    const { path, tracker } = fixture("aB.ts");
     writeFileSync(path, "A\n");
     update(tracker, path, "one", "B\n");
     const result = update(tracker, path, "two", "C\n");
     expect(result.complete).toBe(true);
     expect(result.files).toHaveLength(1);
     expect(result.files[0].diff).toContain("-A\n+C\n");
-    expect(result.files[0].diff).not.toContain("B");
+    expect(result.files[0].diff).not.toMatch(/^[ +-]B$/m);
     expect(result.toolCallIds).toEqual(["one", "two"]);
     expect(applyDiff("A\n", result.files[0].diff)).toBe("C\n");
   });
