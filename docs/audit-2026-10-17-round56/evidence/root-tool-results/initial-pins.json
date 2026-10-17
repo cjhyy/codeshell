@@ -1,0 +1,20 @@
+{
+  "atUTC": "2026-10-17T18:44:19.681757+00:00",
+  "files": [
+    {
+      "path": "packages/core/src/context/tool-result-storage.ts",
+      "bytes": 19859,
+      "lines": 493,
+      "sha256": "a5bcffa03853d7510775c7db0bef0beb4e89d2272cb0c9954ffcff3a8d3da1db",
+      "beforeBodyOrLineNavigation": true
+    },
+    {
+      "path": "packages/core/src/context/tool-output-budget.ts",
+      "bytes": 6990,
+      "lines": 173,
+      "sha256": "d1c25d1d8329d37b050fdb9f3fd01508da83c1804f37085a845d65dcdd2e4171",
+      "beforeBodyOrLineNavigation": true
+    }
+  ],
+  "productExecution": 0
+}

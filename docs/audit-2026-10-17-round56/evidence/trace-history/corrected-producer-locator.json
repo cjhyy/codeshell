@@ -1,0 +1,14 @@
+{
+  "command": [
+    "rg",
+    "-l",
+    "randomUUID|startedAt: Date.now|class ModelTrace",
+    "packages/core/src/model-traces",
+    "--glob",
+    "*.ts"
+  ],
+  "exitCode": 0,
+  "stdout": "packages/core/src/model-traces/native-process.ts\npackages/core/src/model-traces/tool-events.test.ts\npackages/core/src/model-traces/store.ts\npackages/core/src/model-traces/native-frames.test.ts\npackages/core/src/model-traces/context.ts\npackages/core/src/model-traces/store.test.ts\npackages/core/src/model-traces/capture.test.ts\n",
+  "stderr": "",
+  "at": "2026-10-17T18:45:41.826210+00:00"
+}

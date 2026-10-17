@@ -1,0 +1,34 @@
+{
+  "atUTC": "2026-10-17T18:49:12.667060+00:00",
+  "sourcePins": [
+    {
+      "path": "packages/core/src/context/tool-result-storage.ts",
+      "sha256": "a5bcffa03853d7510775c7db0bef0beb4e89d2272cb0c9954ffcff3a8d3da1db",
+      "same": true
+    },
+    {
+      "path": "packages/core/src/context/tool-output-budget.ts",
+      "sha256": "d1c25d1d8329d37b050fdb9f3fd01508da83c1804f37085a845d65dcdd2e4171",
+      "same": true
+    },
+    {
+      "path": "packages/core/src/context/manager.ts",
+      "sha256": "6af0bc2a40a390351576ef3742a589a8093aa5c9f47da9248bfeca6ad0f1885c",
+      "same": true
+    },
+    {
+      "path": "tests/tool-result-storage.test.ts",
+      "sha256": "981b173c003d48477547c69967d4a67f5f2cf376bbac98f89de1d81445419607",
+      "same": true
+    },
+    {
+      "path": "packages/core/src/context/tool-output-budget.test.ts",
+      "sha256": "3ca5e4ce83fbcc8e4a2d86b17ab46d16b09d36505abed8eb89228c4f95a44b5c",
+      "same": true
+    }
+  ],
+  "historyFiles": 5584,
+  "changed": [],
+  "missing": [],
+  "productExecution": 0
+}

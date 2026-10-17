@@ -1,0 +1,110 @@
+{
+  "createdAt": "2026-10-17T18:48:49.470230+00:00",
+  "sourceAndInstructionPins": [
+    {
+      "path": "CODESHELL.md",
+      "bytes": 17639,
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "matchesInitial": true
+    },
+    {
+      "path": "AGENTS.md",
+      "bytes": 206,
+      "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "matchesInitial": true
+    },
+    {
+      "path": "packages/core/src/context/image-history-window.ts",
+      "bytes": 3033,
+      "sha256": "d4465094dfaf9f339c616feed2b6e2dd084b557f9b29e5d9b1c7b04a463faa71",
+      "matchesInitial": true
+    },
+    {
+      "path": "packages/core/src/context/image-history-window.test.ts",
+      "bytes": 4760,
+      "sha256": "606acebf485d9b3117143b532fe5061ce90fe25ea07961d06b12de874796385a",
+      "matchesInitial": true
+    },
+    {
+      "path": "packages/core/src/context/manager.ts",
+      "bytes": 34508,
+      "sha256": "6af0bc2a40a390351576ef3742a589a8093aa5c9f47da9248bfeca6ad0f1885c",
+      "matchesInitial": true
+    },
+    {
+      "path": "packages/core/src/engine/turn-loop.ts",
+      "bytes": 108774,
+      "sha256": "9ccbcd28cdb100d7d879994c3839d3b53c46af01589e0475d6f75f1d7e750413",
+      "matchesInitial": true
+    },
+    {
+      "path": "packages/core/src/context/compaction.ts",
+      "bytes": 43905,
+      "sha256": "981daf03db583c466b7c190efdd9336167978e193690096cec8c9e9c8ec7d81e",
+      "matchesInitial": true
+    }
+  ],
+  "selectedHistoricalMetadata": [
+    {
+      "path": "docs/audit-2026-10-17-round21/evidence/root-source-manifest.json",
+      "bytes": 5181,
+      "sha256": "b47d0fdb20539eaec3a263cf477d1a36c8440e7f31451d3af0590c7d8fefa18d",
+      "pinTiming": "Canonical metadata hashed when selected before current source body",
+      "endingSha256": "b47d0fdb20539eaec3a263cf477d1a36c8440e7f31451d3af0590c7d8fefa18d",
+      "matchesSelectedPin": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round4/evidence/context-source-manifest.json",
+      "bytes": 5207,
+      "sha256": "a58f2101e51d4d5ca0523e4fd3fece4270f290626b64e62c6759382b06bbdad6",
+      "pinTiming": "Canonical metadata hashed when selected before current source body",
+      "endingSha256": "a58f2101e51d4d5ca0523e4fd3fece4270f290626b64e62c6759382b06bbdad6",
+      "matchesSelectedPin": true
+    },
+    {
+      "path": "docs/refactor/_archive/view-image-vs-codex-review.md",
+      "bytes": 39768,
+      "sha256": "42c8f884357a6a97714b0e5da7504428b2d6e1f5823b91f7863d2e7a16f83d2b",
+      "pinTiming": "Original archive finite window hashed before line presentation",
+      "endingSha256": "42c8f884357a6a97714b0e5da7504428b2d6e1f5823b91f7863d2e7a16f83d2b",
+      "matchesSelectedPin": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round4/context.md",
+      "bytes": 9369,
+      "sha256": "54c21c92ef3478959c96061834f5bbda908c62b0ca7c3191024bf7d9396655c7",
+      "pinTiming": "Late own metadata hash after rg snippets; shared earlier batch inventory provenance retained, not backdated",
+      "matchesSharedInventory": true,
+      "endingSha256": "54c21c92ef3478959c96061834f5bbda908c62b0ca7c3191024bf7d9396655c7",
+      "matchesSelectedPin": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round4/candidates-and-skips.md",
+      "bytes": 2415,
+      "sha256": "0c71078f68aeccf969ada205650103c65c03965ba4ca43a7b0d807b2cd981ccc",
+      "pinTiming": "Late own metadata hash after rg snippets; shared earlier batch inventory provenance retained, not backdated",
+      "matchesSharedInventory": true,
+      "endingSha256": "0c71078f68aeccf969ada205650103c65c03965ba4ca43a7b0d807b2cd981ccc",
+      "matchesSelectedPin": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round21/coverage.md",
+      "bytes": 3160,
+      "sha256": "e8b2949930778f27b4d55cf0a1dcccd8afd2776ae12fb05f148107a344539f9c",
+      "pinTiming": "Late own metadata hash after rg snippets; shared earlier batch inventory provenance retained, not backdated",
+      "matchesSharedInventory": true,
+      "endingSha256": "e8b2949930778f27b4d55cf0a1dcccd8afd2776ae12fb05f148107a344539f9c",
+      "matchesSelectedPin": true
+    }
+  ],
+  "sharedBatch": {
+    "path": "/tmp/codeshell-audit-round131-tool-results/history-batch.json",
+    "bytes": 1362192,
+    "sha256": "03e45f55e814fedcbeed4c19e47f75c1263a24c23af220a5c398463585b1880c",
+    "matchesInitial": true
+  },
+  "allSelectedBytesUnchanged": true,
+  "whole5584HistoryIndependentlyRehashed": false,
+  "sourceBodyReadForEnding": false,
+  "gitExecuted": false
+}

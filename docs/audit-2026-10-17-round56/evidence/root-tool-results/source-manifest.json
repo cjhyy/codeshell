@@ -1,0 +1,220 @@
+{
+  "files": [
+    {
+      "path": "packages/core/src/context/tool-result-storage.ts",
+      "bytes": 19859,
+      "lines": 493,
+      "sha256": "a5bcffa03853d7510775c7db0bef0beb4e89d2272cb0c9954ffcff3a8d3da1db",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          57,
+          109
+        ],
+        [
+          187,
+          218
+        ],
+        [
+          255,
+          270
+        ],
+        [
+          287,
+          306
+        ],
+        [
+          330,
+          437
+        ],
+        [
+          440,
+          475
+        ]
+      ],
+      "bodyDisplayedLineRanges": [
+        [
+          1,
+          493
+        ]
+      ],
+      "semanticLines": 265,
+      "bodyDisplayedLines": 493,
+      "beforeBodyOrLineNavigation": true,
+      "scope": "Ordinary text-slot/state/replacement projection and direct manager call boundary; filesystem custody, private file I/O, atomicity, security and callback-failure mechanisms not certified. Test rows are declarations only.",
+      "overlap": "R4 two primary files same-SHA full; R21 helper full and storage selected. Current targeted read retains overlap, not first/unread or unique coverage."
+    },
+    {
+      "path": "packages/core/src/context/tool-output-budget.ts",
+      "bytes": 6990,
+      "lines": 173,
+      "sha256": "d1c25d1d8329d37b050fdb9f3fd01508da83c1804f37085a845d65dcdd2e4171",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          14,
+          46
+        ],
+        [
+          64,
+          106
+        ]
+      ],
+      "bodyDisplayedLineRanges": [
+        [
+          1,
+          106
+        ],
+        [
+          128,
+          173
+        ]
+      ],
+      "semanticLines": 76,
+      "bodyDisplayedLines": 152,
+      "beforeBodyOrLineNavigation": true,
+      "scope": "Ordinary text-slot/state/replacement projection and direct manager call boundary; filesystem custody, private file I/O, atomicity, security and callback-failure mechanisms not certified. Test rows are declarations only.",
+      "overlap": "R4 two primary files same-SHA full; R21 helper full and storage selected. Current targeted read retains overlap, not first/unread or unique coverage."
+    },
+    {
+      "path": "packages/core/src/context/manager.ts",
+      "bytes": 34508,
+      "lines": 867,
+      "sha256": "6af0bc2a40a390351576ef3742a589a8093aa5c9f47da9248bfeca6ad0f1885c",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          385,
+          385
+        ],
+        [
+          780,
+          794
+        ]
+      ],
+      "bodyDisplayedLineRanges": [
+        [
+          375,
+          391
+        ],
+        [
+          775,
+          801
+        ]
+      ],
+      "semanticLines": 16,
+      "bodyDisplayedLines": 44,
+      "beforeBodyOrLineNavigation": true,
+      "scope": "Ordinary text-slot/state/replacement projection and direct manager call boundary; filesystem custody, private file I/O, atomicity, security and callback-failure mechanisms not certified. Test rows are declarations only.",
+      "overlap": "R4 two primary files same-SHA full; R21 helper full and storage selected. Current targeted read retains overlap, not first/unread or unique coverage."
+    },
+    {
+      "path": "tests/tool-result-storage.test.ts",
+      "bytes": 19226,
+      "lines": 477,
+      "sha256": "981b173c003d48477547c69967d4a67f5f2cf376bbac98f89de1d81445419607",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          98,
+          117
+        ],
+        [
+          266,
+          282
+        ]
+      ],
+      "bodyDisplayedLineRanges": [
+        [
+          98,
+          117
+        ],
+        [
+          266,
+          282
+        ]
+      ],
+      "semanticLines": 37,
+      "bodyDisplayedLines": 37,
+      "beforeBodyOrLineNavigation": true,
+      "scope": "Ordinary text-slot/state/replacement projection and direct manager call boundary; filesystem custody, private file I/O, atomicity, security and callback-failure mechanisms not certified. Test rows are declarations only.",
+      "overlap": "R4 two primary files same-SHA full; R21 helper full and storage selected. Current targeted read retains overlap, not first/unread or unique coverage."
+    },
+    {
+      "path": "packages/core/src/context/tool-output-budget.test.ts",
+      "bytes": 6024,
+      "lines": 134,
+      "sha256": "3ca5e4ce83fbcc8e4a2d86b17ab46d16b09d36505abed8eb89228c4f95a44b5c",
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          48,
+          91
+        ],
+        [
+          106,
+          118
+        ]
+      ],
+      "bodyDisplayedLineRanges": [
+        [
+          48,
+          91
+        ],
+        [
+          106,
+          118
+        ]
+      ],
+      "semanticLines": 57,
+      "bodyDisplayedLines": 57,
+      "beforeBodyOrLineNavigation": true,
+      "scope": "Ordinary text-slot/state/replacement projection and direct manager call boundary; filesystem custody, private file I/O, atomicity, security and callback-failure mechanisms not certified. Test rows are declarations only.",
+      "overlap": "R4 two primary files same-SHA full; R21 helper full and storage selected. Current targeted read retains overlap, not first/unread or unique coverage."
+    }
+  ],
+  "historicalMetadataSelected": [
+    {
+      "path": "docs/audit-2026-10-17-round4/evidence/context-source-manifest.json",
+      "bytes": 5207,
+      "sha256": "a58f2101e51d4d5ca0523e4fd3fece4270f290626b64e62c6759382b06bbdad6",
+      "coverage": "selected-historical-metadata",
+      "firstSemanticReadSha256": null,
+      "note": "Original row objects or complete original MD actually read; SHA captured after display, not invented pre-read pin."
+    },
+    {
+      "path": "docs/audit-2026-10-17-round21/evidence/toolbudget-source-manifest.json",
+      "bytes": 5655,
+      "sha256": "f8cf67f58f1f4e74a3fac46f295d10042ea5519615e777e57d86fe98f88a3d5a",
+      "coverage": "selected-historical-metadata",
+      "firstSemanticReadSha256": null,
+      "note": "Original row objects or complete original MD actually read; SHA captured after display, not invented pre-read pin."
+    },
+    {
+      "path": "docs/audit-2026-10-17-round4/context.md",
+      "bytes": 9369,
+      "sha256": "54c21c92ef3478959c96061834f5bbda908c62b0ca7c3191024bf7d9396655c7",
+      "coverage": "selected-historical-metadata",
+      "firstSemanticReadSha256": null,
+      "note": "Original row objects or complete original MD actually read; SHA captured after display, not invented pre-read pin."
+    },
+    {
+      "path": "docs/audit-2026-10-17-round21/tool-budget.md",
+      "bytes": 6280,
+      "sha256": "ca051366f5c311fc9bdbf9230fb160b9146f54a2b01804e901ccf8ead22d6124",
+      "coverage": "selected-historical-metadata",
+      "firstSemanticReadSha256": null,
+      "note": "Original row objects or complete original MD actually read; SHA captured after display, not invented pre-read pin."
+    }
+  ],
+  "totals": {
+    "fullFiles": 0,
+    "selectedFiles": 5,
+    "productSemanticLines": 357,
+    "testDeclarationLines": 94,
+    "bodyDisplayedLines": 783
+  },
+  "navigationNote": "rg-n test titles and manager import/call locators navigation only, not whole-source reading. Storage493 displayed but only ordinary selected semantics counted; helper128–173 truncation/Unicode adjacency not audited as new route.",
+  "rootReportedBaseline": "ae7bd786f133f9c42d212d41110b54eb18c4a9e4",
+  "productExecution": 0
+}

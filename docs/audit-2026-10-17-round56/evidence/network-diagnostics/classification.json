@@ -1,0 +1,34 @@
+{
+  "formal": [],
+  "candidates": [],
+  "newRelated": [],
+  "counts": {
+    "formal": 0,
+    "candidate": 0,
+    "newRelated": 0
+  },
+  "decision": "Finite normal network metadata/limit/actual BrowserInspect projection negative, not full diagnostics assurance.",
+  "counterevidence": [
+    {
+      "hypothesis": "Network results must advertise complete history/truncation marker",
+      "decision": "Not established. Contracts data is unknown, README35–36/43–44 describes recent capped recordings; no complete network-history or network truncated-flag requirement found in read contract. DOM/performance flags not generalized into network requirement."
+    },
+    {
+      "hypothesis": "Tool and collector limits disagree or lose max_entries",
+      "decision": "Core tool maps max_entries→maxEntries, clamps1–100/default50; collector same finite/floor/cap100/default50, stores at most100 and slices recent tail."
+    },
+    {
+      "hypothesis": "Projection drops ordinary network fields downstream",
+      "decision": "Collector response emits time/url/method/type/status, failed request emits time/url/method/error capped300; success data passed unchanged through driver and serialized by tool. URL projection bounded; no headers/bodies collected. No total-byte claim for every possible external SDK string or fabricated event object."
+    }
+  ],
+  "oldCauses": "DIAG-R10-01 DOM eager child enumeration and CDP-R3-03 hidden subtree pruning are prior, not new/related counted, not replayed. R33 already same-version cap/recent ordinary review; overlap retained.",
+  "excluded": [
+    "actual page/CDP/browser/native/adapter/helper execution",
+    "real request/header/body/user data",
+    "DOM/performance source semantics",
+    "authority/identity/permissions/target mechanism",
+    "arbitrary malformed SDK DTO counterexamples",
+    "old runtime pass borrowed as current verification"
+  ]
+}

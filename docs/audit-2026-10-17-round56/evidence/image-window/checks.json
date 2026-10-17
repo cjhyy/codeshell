@@ -1,0 +1,61 @@
+{
+  "createdAt": "2026-10-17T18:48:49.473192+00:00",
+  "files": [],
+  "sourceAndInstructionPins": 7,
+  "selectedMetadataPins": 6,
+  "allSelectedBytesUnchanged": true,
+  "localLinks": [
+    {
+      "target": "canonical-history.json",
+      "exists": true,
+      "insidePacket": true
+    },
+    {
+      "target": "archive-window.json",
+      "exists": true,
+      "insidePacket": true
+    },
+    {
+      "target": "source-manifest.json",
+      "exists": true,
+      "insidePacket": true
+    },
+    {
+      "target": "history-projection.json",
+      "exists": true,
+      "insidePacket": true
+    },
+    {
+      "target": "shared-history-reference.json",
+      "exists": true,
+      "insidePacket": true
+    },
+    {
+      "target": "ending-checks.json",
+      "exists": true,
+      "insidePacket": true
+    },
+    {
+      "target": "diagnostics.json",
+      "exists": true,
+      "insidePacket": true
+    },
+    {
+      "target": "classification.json",
+      "exists": true,
+      "insidePacket": true
+    },
+    {
+      "target": "validation.json",
+      "exists": true,
+      "insidePacket": true
+    }
+  ],
+  "allValid": true,
+  "productSemanticLineCount": 265,
+  "testDeclarationLineCount": 99,
+  "displayedLineCount": 554,
+  "classification": "0/0/0",
+  "productExecutions": 0,
+  "Git": 0
+}

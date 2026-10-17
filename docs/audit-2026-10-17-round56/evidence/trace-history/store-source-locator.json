@@ -1,0 +1,11 @@
+{
+  "command": [
+    "rg",
+    "-l",
+    "(?:class|interface) ModelTraceStore",
+    "packages/core/src"
+  ],
+  "exitCode": 0,
+  "stdout": "packages/core/src/model-traces/store.ts\n",
+  "stderr": ""
+}

@@ -1,0 +1,15 @@
+{
+  "createdAt": "2026-10-17T18:48:49.472153+00:00",
+  "productExecutions": 0,
+  "helperExecutions": 0,
+  "importExecutions": 0,
+  "testExecutions": 0,
+  "fixtureExecutions": 0,
+  "modelSDKAccountSessionImageFileTimerNativeNetworkGitExecutions": 0,
+  "authorSharedBatchMethodExecuted": false,
+  "historyStrategy": "Reuse Root frozen shared batch, no duplicate millionscalar history scan",
+  "productSemanticLineCount": 265,
+  "testDeclarationLineCount": 99,
+  "displayedLineCount": 554,
+  "guardedTestPlan": "No new ordinary defect established; no new runtime plan proposed."
+}

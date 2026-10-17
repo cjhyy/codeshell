@@ -1,0 +1,23 @@
+{
+  "counts": {
+    "formal": 0,
+    "candidate": 0,
+    "newRelated": 0
+  },
+  "formal": [],
+  "candidates": [],
+  "newRelated": [],
+  "result": "finite negative for normal metadata list sorting/cursor/projection only",
+  "negativeEvidence": [
+    "Actual withModelTrace record has normal version1,id,startedAt,running metadata; persist hands it to store.write, which writes summary(safeRecord). No arbitrary bad JSON/DTO used.",
+    "Ordering startedAt descending/id descending and strict after-cursor predicate use the same comparison; nextCursor describes last sliced item only when more candidates remain.",
+    "Ordinary exact fields, inclusive since/until, normalized multiword search filter before list slice; payload projection omits bodies/attempt arrays as declared.",
+    "Actual UI first call uses limit100, then sends returned nextCursor and consumes page.items/nextCursor; test119–139 is a declaration, not a pass."
+  ],
+  "limits": [
+    "Static only, no real user traces/files/config, account, auth/permissions/identity mechanisms, native, model/SDK, connection, network, clock experiment, React/DOM, helper, import, fixture or test execution.",
+    "No snapshot consistency under arbitrary mutations, filesystem/lease/integrity/retention or complete ModelTraceStore certification.",
+    "Shared579 path/SHA hits cap100 are machine navigation only; absence of a finding is not proof of exhaustive history or of bug-free behavior.",
+    "Old failed directions not retried; original old scopes/classifications unchanged."
+  ]
+}

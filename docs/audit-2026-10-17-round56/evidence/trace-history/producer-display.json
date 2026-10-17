@@ -1,0 +1,16 @@
+{
+  "path": "packages/core/src/model-traces/context.ts",
+  "sha256": "e759a2298fa15ed12f68329422db12291a73f2a20a7d567d631b57aa7d2f8202",
+  "displayedLineRanges": [
+    [
+      199,
+      212
+    ],
+    [
+      274,
+      318
+    ]
+  ],
+  "pinReference": "producer-initial-pin.json",
+  "displayAt": "2026-10-17T18:46:04.697321+00:00"
+}

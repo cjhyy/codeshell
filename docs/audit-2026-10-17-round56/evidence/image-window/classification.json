@@ -1,0 +1,30 @@
+{
+  "createdAt": "2026-10-17T18:48:49.471234+00:00",
+  "formal": [],
+  "candidates": [],
+  "newRelated": [],
+  "counts": {
+    "formal": 0,
+    "candidates": 0,
+    "newRelated": 0
+  },
+  "assessment": "Finite negative for ordinary retained image count/encoded length/response-age/order in current working history",
+  "oldSameShaFullDirectionsTargeted": 1,
+  "oldCauseExclusions": [
+    {
+      "cause": "Compaction/reload image numbering mismatch",
+      "evidence": "archive-window.json original22/240-267 plusR4 context39",
+      "decision": "Explicit historical finding, not new; window code same-history numbering is not proof of transcript reload identity correctness"
+    },
+    {
+      "cause": "127 stripVision/nonvision/providerKind/dataURL",
+      "decision": "Previous direction excluded; no substitute entry or dynamic retry"
+    }
+  ],
+  "normalCounterexamplesNotEstablished": [
+    "Fresh batch exceeds caps intentionally for first request, per source contract; not a cap bug.",
+    "Repeated shared block references counted by serialized occurrences; retaining fewer than4 is not a requirement to fill4slots.",
+    "Compacted-away block keys removed and not silently reactivated; container copies preserve retained block reference."
+  ],
+  "currentGlobalCorrectnessClaim": false
+}

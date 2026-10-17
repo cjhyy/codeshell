@@ -1,0 +1,334 @@
+[
+  {
+    "path": "docs/audit-2026-10-17-round49/evidence/trace-history-frontier/report.md",
+    "bytes": 3777,
+    "sha256": "d60969718045e0df9bc310b206d44ee7651c75ba49343ab156120e18b88e85d2",
+    "readAt": "2026-10-17T18:44:17.158095+00:00",
+    "selectedLines": [
+      {
+        "line": 1,
+        "text": "# Model trace history 普通DTO静态前置"
+      },
+      {
+        "line": 2,
+        "text": ""
+      },
+      {
+        "line": 3,
+        "text": "结果 **0正式 / 0候选 / 0新增关联**。这是有限ordinary query/list DTO负向结论，不是整个model trace系统、排序/裁剪或存储机制正确性认证。"
+      },
+      {
+        "line": 4,
+        "text": ""
+      },
+      {
+        "line": 5,
+        "text": "目标 `packages/server/src/model-trace-history.ts` 当前242行/9402B，SHA2bf60f9f830be0d04e9e96b20dfc86f7f24ed5a8d5d0f44e8c8115b2206c7dfb；[初始pin](initial-pins.json)在正文前。own [fresh history](history.json)纳冻结48、排49+，2026-10-17 16:19:42–46 UTC为4492=1442MD+3050JSON、1953735string/2921270scalar、169archive/_archive路径、0parse错误。值机器扫描不等于语义全文。path14/SHA5、cap100全保存；本轮确实读了[19个短窗口](history-contexts.json)与[8个简表对象](coverage-gate-rows.json)，均为库存/派生incidental记录，未建立同SHA明确full。unknown/no-row不当从未读过。Root74原说法与其更正另在[parent上下文](parent-context-notes.json)，Root的机器14/5命中不冒充其读全19窗口。"
+      },
+      {
+        "line": 6,
+        "text": ""
+      },
+      {
+        "line": 7,
+        "text": "## 普通合同与反证"
+      },
+      {
+        "line": 8,
+        "text": ""
+      },
+      {
+        "line": 9,
+        "text": "目标所读query字段/校验把正常limit1–200、withoutSession布尔、有限非负且顺序正确的since/until和有界字符串保留到新DTO；list/sessions在validated spread后转交store，session cursor错误有400映射。未用任意坏DTO、NaN或真实文件造反例。HTTP20–38仅普通query值解码，73–74直接调history list/sessions；Web API普通querySuffix以String编码、跳undefined并转交注入requester。false与正常0时间值未被truthy条件丢弃。这里只是静态值流，未构造或执行语言fixture/URL/网络请求。"
+      },
+      {
+        "line": 10,
+        "text": ""
+      },
+      {
+        "line": 16,
+        "text": ""
+      },
+      {
+        "line": 17,
+        "text": "[所读范围](source-manifest.json)5份产品源均selected，原[显示前pin](source-display-pins.json)与[摘录](source-excerpts.txt)保留；target97行display仅78行ordinary语义，不称242全文。HTTP workspace边界行23、Web Host guard41–42、Desktop native说明/目录行5/10等只是相邻显示，排除语义。四个producer文件首次rg导航先于dedicated pin，initialSemanticReadSha256=null如实保留；随后selected块在dedicated pin之后显示。没有打开任何测试正文，声明计数0。"
+      },
+      {
+        "line": 18,
+        "text": ""
+      },
+      {
+        "line": 19,
+        "text": "首次metadata reader将datetime类误写成datetime.datetime，exit1；原[stderr](metadata-first-error.txt)/[阶段说明](metadata-first-error.json)保存。失败在新增producer pin落盘和正文显示前，只修metadata timestamp再读同选段，非产品或fixture重试；无输出截断。Parent报告dc2b3d4…上下文，不作独立Git认证。CODESHELL/AGENTS刚在前置72读过，本轮仅结束hash复核，不重复算222行新阅读。"
+      },
+      {
+        "line": 20,
+        "text": ""
+      },
+      {
+        "line": 21,
+        "text": "[结束检查](ending-checks.json)核原4492历史和5source SHA；[验证口径](validation.json)产品/helper/import/函数、测试/fixture、React/clock、真实trace、模型/native/业务网络和Git均0。finalization只metadata，不产生第二轮语义。冻结见[receipt](reviewer-receipt.json)。"
+      }
+    ]
+  },
+  {
+    "path": "docs/audit-2026-10-17-round49/evidence/trace-history-frontier/source-manifest.json",
+    "bytes": 8939,
+    "sha256": "5c69dc71f41e34690d648e1705734d9562bbd09099b23a34cc1ede8cd65a008a",
+    "readAt": "2026-10-17T18:44:17.159730+00:00",
+    "selectedObjects": [
+      {
+        "pointer": "/files/0",
+        "object": {
+          "path": "packages/server/src/model-trace-history.ts",
+          "bytes": 9402,
+          "sha256": "2bf60f9f830be0d04e9e96b20dfc86f7f24ed5a8d5d0f44e8c8115b2206c7dfb",
+          "lines": 242,
+          "beforeSelectedDisplayUTC": "2026-10-17T16:20:15.729394+00:00",
+          "displayedLineRanges": [
+            [
+              14,
+              36
+            ],
+            [
+              47,
+              91
+            ],
+            [
+              202,
+              230
+            ]
+          ],
+          "coverage": "selected",
+          "selectedLineRanges": [
+            [
+              14,
+              18
+            ],
+            [
+              20,
+              35
+            ],
+            [
+              47,
+              52
+            ],
+            [
+              54,
+              90
+            ],
+            [
+              203,
+              206
+            ],
+            [
+              214,
+              218
+            ],
+            [
+              225,
+              229
+            ]
+          ],
+          "semanticLineCount": 78,
+          "displayedLineCount": 97,
+          "purpose": "Only ordinary query DTO declaration/validation and forwarding/error mapping. 118–201 scope/visibility/store-event filtering not opened; displayed53 and207–211/219–223 mechanism-adjacent lines excluded. ModelTraceStore sorting/trimming/files not read.",
+          "endingBytes": 9402,
+          "endingSha256": "2bf60f9f830be0d04e9e96b20dfc86f7f24ed5a8d5d0f44e8c8115b2206c7dfb",
+          "unchanged": true,
+          "endingCheckedUTC": "2026-10-17T16:23:04.066308+00:00",
+          "initialSemanticReadSha256": "2bf60f9f830be0d04e9e96b20dfc86f7f24ed5a8d5d0f44e8c8115b2206c7dfb",
+          "dedicatedSelectedReadSha256": "2bf60f9f830be0d04e9e96b20dfc86f7f24ed5a8d5d0f44e8c8115b2206c7dfb"
+        }
+      }
+    ]
+  },
+  {
+    "path": "docs/audit-2026-10-17-round53/evidence/trace-history/report.md",
+    "bytes": 5996,
+    "sha256": "39dc729934f4377d4e7acb04224efa1fe0168a8cde639d33582ffc2236464015",
+    "readAt": "2026-10-17T18:44:17.160252+00:00",
+    "selectedLines": [
+      {
+        "line": 1,
+        "text": "# Prep107 — model trace history 普通查询 DTO"
+      },
+      {
+        "line": 2,
+        "text": ""
+      },
+      {
+        "line": 3,
+        "text": "有限结果为 **0 新 formal / 0 candidate / 0 new-related**。所读普通查询校验、转交、页 DTO 消费与两个现有测试声明选段没有建立正常调用的新反例；这不是整个 adapter、Store、Host、UI 或仓库正确性认证。[分类](classification.json)记录反证和边界。"
+      },
+      {
+        "line": 4,
+        "text": ""
+      },
+      {
+        "line": 5,
+        "text": "Root 提供 formal53 的产品 baseline `524c0827a480132119b637aa87e16f0eab9895f3`，仅作外部上下文，本读者没有执行 Git。文件名库存确认 `packages/server/src/model-trace-history.ts`，当前242行 / 9402 B / SHA `2bf60f9f830be0d04e9e96b20dfc86f7f24ed5a8d5d0f44e8c8115b2206c7dfb`；[初始 pins](initial-pins.json)先于正文与行导航。AGENTS5/CODESHELL217 的先前实际阅读按当前相同 SHA 沿用，重复 hash 不算新阅读。"
+      },
+      {
+        "line": 6,
+        "text": ""
+      },
+      {
+        "line": 7,
+        "text": "正文前 fresh [完整历史库存](history.json)依 [metadata 方法](history-method.py)遍历 docs/bugs Markdown 正文及递归 JSON value scalar，包含 archive，纳正式52、排数字正式53+与自身未来目录。2026-10-17 17:48:37–48 UTC 得到 **5150份 = 1489 MD + 3661 JSON**，2430509 strings / 3611347 scalars / 1041471 objects / 87132 arrays；169 个精确 archive/_archive 目录成员，0 parse error。path/SHA/filename/old-cause 总命中 **92/53/125/82**，各 cap100，保留 **92/53/100/82** 个 [有界窗口](history-contexts.json)。机器遍历量和保存量不等于人逐字读完的范围。"
+      },
+      {
+        "line": 8,
+        "text": ""
+      },
+      {
+        "line": 9,
+        "text": "[精确对象](coverage-gate-objects.json)共有95个 path/SHA 元数据对象。实际 gate 读了 R49/R50 两份 canonical 原报告及其原 selected row，原 R3 selected-chain 与 R18 adapter 的显示窗口，另看 compact 定位；没有声称语义读完95个 raw object 或全部窗口。[gate decision](gate-decision.json)保留 coverage/scope/purpose/readScope/reviewMode/inspectionScope/review 限定和 canonical 原行。R49 `/files/0` 同 SHA 明确只有78行普通语义，118–201 scope/visibility 未打开；R50 `/files/2` 同 SHA只有53行 selected。R3 的“选择性阅读结构”及 R18 的 Web adapter 审读不构成本目标 full。R28/R44 inventory、派生 claims、unknown/no-row/hash 既不证明全文，也不保证此前未读。"
+      },
+      {
+        "line": 10,
+        "text": ""
+      },
+      {
+        "line": 11,
+        "text": "没有建立明确同 SHA whole-target 旧读，故本次只做有限 selected recheck，不用 fallback。尤其目标本次78行语义**完全重叠 R49**；HTTP普通映射、service调用边界和Desktop消费者也保留 R49/R50 旧选段重叠，不把它们再加为新唯一覆盖。本读者也是旧 R50 trace-query 包作者，角色如实披露。"
+      },
+      {
+        "line": 12,
+        "text": ""
+      },
+      {
+        "line": 19,
+        "text": ""
+      },
+      {
+        "line": 20,
+        "text": "[所读清单](source-manifest.json)为 **5 selected / 0 full，176语义行 = 133产品 + 43测试声明**；跨文件累计唯一显示294行。目标显示158行，只有78行普通语义；get/config/Host/捕获设置等相邻显示只算导航，不因打印出来而扩成 full。HTTP/test 的 additionalNavigationSnippetLines 单列并纳显示 union；[摘录](source-excerpts.json)在实际显示之后捕获，只含已显示行，不冒充 pre-read snapshot。Store 的排序/cursor实现本次没有重新打开，不能把旧 R50 范围或旧 pass 借作当前运行验证。"
+      },
+      {
+        "line": 21,
+        "text": ""
+      },
+      {
+        "line": 23,
+        "text": ""
+      },
+      {
+        "line": 24,
+        "text": "[结束检查](ending-checks.json)的7个源码/指令 pins 全同 SHA；原5150历史集合在同 filter 下无新增、删除或 bytes 漂移。结束 hash 不算新语义阅读。[validation](validation.json)记录产品/helper/import/fixture/test/React/DOM/timer/模型/native/network/Git均0，真实trace/config/session/account内容未读。只运行独立标准库 metadata/hash/range脚本；[整理脚本](finalize-metadata.py)不导入产品。"
+      },
+      {
+        "line": 25,
+        "text": ""
+      }
+    ]
+  },
+  {
+    "path": "docs/audit-2026-10-17-round53/evidence/trace-history/source-manifest.json",
+    "bytes": 11040,
+    "sha256": "665b3ed432568948338fb341f3b7cf311631668a9c95cb99b25492adc1fbca57",
+    "readAt": "2026-10-17T18:44:17.160873+00:00",
+    "selectedObjects": [
+      {
+        "pointer": "/files/0",
+        "object": {
+          "path": "packages/server/src/model-trace-history.ts",
+          "bytes": 9402,
+          "lines": 242,
+          "sha256": "2bf60f9f830be0d04e9e96b20dfc86f7f24ed5a8d5d0f44e8c8115b2206c7dfb",
+          "beforeBodyOrLineNavigation": true,
+          "coverage": "selected",
+          "selectedLineRanges": [
+            [
+              14,
+              18
+            ],
+            [
+              20,
+              35
+            ],
+            [
+              47,
+              52
+            ],
+            [
+              54,
+              90
+            ],
+            [
+              203,
+              206
+            ],
+            [
+              214,
+              218
+            ],
+            [
+              225,
+              229
+            ]
+          ],
+          "semanticLines": 78,
+          "sourceKind": "product",
+          "displayedLineRanges": [
+            [
+              1,
+              117
+            ],
+            [
+              202,
+              242
+            ]
+          ],
+          "additionalNavigationSnippetLines": [],
+          "uniqueDisplayedLines": 158,
+          "navigationOnlyDisplayedLineRanges": [
+            [
+              1,
+              13
+            ],
+            [
+              19,
+              19
+            ],
+            [
+              36,
+              46
+            ],
+            [
+              53,
+              53
+            ],
+            [
+              91,
+              117
+            ],
+            [
+              202,
+              202
+            ],
+            [
+              207,
+              213
+            ],
+            [
+              219,
+              224
+            ],
+            [
+              230,
+              242
+            ]
+          ],
+          "purpose": "Ordinary query field declarations/validation, validated forwarding and cursor-error mapping only. 118–201 not displayed or read; config/get/Host/fs/capture/visibility adjacency is navigation only. Entire78 semantic lines overlap canonical R49 selected range; no new unique target coverage claimed.",
+          "initialSemanticReadSha256": "2bf60f9f830be0d04e9e96b20dfc86f7f24ed5a8d5d0f44e8c8115b2206c7dfb",
+          "initialPinBeforeBodyOrLineNavigation": true,
+          "finishSha256": "2bf60f9f830be0d04e9e96b20dfc86f7f24ed5a8d5d0f44e8c8115b2206c7dfb",
+          "finishBytes": 9402,
+          "finishMatchesInitial": true,
+          "fullFileReadingClaimed": false
+        }
+      }
+    ]
+  }
+]

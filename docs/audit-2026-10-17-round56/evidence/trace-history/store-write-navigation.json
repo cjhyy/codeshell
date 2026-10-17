@@ -1,0 +1,11 @@
+{
+  "command": [
+    "rg",
+    "-n",
+    "write\\(record|summary\\(record",
+    "packages/core/src/model-traces/store.ts"
+  ],
+  "exitCode": 0,
+  "stdout": "54:function summary(record: ModelTraceRecord): ModelTraceSummary {\n492:  write(record: ModelTraceRecord): void {\n",
+  "stderr": ""
+}

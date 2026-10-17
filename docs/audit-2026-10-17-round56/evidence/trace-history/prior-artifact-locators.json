@@ -1,0 +1,14 @@
+{
+  "command": [
+    "rg",
+    "--files",
+    "docs"
+  ],
+  "exitCode": 0,
+  "filteredFilenames": [
+    "docs/audit-2026-10-17-round49/evidence/trace-history-frontier/report.md",
+    "docs/audit-2026-10-17-round49/evidence/trace-history-frontier/source-manifest.json",
+    "docs/audit-2026-10-17-round53/evidence/trace-history/report.md",
+    "docs/audit-2026-10-17-round53/evidence/trace-history/source-manifest.json"
+  ]
+}

@@ -1,0 +1,47 @@
+{
+  "capturedUTC": "2026-10-17T18:44:34.567081+00:00",
+  "files": [
+    {
+      "path": "packages/browser-devtools/README.md",
+      "bytes": 2940,
+      "lines": 56,
+      "sha256": "76a62792a7713734235a9f51e4f934023b6c42c354c06d9ecb3cb5e3f1e31096",
+      "beforeBodyOrLineNavigation": true
+    },
+    {
+      "path": "packages/browser-devtools/src/inspector.test.ts",
+      "bytes": 5243,
+      "lines": 137,
+      "sha256": "b1fe416622c47a9e82325f8ca5a2505cd87f49b2dc167e834ac27804999bde92",
+      "beforeBodyOrLineNavigation": true
+    },
+    {
+      "path": "packages/core/src/tool-system/builtin/browser-inspect.ts",
+      "bytes": 2272,
+      "lines": 50,
+      "sha256": "d7bf222610e1cb70dab7765a7e5571f0074adc61f43775ba679555242ed92dcd",
+      "beforeBodyOrLineNavigation": true
+    },
+    {
+      "path": "packages/core/src/tool-system/browser-bridge.ts",
+      "bytes": 17657,
+      "lines": 466,
+      "sha256": "f1c0b6595a9be51175704468a5fa0d44675c45c74b887dc634d0cffb47db30a5",
+      "beforeBodyOrLineNavigation": true
+    },
+    {
+      "path": "packages/desktop/src/browser-library/browser-inspector.ts",
+      "bytes": 668,
+      "lines": 10,
+      "sha256": "47898599f9b3fa63a5c4752205b477f1132ca4315a33b4b697198edec6dd67ac",
+      "beforeBodyOrLineNavigation": true
+    },
+    {
+      "path": "packages/desktop/src/browser-library/puppeteer-browser-driver.ts",
+      "bytes": 37488,
+      "lines": 1091,
+      "sha256": "d275aaba9b2eb29a306bfb91d1ccd32499a288bf79c0f0fc08b8d90723bc080f",
+      "beforeBodyOrLineNavigation": true
+    }
+  ]
+}
