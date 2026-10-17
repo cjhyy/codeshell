@@ -1,0 +1,64 @@
+{
+  "base": "ae777b3fce6fc9986e69ceb62802f3bb3f6aa478",
+  "firstExecutions": [
+    {
+      "command": [
+        "node",
+        "scripts/run-bun-test-shard.mjs",
+        "--timeout",
+        "30000",
+        "docs/audit-2026-10-17-round15/evidence/migration-config-pure.test.ts"
+      ],
+      "exitCode": 0,
+      "elapsedSeconds": 0.2617,
+      "rawLog": "docs/audit-2026-10-17-round15/evidence/migration-config-pure.first.log",
+      "rawSha256": "f9a9cd718da6ea954281d67c4ac845e2ecc9cbe6f9128ed83808e3f66b0441c0",
+      "firstAttempt": true,
+      "receipt": "evidence/migration-config-pure.first.exit.json",
+      "completed": true,
+      "passed": 4,
+      "tests": 4,
+      "failed": 0,
+      "skipped": 0,
+      "expects": 16
+    },
+    {
+      "command": [
+        "node",
+        "scripts/run-bun-test-shard.mjs",
+        "--timeout",
+        "30000",
+        "docs/audit-2026-10-17-round15/evidence/migration-source-pure.test.ts"
+      ],
+      "exitCode": 0,
+      "elapsedSeconds": 0.3065,
+      "rawLog": "docs/audit-2026-10-17-round15/evidence/migration-source-pure.first.log",
+      "rawSha256": "1120dc67f17359ddd5579a51a0adc76505335e97849c9c928ff2aac2576994d3",
+      "firstAttempt": true,
+      "receipt": "evidence/migration-source-pure.first.exit.json",
+      "completed": true,
+      "passed": 7,
+      "tests": 7,
+      "failed": 0,
+      "skipped": 0,
+      "expects": 11
+    }
+  ],
+  "cleanShards": 2,
+  "failedBunShards": 0,
+  "successfulTests": 11,
+  "expectations": 27,
+  "failedTests": 0,
+  "skippedTests": 0,
+  "existingTestsExecuted": 0,
+  "newFocusedTestsExecuted": 11,
+  "metadataFailures": {
+    "count": 3,
+    "note": "evidence/migration-navigation-skip.md",
+    "productImportOrBun": false,
+    "repairedOrRetried": false
+  },
+  "networkOrNativeExecuted": false,
+  "productEdits": false,
+  "gitWrites": false
+}

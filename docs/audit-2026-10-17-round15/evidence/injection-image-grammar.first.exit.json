@@ -1,0 +1,15 @@
+{
+  "command": [
+    "node",
+    "scripts/run-bun-test-shard.mjs",
+    "--timeout",
+    "30000",
+    "tests/parse-task.test.ts",
+    "docs/audit-2026-10-17-round15/evidence/injection-image-grammar.test.ts"
+  ],
+  "cwd": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell",
+  "exitCode": 0,
+  "rawLog": "docs/audit-2026-10-17-round15/evidence/injection-image-grammar.first.raw.log",
+  "attempts": 1,
+  "reruns": 0
+}

@@ -1,0 +1,145 @@
+{
+  "frozenBase": "ae777b3fce6fc9986e69ceb62802f3bb3f6aa478",
+  "sources": [
+    {
+      "path": "packages/core/src/engine/injected-context-cache.ts",
+      "frozenBytes": 642,
+      "bytes": 642,
+      "frozenSha256": "e1bb80df909e7c321643c093de09258b7840e9704dffcd8e9e41b7ebc5b79b74",
+      "sha256": "e1bb80df909e7c321643c093de09258b7840e9704dffcd8e9e41b7ebc5b79b74",
+      "currentSha256": "e1bb80df909e7c321643c093de09258b7840e9704dffcd8e9e41b7ebc5b79b74",
+      "currentMatchesFrozen": true,
+      "scope": "Fully read and actual pure helper called; no run-finalize or real caching lifecycle executed."
+    },
+    {
+      "path": "packages/core/src/engine/steer-queue.ts",
+      "frozenBytes": 2033,
+      "bytes": 2033,
+      "frozenSha256": "345d12fc1dc4d632f02835d6e157839ba6a7e49ad90628975b9035ba565450cf",
+      "sha256": "345d12fc1dc4d632f02835d6e157839ba6a7e49ad90628975b9035ba565450cf",
+      "currentSha256": "345d12fc1dc4d632f02835d6e157839ba6a7e49ad90628975b9035ba565450cf",
+      "currentMatchesFrozen": true,
+      "scope": "Fully read and actual pure enqueue/remove/consume helpers called."
+    },
+    {
+      "path": "packages/core/src/engine/parse-task.ts",
+      "frozenBytes": 7206,
+      "bytes": 7206,
+      "frozenSha256": "e93cf2d985b1787138537020aefb5b20fb403125a9ea12129bae9fa8c0dd2c0a",
+      "sha256": "e93cf2d985b1787138537020aefb5b20fb403125a9ea12129bae9fa8c0dd2c0a",
+      "currentSha256": "e93cf2d985b1787138537020aefb5b20fb403125a9ea12129bae9fa8c0dd2c0a",
+      "currentMatchesFrozen": true,
+      "scope": "Fully read and actual pure parser called; no real image bytes, policy, IO, Engine or provider."
+    },
+    {
+      "path": "packages/core/src/engine/injected-context-cache.test.ts",
+      "frozenBytes": 1228,
+      "bytes": 1228,
+      "frozenSha256": "a5d8fc49341a570264e214bbe76234875d48e41aad996d949f26d8771d21374e",
+      "sha256": "a5d8fc49341a570264e214bbe76234875d48e41aad996d949f26d8771d21374e",
+      "currentSha256": "a5d8fc49341a570264e214bbe76234875d48e41aad996d949f26d8771d21374e",
+      "currentMatchesFrozen": true,
+      "scope": "Existing two-test baseline executed once in combined cache-queue shard."
+    },
+    {
+      "path": "packages/core/src/engine/steer-queue.test.ts",
+      "frozenBytes": 3782,
+      "bytes": 3782,
+      "frozenSha256": "7ed6d57e70a19510c968833121a2e5dc5beb59e376ec1df59d98e1a6ac896d50",
+      "sha256": "7ed6d57e70a19510c968833121a2e5dc5beb59e376ec1df59d98e1a6ac896d50",
+      "currentSha256": "7ed6d57e70a19510c968833121a2e5dc5beb59e376ec1df59d98e1a6ac896d50",
+      "currentMatchesFrozen": true,
+      "scope": "Existing eight-test helper/value-shape baseline executed once; no static typecheck claim."
+    },
+    {
+      "path": "tests/parse-task.test.ts",
+      "frozenBytes": 6432,
+      "bytes": 6432,
+      "frozenSha256": "c954709faa7f0b75825d521a4cff002cc48a259f111a5fc50405c758fe5de540",
+      "sha256": "c954709faa7f0b75825d521a4cff002cc48a259f111a5fc50405c758fe5de540",
+      "currentSha256": "c954709faa7f0b75825d521a4cff002cc48a259f111a5fc50405c758fe5de540",
+      "currentMatchesFrozen": true,
+      "scope": "Existing fourteen-test parser baseline executed once."
+    },
+    {
+      "path": "packages/core/src/engine/engine.ts",
+      "frozenBytes": 210013,
+      "bytes": 210013,
+      "frozenSha256": "43ed9545f9c4ea2930b2855d58bf9b48ff2584cc6bba397daaa9c99ad0833307",
+      "sha256": "43ed9545f9c4ea2930b2855d58bf9b48ff2584cc6bba397daaa9c99ad0833307",
+      "currentSha256": "43ed9545f9c4ea2930b2855d58bf9b48ff2584cc6bba397daaa9c99ad0833307",
+      "currentMatchesFrozen": true,
+      "scope": "Selected consumer excerpts only (steer enqueue/unsteer/consume/restore, prompt-context assembly and static locators); never imported or executed."
+    },
+    {
+      "path": "packages/core/src/engine/run-context.ts",
+      "frozenBytes": 5588,
+      "bytes": 5588,
+      "frozenSha256": "24b659c85988af12bab398e87510ab94185925e298d4845939a7b2e6f510d230",
+      "sha256": "24b659c85988af12bab398e87510ab94185925e298d4845939a7b2e6f510d230",
+      "currentSha256": "24b659c85988af12bab398e87510ab94185925e298d4845939a7b2e6f510d230",
+      "currentMatchesFrozen": true,
+      "scope": "Selected assembleRunMessages source and adjacent context composition only; not executed."
+    },
+    {
+      "path": "packages/core/src/engine/run-finalize.ts",
+      "frozenBytes": 19306,
+      "bytes": 19306,
+      "frozenSha256": "c60c45ef7392d360be5f59e75465a7f03b9a5d0fa6ea5849c4d05ff2c546f335",
+      "sha256": "c60c45ef7392d360be5f59e75465a7f03b9a5d0fa6ea5849c4d05ff2c546f335",
+      "currentSha256": "c60c45ef7392d360be5f59e75465a7f03b9a5d0fa6ea5849c4d05ff2c546f335",
+      "currentMatchesFrozen": true,
+      "scope": "Selected cachedMessages finalization consumer excerpt only; not executed."
+    },
+    {
+      "path": "packages/core/src/engine/run-image-input.ts",
+      "frozenBytes": 9480,
+      "bytes": 9480,
+      "frozenSha256": "0ff0d1d149ac28e9c25a87a52bb6a1fffbeb6db5f8154265418cb49c6097802e",
+      "sha256": "0ff0d1d149ac28e9c25a87a52bb6a1fffbeb6db5f8154265418cb49c6097802e",
+      "currentSha256": "0ff0d1d149ac28e9c25a87a52bb6a1fffbeb6db5f8154265418cb49c6097802e",
+      "currentMatchesFrozen": true,
+      "scope": "Fully read static parser producer/consumer wiring only; never imported or executed."
+    },
+    {
+      "path": "packages/core/src/prompt/composer.ts",
+      "frozenBytes": 18842,
+      "bytes": 18842,
+      "frozenSha256": "acc59a7875b0afcf3d99e40d8b76139f9c9e95cd54989db8d84426846926f54b",
+      "sha256": "acc59a7875b0afcf3d99e40d8b76139f9c9e95cd54989db8d84426846926f54b",
+      "currentSha256": "acc59a7875b0afcf3d99e40d8b76139f9c9e95cd54989db8d84426846926f54b",
+      "currentMatchesFrozen": true,
+      "scope": "Selected user-context and dynamic-context construction source only; no PromptComposer instantiation or scans."
+    },
+    {
+      "path": "packages/core/src/protocol/server-run-controls.ts",
+      "frozenBytes": 6453,
+      "bytes": 6453,
+      "frozenSha256": "18693b1c01a619a76d5726a1820e5f1a27b9ad70423b5f8fcf8182268ecc9ac0",
+      "sha256": "18693b1c01a619a76d5726a1820e5f1a27b9ad70423b5f8fcf8182268ecc9ac0",
+      "currentSha256": "18693b1c01a619a76d5726a1820e5f1a27b9ad70423b5f8fcf8182268ecc9ac0",
+      "currentMatchesFrozen": true,
+      "scope": "Selected steer request forwarding and immediately adjacent cancel source only; no protocol dispatch."
+    },
+    {
+      "path": "packages/core/src/protocol/async-user-answer.ts",
+      "frozenBytes": 2646,
+      "bytes": 2646,
+      "frozenSha256": "d1e35b5f057b9a5ee1ce2b474c7b98e0546bffb23532ff27072760e148dea5d1",
+      "sha256": "d1e35b5f057b9a5ee1ce2b474c7b98e0546bffb23532ff27072760e148dea5d1",
+      "currentSha256": "d1e35b5f057b9a5ee1ce2b474c7b98e0546bffb23532ff27072760e148dea5d1",
+      "currentMatchesFrozen": true,
+      "scope": "Selected steer forwarding excerpt only; no actual answer queue or callback execution."
+    },
+    {
+      "path": "packages/desktop/src/renderer/chat/attachments.ts",
+      "frozenBytes": 13388,
+      "bytes": 13388,
+      "frozenSha256": "a16e8fa7250c3265e7fcb7d9c18a371f301acc265e4ee6d7c7a765f23d590621",
+      "sha256": "a16e8fa7250c3265e7fcb7d9c18a371f301acc265e4ee6d7c7a765f23d590621",
+      "currentSha256": "a16e8fa7250c3265e7fcb7d9c18a371f301acc265e4ee6d7c7a765f23d590621",
+      "currentMatchesFrozen": true,
+      "scope": "Selected metadata, encode/decode and helper source only; no import, DOM, clipboard, UI, language or actual encoder execution."
+    }
+  ]
+}

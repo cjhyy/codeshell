@@ -1,0 +1,20 @@
+bun test v1.3.11 (af24e281)
+
+packages/tui/src/cli/parse-int-option.test.ts:
+(pass) parsePositiveInt > parses a valid positive integer [1.45ms]
+(pass) parsePositiveInt > uses radix 10 (no octal surprise)
+(pass) parsePositiveInt > throws a clear error on non-numeric input [1.12ms]
+(pass) parsePositiveInt > throws on zero and negatives [0.06ms]
+(pass) parsePositiveInt > rejects trailing garbage (parseInt would accept '5abc')
+
+packages/tui/src/cli/commands/max-context-tokens.test.ts:
+(pass) resolveMaxContextTokens > prefers the model connection maxContextTokens over settings.context.maxTokens
+(pass) resolveMaxContextTokens > falls back to settings.context.maxTokens when the model connection omits it
+(pass) resolveMaxContextTokens > falls back to 200_000 when both values are missing
+(pass) resolveMaxContextTokens > REPL uses the shared resolver instead of duplicating fallback logic [2.38ms]
+
+ 9 pass
+ 0 fail
+ 12 expect() calls
+Ran 9 tests across 2 files. [144.00ms]
+Completed Bun shard: 9 tests, 0 skipped; 0 failures.

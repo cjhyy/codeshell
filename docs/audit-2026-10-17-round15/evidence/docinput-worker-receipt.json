@@ -1,0 +1,60 @@
+{
+  "base": "ae777b3fce6fc9986e69ceb62802f3bb3f6aa478",
+  "worker": "document_inputs_round15",
+  "report": "documents.md",
+  "formalCount": 0,
+  "candidateCount": 1,
+  "relatedCount": 0,
+  "testsExecuted": 0,
+  "cleanBunShards": 0,
+  "failedBunShards": 0,
+  "rawLogs": [],
+  "firstMetadataFailure": "evidence/docinput-preflight-skip.md",
+  "artifacts": [
+    {
+      "path": "documents.md",
+      "bytes": 4961,
+      "sha256": "5651ef7737a98944ae24e7acff5c7197175f962cbbc6556d155a7157f1e3112f"
+    },
+    {
+      "path": "evidence/docinput-candidates.json",
+      "bytes": 1625,
+      "sha256": "8d51d93f4ed17f13fc6534f76c46ffe1c2b81eef3e54ebd8001b072d11780403"
+    },
+    {
+      "path": "evidence/docinput-dedup.json",
+      "bytes": 550585,
+      "sha256": "a1bad6f073d1f9dbabe69bff0afb33cb2192fd7005a8ab729c298d9560aac7fd"
+    },
+    {
+      "path": "evidence/docinput-findings.json",
+      "bytes": 75,
+      "sha256": "cdebc0f2e3a03279dc23e83341c03d4685b2fd1d719b9240f2484aad9cfca4a6"
+    },
+    {
+      "path": "evidence/docinput-navigation-skip.md",
+      "bytes": 1076,
+      "sha256": "cc3fa55002d7a97ac3845f623929df918a58992df61602d3438a455fe6adf9d4"
+    },
+    {
+      "path": "evidence/docinput-prefix-dedup-context.json",
+      "bytes": 1333928,
+      "sha256": "57ebf62304d32d43e0f4f3bbd2811a4aa390436662168c8cd24b121b1eb0dcf3"
+    },
+    {
+      "path": "evidence/docinput-preflight-skip.md",
+      "bytes": 1212,
+      "sha256": "16595db8fb9eb24a4863c7f19c76575902ffc6a9dabcf97b3640909c1fc3fe51"
+    },
+    {
+      "path": "evidence/docinput-source-manifest.json",
+      "bytes": 3547,
+      "sha256": "9dcfd98366643d5457896822572b8421d9cb3fc0322a65f808d39dc7f1299dda"
+    },
+    {
+      "path": "evidence/docinput-validation.json",
+      "bytes": 874,
+      "sha256": "5ac287afb54352608cf36d611355f92e7125ffd577b4cd30eb88d6c1c23831eb"
+    }
+  ]
+}

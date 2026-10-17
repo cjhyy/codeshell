@@ -1,0 +1,32 @@
+[
+  {
+    "id": "STEER-R15-C1",
+    "status": "candidate-no-severity",
+    "title": "Default steer id derived from current queue length can reuse a still-pending id after revocation",
+    "source": "packages/core/src/engine/engine.ts:1160",
+    "helperSource": "packages/core/src/engine/steer-queue.ts:58",
+    "contract": "Queue entries carry stable ids for individual pending-entry correlation and revocation; Engine id argument has a default.",
+    "actualEvidence": "Pure helper calls with the independently inspected default id expression create [steer-1(second), steer-1(third)]; removeSteerItem(..., steer-1) removes both.",
+    "producerEvidence": "Static Engine.enqueueSteer default expression and protocol pass-through only. No actual Engine execution or ordinary host caller omitting ids was established.",
+    "controls": "Distinct host ids revoke exactly one pending entry; FIFO drain and input-array preservation pass.",
+    "limits": [
+      "No UI, real active run, actual default-id allocation, protocol RPC or lost user work was reproduced.",
+      "Helpers intentionally accept caller-supplied ids; duplicate external ids alone are not a separate defect."
+    ]
+  },
+  {
+    "id": "IMAGE-R15-C1",
+    "status": "candidate-no-severity",
+    "title": "Equal opening/closing tag counts do not ensure all malformed inline-image markup is rejected",
+    "source": "packages/core/src/engine/parse-task.ts:142",
+    "contractSource": "packages/core/src/engine/parse-task.ts:127",
+    "actualEvidence": "Actual parseTaskWithImages accepts a closing tag before its only opening tag, returns unchanged text and hasImages false. A valid block plus the same malformed tail returns one image and leaves malformed tag text.",
+    "producerEvidence": "Hand-built malformed wire only. Static Desktop encoder always emits complete opener/body/closer blocks; no ordinary encoder or transport corruption producer of the reversed ordering was established.",
+    "controls": "True unbalanced opener and invalid data body throw ImageParseError; valid block parses; escaped attrs and source-order images pass.",
+    "limits": [
+      "No real image decode, staged file, provider input, actual byte loss or user-visible failure was reproduced.",
+      "Fixture base64 YQ== is parser syntax data, not a claim of a decodable PNG.",
+      "Reserved literal opener rejection is an explicit existing test policy; not promoted as a new bug."
+    ]
+  }
+]

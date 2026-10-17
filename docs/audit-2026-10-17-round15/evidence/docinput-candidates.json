@@ -1,0 +1,39 @@
+{
+  "base": "ae777b3fce6fc9986e69ceb62802f3bb3f6aa478",
+  "candidates": [
+    {
+      "id": "DOCINPUT-R15-C1",
+      "title": "Two-byte PK / %P prefix classification may reject ordinary supported UTF-8 text",
+      "severity": null,
+      "status": "static-candidate-runtime-skipped",
+      "source": "packages/core/src/sources/documents/parse.ts",
+      "lines": [
+        397,
+        398,
+        403,
+        404
+      ],
+      "contract": "docs/todo/workspace-upload-document-index-delivery.md:7 supports UTF-8 Markdown/CSV/JSON",
+      "normalInputs": [
+        {
+          "filename": "review.md",
+          "text": "PK review notes\n项目进展：正常文本。\n"
+        },
+        {
+          "filename": "progress.csv",
+          "text": "%Progress,Task\n50,Implementation\n"
+        }
+      ],
+      "actualObserved": null,
+      "staticInference": "Before decodeText, either two-byte prefix causes an unsupported-format exception; shifted/lowercase prefixes do not meet that branch condition. No runtime observation or controls were executed.",
+      "runtimeSkip": "First metadata-only preflight asserted guessed root node_modules package.json paths and failed before fixture creation. No product import or Bun resolver tested; dynamic parser direction skipped.",
+      "dedup": "No same-cause formal/candidate located in full historical Markdown/parsed JSON inventory; existing Office and phonetic issues excluded.",
+      "limits": [
+        "No parser invocation",
+        "No worker/ReadSource/UI execution",
+        "No user artifact",
+        "No product dependency failure proven"
+      ]
+    }
+  ]
+}

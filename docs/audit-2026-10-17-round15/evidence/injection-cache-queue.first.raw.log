@@ -1,0 +1,29 @@
+bun test v1.3.11 (af24e281)
+
+docs/audit-2026-10-17-round15/evidence/injection-cache-queue.test.ts:
+(pass) round15 cache and queue characterization (no Engine) > cache removes only run-scoped identities and preserves equal durable content [0.95ms]
+(pass) round15 cache and queue characterization (no Engine) > cache with absent injections returns a new outer array, preserving message identity [0.19ms]
+(pass) round15 cache and queue characterization (no Engine) > distinct ids preserve per-entry revocation and FIFO draining without mutating inputs [0.02ms]
+STEER-R15-C1 {"beforeRevoke":[{"id":"steer-1","text":"second"},{"id":"steer-1","text":"third"}],"afterRevoke":[],"actualEngineExecuted":false}
+(pass) round15 cache and queue characterization (no Engine) > candidate: list-length ids can collide after a revoke, and helper revokes both [0.82ms]
+(pass) round15 cache and queue characterization (no Engine) > attachment list is copied at enqueue, without claiming a deep immutable snapshot
+
+packages/core/src/engine/injected-context-cache.test.ts:
+(pass) stripInjectedContextMessages > removes the exact user head and dynamic tail identities without matching equal content [0.02ms]
+(pass) stripInjectedContextMessages > keeps a user-context object that is no longer the first message
+
+packages/core/src/engine/steer-queue.test.ts:
+(pass) steer-injection wiring contract > StreamEvent union includes steer_injected with a text payload
+(pass) steer-injection wiring contract > steer_injected carries the id so the host can match it back to the queued draft [0.11ms]
+(pass) steer-queue helpers (id-keyed, revocable) > enqueue appends with id + trimmed text
+(pass) steer-queue helpers (id-keyed, revocable) > enqueue serializes and consumes structured attachments with the steer item [0.70ms]
+(pass) steer-queue helpers (id-keyed, revocable) > enqueue drops blank text and missing id
+(pass) steer-queue helpers (id-keyed, revocable) > consume drains all and clears [0.01ms]
+(pass) steer-queue helpers (id-keyed, revocable) > remove takes out a pending entry and reports removed=true
+(pass) steer-queue helpers (id-keyed, revocable) > remove of an already-consumed id reports removed=false (can't revoke) [0.01ms]
+
+ 15 pass
+ 0 fail
+ 39 expect() calls
+Ran 15 tests across 3 files. [153.00ms]
+Completed Bun shard: 15 tests, 0 skipped; 0 failures.
