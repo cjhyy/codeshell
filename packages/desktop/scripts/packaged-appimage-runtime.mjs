@@ -87,6 +87,10 @@ export function assertAppImagePayload(source, extracted) {
     // managed-Node LICENSE conversion plus stripping the approved sandbox's
     // SUID; other file-mode changes still require a separately reviewed case.
     const directory = entry[1] === "directory" && entry[2] === 0o700 && actual[2] === 0o755;
+    // The shipped appimage-12.0.1 runtime-x64 mkdir_p calls mkdir(..., 0700).
+    // CI confirmed all 73 source 0755 directories extract as 0700. This exact
+    // owner-only conversion cannot grant execute/write or privilege bits.
+    const privateDirectory = entry[1] === "directory" && entry[2] === 0o755 && actual[2] === 0o700;
     const license =
       entry[0] === "resources/runtimes/node/LICENSE" &&
       entry[1] === "file" &&
@@ -97,7 +101,7 @@ export function assertAppImagePayload(source, extracted) {
       entry[1] === "file" &&
       entry[2] === 0o4755 &&
       actual[2] === 0o755;
-    if (!(directory || license || sandbox)) {
+    if (!(directory || privateDirectory || license || sandbox)) {
       const failure = {
         path: entry[0],
         type: entry[1],
@@ -120,11 +124,13 @@ export function assertAppImagePayload(source, extracted) {
       type: entry[1],
       sourceMode: entry[2],
       extractedMode: actual[2],
-      rule: directory
-        ? "builder directory 0700 to 0755"
-        : license
-          ? "public managed Node LICENSE 0600 to 0644"
-          : "builder removes sandbox setuid; owned sandbox configured separately",
+      rule: privateDirectory
+        ? "AppImage runtime creates private directories 0755 to 0700"
+        : directory
+          ? "builder directory 0700 to 0755"
+          : license
+            ? "public managed Node LICENSE 0600 to 0644"
+            : "builder removes sandbox setuid; owned sandbox configured separately",
     });
   }
   return changes;

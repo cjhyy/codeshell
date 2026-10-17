@@ -176,6 +176,48 @@ test("payload modes retain type/byte/link and executable/write/privilege limits"
   );
 });
 
+test("observed AppImage runtime creates only exact 0755 source directories as private 0700", async () => {
+  const root = await mkdtemp(join(tmpdir(), "appimage-private-directory-"));
+  try {
+    const source = join(root, "source"),
+      extracted = join(root, "extracted");
+    for (const directory of [source, extracted]) {
+      await mkdir(join(directory, "locales"), { recursive: true });
+      await writeFile(join(directory, "locales/en-US.pak"), "owned locale bytes");
+      await chmod(join(directory, "locales/en-US.pak"), 0o644);
+    }
+    await chmod(join(source, "locales"), 0o755);
+    await chmod(join(extracted, "locales"), 0o700);
+    const before = await inventoryAppImagePayload(source);
+    const actual = await inventoryAppImagePayload(extracted);
+    assert.deepEqual(assertAppImagePayload(before, actual), [
+      {
+        path: "locales",
+        type: "directory",
+        sourceMode: 0o755,
+        extractedMode: 0o700,
+        rule: "AppImage runtime creates private directories 0755 to 0700",
+      },
+    ]);
+    assert.deepEqual(await inventoryAppImagePayload(source), before);
+    for (const mode of [0o000, 0o600, 0o710, 0o750, 0o705, 0o775, 0o777, 0o1700, 0o2700, 0o4700]) {
+      const changed = actual.map((row) => [...row]);
+      changed.find((row) => row[0] === "locales")[2] = mode;
+      assert.throws(() => assertAppImagePayload(before, changed));
+    }
+    for (const mode of [0o555, 0o750, 0o705]) {
+      const changed = before.map((row) => [...row]);
+      changed.find((row) => row[0] === "locales")[2] = mode;
+      assert.throws(() => assertAppImagePayload(changed, actual));
+    }
+    await writeFile(join(extracted, "locales/en-US.pak"), "changed locale bytes");
+    const changedBytes = await inventoryAppImagePayload(extracted);
+    assert.throws(() => assertAppImagePayload(before, changedBytes));
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
 test("owned inventory retains SUID bits and detects runtime-added SUID/SGID", async () => {
   const root = await mkdtemp(join(tmpdir(), "appimage-full-mode-"));
   try {
@@ -203,21 +245,21 @@ test("rejected directory modes retain both complete permission inventories befor
       ["chrome-sandbox", "file", 0o4755, 7, "owned-sha"],
       ["alias", "link", "locales"],
     ];
-    // This is an owned contract counterexample, not an observed Linux mode.
+    // This partial-group mode is an unapproved owned counterexample.
     const extracted = source.map((row) => [...row]);
-    extracted[0][2] = 0o700;
+    extracted[0][2] = 0o750;
     const report = {};
     await assert.rejects(
       assertAppImagePayloadWithEvidence(source, extracted, { evidence: root, report }),
-      /AppImage payload mode changed locales: source 0755, extracted 0700/,
+      /AppImage payload mode changed locales: source 0755, extracted 0750/,
     );
     assert.deepEqual(report.payloadModeFailure, {
       path: "locales",
       type: "directory",
       sourceMode: 0o755,
-      extractedMode: 0o700,
+      extractedMode: 0o750,
       sourceModeOctal: "0755",
-      extractedModeOctal: "0700",
+      extractedModeOctal: "0750",
     });
     for (const [index, inventory] of [source, extracted].entries()) {
       const metadata = report.payloadPermissionEvidence[index];
