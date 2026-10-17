@@ -54,15 +54,24 @@ describe("composeFileEdits", () => {
     expect(parseUnifiedDiff(result.diff)[0]?.hunks).toHaveLength(1);
   });
 
-  test("extends the baseline when a later old-snippet uniquely encloses the known after", () => {
+  test("keeps enclosing snippets separate because their shared text does not prove a location", () => {
     const result = composeFileEdits("a.ts", [
       edit("original", "intermediate"),
       edit("top\nintermediate\nbottom", "top\nfinal\nbottom"),
     ]);
-    expect(changedLines(result.diff)).toEqual(["-original", "+final"]);
-    expect(parseUnifiedDiff(result.diff)[0]?.hunks[0]?.lines.map((line) => line.text)).toEqual([
+    // These payloads can also come from two distinct globally unique edits.
+    // Even when one physical file could support a net merge, no position or
+    // full baseline in this API distinguishes that file from the counterexample.
+    expect(changedLines(result.diff)).toEqual([
+      "-original",
+      "+intermediate",
+      "-intermediate",
+      "+final",
+    ]);
+    expect(parseUnifiedDiff(result.diff)[0]?.hunks).toHaveLength(2);
+    expect(parseUnifiedDiff(result.diff)[0]?.hunks[1]?.lines.map((line) => line.text)).toEqual([
       "top",
-      "original",
+      "intermediate",
       "final",
       "bottom",
     ]);

@@ -198,10 +198,20 @@ test("actual globally unique Core edits yield different files for identical snip
   expect(cases[0]!.expected).not.toBe(cases[1]!.expected);
 });
 
-test("same-location control currently composes a valid net preview from the same payloads", () => {
-  const summary = aggregateFileChangeSummary(messages(cases[1]!.results))!;
-  expect(changes(summary.sessionDiffs[0]!.diff)).toEqual(["-before();", "+final();"]);
-  expect(summary.files).toEqual([{ path: "sample.ts", added: 1, removed: 1, count: 2 }]);
+test("both real file scenarios conservatively retain two previews for identical payloads", () => {
+  for (const scenario of cases) {
+    const summary = aggregateFileChangeSummary(messages(scenario.results))!;
+    expect(changes(summary.sessionDiffs[0]!.diff)).toEqual([
+      "-before();",
+      "+shared();",
+      "-shared();",
+      "+final();",
+    ]);
+    expect(parseUnifiedDiff(summary.sessionDiffs[0]!.diff)[0]?.hunks).toHaveLength(2);
+    expect(summary.files).toEqual([{ path: "sample.ts", added: 2, removed: 2, count: 2 }]);
+  }
+  const composed = composeFileEdits("sample.ts", operations);
+  expect(parseUnifiedDiff(composed.diff)[0]?.hunks).toHaveLength(2);
 });
 
 test("different-location aggregation must preserve the independently added first shared line", () => {
