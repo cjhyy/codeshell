@@ -133,6 +133,35 @@ test("normal completion cancels all timers without signaling a successful child"
   deepStrictEqual(f.failures, []);
 });
 
+test("a departed process tree does not require one native query per stale incarnation", async () => {
+  const f = fixture([
+    root,
+    ...Array.from({ length: 200 }, (_, index) => ({
+      pid: index + 100,
+      ppid: root.pid,
+      birth: `departed-${index}`,
+    })),
+  ]);
+  let reads = 0;
+  const snapshot = f.options.snapshotProcesses;
+  const stop = watchElectronTestProcess(f.child, {
+    ...f.options,
+    snapshotProcesses: () => {
+      reads++;
+      return snapshot();
+    },
+  });
+  f.setProcesses([]);
+  f.child.exitCode = 0;
+  f.child.emit("exit", 0, null);
+  const receipt = await stop.completed;
+  equal(receipt.status, "cleaned");
+  equal(receipt.ownedCount, 201);
+  equal(receipt.remainingCount, 0);
+  equal(reads, 3, "Binding, cleanup discovery, and final disappearance proof only");
+  deepStrictEqual(f.signals, []);
+});
+
 test("normal completion cleans only observed leftovers and their live descendants", () => {
   const f = fixture([root, descendant]);
   watchElectronTestProcess(f.child, f.options);

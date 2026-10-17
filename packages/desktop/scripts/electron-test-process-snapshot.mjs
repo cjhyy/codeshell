@@ -1,5 +1,6 @@
 import { execFileSync } from "node:child_process";
 import { win32 } from "node:path";
+import { performance } from "node:perf_hooks";
 
 const MAX_BYTES = 8 * 1024 * 1024;
 const MAX_PROCESSES = 100_000;
@@ -121,6 +122,7 @@ export function snapshotElectronTestProcesses({
     parse = parseWindowsProcessSnapshot;
   } else throw new Error("Unsupported Electron test process metadata platform");
   let output;
+  const started = performance.now();
   try {
     output = execFile(executable, args, {
       env,
@@ -130,11 +132,25 @@ export function snapshotElectronTestProcesses({
       windowsHide: true,
       stdio: ["ignore", "pipe", "pipe"],
     });
-  } catch {
+  } catch (error) {
     // Never forward native stderr or a command's raw error into acceptance logs.
-    throw Object.assign(new Error("Cannot query Electron test process metadata"), {
-      code: "ELECTRON_TEST_PROCESS_QUERY_FAILED",
-    });
+    const reason =
+      error?.code === "ETIMEDOUT"
+        ? "timeout"
+        : error?.code === "ENOENT"
+          ? "unavailable"
+          : error?.code === "EACCES"
+            ? "permission"
+            : error?.code === "ENOBUFS"
+              ? "output-limit"
+              : Number.isInteger(error?.status)
+                ? "native-exit"
+                : "unknown";
+    const elapsedMs = Math.round(performance.now() - started);
+    throw Object.assign(
+      new Error(`Cannot query Electron test process metadata (${reason}, ${elapsedMs}ms)`),
+      { code: "ELECTRON_TEST_PROCESS_QUERY_FAILED", reason, elapsedMs },
+    );
   }
   return parse(output);
 }

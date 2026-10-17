@@ -204,6 +204,36 @@ test("native query failure fails closed without raw stderr, cause or fallback qu
   }
 });
 
+test("query diagnostics expose fixed failure labels and elapsed time without native payloads", () => {
+  for (const [native, reason] of [
+    [{ code: "ETIMEDOUT" }, "timeout"],
+    [{ code: "ENOENT" }, "unavailable"],
+    [{ code: "EACCES" }, "permission"],
+    [{ code: "ENOBUFS" }, "output-limit"],
+    [{ status: 1 }, "native-exit"],
+    [{ code: "PRIVATE_SYNTHETIC_CODE" }, "unknown"],
+  ])
+    throws(
+      () =>
+        snapshotElectronTestProcesses({
+          execFile() {
+            throw Object.assign(new Error("PRIVATE_SYNTHETIC_MESSAGE"), native, {
+              stderr: "PRIVATE_SYNTHETIC_STDERR",
+            });
+          },
+        }),
+      (error) => {
+        equal(error.code, "ELECTRON_TEST_PROCESS_QUERY_FAILED");
+        equal(error.reason, reason);
+        equal(Number.isInteger(error.elapsedMs) && error.elapsedMs >= 0, true);
+        doesNotMatch(error.message, /PRIVATE_SYNTHETIC/);
+        equal(error.cause, undefined);
+        equal(error.stderr, undefined);
+        return true;
+      },
+    );
+});
+
 test("the current real host returns the test controller's own PID and parent metadata", () => {
   const rows = snapshotElectronTestProcesses();
   const own = rows.find((row) => row.pid === process.pid);

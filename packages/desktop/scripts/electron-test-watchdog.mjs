@@ -99,11 +99,15 @@ export function watchElectronTestProcess(child, options = {}) {
     }
   };
   const signalOwned = (signal, includeRoot) => {
-    if (!observe() || snapshotFailureReported) return 0;
+    const candidates = observe();
+    if (!candidates || snapshotFailureReported) return 0;
     let count = 0;
     // Descendants are remembered after their parent, so the root is signaled last.
     for (const item of [...owned.values()].reverse()) {
       if (!includeRoot && item.pid === root.pid) continue;
+      // An incarnation already absent from this fresh discovery cannot be a
+      // signal candidate. Avoid a separate native query for each departed PID.
+      if (candidates.get(item.pid)?.birth !== item.birth) continue;
       // A preceding signal/query may race process exit and PID reuse. Recheck
       // this exact incarnation immediately before each individual signal.
       const current = observe();
