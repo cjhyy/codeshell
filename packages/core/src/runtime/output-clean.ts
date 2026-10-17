@@ -27,11 +27,12 @@ export function stripAnsi(s: string): string {
 /**
  * Collapse carriage-return progress redraws. Within a single line (text
  * between `\n`s), `\r` means "redraw from column 0" — only the segment after
- * the last `\r` survives. Newlines are preserved as line separators.
+ * the last `\r` survives. A CRLF pair is a newline, not a progress redraw;
+ * line separators are preserved as LF.
  */
 export function foldProgressLines(s: string): string {
   return s
-    .split("\n")
+    .split(/\r?\n/)
     .map((line) => {
       const lastCr = line.lastIndexOf("\r");
       return lastCr === -1 ? line : line.slice(lastCr + 1);
