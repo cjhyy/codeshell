@@ -249,6 +249,16 @@ jobs:
             node scripts/run-isolated-node-smoke.mjs packages/desktop/scripts/e2e-memory-pin-operation-cycles.mjs --evidence-dir "$ACCEPTANCE_ROOT/memory" 2>&1 | tee "$ACCEPTANCE_ROOT/memory.log"
           fi
 
+      - name: actual language and system-theme multiwindow persistence
+        timeout-minutes: 6
+        run: |
+          set -euo pipefail
+          if [[ "$RUNNER_OS" == Linux ]]; then
+            xvfb-run -a node scripts/run-isolated-node-smoke.mjs --private-keyring packages/desktop/scripts/e2e-preferences-operation-cycles.mjs --evidence-dir "$ACCEPTANCE_ROOT/preferences" 2>&1 | tee "$ACCEPTANCE_ROOT/preferences.log"
+          else
+            node scripts/run-isolated-node-smoke.mjs packages/desktop/scripts/e2e-preferences-operation-cycles.mjs --evidence-dir "$ACCEPTANCE_ROOT/preferences" 2>&1 | tee "$ACCEPTANCE_ROOT/preferences.log"
+          fi
+
       - name: actual packaged Main, preload, and renderer UI
         timeout-minutes: 8
         run: |
@@ -268,6 +278,13 @@ jobs:
           else
             node packages/desktop/scripts/run-packaged-ui-acceptance.mjs --build-receipt "$ACCEPTANCE_ROOT/package/build-receipt.json" --evidence-dir "$ACCEPTANCE_ROOT/updater" --fixture updater 2>&1 | tee "$ACCEPTANCE_ROOT/updater.log"
           fi
+
+      - name: production macOS DMG owned installation and replacement
+        if: runner.os == 'macOS'
+        timeout-minutes: 12
+        run: |
+          set -euo pipefail
+          node scripts/run-isolated-node-smoke.mjs packages/desktop/scripts/smoke-macos-dmg-install.mjs --build-receipt "$ACCEPTANCE_ROOT/package/build-receipt.json" --output "$ACCEPTANCE_ROOT/dmg" 2>&1 | tee "$ACCEPTANCE_ROOT/dmg.log"
 
       # Explicit evidence only: never upload private HOME, Keychain references,
       # application archives, credentials, or caches.
@@ -297,6 +314,15 @@ jobs:
             ${{ env.ACCEPTANCE_ROOT }}/memory/network-guard.jsonl
             ${{ env.ACCEPTANCE_ROOT }}/memory/cost-gui-guard.jsonl
             ${{ env.ACCEPTANCE_ROOT }}/memory/spawned-workers.jsonl
+            ${{ env.ACCEPTANCE_ROOT }}/preferences.log
+            ${{ env.ACCEPTANCE_ROOT }}/preferences/*.png
+            ${{ env.ACCEPTANCE_ROOT }}/preferences/receipt.json
+            ${{ env.ACCEPTANCE_ROOT }}/preferences/operations.json
+            ${{ env.ACCEPTANCE_ROOT }}/preferences/main-*.log
+            ${{ env.ACCEPTANCE_ROOT }}/preferences/network-guard.jsonl
+            ${{ env.ACCEPTANCE_ROOT }}/preferences/cost-gui-guard.jsonl
+            ${{ env.ACCEPTANCE_ROOT }}/preferences/spawned-workers.jsonl
+            ${{ env.ACCEPTANCE_ROOT }}/preferences/denied-attempts.jsonl
             ${{ env.ACCEPTANCE_ROOT }}/packaged-ui.log
             ${{ env.ACCEPTANCE_ROOT }}/ui/*.png
             ${{ env.ACCEPTANCE_ROOT }}/ui/receipt.json
@@ -307,5 +333,12 @@ jobs:
             ${{ env.ACCEPTANCE_ROOT }}/updater/receipt.json
             ${{ env.ACCEPTANCE_ROOT }}/updater/operations.json
             ${{ env.ACCEPTANCE_ROOT }}/updater/launcher-receipt.json
+            ${{ env.ACCEPTANCE_ROOT }}/dmg.log
+            ${{ env.ACCEPTANCE_ROOT }}/dmg/receipt.json
+            ${{ env.ACCEPTANCE_ROOT }}/dmg/mount-custody.json
+            ${{ env.ACCEPTANCE_ROOT }}/dmg/installed-ui/*.png
+            ${{ env.ACCEPTANCE_ROOT }}/dmg/installed-ui/receipt.json
+            ${{ env.ACCEPTANCE_ROOT }}/dmg/reinstalled-ui/*.png
+            ${{ env.ACCEPTANCE_ROOT }}/dmg/reinstalled-ui/receipt.json
           if-no-files-found: error
           retention-days: 7
