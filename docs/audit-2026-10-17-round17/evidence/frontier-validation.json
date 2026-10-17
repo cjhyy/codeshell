@@ -1,0 +1,59 @@
+{
+  "base": "d86db33012dffd5d1849e76b869fa15eb260324f",
+  "formalCount": 1,
+  "candidateCount": 0,
+  "relatedCount": 0,
+  "runs": [
+    {
+      "command": [
+        "node",
+        "scripts/run-bun-test-shard.mjs",
+        "--timeout",
+        "30000",
+        "docs/audit-2026-10-17-round17/evidence/frontier-ingress-port.test.ts"
+      ],
+      "cwd": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell",
+      "startedAt": "2026-10-17T07:58:37.430097+00:00",
+      "finishedAt": "2026-10-17T07:58:37.592473+00:00",
+      "exitCode": 0,
+      "rawLog": "evidence/frontier-ingress-port.first.raw.log",
+      "firstExecution": true,
+      "rawSavedBeforeInspection": true,
+      "noRerun": true,
+      "passCount": 3,
+      "expectCount": 22,
+      "failCount": 0,
+      "skipCount": 0,
+      "completed": true,
+      "existingTests": 0,
+      "focusedTests": 3,
+      "productRuntimeImports": [
+        "packages/chat/src/ingress.ts"
+      ],
+      "testRuntimeDependencies": [
+        "bun:test"
+      ],
+      "scope": "纯生成器和内存字符串；实际 leaf 无 imports；不存在网络请求、平台或 CLI 执行。"
+    }
+  ],
+  "totals": {
+    "cleanShards": 1,
+    "failedBunShards": 0,
+    "successfulTests": 3,
+    "expectations": 22,
+    "existingTests": 0,
+    "focusedTests": 3,
+    "skippedTests": 0,
+    "reruns": 0
+  },
+  "metadataPreflightFailures": [],
+  "navigationFailures": [],
+  "notRun": [
+    "CLI/gateway",
+    "Caddy/Nginx/listener/deployment",
+    "platform send/network/native/PTY/model/account/user-data",
+    "permission/auth/security/custody/watchdog experiments",
+    "build/typecheck/lint/full suite"
+  ],
+  "skipPolicy": "任何运行 fixture/import/assert/platform 失败应保留首次输出后跳过整个动态方向。本方向首次执行成功，无失败或重跑。"
+}

@@ -1,0 +1,72 @@
+{
+  "base": "d86db33012dffd5d1849e76b869fa15eb260324f",
+  "owner": "frontier_round17",
+  "scope": "Only frontier.md and evidence/frontier-*; excludes this receipt itself; raw unchanged",
+  "files": [
+    {
+      "path": "frontier.md",
+      "bytes": 6208,
+      "sha256": "dfe2cce34db51e7a74279d7bc8d9c4a48a279de1c07d22f38ab33cdfedc48680"
+    },
+    {
+      "path": "evidence/frontier-assembly-note.md",
+      "bytes": 680,
+      "sha256": "dba9178fecc2ef624d3219fe0236af1ddd5c4f05baf7d216d6ff35a5b61c210f"
+    },
+    {
+      "path": "evidence/frontier-candidates.json",
+      "bytes": 529,
+      "sha256": "37a1bd92c1eb7fb487ca48ee747b08dec7783a788c28d0b7de0c4c84fce38c65"
+    },
+    {
+      "path": "evidence/frontier-dedup.json",
+      "bytes": 43734,
+      "sha256": "d0c6f53f6a01640e83c0cd15c39d2bd48b2a3007efa655e4954164906678c433"
+    },
+    {
+      "path": "evidence/frontier-findings.json",
+      "bytes": 1637,
+      "sha256": "dfaa7749371ecfbeebd7d7322d283b548fc4b81bc14f94bdcf5258fc1e2b4887"
+    },
+    {
+      "path": "evidence/frontier-ingress-port.first.exit.json",
+      "bytes": 511,
+      "sha256": "a0cec089840046984350b4faf12a23dad799c6486b1ba4670e9b8541f9a7a42f"
+    },
+    {
+      "path": "evidence/frontier-ingress-port.first.raw.log",
+      "bytes": 651,
+      "sha256": "01965d3132617dd93c6c051a279154dec07576554738cda39bf9e427ec248908"
+    },
+    {
+      "path": "evidence/frontier-ingress-port.test.ts",
+      "bytes": 1983,
+      "sha256": "49c287c5cfaa1c69f7e5d2c2ee71c85cf846df694f67f8168e3a19060d4a46bd"
+    },
+    {
+      "path": "evidence/frontier-preflight.json",
+      "bytes": 870,
+      "sha256": "091722d1cc5ad9a3e9fbc2dfd054dbf93559b36c266c156558423e97bc44be46"
+    },
+    {
+      "path": "evidence/frontier-source-manifest.json",
+      "bytes": 6349,
+      "sha256": "66bb614d01d4075fb0415f482a6ecaa23b1df2a2bd9fd1c3cead648ece3a4147"
+    },
+    {
+      "path": "evidence/frontier-specific-dedup.json",
+      "bytes": 380004,
+      "sha256": "2fb7597ce0faa82a8874a65bd0f31a8cba9e8f729d09ebd80ca47213bc7cee65"
+    },
+    {
+      "path": "evidence/frontier-specific-dedup.py",
+      "bytes": 2446,
+      "sha256": "c74a80970dd3a3223dc9acdc953ca4620d732572911cef43bbd28ce208bbed1f"
+    },
+    {
+      "path": "evidence/frontier-validation.json",
+      "bytes": 1831,
+      "sha256": "d83e3cba91dc8c6c154086e4afb962508bf879b2323274e7f2b7c1d818401114"
+    }
+  ]
+}

@@ -1,0 +1,50 @@
+[
+  {
+    "id": "MAPPERS-R17-C1",
+    "status": "candidate",
+    "priority": null,
+    "title": "Snapshot tool start uses a positional id while later real-id room result retains original toolId",
+    "ordinaryTrigger": "Opening/re-subscribing to a followed external session while a tool call is in flight (static production wiring only; not executed).",
+    "sourceLocations": [
+      {
+        "path": "packages/web/src/lib/messageMappers.ts",
+        "lines": "112-123,54-59"
+      },
+      {
+        "path": "packages/coding/src/cc-orchestrator/session-history.ts",
+        "lines": "7-15"
+      },
+      {
+        "path": "packages/desktop/src/main/cc-room/transcript-subscriptions.ts",
+        "lines": "135-140,217-225,551-557"
+      },
+      {
+        "path": "packages/web/src/hooks/useRemoteApp.ts",
+        "lines": "1157-1177"
+      }
+    ],
+    "observed": "Actual mapper APIs on ordinary owned HistoryMessage and RoomMessage objects yield cc-hist-0-0 for the history tool start and toolu_owned_running for the result; direct live start/result both retain toolu_owned_running.",
+    "dynamicScope": "Pure mapper functions only; hand-built valid object shapes; no production parser/follower/RoomManager/reducer/consumer execution.",
+    "controls": [
+      "Normal RoomMessage start/result pairing retains real ids including out-of-order results.",
+      "Legacy starts retain sequence-based id and legacy results keep id-less event.",
+      "History tool positional ids are distinct and deterministic.",
+      "Prose, args and user attachments preserve documented mappings; frozen inputs remain unchanged."
+    ],
+    "missingEvidence": [
+      "Actual common in-flight call across snapshot/live boundary not reproduced.",
+      "Contract requiring id identity across a historical completed boundary and subsequent live result not independently established.",
+      "Consumer/reducer outcome not executed; no result loss, mispairing, stuck state, duplicate UI, or other display claim."
+    ],
+    "test": "evidence/mappers-pure.test.ts",
+    "rawLog": "evidence/mappers-pure.first.raw.log",
+    "baseCommit": "d86db33012dffd5d1849e76b869fa15eb260324f",
+    "relatedHistoricalRecordsExcluded": [
+      "old non-array room-history guard",
+      "old top-level Engine duplicate turn_complete",
+      "old parallel tool-id pairing",
+      "old Codex MCP summary",
+      "round14 failed userMessageDisplay dynamic direction"
+    ]
+  }
+]

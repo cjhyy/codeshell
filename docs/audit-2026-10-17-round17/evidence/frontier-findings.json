@@ -1,0 +1,37 @@
+{
+  "base": "d86db33012dffd5d1849e76b869fa15eb260324f",
+  "formalCount": 1,
+  "findings": [
+    {
+      "id": "CHAT-R17-01",
+      "title": "显式 loopback HTTP 80 端口被配置生成器误判成缺少端口",
+      "severity": "P3",
+      "confidence": "high",
+      "source": "packages/chat/src/ingress.ts",
+      "line": 63,
+      "ordinaryProducer": {
+        "source": "packages/chat/src/cli.ts",
+        "lines": [
+          213,
+          231
+        ],
+        "description": "printIngress --upstream 原样传入 renderWebhookIngress；接线仅静态读取。"
+      },
+      "contract": {
+        "source": "packages/chat/README.md",
+        "line": 369,
+        "description": "上游允许 loopback host:port，未声明排除显式 HTTP :80。",
+        "supplement": "静态config.ts:337/856–860接受webhook整数端口1–65,535；无端口80排除，不运行配置加载。"
+      },
+      "actualBehavior": "三个允许的 loopback 主机拼写分别在 Caddy/Nginx 下显式 :80 均被真实函数拒绝；URL 默认端口正规化为空后 !url.port 拒绝。",
+      "controls": "同三个主机 :8080 的六次调用成功；default8787、普通 host 正规化、固定 paths、自定义 body 大小成功。",
+      "evidence": "evidence/frontier-ingress-port.test.ts",
+      "rawLog": "evidence/frontier-ingress-port.first.raw.log",
+      "limitations": [
+        "没有执行 CLI/gateway、Caddy/Nginx 或 listener。",
+        "不宣称实际代理部署/运行故障；仅纯配置生成器的可复现拒绝。",
+        "fixture 是 characterization，未修改产品实现。"
+      ]
+    }
+  ]
+}

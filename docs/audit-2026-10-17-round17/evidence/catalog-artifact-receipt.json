@@ -1,0 +1,71 @@
+{
+  "frozenBase": "d86db33012dffd5d1849e76b869fa15eb260324f",
+  "owner": "model_catalog_round17",
+  "scope": "Owned audit documents/evidence only; no product or Git writes",
+  "selfExcluded": true,
+  "artifacts": [
+    {
+      "path": "docs/audit-2026-10-17-round17/catalog.md",
+      "bytes": 8419,
+      "sha256": "2a8acde17a0ab61a9a1975dff3ed83bc0f26b1ae6c59148ea0be087eead7f5ce"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round17/evidence/catalog-candidates.json",
+      "bytes": 3049,
+      "sha256": "f46d50a6fda478fe3037f121c383e991aa80efca8eb7125de66f3d1053b63bbd"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round17/evidence/catalog-dedup.json",
+      "bytes": 414009,
+      "sha256": "246a0b7780df621973741aa2dd8120ae9d84a0ddf39fd0b159f1d81e13a60edd"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round17/evidence/catalog-dedup.py",
+      "bytes": 3400,
+      "sha256": "bbeae67f8563c06811ab7b2863561cc6eab77ba3c5fa97fcbc9c534b0fbc3dd6"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round17/evidence/catalog-findings.json",
+      "bytes": 3,
+      "sha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round17/evidence/catalog-navigation-skip.md",
+      "bytes": 1800,
+      "sha256": "89df4c2777bd599f2b6d72599d6e628e813bf2d7507888417bc29912058d0e14"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round17/evidence/catalog-preflight.json",
+      "bytes": 1252,
+      "sha256": "74a88404d4fcf40acc84283335512d4b0a21a919d05164d6783edc08cee6bb7f"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round17/evidence/catalog-pure.first.exit.json",
+      "bytes": 690,
+      "sha256": "4caeefb4f5463dc6953678ec471c4133fa8cdee03acdfa8367c71056d83c6eb6"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round17/evidence/catalog-pure.first.raw.log",
+      "bytes": 1792,
+      "sha256": "cfa1d3f04a5aa20618958528a948e388f984c8a28494d97650ecadd847239b0b"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round17/evidence/catalog-pure.test.ts",
+      "bytes": 7042,
+      "sha256": "8cd73b0bca3b63236d35cd410be156c4700c8d9d52745225acb98b38bff97058"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round17/evidence/catalog-source-manifest.json",
+      "bytes": 10532,
+      "sha256": "2823ccfc08f464aecd29a2fae71f0dac1d0287329b6a9943da01087fc7eac059"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round17/evidence/catalog-validation.json",
+      "bytes": 1679,
+      "sha256": "dbdf173100b8a36d58e68addbb60e548f1fb4471acbd0023487cea1f68da35de"
+    }
+  ],
+  "artifactCount": 12,
+  "productReruns": 0,
+  "reportLocalLinksChecked": 39
+}

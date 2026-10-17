@@ -1,0 +1,16 @@
+{
+  "base": "d86db33012dffd5d1849e76b869fa15eb260324f",
+  "files": [
+    {
+      "path": "packages/server/src/client-message-id.ts",
+      "bytes": 257,
+      "sha256": "ed31c575dd7ee8c5b5cfa98d9476f39efa98b44bafc0df047e7aabc88f552f17"
+    },
+    {
+      "path": "packages/desktop/src/renderer/app/appUtils.ts",
+      "bytes": 4377,
+      "sha256": "75f111826e39d3c333937641e291aaf9cff12e987e6369c85d3800d6dda4f91b"
+    }
+  ],
+  "nature": "Actual known source existence/frozen Git bytes only; no package resolver, Desktop import or product run"
+}

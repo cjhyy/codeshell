@@ -1,0 +1,53 @@
+{
+  "frozenBase": "d86db33012dffd5d1849e76b869fa15eb260324f",
+  "formalCount": 0,
+  "candidateCount": 2,
+  "relatedCount": 0,
+  "firstExecutions": [
+    {
+      "command": [
+        "node",
+        "scripts/run-bun-test-shard.mjs",
+        "--timeout",
+        "30000",
+        "docs/audit-2026-10-17-round17/evidence/catalog-pure.test.ts"
+      ],
+      "exitCode": 0,
+      "rawLog": "docs/audit-2026-10-17-round17/evidence/catalog-pure.first.raw.log",
+      "exitReceipt": "docs/audit-2026-10-17-round17/evidence/catalog-pure.first.exit.json",
+      "successfulTests": 12,
+      "expectations": 36,
+      "failedTests": 0,
+      "skippedTests": 0,
+      "guardCompleted": true,
+      "existingTests": 0,
+      "focusedTests": 12,
+      "firstAttempt": true,
+      "outputSavedBeforeInspection": true
+    }
+  ],
+  "cleanShards": 1,
+  "failedBunShards": 0,
+  "cleanTotals": {
+    "successfulTests": 12,
+    "expectations": 36,
+    "existingTests": 0,
+    "focusedTests": 12,
+    "skippedTests": 0
+  },
+  "productReruns": 0,
+  "metadataNavigationFailures": 1,
+  "metadataPreflightFailures": 0,
+  "notExecuted": [
+    "Desktop existing barrel-import test",
+    "React editor and IPC persistence",
+    "schema.safeParse",
+    "SettingsManager or user config loading",
+    "Core Engine/Runtime/pool/CLI",
+    "server Host and task worker",
+    "credential/provider availability/model/network/native experiments"
+  ],
+  "passMeaning": "Passing characterization tests preserve current behavior and controls; no product fix.",
+  "dynamicBoundary": "Four pure functions through absolute leaf imports; all input records owned ordinary in-memory data.",
+  "metadataAssemblyFailures": 1
+}

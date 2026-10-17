@@ -1,0 +1,36 @@
+{
+  "frozenBase": "d86db33012dffd5d1849e76b869fa15eb260324f",
+  "kind": "metadata-only actual files and frozen bytes; no resolver or dependency probing",
+  "sourceFiles": [
+    {
+      "path": "packages/server/src/panels/agent-task-models.ts",
+      "bytes": 2710,
+      "sha256": "3c283a536c10b62e68cae91cade6492d05819875481c4cfa77539e2270345dc1",
+      "matchesFrozen": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/textConnections.ts",
+      "bytes": 8807,
+      "sha256": "4a9a67e24e0c6dbbb3aceb9f9f94493a4150de80c8f01a815715f5e50730979e",
+      "matchesFrozen": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/catalogEditor.ts",
+      "bytes": 1918,
+      "sha256": "c6534a82262d07576f1f561a2e04aa3c6d0049539c6216d81ce1baf4ad24d9ed",
+      "matchesFrozen": true
+    },
+    {
+      "path": "scripts/run-bun-test-shard.mjs",
+      "bytes": 233,
+      "sha256": "dd2b245afbcb5aa7c798c8674d34edb8e02bb42be0be320050adf9be5ed2fd7d",
+      "matchesFrozen": true
+    }
+  ],
+  "fixture": {
+    "path": "docs/audit-2026-10-17-round17/evidence/catalog-pure.test.ts",
+    "bytes": 7042,
+    "sha256": "8cd73b0bca3b63236d35cd410be156c4700c8d9d52745225acb98b38bff97058"
+  },
+  "productImportsExecuted": false
+}
