@@ -1,0 +1,395 @@
+{
+  "selectedUTC": "2026-10-17T13:45:38.515247+00:00",
+  "method": "All retained literal locator contexts deduplicated by exact context text; full scan cap160 each group, none reached.",
+  "uniqueContextCount": 22,
+  "rows": [
+    {
+      "context": "立即运行、取消和查看上次运行 | `packages/desktop/src/renderer/automation/AutomationView.tsx:206`，`packages/desktop/src/renderer/automation/AutomationView.tsx:385` | 侧栏点 Automation |\n| **自动化时间与项目辅助** | cron schedule 解析/描述、时区分组、项目选项与磁盘会话重建辅助 | `packages/desktop/src/renderer/automation/scheduleModel.ts:66`，`packages/desktop/src/renderer/automation/timezones.ts:6`，`packages/desktop/src/renderer/automation/projectOptions.ts:53`，`packages/desktop/src/renderer/automation/rebuildFromDisk.ts:32` | 自动化表单选择频率、时区、项目或查看运行 |\n| **运行视图（Runs）** | 列所有 runs，选中看详情/transcript | `packages/desktop/src/renderer/runs/RunsView.tsx:24` | 侧栏或命令面板打开 Runs |\n| **审批视图** | 全屏待审批队列和历史记录 | `packages/desktop/src/renderer/approvals/ApprovalsView.tsx:19` | 打开 Approvals 处理待批任务 |\n| **工具审批卡** | 按操作生成 approve/deny 决策，支持本次、本会话、范围批准和拒绝原因 | `packages/desktop/src/renderer/approvals/ApprovalCard.tsx:63`，`packages/desktop/src/renderer/approvals/approvalDecision.ts:37`，`packages/desktop/src/renderer/approvals/approvalDecision.ts:74` | 审批卡点击批准范围或拒绝 |\n| **会话视图** | 全屏磁盘会话列表，搜索、重命名、删除、新建 | `packages/desktop/src/renderer/sessions/SessionsView.tsx:12` | 打开 Se",
+      "locators": [
+        {
+          "group": "source_path",
+          "index": 0,
+          "path": "docs/architecture/11-feature-inventory.md",
+          "jsonPointer": null,
+          "line": 174
+        }
+      ]
+    },
+    {
+      "context": "packages/desktop/src/renderer/automation/projectOptions.ts",
+      "locators": [
+        {
+          "group": "source_path",
+          "index": 1,
+          "path": "docs/audit-2026-10-16/inventory.json",
+          "jsonPointer": "/source_inventory/1343",
+          "line": 1
+        },
+        {
+          "group": "source_path",
+          "index": 4,
+          "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+          "jsonPointer": "/files/2485/path",
+          "line": 1
+        },
+        {
+          "group": "source_filename",
+          "index": 1,
+          "path": "docs/audit-2026-10-16/inventory.json",
+          "jsonPointer": "/source_inventory/1343",
+          "line": 1
+        },
+        {
+          "group": "source_filename",
+          "index": 4,
+          "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+          "jsonPointer": "/files/2485/path",
+          "line": 1
+        },
+        {
+          "group": "project_options",
+          "index": 2,
+          "path": "docs/audit-2026-10-16/inventory.json",
+          "jsonPointer": "/source_inventory/1343",
+          "line": 1
+        },
+        {
+          "group": "project_options",
+          "index": 8,
+          "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+          "jsonPointer": "/files/2485/path",
+          "line": 1
+        }
+      ]
+    },
+    {
+      "context": "ationView.tsx:385` | 侧栏点 Automation |\n| **自动化时间与项目辅助** | cron schedule 解析/描述、时区分组、项目选项与磁盘会话重建辅助 | `packages/desktop/src/renderer/automation/scheduleModel.ts:66`，`packages/desktop/src/renderer/automation/timezones.ts:6`，`packages/desktop/src/renderer/automation/projectOptions.ts:53`，`packages/desktop/src/renderer/automation/rebuildFromDisk.ts:32` | 自动化表单选择频率、时区、项目或查看运行 |\n| **运行视图（Runs）** | 列所有 runs，选中看详情/transcript | `packages/des",
+      "locators": [
+        {
+          "group": "source_path",
+          "index": 2,
+          "path": "docs/audit-2026-10-17-round12/evidence/root-dedup.json",
+          "jsonPointer": "/hits/schedule_model/0/context",
+          "line": 2
+        },
+        {
+          "group": "source_filename",
+          "index": 2,
+          "path": "docs/audit-2026-10-17-round12/evidence/root-dedup.json",
+          "jsonPointer": "/hits/schedule_model/0/context",
+          "line": 2
+        },
+        {
+          "group": "project_options",
+          "index": 3,
+          "path": "docs/audit-2026-10-17-round12/evidence/root-dedup.json",
+          "jsonPointer": "/hits/schedule_model/0/context",
+          "line": 2
+        },
+        {
+          "group": "project_options",
+          "index": 4,
+          "path": "docs/audit-2026-10-17-round12/evidence/root-dedup.json",
+          "jsonPointer": "/hits/schedule_model/0/context",
+          "line": 2
+        }
+      ]
+    },
+    {
+      "context": "chedule 解析/描述、时区分组、项目选项与磁盘会话重建辅助 | `packages/desktop/src/renderer/automation/scheduleModel.ts:66`，`packages/desktop/src/renderer/automation/timezones.ts:6`，`packages/desktop/src/renderer/automation/projectOptions.ts:53`，`packages/desktop/src/renderer/automation/rebuildFromDisk.ts:32` | 自动化表单选择频率、时区、项目或查看运行 |\n| **运行视图（Runs）** | 列所有 runs，选中看详情/transcript | `packages/desktop/src/renderer/runs/RunsView.tsx:24` | 侧栏或命令面板打开 Runs |\n| *",
+      "locators": [
+        {
+          "group": "source_path",
+          "index": 3,
+          "path": "docs/audit-2026-10-17-round12/evidence/root-dedup.json",
+          "jsonPointer": "/hits/timezone/0/context",
+          "line": 1
+        },
+        {
+          "group": "source_filename",
+          "index": 3,
+          "path": "docs/audit-2026-10-17-round12/evidence/root-dedup.json",
+          "jsonPointer": "/hits/timezone/0/context",
+          "line": 1
+        },
+        {
+          "group": "project_options",
+          "index": 5,
+          "path": "docs/audit-2026-10-17-round12/evidence/root-dedup.json",
+          "jsonPointer": "/hits/timezone/0/context",
+          "line": 1
+        },
+        {
+          "group": "project_options",
+          "index": 6,
+          "path": "docs/audit-2026-10-17-round12/evidence/root-dedup.json",
+          "jsonPointer": "/hits/timezone/0/context",
+          "line": 1
+        }
+      ]
+    },
+    {
+      "context": "on；已有 session 仍出现在原 project 下。\n\n### PR 3：迁移次级页面、settings UI 与 automation 的 Project props\n\n**文件清单**\n\n- `packages/desktop/src/renderer/automation/AutomationView.tsx`\n- `packages/desktop/src/renderer/automation/importRuns.ts`\n- `packages/desktop/src/renderer/automation/liveSession.ts`\n- `packages/desktop/src/renderer/automation/rebuildFromDisk.ts`\n- `packages/desktop/src/renderer/automation/projectOptions.ts`\n- `packages/desktop/src/renderer/credentials/CredentialsPage.tsx`\n- `packages/desktop/src/renderer/customize/CustomizeView.tsx`\n- `packages/desktop/src/renderer/extensions/ExtensionsPage.tsx`\n- `packages/desktop/src/renderer/extensions/ManagePage.tsx`\n- `packages/desktop/src/renderer/settings/SettingsPage.tsx`\n- `packages/desktop/src/renderer/settings/ProjectPicker.tsx`\n- `packages/desktop/src/renderer/settings/AgentsSection.tsx`\n- `packages/desktop/src/renderer/settings/CapabilitiesOverviewSection.tsx`\n- `packages/desktop/src/renderer/settings/SandboxSection.tsx`\n- `packages/desktop/src/renderer/settings/MemorySection.tsx`\n- `packages/desktop/src/renderer/settings/AdvancedSections.tsx`\n- ",
+      "locators": [
+        {
+          "group": "source_path",
+          "index": 5,
+          "path": "docs/todo/small-features-2026-07-10/naming-consolidation.md",
+          "jsonPointer": null,
+          "line": 309
+        }
+      ]
+    },
+    {
+      "context": "nderer/automation/AutomationView.tsx:206`，`packages/desktop/src/renderer/automation/AutomationView.tsx:385` | 侧栏点 Automation |\n| **自动化时间与项目辅助** | cron schedule 解析/描述、时区分组、项目选项与磁盘会话重建辅助 | `packages/desktop/src/renderer/automation/scheduleModel.ts:66`，`packages/desktop/src/renderer/automation/timezones.ts:6`，`packages/desktop/src/renderer/automation/projectOptions.ts:53`，`packages/desktop/src/renderer/automation/rebuildFromDisk.ts:32` | 自动化表单选择频率、时区、项目或查看运行 |\n| **运行视图（Runs）** | 列所有 runs，选中看详情/transcript | `packages/desktop/src/renderer/runs/RunsView.tsx:24` | 侧栏或命令面板打开 Runs |\n| **审批视图** | 全屏待审批队列和历史记录 | `packages/desktop/src/renderer/approvals/ApprovalsView.tsx:19` | 打开 Approvals 处理待批任务 |\n| **工具审批卡** | 按操作生成 approve/deny 决策，支持本次、本会话、范围批准和拒绝原因 | `packages/desktop/src/renderer/approvals/ApprovalCard.tsx:63`，`packages/desktop/src/renderer/approvals/approvalDecision.ts:37`，`packages/desktop/src/renderer/approvals/approvalDecision.ts:74` | 审批卡点击批准范围或拒绝 |\n| **会话视图** | 全屏磁盘会话列表，搜索、重命名、删除、新建 | `packages/desktop/src/renderer/sessions/SessionsView.tsx:12` | 打开 Se",
+      "locators": [
+        {
+          "group": "source_filename",
+          "index": 0,
+          "path": "docs/architecture/11-feature-inventory.md",
+          "jsonPointer": null,
+          "line": 174
+        }
+      ]
+    },
+    {
+      "context": "迁移次级页面、settings UI 与 automation 的 Project props\n\n**文件清单**\n\n- `packages/desktop/src/renderer/automation/AutomationView.tsx`\n- `packages/desktop/src/renderer/automation/importRuns.ts`\n- `packages/desktop/src/renderer/automation/liveSession.ts`\n- `packages/desktop/src/renderer/automation/rebuildFromDisk.ts`\n- `packages/desktop/src/renderer/automation/projectOptions.ts`\n- `packages/desktop/src/renderer/credentials/CredentialsPage.tsx`\n- `packages/desktop/src/renderer/customize/CustomizeView.tsx`\n- `packages/desktop/src/renderer/extensions/ExtensionsPage.tsx`\n- `packages/desktop/src/renderer/extensions/ManagePage.tsx`\n- `packages/desktop/src/renderer/settings/SettingsPage.tsx`\n- `packages/desktop/src/renderer/settings/ProjectPicker.tsx`\n- `packages/desktop/src/renderer/settings/AgentsSection.tsx`\n- `packages/desktop/src/renderer/settings/CapabilitiesOverviewSection.tsx`\n- `packages/desktop/src/renderer/settings/SandboxSection.tsx`\n- `packages/desktop/src/renderer/settings/MemorySection.tsx`\n- `packages/desktop/src/renderer/settings/AdvancedSections.tsx`\n- ",
+      "locators": [
+        {
+          "group": "source_filename",
+          "index": 5,
+          "path": "docs/todo/small-features-2026-07-10/naming-consolidation.md",
+          "jsonPointer": null,
+          "line": 309
+        }
+      ]
+    },
+    {
+      "context": "ation/{importRuns,liveSession,rebuildFromDisk,projectOptions}.test.ts`\n\n**改动**\n\n- 类型 import 改自 `projects.ts`，props/locals 机械改名。\n- automation 的返回 shape `repoId` -> `projectId`，但写入 bucket 时仍是同一 id 值；若函数由多模块调用，先提供\n  `{projectId, /** @deprecated */ repoId}` 一版兼容，再在本 PR 内清完调用者并删除旧返回字段。\n- `CredentialsPage.activeRepoPath` 等产品路径统一为 `activeProjectPath`。\n- `projectOptions.ts` 已是用户可见 Project 语义，删除其局部 `ProjectRepo/repoLabel` 重复类型，复用 `TrackedProject/projectLabel`。\n\n**合并门槛**\n\ndisk rebuild 不创建重复 project；被用户删除的 path 不被 automation resurrect；settings/credentials/extensions 都跟随当前 project；\nautomation session 仍落入原 bucket。\n\n### PR 4：收口 conversation bucket 术语，锁死字节兼容\n\n**文件清单**\n\n- `packages/desktop/src/renderer/transcripts.ts`\n- `packages/desktop/src/renderer/transcripts.test.ts`\n- `packages/desktop/src/renderer/streamRouting.ts`\n- `packages/desktop/src/renderer/streamRouting.test.ts`\n- `packages/desktop/src/renderer/chat/anchorBuckets.ts`\n- `packages/desktop/src/renderer/promptHistory.ts`\n- `packages/desktop/src/renderer/archiveAllSessions.test.ts`\n- `packages/desktop/src/re",
+      "locators": [
+        {
+          "group": "source_filename",
+          "index": 6,
+          "path": "docs/todo/small-features-2026-07-10/naming-consolidation.md",
+          "jsonPointer": null,
+          "line": 329
+        }
+      ]
+    },
+    {
+      "context": "bc14777959c7ae4f4e9c21a06cfcff08dccc9ba15436858b66147f218e1d13e0",
+      "locators": [
+        {
+          "group": "source_sha",
+          "index": 0,
+          "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+          "jsonPointer": "/files/2485/sha256",
+          "line": 1
+        }
+      ]
+    },
+    {
+      "context": "nderer/automation/AutomationView.tsx:206`，`packages/desktop/src/renderer/automation/AutomationView.tsx:385` | 侧栏点 Automation |\n| **自动化时间与项目辅助** | cron schedule 解析/描述、时区分组、项目选项与磁盘会话重建辅助 | `packages/desktop/src/renderer/automation/scheduleModel.ts:66`，`packages/desktop/src/renderer/automation/timezones.ts:6`，`packages/desktop/src/renderer/automation/projectOptions.ts:53`，`packages/desktop/src/renderer/automation/rebuildFromDisk.ts:32` | 自动化表单选择频率、时区、项目或查看运行 |\n| **运行视图（Runs）** | 列所有 runs，选中看详情/transcript | `packages/desktop/src/renderer/runs/RunsView.tsx:24` | 侧栏或命令面板打开 Runs |\n| **审批视图** | 全屏待审批队列和历史记录 | `packages/desktop/src/renderer/approvals/ApprovalsView.tsx:19` | 打开 Approvals 处理待批任务 |\n| **工具审批卡** | 按操作生成 approve/deny 决策，支持本次、本会话、范围批准和拒绝原因 | `packages/desktop/src/renderer/approvals/ApprovalCard.tsx:63`，`packages/desktop/src/renderer/approvals/approvalDecision.ts:37`，`packages/desktop/src/renderer/approvals/approvalDecision.ts:74` | 审批卡点击批准范围或拒绝 |\n| **会话视图** | 全屏磁盘会话列表，搜索、重命名、删除、新建 | `packages/desktop/src/renderer/sessions/SessionsView.tsx:12` | 打开",
+      "locators": [
+        {
+          "group": "project_options",
+          "index": 0,
+          "path": "docs/architecture/11-feature-inventory.md",
+          "jsonPointer": null,
+          "line": 174
+        }
+      ]
+    },
+    {
+      "context": "ials -> Token 或 Link |\n\n### 全屏视图（自动化/运行/审批/会话/日志）\n\n| 功能 | 做什么 | 入口 | 怎么用 |\n|------|--------|------|--------|\n| **自动化视图** | 列定时任务，新建、编辑、启停、立即运行、取消和查看上次运行 | `packages/desktop/src/renderer/automation/AutomationView.tsx:206`，`packages/desktop/src/renderer/automation/AutomationView.tsx:385` | 侧栏点 Automation |\n| **自动化时间与项目辅助** | cron schedule 解析/描述、时区分组、项目选项与磁盘会话重建辅助 | `packages/desktop/src/renderer/automation/scheduleModel.ts:66`，`packages/desktop/src/renderer/automation/timezones.ts:6`，`packages/desktop/src/renderer/automation/projectOptions.ts:53`，`packages/desktop/src/renderer/automation/rebuildFromDisk.ts:32` | 自动化表单选择频率、时区、项目或查看运行 |\n| **运行视图（Runs）** | 列所有 runs，选中看详情/transcript | `packages/desktop/src/renderer/runs/RunsView.tsx:24` | 侧栏或命令面板打开 Runs |\n| **审批视图** | 全屏待审批队列和历史记录 | `packages/desktop/src/renderer/approvals/ApprovalsView.tsx:19` | 打开 Approvals 处理待批任务 |\n| **工具审批卡** | 按操作生成 approve/deny 决策，支持本次、本会话、范围批准和拒绝原因 | `packages/desktop/src/renderer/approvals/ApprovalCard.tsx:63`，`packages/desktop/src/renderer/approvals/approvalDecision.ts",
+      "locators": [
+        {
+          "group": "project_options",
+          "index": 1,
+          "path": "docs/architecture/11-feature-inventory.md",
+          "jsonPointer": null,
+          "line": 174
+        }
+      ]
+    },
+    {
+      "context": "packages/desktop/src/renderer/automation/projectOptions.test.ts",
+      "locators": [
+        {
+          "group": "project_options",
+          "index": 7,
+          "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+          "jsonPointer": "/files/2484/path",
+          "line": 1
+        },
+        {
+          "group": "project_options",
+          "index": 11,
+          "path": "docs/review-2026-10-12/validation/desktop-renderer-results.json",
+          "jsonPointer": "/44/file",
+          "line": 1
+        },
+        {
+          "group": "project_options",
+          "index": 13,
+          "path": "docs/review-2026-10-12/validation/original-baseline-evidence-round28/independent-existing-tests.receipt.json",
+          "jsonPointer": "/groups/1/rawLogs/44/file",
+          "line": 1
+        },
+        {
+          "group": "project_options",
+          "index": 17,
+          "path": "docs/review-2026-10-12/validation/original-baseline-evidence-round28/manifest.json",
+          "jsonPointer": "/logs/185/file",
+          "line": 1
+        }
+      ]
+    },
+    {
+      "context": ".ts`：上述精确 key 断言；旧 bucket fixture 的 load/save/clear/migrate；no-project sentinel；draft `_none_`；\n   override/panel 不丢。\n3. `permissionOverrides`/`promptHistory`/`anchorBuckets`：只改标识符后序列化完全一致。\n4. `automation/rebuildFromDisk.test.ts`、`importRuns.test.ts`、`projectOptions.test.ts`：cwd -> project 匹配、删除 denylist、\n   normalized duplicate path 的 id remap。\n5. App/Sidebar/Chat smoke：旧 localStorage 启动、project picker、add/remove/restore、session search、no-project chat、reload active project。\n\n### 5.2 Desktop main/preload 测试\n\n1. settings path：user/project、缺 projectPath 报错、原子写、并发写锁行为不变。\n2. IPC contract：`settings:get(scope, secondArg)` 与 `settings:set(scope, patch, thirdArg)` 参数顺序不变。\n3. recents registry 继续是 disk source of truth，不修改 `~/.code-sh",
+      "locators": [
+        {
+          "group": "project_options",
+          "index": 9,
+          "path": "docs/audit-2026-10-17-round36/evidence/root-history.json",
+          "jsonPointer": "/hits/chat-view/52/context",
+          "line": 4
+        }
+      ]
+    },
+    {
+      "context": "lState/promptHistory 做 repoId -> projectId 只改命名不改值，避免大规模 key rename。\n\n8. **最后清理旧名**\n   当所有调用点都经 adapter 后，逐步删除新代码中的 `Repo` import。保留极少数 legacy function/key 名，并用注释说明“legacy storage name, project semantics”。\n\n## 后续验证建议\n\n1. renderer 单测：`repos.test.ts`、`transcripts.test.ts`、`permissionOverrides.test.ts`、`automation/rebuildFromDisk.test.ts`、`automation/projectOptions.test.ts`。\n2. core 单测：`session-manager.workspace-resume.test.ts`、`engine.workspace-cwd.test.ts`、`settings/manager.test.ts`。\n3. 手工 smoke：添加 project、删除后恢复、无项目对话、已有 localStorage reload、worktree switch/resume、project settings 写入、automation disk rebuild。\n",
+      "locators": [
+        {
+          "group": "project_options",
+          "index": 10,
+          "path": "docs/nightly-2026-07-10/naming-consolidation-plan.md",
+          "jsonPointer": null,
+          "line": 93
+        }
+      ]
+    },
+    {
+      "context": "/tmp/codeshell-review-20261012/desktop-baseline/044-projectOptions.test.ts.log",
+      "locators": [
+        {
+          "group": "project_options",
+          "index": 12,
+          "path": "docs/review-2026-10-12/validation/desktop-renderer-results.json",
+          "jsonPointer": "/44/log",
+          "line": 1
+        },
+        {
+          "group": "project_options",
+          "index": 14,
+          "path": "docs/review-2026-10-12/validation/original-baseline-evidence-round28/independent-existing-tests.receipt.json",
+          "jsonPointer": "/groups/1/rawLogs/44/log",
+          "line": 1
+        },
+        {
+          "group": "project_options",
+          "index": 18,
+          "path": "docs/review-2026-10-12/validation/original-baseline-evidence-round28/manifest.json",
+          "jsonPointer": "/logs/185/originalLog",
+          "line": 1
+        }
+      ]
+    },
+    {
+      "context": "/private/tmp/codeshell-review-20261012/desktop-baseline/044-projectOptions.test.ts.log",
+      "locators": [
+        {
+          "group": "project_options",
+          "index": 15,
+          "path": "docs/review-2026-10-12/validation/original-baseline-evidence-round28/independent-existing-tests.receipt.json",
+          "jsonPointer": "/groups/1/rawLogs/44/resolvedLog",
+          "line": 1
+        }
+      ]
+    },
+    {
+      "context": "044-projectOptions.test.ts.log",
+      "locators": [
+        {
+          "group": "project_options",
+          "index": 16,
+          "path": "docs/review-2026-10-12/validation/original-baseline-evidence-round28/independent-existing-tests.receipt.json",
+          "jsonPointer": "/groups/1/rawLogs/44/archiveMemberBasename",
+          "line": 1
+        }
+      ]
+    },
+    {
+      "context": "desktop-renderer/044-projectOptions.test.ts.log",
+      "locators": [
+        {
+          "group": "project_options",
+          "index": 19,
+          "path": "docs/review-2026-10-12/validation/original-baseline-evidence-round28/manifest.json",
+          "jsonPointer": "/logs/185/tarMember",
+          "line": 1
+        }
+      ]
+    },
+    {
+      "context": "迁移次级页面、settings UI 与 automation 的 Project props\n\n**文件清单**\n\n- `packages/desktop/src/renderer/automation/AutomationView.tsx`\n- `packages/desktop/src/renderer/automation/importRuns.ts`\n- `packages/desktop/src/renderer/automation/liveSession.ts`\n- `packages/desktop/src/renderer/automation/rebuildFromDisk.ts`\n- `packages/desktop/src/renderer/automation/projectOptions.ts`\n- `packages/desktop/src/renderer/credentials/CredentialsPage.tsx`\n- `packages/desktop/src/renderer/customize/CustomizeView.tsx`\n- `packages/desktop/src/renderer/extensions/ExtensionsPage.tsx`\n- `packages/desktop/src/renderer/extensions/ManagePage.tsx`\n- `packages/desktop/src/renderer/settings/SettingsPage.tsx`\n- `packages/desktop/src/renderer/settings/ProjectPicker.tsx`\n- `packages/desktop/src/renderer/settings/AgentsSection.tsx`\n- `packages/desktop/src/renderer/settings/CapabilitiesOverviewSection.tsx`\n- `packages/desktop/src/renderer/settings/SandboxSection.tsx`\n- `packages/desktop/src/renderer/settings/MemorySection.tsx`\n- `packages/desktop/src/renderer/settings/AdvancedSections.tsx`",
+      "locators": [
+        {
+          "group": "project_options",
+          "index": 20,
+          "path": "docs/todo/small-features-2026-07-10/naming-consolidation.md",
+          "jsonPointer": null,
+          "line": 309
+        }
+      ]
+    },
+    {
+      "context": "`\n- `packages/desktop/src/renderer/settings/CapabilitiesOverviewSection.tsx`\n- `packages/desktop/src/renderer/settings/SandboxSection.tsx`\n- `packages/desktop/src/renderer/settings/MemorySection.tsx`\n- `packages/desktop/src/renderer/settings/AdvancedSections.tsx`\n- 以上模块现有 `.test.ts/.test.tsx`，重点是 `automation/{importRuns,liveSession,rebuildFromDisk,projectOptions}.test.ts`\n\n**改动**\n\n- 类型 import 改自 `projects.ts`，props/locals 机械改名。\n- automation 的返回 shape `repoId` -> `projectId`，但写入 bucket 时仍是同一 id 值；若函数由多模块调用，先提供\n  `{projectId, /** @deprecated */ repoId}` 一版兼容，再在本 PR 内清完调用者并删除旧返回字段。\n- `CredentialsPage.activeRepoPath` 等产品路径统一为 `activeProjectPath`。\n- `projectOptions.ts` 已是用户可见 Project 语义，删除其局部 `ProjectRepo/repoLabel` 重复类型，复用 `TrackedProject/projectLabel`。\n\n**合并门槛**\n\ndisk rebuild 不创建重复 project；被用户删除的 path 不被 automation resurrect；settings/credentials/extensions 都跟随当前 project；\nautomation session 仍落入原 bucket。\n\n### PR 4：收口 conversation bucket 术语，锁死字节兼容\n\n**文件清单**\n\n- `packages/desktop/src/renderer/transcripts.ts`\n- `packages/desktop/src/renderer/transcripts.tes",
+      "locators": [
+        {
+          "group": "project_options",
+          "index": 21,
+          "path": "docs/todo/small-features-2026-07-10/naming-consolidation.md",
+          "jsonPointer": null,
+          "line": 321
+        }
+      ]
+    },
+    {
+      "context": "ation/{importRuns,liveSession,rebuildFromDisk,projectOptions}.test.ts`\n\n**改动**\n\n- 类型 import 改自 `projects.ts`，props/locals 机械改名。\n- automation 的返回 shape `repoId` -> `projectId`，但写入 bucket 时仍是同一 id 值；若函数由多模块调用，先提供\n  `{projectId, /** @deprecated */ repoId}` 一版兼容，再在本 PR 内清完调用者并删除旧返回字段。\n- `CredentialsPage.activeRepoPath` 等产品路径统一为 `activeProjectPath`。\n- `projectOptions.ts` 已是用户可见 Project 语义，删除其局部 `ProjectRepo/repoLabel` 重复类型，复用 `TrackedProject/projectLabel`。\n\n**合并门槛**\n\ndisk rebuild 不创建重复 project；被用户删除的 path 不被 automation resurrect；settings/credentials/extensions 都跟随当前 project；\nautomation session 仍落入原 bucket。\n\n### PR 4：收口 conversation bucket 术语，锁死字节兼容\n\n**文件清单**\n\n- `packages/desktop/src/renderer/transcripts.ts`\n- `packages/desktop/src/renderer/transcripts.test.ts`\n- `packages/desktop/src/renderer/streamRouting.ts`\n- `packages/desktop/src/renderer/streamRouting.test.ts`\n- `packages/desktop/src/renderer/chat/anchorBuckets.ts`\n- `packages/desktop/src/renderer/promptHistory.ts`\n- `packages/desktop/src/renderer/archiveAllSessions.test.ts`\n- `packages/desktop/src",
+      "locators": [
+        {
+          "group": "project_options",
+          "index": 22,
+          "path": "docs/todo/small-features-2026-07-10/naming-consolidation.md",
+          "jsonPointer": null,
+          "line": 329
+        }
+      ]
+    },
+    {
+      "context": " fixture、无效 JSON、stable id、displayName/pinned、removed denylist normalization。\n2. `transcripts.test.ts`：上述精确 key 断言；旧 bucket fixture 的 load/save/clear/migrate；no-project sentinel；draft `_none_`；\n   override/panel 不丢。\n3. `permissionOverrides`/`promptHistory`/`anchorBuckets`：只改标识符后序列化完全一致。\n4. `automation/rebuildFromDisk.test.ts`、`importRuns.test.ts`、`projectOptions.test.ts`：cwd -> project 匹配、删除 denylist、\n   normalized duplicate path 的 id remap。\n5. App/Sidebar/Chat smoke：旧 localStorage 启动、project picker、add/remove/restore、session search、no-project chat、reload active project。\n\n### 5.2 Desktop main/preload 测试\n\n1. settings path：user/project、缺 projectPath 报错、原子写、并发写锁行为不变。\n2. IPC contract：`settings:get(scope, secondArg)` 与 `settings:set(scope, patch, thirdArg)` 参数顺序不变。\n3. recents registry 继续是 disk source of truth，不修改 `~/.code-shell/desktop/recents.json` shape。\n4. session workspace service 仍把 project/main root 和 current workspace 分开，cleanup owner guard 不受 prop rename 影响。\n\n### 5.3 Core 测试\n\n1. `persistedSessionWorkspace()`：workspace 优先；legacy cwd fallback；空/非法",
+      "locators": [
+        {
+          "group": "project_options",
+          "index": 23,
+          "path": "docs/todo/small-features-2026-07-10/naming-consolidation.md",
+          "jsonPointer": null,
+          "line": 431
+        }
+      ]
+    }
+  ],
+  "samePathShaRows": [
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+      "jsonPointer": "/files/2485",
+      "row": {
+        "path": "packages/desktop/src/renderer/automation/projectOptions.ts",
+        "bytes": 3885,
+        "lines": 101,
+        "sha256": "bc14777959c7ae4f4e9c21a06cfcff08dccc9ba15436858b66147f218e1d13e0"
+      }
+    }
+  ]
+}

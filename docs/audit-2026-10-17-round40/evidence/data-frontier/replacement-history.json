@@ -1,0 +1,144 @@
+{
+  "query": "projectOptions|project.option|项目选项",
+  "readAtUTC": "2026-10-17T13:36:38.653072+00:00",
+  "basedOnInventorySha": "579548d35cf40be3c2be8141a5cb418ef2c65f4880413529837d07b45955dec8",
+  "files": 3509,
+  "contextCap": null,
+  "matchCount": 24,
+  "hits": [
+    {
+      "path": "docs/architecture/11-feature-inventory.md",
+      "location": "174",
+      "excerpt": "| **自动化时间与项目辅助** | cron schedule 解析/描述、时区分组、项目选项与磁盘会话重建辅助 | `packages/desktop/src/renderer/automation/scheduleModel.ts:66`，`packages/desktop/src/renderer/automation/timezones.ts:6`，`packages/desktop/src/renderer/automation/projectOptions.ts:53`，`packages/desktop/src/renderer/automation/rebuildFromDisk.ts:32` | 自动化表单选择频率、时区、项目或查看运行 |"
+    },
+    {
+      "path": "docs/architecture/11-feature-inventory.md",
+      "location": "174",
+      "excerpt": "`packages/desktop/src/renderer/automation/timezones.ts:6`，`packages/desktop/src/renderer/automation/projectOptions.ts:53`，`packages/desktop/src/renderer/automation/rebuildFromDisk.ts:32` | 自动化表单选择频率、时区、项目或查看运行 |"
+    },
+    {
+      "path": "docs/audit-2026-10-16/inventory.json",
+      "location": "$[\"source_inventory\"][1343]",
+      "excerpt": "packages/desktop/src/renderer/automation/projectOptions.ts"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round12/evidence/root-dedup.json",
+      "location": "$[\"hits\"][\"schedule_model\"][0][\"context\"]",
+      "excerpt": "ationView.tsx:385` | 侧栏点 Automation |\n| **自动化时间与项目辅助** | cron schedule 解析/描述、时区分组、项目选项与磁盘会话重建辅助 | `packages/desktop/src/renderer/automation/scheduleModel.ts:66`，`packages/desktop/src/renderer/automation/timezones.ts:6`，`packages/desktop/src/renderer/automation/projectOptions.ts:53`，`packages/desktop/src/renderer/automation/rebuildFromDisk.ts:32` | 自动化表单选择频率、时区、项目或查看运行 |\n| **运行视图（Runs）** | 列所有 runs，选中看详情/transcript | `packages/des"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round12/evidence/root-dedup.json",
+      "location": "$[\"hits\"][\"schedule_model\"][0][\"context\"]",
+      "excerpt": "`packages/desktop/src/renderer/automation/timezones.ts:6`，`packages/desktop/src/renderer/automation/projectOptions.ts:53`，`packages/desktop/src/renderer/automation/rebuildFromDisk.ts:32` | 自动化表单选择频率、时区、项目或查看运行 |\n| **运行视图（Runs）** | 列所有 runs，选中看详情/transcript | `packages/des"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round12/evidence/root-dedup.json",
+      "location": "$[\"hits\"][\"timezone\"][0][\"context\"]",
+      "excerpt": "chedule 解析/描述、时区分组、项目选项与磁盘会话重建辅助 | `packages/desktop/src/renderer/automation/scheduleModel.ts:66`，`packages/desktop/src/renderer/automation/timezones.ts:6`，`packages/desktop/src/renderer/automation/projectOptions.ts:53`，`packages/desktop/src/renderer/automation/rebuildFromDisk.ts:32` | 自动化表单选择频率、时区、项目或查看运行 |\n| **运行视图（Runs）** | 列所有 runs，选中看详情/transcript | `packages/desktop/src/renderer/runs/RunsView.tsx:24` | 侧栏或命令面板打开 Runs |\n| *"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round12/evidence/root-dedup.json",
+      "location": "$[\"hits\"][\"timezone\"][0][\"context\"]",
+      "excerpt": "`packages/desktop/src/renderer/automation/timezones.ts:6`，`packages/desktop/src/renderer/automation/projectOptions.ts:53`，`packages/desktop/src/renderer/automation/rebuildFromDisk.ts:32` | 自动化表单选择频率、时区、项目或查看运行 |\n| **运行视图（Runs）** | 列所有 runs，选中看详情/transcript | `packages/desktop/src/renderer/runs/RunsView.tsx:24` | 侧栏或命令面板打开 Runs |\n| *"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+      "location": "$[\"files\"][2484][\"path\"]",
+      "excerpt": "packages/desktop/src/renderer/automation/projectOptions.test.ts"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+      "location": "$[\"files\"][2485][\"path\"]",
+      "excerpt": "packages/desktop/src/renderer/automation/projectOptions.ts"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round36/evidence/root-history.json",
+      "location": "$[\"hits\"][\"chat-view\"][52][\"context\"]",
+      "excerpt": "story`/`anchorBuckets`：只改标识符后序列化完全一致。\n4. `automation/rebuildFromDisk.test.ts`、`importRuns.test.ts`、`projectOptions.test.ts`：cwd -> project 匹配、删除 denylist、\n   normalized duplicate path 的 id remap。\n5. App/Sidebar/Chat smoke：旧 localStorage 启动、project picker、add/remove/restore、session search、no-project chat、reload active project。\n\n### 5.2 Desktop main/preload 测试\n\n1. settings path：user/project、缺 projectPath 报错、原子写、并发写锁行为不变。\n2. IPC contract：`settings:get(scope, secondArg)` 与 `settings:set(scope, patch, thirdArg)` 参数顺序不变。\n3. recents registry 继续是 disk source of truth，不修改 `~/.code-sh"
+    },
+    {
+      "path": "docs/nightly-2026-07-10/naming-consolidation-plan.md",
+      "location": "93",
+      "excerpt": "transcripts.test.ts`、`permissionOverrides.test.ts`、`automation/rebuildFromDisk.test.ts`、`automation/projectOptions.test.ts`。"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/desktop-renderer-results.json",
+      "location": "$[44][\"file\"]",
+      "excerpt": "packages/desktop/src/renderer/automation/projectOptions.test.ts"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/desktop-renderer-results.json",
+      "location": "$[44][\"log\"]",
+      "excerpt": "/tmp/codeshell-review-20261012/desktop-baseline/044-projectOptions.test.ts.log"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-baseline-evidence-round28/independent-existing-tests.receipt.json",
+      "location": "$[\"groups\"][1][\"rawLogs\"][44][\"file\"]",
+      "excerpt": "packages/desktop/src/renderer/automation/projectOptions.test.ts"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-baseline-evidence-round28/independent-existing-tests.receipt.json",
+      "location": "$[\"groups\"][1][\"rawLogs\"][44][\"log\"]",
+      "excerpt": "/tmp/codeshell-review-20261012/desktop-baseline/044-projectOptions.test.ts.log"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-baseline-evidence-round28/independent-existing-tests.receipt.json",
+      "location": "$[\"groups\"][1][\"rawLogs\"][44][\"resolvedLog\"]",
+      "excerpt": "/private/tmp/codeshell-review-20261012/desktop-baseline/044-projectOptions.test.ts.log"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-baseline-evidence-round28/independent-existing-tests.receipt.json",
+      "location": "$[\"groups\"][1][\"rawLogs\"][44][\"archiveMemberBasename\"]",
+      "excerpt": "044-projectOptions.test.ts.log"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-baseline-evidence-round28/manifest.json",
+      "location": "$[\"logs\"][185][\"file\"]",
+      "excerpt": "packages/desktop/src/renderer/automation/projectOptions.test.ts"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-baseline-evidence-round28/manifest.json",
+      "location": "$[\"logs\"][185][\"originalLog\"]",
+      "excerpt": "/tmp/codeshell-review-20261012/desktop-baseline/044-projectOptions.test.ts.log"
+    },
+    {
+      "path": "docs/review-2026-10-12/validation/original-baseline-evidence-round28/manifest.json",
+      "location": "$[\"logs\"][185][\"tarMember\"]",
+      "excerpt": "desktop-renderer/044-projectOptions.test.ts.log"
+    },
+    {
+      "path": "docs/todo/small-features-2026-07-10/naming-consolidation.md",
+      "location": "309",
+      "excerpt": "- `packages/desktop/src/renderer/automation/projectOptions.ts`"
+    },
+    {
+      "path": "docs/todo/small-features-2026-07-10/naming-consolidation.md",
+      "location": "321",
+      "excerpt": "- 以上模块现有 `.test.ts/.test.tsx`，重点是 `automation/{importRuns,liveSession,rebuildFromDisk,projectOptions}.test.ts`"
+    },
+    {
+      "path": "docs/todo/small-features-2026-07-10/naming-consolidation.md",
+      "location": "329",
+      "excerpt": "- `projectOptions.ts` 已是用户可见 Project 语义，删除其局部 `ProjectRepo/repoLabel` 重复类型，复用 `TrackedProject/projectLabel`。"
+    },
+    {
+      "path": "docs/todo/small-features-2026-07-10/naming-consolidation.md",
+      "location": "431",
+      "excerpt": "4. `automation/rebuildFromDisk.test.ts`、`importRuns.test.ts`、`projectOptions.test.ts`：cwd -> project 匹配、删除 denylist、"
+    }
+  ],
+  "directPathObjectCount": 1,
+  "objects": [
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+      "location": "$[\"files\"][2485]",
+      "object": {
+        "path": "packages/desktop/src/renderer/automation/projectOptions.ts",
+        "bytes": 3885,
+        "lines": 101,
+        "sha256": "bc14777959c7ae4f4e9c21a06cfcff08dccc9ba15436858b66147f218e1d13e0"
+      }
+    }
+  ],
+  "driftFromDatedInventory": []
+}

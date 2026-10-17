@@ -1,0 +1,20 @@
+{
+  "baseline": "48bc2c6646bef3914455bb8d3d322a0070278d3b",
+  "count": 1,
+  "updates": [
+    {
+      "existingId": "UTF8-R34-C1",
+      "sourceCommit": "037c2afbb05f2fcb3b2f3f3588be2b4a980032a1",
+      "stage": "source-addressed / runtime not revalidated",
+      "candidateClassificationChanged": false,
+      "runtimeConfirmedFixed": false,
+      "newIdAssigned": false,
+      "scope": "Valid UTF8 logical stream, boundary cursor and retained bytes. No remaining same-condition source gap established.",
+      "evidence": [
+        "evidence/utf8-source-refresh/report.md",
+        "evidence/utf8-source-review/review.md"
+      ],
+      "note": "Prep41 source follow-up bundled into formal40. Original candidate and all prep contexts preserved."
+    }
+  ]
+}

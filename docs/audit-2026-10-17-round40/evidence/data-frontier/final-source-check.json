@@ -1,0 +1,59 @@
+{
+  "kind": "final byte check only, no new semantic reading",
+  "timeUTC": "2026-10-17T13:40:02.841388+00:00",
+  "rootSuppliedContextShort": "42683054",
+  "formalBaseline": null,
+  "gitBindingPerformed": false,
+  "files": [
+    {
+      "path": "packages/desktop/src/renderer/automation/projectOptions.ts",
+      "bytes": 3885,
+      "sha256": "bc14777959c7ae4f4e9c21a06cfcff08dccc9ba15436858b66147f218e1d13e0",
+      "matchesPin": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/automation/projectOptions.test.ts",
+      "bytes": 4376,
+      "sha256": "78018b554992bf1437ec73b81e183f8a65ad43ff5aee04f1d08f57d5c54abcea",
+      "matchesPin": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/automation/AutomationView.tsx",
+      "bytes": 48293,
+      "sha256": "2a40819d84a7a0c6902976cf6a2140f87f049b315405d9186c0c3690e48c7ece",
+      "matchesPin": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/automation/pathMatch.ts",
+      "bytes": 3130,
+      "sha256": "a3e8f76158d99cc473ffe44e9b5c9edf9bff2732eda9c76447591acdcd889bd5",
+      "matchesPin": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/i18n/ns/automation.ts",
+      "bytes": 21013,
+      "sha256": "af15dbfe007df1ace1e080f6d607cf11508f78d6f14970e548f56e049efcdd1e",
+      "matchesPin": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/markdown/stripMarkdown.ts",
+      "bytes": 1799,
+      "sha256": "461ef4477c3a2b94d424a5f3dd9238d96603cdbe6b0a1d495b9c5490b4314881",
+      "matchesPin": true
+    },
+    {
+      "path": "CODESHELL.md",
+      "bytes": 17639,
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "matchesPin": true
+    },
+    {
+      "path": "AGENTS.md",
+      "bytes": 206,
+      "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "matchesPin": true
+    }
+  ],
+  "allStable": true,
+  "newProductSemanticReadLines": 0
+}

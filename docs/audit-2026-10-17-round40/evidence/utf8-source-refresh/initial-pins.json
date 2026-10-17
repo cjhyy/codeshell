@@ -1,0 +1,38 @@
+{
+  "prepOnly": true,
+  "rootSuppliedBaseline": "037c2afbb05f2fcb3b2f3f3588be2b4a980032a1",
+  "files": [
+    {
+      "path": "packages/core/src/runtime/background-shell.ts",
+      "bytes": 26558,
+      "sha256": "3c370fde2abe97bc3eed222b06c34d70c2edabb3fcda7173e388fce64c67e0fe",
+      "totalLines": 739,
+      "pinTimeUTC": "2026-10-17T13:43:24.616172+00:00",
+      "coverage": "hash-only before current prep semantic read"
+    },
+    {
+      "path": "packages/core/src/runtime/background-shell.utf8-frontier.test.ts",
+      "bytes": 12578,
+      "sha256": "d31cf9bf094f86e53d9ab9614eddcc5d2b5caf007dd66280d1fdfa5bcbe14879",
+      "totalLines": 334,
+      "pinTimeUTC": "2026-10-17T13:43:24.616172+00:00",
+      "coverage": "hash-only before current prep semantic read"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round34/evidence/utf8-frontier/proposal.md",
+      "bytes": 2749,
+      "sha256": "1cff6041730c6ef954ec4e0beafeed1d2eb1a62a4a75ad760305c5f7f22f7358",
+      "totalLines": 15,
+      "pinTimeUTC": "2026-10-17T13:43:24.616172+00:00",
+      "coverage": "hash-only before current prep semantic read"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round34/evidence/utf8-review/review.md",
+      "bytes": 4315,
+      "sha256": "ae18882686d59fae58a02f68996490225b683740caaab2b86aa634e1d64ecc15",
+      "totalLines": 13,
+      "pinTimeUTC": "2026-10-17T13:43:24.616172+00:00",
+      "coverage": "hash-only before current prep semantic read"
+    }
+  ]
+}

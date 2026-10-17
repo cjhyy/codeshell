@@ -1,0 +1,35 @@
+{
+  "files": 3509,
+  "markdown": 1361,
+  "json": 2148,
+  "stringLeaves": 975542,
+  "scalarLeaves": 1464542,
+  "exactArchivePaths": 169,
+  "parseErrors": 0,
+  "excludedMutableFuture": [
+    "docs/audit-2026-10-17-round39/**",
+    "docs/audit-2026-10-17-round40/**",
+    "docs/audit-2026-10-17-round41/**"
+  ],
+  "includesFrozen38": true,
+  "queries": {
+    "exact-candidate": 15,
+    "peek-boundary": 20,
+    "old-failed": 0
+  },
+  "cap": 80,
+  "retained": {
+    "exact-candidate": 15,
+    "peek-boundary": 20,
+    "old-failed": 0
+  },
+  "all35ContextsRead": true,
+  "sameCause": "Existing UTF8-R34-C1, not new issue/ID. Round25 CRLF cleanup and D03 JSON-lines decoder are separate known causes, not reopened.",
+  "worktreeNamesNotRuntimeEvidence": true,
+  "runtimePassesBorrowed": false,
+  "datedDelta": {
+    "added": 0,
+    "removed": 0,
+    "sharedChanged": 1
+  }
+}

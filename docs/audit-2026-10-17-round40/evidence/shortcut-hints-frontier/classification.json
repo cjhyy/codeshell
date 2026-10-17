@@ -1,0 +1,17 @@
+{
+  "newFormalFindings": 0,
+  "newCandidates": 0,
+  "newRelatedRecords": 0,
+  "result": "bounded static negative for one active9line ordinary modifier-label formatting leaf and inspected display consumers",
+  "activeLeaf": "packages/desktop/src/renderer/keyboardShortcutHints.ts",
+  "initialCandidateExcludedBeforeBody": "packages/web/src/lib/format.ts",
+  "ordinaryContract": "Platform darwin uses Cmd+ in text or command symbol in symbol style; other platform strings/undefined use Ctrl+. Typed key text is appended unchanged.",
+  "notClaimed": [
+    "All keyboard shortcuts work",
+    "Actual accelerator or modifier event dispatch agrees with labels",
+    "Native menus or window actions work",
+    "Every platform or browser behavior validated",
+    "Untested runtime language/UI state correct"
+  ],
+  "oldFailedDirectionsReopened": false
+}

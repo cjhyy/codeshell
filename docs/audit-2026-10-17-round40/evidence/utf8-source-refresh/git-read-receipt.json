@@ -1,0 +1,105 @@
+{
+  "gitWrites": 0,
+  "actualReadCommands": [
+    {
+      "command": [
+        "git",
+        "rev-parse",
+        "HEAD",
+        "main",
+        "refs/remotes/origin/main"
+      ],
+      "exitCode": 0,
+      "stdout": [
+        "037c2afbb05f2fcb3b2f3f3588be2b4a980032a1",
+        "037c2afbb05f2fcb3b2f3f3588be2b4a980032a1",
+        "02d5d9a9ecbbb206d5f3d8a1d367e7081d937101"
+      ],
+      "toolChunk": "3e97f7",
+      "kind": "read-only refs metadata"
+    },
+    {
+      "command": [
+        "git",
+        "show",
+        "037c2afbb05f2fcb3b2f3f3588be2b4a980032a1:packages/core/src/runtime/background-shell.ts"
+      ],
+      "exitCode": 0,
+      "blobBytes": 26558,
+      "blobSha256": "3c370fde2abe97bc3eed222b06c34d70c2edabb3fcda7173e388fce64c67e0fe",
+      "matchesInitialFilesystemPin": true,
+      "stderr": "",
+      "kind": "read-only frozen blob bytes, not product invocation"
+    },
+    {
+      "command": [
+        "git",
+        "show",
+        "037c2afbb05f2fcb3b2f3f3588be2b4a980032a1:packages/core/src/runtime/background-shell.utf8-frontier.test.ts"
+      ],
+      "exitCode": 0,
+      "blobBytes": 12578,
+      "blobSha256": "d31cf9bf094f86e53d9ab9614eddcc5d2b5caf007dd66280d1fdfa5bcbe14879",
+      "matchesInitialFilesystemPin": true,
+      "stderr": "",
+      "kind": "read-only frozen blob bytes, not product invocation"
+    },
+    {
+      "command": [
+        "git",
+        "show",
+        "037c2afbb05f2fcb3b2f3f3588be2b4a980032a1:packages/core/src/tool-system/builtin/background-shell-tools.ts"
+      ],
+      "exitCode": 0,
+      "blobBytes": 5335,
+      "blobSha256": "e52c34e95dc2ca15dbad41491323f23cfecfd66d9701f1b06903aa3ee8b5f5e6",
+      "matchesInitialFilesystemPin": true,
+      "stderr": "",
+      "kind": "read-only frozen blob bytes before semantic read"
+    },
+    {
+      "command": [
+        "git",
+        "show",
+        "037c2afbb05f2fcb3b2f3f3588be2b4a980032a1:packages/core/src/runtime/ring-file.ts"
+      ],
+      "exitCode": 0,
+      "blobBytes": 5956,
+      "blobSha256": "f3981f59140f06ce2aa138bd15b26a08ad4cff9dd46b76b7c3b57f7bab81fdcd",
+      "matchesInitialFilesystemPin": true,
+      "stderr": "",
+      "kind": "read-only frozen blob bytes before semantic read"
+    },
+    {
+      "command": [
+        "git",
+        "show",
+        "037c2afbb05f2fcb3b2f3f3588be2b4a980032a1:packages/core/src/runtime/utf8-cut.ts"
+      ],
+      "exitCode": 0,
+      "blobBytes": 927,
+      "blobSha256": "0ca2da6f3f1a7e1f97e910478d3851846dfa3877fa6ddcc15be05058c341ba10",
+      "matchesInitialFilesystemPin": true,
+      "stderr": "",
+      "kind": "read-only frozen blob bytes before semantic read"
+    },
+    {
+      "command": [
+        "git",
+        "rev-parse",
+        "HEAD",
+        "main"
+      ],
+      "exitCode": 0,
+      "stdout": [
+        "037c2afbb05f2fcb3b2f3f3588be2b4a980032a1",
+        "037c2afbb05f2fcb3b2f3f3588be2b4a980032a1"
+      ],
+      "toolChunk": "04f476",
+      "kind": "read-only final refs metadata"
+    }
+  ],
+  "readCommandCount": 7,
+  "readAtUTC": "2026-10-17T13:43:24.616172+00:00",
+  "lastReadAtUTC": "2026-10-17T13:46:25.196725+00:00"
+}

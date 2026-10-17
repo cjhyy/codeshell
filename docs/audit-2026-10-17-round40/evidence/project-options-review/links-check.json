@@ -1,0 +1,68 @@
+{
+  "checkedUTC": "2026-10-17T13:49:32.916867+00:00",
+  "method": "All inline Markdown file links in exact independent directory; existence only, no product/formal verifier run",
+  "linkCount": 10,
+  "allExist": true,
+  "links": [
+    {
+      "source": "review.md",
+      "destination": "decisions.json",
+      "resolvedPath": "/private/tmp/codeshell-audit-round40-project-options-review/decisions.json",
+      "exists": true
+    },
+    {
+      "source": "review.md",
+      "destination": "source-manifest.json",
+      "resolvedPath": "/private/tmp/codeshell-audit-round40-project-options-review/source-manifest.json",
+      "exists": true
+    },
+    {
+      "source": "review.md",
+      "destination": "history.json",
+      "resolvedPath": "/private/tmp/codeshell-audit-round40-project-options-review/history.json",
+      "exists": true
+    },
+    {
+      "source": "review.md",
+      "destination": "history-selected-contexts.json",
+      "resolvedPath": "/private/tmp/codeshell-audit-round40-project-options-review/history-selected-contexts.json",
+      "exists": true
+    },
+    {
+      "source": "review.md",
+      "destination": "history-decisions.json",
+      "resolvedPath": "/private/tmp/codeshell-audit-round40-project-options-review/history-decisions.json",
+      "exists": true
+    },
+    {
+      "source": "review.md",
+      "destination": "author-metadata-checks.json",
+      "resolvedPath": "/private/tmp/codeshell-audit-round40-project-options-review/author-metadata-checks.json",
+      "exists": true
+    },
+    {
+      "source": "review.md",
+      "destination": "history-finish-check.json",
+      "resolvedPath": "/private/tmp/codeshell-audit-round40-project-options-review/history-finish-check.json",
+      "exists": true
+    },
+    {
+      "source": "review.md",
+      "destination": "../codeshell-audit-round40-data-frontier/report.md",
+      "resolvedPath": "/private/tmp/codeshell-audit-round40-data-frontier/report.md",
+      "exists": true
+    },
+    {
+      "source": "review.md",
+      "destination": "validation.json",
+      "resolvedPath": "/private/tmp/codeshell-audit-round40-project-options-review/validation.json",
+      "exists": true
+    },
+    {
+      "source": "review.md",
+      "destination": "author-receipt.json",
+      "resolvedPath": "/private/tmp/codeshell-audit-round40-project-options-review/author-receipt.json",
+      "exists": true
+    }
+  ]
+}

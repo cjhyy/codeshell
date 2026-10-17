@@ -1,0 +1,12 @@
+{
+  "ownedOutput": "/tmp/codeshell-audit-round41-utf8-source-refresh",
+  "prepOnly": true,
+  "baselineActuallyRead": "037c2afbb05f2fcb3b2f3f3588be2b4a980032a1",
+  "existingItemId": "UTF8-R34-C1",
+  "scope": "current complete UTF8 frontier prefix and incremental byte cursor handling + actual default entry, retained byte producer and new test source declarations",
+  "oldR34And40DirectoriesUntouched": true,
+  "noNewId": true,
+  "RootOwnsStageClassification": true,
+  "gitReads": 7,
+  "gitWrites": 0
+}

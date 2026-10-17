@@ -1,0 +1,151 @@
+{
+  "capturedAtUTC": "2026-10-17T14:00:05.399165+00:00",
+  "kind": "artifact pins before current supplement metadata content review, no product source reads",
+  "artifacts": [
+    {
+      "path": "/tmp/codeshell-audit-round42-data-frontier/artifact-receipt.json",
+      "bytes": 4575,
+      "sha256": "0e82099af3baeae9b28aefd37bf19e454feac30f99d0ebee4daebd1825bf3c33"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round42-data-frontier/classification.json",
+      "bytes": 846,
+      "sha256": "ebefb474ff3e644d0804653ab5b178b6490b69d4b211bbee8b8b8bc3b30000a2"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round42-data-frontier/consumer-initial-pins.json",
+      "bytes": 1163,
+      "sha256": "0be6d1b1726e9371b3c3a5786bae70238d14db2ccfbd0020e52b81c7eeb19399"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round42-data-frontier/history-contexts.json",
+      "bytes": 248147,
+      "sha256": "7ec24914f050dc5f4b0eb02861b49b892ce6b4afbebfbf5fe647ac502365c3d7"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round42-data-frontier/history-decisions.json",
+      "bytes": 3930,
+      "sha256": "28d82b9fdcbca2f9b294851eecb4d3377f10986e0b9836c13dcc44b65788255e"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round42-data-frontier/history-finish-check.json",
+      "bytes": 1240876,
+      "sha256": "94d55495cffdb1262c8b68973bf685f9346db5e249677e3028920e615530b895"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round42-data-frontier/history-initial-pins.json",
+      "bytes": 773236,
+      "sha256": "d231a6d8fa1d6622a0f302ca7c5c2ed92ef45b50b56b7205a0a6d27e82f9d101"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round42-data-frontier/history-inventory.raw.txt",
+      "bytes": 227477,
+      "sha256": "5ea27ff8abf57f12b97e8d0e708a1da329ac75a65f676d2e701ae12da471d8fa"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round42-data-frontier/history-selected-contexts.json",
+      "bytes": 59328,
+      "sha256": "765309078d1a0cdaccb91c9389783d57118e6a311883593b629f928b55edf5cb"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round42-data-frontier/history.json",
+      "bytes": 768576,
+      "sha256": "05eef700051d3a170d9afea2ae9b3f54f7b86aba730b6b04c355209064b8aec7"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round42-data-frontier/initial-pins.json",
+      "bytes": 732,
+      "sha256": "fec8061de5e30a0d1eca69e5ceb676be8b76376724947dfed9323f8b3a35e8d5"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round42-data-frontier/links-check.json",
+      "bytes": 2087,
+      "sha256": "dfd422585ed20bff521512f6e20ea45203592383509539ebcfb0c9a3563a0558"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round42-data-frontier/replacement-history-initial-pins.json",
+      "bytes": 692934,
+      "sha256": "eafd05b8b764422cfe9441958d75c82874ebe8e2ff0ba720eea9db9c5b7c79a9"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round42-data-frontier/replacement-history.json",
+      "bytes": 28411,
+      "sha256": "3b1e5c1b5fb07591e3b091f6080647a418295c2317e840e0ac82864473e6394c"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round42-data-frontier/replacement-history.py",
+      "bytes": 3653,
+      "sha256": "6662a31bc7ed9b9c815cbd1478944955d8a8d47e6f650bf766d0a0d68d6e8296"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round42-data-frontier/replacement-initial-pins.json",
+      "bytes": 2127,
+      "sha256": "e8d2f3b81a734f5c64487e915d0bac42fef517bfcdf56ba86eead7abbea0f9e5"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round42-data-frontier/replacement-selection-metadata.json",
+      "bytes": 7194,
+      "sha256": "e842bd6f50693e6de06c4c266c8f2193bf9bdb418017e2fc222c8fda0fd8de24"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round42-data-frontier/report.md",
+      "bytes": 4415,
+      "sha256": "e98892cecd6e0649fcbecf2c5a9f4eb8c8eaf7307ae8882c89772ec6af22fcda"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round42-data-frontier/scan-history.py",
+      "bytes": 5577,
+      "sha256": "3a7ea981a0d48b044db4da1b11db5d7c375dc8d21cb3720216e9dad86c11c9a8"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round42-data-frontier/selection-metadata.json",
+      "bytes": 10032,
+      "sha256": "c1c7ec12a44bb64aeb1bc995afb62b809ba9dd30af07ade573a6e5218abfe6a3"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round42-data-frontier/source-manifest.json",
+      "bytes": 12108,
+      "sha256": "d4055279c739d9eac94419c1648fb3fe0187c178b6fd479311a2d8aad5a59d1f"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round42-data-frontier/validation.json",
+      "bytes": 1736,
+      "sha256": "d96083b0db1c515a8f92febf9e4a198ce0e8035bc21820b8925f75730963dadb"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round41-utf8-source-review/checks.json",
+      "bytes": 18143,
+      "sha256": "050ad8081771adda1df7b626bad959814a9ac4b332204b9e0d3377995c90d045"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round41-utf8-source-review/initial-pins.json",
+      "bytes": 7713,
+      "sha256": "8a7bcccdd9d59bb69a8686b596ff7133dbbd42d3bf8084bd4657f3faea2cd766"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round41-utf8-source-review/link-check.first.exit.json",
+      "bytes": 766,
+      "sha256": "e05b3383f4a74856e9499516744b9ac92b64d8c25284d0b189b83f048f737268"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round41-utf8-source-review/review.md",
+      "bytes": 5048,
+      "sha256": "941f92f600cc926e6d9bf0d9714d02c1544d48aacabd08f7d22184a118da9389"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round41-utf8-source-review/reviewer-receipt.json",
+      "bytes": 4532,
+      "sha256": "f9873d40a0bbea671889969ef845f533bda8fa87b9b0698b982b39aaaba3e38b"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round41-utf8-source-review/source-excerpts.json",
+      "bytes": 20457,
+      "sha256": "9b498e103b61fed8d101b0ba8b09649f16ac17d4e3afe71956ffd41ef91c7ed1"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round41-utf8-source-review/source-manifest.json",
+      "bytes": 9452,
+      "sha256": "975772a61feb2183e671e777c781d4fb4968f72bc94db0a14348cdfce7d70719"
+    }
+  ]
+}

@@ -1,0 +1,120 @@
+{
+  "kind": "Frozen independent source-only review; self excluded",
+  "frozenUTC": "2026-10-17T13:53:33.002871+00:00",
+  "directory": "/tmp/codeshell-audit-round41-utf8-source-review",
+  "files": [
+    {
+      "path": "checks.json",
+      "bytes": 18143,
+      "sha256": "050ad8081771adda1df7b626bad959814a9ac4b332204b9e0d3377995c90d045"
+    },
+    {
+      "path": "initial-pins.json",
+      "bytes": 7713,
+      "sha256": "8a7bcccdd9d59bb69a8686b596ff7133dbbd42d3bf8084bd4657f3faea2cd766"
+    },
+    {
+      "path": "link-check.first.exit.json",
+      "bytes": 766,
+      "sha256": "e05b3383f4a74856e9499516744b9ac92b64d8c25284d0b189b83f048f737268"
+    },
+    {
+      "path": "review.md",
+      "bytes": 5048,
+      "sha256": "941f92f600cc926e6d9bf0d9714d02c1544d48aacabd08f7d22184a118da9389"
+    },
+    {
+      "path": "source-excerpts.json",
+      "bytes": 20457,
+      "sha256": "9b498e103b61fed8d101b0ba8b09649f16ac17d4e3afe71956ffd41ef91c7ed1"
+    },
+    {
+      "path": "source-manifest.json",
+      "bytes": 9452,
+      "sha256": "975772a61feb2183e671e777c781d4fb4968f72bc94db0a14348cdfce7d70719"
+    }
+  ],
+  "fileCountExcludingSelf": 6,
+  "totalFilesIncludingSelf": 7,
+  "existingItemId": "UTF8-R34-C1",
+  "newFormal": 0,
+  "newCandidate": 0,
+  "newRelated": 0,
+  "dispositionSuggestion": "source-addressed at037 / runtime not revalidated",
+  "notOldUTF8CandidateAuthor": true,
+  "notFixImplementer": true,
+  "sourceManifestRows": 6,
+  "currentProductFiles": 4,
+  "currentProductSemanticLines": 256,
+  "currentProductDisplayedLines": 435,
+  "historicalReportSemanticLines": 28,
+  "ownTestSourceLines": 0,
+  "authorArtifactCount": 16,
+  "authorReceiptRowsChecked": 15,
+  "all23InitialPinsStable": true,
+  "ownGitCommands": 0,
+  "attributedAuthorGitReadCommands": 7,
+  "productRuns": 0,
+  "testsExecuted": 0,
+  "bufferOrLanguageFixtures": 0,
+  "reportLinks": [
+    {
+      "target": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17-round34/evidence/utf8-frontier/proposal.md",
+      "physicalTarget": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17-round34/evidence/utf8-frontier/proposal.md",
+      "existsOrSelf": true
+    },
+    {
+      "target": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17-round34/evidence/utf8-review/review.md",
+      "physicalTarget": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17-round34/evidence/utf8-review/review.md",
+      "existsOrSelf": true
+    },
+    {
+      "target": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/packages/core/src/runtime/background-shell.ts:57",
+      "physicalTarget": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/packages/core/src/runtime/background-shell.ts",
+      "existsOrSelf": true
+    },
+    {
+      "target": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/packages/core/src/runtime/ring-file.ts:96",
+      "physicalTarget": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/packages/core/src/runtime/ring-file.ts",
+      "existsOrSelf": true
+    },
+    {
+      "target": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/packages/core/src/runtime/utf8-cut.ts",
+      "physicalTarget": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/packages/core/src/runtime/utf8-cut.ts",
+      "existsOrSelf": true
+    },
+    {
+      "target": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/packages/core/src/tool-system/builtin/background-shell-tools.ts:25",
+      "physicalTarget": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/packages/core/src/tool-system/builtin/background-shell-tools.ts",
+      "existsOrSelf": true
+    },
+    {
+      "target": "source-manifest.json",
+      "physicalTarget": "source-manifest.json",
+      "existsOrSelf": true
+    },
+    {
+      "target": "source-excerpts.json",
+      "physicalTarget": "source-excerpts.json",
+      "existsOrSelf": true
+    },
+    {
+      "target": "checks.json",
+      "physicalTarget": "checks.json",
+      "existsOrSelf": true
+    },
+    {
+      "target": "reviewer-receipt.json",
+      "physicalTarget": "reviewer-receipt.json",
+      "existsOrSelf": true
+    },
+    {
+      "target": "link-check.first.exit.json",
+      "physicalTarget": "link-check.first.exit.json",
+      "existsOrSelf": true
+    }
+  ],
+  "metadataFirstFailureRecorded": "link-check.first.exit.json",
+  "oldMaterialsModified": false,
+  "formal40BaselineEstablishedByThisReviewer": false
+}

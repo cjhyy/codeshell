@@ -1,0 +1,78 @@
+{
+  "kind": "frozen own-author aggregate metadata artifacts; self excluded",
+  "ownedDirectory": "/tmp/codeshell-audit-round40-aggregate-review",
+  "frozenAtUTC": "2026-10-17T13:53:08.033455+00:00",
+  "role": "own-author metadata only, not independent source review",
+  "proposedFormalRound": 40,
+  "formalBaseline": null,
+  "futureFormalBranchOrHistoryCertified": false,
+  "files": [
+    {
+      "path": "candidate-source-updates.json",
+      "bytes": 987,
+      "sha256": "2512f46d4a8fca1411311a5df8f44f4452a3f1e09a47e3fde41da42054ce82ea"
+    },
+    {
+      "path": "checks.json",
+      "bytes": 26174,
+      "sha256": "2813f504b192c26183f1fb5426e35473b751bdc31a19a802866102aa5099b280"
+    },
+    {
+      "path": "final-input-artifact-checks.json",
+      "bytes": 13463,
+      "sha256": "ff47fbcb7c2d5368cf3594d30f2454edec978ece25d6f8af2d0ccc8d2aadc519"
+    },
+    {
+      "path": "independent-input-artifact-pins.json",
+      "bytes": 5214,
+      "sha256": "329242966300001e11fdf8dd5da903ab972784c132759bc8d725b5ac6c4e408f"
+    },
+    {
+      "path": "input-artifact-pins.json",
+      "bytes": 9973,
+      "sha256": "6589db817586fb895d958b524146fbaf1ee1ed94f2fe0b79168d7dd46a832c96"
+    },
+    {
+      "path": "links-check.json",
+      "bytes": 1091,
+      "sha256": "5c1bdcaff6c43b15e1e46a3af577cf1f1b3d71fa4b9c38d62fd924e2cadc8d15"
+    },
+    {
+      "path": "review.md",
+      "bytes": 5741,
+      "sha256": "473d822d189099b4c5c0ee6af14e420cb39447a23bde7f4b9e1023ce53ff6f22"
+    },
+    {
+      "path": "scope.json",
+      "bytes": 707,
+      "sha256": "104a65fed53919890997dcbc6f92f522ff7a80ac4974787b087b93bdea39ce58"
+    },
+    {
+      "path": "source-range-overlay.json",
+      "bytes": 2068,
+      "sha256": "847b0db7da5494367fc0a35ed3a050d674f73bf51b3c32781cf466865b3f233b"
+    },
+    {
+      "path": "validation.json",
+      "bytes": 829,
+      "sha256": "72fdfc4ca75e654616a7450ad341fee5e2cca8a6cdc19bb081260892ceda2aee"
+    }
+  ],
+  "fileCountExcludingSelf": 10,
+  "totalFilesIncludingSelf": 11,
+  "checksFilesEmpty": true,
+  "frozenInputArtifactRecordsChecked": 49,
+  "frozenInputFilesIncludingReceiptsChecked": 52,
+  "inputArtifactsStable": true,
+  "newClassification": {
+    "formal": 0,
+    "candidate": 0,
+    "related": 0
+  },
+  "existingCandidateSourceUpdateOnly": "UTF8-R34-C1 source-addressed at037 / runtime not revalidated; no candidate removal",
+  "newProductSemanticReadLines": 0,
+  "productSourceFilesystemChecks": 0,
+  "gitCommandsThisAggregate": 0,
+  "gitWrites": 0,
+  "repoWrites": 0
+}

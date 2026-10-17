@@ -1,0 +1,13 @@
+{
+  "kind": "Metadata-only final link-check failure, no product attempt",
+  "toolChunk": "63bfe6",
+  "observedExitCode": 1,
+  "rawDiagnostic": "Traceback (most recent call last):\n  File \"<stdin>\", line 30, in <module>\nAssertionError: /Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/packages/core/src/runtime/background-shell.ts:57\n",
+  "cause": "A valid editor link line suffix :57 was passed to Path.is_file as a literal filename; normalize only line suffix for local-link metadata verification",
+  "reportWasWrittenBeforeFailure": true,
+  "receiptWasNotYetCreated": true,
+  "productImportsOrCalls": 0,
+  "testsOrFixtures": 0,
+  "git": 0,
+  "correction": "Only local markdown link metadata bookkeeping; no source read expansion or product retry"
+}

@@ -1,0 +1,150 @@
+{
+  "checks": [
+    {
+      "path": "evidence/data-frontier/report.md",
+      "bytes": 6575,
+      "sha256": "65785be4275ba82dc19a5bbf2783e88351a81bb32ef988b7122284dc9b4c91ed",
+      "matchesWorkerFreezeMessage": true
+    },
+    {
+      "path": "evidence/data-frontier/source-manifest.json",
+      "bytes": 8266,
+      "sha256": "2544149b833ae157b62f2bbf1958a3ab7c4ece99b3c8885228b4dc45feae19a0",
+      "matchesWorkerFreezeMessage": true
+    },
+    {
+      "path": "evidence/data-frontier/artifact-receipt.json",
+      "bytes": 3140,
+      "sha256": "d0311af10e911323f03d43905136cfa446555d46c091b9006640a0e3366c83a2",
+      "matchesWorkerFreezeMessage": true
+    },
+    {
+      "path": "evidence/project-options-review/review.md",
+      "bytes": 4884,
+      "sha256": "a511cfab04adaaa67cc5ad2e2b6faf733ad81918e19a216187665dd97fd2c977",
+      "matchesWorkerFreezeMessage": true
+    },
+    {
+      "path": "evidence/project-options-review/source-manifest.json",
+      "bytes": 10345,
+      "sha256": "474b96584df13db82c0b85add6fdf9d6757bb2454a573179939ce8a3208f38e9",
+      "matchesWorkerFreezeMessage": true
+    },
+    {
+      "path": "evidence/project-options-review/author-receipt.json",
+      "bytes": 4064,
+      "sha256": "18931cc29b640a031fcea4ab12924662f307a59022c10fd0b63fd4d3ad7a357a",
+      "matchesWorkerFreezeMessage": true
+    },
+    {
+      "path": "evidence/utf8-source-refresh/report.md",
+      "bytes": 7820,
+      "sha256": "d68ef5299f3af898b48f38338db1b36a20e33c3eb84e3d8a44b0964446a1f82c",
+      "matchesWorkerFreezeMessage": true
+    },
+    {
+      "path": "evidence/utf8-source-refresh/source-manifest.json",
+      "bytes": 11280,
+      "sha256": "1243f317f5e08d843305b591a450aa0b1d8de09e46b287a98795a5cc4ea5677f",
+      "matchesWorkerFreezeMessage": true
+    },
+    {
+      "path": "evidence/utf8-source-refresh/artifact-receipt.json",
+      "bytes": 3194,
+      "sha256": "32f6380f3110d88cbc473e3cf23763978ffd7791b22d04e13afafbedcdd3fcb5",
+      "matchesWorkerFreezeMessage": true
+    },
+    {
+      "path": "evidence/utf8-source-refresh/git-read-receipt.json",
+      "bytes": 3116,
+      "sha256": "650ce71ae31b7d8c02d5716984263f074dac40b2dc072425dff2008700b3573c",
+      "matchesWorkerFreezeMessage": true
+    },
+    {
+      "path": "evidence/utf8-source-review/review.md",
+      "bytes": 5048,
+      "sha256": "941f92f600cc926e6d9bf0d9714d02c1544d48aacabd08f7d22184a118da9389",
+      "matchesWorkerFreezeMessage": true
+    },
+    {
+      "path": "evidence/utf8-source-review/source-manifest.json",
+      "bytes": 9452,
+      "sha256": "975772a61feb2183e671e777c781d4fb4968f72bc94db0a14348cdfce7d70719",
+      "matchesWorkerFreezeMessage": true
+    },
+    {
+      "path": "evidence/utf8-source-review/checks.json",
+      "bytes": 18143,
+      "sha256": "050ad8081771adda1df7b626bad959814a9ac4b332204b9e0d3377995c90d045",
+      "matchesWorkerFreezeMessage": true
+    },
+    {
+      "path": "evidence/utf8-source-review/reviewer-receipt.json",
+      "bytes": 4532,
+      "sha256": "f9873d40a0bbea671889969ef845f533bda8fa87b9b0698b982b39aaaba3e38b",
+      "matchesWorkerFreezeMessage": true
+    },
+    {
+      "path": "evidence/shortcut-hints-frontier/report.md",
+      "bytes": 4415,
+      "sha256": "e98892cecd6e0649fcbecf2c5a9f4eb8c8eaf7307ae8882c89772ec6af22fcda",
+      "matchesWorkerFreezeMessage": true
+    },
+    {
+      "path": "evidence/shortcut-hints-frontier/source-manifest.json",
+      "bytes": 12108,
+      "sha256": "d4055279c739d9eac94419c1648fb3fe0187c178b6fd479311a2d8aad5a59d1f",
+      "matchesWorkerFreezeMessage": true
+    },
+    {
+      "path": "evidence/shortcut-hints-frontier/artifact-receipt.json",
+      "bytes": 4575,
+      "sha256": "0e82099af3baeae9b28aefd37bf19e454feac30f99d0ebee4daebd1825bf3c33",
+      "matchesWorkerFreezeMessage": true
+    },
+    {
+      "path": "evidence/aggregate-review/review.md",
+      "bytes": 5741,
+      "sha256": "473d822d189099b4c5c0ee6af14e420cb39447a23bde7f4b9e1023ce53ff6f22",
+      "matchesWorkerFreezeMessage": true
+    },
+    {
+      "path": "evidence/aggregate-review/checks.json",
+      "bytes": 26174,
+      "sha256": "2813f504b192c26183f1fb5426e35473b751bdc31a19a802866102aa5099b280",
+      "matchesWorkerFreezeMessage": true
+    },
+    {
+      "path": "evidence/aggregate-review/candidate-source-updates.json",
+      "bytes": 987,
+      "sha256": "2512f46d4a8fca1411311a5df8f44f4452a3f1e09a47e3fde41da42054ce82ea",
+      "matchesWorkerFreezeMessage": true
+    },
+    {
+      "path": "evidence/aggregate-review/artifact-receipt.json",
+      "bytes": 2517,
+      "sha256": "3da35b71d411f4271ee468bc1731bfee0792ecb3d27d44646010dbacb79d16e6",
+      "matchesWorkerFreezeMessage": true
+    },
+    {
+      "path": "evidence/supplement-review/review.md",
+      "bytes": 2453,
+      "sha256": "cab4d8e4d0859bb06b591910fa3d9c06ba990d834043d85630cd05da1b18e49f",
+      "matchesWorkerFreezeMessage": true
+    },
+    {
+      "path": "evidence/supplement-review/checks.json",
+      "bytes": 17007,
+      "sha256": "20c88d30c60a686569aa45cde6e07665af62472208e6b7fa4eea4c464f29827a",
+      "matchesWorkerFreezeMessage": true
+    },
+    {
+      "path": "evidence/supplement-review/artifact-receipt.json",
+      "bytes": 1397,
+      "sha256": "63e7533d248cc3fd97df8068f55f95b44f0efd51a7b853a416faec3edf781bc3",
+      "matchesWorkerFreezeMessage": true
+    }
+  ],
+  "expectedCount": 24,
+  "productRuns": 0
+}

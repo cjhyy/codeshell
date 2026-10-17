@@ -1,0 +1,191 @@
+{
+  "scope": "New Round41 independent source-only counterevidence review; pin before this reviewer content reading",
+  "repository": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell",
+  "gitReadCommands": 0,
+  "files": [
+    {
+      "path": "/tmp/codeshell-audit-round41-utf8-source-refresh/artifact-receipt.json",
+      "bytes": 3194,
+      "sha256": "32f6380f3110d88cbc473e3cf23763978ffd7791b22d04e13afafbedcdd3fcb5",
+      "lines": 103,
+      "pinnedUTC": "2026-10-17T13:50:40.586983+00:00",
+      "semanticReadAtPin": false
+    },
+    {
+      "path": "/tmp/codeshell-audit-round41-utf8-source-refresh/classification.json",
+      "bytes": 544,
+      "sha256": "6abe0e869143c07b4f3324b6a5e9363863439dc4478e71b4091569c5b5f64f0e",
+      "lines": 12,
+      "pinnedUTC": "2026-10-17T13:50:40.587754+00:00",
+      "semanticReadAtPin": false
+    },
+    {
+      "path": "/tmp/codeshell-audit-round41-utf8-source-refresh/consumer-initial-pins.json",
+      "bytes": 999,
+      "sha256": "36d393712b0339cf6e50891a2a036f101e939c1029388e25620cdd915305d7b3",
+      "lines": 28,
+      "pinnedUTC": "2026-10-17T13:50:40.588070+00:00",
+      "semanticReadAtPin": false
+    },
+    {
+      "path": "/tmp/codeshell-audit-round41-utf8-source-refresh/final-source-check.json",
+      "bytes": 2311,
+      "sha256": "32ef255e8e526f24832f4123ac9acd5660cc3147661898a30a5a63892f3b7c67",
+      "lines": 65,
+      "pinnedUTC": "2026-10-17T13:50:40.588324+00:00",
+      "semanticReadAtPin": false
+    },
+    {
+      "path": "/tmp/codeshell-audit-round41-utf8-source-refresh/git-read-receipt.json",
+      "bytes": 3116,
+      "sha256": "650ce71ae31b7d8c02d5716984263f074dac40b2dc072425dff2008700b3573c",
+      "lines": 105,
+      "pinnedUTC": "2026-10-17T13:50:40.588602+00:00",
+      "semanticReadAtPin": false
+    },
+    {
+      "path": "/tmp/codeshell-audit-round41-utf8-source-refresh/history-decisions.json",
+      "bytes": 869,
+      "sha256": "8e5a4e6f07d89e1094c3e50680d85b91e0385a3a653a076f83da5f740330ff75",
+      "lines": 35,
+      "pinnedUTC": "2026-10-17T13:50:40.588891+00:00",
+      "semanticReadAtPin": false
+    },
+    {
+      "path": "/tmp/codeshell-audit-round41-utf8-source-refresh/history-delta.json",
+      "bytes": 738,
+      "sha256": "c1b309fd50835ae3ae368c9cbe09e5798ad3716dbe26dfaf83305313b004ac3e",
+      "lines": 24,
+      "pinnedUTC": "2026-10-17T13:50:40.589179+00:00",
+      "semanticReadAtPin": false
+    },
+    {
+      "path": "/tmp/codeshell-audit-round41-utf8-source-refresh/history-method.py",
+      "bytes": 3342,
+      "sha256": "d5dfa4e841e5f56debecf117a1d4f8dc9903a921eceeca40303e9e7cbf9bd1fc",
+      "lines": 26,
+      "pinnedUTC": "2026-10-17T13:50:40.589592+00:00",
+      "semanticReadAtPin": false
+    },
+    {
+      "path": "/tmp/codeshell-audit-round41-utf8-source-refresh/history.json",
+      "bytes": 712864,
+      "sha256": "23998c34e21a76313c4d277a4b0f55ad58824493d3693bbf2690a1f5fbc34672",
+      "lines": 17778,
+      "pinnedUTC": "2026-10-17T13:50:40.591062+00:00",
+      "semanticReadAtPin": false
+    },
+    {
+      "path": "/tmp/codeshell-audit-round41-utf8-source-refresh/initial-pins.json",
+      "bytes": 1467,
+      "sha256": "52e002c48118a6110e38e118b4e839e82af618e5e974529a4ea860eca473e22a",
+      "lines": 38,
+      "pinnedUTC": "2026-10-17T13:50:40.591396+00:00",
+      "semanticReadAtPin": false
+    },
+    {
+      "path": "/tmp/codeshell-audit-round41-utf8-source-refresh/links-check.json",
+      "bytes": 3339,
+      "sha256": "a779e983e01cd219a7b7423ebdaf18a3efe09c5c2fef2cb166d320528583866c",
+      "lines": 103,
+      "pinnedUTC": "2026-10-17T13:50:40.591673+00:00",
+      "semanticReadAtPin": false
+    },
+    {
+      "path": "/tmp/codeshell-audit-round41-utf8-source-refresh/report.md",
+      "bytes": 7820,
+      "sha256": "d68ef5299f3af898b48f38338db1b36a20e33c3eb84e3d8a44b0964446a1f82c",
+      "lines": 35,
+      "pinnedUTC": "2026-10-17T13:50:40.591967+00:00",
+      "semanticReadAtPin": false
+    },
+    {
+      "path": "/tmp/codeshell-audit-round41-utf8-source-refresh/scope.json",
+      "bytes": 502,
+      "sha256": "52a5fa2eca070c07977b7d3ff636adf3246a1d2982e72492213e6c806a7705c5",
+      "lines": 12,
+      "pinnedUTC": "2026-10-17T13:50:40.592179+00:00",
+      "semanticReadAtPin": false
+    },
+    {
+      "path": "/tmp/codeshell-audit-round41-utf8-source-refresh/source-manifest.json",
+      "bytes": 11280,
+      "sha256": "1243f317f5e08d843305b591a450aa0b1d8de09e46b287a98795a5cc4ea5677f",
+      "lines": 313,
+      "pinnedUTC": "2026-10-17T13:50:40.592498+00:00",
+      "semanticReadAtPin": false
+    },
+    {
+      "path": "/tmp/codeshell-audit-round41-utf8-source-refresh/static-cause-comparison.json",
+      "bytes": 2345,
+      "sha256": "95046aac627f9697e53864e15a213aa18dfb28ad447ae6fc4d2f4e266dc64c65",
+      "lines": 49,
+      "pinnedUTC": "2026-10-17T13:50:40.592701+00:00",
+      "semanticReadAtPin": false
+    },
+    {
+      "path": "/tmp/codeshell-audit-round41-utf8-source-refresh/validation.json",
+      "bytes": 821,
+      "sha256": "b7d3c6ce4236f8e01c4c5337c913ec328d12cd54b6990c0782f8922fb16f5709",
+      "lines": 23,
+      "pinnedUTC": "2026-10-17T13:50:40.592936+00:00",
+      "semanticReadAtPin": false
+    },
+    {
+      "path": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17-round34/evidence/utf8-frontier/proposal.md",
+      "bytes": 2749,
+      "sha256": "1cff6041730c6ef954ec4e0beafeed1d2eb1a62a4a75ad760305c5f7f22f7358",
+      "lines": 15,
+      "pinnedUTC": "2026-10-17T13:50:40.593247+00:00",
+      "semanticReadAtPin": false
+    },
+    {
+      "path": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17-round34/evidence/utf8-review/review.md",
+      "bytes": 4315,
+      "sha256": "ae18882686d59fae58a02f68996490225b683740caaab2b86aa634e1d64ecc15",
+      "lines": 13,
+      "pinnedUTC": "2026-10-17T13:50:40.593645+00:00",
+      "semanticReadAtPin": false
+    },
+    {
+      "path": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17-round34/evidence/utf8-frontier/source-manifest.json",
+      "bytes": 3551,
+      "sha256": "034e393e24e10e759c6d3319f9c3c7842073ce99f7b1e110c322dcabf690a464",
+      "lines": 110,
+      "pinnedUTC": "2026-10-17T13:50:40.593924+00:00",
+      "semanticReadAtPin": false
+    },
+    {
+      "path": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/packages/core/src/runtime/background-shell.ts",
+      "bytes": 26558,
+      "sha256": "3c370fde2abe97bc3eed222b06c34d70c2edabb3fcda7173e388fce64c67e0fe",
+      "lines": 739,
+      "pinnedUTC": "2026-10-17T13:50:40.594444+00:00",
+      "semanticReadAtPin": false
+    },
+    {
+      "path": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/packages/core/src/runtime/utf8-cut.ts",
+      "bytes": 927,
+      "sha256": "0ca2da6f3f1a7e1f97e910478d3851846dfa3877fa6ddcc15be05058c341ba10",
+      "lines": 21,
+      "pinnedUTC": "2026-10-17T13:50:40.594729+00:00",
+      "semanticReadAtPin": false
+    },
+    {
+      "path": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/packages/core/src/runtime/ring-file.ts",
+      "bytes": 5956,
+      "sha256": "f3981f59140f06ce2aa138bd15b26a08ad4cff9dd46b76b7c3b57f7bab81fdcd",
+      "lines": 188,
+      "pinnedUTC": "2026-10-17T13:50:40.594997+00:00",
+      "semanticReadAtPin": false
+    },
+    {
+      "path": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/packages/core/src/tool-system/builtin/background-shell-tools.ts",
+      "bytes": 5335,
+      "sha256": "e52c34e95dc2ca15dbad41491323f23cfecfd66d9701f1b06903aa3ee8b5f5e6",
+      "lines": 130,
+      "pinnedUTC": "2026-10-17T13:50:40.595360+00:00",
+      "semanticReadAtPin": false
+    }
+  ]
+}

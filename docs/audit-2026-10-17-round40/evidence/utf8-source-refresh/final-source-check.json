@@ -1,0 +1,65 @@
+{
+  "kind": "filesystem byte check only, no new source semantic reading or further Git command",
+  "timeUTC": "2026-10-17T13:47:54.051415+00:00",
+  "boundCommit": "037c2afbb05f2fcb3b2f3f3588be2b4a980032a1",
+  "files": [
+    {
+      "path": "packages/core/src/runtime/background-shell.ts",
+      "bytes": 26558,
+      "sha256": "3c370fde2abe97bc3eed222b06c34d70c2edabb3fcda7173e388fce64c67e0fe",
+      "matchesInitialOrCarriedPin": true
+    },
+    {
+      "path": "packages/core/src/runtime/background-shell.utf8-frontier.test.ts",
+      "bytes": 12578,
+      "sha256": "d31cf9bf094f86e53d9ab9614eddcc5d2b5caf007dd66280d1fdfa5bcbe14879",
+      "matchesInitialOrCarriedPin": true
+    },
+    {
+      "path": "packages/core/src/runtime/ring-file.ts",
+      "bytes": 5956,
+      "sha256": "f3981f59140f06ce2aa138bd15b26a08ad4cff9dd46b76b7c3b57f7bab81fdcd",
+      "matchesInitialOrCarriedPin": true
+    },
+    {
+      "path": "packages/core/src/runtime/utf8-cut.ts",
+      "bytes": 927,
+      "sha256": "0ca2da6f3f1a7e1f97e910478d3851846dfa3877fa6ddcc15be05058c341ba10",
+      "matchesInitialOrCarriedPin": true
+    },
+    {
+      "path": "packages/core/src/tool-system/builtin/background-shell-tools.ts",
+      "bytes": 5335,
+      "sha256": "e52c34e95dc2ca15dbad41491323f23cfecfd66d9701f1b06903aa3ee8b5f5e6",
+      "matchesInitialOrCarriedPin": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round34/evidence/utf8-frontier/proposal.md",
+      "bytes": 2749,
+      "sha256": "1cff6041730c6ef954ec4e0beafeed1d2eb1a62a4a75ad760305c5f7f22f7358",
+      "matchesInitialOrCarriedPin": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round34/evidence/utf8-review/review.md",
+      "bytes": 4315,
+      "sha256": "ae18882686d59fae58a02f68996490225b683740caaab2b86aa634e1d64ecc15",
+      "matchesInitialOrCarriedPin": true
+    },
+    {
+      "path": "CODESHELL.md",
+      "bytes": 17639,
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "matchesInitialOrCarriedPin": true
+    },
+    {
+      "path": "AGENTS.md",
+      "bytes": 206,
+      "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "matchesInitialOrCarriedPin": true
+    }
+  ],
+  "allStable": true,
+  "gitReadCommandTotalRemains": 7,
+  "gitWrites": 0,
+  "productExecutions": 0
+}

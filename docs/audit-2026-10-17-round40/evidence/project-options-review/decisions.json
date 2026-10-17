@@ -1,0 +1,22 @@
+{
+  "newFormalFindings": 0,
+  "newCandidates": 0,
+  "newRelatedRecords": 0,
+  "result": "bounded independent static negative",
+  "activeLeaf": "packages/desktop/src/renderer/automation/projectOptions.ts",
+  "ordinaryContractsConfirmedBySource": [
+    "No-project sentinel stays nonempty in Select and maps back to empty cwd.",
+    "Input order and first exact-path occurrence preserved, empty path skipped.",
+    "Trimmed displayName label wins, otherwise name.",
+    "Nonempty current cwd absent from tracked paths is retained synthetically unless classified no-project by existing predicate; mounted root may add project/root label.",
+    "The actual consumer feeds the same helper outputs into current value and option items; inherited-session branch displays label."
+  ],
+  "counterevidenceLimits": [
+    "Exact-string path dedupe does not promise universal filesystem normalization.",
+    "Existing no-project predicate also classifies temp scratch prefixes; do not strengthen contract to empty/internal no-repo only.",
+    "No ordinary producer established for manually forged relative sentinel collision, malformed roots, or registry path admission edge cases; none promoted.",
+    "Project/root identity branch and backend save/runtime/registry mechanisms are boundary skips, not negative proofs.",
+    "No whole-project, all-automation, UI interaction, platform, language-state or permission correctness conclusion."
+  ],
+  "dynamicValidation": false
+}

@@ -1,0 +1,616 @@
+{
+  "scannedUTC": "2026-10-17T13:54:52.766183+00:00",
+  "scope": "All original3509 docs/bugs MD and recursive JSON scalar values including archives/frozen38, excluding original mutable39/future40/41/42; one replacement leaf, no product body read before this gate.",
+  "inventoryFiles": 3509,
+  "jsonStringValues": 975542,
+  "jsonScalarValues": 1464542,
+  "patterns": {
+    "source_path": [
+      "packages/desktop/src/renderer/keyboardshortcuthints.ts"
+    ],
+    "source_filename": [
+      "keyboardshortcuthints"
+    ],
+    "source_sha": [
+      "e15848ee4075aa6a13fb1d981c222881322109aff6d1f3bc03c1cffb4e34a22d"
+    ],
+    "ordinary_contract": [
+      "shortcut hint",
+      "shortcut display"
+    ]
+  },
+  "capPerGroup": 120,
+  "hitTotals": {
+    "source_path": 5,
+    "source_filename": 18,
+    "source_sha": 7,
+    "ordinary_contract": 0
+  },
+  "retained": {
+    "source_path": 5,
+    "source_filename": 18,
+    "source_sha": 7,
+    "ordinary_contract": 0
+  },
+  "hits": {
+    "source_path": [
+      {
+        "path": "docs/audit-2026-10-17-round12/evidence/desktop-source-manifest.json",
+        "jsonPointer": "/files/6/path",
+        "line": 1,
+        "needle": "packages/desktop/src/renderer/keyboardshortcuthints.ts",
+        "context": "packages/desktop/src/renderer/keyboardShortcutHints.ts",
+        "sourceSha256": "1fd8abbcfdd4740d27d6f279f1b5bb7415685836c34483b745db0b5b0707c39b"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round12/source-manifest.json",
+        "jsonPointer": "/files/29/path",
+        "line": 1,
+        "needle": "packages/desktop/src/renderer/keyboardshortcuthints.ts",
+        "context": "packages/desktop/src/renderer/keyboardShortcutHints.ts",
+        "sourceSha256": "fcd065dfcb67909f278eea7b4ea56af042bfc78e678b4626bed4404c6a631b6e"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round12/source-manifest.json",
+        "jsonPointer": "/workerSourceChecks/6/path",
+        "line": 1,
+        "needle": "packages/desktop/src/renderer/keyboardshortcuthints.ts",
+        "context": "packages/desktop/src/renderer/keyboardShortcutHints.ts",
+        "sourceSha256": "fcd065dfcb67909f278eea7b4ea56af042bfc78e678b4626bed4404c6a631b6e"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+        "jsonPointer": "/files/686/path",
+        "line": 1,
+        "needle": "packages/desktop/src/renderer/keyboardshortcuthints.ts",
+        "context": "packages/desktop/src/renderer/keyboardShortcutHints.ts",
+        "sourceSha256": "6cfb5a8d1a6c08e6fb587e339fd78a3d4f023dc65b7ccc466f4eadbb68df7d45"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+        "jsonPointer": "/files/2748/path",
+        "line": 1,
+        "needle": "packages/desktop/src/renderer/keyboardshortcuthints.ts",
+        "context": "packages/desktop/src/renderer/keyboardShortcutHints.ts",
+        "sourceSha256": "12c53ba7d8a17673382d352a48a8ca3afc25a4913fcc96d63d22319e7a00b1eb"
+      }
+    ],
+    "source_filename": [
+      {
+        "path": "docs/audit-2026-10-17-round12/desktop.md",
+        "jsonPointer": null,
+        "line": 38,
+        "needle": "keyboardshortcuthints",
+        "context": "renderer/diff/UnifiedDiffViewer.tsx#L261) 落到 unknownFile，打开动作依赖该 title。fixture 直接按同一过滤表达式验证 mode-only 的实际 parser 结果无法匹配 `run.sh`；未调用 UI、IPC、Git 或打开文件。未要求显示 binary 内容，只讨论文件身份保留。\n- 证据是 focused shard 前四项，共享原始日志，不另加测试计数。与旧 R2-10 因果行重叠，按旧缺陷族剩余边界记录，不重复增加新 bug 数量。\n\n## 基线、排除与首次失败处理\n\n既有 pure metadata 基线只运行 `keyboardShortcutHints.test.ts`、`tool-cards/utils.test.ts`、`diff/reviewScope.test.ts`，23 pass / 39 expect。平台标签 darwin/win32/linux/undefined、argsLive 优先/回放/非法 JSON、Bash stderr sticky 分类和保留文本、Review staged/unstaged/turn 筛选均通过。这不支持整个 Desktop、跨平台 UI 或实际快捷键处理的完整性结论。\n\n未运行现有 parseUnifiedDiff.test.ts，因为前三项会创建临时 Git 仓库并启动真实 Git；只读其用例后，为本次 scope 使用纯字符串 fixture。旧 TUI Diff import 失败没有恢复。旧 R2-09 正文/header 混淆和 R2-11 quoted 路径缺陷已查重排除，没有重跑旧实验；单大文件渲染保护已有历史候选且本次没有 UI/性能验证，未再计。\n\n`truncate(max<=0)`、`formatDuration(NaN/Infinity)`、parsedArgs JSON 数组等仅能以额外坏输入构造，未建立普通 producer 路径，未据此增加 bug。basename 对斜线结尾/Windows 分隔符、prettyJson 合法/非法 JSON、formatDuration 普通非负值有 focused 控制。Bash classifier 与",
+        "sourceSha256": "a4b98b24a2ccf15744dc1bb4ab5422c61fa814eb5729068d850a27c0850be18f"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round12/evidence/desktop-dedup.json",
+        "jsonPointer": "/patterns/utils",
+        "line": 1,
+        "needle": "keyboardshortcuthints",
+        "context": "tool-cards/utils\\.ts|formatDuration|prettyJson|classifyBashLines|keyboardShortcutHints|formatModifierShortcut",
+        "sourceSha256": "ca2678b930210ebf86f42eb40839c0edc51e472f0da03c8d5c841f7567e45d21"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round12/evidence/desktop-existing-metadata.first.receipt.json",
+        "jsonPointer": "/command/4",
+        "line": 1,
+        "needle": "keyboardshortcuthints",
+        "context": "packages/desktop/src/renderer/keyboardShortcutHints.test.ts",
+        "sourceSha256": "96d80690cf806d3b8c8b123e5d97693b7107579c9eebf5e66c6616b7014bce72"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round12/evidence/desktop-source-manifest.json",
+        "jsonPointer": "/files/6/path",
+        "line": 1,
+        "needle": "keyboardshortcuthints",
+        "context": "packages/desktop/src/renderer/keyboardShortcutHints.ts",
+        "sourceSha256": "1fd8abbcfdd4740d27d6f279f1b5bb7415685836c34483b745db0b5b0707c39b"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round12/evidence/desktop-source-manifest.json",
+        "jsonPointer": "/files/7/path",
+        "line": 1,
+        "needle": "keyboardshortcuthints",
+        "context": "packages/desktop/src/renderer/keyboardShortcutHints.test.ts",
+        "sourceSha256": "1fd8abbcfdd4740d27d6f279f1b5bb7415685836c34483b745db0b5b0707c39b"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round12/evidence/desktop-validation.json",
+        "jsonPointer": "/runs/1/command/4",
+        "line": 1,
+        "needle": "keyboardshortcuthints",
+        "context": "packages/desktop/src/renderer/keyboardShortcutHints.test.ts",
+        "sourceSha256": "65bf14bb17dc98c40f902c7a03c7096427e3ea5329309158cad2d0f21f263685"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round12/evidence/desktop-validation.json",
+        "jsonPointer": "/runs/1/fixtures/0/path",
+        "line": 1,
+        "needle": "keyboardshortcuthints",
+        "context": "packages/desktop/src/renderer/keyboardShortcutHints.test.ts",
+        "sourceSha256": "65bf14bb17dc98c40f902c7a03c7096427e3ea5329309158cad2d0f21f263685"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round12/source-manifest.json",
+        "jsonPointer": "/files/28/path",
+        "line": 1,
+        "needle": "keyboardshortcuthints",
+        "context": "packages/desktop/src/renderer/keyboardShortcutHints.test.ts",
+        "sourceSha256": "fcd065dfcb67909f278eea7b4ea56af042bfc78e678b4626bed4404c6a631b6e"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round12/source-manifest.json",
+        "jsonPointer": "/files/29/path",
+        "line": 1,
+        "needle": "keyboardshortcuthints",
+        "context": "packages/desktop/src/renderer/keyboardShortcutHints.ts",
+        "sourceSha256": "fcd065dfcb67909f278eea7b4ea56af042bfc78e678b4626bed4404c6a631b6e"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round12/source-manifest.json",
+        "jsonPointer": "/workerSourceChecks/6/path",
+        "line": 1,
+        "needle": "keyboardshortcuthints",
+        "context": "packages/desktop/src/renderer/keyboardShortcutHints.ts",
+        "sourceSha256": "fcd065dfcb67909f278eea7b4ea56af042bfc78e678b4626bed4404c6a631b6e"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round12/source-manifest.json",
+        "jsonPointer": "/workerSourceChecks/7/path",
+        "line": 1,
+        "needle": "keyboardshortcuthints",
+        "context": "packages/desktop/src/renderer/keyboardShortcutHints.test.ts",
+        "sourceSha256": "fcd065dfcb67909f278eea7b4ea56af042bfc78e678b4626bed4404c6a631b6e"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+        "jsonPointer": "/matches/140/text",
+        "line": 1,
+        "needle": "keyboardshortcuthints",
+        "context": "tool-cards/utils\\.ts|formatDuration|prettyJson|classifyBashLines|keyboardShortcutHints|formatModifierShortcut",
+        "sourceSha256": "992264bbca5ad300e451630e7402d173e41564dfe0a705e163b82fa733d3424d"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round26/evidence/target-dedup.json",
+        "jsonPointer": "/hits/ordinary-target/10/excerpt",
+        "line": 1,
+        "needle": "keyboardshortcuthints",
+        "context": "既有 pure metadata 基线只运行 `keyboardShortcutHints.test.ts`、`tool-cards/utils.test.ts`、`diff/reviewScope.test.ts`，23 pass / 39 expect。平台标签 darwin/win32/linux/undefined、argsLive 优先/回放/非法 JSON、Bash stderr sticky 分类和保留文本、Review staged/unstaged/turn 筛选均通过。这不支持整个 Desktop、跨平台 UI 或实际快捷键处理的完整性结论。",
+        "sourceSha256": "434dcddb86d2bed0827d6c9d32bc02df2306df34a6e6c073b899dd0c77486c13"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round26/evidence/target-prep/history.json",
+        "jsonPointer": "/hits/ordinary-target/10/excerpt",
+        "line": 1,
+        "needle": "keyboardshortcuthints",
+        "context": "既有 pure metadata 基线只运行 `keyboardShortcutHints.test.ts`、`tool-cards/utils.test.ts`、`diff/reviewScope.test.ts`，23 pass / 39 expect。平台标签 darwin/win32/linux/undefined、argsLive 优先/回放/非法 JSON、Bash stderr sticky 分类和保留文本、Review staged/unstaged/turn 筛选均通过。这不支持整个 Desktop、跨平台 UI 或实际快捷键处理的完整性结论。",
+        "sourceSha256": "421a365a60c1c236fe6687a1e34a947bbc6c1fdacfc43d58ff6fca2e205ff444"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+        "jsonPointer": "/files/685/path",
+        "line": 1,
+        "needle": "keyboardshortcuthints",
+        "context": "packages/desktop/src/renderer/keyboardShortcutHints.test.ts",
+        "sourceSha256": "6cfb5a8d1a6c08e6fb587e339fd78a3d4f023dc65b7ccc466f4eadbb68df7d45"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+        "jsonPointer": "/files/686/path",
+        "line": 1,
+        "needle": "keyboardshortcuthints",
+        "context": "packages/desktop/src/renderer/keyboardShortcutHints.ts",
+        "sourceSha256": "6cfb5a8d1a6c08e6fb587e339fd78a3d4f023dc65b7ccc466f4eadbb68df7d45"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+        "jsonPointer": "/files/2747/path",
+        "line": 1,
+        "needle": "keyboardshortcuthints",
+        "context": "packages/desktop/src/renderer/keyboardShortcutHints.test.ts",
+        "sourceSha256": "12c53ba7d8a17673382d352a48a8ca3afc25a4913fcc96d63d22319e7a00b1eb"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+        "jsonPointer": "/files/2748/path",
+        "line": 1,
+        "needle": "keyboardshortcuthints",
+        "context": "packages/desktop/src/renderer/keyboardShortcutHints.ts",
+        "sourceSha256": "12c53ba7d8a17673382d352a48a8ca3afc25a4913fcc96d63d22319e7a00b1eb"
+      }
+    ],
+    "source_sha": [
+      {
+        "path": "docs/audit-2026-10-17-round12/evidence/desktop-source-manifest.json",
+        "jsonPointer": "/files/6/frozenSha256",
+        "line": 1,
+        "needle": "e15848ee4075aa6a13fb1d981c222881322109aff6d1f3bc03c1cffb4e34a22d",
+        "context": "e15848ee4075aa6a13fb1d981c222881322109aff6d1f3bc03c1cffb4e34a22d",
+        "sourceSha256": "1fd8abbcfdd4740d27d6f279f1b5bb7415685836c34483b745db0b5b0707c39b"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round12/evidence/desktop-source-manifest.json",
+        "jsonPointer": "/files/6/sha256",
+        "line": 1,
+        "needle": "e15848ee4075aa6a13fb1d981c222881322109aff6d1f3bc03c1cffb4e34a22d",
+        "context": "e15848ee4075aa6a13fb1d981c222881322109aff6d1f3bc03c1cffb4e34a22d",
+        "sourceSha256": "1fd8abbcfdd4740d27d6f279f1b5bb7415685836c34483b745db0b5b0707c39b"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round12/source-manifest.json",
+        "jsonPointer": "/files/29/sha256",
+        "line": 1,
+        "needle": "e15848ee4075aa6a13fb1d981c222881322109aff6d1f3bc03c1cffb4e34a22d",
+        "context": "e15848ee4075aa6a13fb1d981c222881322109aff6d1f3bc03c1cffb4e34a22d",
+        "sourceSha256": "fcd065dfcb67909f278eea7b4ea56af042bfc78e678b4626bed4404c6a631b6e"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round12/source-manifest.json",
+        "jsonPointer": "/workerSourceChecks/6/sha256",
+        "line": 1,
+        "needle": "e15848ee4075aa6a13fb1d981c222881322109aff6d1f3bc03c1cffb4e34a22d",
+        "context": "e15848ee4075aa6a13fb1d981c222881322109aff6d1f3bc03c1cffb4e34a22d",
+        "sourceSha256": "fcd065dfcb67909f278eea7b4ea56af042bfc78e678b4626bed4404c6a631b6e"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+        "jsonPointer": "/files/686/sha256",
+        "line": 1,
+        "needle": "e15848ee4075aa6a13fb1d981c222881322109aff6d1f3bc03c1cffb4e34a22d",
+        "context": "e15848ee4075aa6a13fb1d981c222881322109aff6d1f3bc03c1cffb4e34a22d",
+        "sourceSha256": "6cfb5a8d1a6c08e6fb587e339fd78a3d4f023dc65b7ccc466f4eadbb68df7d45"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+        "jsonPointer": "/files/686/claims/0/sourceSha256",
+        "line": 1,
+        "needle": "e15848ee4075aa6a13fb1d981c222881322109aff6d1f3bc03c1cffb4e34a22d",
+        "context": "e15848ee4075aa6a13fb1d981c222881322109aff6d1f3bc03c1cffb4e34a22d",
+        "sourceSha256": "6cfb5a8d1a6c08e6fb587e339fd78a3d4f023dc65b7ccc466f4eadbb68df7d45"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+        "jsonPointer": "/files/2748/sha256",
+        "line": 1,
+        "needle": "e15848ee4075aa6a13fb1d981c222881322109aff6d1f3bc03c1cffb4e34a22d",
+        "context": "e15848ee4075aa6a13fb1d981c222881322109aff6d1f3bc03c1cffb4e34a22d",
+        "sourceSha256": "12c53ba7d8a17673382d352a48a8ca3afc25a4913fcc96d63d22319e7a00b1eb"
+      }
+    ],
+    "ordinary_contract": []
+  },
+  "uniqueContextCount": 6,
+  "uniqueContexts": [
+    {
+      "context": "packages/desktop/src/renderer/keyboardShortcutHints.ts",
+      "locators": [
+        {
+          "group": "source_path",
+          "index": 0,
+          "path": "docs/audit-2026-10-17-round12/evidence/desktop-source-manifest.json",
+          "jsonPointer": "/files/6/path",
+          "line": 1
+        },
+        {
+          "group": "source_path",
+          "index": 1,
+          "path": "docs/audit-2026-10-17-round12/source-manifest.json",
+          "jsonPointer": "/files/29/path",
+          "line": 1
+        },
+        {
+          "group": "source_path",
+          "index": 2,
+          "path": "docs/audit-2026-10-17-round12/source-manifest.json",
+          "jsonPointer": "/workerSourceChecks/6/path",
+          "line": 1
+        },
+        {
+          "group": "source_path",
+          "index": 3,
+          "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+          "jsonPointer": "/files/686/path",
+          "line": 1
+        },
+        {
+          "group": "source_path",
+          "index": 4,
+          "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+          "jsonPointer": "/files/2748/path",
+          "line": 1
+        },
+        {
+          "group": "source_filename",
+          "index": 3,
+          "path": "docs/audit-2026-10-17-round12/evidence/desktop-source-manifest.json",
+          "jsonPointer": "/files/6/path",
+          "line": 1
+        },
+        {
+          "group": "source_filename",
+          "index": 8,
+          "path": "docs/audit-2026-10-17-round12/source-manifest.json",
+          "jsonPointer": "/files/29/path",
+          "line": 1
+        },
+        {
+          "group": "source_filename",
+          "index": 9,
+          "path": "docs/audit-2026-10-17-round12/source-manifest.json",
+          "jsonPointer": "/workerSourceChecks/6/path",
+          "line": 1
+        },
+        {
+          "group": "source_filename",
+          "index": 15,
+          "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+          "jsonPointer": "/files/686/path",
+          "line": 1
+        },
+        {
+          "group": "source_filename",
+          "index": 17,
+          "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+          "jsonPointer": "/files/2748/path",
+          "line": 1
+        }
+      ]
+    },
+    {
+      "context": "renderer/diff/UnifiedDiffViewer.tsx#L261) 落到 unknownFile，打开动作依赖该 title。fixture 直接按同一过滤表达式验证 mode-only 的实际 parser 结果无法匹配 `run.sh`；未调用 UI、IPC、Git 或打开文件。未要求显示 binary 内容，只讨论文件身份保留。\n- 证据是 focused shard 前四项，共享原始日志，不另加测试计数。与旧 R2-10 因果行重叠，按旧缺陷族剩余边界记录，不重复增加新 bug 数量。\n\n## 基线、排除与首次失败处理\n\n既有 pure metadata 基线只运行 `keyboardShortcutHints.test.ts`、`tool-cards/utils.test.ts`、`diff/reviewScope.test.ts`，23 pass / 39 expect。平台标签 darwin/win32/linux/undefined、argsLive 优先/回放/非法 JSON、Bash stderr sticky 分类和保留文本、Review staged/unstaged/turn 筛选均通过。这不支持整个 Desktop、跨平台 UI 或实际快捷键处理的完整性结论。\n\n未运行现有 parseUnifiedDiff.test.ts，因为前三项会创建临时 Git 仓库并启动真实 Git；只读其用例后，为本次 scope 使用纯字符串 fixture。旧 TUI Diff import 失败没有恢复。旧 R2-09 正文/header 混淆和 R2-11 quoted 路径缺陷已查重排除，没有重跑旧实验；单大文件渲染保护已有历史候选且本次没有 UI/性能验证，未再计。\n\n`truncate(max<=0)`、`formatDuration(NaN/Infinity)`、parsedArgs JSON 数组等仅能以额外坏输入构造，未建立普通 producer 路径，未据此增加 bug。basename 对斜线结尾/Windows 分隔符、prettyJson 合法/非法 JSON、formatDuration 普通非负值有 focused 控制。Bash classifier 与",
+      "locators": [
+        {
+          "group": "source_filename",
+          "index": 0,
+          "path": "docs/audit-2026-10-17-round12/desktop.md",
+          "jsonPointer": null,
+          "line": 38
+        }
+      ]
+    },
+    {
+      "context": "tool-cards/utils\\.ts|formatDuration|prettyJson|classifyBashLines|keyboardShortcutHints|formatModifierShortcut",
+      "locators": [
+        {
+          "group": "source_filename",
+          "index": 1,
+          "path": "docs/audit-2026-10-17-round12/evidence/desktop-dedup.json",
+          "jsonPointer": "/patterns/utils",
+          "line": 1
+        },
+        {
+          "group": "source_filename",
+          "index": 11,
+          "path": "docs/audit-2026-10-17-round14/evidence/utils-dedup.json",
+          "jsonPointer": "/matches/140/text",
+          "line": 1
+        }
+      ]
+    },
+    {
+      "context": "packages/desktop/src/renderer/keyboardShortcutHints.test.ts",
+      "locators": [
+        {
+          "group": "source_filename",
+          "index": 2,
+          "path": "docs/audit-2026-10-17-round12/evidence/desktop-existing-metadata.first.receipt.json",
+          "jsonPointer": "/command/4",
+          "line": 1
+        },
+        {
+          "group": "source_filename",
+          "index": 4,
+          "path": "docs/audit-2026-10-17-round12/evidence/desktop-source-manifest.json",
+          "jsonPointer": "/files/7/path",
+          "line": 1
+        },
+        {
+          "group": "source_filename",
+          "index": 5,
+          "path": "docs/audit-2026-10-17-round12/evidence/desktop-validation.json",
+          "jsonPointer": "/runs/1/command/4",
+          "line": 1
+        },
+        {
+          "group": "source_filename",
+          "index": 6,
+          "path": "docs/audit-2026-10-17-round12/evidence/desktop-validation.json",
+          "jsonPointer": "/runs/1/fixtures/0/path",
+          "line": 1
+        },
+        {
+          "group": "source_filename",
+          "index": 7,
+          "path": "docs/audit-2026-10-17-round12/source-manifest.json",
+          "jsonPointer": "/files/28/path",
+          "line": 1
+        },
+        {
+          "group": "source_filename",
+          "index": 10,
+          "path": "docs/audit-2026-10-17-round12/source-manifest.json",
+          "jsonPointer": "/workerSourceChecks/7/path",
+          "line": 1
+        },
+        {
+          "group": "source_filename",
+          "index": 14,
+          "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+          "jsonPointer": "/files/685/path",
+          "line": 1
+        },
+        {
+          "group": "source_filename",
+          "index": 16,
+          "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+          "jsonPointer": "/files/2747/path",
+          "line": 1
+        }
+      ]
+    },
+    {
+      "context": "既有 pure metadata 基线只运行 `keyboardShortcutHints.test.ts`、`tool-cards/utils.test.ts`、`diff/reviewScope.test.ts`，23 pass / 39 expect。平台标签 darwin/win32/linux/undefined、argsLive 优先/回放/非法 JSON、Bash stderr sticky 分类和保留文本、Review staged/unstaged/turn 筛选均通过。这不支持整个 Desktop、跨平台 UI 或实际快捷键处理的完整性结论。",
+      "locators": [
+        {
+          "group": "source_filename",
+          "index": 12,
+          "path": "docs/audit-2026-10-17-round26/evidence/target-dedup.json",
+          "jsonPointer": "/hits/ordinary-target/10/excerpt",
+          "line": 1
+        },
+        {
+          "group": "source_filename",
+          "index": 13,
+          "path": "docs/audit-2026-10-17-round26/evidence/target-prep/history.json",
+          "jsonPointer": "/hits/ordinary-target/10/excerpt",
+          "line": 1
+        }
+      ]
+    },
+    {
+      "context": "e15848ee4075aa6a13fb1d981c222881322109aff6d1f3bc03c1cffb4e34a22d",
+      "locators": [
+        {
+          "group": "source_sha",
+          "index": 0,
+          "path": "docs/audit-2026-10-17-round12/evidence/desktop-source-manifest.json",
+          "jsonPointer": "/files/6/frozenSha256",
+          "line": 1
+        },
+        {
+          "group": "source_sha",
+          "index": 1,
+          "path": "docs/audit-2026-10-17-round12/evidence/desktop-source-manifest.json",
+          "jsonPointer": "/files/6/sha256",
+          "line": 1
+        },
+        {
+          "group": "source_sha",
+          "index": 2,
+          "path": "docs/audit-2026-10-17-round12/source-manifest.json",
+          "jsonPointer": "/files/29/sha256",
+          "line": 1
+        },
+        {
+          "group": "source_sha",
+          "index": 3,
+          "path": "docs/audit-2026-10-17-round12/source-manifest.json",
+          "jsonPointer": "/workerSourceChecks/6/sha256",
+          "line": 1
+        },
+        {
+          "group": "source_sha",
+          "index": 4,
+          "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+          "jsonPointer": "/files/686/sha256",
+          "line": 1
+        },
+        {
+          "group": "source_sha",
+          "index": 5,
+          "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+          "jsonPointer": "/files/686/claims/0/sourceSha256",
+          "line": 1
+        },
+        {
+          "group": "source_sha",
+          "index": 6,
+          "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+          "jsonPointer": "/files/2748/sha256",
+          "line": 1
+        }
+      ]
+    }
+  ],
+  "samePathShaRows": [
+    {
+      "path": "docs/audit-2026-10-17-round12/evidence/desktop-source-manifest.json",
+      "jsonPointer": "/files/6",
+      "row": {
+        "path": "packages/desktop/src/renderer/keyboardShortcutHints.ts",
+        "frozenSha256": "e15848ee4075aa6a13fb1d981c222881322109aff6d1f3bc03c1cffb4e34a22d",
+        "sha256": "e15848ee4075aa6a13fb1d981c222881322109aff6d1f3bc03c1cffb4e34a22d",
+        "currentEqualsFrozen": true,
+        "frozenBytes": 337
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round12/source-manifest.json",
+      "jsonPointer": "/files/29",
+      "row": {
+        "path": "packages/desktop/src/renderer/keyboardShortcutHints.ts",
+        "bytes": 337,
+        "sha256": "e15848ee4075aa6a13fb1d981c222881322109aff6d1f3bc03c1cffb4e34a22d",
+        "frozenBlobVerified": true,
+        "currentWorkingTreeMatchesFrozenBlob": true
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round12/source-manifest.json",
+      "jsonPointer": "/workerSourceChecks/6",
+      "row": {
+        "manifest": "desktop-source-manifest.json",
+        "path": "packages/desktop/src/renderer/keyboardShortcutHints.ts",
+        "sha256": "e15848ee4075aa6a13fb1d981c222881322109aff6d1f3bc03c1cffb4e34a22d"
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-index.json",
+      "jsonPointer": "/files/686",
+      "row": {
+        "path": "packages/desktop/src/renderer/keyboardShortcutHints.ts",
+        "bytes": 337,
+        "lines": 9,
+        "sha256": "e15848ee4075aa6a13fb1d981c222881322109aff6d1f3bc03c1cffb4e34a22d",
+        "status": "current-sha-pin-only-no-semantic-coverage",
+        "currentFullClaimVariants": 0,
+        "currentSelectedClaimVariants": 0,
+        "currentSelectedUnionLines": 0,
+        "currentSelectedUnionRanges": [],
+        "priorVersionClaimVariants": 0,
+        "currentPinOnlyVariants": 1,
+        "claimVariants": 1,
+        "claims": [
+          {
+            "sourceSha256": "e15848ee4075aa6a13fb1d981c222881322109aff6d1f3bc03c1cffb4e34a22d",
+            "matchesCurrentFilesystem": true,
+            "coverageKind": "scope-unknown-pin-only",
+            "rawCoverageLabel": null,
+            "selectedLineRanges": [],
+            "validRangeBoundsForCurrentFile": true,
+            "manifests": [
+              {
+                "path": "docs/audit-2026-10-17-round12/evidence/desktop-source-manifest.json",
+                "jsonLocation": "$[\"files\"][6]"
+              },
+              {
+                "path": "docs/audit-2026-10-17-round12/source-manifest.json",
+                "jsonLocation": "$[\"files\"][29]"
+              },
+              {
+                "path": "docs/audit-2026-10-17-round12/source-manifest.json",
+                "jsonLocation": "$[\"workerSourceChecks\"][6]"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+      "jsonPointer": "/files/2748",
+      "row": {
+        "path": "packages/desktop/src/renderer/keyboardShortcutHints.ts",
+        "bytes": 337,
+        "lines": 9,
+        "sha256": "e15848ee4075aa6a13fb1d981c222881322109aff6d1f3bc03c1cffb4e34a22d"
+      }
+    }
+  ],
+  "changedFromOriginal": [],
+  "parseErrors": [],
+  "productExecutions": 0,
+  "gitCommands": 0
+}
