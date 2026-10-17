@@ -1,0 +1,14 @@
+{
+  "frozenSource": "d5fae44358b3a92d4d02fd5fcc4ac21c56b2a08a",
+  "reviewedMain": "d5fae44358b3a92d4d02fd5fcc4ac21c56b2a08a",
+  "originMain": "02d5d9a9ecbbb206d5f3d8a1d367e7081d937101",
+  "endFetchCompleted": true,
+  "mainAdvancedSinceFreeze": false,
+  "taskBranch": "codex/audit/input-parsers-schedule-round12-20261017",
+  "incomingOwnedDirectory": "docs/audit-2026-10-17-round12",
+  "primaryDirtyStateMatchesInitial": true,
+  "untrackedRegularFiles": 4,
+  "sourceDisposition": "All selected source bytes match frozen blobs; no runtime retests",
+  "ongoingWorktreeRetained": "Exclusively owned worktree remains needed for the continuing audit",
+  "pushRequested": false
+}

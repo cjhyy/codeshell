@@ -1,0 +1,90 @@
+{
+  "baseline": "d5fae44358b3a92d4d02fd5fcc4ac21c56b2a08a",
+  "files": [
+    {
+      "path": "packages/desktop/src/renderer/automation/scheduleModel.ts",
+      "bytes": 4977,
+      "sha256": "10637cd7b857dbdb330c9b782d31d78297b56bd4dce4139f6aa0f2feefa740d9",
+      "frozenBlobVerified": true,
+      "currentMatchesFrozen": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/automation/scheduleModel.test.ts",
+      "bytes": 3482,
+      "sha256": "81bafce575e5e4ed713b67646e4d55240ab276e552439394f3fcfe2756ae32b7",
+      "frozenBlobVerified": true,
+      "currentMatchesFrozen": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/automation/timezones.ts",
+      "bytes": 1957,
+      "sha256": "09cdea48cc0270c74d8f022a66f762185abf1c7e0b416b3982928a8ce0628f65",
+      "frozenBlobVerified": true,
+      "currentMatchesFrozen": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/automation/timezones.test.ts",
+      "bytes": 1117,
+      "sha256": "f9b3e2c4ce7b2f7bd873c223adf5d05ecb1f7bd24ad81ca102eebf3aa0c1435c",
+      "frozenBlobVerified": true,
+      "currentMatchesFrozen": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/automation/relativeTime.ts",
+      "bytes": 958,
+      "sha256": "dbd80658f07fd8d39cc05f6ff01f702fa103ce094e4e8ecca1e2a3d22955032d",
+      "frozenBlobVerified": true,
+      "currentMatchesFrozen": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/automation/relativeTime.test.ts",
+      "bytes": 1153,
+      "sha256": "8f7b03da0406fb46ff54456ad5a9edeaf1ea755519512f789ca7ab591b7ee91d",
+      "frozenBlobVerified": true,
+      "currentMatchesFrozen": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/automation/AutomationView.tsx",
+      "bytes": 48293,
+      "sha256": "2a40819d84a7a0c6902976cf6a2140f87f049b315405d9186c0c3690e48c7ece",
+      "frozenBlobVerified": true,
+      "currentMatchesFrozen": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/i18n/translate.ts",
+      "bytes": 1546,
+      "sha256": "9f2ee42007e2777fcfd7d0b6b386db8adfcaad7a4c7b45b2a53251c4d46fa26c",
+      "frozenBlobVerified": true,
+      "currentMatchesFrozen": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/uiLanguage.ts",
+      "bytes": 427,
+      "sha256": "69fd4c8efa753c804fc7b59b522b808f57a2e80a360c8d40d4e04930301ed3a3",
+      "frozenBlobVerified": true,
+      "currentMatchesFrozen": true
+    },
+    {
+      "path": "scripts/run-bun-test-shard.mjs",
+      "bytes": 233,
+      "sha256": "dd2b245afbcb5aa7c798c8674d34edb8e02bb42be0be320050adf9be5ed2fd7d",
+      "frozenBlobVerified": true,
+      "currentMatchesFrozen": true
+    },
+    {
+      "path": "CODESHELL.md",
+      "bytes": 17639,
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "frozenBlobVerified": true,
+      "currentMatchesFrozen": true
+    },
+    {
+      "path": "AGENTS.md",
+      "bytes": 206,
+      "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "frozenBlobVerified": true,
+      "currentMatchesFrozen": true
+    }
+  ],
+  "note": "Selected source pins, not complete/transitive review coverage; scheduleModel and language shim source-only, no localization runtime."
+}

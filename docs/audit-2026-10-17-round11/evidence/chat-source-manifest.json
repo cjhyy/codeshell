@@ -1,0 +1,174 @@
+{
+  "sourceCommit": "b8b776d56e5982e59b18de0262d5c49367746625",
+  "files": [
+    {
+      "path": "CODESHELL.md",
+      "frozenSha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "currentSha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "currentMatchesFrozen": true,
+      "scope": "full instruction read"
+    },
+    {
+      "path": "packages/chat/src/channel.ts",
+      "frozenSha256": "645c32c69b3a8d76de60b85783a765f96133b93a5c183100bfef20794380e0ce",
+      "currentSha256": "645c32c69b3a8d76de60b85783a765f96133b93a5c183100bfef20794380e0ce",
+      "currentMatchesFrozen": true,
+      "scope": "full helper read and real execution"
+    },
+    {
+      "path": "packages/chat/src/channel.test.ts",
+      "frozenSha256": "a9b9a177ebf0b8dff33b66c22642d06704fc57cdd3d6ecf9847dde7befa2fd1b",
+      "currentSha256": "a9b9a177ebf0b8dff33b66c22642d06704fc57cdd3d6ecf9847dde7befa2fd1b",
+      "currentMatchesFrozen": true,
+      "scope": "full read and existing guarded baseline execution"
+    },
+    {
+      "path": "packages/chat/src/notification-progress.ts",
+      "frozenSha256": "e1f787e6aabe7d5a49f86aa80af15c4599a5583f83d7f85207e3acfb7677b617",
+      "currentSha256": "e1f787e6aabe7d5a49f86aa80af15c4599a5583f83d7f85207e3acfb7677b617",
+      "currentMatchesFrozen": true,
+      "scope": "full helper read; memory progress execution; File store static only"
+    },
+    {
+      "path": "packages/chat/src/notification-progress.test.ts",
+      "frozenSha256": "c87049b3fd86bda96aa7f0deb9b85616a7b0e52c4145ed12467d5e5e06e34e1c",
+      "currentSha256": "c87049b3fd86bda96aa7f0deb9b85616a7b0e52c4145ed12467d5e5e06e34e1c",
+      "currentMatchesFrozen": true,
+      "scope": "source read only; no security/permission/custody tests executed"
+    },
+    {
+      "path": "packages/chat/src/attachments.ts",
+      "frozenSha256": "58a2c3b5b566db4d7d3dc1a74bedc371c74972368fae3d9dbf6d400fcd29fc82",
+      "currentSha256": "58a2c3b5b566db4d7d3dc1a74bedc371c74972368fae3d9dbf6d400fcd29fc82",
+      "currentMatchesFrozen": true,
+      "scope": "full ordinary metadata helper read; no bytes loading execution"
+    },
+    {
+      "path": "packages/chat/src/media.ts",
+      "frozenSha256": "9cd43efac474d03615408fd8ab094c3136ef1972d399b72fc30c362487dabe14",
+      "currentSha256": "9cd43efac474d03615408fd8ab094c3136ef1972d399b72fc30c362487dabe14",
+      "currentMatchesFrozen": true,
+      "scope": "full source read; no download/upload/security execution"
+    },
+    {
+      "path": "packages/chat/src/media.test.ts",
+      "frozenSha256": "487b8fed2f2d7a5a4d25ef50233d5e462dd95f709bac28463f9bd07b12a2aa8b",
+      "currentSha256": "487b8fed2f2d7a5a4d25ef50233d5e462dd95f709bac28463f9bd07b12a2aa8b",
+      "currentMatchesFrozen": true,
+      "scope": "source read only; no network/security tests executed"
+    },
+    {
+      "path": "packages/chat/src/protocol.ts",
+      "frozenSha256": "ac7e097c07b4d4ffbca59a7958e2cf71fa68b2ccc9833f8f07043ef6d9afb65a",
+      "currentSha256": "ac7e097c07b4d4ffbca59a7958e2cf71fa68b2ccc9833f8f07043ef6d9afb65a",
+      "currentMatchesFrozen": true,
+      "scope": "full protocol declaration read"
+    },
+    {
+      "path": "packages/chat/src/lifecycle.ts",
+      "frozenSha256": "cdf93e75be321a483b0b9d8339cbefe87b9e211549dfdda58f348ef1ab010d46",
+      "currentSha256": "cdf93e75be321a483b0b9d8339cbefe87b9e211549dfdda58f348ef1ab010d46",
+      "currentMatchesFrozen": true,
+      "scope": "full helper read; format candidate not tested"
+    },
+    {
+      "path": "packages/chat/src/notification-relay.ts",
+      "frozenSha256": "60e29d26b36198ed04c77ec649143a401599dce9b0843eff1f290c01f71d25fc",
+      "currentSha256": "60e29d26b36198ed04c77ec649143a401599dce9b0843eff1f290c01f71d25fc",
+      "currentMatchesFrozen": true,
+      "scope": "ordinary handler/splitter/validation directed read; real in-memory notification execution; file materialization not executed"
+    },
+    {
+      "path": "packages/chat/src/notification-relay.test.ts",
+      "frozenSha256": "2d3b1ce6311388be373f5ab369e62b4eaa4dd684e4f855a30a0e957f7afb3ec0",
+      "currentSha256": "2d3b1ce6311388be373f5ab369e62b4eaa4dd684e4f855a30a0e957f7afb3ec0",
+      "currentMatchesFrozen": true,
+      "scope": "directed source read of first 225 lines; tests not executed"
+    },
+    {
+      "path": "packages/chat/src/gateway.ts",
+      "frozenSha256": "d73ad84b43ef1b2e705323cb3ed63c5102fbb0d31f51dc5ffc10fc45862a1b13",
+      "currentSha256": "d73ad84b43ef1b2e705323cb3ed63c5102fbb0d31f51dc5ffc10fc45862a1b13",
+      "currentMatchesFrozen": true,
+      "scope": "directed text/button projection read"
+    },
+    {
+      "path": "packages/chat/src/mattermost.ts",
+      "frozenSha256": "ab77fad6ff661e2af867e766d6536d588160d7c218a9e2fdb6a32587fe1df06f",
+      "currentSha256": "ab77fad6ff661e2af867e766d6536d588160d7c218a9e2fdb6a32587fe1df06f",
+      "currentMatchesFrozen": true,
+      "scope": "full source read; no adapter execution or platform/socket/network"
+    },
+    {
+      "path": "packages/chat/src/wecom.ts",
+      "frozenSha256": "03614e6bf682d4a33fe63f5697059b49656aaf49a1b8ed5b2f204857759eced9",
+      "currentSha256": "03614e6bf682d4a33fe63f5697059b49656aaf49a1b8ed5b2f204857759eced9",
+      "currentMatchesFrozen": true,
+      "scope": "full source read; no adapter/SDK execution"
+    },
+    {
+      "path": "packages/chat/src/dingtalk.ts",
+      "frozenSha256": "2eb49f6da16ec98732ea2ecbcaf444c12206a5948dcbb758904799b862d1887b",
+      "currentSha256": "2eb49f6da16ec98732ea2ecbcaf444c12206a5948dcbb758904799b862d1887b",
+      "currentMatchesFrozen": true,
+      "scope": "full source read; no adapter/SDK execution"
+    },
+    {
+      "path": "packages/chat/src/wechat.ts",
+      "frozenSha256": "9849a97a5a8dc381af805cc83b2f9bba1168f4be135196f1597f3a3b3bcbfb08",
+      "currentSha256": "9849a97a5a8dc381af805cc83b2f9bba1168f4be135196f1597f3a3b3bcbfb08",
+      "currentMatchesFrozen": true,
+      "scope": "directed send formatting/chunk path source read; no adapter execution"
+    },
+    {
+      "path": "packages/chat/src/desktop-control-client.ts",
+      "frozenSha256": "8647ab741d9b91ee5e043d8d8a02224598b42273f585e02bb5aef81ddc3541d1",
+      "currentSha256": "8647ab741d9b91ee5e043d8d8a02224598b42273f585e02bb5aef81ddc3541d1",
+      "currentMatchesFrozen": true,
+      "scope": "directed source read; watchEvents prototype method only with page/sleep callbacks; no constructor/request/descriptor/spawn/checkpoint"
+    },
+    {
+      "path": "packages/chat/src/cli.ts",
+      "frozenSha256": "4a4c052a8433836583cd9300669f4c400f394d780645c75156c38b78d6e1d9ed",
+      "currentSha256": "4a4c052a8433836583cd9300669f4c400f394d780645c75156c38b78d6e1d9ed",
+      "currentMatchesFrozen": true,
+      "scope": "directed production watcher wiring source read; not executed"
+    },
+    {
+      "path": "packages/chat/src/config.ts",
+      "frozenSha256": "f002a45bda4bffa7c222f039487ddfa74e4d0c22230075a97f7036acaffb01e7",
+      "currentSha256": "f002a45bda4bffa7c222f039487ddfa74e4d0c22230075a97f7036acaffb01e7",
+      "currentMatchesFrozen": true,
+      "scope": "directed target count/shape source read; not executed"
+    },
+    {
+      "path": "packages/chat/README.md",
+      "frozenSha256": "2cbd36412abaaf5bb1ec97c48c5f4c29b62afd1efbbc990eed510de9aefa0148",
+      "currentSha256": "2cbd36412abaaf5bb1ec97c48c5f4c29b62afd1efbbc990eed510de9aefa0148",
+      "currentMatchesFrozen": true,
+      "scope": "notification contract excerpt read"
+    },
+    {
+      "path": "packages/pet/src/host-actions.ts",
+      "frozenSha256": "75e4cbabcbe8b833a901b635f58590a04ed9fcd56521b5684c5fb55978c2cbd7",
+      "currentSha256": "75e4cbabcbe8b833a901b635f58590a04ed9fcd56521b5684c5fb55978c2cbd7",
+      "currentMatchesFrozen": true,
+      "scope": "directed GatewayReply limits/schema source search; not executed"
+    },
+    {
+      "path": "packages/desktop/src/main/im-gateway-service.ts",
+      "frozenSha256": "23bc3919b72cba46edfe651d9d0500daa84b5d0231a3329a2201afdb6c05167a",
+      "currentSha256": "23bc3919b72cba46edfe651d9d0500daa84b5d0231a3329a2201afdb6c05167a",
+      "currentMatchesFrozen": true,
+      "scope": "directed production watcher wiring source read; not executed"
+    },
+    {
+      "path": "scripts/run-bun-test-shard.mjs",
+      "frozenSha256": "dd2b245afbcb5aa7c798c8674d34edb8e02bb42be0be320050adf9be5ed2fd7d",
+      "currentSha256": "dd2b245afbcb5aa7c798c8674d34edb8e02bb42be0be320050adf9be5ed2fd7d",
+      "currentMatchesFrozen": true,
+      "scope": "actual guarded test entry for both first shards"
+    }
+  ],
+  "limitations": "Selected source receipts do not imply full-module dynamic or full repository coverage. Native Node/Bun built-ins only; no imported SDK, installed third-party runtime or real platform used by fixtures."
+}

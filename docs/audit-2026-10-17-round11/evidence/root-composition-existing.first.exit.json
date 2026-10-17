@@ -1,0 +1,16 @@
+{
+  "baseline": "b8b776d56e5982e59b18de0262d5c49367746625",
+  "command": [
+    "node",
+    "scripts/run-bun-test-shard.mjs",
+    "--timeout",
+    "30000",
+    "packages/core/src/composition/snapshot.test.ts",
+    "packages/core/src/composition/core-module.test.ts"
+  ],
+  "exitCode": 0,
+  "firstRun": true,
+  "rawCombinedStdoutStderrSavedBeforeInspection": true,
+  "elapsedSeconds": 0.49518799781799316,
+  "scope": "Existing snapshot and core declaration projection metadata tests only; default compiler source imports builtin declarations but invokes no tool/Engine/provider/host/native or authority test."
+}

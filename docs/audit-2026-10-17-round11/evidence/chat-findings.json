@@ -1,0 +1,40 @@
+{
+  "sourceCommit": "b8b776d56e5982e59b18de0262d5c49367746625",
+  "findings": [
+    {
+      "id": "CHAT-R11-01",
+      "priority": "P3",
+      "title": "通知进度首次 load 失败的 rejected Promise 被缓存，同一 watcher 后续重试不再读取已恢复的 store",
+      "source": "packages/chat/src/notification-progress.ts",
+      "line": 187,
+      "lines": [
+        186,
+        191
+      ],
+      "trigger": "长期存活的 createDesktopNotificationHandler 初次 begin() 时，progressStore.load() 暂时失败；随后 store 已能正常读取，watchEvents 重试同一通知。",
+      "actual": "ensureLoaded 的 loadTask 保留原 rejected Promise；实际 watchEvents 循环连续 3 次失败、store.load 仅 1 次、fake adapter send 0 次、cursor 始终 0。",
+      "expected": "后续通知重试应有机会重新 load 正常状态，并在成功后继续原事件；错误不能仅因 cached rejected Promise 在同一 handler 生命周期反复出现。",
+      "normalProducerAndContract": "CLI cli.ts:116-138 与 Desktop im-gateway-service.ts:565-583 长期复用一个由 FileNotificationDeliveryProgressStore 支持的 handler，并把通知异常按等待重试处理。DesktopControlClient.watchEvents:188-218 顺序调用 handler、失败后退避重试。实际 File store:69-71 对非 ENOENT 读取错误向上传播。",
+      "controls": [
+        "初次正常 load：实际 watcher/page callbacks/fake adapter，1 load、1 send、无 error。",
+        "同一故障后的 healthy store 用新 handler 处理完全相同事件，第二次 load 成功并 send 1 次。",
+        "同一 progress 对暂时 save 失败可用 flush 恢复。",
+        "共享 splitter 在最大长度 2/17/1800/8000 下完整重建 Unicode/空白并保留 UTF-16 对。"
+      ],
+      "evidence": [
+        "evidence/chat-progress-load.test.ts",
+        "evidence/chat-progress-load.first.log",
+        "evidence/chat-progress-load.first.exit.json"
+      ],
+      "dynamicScope": "真实 NotificationDeliveryProgress、createDesktopNotificationHandler、DesktopControlClient.prototype.watchEvents 方法；内存 store、fake adapter、page/sleep 回调替身。watcher 不构造 client，不走 request/descriptor/spawn/checkpoint。",
+      "staticScope": "CLI 和 Desktop host 生产构造接线、FileNotificationDeliveryProgressStore 的非 ENOENT 传播。",
+      "limitations": [
+        "未诱发真实磁盘/OS 读取故障，不验证具体 EIO/EMFILE 概率或平台恢复。",
+        "未运行 Desktop/CLI host、实际账号/平台/模型、网络/SDK连接、权限或 custody 行为。",
+        "未证明通知永久丢失；当前不推进 cursor，新 handler/process 重建可恢复。",
+        "结论限定初次 load 失败；已加载后的 save/flush 恢复控制通过。"
+      ],
+      "dedup": "All 1601 prior docs/bugs Markdown and parsed JSON including archive/_archive and ordinary filenames scanned, 35 precise path/helper matches, 0 parse error; no same-root-cause finding. Earlier 1111-file named-audit subset and broader-keyword receipt retained."
+    }
+  ]
+}

@@ -1,0 +1,19 @@
+# Read-only cross-review — schedule and time display
+
+Reviewed `schedule-display.md`, the root first raw log/exit receipt, `root-dedup.json`, `root-source-manifest.json`, and the linked navigation diagnostic against the ordinary source/test sections. Result: **pass; no actionable report correction identified**. The reported **0 confirmed findings / 0 formal candidates** is supported within this limited scope and is not a correctness claim for automation as a whole.
+
+- The sole root runtime command names only `relativeTime.test.ts` and `timezones.test.ts`. Their imports execute the corresponding pure helpers; relativeTime's translation-related imports are type-only and its tests inject a key-echo translator. `scheduleModel` and its localization imports were not executed by this shard. The raw log contains exactly six relative-time tests and six timezone tests: **12 pass, 16 expect calls, 0 fail, 0 skipped, Completed**; exit receipt records exit `0` and `firstRun: true`.
+- Static source agrees with the source-only observation: `parseSchedule` maps digit-hour intervals to hourly models; `buildSchedule` produces cron text; the UI offers `[1,2,3,4,6,8,12]`. Initial local state/effect only parses the stored schedule. The explicit schedule-edit helper builds/saves schedules, while the timezone handler saves `{ timezone: v }` alone. The report correctly avoids claiming that opening details or changing timezone rewrites a schedule, or that backend interval semantics were tested.
+- The browser `type="time"` handler requires a nonempty value before calling `commitSchedule` (`AutomationView.tsx:975–980`). An arbitrary malformed direct `buildSchedule` argument has no demonstrated ordinary producer here. Approximate relative-time rounding and the deliberately small Intl fallback are described with appropriate limits. The UTC assertion caveat is accurate: the existing test title names UTC, but its actual assertions only require more than 100 zones and Shanghai.
+- The navigation diagnostic clearly labels the missing guessed Core cron directory as a tool-response transcription and records the misleading pipeline exit `0`. The direction remains skipped. Neither these materials nor the sole runtime command establish a resumed Core cron or i18n validation path. No scheduleModel runtime, backend scheduler timing, persisted job, mounted UI, DST/legal timezone correctness, or external service validation is claimed.
+- Independently reconstructed the full dedup inventory from `rg --files docs bugs`, excluding only this round: **1,060 Markdown + 598 JSON = 1,658 files**, exactly matching the receipt. Independently counted **152,326 JSON string leaves**, with no parse errors. All 1,658 inventory byte counts and SHA256 values match the available files. Archive and `_archive` paths are included. Keyword search with bounded context remains a semantic-dedup limitation, which does not turn source-only observations into findings.
+- Independently read the 12 pinned sources from frozen Git commit `d5fae44358b3a92d4d02fd5fcc4ac21c56b2a08a` using read-only `git show`. Every frozen-blob SHA256, current-file SHA256 and recorded byte count matches `root-source-manifest.json`. Selected pins do not imply transitive or full-file review coverage. All four local Markdown links in the schedule report resolve.
+
+Independent first-artifact hashes:
+
+| Artifact | SHA256 |
+| --- | --- |
+| `root-time-display-existing.first.log` | `be23f4bf860b51a8daf67ea5d94a932b52a1d1a4d7b66ce79a8b867d8cf24db3` |
+| `root-time-display-existing.first.exit.json` | `45850fe538f8b7543a0bd6ca417097bb1e9e97f41b3660d64b950891633a66ba` |
+
+This cross-review ran no tests, loaded no product runtime, modified no product or other report, and made no Git writes. It contributes zero tests to the batch totals. Only this review file was written.

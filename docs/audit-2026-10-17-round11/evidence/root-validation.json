@@ -1,0 +1,59 @@
+{
+  "baseline": "b8b776d56e5982e59b18de0262d5c49367746625",
+  "confirmed": 0,
+  "candidates": 0,
+  "cleanShards": 2,
+  "passed": 9,
+  "expectCalls": 444,
+  "failed": 0,
+  "skipped": 0,
+  "existingBaselineTests": 6,
+  "newFocusedControls": 3,
+  "runs": [
+    {
+      "name": "root-composition-existing",
+      "command": [
+        "node",
+        "scripts/run-bun-test-shard.mjs",
+        "--timeout",
+        "30000",
+        "packages/core/src/composition/snapshot.test.ts",
+        "packages/core/src/composition/core-module.test.ts"
+      ],
+      "firstRun": true,
+      "exitCode": 0,
+      "completed": true,
+      "passed": 6,
+      "expectCalls": 426,
+      "failed": 0,
+      "skipped": 0,
+      "log": "root-composition-existing.first.log",
+      "exitReceipt": "root-composition-existing.first.exit.json"
+    },
+    {
+      "name": "root-composition-controls",
+      "command": [
+        "node",
+        "scripts/run-bun-test-shard.mjs",
+        "--timeout",
+        "30000",
+        "docs/audit-2026-10-17-round11/evidence/root-composition-controls.test.ts"
+      ],
+      "firstRun": true,
+      "exitCode": 0,
+      "completed": true,
+      "passed": 3,
+      "expectCalls": 18,
+      "failed": 0,
+      "skipped": 0,
+      "log": "root-composition-controls.first.log",
+      "exitReceipt": "root-composition-controls.first.exit.json"
+    }
+  ],
+  "limits": [
+    "Actual compiler/resolve/snapshot over ordinary in-memory module metadata; callable implementations not invoked.",
+    "No Engine/Host/native/provider/network/tool/security/permission/custody/watchdog experiment, shared build or broad suite.",
+    "Activation/lifetime/registration safety files only read; tests that experiment with authority were not executed.",
+    "Two guessed source-navigation directions skipped; separately transcribed, not Bun failures."
+  ]
+}

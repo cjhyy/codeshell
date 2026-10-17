@@ -1,0 +1,16 @@
+{
+  "command": [
+    "node",
+    "scripts/run-bun-test-shard.mjs",
+    "--timeout",
+    "30000",
+    "packages/desktop/src/renderer/keyboardShortcutHints.test.ts",
+    "packages/desktop/src/renderer/tool-cards/utils.test.ts",
+    "packages/desktop/src/renderer/diff/reviewScope.test.ts"
+  ],
+  "attempt": 1,
+  "exitCode": 0,
+  "rawLog": "docs/audit-2026-10-17-round12/evidence/desktop-existing-metadata.first.log",
+  "rawLogSha256": "35338aa219a51a1b42bdfea45878b472515510b888bc2a1c8eb4e8333b8782d8",
+  "policy": "Combined stdout/stderr and exit saved before log inspection; no retry permitted on failure."
+}

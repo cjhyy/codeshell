@@ -1,0 +1,887 @@
+{
+  "frozenSource": "d5fae44358b3a92d4d02fd5fcc4ac21c56b2a08a",
+  "scope": "All Markdown and parsed JSON in docs/bugs, including archive/_archive; round12 excluded",
+  "patterns": {
+    "diff_parser": "parseUnifiedDiff|UnifiedDiffViewer|gitPath\\(",
+    "header_only": "(?:binary|二进制|mode.only|权限位|chmod|mode.change|empty.file|空文件).{0,160}(?:diff|差异|路径|path|unknown)|(?:diff|差异|路径|path|unknown).{0,160}(?:binary|二进制|mode.only|权限位|chmod|mode.change|empty.file|空文件)",
+    "file_byte_label": "FileToolCard|content[.]length.{0,80}(?:bytes?|字节|B[)])|(?:Write|写入|工具卡).{0,80}(?:UTF.16|byte.{0,10}count|字节数)",
+    "utils": "tool-cards/utils\\.ts|formatDuration|prettyJson|classifyBashLines|keyboardShortcutHints|formatModifierShortcut",
+    "truncate_unicode": "(?:truncate|截断).{0,100}(?:surrogate|UTF.16|emoji|代理|Unicode)|(?:surrogate|UTF.16|emoji|代理|Unicode).{0,100}(?:truncate|截断)"
+  },
+  "scanned": {
+    "markdownFiles": 1060,
+    "jsonFiles": 598,
+    "jsonStringLeaves": 152326
+  },
+  "parseErrors": [],
+  "matchCounts": {
+    "diff_parser": 53,
+    "header_only": 41,
+    "file_byte_label": 12,
+    "utils": 31,
+    "truncate_unicode": 33
+  },
+  "maxContextsPerPattern": 150,
+  "hits": {
+    "diff_parser": [
+      {
+        "file": "docs/audit-2026-10-16/inventory.json",
+        "location": "$ .source_inventory[1465]",
+        "snippet": "packages/desktop/src/renderer/diff/UnifiedDiffViewer.tsx"
+      },
+      {
+        "file": "docs/audit-2026-10-16/inventory.json",
+        "location": "$ .source_inventory[1466]",
+        "snippet": "packages/desktop/src/renderer/diff/parseUnifiedDiff.ts"
+      },
+      {
+        "file": "docs/audit-2026-10-17/candidates-and-skips.md",
+        "location": "$",
+        "snippet": "d) |\n| Review 单一大文件保护 | capFiles 明确保留首文件全部行，可能不能限制单文件超过阈值的渲染；尚未核对性能/设计取舍，不计确认 | [Root 候选区](root.md)、UnifiedDiffViewer.tsx:236-245 |\n| WhatsApp 消息类型长度 | 通用 chunk 与 caption/interactive 的平台限制可能不同；缺官方上限合约，未执行/不确认 | [Chat 候选区](chat-data.md) |\n| cold queued recover | SDK start 正常；Phase1 无持久队列、recover 明确只扫 running，属于已声明边界 | [OM 已验证边界](operations-memory.md)、ops-progress-recovery-rou"
+      },
+      {
+        "file": "docs/audit-2026-10-17/evidence/quality-ui-review.md",
+        "location": "$",
+        "snippet": "充复核新增动态执行仍为0。\n\n## 最终补充：Review R2-09～11\n\n只读 `root-unified-diff.test.ts` /原始 `root-unified-diff.log`、`parseUnifiedDiff.ts`、`ReviewService`生产分派、`desktop-services.gitRun`与各diff参数、`UnifiedDiffViewer`的parse/filter/title/open/comment接线；未执行测试或Git命令。保留 R2-09/P2、R2-10/P3、R2-11/P2。\n\n- **R2-09合法正文错认header可达。** 原始日志是自有Git实际生成的补丁：hunk后合法 `--- before` / `+++ after` 正文来自文本 `-- before` → `+"
+      },
+      {
+        "file": "docs/audit-2026-10-17/evidence/quality-ui-review.md",
+        "location": "$",
+        "snippet": "root-unified-diff.log`、`parseUnifiedDiff.ts`、`ReviewService`生产分派、`desktop-services.gitRun`与各diff参数、`UnifiedDiffViewer`的parse/filter/title/open/comment接线；未执行测试或Git命令。保留 R2-09/P2、R2-10/P3、R2-11/P2。\n\n- **R2-09合法正文错认header可达。** 原始日志是自有Git实际生成的补丁：hunk后合法 `--- before` / `+++ after` 正文来自文本 `-- before` → `++ after`。parser `:62–72` 不检查curHunk就改路径并continue，`:105–118`还排除三个加减号开头内容；因此act"
+      },
+      {
+        "file": "docs/audit-2026-10-17/evidence/quality-ui-review.md",
+        "location": "$",
+        "snippet": "、range/commit函数只给diff/show、no-color/unified/root等参数，没有quotePath false。生产packages检索未找到统一quotePath设置。`UnifiedDiffViewer:82`直接parse；`:181–182`按真实onlyPath比较，`:261`title、`:346`打开、`:405–411`评论定位消费错误路径，无下游解码。中文文件默认配置下review定位不可用，P2与现有10-16 D01严重程度一致。\n- **R2-11fixture与默认配置须分清。** 脚本明确 `-c core.quotePath=true` 构造escaped路径、再 `false`对照，并非依靠operator全局Git配置。官方[core.quotePath](https://git-"
+      },
+      {
+        "file": "docs/audit-2026-10-17/evidence/quality-ui-review.md",
+        "location": "$",
+        "snippet": "0-12 Review R59是首提交无父range错误，不是hunk header、纯rename或quoted path解析。对10-12主Markdown与remaining findings的parseUnifiedDiff/quotePath/rename关键词有限查重未见同项。R2-08只影响外部CLI changedFiles收集，与纯rename Review AST为独立实现/修复，不重复同一缺陷。\n\n额外定位修正清单：R2-08现主报告写external-agent-changes.ts:123–131，漏了真正的header regex `:121`；建议主位置改 `:117–125` 或line=121。R2-09报告的UnifiedDiffViewer打开动作行号354应为当前源码346（路径title在261）。R"
+      },
+      {
+        "file": "docs/audit-2026-10-17/evidence/quality-ui-review.md",
+        "location": "$",
+        "snippet": "现主报告写external-agent-changes.ts:123–131，漏了真正的header regex `:121`；建议主位置改 `:117–125` 或line=121。R2-09报告的UnifiedDiffViewer打开动作行号354应为当前源码346（路径title在261）。R2-07说明实际字符串建议统一“left+一个反斜杠”，日志JSON中双反斜杠为转义表示，不是用户画面两个反斜杠；不影响内容丢列结论。OM1已补明确契约并澄清两条都是reference，R2-04已降P3，本复核末次只读确认这些修正落盘。\n\n最终Review补充阶段新增测试0、Git执行0、修改被审报告0；此前质量材料路径核对曾只读git status，未运行任何Git fixture或Git修改；仅本复核文档追加。所有对真实Git/renderer"
+      },
+      {
+        "file": "docs/audit-2026-10-17/findings.json",
+        "location": "$ .findings[8].source",
+        "snippet": "packages/desktop/src/renderer/diff/parseUnifiedDiff.ts"
+      },
+      {
+        "file": "docs/audit-2026-10-17/findings.json",
+        "location": "$ .findings[9].source",
+        "snippet": "packages/desktop/src/renderer/diff/parseUnifiedDiff.ts"
+      },
+      {
+        "file": "docs/audit-2026-10-17/findings.json",
+        "location": "$ .findings[10].source",
+        "snippet": "packages/desktop/src/renderer/diff/parseUnifiedDiff.ts"
+      },
+      {
+        "file": "docs/audit-2026-10-17/root.md",
+        "location": "$",
+        "snippet": "2-02，未另计。\n\n### R2-09 [P2] Review diff 把正常修改正文当文件头，丢行并改错路径\n\n- 位置：`packages/desktop/src/renderer/diff/parseUnifiedDiff.ts:62-72` 在已进入 hunk 后仍优先处理文件头；`:105-112` 又排除所有以三个加/减号开头的正文行。\n- 触发：文本文件从 `-- before` 改成 `++ after`，例如普通 SQL 注释或运算符示例。实际 Git 产生 `--- before` / `+++ after` 的合法删除/新增行。\n- 预期/实际：应保持 sample.txt 路径并显示一行删除和一行新增；真实 parser 把 oldPath 改成 before、newPath 改成 after，hunk 中没有任何"
+      },
+      {
+        "file": "docs/audit-2026-10-17/root.md",
+        "location": "$",
+        "snippet": "常对照。首次 `root-unified-diff.log` 为 4 pass / 13 expect / 0 fail/skip / Completed，也包含 R2-10/11。\n- 生产接线：`UnifiedDiffViewer.tsx:82` 对 Review service 和 turn snapshot 的 diff 使用该 parser，`:261` / `:346` 使用路径显示/打开。仅 parser 动态验证，没有运行 Electron。\n- 查重：旧主 findings / root / Desktop 报告和 10-12 remaining 审查有限查重未发现同根因确认项；旧 Git argv 问题不同。\n\n### R2-10 [P3] Review 中纯重命名文件丢失两个路径\n\n- 位置：`packages/deskt"
+      },
+      {
+        "file": "docs/audit-2026-10-17/root.md",
+        "location": "$",
+        "snippet": "确认项；旧 Git argv 问题不同。\n\n### R2-10 [P3] Review 中纯重命名文件丢失两个路径\n\n- 位置：`packages/desktop/src/renderer/diff/parseUnifiedDiff.ts:48-57` 忽略 diff --git 的文件名；`:74-76` 遇 rename from 仅设 status，不保存路径，也无 rename to 分支。\n- 触发：只改名、内容完全不变的 staged 文件；Git 输出 diff --git、similarity 100%、rename from/to，没有 ---/+++。\n- 预期/实际：应保留 old.txt → new.txt 的身份；真实 parser 返回 `{oldPath:null,newPath:null,status:\"ren"
+      },
+      {
+        "file": "docs/audit-2026-10-17/root.md",
+        "location": "$",
+        "snippet": "认项。\n\n### R2-11 [P2] Review 的 Git quoted 路径未经解码，中文文件无法正确定位\n\n- 位置：`packages/desktop/src/renderer/diff/parseUnifiedDiff.ts:63-70` 将带引号/八进制转义的原文交给 `:143-145`；stripPrefix 只识别无引号 a/、b/。\n- 触发：默认 core.quotePath=true，已跟踪 `中文.txt` 有普通内容修改。Git 的 +++ 路径为带双引号和 UTF-8 八进制转义的 b/ 路径。\n- 预期/实际：应得到文件相对路径 `中文.txt`；真实 parser 保留整段双引号/b前缀/八进制转义。禁用 quotePath 的同一文件正常对照可解析。\n- 影响：标题错误，onlyPath=真实文件名时过"
+      },
+      {
+        "file": "docs/audit-2026-10-17/root.md",
+        "location": "$",
+        "snippet": "使用 desktop-services 的 getGitDiffForReview / range / commit diff，未对 core.quotePath 设置 false，也未在返回前解码；UnifiedDiffViewer 直接使用 parser。引号/控制字符即便 quotePath=false 仍需处理，未另行动态扩展该边界。\n- 证据：`root-unified-diff.test.ts` 第三项，自有临时 Git repo 的真实 quoted diff + 真实 parser；原始收据同 R2-09。没有读取用户 Git 状态或修改产品代码。\n- 语义依据：Git 的路径引号/八进制转义及默认 true 见 [git-config core.quotePath](https://git-scm.com/docs/git-c"
+      },
+      {
+        "file": "docs/audit-2026-10-17/root.md",
+        "location": "$",
+        "snippet": "erator consumer break 不取消后台 loop 为静态线索；本轮 `rg` 未找到生产 import/export 消费者，也未运行，不将未使用入口按真实产品行为计 bug。\n- `UnifiedDiffViewer.tsx:236-245` 的 capFiles 为保证至少显示首文件，可能将单个大文件的全部行带入渲染，使 2000 行保护阈值无法约束此情形；源码明确有至少首文件的设计选择，尚未验证真实性能/产品取舍，不计确认。供后续独立 Review 性能方向核查。\n- 摘要 JSON 两个候选：`utils/json.ts:11` 的 greedy fence 匹配跨过后续 fenced example；`memory-orchestrator.ts:370` 的尾逗号修复可能修改字符串内的 `,}`。首次独立 `root"
+      },
+      {
+        "file": "docs/audit-2026-10-17/source-manifest.json",
+        "location": "$ .files[37].path",
+        "snippet": "packages/desktop/src/renderer/diff/parseUnifiedDiff.ts"
+      },
+      {
+        "file": "docs/audit-2026-10-17-round7/evidence/tui-dedup-diff-semantic.json",
+        "location": "$ .matches[5].text",
+        "snippet": "- 位置：`packages/desktop/src/renderer/diff/parseUnifiedDiff.ts:62-72` 在已进入 hunk 后仍优先处理文件头；`:105-112` 又排除所有以三个加/减号开头的正文行。"
+      },
+      {
+        "file": "docs/audit-2026-10-17-round7/evidence/tui-dedup-diff-semantic.json",
+        "location": "$ .matches[20].text",
+        "snippet": "、range/commit函数只给diff/show、no-color/unified/root等参数，没有quotePath false。生产packages检索未找到统一quotePath设置。`UnifiedDiffViewer:82`直接parse；`:181–182`按真实onlyPath比较，`:261`title、`:346`打开、`:405–411`评论定位消费错误路径，无下游解码。中文文件默认配置下review定位不可用，P2与现有10-16 D01严重程度一致。"
+      },
+      {
+        "file": "docs/audit-2026-10-17-round7/tui.md",
+        "location": "$",
+        "snippet": " 作为普通输出时应保持原样的意图已在源码注释写明，真实修复需区分 compact Edit 格式、普通输出和 unified hunk 上下文，不能简单全局放宽正则。\n- 与上一轮 Desktop `parseUnifiedDiff` 的 hunk 状态和 quoted-path 缺陷属于不同实现、不同映射边界。未找到同根因旧确认项；当前仍是 fixture 失败后跳过的 source-only 候选。\n\n## 候选 TUI-C2：Diff 颜色带按 UTF-16 长度补空格，中文会超出列宽\n\n- 源码：[DiffLine.tsx:45](../../packages/tui/src/ui/components/DiffLine.tsx#L45)，48–49 行使用 `s.length` 而非终端显示宽度计算补位；54 行 gutter 也使"
+      },
+      {
+        "file": "docs/audit-2026-10-17-round8/evidence/cross-review-questions.md",
+        "location": "$",
+        "snippet": "首行 trim 的路径截断；A04 是 log subject 竖线分字段。R2-08 是外部 CLI changedFiles collection，R2-11 是 Desktop Review `parseUnifiedDiff` 路径定位。这些独立消费者的旧修复不会统一本 `getWorktreeDiff` 两个集合的身份空间；本项可以单独记录。本次未重复运行任何旧 fixture。\n\n源码核对的七个核心文件字节均与冻结 Git blob 相等：command loader、marketplace parser、installer paths、marketplace manager、Codex command converter、worktree diff 与 query。Plugins 两个首次 raw log 和 fixture 的"
+      },
+      {
+        "file": "docs/audit-2026-10-17-round8/evidence/root-git-diff-dedup.json",
+        "location": "$ .matches[0].context",
+        "snippet": "0-12 Review R59是首提交无父range错误，不是hunk header、纯rename或quoted path解析。对10-12主Markdown与remaining findings的parseUnifiedDiff/quotePath/rename关键词有限查重未见同项。R2-08只影响外部CLI changedFiles收集，与纯rename Review AST为独立实现/修复，不重复同一缺陷。"
+      },
+      {
+        "file": "docs/audit-2026-10-17-round9/evidence/attachments-dedup.json",
+        "location": "$ .hits.tokenizer[8].snippet",
+        "snippet": "首行 trim 的路径截断；A04 是 log subject 竖线分字段。R2-08 是外部 CLI changedFiles collection，R2-11 是 Desktop Review `parseUnifiedDiff` 路径定位。这些独立消费者的旧修复不会统一本 `getWorktreeDiff` 两个集合的身份空间；本项可以单独记录。本次未重复运行任何旧 fixture。\n\n源码核对的七个核心文件字节均与冻结 Git blob 相等：command loader、marketplac"
+      },
+      {
+        "file": "docs/audit-2026-10-17-round9/evidence/tools-dedup.json",
+        "location": "$ .hits[158].text",
+        "snippet": "repository errors。它与已有 Session/工作区选择问题、审批生命周期或文件丢失项独立。所查 ReviewService/desktop-services/ReviewPanel/UnifiedDiffViewer 在 84740d56→a66f4ef2 的只读 git diff --stat 为空，应写作旧实现本轮新发现。"
+      },
+      {
+        "file": "docs/review-2026-10-12/terminal-review-quality-round13.md",
+        "location": "$",
+        "snippet": "e；没有 parent 数量或 root-commit 禁用条件。`:151–160` 生成 `{kind:\"committed\",rootId,commitHash}`，`:313–318` 交给 UnifiedDiffViewer，preload/Main 走 `review:diff`。\n\n所以范围限定为 root commit 出现在当前仓库最近 20 个日志结果中的正常用户菜单入口，最简单场景是一个或少量提交的新仓库；不能声称 UI 提供了任意古老提交的选择器。只有一个提交时，默认“最近提交”也失败；增加第二个提交后，仍可在菜单选中原 root commit 并触发同一缺陷。Fixture 使用服务端实际返回的 rootId/hash，未拼造未知 ID 或绕过 workspace 选择检查。\n\n## 因果链\n\n1. `packages"
+      },
+      {
+        "file": "docs/review-2026-10-12/terminal-review-quality-round13.md",
+        "location": "$",
+        "snippet": "errors。helper 已吞掉错误，因此返回一个合法 repository 对象，diff 空，errors=[]。\n4. `packages/desktop/src/renderer/diff/UnifiedDiffViewer.tsx:129–138` 将空 diff 解析为 0 files，`:180–181` 在 files=0 且 errors=0 时显示 no changes。真正失败没有显示 git diff failed。\n\n仅展示改动为空有合理场景，例如空提交；本 fixture 根提交有实际新增内容，并用真实 `git show --format= --root <hash>` 证明含 `+ROOT_COMMIT_REAL_CONTENT`，排除了空提交。第二提交含 `+SECOND_COMMIT_REAL_CONTEN"
+      },
+      {
+        "file": "docs/review-2026-10-12/terminal-review-quality-round13.md",
+        "location": "$",
+        "snippet": "仓库是自行创建的临时目录，afterEach 删除它。仅只读确认这些已执行证据，没有新建或清理实验进程/仓库。\n\nFixture 跑真实 ReviewService、真实 Git helper、真实 UnifiedDiffViewer React DOM，workspace 解析经 dependency seam 提供合法隔离项目；未启动完整 Electron Main，也未实际点击 Radix 提交子菜单。菜单可选性由上述生产源码直接确认，应维持这一证据边界。`diffText=actualRootDiff` 的控制证明 viewer 可以正常显示已经取得的 root snapshot；它不是用户可以从该菜单调用的恢复按钮。\n\n## 分级、恢复与建议\n\nP3 合理：失败只影响选定的无父提交（和单提交仓库默认最近提交），一般有父提交的 comm"
+      },
+      {
+        "file": "docs/review-2026-10-12/terminal-review-quality-round13.md",
+        "location": "$",
+        "snippet": "repository errors。它与已有 Session/工作区选择问题、审批生命周期或文件丢失项独立。所查 ReviewService/desktop-services/ReviewPanel/UnifiedDiffViewer 在 84740d56→a66f4ef2 的只读 git diff --stat 为空，应写作旧实现本轮新发现。\n"
+      },
+      {
+        "file": "docs/review-2026-10-12/terminal-review-round13.md",
+        "location": "$",
+        "snippet": "ell/packages/desktop/src/main/desktop-services.ts:621) 把 Git 错误吞成空串，fan-in 得到 diff=\"\"、errors=[]；实际 [UnifiedDiffViewer:180](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/desktop/src/renderer/diff/UnifiedDiffViewer.tsx:180) 因此显示“no changes”。\n\n触发入口：[ReviewPanel 提交子菜单:233](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/desktop/s"
+      },
+      {
+        "file": "docs/review-2026-10-12/terminal-review-round13.md",
+        "location": "$",
+        "snippet": "](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/desktop/src/renderer/diff/UnifiedDiffViewer.tsx:180) 因此显示“no changes”。\n\n触发入口：[ReviewPanel 提交子菜单:233](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/desktop/src/renderer/panels/ReviewPanel.tsx:233) 直接列出 `getRecentCommits` 返回的最近 20 项，没有过滤其中的首次提交；选择后以 [rootId + hash:151](/Users/ad"
+      },
+      {
+        "file": "docs/review-2026-10-12/terminal-review-round13.md",
+        "location": "$",
+        "snippet": "root，Git discovery、recent commits、range diff 均用生产实现。真实提交列表包含 root；显式选择和单提交默认请求都返回空 diff、无 errors。实际 UnifiedDiffViewer 接真实 service 回包显示“no changes”，没有新增正文或 Git 失败提示。\n\n正常对照：创建第二个真实提交后，选第二提交可显示新增正文；再选 root 仍为空，不会因仓库多了一次提交而修复。显式给 viewer 真实 root diffText 可显示首提交正文，证明渲染器能显示该内容；这只是渲染正常对照，**不代表现有菜单提供恢复按钮或自动备份**。完整 ReviewPanel 下拉交互和 Electron Main 本轮未挂载，正式菜单接线静态核对，动态范围是实际 service + vie"
+      },
+      {
+        "file": "docs/review-2026-10-12/validation/desktop-renderer-results.json",
+        "location": "$ [85].file",
+        "snippet": "packages/desktop/src/renderer/diff/UnifiedDiffViewer.review.test.ts"
+      },
+      {
+        "file": "docs/review-2026-10-12/validation/desktop-renderer-results.json",
+        "location": "$ [85].log",
+        "snippet": "/tmp/codeshell-review-20261012/desktop-baseline/085-UnifiedDiffViewer.review.test.ts.log"
+      },
+      {
+        "file": "docs/review-2026-10-12/validation/original-baseline-evidence-round28/independent-existing-tests.receipt.json",
+        "location": "$ .groups[1].rawLogs[85].file",
+        "snippet": "packages/desktop/src/renderer/diff/UnifiedDiffViewer.review.test.ts"
+      },
+      {
+        "file": "docs/review-2026-10-12/validation/original-baseline-evidence-round28/independent-existing-tests.receipt.json",
+        "location": "$ .groups[1].rawLogs[85].log",
+        "snippet": "/tmp/codeshell-review-20261012/desktop-baseline/085-UnifiedDiffViewer.review.test.ts.log"
+      },
+      {
+        "file": "docs/review-2026-10-12/validation/original-baseline-evidence-round28/independent-existing-tests.receipt.json",
+        "location": "$ .groups[1].rawLogs[85].resolvedLog",
+        "snippet": "/private/tmp/codeshell-review-20261012/desktop-baseline/085-UnifiedDiffViewer.review.test.ts.log"
+      },
+      {
+        "file": "docs/review-2026-10-12/validation/original-baseline-evidence-round28/independent-existing-tests.receipt.json",
+        "location": "$ .groups[1].rawLogs[85].archiveMemberBasename",
+        "snippet": "085-UnifiedDiffViewer.review.test.ts.log"
+      },
+      {
+        "file": "docs/review-2026-10-12/validation/original-baseline-evidence-round28/manifest.json",
+        "location": "$ .logs[226].file",
+        "snippet": "packages/desktop/src/renderer/diff/UnifiedDiffViewer.review.test.ts"
+      },
+      {
+        "file": "docs/review-2026-10-12/validation/original-baseline-evidence-round28/manifest.json",
+        "location": "$ .logs[226].originalLog",
+        "snippet": "/tmp/codeshell-review-20261012/desktop-baseline/085-UnifiedDiffViewer.review.test.ts.log"
+      },
+      {
+        "file": "docs/review-2026-10-12/validation/original-baseline-evidence-round28/manifest.json",
+        "location": "$ .logs[226].tarMember",
+        "snippet": "desktop-renderer/085-UnifiedDiffViewer.review.test.ts.log"
+      },
+      {
+        "file": "docs/superpowers/plans/2026-09-01-github-pr-workflow.md",
+        "location": "$",
+        "snippet": " 时禁用旧 draft 提交并引导重新定位。\n- [ ] 首切片只读 flag 下没有任何远端写入口。\n\n## P6 — 行内评论与 review 提交\n\n**Files:**\n- Modify: `UnifiedDiffViewer`（draft anchor seam）\n- Create: `pull-request-service.ts`, IPC/preload API\n- Test: locator、确认、幂等、partial failure\n\n- [ ] 在 diff 行上创建/编辑/删除本地 draft。\n- [ ] 提交前重新读取 head SHA、account、permission，并使旧确认失效。\n- [ ] 预览 `COMMENT | APPROVE | REQUEST_CHANGES` 与所有评论正文。\n- [ ] 一"
+      },
+      {
+        "file": "docs/superpowers/specs/2026-05-24-electron-codex-ui-full-design.md",
+        "location": "$",
+        "snippet": "  # full queue\n      ApprovalCard.tsx\n      RiskPill.tsx\n    diff/\n      ChangedFilesList.tsx\n      UnifiedDiffViewer.tsx\n      parse-unified-diff.ts\n    runs/\n      RunsView.tsx\n      RunListItem.tsx\n      RunDetail.tsx\n      CheckpointList.tsx\n    settings/\n      SettingsView.tsx\n      ModelSection.tsx\n      ProviderSection.tsx\n      PermissionSection.tsx\n      McpSection."
+      },
+      {
+        "file": "docs/superpowers/specs/2026-05-24-electron-codex-ui-full-design.md",
+        "location": "$",
+        "snippet": "desktop-services.ts` git status + git diff (spawn `git` in `cwd`).\n- [ ] `parse-unified-diff.ts` + `UnifiedDiffViewer`.\n- [ ] `ChangedFilesList` in Inspector when run touches files.\n- [ ] Tool cards for Write/Edit/ApplyPatch link to Diff inspector.\n- [ ] `ApprovalsView` listing queued approvals.\n- [ ] `ApprovalQueue` slice; sidebar/topbar badge.\n- [ ] `ApprovalCard` with ris"
+      },
+      {
+        "file": "docs/superpowers/specs/2026-09-01-github-pr-workflow-design.md",
+        "location": "$",
+        "snippet": "ckout，并绑定一个 review Session。\n6. 打开 Review 面板的 `pull-request` scope。\n\n### 4.2 审查与评论\n\n- 文件和 hunk 仍由现有 `UnifiedDiffViewer` 展示。\n- 用户点击新增行内评论，评论先进入本地 draft，不立即发网。\n- Review drawer 汇总所有 draft、普通总结和最终事件。\n- 提交前展示：仓库、PR、head SHA、事件、评论数量与正文预览；用户确认后批量创建 review。\n\n### 4.3 checks 与 merge\n\n- 展示 latest check suites/runs 的 `queued | in_progress | success | failure | cancelled | neutral`。\n- 支持手"
+      },
+      {
+        "file": "docs/superpowers/specs/2026-09-01-github-pr-workflow-design.md",
+        "location": "$",
+        "snippet": "quest-service.ts`：状态机与 IPC facade。\n\nrenderer 新增 `pull-request` 页面/侧栏，但 diff 核心继续复用 `ReviewPanel` / `UnifiedDiffViewer`。ReviewService 增加受约束的 PR range：只接受 main 已登记的 review context id，不接受 renderer 传任意 git range。\n\n### 状态模型\n\n```ts\ntype PullRequestReviewState =\n  | \"resolving\"\n  | \"fetching\"\n  | \"ready\"\n  | \"head_changed\"\n  | \"submitting\"\n  | \"submitted\"\n  | \"merged\"\n  | \"closed\"\n"
+      },
+      {
+        "file": "docs/todo/2026-09-11-overnight-todo-audit.md",
+        "location": "$",
+        "snippet": " 4                            | 已实现行为的编号/历史追溯标签             |\n| [packages/desktop/src/renderer/diff/UnifiedDiffViewer.tsx](../../packages/desktop/src/renderer/diff/UnifiedDiffViewer.tsx)                                 | 28                           | 已实现行为的编号/历史追溯标签             |\n| [packages/desktop/src/renderer/diff/reviewScope.ts](../../packages/desktop/src/renderer/diff/"
+      },
+      {
+        "file": "docs/todo/2026-09-11-overnight-todo-audit.md",
+        "location": "$",
+        "snippet": "[packages/desktop/src/renderer/diff/UnifiedDiffViewer.tsx](../../packages/desktop/src/renderer/diff/UnifiedDiffViewer.tsx)                                 | 28                           | 已实现行为的编号/历史追溯标签             |\n| [packages/desktop/src/renderer/diff/reviewScope.ts](../../packages/desktop/src/renderer/diff/reviewScope.ts)                                               | "
+      },
+      {
+        "file": "docs/todo/small-features-2026-07-10/review-panel-wrong-cwd.md",
+        "location": "$",
+        "snippet": "ewPanel`。\n- `ReviewPanel.tsx:47-95` 的 branch base/commit 查询以及 `:226-257` 的所有 diff scope 都依赖 cwd。\n- `UnifiedDiffViewer.tsx:49-73` 最终执行 `window.codeshell.getGitDiff(cwd, ...)` 或 `getGitRangeDiff(cwd, ...)`，所以“未暂存/已暂存/全部未提交”实际在主仓库执行。\n- main 的 git service 并不知道 session：`packages/desktop/src/main/index.ts:3233-3238` 的 `git:diff` 只收 cwd，`packages/desktop/src/main/desktop-services.t"
+      },
+      {
+        "file": "docs/todo/small-features-2026-07-10/review-panel-wrong-cwd.md",
+        "location": "$",
+        "snippet": "当前从 PanelArea cwd 派生运行目录，也应使用 resolved root；否则 dock 修复后 quick chat 仍会在主仓库运行。\n\n### 3.5 ReviewPanel / UnifiedDiffViewer：workspace 变化后的状态重置\n\n`UnifiedDiffViewer.tsx:49-73` 的 effect 已把 cwd 放在依赖中，resolved root 变化后会自动重新查询，不必改变 IPC shape。需要补两点状态卫生：\n\n- 发新请求前 `setError(null)`、`setDiff(null)`，避免 workspace 切换期间继续展示旧 worktree diff。\n- 保留 cancelled guard，旧 cwd 响应不得覆盖新 cwd。\n\n`ReviewPanel.ts"
+      },
+      {
+        "file": "docs/todo/small-features-2026-07-10/review-panel-wrong-cwd.md",
+        "location": "$",
+        "snippet": "root；否则 dock 修复后 quick chat 仍会在主仓库运行。\n\n### 3.5 ReviewPanel / UnifiedDiffViewer：workspace 变化后的状态重置\n\n`UnifiedDiffViewer.tsx:49-73` 的 effect 已把 cwd 放在依赖中，resolved root 变化后会自动重新查询，不必改变 IPC shape。需要补两点状态卫生：\n\n- 发新请求前 `setError(null)`、`setDiff(null)`，避免 workspace 切换期间继续展示旧 worktree diff。\n- 保留 cancelled guard，旧 cwd 响应不得覆盖新 cwd。\n\n`ReviewPanel.tsx` 还缓存了 cwd 相关状态：\n\n- `commits` 在 `:71-7"
+      },
+      {
+        "file": "docs/todo/small-features-2026-07-10/review-panel-wrong-cwd.md",
+        "location": "$",
+        "snippet": "默认 `HEAD~1..HEAD`。\n- `turnDiff` 是来源 turn 的权威快照（`:29-35`），不重新调用 git。cwd 更新只影响 diff 内“打开文件”动作所使用的根目录（`UnifiedDiffViewer.tsx:120-125`）。\n- `getGitBranchBase`、recent commits、range diff 全部自然接收新 root。\n\n### 3.6 Files 面板审计与修正\n\nFiles 使用统一 resolved root 后，目录树查询会切到 worktree。但组件可能仍持有旧根下的绝对 `selected`：\n\n- 在 `FilesPanel` 增加 root change effect；当 `selected` 不在新 root 下时清空 `selected` 和 `reveal"
+      },
+      {
+        "file": "docs/todo/small-features-2026-07-10/review-panel-wrong-cwd.md",
+        "location": "$",
+        "snippet": "和 ready gate。\n3. PanelRegistry 全面改用 resolved root，先确认 Review/Files/QuickChat/CCRoom 的 prop 链。\n4. 修正 UnifiedDiffViewer 和 ReviewPanel 在 cwd 变化时的 loading/error/cache 状态。\n5. 修正 FilesPanel 的旧绝对 selection 清理。\n6. 为 Terminal 增加实际 spawn cwd 与 workspace-changed 提示，确认新 tab 从新 root 启动。\n7. 添加回归测试，最后进行两个 worktree 各自有不同未暂存内容的手工验证。\n\n## 5. 测试策略\n\n### Hook / 组件单测\n\n- `usePanelWorkspaceRoot.test"
+      }
+    ],
+    "header_only": [
+      {
+        "file": "docs/architecture/10-desktop-and-mobile.md",
+        "location": "$",
+        "snippet": "us/path helpers (`packages/desktop/src/main/desktop-services.ts:57`); `fs-service.ts` resolves real paths under the project root, skips symlink escapes, caps file reads at 2 MB, and sniffs binary content (`packages/desktop/src/main/fs-service.ts:24`, `packages/desktop/src/main/fs-service.ts:81`). |\n| Terminal | `pty-service.ts` lazily loads the native `node-pty` addon, starts or reuses PTYs by session id, replays scrollback, emits `pty:data` / `pty:ex"
+      },
+      {
+        "file": "docs/architecture/11-feature-inventory.md",
+        "location": "$",
+        "snippet": "代码工作区\n\n| 功能 | 做什么 | 入口 | 怎么用 |\n|------|--------|------|--------|\n| **文件浏览面板服务 (只读 fs)** | 目录读取、文件读取、路径存在性判断；限制工作区内 realpath、防 symlink escape、限制大文件和二进制预览 | `packages/desktop/src/main/fs-service.ts:52`，`packages/desktop/src/main/fs-service.ts:99`，`packages/desktop/src/main/fs-service.ts:114`，`packages/desktop/src/main/index.ts:2734` | 文件面板浏览目录，聊天里的路径链接先经 `fs:exists` 判断 |\n| **文件改动撤销/重做 (turn 级 undo)** | 基于 cor"
+      },
+      {
+        "file": "docs/archive/beta-prep-audit-2026-06-23.md",
+        "location": "$",
+        "snippet": "|---|---|---|---|---|\n> | 1 | `pruneDisabled.ts:75` | 🔴 high | settings.json 漏 `mode:0o600` —— **同一 diff 刚把 manager.ts 锁成 owner-only,但 prune 重写又落回 0o644 世界可读**(明文 API key 泄漏) | tmp 创建即带 0o600(tmp 即最终文件,chmod 有竞态窗)+ 集成测断言 |\n> | 2 | `context-tools.ts:143` | 🟡 high→实低 | realpath-vs-lexical 混比:目标不存在的 fallback 拿 `realRoot`(real)比 `resolved`(lexical),REPO_ROOT 走 symlink 时**误拒合法路径**(fail-safe 方向·只读·缺失文件下游本就失败,故实际影响低) | 解析父目录 realpath 再拼 leaf,两侧同模式;父也缺则 lexical-vs-lexica"
+      },
+      {
+        "file": "docs/archive/core-modules/git.md",
+        "location": "$",
+        "snippet": "`** (the `--` trick doesn't work for checkout) — passing `--orphan`-style names throws.\n- **Windows binary resolution.** `git`/`gh` are resolved once at module load via `resolveExecutable` so a `.cmd`/`.exe` shim on `PATH×PATHEXT` is found (bare `execFile` doesn't walk PATHEXT). On POSIX it's a no-op.\n- **`removeWorktree` runs from the MAIN repo, not the worktree.** It derives the main root from `--git-common-dir` and captures the branch name **before** removing the worktree (after"
+      },
+      {
+        "file": "docs/archive/core-modules/utils.md",
+        "location": "$",
+        "snippet": "platform executable resolution (`resolveExecutable`/`findExecutable`/`commandCandidateNames`) + git binary helpers (`resolveGit`/`isGitAvailable`/`setGitPathOverride`). |\n| `execFileNoThrow.ts` | Run a child process without throwing; distinguishes spawn failure (`code: null`) from non-zero exit. |\n| `memoize.ts` | Minimal `memoize(fn, resolver)` (lodash-shaped) with a `.cache` Map; in-tree to drop the lodash depen"
+      },
+      {
+        "file": "docs/archive/core-modules/utils.md",
+        "location": "$",
+        "snippet": "` surfaces its own ENOENT) — use it right before spawning. `findExecutable` returns `null` when the binary genuinely doesn't exist — use it to *detect* a missing tool up front. The Windows path here walks `PATH × PATHEXT` so `.cmd`/`.bat` shims are found (Node won't do this for a bare name without `shell:true`).\n- **`setGitPathOverride` is process-global mutable state.** The desktop host calls it at startup / on settings change to honor the `git.path` setting; `resolveGit`"
+      },
+      {
+        "file": "docs/archive/plan-2026-07-09-input-attachment-pipeline.md",
+        "location": "$",
+        "snippet": "片落盘 / 附件路径化」「主 agent 本地图片视觉读取」「通用输入接入总线」合并为一条可串行落地的 input-attachment pipeline 方案。\n\n推荐 MVP 边界：先做「图片附件路径化闭环」，即桌面粘贴/OS drop/文件面板图片统一落盘到工作区 `.code-shell/attachments/`，发送给模型时同时提供可引用路径和 vision image part；`@dir`、通用二进制附件、DriveAgent 直接透传 CLI 图片参数放到后续 stage。\n\n## 1. 现状事实\n\n### 1.1 已确证：桌面 composer 图片附件\n\n- `packages/desktop/src/renderer/chat/attachments.ts:1` 到 `packages/desktop/src/renderer/chat/attachments.ts:7` 明确说明当前图片附件是 renderer-only，不碰磁盘，发送时以内联 wire format 进入 engine。\n- `Im"
+      },
+      {
+        "file": "docs/archive/plan-2026-07-09-input-attachment-pipeline.md",
+        "location": "$",
+        "snippet": "3` 到 `packages/core/src/tool-system/builtin/read.ts:34`。\n- `Read` 只在文件超过 5MB 时拒绝；否则直接 `readFile(filePath, \"utf-8\")`，没有图片 MIME 检测或二进制降级，见 `packages/core/src/tool-system/builtin/read.ts:49` 到 `packages/core/src/tool-system/builtin/read.ts:64`。\n- `Glob` 只返回文件，`nodir: true`，且默认 `dot: false`，见 `packages/core/src/tool-system/builtin/glob.ts:44` 到 `packages/core/src/tool-system/builtin/glob.ts:51"
+      },
+      {
+        "file": "docs/archive/plan-2026-07-09-input-attachment-pipeline.md",
+        "location": "$",
+        "snippet": "信息：文本 path hint 和真正 vision image part。path 用于工具/子代理，image part 用于视觉理解。\n4. 已存在于工作区的图片继续走 `view_image(path)`；`Read` 对图片/二进制不再吐乱码，而是返回 path、mime、size、hash 和「请用 view_image」提示。\n5. 扩展 composer `@` 和 picker，使其能区分 `@file`、`@dir`、最近附件，最终不只是插入文本，而是写入结构化 attachment/reference。\n6. 大文件、二进制、未知类型默认只给 path + metadata，不内联内容。\n7. 统一清理、去重、隐私与默认 git-ignore 策略。\n\n### 2.2 非目标\n\n- MVP 不做任意二进制内容解析、OCR、PDF "
+      },
+      {
+        "file": "docs/archive/plan-2026-07-09-input-attachment-pipeline.md",
+        "location": "$",
+        "snippet": ". 扩展 composer `@` 和 picker，使其能区分 `@file`、`@dir`、最近附件，最终不只是插入文本，而是写入结构化 attachment/reference。\n6. 大文件、二进制、未知类型默认只给 path + metadata，不内联内容。\n7. 统一清理、去重、隐私与默认 git-ignore 策略。\n\n### 2.2 非目标\n\n- MVP 不做任意二进制内容解析、OCR、PDF 渲染、Office 文档预览或云端上传。\n- MVP 不做目录全文摘要。目录引用先给受限 tree/metadata，细读仍由 agent 用 `Glob`/`Read`。\n- MVP 不要求修改外部 Claude Code CLI 行为；Claude Code 先通过 prompt path handoff。\n- MVP 不把附件目录"
+      },
+      {
+        "file": "docs/archive/plan-2026-07-09-input-attachment-pipeline.md",
+        "location": "$",
+        "snippet": " path\n  - mime\n  - size\n  - sha256\n  - 提示：`Use view_image({ path: \"...\" }) to inspect pixels.`\n- 对未知二进制返回 path + size + hash，不按 UTF-8 输出乱码。\n- `view_image` 复用 image policy 的大小策略。超过 5MB 时可生成 vision 缩略派生图，或继续提示用户压缩。推荐用同一套 `IMAGE_TARGETS`，派生图写到 `.code-shell/attachments/<sessionId>/derived/`。\n- `view_image` 可增加可选参数 `detail?: \"low\" | \"standard\" | \"high\"`，默认沿用 ctx/runtime im"
+      },
+      {
+        "file": "docs/archive/plan-2026-07-09-input-attachment-pipeline.md",
+        "location": "$",
+        "snippet": "为 path-only，由 MVP 拍板。\n- `Read` 不自动 vision，避免一次普通文件读取触发昂贵图片 token。\n- 对 `@dir`，默认只给 tree，不内联文件内容；对大文件、二进制、未知类型只给 path/size/hash。\n\n## 7. 需卡密sama拍板的决策点\n\n1. MVP 是否严格限定图片：推荐是。通用 `@file/@dir` 和二进制附件放 Stage 6。\n2. 粘贴/OS drop 图片 staging 失败时怎么办：推荐阻止发送并显示错误；备选是回退到旧 data URL 内联，但会继续没有 path。\n3. 落盘目录是否采用 `<cwd>/.code-shell/attachments/<sessionId>/`：推荐是。备选 `~/.code-shell/sessions/<id>/att"
+      },
+      {
+        "file": "docs/archive/plan-2026-07-09-input-attachment-pipeline.md",
+        "location": "$",
+        "snippet": "置。\n- Stage 1 到 Stage 8 是串行顺序；涉及同一文件的后续 stage 必须等待前一 stage 完成并测试通过后再改，不能并行拆给多个 agent。\n- MVP 边界清晰：图片落盘路径化 + path hint + vision image part + Read/view_image 收口；`@dir`、通用二进制、Codex `-i` 直传属于后续。\n"
+      },
+      {
+        "file": "docs/archive/todo/final-signoff-2026-07-08.md",
+        "location": "$",
+        "snippet": "h inline script; scan found no remote script/fetch/localStorage/credential handling.\n- No committed binary files were reported by `git diff --numstat origin/main..HEAD`.\n- No unintended large committed files found. The largest changed blobs are existing source files; the largest new docs artifact is `docs/archive/todo/memory-demo.html` at 58,790 bytes.\n- Secret scan of the committed diff found on"
+      },
+      {
+        "file": "docs/audit-2026-10-17-round11/evidence/final-quality.md",
+        "location": "$",
+        "snippet": " No raw whitespace normalization or exception is needed.\n\nInitial/current porcelain, tracked/staged binary diff hashes and all four original untracked byte hashes remained equal despite main advancement. Integration must preserve the refreshed snapshot and use only incoming batch documentation paths. The original bug-report deletion is user-owned. A postintegration rec"
+      },
+      {
+        "file": "docs/audit-2026-10-17-round11/evidence/root-integration-refresh-note.md",
+        "location": "$",
+        "snippet": "b18de0262d5c49367746625`, now `9cbd3a34c8c3249d87a2a31b2edf538e0448c365`. Porcelain, tracked/staged binary diff hashes and all four untracked byte hashes remained equal. The eight incoming paths were other tasks' Desktop acceptance harness/AppImage/startup scripts, CI and documentation.\n\nRoot preserved that observed snapshot in `integration-current-observed.json`, fast-forwarded only its own branch to current main, and captured a fresh final preinte"
+      },
+      {
+        "file": "docs/audit-2026-10-17-round7/evidence/files-dedup.json",
+        "location": "$ .hits.read-large-guidance[3].snippet",
+        "snippet": "- `Read` 只在文件超过 5MB 时拒绝；否则直接 `readFile(filePath, \"utf-8\")`，没有图片 MIME 检测或二进制降级，见 `packages/core/src/tool-system/builtin/read.ts:49` 到 `packages/core/src/tool-system/builtin/read.ts:64`。"
+      },
+      {
+        "file": "docs/deployment.md",
+        "location": "$",
+        "snippet": "ell\ncp deploy/settings.example.json \\\n  /absolute/path/to/workspace/.code-shell/settings.local.json\nchmod 600 /absolute/path/to/workspace/.code-shell/settings.local.json\n```\n\n编辑该文件，替换 `REPLACE_WITH_YOUR_API_KEY`、`REPLACE_WITH_YOUR_MODEL_ID`，以及需要使用的 `baseUrl`。模板使用内置 `openai` 目录项，适用于相应的 OpenAI 兼容文本接口；使用 Anthropic 等其他协议时，应把凭证和连接的 `catalogId` 一并改为对应内置目录项。\n\n配置由三部分关联：`credentials[].id` 保"
+      },
+      {
+        "file": "docs/deployment.md",
+        "location": "$",
+        "snippet": "r/lib/codeshell srv/codeshell-workspace \\\n  etc/codeshell etc/systemd/system/codeshell.service\nsudo chmod 600 /absolute/path/to/private-backup/codeshell-backup.tgz\nsudo systemctl start codeshell\n```\n\n归档含密钥和登录数据，应仅允许运维者访问；如已部署 Caddy，另行保存其实际配置。备份命令失败时保留错误输出，确认归档完整后再升级。\n\n恢复时先停止目标服务，使用空目录或独立实例，保留备份中的认证文件，避免覆盖另一实例的账号或混合会话。保持原数据目录、Workspace 和用户 home 的绝对路径及系统用户权限一致；会话按 Workspace 路径筛选，直接改目"
+      },
+      {
+        "file": "docs/docker-deployment.md",
+        "location": "$",
+        "snippet": "份。所有路径按实际部署替换：\n\n```bash\ndocker compose stop hub\numask 077\nmkdir -p /absolute/path/to/private-backup\nchmod 700 /absolute/path/to/private-backup\ndocker compose run --rm --no-deps -T --entrypoint tar hub -C / -czf - data workspace \\\n  > /absolute/path/to/private-backup/codeshell-backup.tgz\nchmod 600 /absolute/path/to/private-backup/codeshell-backup.tgz\ndocker compose start hub\n```\n\n归档"
+      },
+      {
+        "file": "docs/docker-deployment.md",
+        "location": "$",
+        "snippet": "oint tar hub -C / -czf - data workspace \\\n  > /absolute/path/to/private-backup/codeshell-backup.tgz\nchmod 600 /absolute/path/to/private-backup/codeshell-backup.tgz\ndocker compose start hub\n```\n\n归档包含绑定的模型密钥文件。备份路径和文件名应使用尚不存在的位置；备份失败时保留错误输出并重新备份，确认归档完整后再升级。还应单独保存 `compose.yaml`、所用版本信息和自定义 `.env` / `compose.override.yaml`。\n\n迁移到另一台 Docker 主机时，先停止目标服务，在空的专用卷或目录中恢复 `/data`、`/workspace` 的"
+      },
+      {
+        "file": "docs/nightly-2026-07-12/server-deployment-web-account-roadmap.md",
+        "location": "$",
+        "snippet": "n 是否过期/撤销、谁执行了哪个动作。因此正式账号体系必须新建。\n\n### 3.6 Electron 解耦成本\n\n成本分三档：\n\n- **低**：tunnel process、cloudflared binary、pairing primitive、static path security、upload ticket、WS lifecycle；都是 Node 模块或依赖注入（见 2.4）。\n- **中**：mobile UI、stream reducer、reconnect/snapshot/ack。UI 是纯 browser，但 Vite alias 仍指向 desktop renderer components/protocol（`packages/desktop/vite.mobile.config.ts:43`）；需要建立稳定 `packages/web` dependen"
+      },
+      {
+        "file": "docs/panel-apps.md",
+        "location": "$",
+        "snippet": "                       |\n\nWorkspace calls reject traversal, hidden paths, `node_modules`, symlinks,\nbinary files, invalid UTF-8, control characters, Windows device names, and path\nsegments ending in a dot or space. Existing-file writes require the revision or\nmodification timestamp returned by the preceding read; blind overwrites are\nrejected.\n\nCodeShell 0.9.36+ holds a cross-process lock from the revision check through\npublication for"
+      },
+      {
+        "file": "docs/refactor/_archive/goal-mechanism-review-codex.md",
+        "location": "$",
+        "snippet": " save/raw overwrite` 回归，并把当前\n`BUG` 测试改成不可复活断言。\n\n### 4. `[blocker]` 新旧 binary 仅 shape 兼容，不是双向行为兼容\n\n新 binary 读取一份从未见过新机制的旧 state 时，正常路径是正确的：checkpoint 为 0，legacy\ngoal 不会在 resume 阶段被压制，Engine 随后能迁移它。SHA-256 bridge 也能压制迁移前 snapshot。\n\n反方向不成立：\n\n- 一旦 checkpoint 有任意 modern revision，`goalIsSuppressed` 会无条件拒绝所有 revisionless goal\n  （`packages/core/src/session/session-manager.ts:977-980`）。\n- `d97f95f4`"
+      },
+      {
+        "file": "docs/review-2026-10-12/hub-session-operations-quality-round18.md",
+        "location": "$",
+        "snippet": "两次 form submit，fixture 两次 submit只得到一个 PATCH，不列重复提交发现。\n\n最终追加的 500 控制将 owned session-titles.json 暂存后在原路径建目录，实际 registry 拒写，UI 保留 D 草稿且同稿可重试，恢复文件后成功；**这是非文件 registry 错误，不是成功的 EACCES 控制。** 独立的 parent chmod/EACCES 诊断因为 lock 等待超过 test deadline 失败，保留于 diagnostic-parent-EACCES-lock-timeout.log，不用于正式正常控制或新增发现。404 控制把 owned session dir 暂移，UI保留 E 草稿并禁保存，恢复后显式读取才重启提交，同稿成功，generated Engine title 保持不变。元数据错误状态映射见 session-management [341–355](/Users/admin/.codex/worktrees/"
+      },
+      {
+        "file": "docs/review-2026-10-12/quality-round19.md",
+        "location": "$",
+        "snippet": "ling dataDir/hub.lock。\n\n故障注入是owned dataDir自身0700→0500，而不是dirname(dataDir)。hub子目录已经存在，仍可读/遍历并可由同一uid chmod700；Auth ensureDirectory只修hub权限，没有修其parent dataDir。因此实际mkdir(dataDir/hub.lock)失败。两基线firstError.path均精确为该auth lock，actualFailureStage均为HubAuthStore.authenticate/acquireFileLock(data/hub/auth.json)。失败response是Headless外层500 “server request failed”，不是title handler中文500；未抵达title handler。已建title anchor只为正常/字节对照，并不是触发auth锁故障的必要条件。\n\nfile-mutex.ts:95–112捕获所有lockSync"
+      },
+      {
+        "file": "docs/review-2026-10-12/validation/original-hub-session-operations-round18/quality-audit.md",
+        "location": "$",
+        "snippet": "两次 form submit，fixture 两次 submit只得到一个 PATCH，不列重复提交发现。\n\n最终追加的 500 控制将 owned session-titles.json 暂存后在原路径建目录，实际 registry 拒写，UI 保留 D 草稿且同稿可重试，恢复文件后成功；**这是非文件 registry 错误，不是成功的 EACCES 控制。** 独立的 parent chmod/EACCES 诊断因为 lock 等待超过 test deadline 失败，保留于 diagnostic-parent-EACCES-lock-timeout.log，不用于正式正常控制或新增发现。404 控制把 owned session dir 暂移，UI保留 E 草稿并禁保存，恢复后显式读取才重启提交，同稿成功，generated Engine title 保持不变。元数据错误状态映射见 session-management [341–355](/Users/admin/.codex/worktrees/"
+      },
+      {
+        "file": "docs/superpowers/plans/2026-05-19-skill-reuse-phase-a-plan.md",
+        "location": "$",
+        "snippet": "ists `brainstorming` under User skills with a non-empty description. This is a manual smoke; if the binary path is `dist/cli/main.js`, run:\n\n```bash\nbun run build 2>&1 | tail -5\nnode dist/cli/main.js --help 2>&1 | head -5     # ensure it boots\n```\n\nThen in an interactive codeshell session, type `/skills` and confirm:\n- Header `User skills (1):` appears\n- Line `  brains"
+      },
+      {
+        "file": "docs/superpowers/plans/2026-06-09-mobile-remote-tunnel-impl.md",
+        "location": "$",
+        "snippet": "沿用。LAN 模式行为零变化(回归保护)。\n\n---\n\n## Task 1 — `cloudflared-binary.ts`(新,纯单元)\n\n只管二进制,无进程、无网络服务。\n\n**接口**\n- `binaryPath(): string` — `<userData>/mobile-remote/bin/cloudflared`(由 ctor 注入 baseDir,便于测试)。\n- `isInstalled(): boolean` — 文件存在且可执行。\n- `ensureBinary(onProgress?: (pct:number)=>void): Promise<string>` — 已存在则跳过;否则按 `process.arch` 选 url(darwin-arm64 / darwin-amd64),`node:htt"
+      },
+      {
+        "file": "docs/superpowers/plans/2026-06-09-mobile-remote-tunnel-impl.md",
+        "location": "$",
+        "snippet": "e:https`、`node:fs`(注入 fs/https 以便 mock,或抽 `download` 为可注入函数)。\n\n**测试**(TDD 先写):\n1. 已存在(且可执行)→ `ensureBinary` 不发起下载、返回路径。\n2. 下载失败(https 回错/非 200)→ 抛错且不留 `.download` 残文件。\n3. `cloudflaredDownloadUrl(\"arm64\")` / `(\"x64\")` 返回对应官方 URL。\n4. 成功下载 → 临时名 → rename 到最终名 + chmod 可执行。\n\n## Task 2 — `tunnel-manager.ts`(新,纯单元)\n\n只管隧道进程。\n\n**接口**\n- `start(port: number): Promise<{ url: string }>` —"
+      },
+      {
+        "file": "docs/superpowers/plans/2026-06-09-mobile-remote-tunnel-impl.md",
+        "location": "$",
+        "snippet": "nnel-manager.ts`(新,纯单元)\n\n只管隧道进程。\n\n**接口**\n- `start(port: number): Promise<{ url: string }>` — `spawn(binaryPath, [\"tunnel\",\"--url\",`http://127.0.0.1:${port}`])`(spawn 注入以便 mock);监听 stdout/stderr,正则 `https:\\/\\/[a-z0-9-]+\\.trycloudflare\\.com` 抓第一个命中即 resolve;15s 未出 URL → kill + reject(\"隧道启动失败/超时\")。\n- `stop(): void` — kill 子进程(SIGTERM),清状态。\n- 事件:`EventEmitter`,`emit(\"stat"
+      },
+      {
+        "file": "docs/superpowers/plans/2026-06-09-mobile-remote-tunnel-impl.md",
+        "location": "$",
+        "snippet": "ted`(地址作废);spawn error → `error`。**不自动重启**(spec 决策表)。\n\n**依赖**:`node:child_process`(注入)、`cloudflared-binary`(取路径)。超时用注入的 timer / 真实 setTimeout 均可,测试喂 fake child。\n\n**测试**:\n1. 喂模拟 stdout 含 `https://foo-bar.trycloudflare.com` → `start` resolve 该 URL。\n2. 超时无 URL → reject 且子进程被 kill。\n3. 启动后子进程 exit → emit `disconnected`。\n4. `stop()` → kill 调用 + 不再 emit。\n\n## Task 3 — `access-"
+      },
+      {
+        "file": "docs/superpowers/plans/2026-06-09-mobile-remote-tunnel-impl.md",
+        "location": "$",
+        "snippet": "asscodeStatus`(isSet)、`mobileRemote:tunnelStatus`(查当前)。\n- `new AccessPasscode(...)`、`new CloudflaredBinary(...)`、`new TunnelManager(...)` 实例化(userData 路径)。\n- 退出钩子:`tunnelManager.stop()` 一并 kill cloudflared(防孤儿),加到现有 `void mobileRemote.stop()` 旁。\n\n(index.ts 这层主要是接线,核心逻辑已被 1–4 单测覆盖;此处不强求新单测,靠手动真机验证。)\n\n## Task 6 — preload + `MobileRemoteSection.tsx`(改,UI)\n\n**preload**(`index.ts` 行 584 + `types.d.ts` 行 621):\n- `st"
+      },
+      {
+        "file": "docs/superpowers/plans/2026-07-15-export-surface-convergence-phase1c.md",
+        "location": "$",
+        "snippet": "beAvailable/describeTranscribe, getMergedCatalog/saveCatalogEntry/deleteUserCatalogEntry/userCatalogPath/catalogEntryOrigins, defaultCacheDir/fetchModelList/PROVIDER_KINDS/capabilitiesFor/reasoningControlFor, defaultSandboxConfig, TaskInfo, …per recon mapping). Split mixed statements.\n- [x] **Step C2:** Add any missing symbols to index.internal.ts (same-module re-export).\n- [x] **Step C3: Verify**\n\n```bash\n"
+      },
+      {
+        "file": "docs/superpowers/plans/2026-09-01-github-pr-workflow.md",
+        "location": "$",
+        "snippet": "的 `baseSha...headSha`，renderer 无法注入任意 range/path。\n- [ ] 显示 PR 标题、编号、head/base、作者与 `+/-` 统计。\n- [ ] 大 diff/二进制/重命名降级显示，保持现有 working/branch scope 不回归。\n\n## P4 — context 与 draft 持久化\n\n**Files:**\n- Create: `pull-request-review-store.ts` + tests\n\n- [ ] 持久 context、draft comment、review body、提交 receipt；原子写、`0600`、bounded。\n- [ ] comment locator 来自 parsed hunk，不能输入任意路径/行号。\n- [ ]"
+      },
+      {
+        "file": "docs/superpowers/specs/2026-05-29-plugin-remote-install-design.md",
+        "location": "$",
+        "snippet": "  - `githubRepoToCloneUrl(repo)` — `org/repo` → `https://github.com/org/repo.git`。\n  - git 是 shell 出二进制(`safeSpawn(\"git\", …)`),非库;依赖 PATH 里有 `git`。\n- 我的 `installPluginFromPath(sourceDir, name, installedAt)`(`plugins/installer/install.ts`)会做 CC/Codex 检测+转换+落盘+登记,**但只吃本地路径、不克隆**。\n- 另有一套 `pluginInstaller.ts` + marketplace(给 slash `/plugin install name@marketplace` 用),克隆进 `cache/<market>/<plugin>/<"
+      },
+      {
+        "file": "docs/superpowers/specs/2026-06-09-mobile-remote-tunnel-design.md",
+        "location": "$",
+        "snippet": "*`cloudflared-binary.ts`(新)** — 只管二进制。\n   - 职责:检测是否存在、下载对应架构官方二进制、校验可执行权限。\n   - 接口:`isInstalled()`、`binaryPath()`、`ensureBinary(onProgress?) → Promise<string>`。\n   - 依赖:`process.arch`、`node:https`(下载)、`node:fs`。\n\n2. **`tunnel-manager.ts`(新)** — 只管隧道进程。\n   - 职责:`spawn(cloudflared, [\"tunnel\",\"--url\",...])`、从 stdout 正则抓 `https://*.trycloudflare.com`、超时处理、进程退出/崩溃事件、`stop("
+      },
+      {
+        "file": "docs/superpowers/specs/2026-06-09-mobile-remote-tunnel-design.md",
+        "location": "$",
+        "snippet": "Access(需登录+域名,与\"零配置一个开关\"冲突)。\n- Tailscale / mDNS(另一调研方向,不在本 spec)。\n- 隧道自动重连(明确不做,见决策表)。\n- Homebrew 安装路径(只走官方二进制下载)。\n"
+      },
+      {
+        "file": "docs/todo/2026-09-11-skipped-test-audit.md",
+        "location": "$",
+        "snippet": "                       | 独立通过（已含 wrapper）    |\n|  50 | PanelAppBridge > rejects traversing, hidden, binary, symlink, and untrusted workspace paths                                                                                 | 独立通过（已含 wrapper）    |\n|  51 | PanelAppBridge > sends title-prefixed system notifications under a dedicated per-window cap                                                       "
+      },
+      {
+        "file": "docs/todo/external-agent-runtime-tool-bridge-design.md",
+        "location": "$",
+        "snippet": "\n- 提供 `SessionToolHost` 所需的 host bridges；\n- 绑定 ApprovalRouter、StreamEvent、窗口和连接生命周期；\n- 解析外部 Runtime 二进制路径和授权状态；\n- 只向子进程注入经过筛选的环境变量；\n- 持久化业务 session 与 runtime session/thread 的映射。\n\n**宿主回环归属（v2 展开）**。v1 的\"提供 host bridges\"过于笼统 —— 宿主回环工具（9.3）\n在 Desktop 侧有两个必须显式建立、且当前都挂在 renderer `agent/run` 副作用上的前置条件：\n\n| 项                | 现状                                           "
+      },
+      {
+        "file": "docs/todo/release-real-operations-2026-10-16.md",
+        "location": "$",
+        "snippet": "eference\nbrowser attempts failed before launching because no Chromium existed at the\nselected cache path; the successful run used the installed Chrome binary with a\nnew owned profile. Package release verification again passed 10 tarballs and 48\ntyped entries. Counts describe separate suites, not a deduplicated total.\n\nUpdater evidence is frozen separately: the old immutable package reproduced the\n404 event/rejecti"
+      }
+    ],
+    "file_byte_label": [
+      {
+        "file": "docs/audit-2026-10-16/inventory.json",
+        "location": "$ .source_inventory[1780]",
+        "snippet": "packages/desktop/src/renderer/tool-cards/FileToolCard.tsx"
+      },
+      {
+        "file": "docs/superpowers/plans/2026-05-28-electron-turn-summary.md",
+        "location": "$",
+        "snippet": "[ ] Run:\n\n```bash\ncd packages/desktop && bun run typecheck\n```\n\nExpected: pre-existing call sites (`FileToolCard`, `BashToolCard`, etc.) that don't pass `turnEpoch` should still compile — the prop is optional. Confirm zero errors.\n\n### Step 6.6 — Commit\n\n- [ ] Stage and commit:\n\n```bash\ncd /Users/admin/Documents/个人学习/代码学习/codeshell\ngit add packages/desktop/src/renderer/"
+      },
+      {
+        "file": "docs/superpowers/plans/2026-05-28-electron-turn-summary.md",
+        "location": "$",
+        "snippet": "sktop/src/renderer/tool-cards/BashToolCard.tsx`\n- Modify: `packages/desktop/src/renderer/tool-cards/FileToolCard.tsx`\n- Modify: `packages/desktop/src/renderer/tool-cards/SearchToolCard.tsx`\n- Modify: `packages/desktop/src/renderer/tool-cards/WebToolCard.tsx`\n- Modify: `packages/desktop/src/renderer/tool-cards/AgentToolCard.tsx`\n- Modify: `packages/desktop/src/renderer/t"
+      },
+      {
+        "file": "docs/superpowers/plans/2026-05-28-electron-turn-summary.md",
+        "location": "$",
+        "snippet": "mport type { ToolMessage } from \"../types\";\nimport { BashToolCard } from \"./BashToolCard\";\nimport { FileToolCard } from \"./FileToolCard\";\nimport { SearchToolCard } from \"./SearchToolCard\";\nimport { WebToolCard } from \"./WebToolCard\";\nimport { AgentToolCard } from \"./AgentToolCard\";\nimport { GenericToolCard } from \"./GenericToolCard\";\n\ninterface Props {\n  message: ToolMe"
+      },
+      {
+        "file": "docs/superpowers/plans/2026-05-28-electron-turn-summary.md",
+        "location": "$",
+        "snippet": "e } from \"../types\";\nimport { BashToolCard } from \"./BashToolCard\";\nimport { FileToolCard } from \"./FileToolCard\";\nimport { SearchToolCard } from \"./SearchToolCard\";\nimport { WebToolCard } from \"./WebToolCard\";\nimport { AgentToolCard } from \"./AgentToolCard\";\nimport { GenericToolCard } from \"./GenericToolCard\";\n\ninterface Props {\n  message: ToolMessage;\n  onSelect?: (m:"
+      },
+      {
+        "file": "docs/superpowers/plans/2026-05-28-electron-turn-summary.md",
+        "location": "$",
+        "snippet": "={turnEpoch} />;\n  }\n  if (name === \"read\" || name === \"view\" || name === \"fileread\") {\n    return <FileToolCard message={message} variant=\"read\" onSelect={onSelect} selected={selected} turnEpoch={turnEpoch} />;\n  }\n  if (name === \"write\" || name === \"filewrite\") {\n    return <FileToolCard message={message} variant=\"write\" onSelect={onSelect} selected={selected} turnEpo"
+      },
+      {
+        "file": "docs/superpowers/plans/2026-05-28-electron-turn-summary.md",
+        "location": "$",
+        "snippet": "lected} turnEpoch={turnEpoch} />;\n  }\n  if (name === \"write\" || name === \"filewrite\") {\n    return <FileToolCard message={message} variant=\"write\" onSelect={onSelect} selected={selected} turnEpoch={turnEpoch} />;\n  }\n  if (name === \"edit\" || name === \"multiedit\" || name === \"applypatch\" || name === \"apply_patch\") {\n    return <FileToolCard message={message} variant=\"edi"
+      },
+      {
+        "file": "docs/superpowers/plans/2026-05-28-electron-turn-summary.md",
+        "location": "$",
+        "snippet": "== \"edit\" || name === \"multiedit\" || name === \"applypatch\" || name === \"apply_patch\") {\n    return <FileToolCard message={message} variant=\"edit\" onSelect={onSelect} selected={selected} turnEpoch={turnEpoch} />;\n  }\n  if (name === \"grep\" || name === \"glob\" || name === \"search\") {\n    return <SearchToolCard message={message} onSelect={onSelect} selected={selected} turnEp"
+      },
+      {
+        "file": "docs/superpowers/plans/2026-05-28-electron-turn-summary.md",
+        "location": "$",
+        "snippet": "p 7.2 — Add turnEpoch to each leaf tool card\n\nFor each of the six leaf tool cards (`BashToolCard`, `FileToolCard`, `SearchToolCard`, `WebToolCard`, `AgentToolCard`, `GenericToolCard`):\n\n- [ ] Open the file. Locate the `Props` interface (or `interface Props { ... }` definition).\n- [ ] Add `turnEpoch?: number;` to Props.\n- [ ] Locate where it instantiates `<ToolCardShell "
+      },
+      {
+        "file": "docs/superpowers/plans/2026-05-28-electron-turn-summary.md",
+        "location": "$",
+        "snippet": "h}` to the prop list.\n- [ ] Update the function signature to destructure `turnEpoch`.\n\nExample for `FileToolCard.tsx` — replace the Props interface (lines 6-12) with:\n\n```tsx\ninterface Props {\n  message: ToolMessage;\n  onSelect?: (m: ToolMessage) => void;\n  selected?: boolean;\n  /** \"read\" or \"write\" — affects the summary verbiage and detail layout. */\n  variant: \"read\""
+      },
+      {
+        "file": "docs/superpowers/plans/2026-05-28-electron-turn-summary.md",
+        "location": "$",
+        "snippet": "te the function signature and ToolCardShell call (line 14 and lines 86-94):\n\n```tsx\nexport function FileToolCard({ message, onSelect, selected, variant, turnEpoch }: Props) {\n  // ... existing logic unchanged ...\n  return (\n    <ToolCardShell\n      message={message}\n      summary={summary}\n      details={details}\n      onSelect={onSelect}\n      selected={selected}\n     "
+      },
+      {
+        "file": "docs/superpowers/specs/2026-05-28-electron-turn-summary-design.md",
+        "location": "$",
+        "snippet": "\nRight-side totals: green `+X`, red `-Y`, matching `tool-card-row-val added`/`removed` colors from `FileToolCard`.\n\nBody (expanded):\n\n```\npath/to/file.ts                 +98  -0\npackages/desktop/src/main/...   +61  -2\npackages/desktop/src/main/i...  +40  -1\n─────────────────────────────────────\n再显示 10 个文件 ▾\n```\n\nFirst 3 files shown by default when expanded; \"再显示 N 个文件\" "
+      }
+    ],
+    "utils": [
+      {
+        "file": "docs/archive/core-modules/utils.md",
+        "location": "$",
+        "snippet": "heavy pasted task text. |\n| `format.ts` | Pure display formatters: `formatFileSize`/`formatBytes`, `formatDuration`, `formatSecondsShort`, `formatTokens`, `singleLine`. |\n| `intl.ts` | Locale/timezone/segmenter helpers (`getRelativeTimeFormat`, `getTimeZone`, `getWordSegmenter`, `lastGrapheme`, …). |\n| `env.ts` | Host/runtime/platform detection (`env`, `getHostPlatform`, "
+      },
+      {
+        "file": "docs/archive/core-modules/utils.md",
+        "location": "$",
+        "snippet": "e: boolean; reason: string; cleaned: string };\n\n// format.ts (re-exported from core index)\nfunction formatDuration(ms: number, opts?: { hideTrailingZeros?: boolean; mostSignificantOnly?: boolean }): string;\nfunction formatTokens(n: number): string;\n```\n\n## 怎么用 / How to use\n\nAcquiring a run lock (from `run/RunLock.ts`):\n\n```ts\nimport { lock, check, unlock } from \"../utils/"
+      },
+      {
+        "file": "docs/archive/review-2026-05-30/backlog.json",
+        "location": "$ [67].title",
+        "snippet": "formatDuration incorrectly returns '0s' for milliseconds in range [1, 1000)"
+      },
+      {
+        "file": "docs/archive/review-2026-05-30/backlog_confirmed.json",
+        "location": "$ [15].title",
+        "snippet": "formatDuration incorrectly returns '0s' for milliseconds in range [1, 1000)"
+      },
+      {
+        "file": "docs/archive/review-2026-05-30/backlog_confirmed.json",
+        "location": "$ [15].verify_reason",
+        "snippet": "The function incorrectly handles milliseconds in range [1, 999). For example, calling formatDuration(500) returns \"0s\" instead of approximately \"0.5s\". The control flow enters the `ms < 60000` branch (line 38), fails the `ms === 0` check (line 40) and `ms < 1` check (line 44), then executes line 48 which computes Math.floor(500/1000) = Math.floor(0.5) = 0, r"
+      },
+      {
+        "file": "docs/archive/review-2026-05-30/backlog_ided.json",
+        "location": "$ [67].title",
+        "snippet": "formatDuration incorrectly returns '0s' for milliseconds in range [1, 1000)"
+      },
+      {
+        "file": "docs/archive/review-2026-05-30/backlog_verdicts.json",
+        "location": "$ [67].reason",
+        "snippet": "The function incorrectly handles milliseconds in range [1, 999). For example, calling formatDuration(500) returns \"0s\" instead of approximately \"0.5s\". The control flow enters the `ms < 60000` branch (line 38), fails the `ms === 0` check (line 40) and `ms < 1` check (line 44), then executes line 48 which computes Math.floor(500/1000) = Math.floor(0.5) = 0, r"
+      },
+      {
+        "file": "docs/archive/review-2026-05-30/findings.json",
+        "location": "$ [138].title",
+        "snippet": "formatDuration incorrectly returns '0s' for milliseconds in range [1, 1000)"
+      },
+      {
+        "file": "docs/archive/review-2026-05-30/round2_section.md",
+        "location": "$",
+        "snippet": "turn `\"${path.replace(/\\\\/g, '\\\\\\\\').replace(/\"… |\n| ⬜ | 🟡 中 | 正确性 | `core/utils/format.ts:38-49` | formatDuration incorrectly returns '0s' for milliseconds in range [1, 1000) | After line 40, before line 48, add a check: if the floored value is 0 and ms > 0, format w… |\n| ⬜ | 🟡 中 | 正确性 | `desktop/renderer/Markdown.tsx:108-113` | Uncleanable timer may cause memory leak wa"
+      },
+      {
+        "file": "docs/audit-2026-10-16/inventory.json",
+        "location": "$ .source_inventory[1791]",
+        "snippet": "packages/desktop/src/renderer/tool-cards/utils.ts"
+      },
+      {
+        "file": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+        "location": "$ .hits.logs[1].text",
+        "snippet": ", \"line\": \"38-49\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"formatDuration incorrectly returns '0s' for milliseconds in range [1, 1000)\", \"detail\": \"The function checks 'if (ms < 60000)' then 'if (ms < 1)' for fractional ms, but the else clause at line 48 uses Math.floor(ms/1000) for all other values. For ms values from 1 to 999 (e."
+      },
+      {
+        "file": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+        "location": "$ .hits.logs[2].text",
+        "snippet": ", \"line\": \"38-49\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"formatDuration incorrectly returns '0s' for milliseconds in range [1, 1000)\", \"detail\": \"The function checks 'if (ms < 60000)' then 'if (ms < 1)' for fractional ms, but the else clause at line 48 uses Math.floor(ms/1000) for all other values. For ms values from 1 to 999 (e."
+      },
+      {
+        "file": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+        "location": "$ .hits.logs[3].text",
+        "snippet": ", \"line\": \"38-49\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"formatDuration incorrectly returns '0s' for milliseconds in range [1, 1000)\", \"detail\": \"The function checks 'if (ms < 60000)' then 'if (ms < 1)' for fractional ms, but the else clause at line 48 uses Math.floor(ms/1000) for all other values. For ms values from 1 to 999 (e."
+      },
+      {
+        "file": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+        "location": "$ .hits.settings-navigation[0].text",
+        "snippet": ", \"line\": \"38-49\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"formatDuration incorrectly returns '0s' for milliseconds in range [1, 1000)\", \"detail\": \"The function checks 'if (ms < 60000)' then 'if (ms < 1)' for fractional ms, but the else clause at line 48 uses Math.floor(ms/1000) for all other values. For ms values from 1 to 999 (e."
+      },
+      {
+        "file": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+        "location": "$ .hits.settings-navigation[1].text",
+        "snippet": "e/src/utils/format.ts\", \"line\": \"38-49\", \"category\": \"correctness\", \"severity\": \"medium\", \"title\": \"formatDuration incorrectly returns '0s' for milliseconds in range [1, 1000)\", \"detail\": \"The function checks 'if (ms < 60000)' then 'if (ms < 1)' for fractional ms, but the else clause at line 48 uses Math.floor(ms/1000) for all other values. For ms values from 1 to 999 (e."
+      },
+      {
+        "file": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+        "location": "$ .hits.settings-navigation[1].text",
+        "snippet": "ify_reason\": \"The function incorrectly handles milliseconds in range [1, 999). For example, calling formatDuration(500) returns \\\"0s\\\" instead of approximately \\\"0.5s\\\". The control flow enters the `ms < 60000` branch (line 38), fails the `ms === 0` check (line 40) and `ms < 1` check (line 44), then executes line 48 which computes Math.floor(500/1000) = Math.floor(0.5) = "
+      },
+      {
+        "file": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+        "location": "$ .hits.settings-navigation[2].text",
+        "snippet": ", \"line\": \"38-49\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"formatDuration incorrectly returns '0s' for milliseconds in range [1, 1000)\", \"detail\": \"The function checks 'if (ms < 60000)' then 'if (ms < 1)' for fractional ms, but the else clause at line 48 uses Math.floor(ms/1000) for all other values. For ms values from 1 to 999 (e."
+      },
+      {
+        "file": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+        "location": "$ .hits.settings-navigation[3].text",
+        "snippet": ", \"line\": \"38-49\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"formatDuration incorrectly returns '0s' for milliseconds in range [1, 1000)\", \"detail\": \"The function checks 'if (ms < 60000)' then 'if (ms < 1)' for fractional ms, but the else clause at line 48 uses Math.floor(ms/1000) for all other values. For ms values from 1 to 999 (e."
+      },
+      {
+        "file": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+        "location": "$ .hits.sidebar-projection[8].text",
+        "snippet": ", \"line\": \"38-49\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"formatDuration incorrectly returns '0s' for milliseconds in range [1, 1000)\", \"detail\": \"The function checks 'if (ms < 60000)' then 'if (ms < 1)' for fractional ms, but the else clause at line 48 uses Math.floor(ms/1000) for all other values. For ms values from 1 to 999 (e."
+      },
+      {
+        "file": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+        "location": "$ .hits.sidebar-projection[9].text",
+        "snippet": "e/src/utils/format.ts\", \"line\": \"38-49\", \"category\": \"correctness\", \"severity\": \"medium\", \"title\": \"formatDuration incorrectly returns '0s' for milliseconds in range [1, 1000)\", \"detail\": \"The function checks 'if (ms < 60000)' then 'if (ms < 1)' for fractional ms, but the else clause at line 48 uses Math.floor(ms/1000) for all other values. For ms values from 1 to 999 (e."
+      },
+      {
+        "file": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+        "location": "$ .hits.sidebar-projection[9].text",
+        "snippet": "ify_reason\": \"The function incorrectly handles milliseconds in range [1, 999). For example, calling formatDuration(500) returns \\\"0s\\\" instead of approximately \\\"0.5s\\\". The control flow enters the `ms < 60000` branch (line 38), fails the `ms === 0` check (line 40) and `ms < 1` check (line 44), then executes line 48 which computes Math.floor(500/1000) = Math.floor(0.5) = "
+      },
+      {
+        "file": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+        "location": "$ .hits.sidebar-projection[10].text",
+        "snippet": ", \"line\": \"38-49\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"formatDuration incorrectly returns '0s' for milliseconds in range [1, 1000)\", \"detail\": \"The function checks 'if (ms < 60000)' then 'if (ms < 1)' for fractional ms, but the else clause at line 48 uses Math.floor(ms/1000) for all other values. For ms values from 1 to 999 (e."
+      },
+      {
+        "file": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+        "location": "$ .hits.sidebar-projection[11].text",
+        "snippet": ", \"line\": \"38-49\", \"category\": \"correctness\", \"severity\": \"medium\", \"confidence\": \"high\", \"title\": \"formatDuration incorrectly returns '0s' for milliseconds in range [1, 1000)\", \"detail\": \"The function checks 'if (ms < 60000)' then 'if (ms < 1)' for fractional ms, but the else clause at line 48 uses Math.floor(ms/1000) for all other values. For ms values from 1 to 999 (e."
+      },
+      {
+        "file": "docs/audit-2026-10-17-round8/evidence/web-source-manifest.json",
+        "location": "$ .sources[12].path",
+        "snippet": "packages/desktop/src/renderer/tool-cards/utils.ts"
+      },
+      {
+        "file": "docs/audit-2026-10-17-round8/source-manifest.json",
+        "location": "$ .files[70].path",
+        "snippet": "packages/desktop/src/renderer/tool-cards/utils.ts"
+      },
+      {
+        "file": "docs/superpowers/plans/2026-05-20-bg-agent-completion-notification.md",
+        "location": "$",
+        "snippet": "       result.usage.completionTokens,\n            )\n          : 0;\n        const parts: string[] = [formatDuration(elapsed)];\n        if (result.usage && result.usage.totalTokens > 0) {\n          parts.push(`${formatTokens(result.usage.totalTokens)} tokens`);\n          if (result.usage.cacheReadTokens) {\n            parts.push(`${formatTokens(result.usage.cacheReadTokens)"
+      },
+      {
+        "file": "docs/superpowers/plans/2026-05-28-electron-turn-summary.md",
+        "location": "$",
+        "snippet": "hevronDown } from \"../ui/icons\";\nimport { StatusDot, type Status } from \"../ui/StatusDot\";\nimport { formatDuration } from \"./utils\";\n\ninterface Props {\n  message: ToolMessage;\n  /** One-line summary shown on the head row. */\n  summary: React.ReactNode;\n  /** Optional rich detail when the card is expanded inline. */\n  details?: React.ReactNode;\n  onSelect?: (m: ToolMessage"
+      },
+      {
+        "file": "docs/superpowers/plans/2026-05-28-electron-turn-summary.md",
+        "location": "$",
+        "snippet": "     : message.status === \"cancelled\"\n            ? \"warn\"\n            : \"idle\";\n  const duration = formatDuration(message.durationMs);\n  return (\n    <div\n      className={`tool-card status-${message.status}${selected ? \" selected\" : \"\"}`}\n      onClick={() => onSelect?.(message)}\n    >\n      <button\n        className=\"tool-card-head\"\n        onClick={(e) => {\n          "
+      },
+      {
+        "file": "docs/superpowers/plans/2026-07-15-export-surface-convergence-phase1c.md",
+        "location": "$",
+        "snippet": "lsy, stopCapturingEarlyInput, formatBytes/formatToolArgs/singleLine/MAX_LINE_WIDTH/TOOL_DOT_COLORS, classifyBashLines, formatDuration/formatTokens, getTheme/Theme/ThemeName/ThemeSetting/resolveThemeSetting, rotateLogs, recordUIEvent, getInteractiveApprovalBackend, defaultSandboxConfig/SandboxConfig, buildNotificationMessage/buildNotificationSummary/notificationQueue/Notifica"
+      },
+      {
+        "file": "docs/superpowers/plans/2026-07-15-export-surface-convergence-phase1c.md",
+        "location": "$",
+        "snippet": "arlyInput, formatBytes/formatToolArgs/singleLine/MAX_LINE_WIDTH/TOOL_DOT_COLORS, classifyBashLines, formatDuration/formatTokens, getTheme/Theme/ThemeName/ThemeSetting/resolveThemeSetting, rotateLogs, recordUIEvent, getInteractiveApprovalBackend, defaultSandboxConfig/SandboxConfig, buildNotificationMessage/buildNotificationSummary/notificationQueue/NotificationItem, CronSt"
+      },
+      {
+        "file": "docs/superpowers/specs/2026-05-28-electron-turn-summary-design.md",
+        "location": "$",
+        "snippet": "panded; \"再显示 N 个文件\" reveals the rest via local state. Path truncated with `truncate(p, 70)` (reuse `tool-cards/utils.ts`).\n\nDefault state: collapsed. ChevronRight/ChevronDown icons match `ToolGroupCard`.\n\n### Empty-message fix (`MessageStream.tsx`, `case \"assistant\"`)\n\n```tsx\ncase \"assistant\":\n  if (!m.done && m.text === \"\") return null;\n  return (/* existing JSX unchanged */)"
+      }
+    ],
+    "truncate_unicode": [
+      {
+        "file": "docs/audit-2026-10-17/README.md",
+        "location": "$",
+        "snippet": "d) |\n| CHD01 | P2 | Slack thread 身份丢失使回复落到频道顶层 | [chat-data.md](chat-data.md) |\n| CHD02 | P3 | 长附件标签截断拆开 Unicode 代理对 | [chat-data.md](chat-data.md) |\n\n验证收据：[validation.json](validation.json)。34 个完整成功 guarded shard，实际 **227 pass / 777 expect**；另有 26 个过滤测试。共享收据只计一次，候选和正常对照不是额外 bug；断言错误现象的测试通过也不代表产品已修复。\n\n**3 组首次失败实验独立保留，均未修支架重跑。** OM3 的排序观察来自其中一组的首项通过与明确源码契约，整组仍失败、无 Completed"
+      },
+      {
+        "file": "docs/audit-2026-10-17/evidence/quality-final-review.md",
+        "location": "$",
+        "snippet": "以支持 P2，不能扩大为真实 session 合并/跨账号/泄漏结论。 |\n| CHD02 / P3，长 remote/SDK 标签条件 | 保留条件项 | `media.ts:232,234` 按 UTF-16 code units 截断；`:52` remoteAttachment 调用此 helper，`attachments.ts:61` 原样保留 name。原始测试以 254 ASCII + emoji 的完整 Unicode 标签触发尾部 lone high surrogate 0xd83d，并验证编码后 U+FFFD；短 Unicode 标签正常。只证明共享普通元数据转换及 bridge payload，不推断所有真实平台都接受这种长标签，也不将其写成本地 APFS 文件名复现。 |\n\nSlack 官方 `chat.postMessag"
+      },
+      {
+        "file": "docs/audit-2026-10-17/findings.json",
+        "location": "$ .findings[25].title",
+        "snippet": "长附件标签截断拆开 Unicode 代理对"
+      },
+      {
+        "file": "docs/audit-2026-10-17-round10/evidence/pet-dedup.json",
+        "location": "$ .matches[0].hits[1].excerpt",
+        "snippet": "- 覆盖显式 sensitive 快照脱敏、工具 prompt injection 的结构隔离、图片/混合非文本省略、1600/8000 两级 Unicode 安全截断。"
+      },
+      {
+        "file": "docs/audit-2026-10-17-round10/evidence/pet-dedup.json",
+        "location": "$ .matches[8].hits[0].excerpt",
+        "snippet": "| HL-02 | P3 | 长路径默认标签截断Unicode代理对 | [host-link.md](host-link.md) |"
+      },
+      {
+        "file": "docs/audit-2026-10-17-round10/evidence/pet-dedup.json",
+        "location": "$ .matches[9].hits[0].excerpt",
+        "snippet": "长路径默认标签截断Unicode代理对"
+      },
+      {
+        "file": "docs/audit-2026-10-17-round10/evidence/pet-dedup.json",
+        "location": "$ .matches[10].hits[0].excerpt",
+        "snippet": "- **可达触发**：GitHub 文件选择不传显式 `label`，路径长度超过默认标签上限，截断点刚好落在 Unicode 代理对中间。fixture 使用 `😀/` 后接两个 250 字符目录和 8 字符文件名，总计 513 个 UTF-16 单位，每段均不超过 255，路径没有非法分隔或控制字符，远低于 resolver 的 2,000 限制。"
+      },
+      {
+        "file": "docs/audit-2026-10-17-round10/evidence/pet-dedup.json",
+        "location": "$ .matches[17].hits[0].excerpt",
+        "snippet": "| CHD02 | P3 | 长附件标签截断拆开 Unicode 代理对 | [chat-data.md](chat-data.md) |"
+      },
+      {
+        "file": "docs/audit-2026-10-17-round10/evidence/pet-dedup.json",
+        "location": "$ .matches[18].hits[0].excerpt",
+        "snippet": "长附件标签截断拆开 Unicode 代理对"
+      },
+      {
+        "file": "docs/audit-2026-10-17-round10/evidence/pet-dedup.json",
+        "location": "$ .matches[33].hits[0].excerpt",
+        "snippet": "file-selection.ts:90` 的 `defaultLabel.slice(-512)`。\n- **可达触发**：GitHub 文件选择不传显式 `label`，路径长度超过默认标签上限，截断点刚好落在 Unicode 代理对中间。fixture 使用 `😀/` 后接两个 250 字符目录和 8 字符文件名，总计 513 个 UTF-16 单位，每段均不超过 255，路径没有非法分隔或控制字符，远低于 resolver 的 2,000 限制。\n- **预期契约**：路径可以包含 Unicode；默认展示标签应保持合法 Unicode 文本。显式普通 Unicode 标签的对照项完整保留。\n- **实际**：生产 resolver 接受且保留原始 `params.p"
+      },
+      {
+        "file": "docs/audit-2026-10-17-round10/evidence/pet-dedup.json",
+        "location": "$ .matches[33].hits[1].excerpt",
+        "snippet": "长路径默认标签截断Unicode代理对"
+      },
+      {
+        "file": "docs/audit-2026-10-17-round10/evidence/pet-dedup.json",
+        "location": "$ .matches[33].hits[2].excerpt",
+        "snippet": ".md) |\n| HL-01 | P3 | 精确GitHub文件路径被trim并合并引用 | [host-link.md](host-link.md) |\n| HL-02 | P3 | 长路径默认标签截断Unicode代理对 | [host-link.md](host-link.md) |\n| CDP-R3-01 | P3 | 旋转quad点击/hover取到元素外的点 | [cdp-browser.md](cdp-browser.md) |\n| CDP-R3-02 | P3 | Shift组合的logical key与text矛盾 | [cdp-browser.md](cdp-browser.md) |\n| CDP-R3-03 | P2 | DOM hidden祖先剪枝漏掉"
+      },
+      {
+        "file": "docs/audit-2026-10-17-round10/evidence/pet-dedup.json",
+        "location": "$ .matches[43].hits[0].excerpt",
+        "snippet": "remote/SDK 标签条件 | 保留条件项 | `media.ts:232,234` 按 UTF-16 code units 截断；`:52` remoteAttachment 调用此 helper，`attachments.ts:61` 原样保留 name。原始测试以 254 ASCII + emoji 的完整 Unicode 标签触发尾部 lone high surrogate 0xd83d，并验证编码后 U+FFFD；短 Unicode 标签正常。只证明共享普通元数据转换及 bridge payload，不推断所有真实平台都接受这种长标签，也不将其写成本地 APFS 文件名复现。 |"
+      },
+      {
+        "file": "docs/audit-2026-10-17-round10/evidence/pet-dedup.json",
+        "location": "$ .matches[45].hits[2].excerpt",
+        "snippet": "remote/SDK 标签条件 | 保留条件项 | `media.ts:232,234` 按 UTF-16 code units 截断；`:52` remoteAttachment 调用此 helper，`attachments.ts:61` 原样保留 name。原始测试以 254 ASCII + emoji 的完整 Unicode 标签触发尾部 lone high surrogate 0xd83d，并验证编码后 U+FFFD；短 Unicode 标签正常。只证明共享普通元数据转换及 bridge payload，不推断所有真实平台都接受这种长标签，也不将其写成本地 APFS 文件名复现。 |"
+      },
+      {
+        "file": "docs/audit-2026-10-17-round10/evidence/pet-dedup.json",
+        "location": "$ .matches[45].hits[4].excerpt",
+        "snippet": "| CHD02 | P3 | 长附件标签截断拆开 Unicode 代理对 | [chat-data.md](chat-data.md) |"
+      },
+      {
+        "file": "docs/audit-2026-10-17-round3/README.md",
+        "location": "$",
+        "snippet": ".md) |\n| HL-01 | P3 | 精确GitHub文件路径被trim并合并引用 | [host-link.md](host-link.md) |\n| HL-02 | P3 | 长路径默认标签截断Unicode代理对 | [host-link.md](host-link.md) |\n| CDP-R3-01 | P3 | 旋转quad点击/hover取到元素外的点 | [cdp-browser.md](cdp-browser.md) |\n| CDP-R3-02 | P3 | Shift组合的logical key与text矛盾 | [cdp-browser.md](cdp-browser.md) |\n| CDP-R3-03 | P2 | DOM hidden祖先剪枝漏掉显式visible子节点 | [cdp-browser.m"
+      },
+      {
+        "file": "docs/audit-2026-10-17-round3/findings.json",
+        "location": "$ .findings[5].title",
+        "snippet": "长路径默认标签截断Unicode代理对"
+      },
+      {
+        "file": "docs/audit-2026-10-17-round3/host-link.md",
+        "location": "$",
+        "snippet": "file-selection.ts:90` 的 `defaultLabel.slice(-512)`。\n- **可达触发**：GitHub 文件选择不传显式 `label`，路径长度超过默认标签上限，截断点刚好落在 Unicode 代理对中间。fixture 使用 `😀/` 后接两个 250 字符目录和 8 字符文件名，总计 513 个 UTF-16 单位，每段均不超过 255，路径没有非法分隔或控制字符，远低于 resolver 的 2,000 限制。\n- **预期契约**：路径可以包含 Unicode；默认展示标签应保持合法 Unicode 文本。显式普通 Unicode 标签的对照项完整保留。\n- **实际**：生产 resolver 接受且保留原始 `params.path`，但返回的 512 单位标签首字符是低代理项 `0xde00`，`label.isWellFormed()` 为 false，原路径则为 true。\n- **影响**：默认标签带孤"
+      },
+      {
+        "file": "docs/audit-2026-10-17-round3/host-link.md",
+        "location": "$",
+        "snippet": "ngs、2026-05-30 findings，以及 2026-07-09 register、2026-08-13 report 共六个旧索引未找到这两个生产路径的同根因条目。`CHD02` 是相同 UTF-16 截断类别，但发生在 chat 附件名函数，消费者不同；列为相关问题，未作为重复移除。此为限定索引查重，非所有历史文档逐字穷尽。见 [dedup receipt](evidence/host-dedup.json)。\n\n## 覆盖与精确收据\n\n普通 Host 阅读 `runtime.ts`、`host-requests.ts`、公开入口及 Desktop/serve/Panel 创建和 dispatch 接线；基线覆盖原子登记、启动顺序、部分失败回滚、cleanup 错误聚合、反向停止、幂等、正常 handler、下游 "
+      },
+      {
+        "file": "docs/audit-2026-10-17-round5/evidence/chat-dedup.json",
+        "location": "$ .matches.known_text_findings[3].excerpt",
+        "snippet": "| CHD02 | P3 | 长附件标签截断拆开 Unicode 代理对 | [chat-data.md](chat-data.md) |"
+      },
+      {
+        "file": "docs/audit-2026-10-17-round5/evidence/chat-dedup.json",
+        "location": "$ .matches.known_text_findings[16].excerpt",
+        "snippet": "| CHD02 / P3，长 remote/SDK 标签条件 | 保留条件项 | `media.ts:232,234` 按 UTF-16 code units 截断；`:52` remoteAttachment 调用此 helper，`attachments.ts:61` 原样保留 name。原始测试以 254 ASCII + emoji 的完整 Unicode 标签触发尾部 lone high surrogate 0xd83d，并验证编码后 U+FFFD；短 Unicode 标签正常。只证明共享普通元数据转换及 bridge payload，不推断所有真实平台都接受这种长标签，也不将其写成本地 APFS 文件名复现。 |"
+      },
+      {
+        "file": "docs/audit-2026-10-17-round5/evidence/chat-dedup.json",
+        "location": "$ .matches.known_text_findings[30].excerpt",
+        "snippet": "ngs、2026-05-30 findings，以及 2026-07-09 register、2026-08-13 report 共六个旧索引未找到这两个生产路径的同根因条目。`CHD02` 是相同 UTF-16 截断类别，但发生在 chat 附件名函数，消费者不同；列为相关问题，未作为重复移除。此为限定索引查重，非所有历史文档逐字穷尽。见 [dedup receipt](evidence/host-dedup.json)。"
+      },
+      {
+        "file": "docs/audit-2026-10-17-round9/evidence/attachments-dedup.json",
+        "location": "$ .hits.tokenizer[2].snippet",
+        "snippet": ".md) |\n| HL-01 | P3 | 精确GitHub文件路径被trim并合并引用 | [host-link.md](host-link.md) |\n| HL-02 | P3 | 长路径默认标签截断Unicode代理对 | [host-link.md](host-link.md) |\n| CDP-R3-01 | P3 | 旋转quad点击/hover取到元素外的点 | [cdp-browser.md](cdp-browser.md) |\n| CDP-R3-02 | P3 | Shift组合的logical key与text矛盾 | [cdp-browser.md](cdp-browser.md) |\n| CDP-R3-03 | P2 | DOM hidden祖先剪枝漏掉"
+      },
+      {
+        "file": "docs/audit-2026-10-17-round9/evidence/attachments-dedup.json",
+        "location": "$ .hits.tokenizer[3].snippet",
+        "snippet": "长路径默认标签截断Unicode代理对"
+      },
+      {
+        "file": "docs/audit-2026-10-17-round9/evidence/attachments-dedup.json",
+        "location": "$ .hits.tokenizer[4].snippet",
+        "snippet": "file-selection.ts:90` 的 `defaultLabel.slice(-512)`。\n- **可达触发**：GitHub 文件选择不传显式 `label`，路径长度超过默认标签上限，截断点刚好落在 Unicode 代理对中间。fixture 使用 `😀/` 后接两个 250 字符目录和 8 字符文件名，总计 513 个 UTF-16 单位，每段均不超过 255，路径没有非法分隔或控制字符，远低于 resolver 的 2,000 限制。\n- **预期契约**：路径可以包含 Unicode；默认展示标签应保持合法 Unicode 文本。显式普通 Unicode 标签的对照项完整保留。\n- **实际**：生产 resolver 接受且保留原始 `params.p"
+      },
+      {
+        "file": "docs/audit-2026-10-17-round9/evidence/attachments-dedup.json",
+        "location": "$ .hits.tokenizer[5].snippet",
+        "snippet": "ngs、2026-05-30 findings，以及 2026-07-09 register、2026-08-13 report 共六个旧索引未找到这两个生产路径的同根因条目。`CHD02` 是相同 UTF-16 截断类别，但发生在 chat 附件名函数，消费者不同；列为相关问题，未作为重复移除。此为限定索引查重，非所有历史文档逐字穷尽。见 [dedup receipt](evidence/host-dedup.json)。\n\n## 覆盖与精确收据\n\n普通 Host 阅读 `runtime.ts`、`host-requests.ts`、公开入口及 Desktop/serve/Panel 创建和 dispatch 接线；基线覆盖原子登记、启动顺序、部分失败回滚、cleanup 错误聚合、反向"
+      },
+      {
+        "file": "docs/audit-2026-10-17-round9/evidence/attachments-dedup.json",
+        "location": "$ .hits.tokenizer[6].snippet",
+        "snippet": "ngs、2026-05-30 findings，以及 2026-07-09 register、2026-08-13 report 共六个旧索引未找到这两个生产路径的同根因条目。`CHD02` 是相同 UTF-16 截断类别，但发生在 chat 附件名函数，消费者不同；列为相关问题，未作为重复移除。此为限定索引查重，非所有历史文档逐字穷尽。见 [dedup receipt](evidence/host-dedup.json)。"
+      },
+      {
+        "file": "docs/refactor/goal-judge-v1-final-review-codex.md",
+        "location": "$",
+        "snippet": "`slice`；其余 `.length/.slice` 只用于数组计数、分钟桶或日志预览，不参与这两个字符预算。\n- 1600 单项边界测试断言结果恰为 1600 code points 且没有孤立 surrogate（`goal-stop-hook.test.ts:318-327`）。8000 总证据边界测试解析 JSON 后检查 evidence 不超过 8000 code points、含截断标记且没有孤立 surrogate（`:329-360`）。\n\n### 6. 绿线未破坏 — **通过**\n\n- fail-closed：judge throw 或输出不可解析都返回 `continueSession:true`（`goal-stop-hook.ts:498-537`），不会误判完成。\n- waiting guard：只有 `verdict.waiting && runningWork.length > 0` 才允许等待；空列表落回 not_met 并继续（`:553-577`）。定向单测与 Eng"
+      },
+      {
+        "file": "docs/refactor/goal-judge-v1-review-codex.md",
+        "location": "$",
+        "snippet": "时，新引入的原始工具输出没有作为不可信数据隔离，\n能够对完成裁判做 prompt injection，最终触发 `met:true` 并清除持久 goal。另有缓存实际\n失效、非文本省略标记不可靠及 UTF-16 截断问题。\n\n## Findings\n\n### Blocker 1 — 私有快照保留敏感原文，破坏“只供当前模型 round 使用”的生命周期\n\n位置：`packages/core/src/engine/turn-loop.ts:1164`（尤其 `:1165-1168`）；快照继续被保存于\n`packages/core/src/engine/engine.ts:1941`、`:2056-2058`。\n\n`goalToolResults` 浅拷贝并保留完整 `result`、`contentBlocks`、`displ"
+      },
+      {
+        "file": "docs/review-2026-07-10-goal-judge-v1.md",
+        "location": "$",
+        "snippet": "ss、仅 progress 变化 cache hit。\n- 覆盖显式 sensitive 快照脱敏、工具 prompt injection 的结构隔离、图片/混合非文本省略、1600/8000 两级 Unicode 安全截断。\n- 保留并通过 met/not_met/waiting、judge throw、不可解析 fail-closed、abort signal、时间桶及 exhausted-goal 生命周期测试。\n\n关键缺口：\n\n- parser 只测“完全不可解析”，没有测缺字段、错类型、`met && waiting`、met 带非空 gaps、多 JSON 对象。\n- 没有验证 judge usage/cost 是否计入 Goal budget，也没有覆盖 repeated parse failure/timeout 的请"
+      },
+      {
+        "file": "docs/todo/workspace-upload-document-index-delivery.md",
+        "location": "$",
+        "snippet": "\n\n读取输入最多 20 MiB（上传入口保留既有上传大小限制；更大的文件可存放，但读取时需拆分）。提取文本最多 1 MiB、500 个文档部分、200 个 PDF 页面、512 个分块；达到上限会报告截断。每块最多 3,000 个 UTF-16 字符，重叠 200 字符且不拆开代理对。工具结果仍受 256 KiB 与秘密脱敏限制。\n\nOffice ZIP 额外限制 2,000 项、32 MiB 声明/选中解压总量、每 XML 8 MiB、20 万 XML 元素和 128 层深度；拒绝 DOCTYPE。文件不解压到磁盘，不跟随外部关系。\n\n## 查询、引用与权限\n\n先 `ListSources` 查看文件 metadata；它不创建索引也不读出正文。所有内容入口仍要求同一个 `source`、`scope`、`resource`：\n\n```json\n{\n  \"source\": \"project"
+      },
+      {
+        "file": "docs/todo/workspace-upload-document-index-delivery.md",
+        "location": "$",
+        "snippet": "\"uploads\",\n  \"resource\": \"brief.docx\",\n  \"query\": \"项目预算\",\n  \"limit\": 5\n}\n```\n\n查询在该文件的分块上运行本地词法评分，支持 Unicode 单词与中日韩字符二元词，无模型/嵌入请求。结果包含 `resourceId`、`sourceHash`、`format`、`parserVersion`、`extractionTruncated`、`totalMatches`、`hasMore` 和带部分标签/偏移/分数的 `matches`。用返回的分块 ID 再读：\n\n```json\n{\n  \"source\": \"project-uploads\",\n  \"scope\": \"uploads\",\n  \"resource\": \"brief.docx\",\n  \"chunk\": \"c_<返回的24位十六进制ID>\"\n}\n```\n\n`query` 和 `chunk` 互斥；`limit` 只用于查询，范围 1..20；这些参数仅适用于项目上传源。原有不带查询参"
+      },
+      {
+        "file": "docs/todo/workspace-upload-document-index-delivery.md",
+        "location": "$",
+        "snippet": "4,305,667 字节；这些是本地运行文件体积，不是安装器或其它平台发布证明。\n\n- 真实 ZIP/XML DOCX/PPTX/XLSX 与真实 PDF fixtures：文本、关系顺序、缓存公式、Unicode、XXE/压缩量界限、重复大 shared string 的增量预算、非法二进制、截断、活动取消/超时与满队列恢复。\n- 真实 `ReadSource` / `ToolExecutor`：中文查询、精确文件 deny、Profile deny、解析时撤权/覆盖、同字节目录和原件替换、cold/warm 取消、脱敏和来源包裹。真实解析的对象身份验证 32 项与 8 MiB LRU 淘汰、冻结、canonical workspace/resource 缓存隔离。\n- 读取、覆盖与删除不产生新派生磁盘文件；损坏/大体积/不可写 legacy 文件、路径处的普通文件、符号链接目录和硬链接内容均保持字节不变。"
+      }
+    ]
+  }
+}

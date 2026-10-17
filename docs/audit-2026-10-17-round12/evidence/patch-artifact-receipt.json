@@ -1,0 +1,77 @@
+{
+  "frozenCommit": "d5fae44358b3a92d4d02fd5fcc4ac21c56b2a08a",
+  "files": [
+    {
+      "path": "evidence/patch-candidates.json",
+      "bytes": 3,
+      "sha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570"
+    },
+    {
+      "path": "evidence/patch-dedup-initial-selected.json",
+      "bytes": 292557,
+      "sha256": "ec3a14e8bf7f899e3377d352d26aca0d11647cae28f96bfd64a2953870318a64"
+    },
+    {
+      "path": "evidence/patch-dedup-note.md",
+      "bytes": 1370,
+      "sha256": "5084e49a937a6c9ffbf1aa54b7dfaa84fea490d35f757238f054329dfe747573"
+    },
+    {
+      "path": "evidence/patch-dedup.json",
+      "bytes": 420481,
+      "sha256": "d834db5819494b3b73facc06df297a8a04a7f1e2ac07e84c5e373287c301dfff"
+    },
+    {
+      "path": "evidence/patch-dedup.py",
+      "bytes": 2483,
+      "sha256": "17e9c8c92a4297ad8240203e3b386aa6bfa1e69b729610d73a34355998a6cf0b"
+    },
+    {
+      "path": "evidence/patch-findings.json",
+      "bytes": 2134,
+      "sha256": "c9ae0bc9424d0b91b20f891fab49aefbc2b2a492cc64505be5856e033e0c95d5"
+    },
+    {
+      "path": "evidence/patch-leading-context.first.exit.json",
+      "bytes": 629,
+      "sha256": "75d1ff290977d4daf754a54acc2a43e540551928eba0d1716a38b4e80bc23e08"
+    },
+    {
+      "path": "evidence/patch-leading-context.first.log",
+      "bytes": 1240,
+      "sha256": "e51f796029f7dd89337c9760090139d2538fd0e8f6eb640f56b153250a6450c9"
+    },
+    {
+      "path": "evidence/patch-leading-context.test.ts",
+      "bytes": 3447,
+      "sha256": "323e995d9030a57ebb2dddff175a48de4db627cca5d12d311166873a4c69bdc7"
+    },
+    {
+      "path": "evidence/patch-source-manifest.json",
+      "bytes": 2287,
+      "sha256": "166d7f69e2549e15b4eadcbf099468d4dccdab9473cf986146d128ba4f10f9b1"
+    },
+    {
+      "path": "evidence/patch-validation.json",
+      "bytes": 1523,
+      "sha256": "88f381472c1652f4b4b24d4704791a2cde8533c9558dc39b8b1488d74004bc91"
+    },
+    {
+      "path": "patch.md",
+      "bytes": 4775,
+      "sha256": "322710c7a56fdb595404f62c484eaa906efca1ce14408e34fc013b7272c59e03"
+    }
+  ],
+  "testTotals": {
+    "cleanShards": 1,
+    "pass": 8,
+    "fail": 0,
+    "skip": 0,
+    "expectCalls": 31,
+    "existingTests": 0,
+    "focusedTests": 8,
+    "failedBunShards": 0
+  },
+  "includesRawFirstLog": true,
+  "selfExcluded": true
+}

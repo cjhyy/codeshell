@@ -1,0 +1,14 @@
+[
+  {
+    "id": "TUI-R12-C1",
+    "title": "ANSI Parser 的组合重音 grapheme 宽度 metadata 错误",
+    "file": "packages/tui/src/render/termio/parser.ts",
+    "line": 64,
+    "observed": "真实 Parser.feed(e+U+0301) 输出 width=2；真实 stringWidth 得 1；NFC é 的 Parser width=1；ASCII/CJK/emoji 控制一致。",
+    "whyCandidate": "types.ts 明确 width 为列数，但唯一生产 Parser 消费者 Ansi.tsx:134 只拼 grapheme.value，未读取 width；没有证明现有产品布局/显示受损，不计正式。",
+    "fixture": "tui-text-data.test.ts",
+    "log": "tui-text-data.first.log",
+    "dependencyIsolation": "first-run-before-import mock.module redirects Core barrel getGraphemeSegmenter to real frozen core/src/utils/intl.ts function; env fixed; unrelated OSC execFileNoThrow is throwing zero-call stub",
+    "runtimeScope": "pure parser/tokenizer/stringWidth/cache arithmetic only; no ANSI rendering"
+  }
+]

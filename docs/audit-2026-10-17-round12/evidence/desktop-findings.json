@@ -1,0 +1,26 @@
+{
+  "sourceBase": "d5fae44358b3a92d4d02fd5fcc4ac21c56b2a08a",
+  "findings": [
+    {
+      "id": "DESKTOP-R12-01",
+      "priority": "P3",
+      "title": "工具卡摘要截断拆开 Unicode 代理对",
+      "file": "packages/desktop/src/renderer/tool-cards/utils.ts",
+      "line": 13,
+      "sourceBase": "d5fae44358b3a92d4d02fd5fcc4ac21c56b2a08a",
+      "evidenceLevel": "Actual production pure helper with valid Unicode input and real positive card limits; UI consumption source-only",
+      "trigger": "Valid supplementary Unicode character straddles max-1 UTF-16 boundary at existing 70/80/90 card limits",
+      "expected": "Truncated summaries remain well-formed Unicode text",
+      "actual": "Returned text contains a lone high surrogate; standard UTF-8 roundtrip yields U+FFFD",
+      "controls": "Short Unicode, complete emoji boundary, ASCII and BMP truncation",
+      "limitations": "No UI mount, Electron, actual tool execution or file open; raw arguments remain intact",
+      "relatedHistory": [
+        "CHD02: Chat attachment label implementation",
+        "HL-02: Host GitHub selection label implementation"
+      ],
+      "report": "docs/audit-2026-10-17-round12/desktop.md",
+      "fixture": "docs/audit-2026-10-17-round12/evidence/desktop-display-contracts.test.ts",
+      "rawLog": "docs/audit-2026-10-17-round12/evidence/desktop-display-contracts.first.log"
+    }
+  ]
+}

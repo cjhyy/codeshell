@@ -1,0 +1,20 @@
+{
+  "baseline": "d5fae44358b3a92d4d02fd5fcc4ac21c56b2a08a",
+  "count": 1,
+  "observations": [
+    {
+      "id": "DESKTOP-R12-R1",
+      "title": "Header-only diff paths remain null",
+      "file": "packages/desktop/src/renderer/diff/parseUnifiedDiff.ts",
+      "line": 48,
+      "disposition": "Related extension of old R2-10; not an independent new finding",
+      "relatedId": "R2-10",
+      "actual": "Mode-only, empty additions/deletions, binary notices lose both paths; ordinary text hunk control correct",
+      "evidenceLevel": "Actual parser with synthetic Git-format strings; normal producer format from upstream official source and product caller source-only",
+      "limits": "No installed Git execution/capture or UI mounting",
+      "fixture": "docs/audit-2026-10-17-round12/evidence/desktop-display-contracts.test.ts",
+      "rawLog": "docs/audit-2026-10-17-round12/evidence/desktop-display-contracts.first.log"
+    }
+  ],
+  "note": "Old R2-10 root-cause remainder, not an independent new bug or candidate."
+}
