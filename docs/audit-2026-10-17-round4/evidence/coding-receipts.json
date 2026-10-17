@@ -1,0 +1,198 @@
+{
+  "frozen_head": "4ee32f28f78b8315112cca77cfc22b2f2f80ced6",
+  "branch": "codex/audit/context-round4-20261017",
+  "product_sources_unchanged": true,
+  "execution": {
+    "command": [
+      "node",
+      "scripts/run-bun-test-shard.mjs",
+      "--timeout",
+      "30000",
+      "docs/audit-2026-10-17-round4/evidence/coding-lsp-data.test.ts"
+    ],
+    "attempt": 1,
+    "runner": "repository guarded Bun runner",
+    "files": 1,
+    "tests": 8,
+    "pass": 8,
+    "fail": 0,
+    "skip": 0,
+    "expect": 32,
+    "completion": "Completed Bun shard: 8 tests, 0 skipped; 0 failures.",
+    "exit_code": 0,
+    "raw_stdout_and_stderr": "docs/audit-2026-10-17-round4/evidence/coding-lsp-data.first.log",
+    "retry": false,
+    "network": false,
+    "real_language_servers": false,
+    "native_app": false,
+    "fake_client": "EventEmitter fake injected at actual manager.getClient; no spawn path invoked"
+  },
+  "findings": [
+    {
+      "id": "CODING-R4-01",
+      "severity": "P2",
+      "file": "packages/coding/src/tools/lsp.ts",
+      "line": 208,
+      "title": "Definition / References 将编码 URI 当作文件路径返回",
+      "test_cases": [
+        3,
+        4
+      ],
+      "dedup": "Historic manager cwd URI issue fixed in rootUriToPath; current formatter consumer distinct."
+    },
+    {
+      "id": "CODING-R4-02",
+      "severity": "P2",
+      "file": "packages/coding/src/tools/lsp.ts",
+      "line": 156,
+      "title": "重复 getDiagnostics 不同步已打开文件的编辑",
+      "test_cases": [
+        8
+      ],
+      "dedup": "Historic 2s/no collection and startup/liveness excluded; repeated document sync distinct."
+    }
+  ],
+  "candidates_not_counted": [
+    "hierarchical document symbols",
+    "LocationLink selection range",
+    "per-extension languageId"
+  ],
+  "historical_or_scope_skips": [
+    "LSP startup/failed initialize/concurrent cold start/dead child",
+    "old failed fixtures",
+    "N12",
+    "security",
+    "native/platform",
+    "real language servers",
+    "network"
+  ],
+  "limitations": [
+    "Direct source / fake adapter only; no real server E2E.",
+    "Stale diagnostics observed only under strict fake retaining first-opened document; duplicate didOpen/version=1 is the source-proven contract violation.",
+    "beforeExit observer was not triggered by Bun test; no raw observation payload appended, assertions and test source retained.",
+    "No full Coding baseline, typecheck, lint, native, GUI, watcher, timeout or cross-platform testing."
+  ],
+  "owned_temp_directories_remaining": [],
+  "sources": [
+    {
+      "path": "packages/coding/src/lsp/client.ts",
+      "sha256": "7884e6ab61bbc5c82dbf7872941d602a3a4d2170b634932dcdb83b4dbe5aa31e",
+      "frozen_sha256": "7884e6ab61bbc5c82dbf7872941d602a3a4d2170b634932dcdb83b4dbe5aa31e",
+      "matches_frozen": true
+    },
+    {
+      "path": "packages/coding/src/lsp/manager.ts",
+      "sha256": "ff1a25879fd6a2ce725a9e82f501af543e2afa429ea99020be6513ef0c4e0b7d",
+      "frozen_sha256": "ff1a25879fd6a2ce725a9e82f501af543e2afa429ea99020be6513ef0c4e0b7d",
+      "matches_frozen": true
+    },
+    {
+      "path": "packages/coding/src/lsp/root-path.ts",
+      "sha256": "11868a6f1b14f0b2a8b642ea741994784834ea9931cfd8b99910861aca415c3c",
+      "frozen_sha256": "11868a6f1b14f0b2a8b642ea741994784834ea9931cfd8b99910861aca415c3c",
+      "matches_frozen": true
+    },
+    {
+      "path": "packages/coding/src/lsp/root-path.test.ts",
+      "sha256": "fcc79e191c841cf4466b17b97db2d7962a0424ca550f8b25c795fef2cf611991",
+      "frozen_sha256": "fcc79e191c841cf4466b17b97db2d7962a0424ca550f8b25c795fef2cf611991",
+      "matches_frozen": true
+    },
+    {
+      "path": "packages/coding/src/lsp/servers.ts",
+      "sha256": "91f5c21df41ebc75bbbf19d21ed7f4d7971c82d850c485b9288b1c688d8ea18c",
+      "frozen_sha256": "91f5c21df41ebc75bbbf19d21ed7f4d7971c82d850c485b9288b1c688d8ea18c",
+      "matches_frozen": true
+    },
+    {
+      "path": "packages/coding/src/tools/lsp.ts",
+      "sha256": "c2c3678fcd30d46761e151c716bb905944f3f44daa2312ab9636b5c657233eab",
+      "frozen_sha256": "c2c3678fcd30d46761e151c716bb905944f3f44daa2312ab9636b5c657233eab",
+      "matches_frozen": true
+    },
+    {
+      "path": "packages/coding/src/index.capability.ts",
+      "sha256": "2059d5f6913ef3e73b70a857a5dd9a84117fe723bb58e63e00a6eb0c03ff2f1f",
+      "frozen_sha256": "2059d5f6913ef3e73b70a857a5dd9a84117fe723bb58e63e00a6eb0c03ff2f1f",
+      "matches_frozen": true
+    },
+    {
+      "path": "packages/coding/src/index.ts",
+      "sha256": "633d33c1089f40e2219d0d9ea7a36be4e39fee049334941dad62e1249c477f72",
+      "frozen_sha256": "633d33c1089f40e2219d0d9ea7a36be4e39fee049334941dad62e1249c477f72",
+      "matches_frozen": true
+    },
+    {
+      "path": "packages/coding/src/prompt/coding.md",
+      "sha256": "00b2f4c4bf89ff2330968a6eb2718338755a4db16e51e9d3329575a0f5baf821",
+      "frozen_sha256": "00b2f4c4bf89ff2330968a6eb2718338755a4db16e51e9d3329575a0f5baf821",
+      "matches_frozen": true
+    },
+    {
+      "path": "packages/coding/src/lsp/manager.test.ts",
+      "sha256": "493fa1d39db49f4d57ac43ba022bdcd3c54f17d29fd53130cd1e702b877d0198",
+      "frozen_sha256": "493fa1d39db49f4d57ac43ba022bdcd3c54f17d29fd53130cd1e702b877d0198",
+      "matches_frozen": true
+    },
+    {
+      "path": "packages/coding/src/lsp/manager-lifecycle.test.ts",
+      "sha256": "149d77a060427e6aac3eba6250b45540220d4c480a5f0b74dc93bd85b92073b4",
+      "frozen_sha256": "149d77a060427e6aac3eba6250b45540220d4c480a5f0b74dc93bd85b92073b4",
+      "matches_frozen": true
+    },
+    {
+      "path": "packages/coding/src/git/utils.ts",
+      "sha256": "8e3531c2b340359e99e13b35242a88bb12eed51008e2c9ded67b149be7983192",
+      "frozen_sha256": "8e3531c2b340359e99e13b35242a88bb12eed51008e2c9ded67b149be7983192",
+      "matches_frozen": true
+    },
+    {
+      "path": "packages/coding/src/git/resolve-project-root.test.ts",
+      "sha256": "950317ad509233c6a7f317e9b25570df6998373bc0246117f30e933fd0601854",
+      "frozen_sha256": "950317ad509233c6a7f317e9b25570df6998373bc0246117f30e933fd0601854",
+      "matches_frozen": true
+    },
+    {
+      "path": "scripts/run-bun-test-shard.mjs",
+      "sha256": "dd2b245afbcb5aa7c798c8674d34edb8e02bb42be0be320050adf9be5ed2fd7d",
+      "frozen_sha256": "dd2b245afbcb5aa7c798c8674d34edb8e02bb42be0be320050adf9be5ed2fd7d",
+      "matches_frozen": true
+    },
+    {
+      "path": "scripts/bun-test-completion.mjs",
+      "sha256": "99808f8f7c67ae5f108243b0649557209991f148f0150785fcde83d47465047e",
+      "frozen_sha256": "99808f8f7c67ae5f108243b0649557209991f148f0150785fcde83d47465047e",
+      "matches_frozen": true
+    }
+  ],
+  "artifacts": [
+    {
+      "path": "docs/audit-2026-10-17-round4/evidence/coding-dedup.json",
+      "bytes": 66903,
+      "sha256": "601243c73ff99ad53d52cc854d91de123c0fb71ea6a2253586f40b609f3ae16f"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round4/evidence/coding-lsp-data.first.exit.txt",
+      "bytes": 2,
+      "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round4/evidence/coding-lsp-data.first.log",
+      "bytes": 1176,
+      "sha256": "096abbde3548c3f04585b0ca1fced8e3870edf1f9abce196d660e6e0a14a5fa1"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round4/evidence/coding-lsp-data.test.ts",
+      "bytes": 8794,
+      "sha256": "0d04405f49404160e8d181985dfcc92f3af35f1b0d49156e91cf58b0ff6ca9b7"
+    }
+  ],
+  "contract_references": [
+    {
+      "finding": "CODING-R4-02",
+      "url": "https://raw.githubusercontent.com/microsoft/language-server-protocol/gh-pages/_specifications/lsp/3.17/textDocument/didOpen.md",
+      "verification": "Root agent independently read official LSP3.17 primary source; Coding test execution remained offline.",
+      "supports": "Open/close must be balanced, max one open notification outstanding, opened content managed by client."
+    }
+  ]
+}

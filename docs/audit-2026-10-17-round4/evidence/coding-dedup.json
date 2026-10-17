@@ -1,0 +1,1389 @@
+{
+  "frozen_head": "4ee32f28f78b8315112cca77cfc22b2f2f80ced6",
+  "file_count": 252,
+  "files": [
+    {
+      "path": "docs/archive/review-2026-05-30/backlog.json",
+      "sha256": "e0fd4e2cf69ef0ac2cf43d6b16b61ec2725605d4b856e9139a76ca6922e6d9ee"
+    },
+    {
+      "path": "docs/archive/review-2026-05-30/backlog_confirmed.json",
+      "sha256": "dc8abb277b00dfb57b898e77623deef973e01cee67dd21295f8fdd8d3c38c864"
+    },
+    {
+      "path": "docs/archive/review-2026-05-30/backlog_ided.json",
+      "sha256": "89770332d75d998120bd9469cb63b328377656caa4bbb34d8c1e715b1e4acba3"
+    },
+    {
+      "path": "docs/archive/review-2026-05-30/backlog_verdicts.json",
+      "sha256": "db8b262e398040c55bbad50acc7a8d01c10b957f0574f5d238140670a0bf7a11"
+    },
+    {
+      "path": "docs/archive/review-2026-05-30/confirmed.json",
+      "sha256": "4b2bd66512c968f13df1a761db60418be65853871eb0635741d1d9413f4d099a"
+    },
+    {
+      "path": "docs/archive/review-2026-05-30/findings.json",
+      "sha256": "6937976e6107dbbbab93fd429900e6f236352d67ba4f287526f529a48e6a3a35"
+    },
+    {
+      "path": "docs/archive/review-2026-05-30/low_confirmed.json",
+      "sha256": "99d2ef32a15255c9d22fe21b2a9f2c7e8cf00c71e7bde5902718c012b6f834fd"
+    },
+    {
+      "path": "docs/archive/review-2026-05-30/low_section.md",
+      "sha256": "642de51fa377440eb1f79e9730cc0f23965094525c033f93675b0ec4d31c24e2"
+    },
+    {
+      "path": "docs/archive/review-2026-05-30/round2_section.md",
+      "sha256": "016e5b63faa51368a0cc811ae067904bfe5f6dae5b23f6dbeb0beb2f0364f879"
+    },
+    {
+      "path": "docs/archive/review-2026-07-09/01-core-engine-structure.md",
+      "sha256": "b2006f1b9e8af0251719756eaadb1a51d277694f57c56d137015e5e700ffcc0b"
+    },
+    {
+      "path": "docs/archive/review-2026-07-09/02-desktop-stream-walkthrough.md",
+      "sha256": "80e1961a7272034ac06360753353aef510c5068eb26098b5b701923ef1a4afac"
+    },
+    {
+      "path": "docs/archive/review-2026-07-09/03-optimization-findings.md",
+      "sha256": "98fd44723ecd749b09cfbf60cfb0514b4b113dd5f9e1f04a5ee921ef28e8f043"
+    },
+    {
+      "path": "docs/archive/review-2026-07-09/04-p1-deep-dive-and-fix-design.md",
+      "sha256": "d469df1a5e32c44154d7b5c0cdf20a15694221e17b1b19aa8ebfe2747a46a66d"
+    },
+    {
+      "path": "docs/archive/review-2026-07-09/05-p2-deep-dive-and-fix-design.md",
+      "sha256": "6b5fede9d7a924c6be358ef8a51c84cd0b7fe37e0c7827f1308e18baece0e59a"
+    },
+    {
+      "path": "docs/archive/review-2026-07-09/06-turn-loop-state-machine.md",
+      "sha256": "3094e217dfda03cffdfd3e2c39198a635b7e860d704aa6e5d1bedcabf8e3e5c2"
+    },
+    {
+      "path": "docs/archive/review-2026-07-09/07-new-observations-verification.md",
+      "sha256": "3c86bef44e134d802830201fa3b57199ea6bf72f36eb3d62f7010bda21892132"
+    },
+    {
+      "path": "docs/archive/review-2026-07-09/08-N03-fix-design.md",
+      "sha256": "bdf8243b21d2947403d77b19b19ee66dc5650107936f0ae012733c8740d26cee"
+    },
+    {
+      "path": "docs/archive/review-2026-07-09/09-protocol-event-and-session-contract.md",
+      "sha256": "dba8d1b11090d21e550025ee45d89824aa6d66c9f33e9d642f537ace5974b858"
+    },
+    {
+      "path": "docs/archive/review-2026-07-09/10-tool-system-execution-and-permission-contract.md",
+      "sha256": "dbb59eb5f0278af30c6ef19e34ab261008d9802278764b92ae7c464769337c6f"
+    },
+    {
+      "path": "docs/archive/review-2026-07-09/11-N06-verification.md",
+      "sha256": "3b99fa942d77ab0e9a3ea7ac0c02398924ed8c5938d680096db513baa2c3fd57"
+    },
+    {
+      "path": "docs/archive/review-2026-07-09/12-N06-fix-design.md",
+      "sha256": "7d319bd5856f977287d53cae526620b8a1b913ecd78a29d76282803db9950c65"
+    },
+    {
+      "path": "docs/archive/review-2026-07-09/14-remaining-observations-verification.md",
+      "sha256": "3131a9f24c1380fdd86e4dd7fd03d6c53845978e7a6dfe4f4da0094193b0a640"
+    },
+    {
+      "path": "docs/archive/review-2026-07-09/15-p2-fix-checklist.md",
+      "sha256": "1b61759b17ee1c98bbd88a77c7f1e0706d70773870abc5e05fee9191bcdbe0a9"
+    },
+    {
+      "path": "docs/archive/review-2026-07-09/16-consistency-audit.md",
+      "sha256": "a637a177dae2f93f2ad3f3c29535dfe7683d08591858c0c6dede7b04012a1b86"
+    },
+    {
+      "path": "docs/archive/review-2026-07-09/17-fix-execution-plan.md",
+      "sha256": "2cf143f339958031e221c205c94c05678827230fa4b3fab057102aaadcadcc67"
+    },
+    {
+      "path": "docs/archive/review-2026-07-09/18-fix-code-review.md",
+      "sha256": "9374cbafc98c57df49349850dbeb89e29b3de11d4595e90a3177576fb59e22a0"
+    },
+    {
+      "path": "docs/archive/review-2026-07-09/19-landing-status.md",
+      "sha256": "8736eb8fd67db2dee347982f6a69b60c8be10cb633058ee98a357cd6dc0a64fe"
+    },
+    {
+      "path": "docs/archive/review-2026-07-09/20-p2-code-review.md",
+      "sha256": "6d6d70067ace7d882630439608bf214edb05645823d61240f5491765e47491c6"
+    },
+    {
+      "path": "docs/archive/review-2026-07-09/21-test-coverage-gaps.md",
+      "sha256": "7b65e4e274c06c19509eeb57daf3073058536ff6057f1e1fee0363c282ae9098"
+    },
+    {
+      "path": "docs/archive/review-2026-07-09/22-test-quality-audit.md",
+      "sha256": "762697789db8e2f664eaaa45c15af580447e08e3c827cdf42953ce3731722f35"
+    },
+    {
+      "path": "docs/archive/review-2026-07-09/23-codex-unpushed-12-review.md",
+      "sha256": "c034057c01927fb840781dd971662edd8207c4421771c93ef566a2e267c92c73"
+    },
+    {
+      "path": "docs/archive/review-2026-07-09/24-input-attachment-pipeline-review.md",
+      "sha256": "993f460bc63a65cb74c11b75c5fde59f666496f73ed53d9d853e6e174548b1a9"
+    },
+    {
+      "path": "docs/archive/review-2026-07-09/25-small-features-impl-notes.md",
+      "sha256": "c9bf529c84a975e868f138f4e90c4738a571c703c762714ead1e1ce003f5c0e3"
+    },
+    {
+      "path": "docs/archive/review-2026-07-09/26-bg-completion-no-wake-root-cause.md",
+      "sha256": "9a8ec5fad996c2eba36bbb0ec587a446643464122f61536c252de820df16fb38"
+    },
+    {
+      "path": "docs/archive/review-2026-07-09/26-small-features-review.md",
+      "sha256": "e620675e661c7b9f9d4b085fab4cf2c2aa533a752aaf7735ae298326437e79de"
+    },
+    {
+      "path": "docs/audit-2026-10-16/README.md",
+      "sha256": "8fe31bdae2bfad3e859ed5566f5c246229f7044d63c11604d968200545526b13"
+    },
+    {
+      "path": "docs/audit-2026-10-16/candidates.md",
+      "sha256": "df60072a219e6dc93fbace6c08a1c8d8f5ee1245e8f52f8dc721f958e088d9bb"
+    },
+    {
+      "path": "docs/audit-2026-10-16/core.md",
+      "sha256": "3fcbedfe12bc2ff4c123453f0bffc54ba25edcdc470a6eda8a4cdcc49241ecc1"
+    },
+    {
+      "path": "docs/audit-2026-10-16/coverage.md",
+      "sha256": "a61156cccf3dcf436354c3f50ebd12d8cfa5faab8eeb95ed95bc1dc9abf09f16"
+    },
+    {
+      "path": "docs/audit-2026-10-16/desktop.md",
+      "sha256": "dc1f47e7c585a2f51943c4fab6024029c2e7fb1acac1ed96d633cfbd84089b1a"
+    },
+    {
+      "path": "docs/audit-2026-10-16/evidence-index.json",
+      "sha256": "ccf463583cd1dd02d5486b202135a58a2e1931c7dcac1b8aca4c8179722cca05"
+    },
+    {
+      "path": "docs/audit-2026-10-16/findings.json",
+      "sha256": "6a4cf415ee6c3a4fb5c7fae5d97445838bd668fcbe6060a1c4656c51f5cd96b2"
+    },
+    {
+      "path": "docs/audit-2026-10-16/inventory.json",
+      "sha256": "91118ed73a7f6ff44c10dc248759a5371b81eb29f2cc64a75ae81e991fdac8b7"
+    },
+    {
+      "path": "docs/audit-2026-10-16/quality.md",
+      "sha256": "ba6f94de0749e92dbabe8d2852a2c76de0ceb2d9eaadb975215687762c5b6086"
+    },
+    {
+      "path": "docs/audit-2026-10-16/root.md",
+      "sha256": "585f9e263b7b45e64337f18b84499ea67cdb98a25a01599331fcd1238ebab6e9"
+    },
+    {
+      "path": "docs/audit-2026-10-16/server-web-chat.md",
+      "sha256": "e12916c5a52bc6bee7ccb78acf25788fcc68a160283523fa32f52e2f74098de0"
+    },
+    {
+      "path": "docs/audit-2026-10-16/source-manifest.json",
+      "sha256": "9a624ccb9a02c21474a563b4b7382799a95cf7961f5ee6d2cf7f36da54c666d9"
+    },
+    {
+      "path": "docs/audit-2026-10-16/validation.json",
+      "sha256": "16bbed968f609e6992c22cfd5e9c4039f197952e1496ebabb34728cc81dacec5"
+    },
+    {
+      "path": "docs/audit-2026-10-17/README.md",
+      "sha256": "f4dc039ceb6d4d1fc32dcefaca22f113faf9b29b2e2532b0cc104a6b6b0384dd"
+    },
+    {
+      "path": "docs/audit-2026-10-17/candidates-and-skips.md",
+      "sha256": "26c63836964c9d1a0b4a1c184830f9fd3cfbf8323395f30b10aa561753766b2e"
+    },
+    {
+      "path": "docs/audit-2026-10-17/chat-data.md",
+      "sha256": "1c9fcfb4606c4c3721f9e3d22459cff65604a0b24995a362f05108445207f773"
+    },
+    {
+      "path": "docs/audit-2026-10-17/coverage.md",
+      "sha256": "5e1fcea577db3f84c8b4315951cbbe9cf12861fad71fb1f44b377735c3dfadb5"
+    },
+    {
+      "path": "docs/audit-2026-10-17/desktop-data.md",
+      "sha256": "71e9ee030f1e0bb0945f67407051fff6238a58b8c054784dd81009af55988ce3"
+    },
+    {
+      "path": "docs/audit-2026-10-17/evidence-index.json",
+      "sha256": "978b9e8282fdc6ebf97f12755203d07928219377872f223288d991fecdf87221"
+    },
+    {
+      "path": "docs/audit-2026-10-17/findings.json",
+      "sha256": "7e197f4b8b12f058ceeefbb8c73e0fbb292da844823b9a33fd9e19bcafabdb0d"
+    },
+    {
+      "path": "docs/audit-2026-10-17/inventory.json",
+      "sha256": "164b681af6fa481807c3128358cf5cc94206855c713b517a878f61da6fa0efc9"
+    },
+    {
+      "path": "docs/audit-2026-10-17/operations-memory.md",
+      "sha256": "40b575c42f9ac53e995ebf441482ab65524fdf71bed70ba418f86530540de466"
+    },
+    {
+      "path": "docs/audit-2026-10-17/pet-data.md",
+      "sha256": "2c8df717e0725dc7179dcdfa9a7f64a4f34ff2723689cb956f2985d5a9917ee8"
+    },
+    {
+      "path": "docs/audit-2026-10-17/root.md",
+      "sha256": "dc064bda5b9669daa90cd0b1342c6e9d8b1e51b7571b70bb0e5bb9894a72d074"
+    },
+    {
+      "path": "docs/audit-2026-10-17/scheduling-data.md",
+      "sha256": "3f153cd67dca7c20fbe27cf83c0eef6c32bfe4bd3ffd14c48300af98550360e1"
+    },
+    {
+      "path": "docs/audit-2026-10-17/source-manifest.json",
+      "sha256": "27f492ee3e4314ea5b808155d5fab860882c4b717750e39ae60d1cfa3cd5aae1"
+    },
+    {
+      "path": "docs/audit-2026-10-17/sources.md",
+      "sha256": "91081486ad6936609bbbc702aed26d2b1feca50d965b1e449adaed24988eca70"
+    },
+    {
+      "path": "docs/audit-2026-10-17/validation.json",
+      "sha256": "bef56b4bd460cd28139b8dd131f3bec08f1e9b7d1e51720e837831113b4e93c6"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round3/README.md",
+      "sha256": "1fff0e69ab72e39c28080cb95b256e4985d9934a8f4d6e49882c59f9d9f8341d"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round3/arena-lab.md",
+      "sha256": "8ef589d9e343fc8b0c284740ec9e7d589f5cecd8337f6de75765e6c00df0229a"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round3/candidates-and-skips.md",
+      "sha256": "a96aab93146bec42c1dd7de3f38b45c8d1cc209013208569368bb543debbdb68"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round3/cdp-browser.md",
+      "sha256": "d5db8c108ca64b60a36ec761389626498223752d41ff251131bc299b01f7a3a2"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round3/coverage.md",
+      "sha256": "f749e2b99ae0d19bb2f527200bcd9fff7158338d92f93c30aa78ad635d4b8f8a"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round3/evidence-index.json",
+      "sha256": "70d561cddf8df6c027ce32d981dd035423123498d8d6c401d934eeecdb08a825"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round3/findings.json",
+      "sha256": "77978fde913f3a3b07d46e4d74fb9aab49705f0eb7cbe4e4275a869627c9891d"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round3/host-link.md",
+      "sha256": "53c4eb98275b007dc9c72c3b65e74d9b0b46c5e74e709e466bf5cf0cc8ec3b03"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round3/quality-root.md",
+      "sha256": "9def30af25fa20e19c9b34e301bbd1c61cee0830823ef90145dc4a144840900d"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round3/root.md",
+      "sha256": "7f27dcf971ff16bb796054646621f9d02f5e0f7ba824b8d47c1e263e59e74c9c"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round3/source-manifest.json",
+      "sha256": "031922118a63faaa456011616e9e2eea1f5ae90485bb5a14f87921f48a195735"
+    },
+    {
+      "path": "docs/audit-2026-10-17-round3/validation.json",
+      "sha256": "d3b7ebb116bc3a0286214f33ea71343b96b4666495de351154f0cb511f1e41d9"
+    },
+    {
+      "path": "docs/review-2026-07-09/13-findings-register.md",
+      "sha256": "dfea044e45ee1ba4529dc1eef16ee5c312ce5ba48e8a310d50e8129b59c6ceeb"
+    },
+    {
+      "path": "docs/review-2026-07-09/27-bg-wake-rehydrate-impl-notes.md",
+      "sha256": "2179457485d8f62fd2c3489826cd4272635cefd4e7d13780afc6b432380bb434"
+    },
+    {
+      "path": "docs/review-2026-07-09/GUIDELINE.md",
+      "sha256": "733d4061fbf840365ac99331f16c0abc96e60a1826ab09ec514ba9a4320fd8c3"
+    },
+    {
+      "path": "docs/review-2026-07-09/README.md",
+      "sha256": "2ae7210a82d4f67f33297e2a4079f90a0af270096660ada234a076e97b89412f"
+    },
+    {
+      "path": "docs/review-2026-07-09/pre-beta-01-core.md",
+      "sha256": "a5bd18b62a3ce8b6a9f1ca04f52c651998176576acbee8a3e09bfcefb692c259"
+    },
+    {
+      "path": "docs/review-2026-07-09/pre-beta-02-desktop.md",
+      "sha256": "b1f99a19dff90ccfd24adb3710704532d41274d115d6b212bcc8517a3ced3a48"
+    },
+    {
+      "path": "docs/review-2026-07-09/pre-beta-03-release.md",
+      "sha256": "d2564b5db24fab3e8d6b682a0a233e9482f9031521ccbacdbcdc9ac9e042f62d"
+    },
+    {
+      "path": "docs/review-2026-07-09/pre-beta-04-tui-cdp-config.md",
+      "sha256": "8102fe9a7a97ebc24023454ffa082ec4b3256ab61a0654026e16cbd2f53b9fea"
+    },
+    {
+      "path": "docs/review-2026-07-09/pre-beta-05-security-investigation.md",
+      "sha256": "d0994f0b45fcab332354934bfcc6452873c27b4b965b3e0795100ad0c30a0f3f"
+    },
+    {
+      "path": "docs/review-2026-07-09/pre-beta-06-security-impl-review.md",
+      "sha256": "bacf2a9413f81ddb9370b790d3e1715caa829d21211f5ab69742e0f9e0a199bd"
+    },
+    {
+      "path": "docs/review-2026-07-09/pre-beta-07-security-refix-review.md",
+      "sha256": "b6e5998e232537a56417d543e68b49cb6d1ad48f84cc16911975f4c3034cddad"
+    },
+    {
+      "path": "docs/review-2026-07-09/pre-beta-08-security-refix2-review.md",
+      "sha256": "4562978bbf934e0cdafbb74ec86e15b4079c92720f4255402e0063b93f038337"
+    },
+    {
+      "path": "docs/review-2026-07-09/pre-beta-final-01-security-correctness.md",
+      "sha256": "4d68c155ff776d318f729231b7bb71add9bc2e82c5f2f1642e1a7c5bebb3fd1f"
+    },
+    {
+      "path": "docs/review-2026-07-09/pre-beta-final-02-contract-regression.md",
+      "sha256": "20ae505b7ee9b1024a28410b006b0c61074c00ca37cbe89d0d4f354290cbbf62"
+    },
+    {
+      "path": "docs/review-2026-07-09/pre-beta-final-03-release-readiness.md",
+      "sha256": "2409fe7240252dbc0444cd50c8d10902eed7dd1bb387c56093f79fd6411d7e7c"
+    },
+    {
+      "path": "docs/review-2026-07-09/pre-beta-final-fixes-notes.md",
+      "sha256": "9617c896d057a25a02dab8d6affef2a1f5df66e641ebc5bfed9172fad0104100"
+    },
+    {
+      "path": "docs/review-2026-07-09/pre-beta-final-followup-notes.md",
+      "sha256": "a4696ab8eed95e12b9f50ea6cee9226dad71ae83967ab869607a191c4b8a1837"
+    },
+    {
+      "path": "docs/review-2026-07-09/pre-beta-final-followup-review.md",
+      "sha256": "e044587bda3b98b95370588bce96e5aae110d68caf06e579a28af4e57b5c13a7"
+    },
+    {
+      "path": "docs/review-2026-07-09/pre-beta-final-refix-review.md",
+      "sha256": "e0b3a36927a42af7ebadd371a94cd92c5456af097db944cd4bd143d78ffee027"
+    },
+    {
+      "path": "docs/review-2026-10-12/README.md",
+      "sha256": "0b3bbba150474889a536dda42e62e73490bcc7f4adbcdcf77a9be49ab940d9a7"
+    },
+    {
+      "path": "docs/review-2026-10-12/approval-quality-round10.md",
+      "sha256": "f525ea372cfcc72d9b78fb365d10e9b0d91713f7735bae848cd48eb6a6ac76f0"
+    },
+    {
+      "path": "docs/review-2026-10-12/auth-round7.md",
+      "sha256": "5867acdd224c61e8b0a953e003a7574b2919271bcaa19bfe412b3903997de914"
+    },
+    {
+      "path": "docs/review-2026-10-12/automation-quality-round18.md",
+      "sha256": "867da87c7383b3aa7e5dd2deeb7e1773c9af7740412d2d9e2396deafecdc88d4"
+    },
+    {
+      "path": "docs/review-2026-10-12/automation-round5.md",
+      "sha256": "4a6aab0fb197862e288a17d1f6f37b804c665639d31344a24a8413ffe54cd755"
+    },
+    {
+      "path": "docs/review-2026-10-12/baseline-evidence-round28.md",
+      "sha256": "5df61f1d20e14104fed2fff5273c11ca23e929c0467b12050d48389bb3a6f35d"
+    },
+    {
+      "path": "docs/review-2026-10-12/blank-files-counterreview-round28.md",
+      "sha256": "d0e8bf53cc32e1e780e693bf1b0133f365075f2a0f41953f71342e68ebc3ed63"
+    },
+    {
+      "path": "docs/review-2026-10-12/browser-cancel-gates-round21.md",
+      "sha256": "5b77277c82542dff9de9fa92b50ebaa6125dab1e74466580c1f0ca1a38d67d98"
+    },
+    {
+      "path": "docs/review-2026-10-12/browser-cancel-quality-round21.md",
+      "sha256": "c19e680aa1f89c80ffd56b1c96a7deaabc9b7f4375c34bcad9958708433deee2"
+    },
+    {
+      "path": "docs/review-2026-10-12/browser-lifecycle-round21.md",
+      "sha256": "615f03174c517de0b02b517f363641484cd9e706ca2979782467218622fdf102"
+    },
+    {
+      "path": "docs/review-2026-10-12/browser-quality-round21.md",
+      "sha256": "a9bf1fd3ecd3274cbd2d081a1b818289dc76fa4eb4d7551a6880dedc8490a0ad"
+    },
+    {
+      "path": "docs/review-2026-10-12/browser-stop-contract-round22.md",
+      "sha256": "7c4fb2573283b2aadc6d056037e2a17d07337b888a5e344b1fa83a87e0685866"
+    },
+    {
+      "path": "docs/review-2026-10-12/browser-stop-core-gates-round22.md",
+      "sha256": "c158ac1046c85861c1c30c1860b25a205b72270d727efeb96a235d89b2fe02a5"
+    },
+    {
+      "path": "docs/review-2026-10-12/browser-stop-discovery-round22.md",
+      "sha256": "893acdd06b6fb50268ff17b78aa7fce08f8362bf871d2da297b826200dfa4926"
+    },
+    {
+      "path": "docs/review-2026-10-12/browser-stop-plan-round22.md",
+      "sha256": "6cc879ccceba986004466b741c1c2330ec80f233a86326e67cd4f3d4801d9329"
+    },
+    {
+      "path": "docs/review-2026-10-12/browser-stop-preflight-round22.md",
+      "sha256": "77f8f1b9949191df9704578875b4f2f310b6662e1ef78f4f972b7a7f2f76703d"
+    },
+    {
+      "path": "docs/review-2026-10-12/browser-stop-quality-round22.md",
+      "sha256": "36c08de7086fa7554e1a784e71ea2cd8de92ac42fffe581fa051655981747ef3"
+    },
+    {
+      "path": "docs/review-2026-10-12/browser-stop-round22.md",
+      "sha256": "c33003919a92272ccc54efd648ec0ce841d933dd110a4b3b4a39805c93213918"
+    },
+    {
+      "path": "docs/review-2026-10-12/cli-quality-round9.md",
+      "sha256": "1eafab70578f13bc42d4eb2fdd5f9e2ea9ae51d5a2207afc10a4cda4984e5af3"
+    },
+    {
+      "path": "docs/review-2026-10-12/cli-recovery-quality-round15.md",
+      "sha256": "42d10348491dc6340a7c616e8fd36ccf702435fa9f6b0b3702757e6045d2801f"
+    },
+    {
+      "path": "docs/review-2026-10-12/cli-recovery-round15.md",
+      "sha256": "3afdb57700ac89646c89afe3837401bda5d6e97656d4e8e8d4704612fceeb81f"
+    },
+    {
+      "path": "docs/review-2026-10-12/cloud-account-quality-round26.md",
+      "sha256": "6fc20ba1da77fd47709d83553aebb791369b996a7ff821bd06a7c154f6b35d01"
+    },
+    {
+      "path": "docs/review-2026-10-12/cloud-account-static-round26.md",
+      "sha256": "373a6b07183c85950d4942fbd4f49aba2c689c2e720ae15bde6408b19bb58ecc"
+    },
+    {
+      "path": "docs/review-2026-10-12/cloud-account-static-round26.sources.json",
+      "sha256": "cb2f46836ddf595c7892bd51a2cf7857c73d5700921db75aad7c9367c3eb2335"
+    },
+    {
+      "path": "docs/review-2026-10-12/collections-round6.md",
+      "sha256": "6f9b3f7b7837caf1a02f8f7a1c1e6a08915a2213468afe7ea235552788b834c9"
+    },
+    {
+      "path": "docs/review-2026-10-12/command-recovery-round16.md",
+      "sha256": "83a0718ad204293590009edf3cce17ea6cd8cdadd2573663054ffe253786fed1"
+    },
+    {
+      "path": "docs/review-2026-10-12/connection-recovery-quality-round15.md",
+      "sha256": "69c10ccc744d6624e126bf3d766df6d5b554c45169cebfdfab911c60cd06c265"
+    },
+    {
+      "path": "docs/review-2026-10-12/connection-recovery-round15.md",
+      "sha256": "24bac410591d223abc62497a81c005d3b5d18f4390d61c8d4c9390f131afec3f"
+    },
+    {
+      "path": "docs/review-2026-10-12/context-cancel-quality-round18.md",
+      "sha256": "bfc971305bf88848f6e611dadb567e3973760ed8d42c70740e65f9fd1060344e"
+    },
+    {
+      "path": "docs/review-2026-10-12/context-cancel-round18.md",
+      "sha256": "9911524de544761e0cc106170b2bef7a078c71274a43fb7585c689102aa6bb66"
+    },
+    {
+      "path": "docs/review-2026-10-12/context-recovery-quality-round17.md",
+      "sha256": "616542a2a0c3f2ccec9a1df8a92ec35b8c18fed96d4505c81c684e60473800da"
+    },
+    {
+      "path": "docs/review-2026-10-12/context-recovery-round17.md",
+      "sha256": "74ba376b3eca7aa1ac537e05bf114926152b7008ec7fa74b2ce8ee79aa796b0a"
+    },
+    {
+      "path": "docs/review-2026-10-12/credentials-round5.md",
+      "sha256": "27bdf3ed6903cdfaa47837d32d08e3af7a0ae71c7e147d8ee50a52c4f58230bf"
+    },
+    {
+      "path": "docs/review-2026-10-12/delivery-audit.md",
+      "sha256": "1174ecfba1bc2ed9bbc938d2198e1418a0912bcf729938a0b2267ae10b6bdd6d"
+    },
+    {
+      "path": "docs/review-2026-10-12/desktop-preflight-round23.md",
+      "sha256": "78a1c06816062ccadcdcc18b632360ea3905ca97840812694af7ca774968caf3"
+    },
+    {
+      "path": "docs/review-2026-10-12/desktop-quality-round10.md",
+      "sha256": "cf1787e7670bc910890e01f75da20fb4470b7f115a7ab206a9b1130cc786a90e"
+    },
+    {
+      "path": "docs/review-2026-10-12/desktop-round1.md",
+      "sha256": "b216b26c4273d04dbae0597115b63ef8b686fe7eda0996868bf4c387e93977d4"
+    },
+    {
+      "path": "docs/review-2026-10-12/desktop-round2.md",
+      "sha256": "6cd1aa8e8a492e67d26e9f6ff5384b132dbfa90a533b0cddb86adb5465365001"
+    },
+    {
+      "path": "docs/review-2026-10-12/desktop-round3.md",
+      "sha256": "04430329ec33f8c40c8170f36f0b14855d184860e4dd4084bb1034d4fbfd336c"
+    },
+    {
+      "path": "docs/review-2026-10-12/download-quality-round12.md",
+      "sha256": "0085952e9e020b36bb5604e902d65f52ac1b19254565a192d6a4ba32409e6d3d"
+    },
+    {
+      "path": "docs/review-2026-10-12/download-round11.md",
+      "sha256": "97196d787ffaf8129e30a674e9ac6514c33e9d9b499b8a2dea13eff6ecf574b2"
+    },
+    {
+      "path": "docs/review-2026-10-12/evidence-navigation-round29.md",
+      "sha256": "69fcf6c1e1b303f9c3cf2953b007d4c42fc029bfa96f1cad8efaf844bd64a100"
+    },
+    {
+      "path": "docs/review-2026-10-12/file-mutex-quality-round19.md",
+      "sha256": "6940a2c615572bc0e0955b3f962337a44393fc1715ec5a3f7b37f387390a6dde"
+    },
+    {
+      "path": "docs/review-2026-10-12/file-mutex-round19.md",
+      "sha256": "40a33225154448ecf505dade3a27b7c6abefaac3e936a999704cf19b8a072886"
+    },
+    {
+      "path": "docs/review-2026-10-12/file-navigation-quality-round14.md",
+      "sha256": "8006ef1842929f77b2452cdbd3701e1569d9e44cb460d8e8f7f7b4b18d4040a9"
+    },
+    {
+      "path": "docs/review-2026-10-12/file-navigation-round14.md",
+      "sha256": "8442a15342d04c69183b5ad42397431da3d10aef595cb2de8ef6ef3acf647f5f"
+    },
+    {
+      "path": "docs/review-2026-10-12/file-root-fixture-preflight-round27.md",
+      "sha256": "3f3f6e6fbf03715637d5ac314e9fe81172058fce38952a699ba494eb3ae6b3f0"
+    },
+    {
+      "path": "docs/review-2026-10-12/file-root-quality-preflight-round27.md",
+      "sha256": "826e2f76992e0d2cc07afb13840e594095eefb06ff28ba7b09e98c0c51533c29"
+    },
+    {
+      "path": "docs/review-2026-10-12/file-root-quality-preflight-round27.sources.json",
+      "sha256": "f5429f6ef922d440d0859d25ce6fdbe29640773c0617fd431b87ee71366ca6ee"
+    },
+    {
+      "path": "docs/review-2026-10-12/file-root-round27.md",
+      "sha256": "a032a7897961f673d11b0529b3cb25b6713c64f3e3d301ff88c625872b9b6be8"
+    },
+    {
+      "path": "docs/review-2026-10-12/files-round4.md",
+      "sha256": "4788d986505c6227cc46a534479781143221d285cca5b5cb1d26354c77e4677b"
+    },
+    {
+      "path": "docs/review-2026-10-12/flow-coverage.md",
+      "sha256": "6bf8657e6254b7feb220fd79a1b00d7f7c26cffbb832e02b16182e18ab0660cb"
+    },
+    {
+      "path": "docs/review-2026-10-12/fork-authority-quality-round26.md",
+      "sha256": "5aa3206e3a14c7b624f424ab9d9c7cd32286e3da1708a914b9d948da923da7fd"
+    },
+    {
+      "path": "docs/review-2026-10-12/fresh-project-quality-round18.md",
+      "sha256": "6a9b2edf998f07299fe9f47d91b8bedbb1d336e6e833509613e94529a5f9c70a"
+    },
+    {
+      "path": "docs/review-2026-10-12/goal-bound-quality-round20.md",
+      "sha256": "d7cbc718181911e1a24793e23b89d3c92b1c74b2e88f04d2279779d80c820dc1"
+    },
+    {
+      "path": "docs/review-2026-10-12/goal-cold-quality-round20.md",
+      "sha256": "e93786f20385e23887b5c998631c57c2b4406ebe002662ef5306bc17672ae2c1"
+    },
+    {
+      "path": "docs/review-2026-10-12/goal-sleep-round20.md",
+      "sha256": "a790f5f6330fc21f95d83d0c39efecf4ab33950e48d24ea0902d0bfda85ccc55"
+    },
+    {
+      "path": "docs/review-2026-10-12/high-risk-quality-round17.md",
+      "sha256": "3254a130e251de5cadc4cca01f54d00846a7b439ab21dc175cb37f3d4c7ef177"
+    },
+    {
+      "path": "docs/review-2026-10-12/http-error-preflight-round23.md",
+      "sha256": "366fe95280c5cee9eaa82e13a6b0a39a848751243a828adae2294e3f4bac1233"
+    },
+    {
+      "path": "docs/review-2026-10-12/hub-session-operations-quality-round18.md",
+      "sha256": "bbb52f96c5f5494cbee370d59f362a9e621d8efc2c77aeb83ca89a7e5f07be03"
+    },
+    {
+      "path": "docs/review-2026-10-12/hub-session-operations-round18.md",
+      "sha256": "565000b79719c562c38b981dd0e1466bc4cc50f223aafe89d4ab0559facbe1a9"
+    },
+    {
+      "path": "docs/review-2026-10-12/latest-baseline.md",
+      "sha256": "2674e305de313d25ea68c04d2b2b55833718a7ec3dd1e32de57ad5b1953f8c7a"
+    },
+    {
+      "path": "docs/review-2026-10-12/legacy-history-quality-round24.md",
+      "sha256": "5b8e893648235dd1c7caec7bf5810946b8216afe4b921ad9baab9210e988685e"
+    },
+    {
+      "path": "docs/review-2026-10-12/legacy-history-round24.md",
+      "sha256": "f6d718b8ffbc74b33c86c69f4091171bd4d8659ff709af57fb200a65ad0384b0"
+    },
+    {
+      "path": "docs/review-2026-10-12/link-recovery-round16.md",
+      "sha256": "94c4307afacd8ddffd9b37988ecc0b7de2285cd634d99e1198c4228c72a4dfaf"
+    },
+    {
+      "path": "docs/review-2026-10-12/links-round8.md",
+      "sha256": "a1364539fc211b930e122d7ed064503ea352c6d9c4351ddbc46e81729a51d55d"
+    },
+    {
+      "path": "docs/review-2026-10-12/menu-quality-preflight-round23.md",
+      "sha256": "9090e8a6414a6aad7df06ee2decff1d97247ab66c9752d89a1f32fdc0ce51826"
+    },
+    {
+      "path": "docs/review-2026-10-12/menu-recents-preflight-round23.md",
+      "sha256": "533e92893e56d68b3a94eda9460ab0d624969e08351c6cfc54b118cf33e49df2"
+    },
+    {
+      "path": "docs/review-2026-10-12/menu-recents-quality-round23.md",
+      "sha256": "f71416129225c187708bdc003172a8651892baf2d4f4bb05ad9460d9dc51ee83"
+    },
+    {
+      "path": "docs/review-2026-10-12/menu-recents-round23.md",
+      "sha256": "c55475ba78ec9804689d44e97f5930707517c7a03661fc7e445e14667f195b6b"
+    },
+    {
+      "path": "docs/review-2026-10-12/menu-routing-round23.md",
+      "sha256": "f493ff08565819c2a3c95a99754f6739c932730ccb0de6628bb301028d035edc"
+    },
+    {
+      "path": "docs/review-2026-10-12/model-native-quality-round20.md",
+      "sha256": "6bfb9ede9391ce3f060f08d3983bb58f8eef1ef839b068bc6e8f2e7c108b5da2"
+    },
+    {
+      "path": "docs/review-2026-10-12/model-native-round20.md",
+      "sha256": "eaf2f941ec5ae7b3299dce55afd082779d21566571a53032edcc9c3642f71815"
+    },
+    {
+      "path": "docs/review-2026-10-12/model-switch-quality-round18.md",
+      "sha256": "4de6c3ecdf5442672cfe69503046ddf20192894741a97007265e77a4bafd8f08"
+    },
+    {
+      "path": "docs/review-2026-10-12/model-switch-round18.md",
+      "sha256": "e70836526062a86067744225ab94f99f16aba9f25b62aaf8d2d5371559d968f5"
+    },
+    {
+      "path": "docs/review-2026-10-12/modern-desktop-image-quality-round25.md",
+      "sha256": "36d4892b31b9342551911b38aa236d77d058db58547f8b54e6a8394e512b918d"
+    },
+    {
+      "path": "docs/review-2026-10-12/modern-desktop-image-quality-round25.sources.json",
+      "sha256": "f63f522d8f4479d2c4c769d6da4a651d6dfbce6d9dff302dd285477cbab13489"
+    },
+    {
+      "path": "docs/review-2026-10-12/modern-desktop-image-round25.md",
+      "sha256": "d11e6de36e65130b75c6d6b83e915336bd02da4f4ef51592bf5200277274fbb1"
+    },
+    {
+      "path": "docs/review-2026-10-12/multiwindow-round13.md",
+      "sha256": "7e201005ad70b003026478912746736a5c7aadba8f76751f86890971ce291244"
+    },
+    {
+      "path": "docs/review-2026-10-12/notification-quality-round14.md",
+      "sha256": "6fccdc4940862197c5719272a4b6ff358997624d1124db6822747a6022706b82"
+    },
+    {
+      "path": "docs/review-2026-10-12/notification-round14.md",
+      "sha256": "678802c7c7845c7c4f83afbcb4a335736ce0c53ca15b0af332027db43cdb0bdd"
+    },
+    {
+      "path": "docs/review-2026-10-12/panels-round6.md",
+      "sha256": "c2edc10152417249f841168110b9aad9cf7cf42f25ada6263d2f5e7c3b7a997f"
+    },
+    {
+      "path": "docs/review-2026-10-12/plugin-quality-round9.md",
+      "sha256": "d95a7591feb90602afbd339fc10c896e4fb7e119c545c625cf64e7e804e4598b"
+    },
+    {
+      "path": "docs/review-2026-10-12/plugins-round7.md",
+      "sha256": "2d94322748f32d12ed7c55c48224000db209ec62a9fe90c927d85c9bb56d8970"
+    },
+    {
+      "path": "docs/review-2026-10-12/priority-and-coverage.md",
+      "sha256": "0fa0277c60411059304f253bf3af120db858e4230fb358acec628178d3117a1e"
+    },
+    {
+      "path": "docs/review-2026-10-12/priority-quality-round20.md",
+      "sha256": "1d9989e420bef47437f614d12252c2127fa97818b3fa4214a309f103d09ff1e2"
+    },
+    {
+      "path": "docs/review-2026-10-12/progress.md",
+      "sha256": "6454bc34d825cf3535654665b98d7062c4e05e31166aa6ac7cbfa47c3f06ed03"
+    },
+    {
+      "path": "docs/review-2026-10-12/project-recovery-quality-round16.md",
+      "sha256": "b3673530d4ff3dfa7a09f2dada7af7dad3f2bf256b9f8c64ae0e93b44a1020f8"
+    },
+    {
+      "path": "docs/review-2026-10-12/project-recovery-round16.md",
+      "sha256": "1f32eed0705ce29ddbf804653927f496903d2f48761fe5bbad47655d020754bb"
+    },
+    {
+      "path": "docs/review-2026-10-12/quality-audit.md",
+      "sha256": "c2a286f5026778105341baa47927449137e5149fcc86c31d21f037abf8c639ea"
+    },
+    {
+      "path": "docs/review-2026-10-12/quality-round13.md",
+      "sha256": "ff3b9fff437939220add9cbeb2de54fa4408423c8e59908f676249ebcdaf87ab"
+    },
+    {
+      "path": "docs/review-2026-10-12/quality-round14.md",
+      "sha256": "7757158ff7ff848293dbcda6f430548149df9436d32525e3690db968251e7368"
+    },
+    {
+      "path": "docs/review-2026-10-12/quality-round15.md",
+      "sha256": "006e31f48c1d43819e2adfc0db685e5dbc9bd1315187ea9922619b6173a817db"
+    },
+    {
+      "path": "docs/review-2026-10-12/quality-round16.md",
+      "sha256": "fd4fb2e2530d7abc2852d1dfa89fd665a21a48e8e045602191db491089fd4e03"
+    },
+    {
+      "path": "docs/review-2026-10-12/quality-round17.md",
+      "sha256": "18845726d62d07f974d6e5a9a2446205d63cd1b841690cbe0b3ff8fc3a4c172e"
+    },
+    {
+      "path": "docs/review-2026-10-12/quality-round18.md",
+      "sha256": "bdbfb8256dc0213c632f9f8e9b47052a8f86b11639542853a350a5a39ef90963"
+    },
+    {
+      "path": "docs/review-2026-10-12/quality-round19.md",
+      "sha256": "178d8ec7637db0dc54003ba96a1f4e4ab85bec92b747a78f4ee8f3f556c99661"
+    },
+    {
+      "path": "docs/review-2026-10-12/quality-round20.md",
+      "sha256": "c498506965ba3fdbbf9b1fa0fbb89155809f5c505492c87d8ce71d81801d55c3"
+    },
+    {
+      "path": "docs/review-2026-10-12/quality-round21.md",
+      "sha256": "ddf5623049b1dbadcad3da0ecb98b8016357e5a5f2153e982ec537f373691bc1"
+    },
+    {
+      "path": "docs/review-2026-10-12/quality-round22.md",
+      "sha256": "05c849c718ff57c4b838b536cf3b9ee52219ac49b1ff7ae7d28db506424a42a6"
+    },
+    {
+      "path": "docs/review-2026-10-12/quality-round23.md",
+      "sha256": "2fae5540e009a535ccdf5ae75ef4700b4f9b20111fea1f3d953bc1601d3aca19"
+    },
+    {
+      "path": "docs/review-2026-10-12/quality-round24.md",
+      "sha256": "8be9e1623e6870055505ad5c7c1f23e3d07a11c60408d058833967402cc5e1ff"
+    },
+    {
+      "path": "docs/review-2026-10-12/quality-round25.md",
+      "sha256": "62c91f923fdabd5c2df7452db13fca944c02c52d0bfa53e9a0b190693bc42b98"
+    },
+    {
+      "path": "docs/review-2026-10-12/quality-round27.md",
+      "sha256": "041c852033471f583a6ceb7de9fc0749d228bb0102dd680d75407101c149d21d"
+    },
+    {
+      "path": "docs/review-2026-10-12/quality-round28.md",
+      "sha256": "a70053171ff2f44290830a16f2261b729a21990c93aee6f124b370123027774d"
+    },
+    {
+      "path": "docs/review-2026-10-12/quality-round29.md",
+      "sha256": "752e47a24b17798a902b89e596cbee44ce3811dc10af43a9a33f442fbf0845c2"
+    },
+    {
+      "path": "docs/review-2026-10-12/quality-round5.md",
+      "sha256": "bc5defe7fc1355527e11f0d96ba3ed267bb772bc5a8190ae19877bf8cf566d32"
+    },
+    {
+      "path": "docs/review-2026-10-12/quality-round6.md",
+      "sha256": "601a974c41e18a3aa5292547ef54948d360599c252b65573e990c8815582c278"
+    },
+    {
+      "path": "docs/review-2026-10-12/quickchat-round8.md",
+      "sha256": "82529356a7906739a2065f64f679d2290fadcdf36bc2d1998d65e812860285fe"
+    },
+    {
+      "path": "docs/review-2026-10-12/r29-priority-round20.md",
+      "sha256": "fccee7e527bfb3d8edd5b5b118c078a7813eba76da184f1382b8f6dac61daf40"
+    },
+    {
+      "path": "docs/review-2026-10-12/remote-settings-quality-round15.md",
+      "sha256": "1504edcf5ef1b98c4e71002cde575d0e3f9028ee05bc054e9cfa0eb2ab2860c5"
+    },
+    {
+      "path": "docs/review-2026-10-12/remote-settings-round15.md",
+      "sha256": "c0a135e71f7606b3fb54b6b3124c6375613838d45a27ba935906797908b714bd"
+    },
+    {
+      "path": "docs/review-2026-10-12/repair-handoff.md",
+      "sha256": "a7779ff8c02810b429e6d4aaf3ad37b5764842f5cf9339cb914c3d0775e5dc22"
+    },
+    {
+      "path": "docs/review-2026-10-12/report-inventory-postreview.md",
+      "sha256": "d568390fef9c7a2e84652ed47b8fa14365b788200c4416ee049177c930aeee1c"
+    },
+    {
+      "path": "docs/review-2026-10-12/resource-quality-round8.md",
+      "sha256": "144f503bca6049c11ef1eca2faa108998d2d0ef5a4eafaaca3ea0946e9913975"
+    },
+    {
+      "path": "docs/review-2026-10-12/runtime-round3.md",
+      "sha256": "d3873d2f368812e049bda27862bca1b6a7a026a2c6d451e2b12765888a5230d7"
+    },
+    {
+      "path": "docs/review-2026-10-12/search-quality-round12.md",
+      "sha256": "9ce018cfa43d39516d6d9962afcd32b6bf162cd99d907c3280f8b688d242dc14"
+    },
+    {
+      "path": "docs/review-2026-10-12/search-routing-round11.md",
+      "sha256": "20d0d67f8e47b7706dca55f9bf2e51de5793b757fee31b3ee578e63d140dbc0c"
+    },
+    {
+      "path": "docs/review-2026-10-12/server-preflight-round23.md",
+      "sha256": "80ee715fa408a2ed8fcb9a1490301b933d40db9386988e9cc5d6e9dc7dcd2112"
+    },
+    {
+      "path": "docs/review-2026-10-12/server-round1.md",
+      "sha256": "dc6a7308826b0a483310966e17b04ec7ca6cb56a37ebad9edbc7cfe2d42ff5e8"
+    },
+    {
+      "path": "docs/review-2026-10-12/server-routing-quality-round17.md",
+      "sha256": "5773d0834f94b56230913b0dc5599664ad95375e0a906326321fe55aa31e57cf"
+    },
+    {
+      "path": "docs/review-2026-10-12/server-routing-round17.md",
+      "sha256": "72976cb51679714421d8e411c6920189ac6c662bfbac63f0e3d86a7d5463bfd6"
+    },
+    {
+      "path": "docs/review-2026-10-12/session-actions-quality-round13.md",
+      "sha256": "5541c2ee2706164324739296a5b22089acee63d0aba61b50ac60667db38ba166"
+    },
+    {
+      "path": "docs/review-2026-10-12/session-actions-round13.md",
+      "sha256": "e93516afdcc2eef11850eaa1d2e7a2859b0524af030d3a8e07317176cb3b4e37"
+    },
+    {
+      "path": "docs/review-2026-10-12/session-close-round10.md",
+      "sha256": "979781b84893ec9989bc02ae4a1b84896268e50b29236ed9220f83f062d014c6"
+    },
+    {
+      "path": "docs/review-2026-10-12/session-continuation-round26.md",
+      "sha256": "0a62a74ebef8c320ab8ed6697d533a464f3faac7519b33bfc984b66d63f8e44b"
+    },
+    {
+      "path": "docs/review-2026-10-12/session-operations-quality-round17.md",
+      "sha256": "0010d542f2ab2210dfeb4a6733bef909eb8d2931970173929674be65ea56f39b"
+    },
+    {
+      "path": "docs/review-2026-10-12/session-operations-round17.md",
+      "sha256": "f70e6e23b7fb293b7510edc8af69470a4d01cdeb1f43b1b1453e4b684f9c9fd9"
+    },
+    {
+      "path": "docs/review-2026-10-12/settings-recovery-quality-round16.md",
+      "sha256": "4c2d905de81c6637dbbc5fb7dfc588490c16b57fe4ceca4bcd2abdab4562ca80"
+    },
+    {
+      "path": "docs/review-2026-10-12/settings-recovery-round16.md",
+      "sha256": "b5f501f9b6a20e6067db547d8a504ff27ba4b8d0ebdbd8b0971fd0e613d77bf8"
+    },
+    {
+      "path": "docs/review-2026-10-12/sidebar-account-local-round22.md",
+      "sha256": "bbadd7c470fff08c13d5c7c5e538419dbe3c7f15aa2bf39a492c9aedad29d483"
+    },
+    {
+      "path": "docs/review-2026-10-12/sidebar-title-observation-round27.md",
+      "sha256": "a8066e62f720eb5f74ec3a776fdb98652ad2fb686302efb259b059a76315bb74"
+    },
+    {
+      "path": "docs/review-2026-10-12/terminal-lifecycle-round14.md",
+      "sha256": "9d1cc570aa45198dff160f02313f8a33b933b789a448424ea36b2ccb18130697"
+    },
+    {
+      "path": "docs/review-2026-10-12/terminal-review-quality-round13.md",
+      "sha256": "1cbd5595335bd61f74f844924f57abb75bea03f6cc6e22e868f8f7c59e98a34d"
+    },
+    {
+      "path": "docs/review-2026-10-12/terminal-review-round13.md",
+      "sha256": "66a12b0debbd243648ef214fa4b7b09204d87cc7111951bc00f0d91a35d5e33e"
+    },
+    {
+      "path": "docs/review-2026-10-12/transfer-round12.md",
+      "sha256": "0c16bb785db7e51ad820fab3094df950df8bce0040dba3b747ea7744d009ced1"
+    },
+    {
+      "path": "docs/review-2026-10-12/updater-candidate-audit.md",
+      "sha256": "bd941db5e6caed66a4e4839d82c126367351d886fb8886a4f977a0491f4830a1"
+    },
+    {
+      "path": "docs/review-2026-10-12/voice-round6.md",
+      "sha256": "94b7b9092aecaca35e1b8abf327bd9036fb2414a9b0a542eccc4a0b34fba95db"
+    },
+    {
+      "path": "docs/review-2026-10-12/web-lifecycle-round13.md",
+      "sha256": "8ddec54fe8563e0fd2b8583247821e7cca81f250e70c2b4d5f53ae317ee22b57"
+    },
+    {
+      "path": "docs/review-2026-10-12/web-quality-round10.md",
+      "sha256": "25fd8f7f3c444f587f674a9ffb8a7cb8816725d1d85a7f35c1bfee6bd94d3ef0"
+    },
+    {
+      "path": "docs/review-2026-10-12/web-round1.md",
+      "sha256": "062fe7be52825010fefd6ea12a3e1167c6c5d2d50d14aa06932dc1f980b4107a"
+    },
+    {
+      "path": "docs/review-2026-10-12/web-round2.md",
+      "sha256": "8b65c7d1e74d77bfbf4a6f5602917344b5aa12c2b805dc66ae95a201ace428de"
+    },
+    {
+      "path": "docs/review-2026-10-12/web-round3.md",
+      "sha256": "c96980d8023f4d2556fead8c049a16903d9ebffccf8d496e46d0b6b9f72eaec0"
+    },
+    {
+      "path": "docs/review-2026-10-12/web-round5.md",
+      "sha256": "c579cd8a99ca7a8f78c650eaa7e02d36a5d97861b5bb66d084148aa114dafd63"
+    },
+    {
+      "path": "docs/review-2026-10-12/workspace-quality-round11.md",
+      "sha256": "910177703a4d36a30222682689bc6314650ce917b2c96fee2ff7b1156a732230"
+    },
+    {
+      "path": "docs/review-remaining-2026-10-12/README.md",
+      "sha256": "df013f372ff5d1b5e9fb8af6f809e2a89955b0906a012c808c75c4d5fd3f2feb"
+    },
+    {
+      "path": "docs/review-remaining-2026-10-12/coding-tui-chat.md",
+      "sha256": "956ae03625e6511b9871ebd754c4320dfbbb0ccdfcbe07605df32678ee3a0844"
+    },
+    {
+      "path": "docs/review-remaining-2026-10-12/core-lifecycle.md",
+      "sha256": "c75cb5a43357e34fca599dfec4e989e55bb06f67bbf3c9b1abe58e71976a8390"
+    },
+    {
+      "path": "docs/review-remaining-2026-10-12/core.md",
+      "sha256": "695848e99ff5a90b1005fbb0d816429b56962fa1bce490bfd5b00e1b288d06e2"
+    },
+    {
+      "path": "docs/review-remaining-2026-10-12/coverage.md",
+      "sha256": "b1266e7ab84e05f43b2979828977f6e7fbb9f37dd50a7f0c4698e5db27cd5539"
+    },
+    {
+      "path": "docs/review-remaining-2026-10-12/design.md",
+      "sha256": "a0bb4171a363689cfd0f766fb846e05036feef61cb7ba02332d8137acfc6d191"
+    },
+    {
+      "path": "docs/review-remaining-2026-10-12/evidence-audit.md",
+      "sha256": "9c59613a1a3feff6c90334ddd7c581c8d201f32568cacb017651468a3ac9a709"
+    },
+    {
+      "path": "docs/review-remaining-2026-10-12/findings.json",
+      "sha256": "b72da00f7b2f0a1e6fe1024dfc941c821fb649a5527e8f7c15d23f5fa5e6c7cc"
+    },
+    {
+      "path": "docs/review-remaining-2026-10-12/hosts.md",
+      "sha256": "884a2deee6eddfe00a2a4f147e1d964351ab6017928c81e33e303315132870a8"
+    },
+    {
+      "path": "docs/review-remaining-2026-10-12/quant-job.md",
+      "sha256": "4e9dcfbcc8d3dba4b9950f53c63770c17d8c00106ea53c05708632285488f578"
+    },
+    {
+      "path": "docs/review-remaining-2026-10-12/review-state.json",
+      "sha256": "279a41734e00ffa8cfe05d3838e286db6422e0c21d5cc812e766b33989ab8b6b"
+    },
+    {
+      "path": "docs/review-remaining-2026-10-12/root-and-video-download.md",
+      "sha256": "d8372fa803ca452192b7afcb6946b7e56a6c743d8bbece691ec10de23b171e65"
+    },
+    {
+      "path": "docs/review-remaining-2026-10-12/video-studio.md",
+      "sha256": "3b15e1001da0a7e99d35cf726aa56815ab41b281b796f737ce66db8eb8897fe8"
+    }
+  ],
+  "selected_json_records": [
+    {
+      "file": "docs/archive/review-2026-05-30/backlog.json",
+      "records": [
+        {
+          "file": "packages/core/src/lsp/client.ts",
+          "line": "109",
+          "severity": "medium",
+          "title": "Unsafe non-null assertion after prior null check",
+          "detail": "Line 88 checks `if (!this.process?.stdin)`, but line 109 uses `this.process!.stdin!.write()` with force non-null assertions. Between lines 88 and 109, the process could theoretically exit and be cleared (though the timer is set up first). More critically, the check on line 88 guards only the immediate path; if an exception occurs between 88-109 (e.g., during Promise construction), the assertions are unsafe. Better to assign to a local variable after the check."
+        },
+        {
+          "file": "packages/core/src/lsp/manager.ts",
+          "line": "71",
+          "severity": "medium",
+          "title": "Incorrect path handling with simple string replace",
+          "detail": "The line `this.rootUri.replace('file://', '')` only removes the first occurrence of 'file://' and doesn't properly convert a file URL to a platform-specific path. On Windows, 'file:///C:/Users/...' becomes '/C:/Users/...' which is invalid. The correct approach is to use `fileURLToPath()` from 'node:url' which is already imported."
+        },
+        {
+          "file": "packages/core/src/lsp/manager.ts",
+          "line": "126",
+          "severity": "medium",
+          "title": "Command injection via unescaped shell interpolation",
+          "detail": "The execSync call interpolates the `command` variable directly into a shell command string: `execSync(`which ${command} 2>/dev/null || where ${command} 2>nul`, ...)`. While the current usage is from hardcoded BUILTIN_LSP_SERVERS array (low practical risk), this pattern is inherently unsafe and violates secure coding practices. A command with special characters (e.g., '`', '$', ';') could execute arbitrary shell code."
+        },
+        {
+          "file": "packages/core/src/tool-system/builtin/lsp.ts",
+          "line": "103",
+          "severity": "medium",
+          "title": "Hardcoded 2-second timeout for LSP diagnostics is a race condition",
+          "detail": "The getDiagnostics action waits exactly 2 seconds with `await new Promise((r) => setTimeout(r, 2000))` for diagnostic results after sending didOpen notification. This is an arbitrary timeout that may be too short for some language servers or too long for others, causing intermittent failures or unnecessary delays. Diagnostics are typically delivered via LSP notifications, not request-response."
+        }
+      ]
+    },
+    {
+      "file": "docs/archive/review-2026-05-30/backlog_confirmed.json",
+      "records": [
+        {
+          "file": "packages/core/src/lsp/manager.ts",
+          "line": "71",
+          "severity": "high",
+          "title": "Incorrect path handling with simple string replace",
+          "detail": "The line `this.rootUri.replace('file://', '')` only removes the first occurrence of 'file://' and doesn't properly convert a file URL to a platform-specific path. On Windows, 'file:///C:/Users/...' becomes '/C:/Users/...' which is invalid. The correct approach is to use `fileURLToPath()` from 'node:url' which is already imported."
+        },
+        {
+          "file": "packages/core/src/tool-system/builtin/lsp.ts",
+          "line": "103",
+          "severity": "medium",
+          "title": "Hardcoded 2-second timeout for LSP diagnostics is a race condition",
+          "detail": "The getDiagnostics action waits exactly 2 seconds with `await new Promise((r) => setTimeout(r, 2000))` for diagnostic results after sending didOpen notification. This is an arbitrary timeout that may be too short for some language servers or too long for others, causing intermittent failures or unnecessary delays. Diagnostics are typically delivered via LSP notifications, not request-response."
+        }
+      ]
+    },
+    {
+      "file": "docs/archive/review-2026-05-30/backlog_ided.json",
+      "records": [
+        {
+          "_id": 28,
+          "file": "packages/core/src/lsp/client.ts",
+          "line": "109",
+          "severity": "medium",
+          "title": "Unsafe non-null assertion after prior null check",
+          "detail": "Line 88 checks `if (!this.process?.stdin)`, but line 109 uses `this.process!.stdin!.write()` with force non-null assertions. Between lines 88 and 109, the process could theoretically exit and be cleared (though the timer is set up first). More critically, the check on line 88 guards only the immediate path; if an exception occurs between 88-109 (e.g., during Promise construction), the assertions are unsafe. Better to assign to a local variable after the check."
+        },
+        {
+          "_id": 29,
+          "file": "packages/core/src/lsp/manager.ts",
+          "line": "71",
+          "severity": "medium",
+          "title": "Incorrect path handling with simple string replace",
+          "detail": "The line `this.rootUri.replace('file://', '')` only removes the first occurrence of 'file://' and doesn't properly convert a file URL to a platform-specific path. On Windows, 'file:///C:/Users/...' becomes '/C:/Users/...' which is invalid. The correct approach is to use `fileURLToPath()` from 'node:url' which is already imported."
+        },
+        {
+          "_id": 30,
+          "file": "packages/core/src/lsp/manager.ts",
+          "line": "126",
+          "severity": "medium",
+          "title": "Command injection via unescaped shell interpolation",
+          "detail": "The execSync call interpolates the `command` variable directly into a shell command string: `execSync(`which ${command} 2>/dev/null || where ${command} 2>nul`, ...)`. While the current usage is from hardcoded BUILTIN_LSP_SERVERS array (low practical risk), this pattern is inherently unsafe and violates secure coding practices. A command with special characters (e.g., '`', '$', ';') could execute arbitrary shell code."
+        },
+        {
+          "_id": 62,
+          "file": "packages/core/src/tool-system/builtin/lsp.ts",
+          "line": "103",
+          "severity": "medium",
+          "title": "Hardcoded 2-second timeout for LSP diagnostics is a race condition",
+          "detail": "The getDiagnostics action waits exactly 2 seconds with `await new Promise((r) => setTimeout(r, 2000))` for diagnostic results after sending didOpen notification. This is an arbitrary timeout that may be too short for some language servers or too long for others, causing intermittent failures or unnecessary delays. Diagnostics are typically delivered via LSP notifications, not request-response."
+        }
+      ]
+    },
+    {
+      "file": "docs/archive/review-2026-05-30/confirmed.json",
+      "records": [
+        {
+          "file": "packages/core/src/lsp/manager.ts",
+          "line": "44-47",
+          "severity": "medium",
+          "title": "Race condition: polling for server readiness without guarantee",
+          "detail": "In getClient(), when state is 'starting', the code waits exactly 2 seconds with `await new Promise((r) => setTimeout(r, 2000))` then returns managed.client. However, if initialization takes longer than 2 seconds, the client may still be initializing or not yet set. Additionally, if called concurrently twice, both threads may enter the 'starting' state branch and both sleep, returning potentially uninitialized clients. There's no proper synchronization mechanism or state polling that checks if the client actually reached 'ready' state."
+        }
+      ]
+    },
+    {
+      "file": "docs/archive/review-2026-05-30/findings.json",
+      "records": [
+        {
+          "file": "packages/core/src/lsp/manager.ts",
+          "line": "44-47",
+          "severity": "high",
+          "title": "Race condition: polling for server readiness without guarantee",
+          "detail": "In getClient(), when state is 'starting', the code waits exactly 2 seconds with `await new Promise((r) => setTimeout(r, 2000))` then returns managed.client. However, if initialization takes longer than 2 seconds, the client may still be initializing or not yet set. Additionally, if called concurrently twice, both threads may enter the 'starting' state branch and both sleep, returning potentially uninitialized clients. There's no proper synchronization mechanism or state polling that checks if the client actually reached 'ready' state."
+        },
+        {
+          "file": "packages/core/src/lsp/manager.ts",
+          "line": "71",
+          "severity": "medium",
+          "title": "Incorrect path handling with simple string replace",
+          "detail": "The line `this.rootUri.replace('file://', '')` only removes the first occurrence of 'file://' and doesn't properly convert a file URL to a platform-specific path. On Windows, 'file:///C:/Users/...' becomes '/C:/Users/...' which is invalid. The correct approach is to use `fileURLToPath()` from 'node:url' which is already imported."
+        },
+        {
+          "file": "packages/core/src/lsp/manager.ts",
+          "line": "126",
+          "severity": "medium",
+          "title": "Command injection via unescaped shell interpolation",
+          "detail": "The execSync call interpolates the `command` variable directly into a shell command string: `execSync(`which ${command} 2>/dev/null || where ${command} 2>nul`, ...)`. While the current usage is from hardcoded BUILTIN_LSP_SERVERS array (low practical risk), this pattern is inherently unsafe and violates secure coding practices. A command with special characters (e.g., '`', '$', ';') could execute arbitrary shell code."
+        },
+        {
+          "file": "packages/core/src/lsp/client.ts",
+          "line": "109",
+          "severity": "medium",
+          "title": "Unsafe non-null assertion after prior null check",
+          "detail": "Line 88 checks `if (!this.process?.stdin)`, but line 109 uses `this.process!.stdin!.write()` with force non-null assertions. Between lines 88 and 109, the process could theoretically exit and be cleared (though the timer is set up first). More critically, the check on line 88 guards only the immediate path; if an exception occurs between 88-109 (e.g., during Promise construction), the assertions are unsafe. Better to assign to a local variable after the check."
+        },
+        {
+          "file": "packages/core/src/lsp/client.ts",
+          "line": "96-100",
+          "severity": "low",
+          "title": "Potential double rejection in timeout handler",
+          "detail": "The timeout handler (lines 96-100) checks if the ID is still in `pending` before rejecting. However, if the exit event fires (line 55-58) at nearly the same time, `rejectAll()` may reject the same pending request. While `rejectAll()` iterates over the map and this clears it, the explicit timeout rejection happens first — so the same request could see two rejections. This is a race condition that manifests when process exits immediately after timeout fires."
+        },
+        {
+          "file": "packages/core/src/tool-system/builtin/lsp.ts",
+          "line": "103",
+          "severity": "medium",
+          "title": "Hardcoded 2-second timeout for LSP diagnostics is a race condition",
+          "detail": "The getDiagnostics action waits exactly 2 seconds with `await new Promise((r) => setTimeout(r, 2000))` for diagnostic results after sending didOpen notification. This is an arbitrary timeout that may be too short for some language servers or too long for others, causing intermittent failures or unnecessary delays. Diagnostics are typically delivered via LSP notifications, not request-response."
+        }
+      ]
+    },
+    {
+      "file": "docs/review-remaining-2026-10-12/findings.json",
+      "records": [
+        {
+          "id": "N15",
+          "file": "/Users/admin/.codex/worktrees/remaining-modules-review-20261012/codeshell/packages/coding/src/lsp/client.ts",
+          "line": 48,
+          "title": "LSP启动失败可使Host退出或遗留子进程"
+        },
+        {
+          "id": "N16",
+          "file": "/Users/admin/.codex/worktrees/remaining-modules-review-20261012/codeshell/packages/coding/src/lsp/manager.ts",
+          "line": 42,
+          "title": "LSP缓存死客户端且并发启动误报不可用"
+        }
+      ]
+    }
+  ],
+  "selected_markdown_hits": [
+    {
+      "file": "docs/archive/review-2026-05-30/round2_section.md",
+      "hits": [
+        {
+          "line": 7,
+          "text": "| ⬜ | 🔴 高 | 正确性 | `core/lsp/manager.ts:71` | Incorrect path handling with simple string replace | Replace with `fileURLToPath(this.rootUri)` |"
+        },
+        {
+          "line": 20,
+          "text": "| ⬜ | 🟡 中 | 正确性 | `core/tool-system/builtin/lsp.ts:103` | Hardcoded 2-second timeout for LSP diagnostics is a race condition | Either: (1) Subscribe to LSP diagnostic notifications and collect results until no new one… |"
+        },
+        {
+          "line": 46,
+          "text": "- **[🔴 高 正确性] core/lsp/manager.ts:71 — Incorrect path handling with simple string replace**"
+        },
+        {
+          "line": 47,
+          "text": "  - The line `this.rootUri.replace('file://', '')` only removes the first occurrence of 'file://' and doesn't properly convert a file URL to a platform-specific path. On Windows, 'file:///C:/Users/...' becomes '/C:/Users/...' which is invalid. The correct approach is to use `fileURLToPath()` from 'node:url' which is already imported."
+        },
+        {
+          "line": 48,
+          "text": "  - **修复**:Replace with `fileURLToPath(this.rootUri)`"
+        },
+        {
+          "line": 49,
+          "text": "  - _验证_:Line 71 uses `this.rootUri.replace(\"file://\", \"\")` to convert a file URI to a file path for passing to `spawn()` as the `cwd` option. However, this approach is platform-unsafe: on Windows, a file URI like `file:///C:/Users/test` becomes `/C:/Users/test` (invalid path), whereas th"
+        }
+      ]
+    },
+    {
+      "file": "docs/archive/review-2026-07-09/06-turn-loop-state-machine.md",
+      "hits": [
+        {
+          "line": 73,
+          "text": "| S9 | tool_use 物化 | 模型返回工具调用。 | 截断到 `maxToolCallsPerTurn`，构造 assistant tool_use blocks，补发未流式发过的 `tool_use_start`，写 transcript。 | `packages/core/src/engine/turn-loop.ts:980`、`packages/core/src/engine/turn-loop.ts:985`、`packages/core/src/engine/turn-loop.ts:993`、`packages/core/src/engine/turn-loop.ts:998`、`packages/core/src/engine/turn-loop.ts:1005`、`packages/core/src/engine/turn-loop.ts:1010`、`packages/core/src/engine/turn-loop.ts:1012` |"
+        }
+      ]
+    },
+    {
+      "file": "docs/archive/review-2026-07-09/10-tool-system-execution-and-permission-contract.md",
+      "hits": [
+        {
+          "line": 38,
+          "text": "| 1 | TurnLoop 物化工具调用 | 截断到 `maxToolCallsPerTurn`，构造 assistant `tool_use` block，补发未流式出现的 `tool_use_start`，写 transcript。 | 进入 `StreamingToolQueue`。 | 超出 cap 的调用不执行，后续给模型追加 reminder。 | `packages/core/src/engine/turn-loop.ts:985`、`packages/core/src/engine/turn-loop.ts:998`、`packages/core/src/engine/turn-loop.ts:1006`、`packages/core/src/engine/turn-loop.ts:1010` |"
+        }
+      ]
+    },
+    {
+      "file": "docs/audit-2026-10-16/coverage.md",
+      "hits": [
+        {
+          "line": 12,
+          "text": "| Coding | ApplyPatch 计划/提交/rollback、Git/worktree、Notebook、DriveAgent 接线、LSP、外部 runtime/history/discovery | patch/Git 7 个新测试；Coding Git/patch + Arena/Optimization Lab 253 项 baseline；runtime shared 的 TUI 合并 baseline | 真实 Codex/Claude/LSP、所有 DriveAgent 并发/退出边界；Notebook 旧问题本轮只读未重跑 |"
+        }
+      ]
+    },
+    {
+      "file": "docs/audit-2026-10-17/coverage.md",
+      "hits": [
+        {
+          "line": 10,
+          "text": "| Coding | Claude/Codex discovery/history、changed-files、DriveAgent 接线、apply_patch 语法 | 外部真实 CLI、takeover、实际 patch 执行、其他 Git/LSP/worktree 能力全量 |"
+        }
+      ]
+    },
+    {
+      "file": "docs/review-2026-10-12/link-recovery-round16.md",
+      "hits": [
+        {
+          "line": 25,
+          "text": "- 主页面 [App.tsx:2417](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/desktop/src/renderer/App.tsx:2417) 将当前项目 path 传给 CredentialsPage；[CredentialsPage.tsx:178](/Users/admin/.codex/worktrees/review-latest-20261012/codeshell/packages/desktop/src/renderer/credentials/CredentialsPage.tsx:178) 在 Link tab 挂 LinkTab，离开 tab/page 会卸载该子树。"
+        }
+      ]
+    },
+    {
+      "file": "docs/review-2026-10-12/model-native-quality-round20.md",
+      "hits": [
+        {
+          "line": 9,
+          "text": "主审最终Main62446，两初始renderer62451/62452独立且均使用defaultSession、相同精确file URL，真实location.origin为file://。A写后B的实际storage event带A值、真实localStorage可读A，但B普通JS旧图未更新；B整图写后实际存储只剩B，真实reload A读B-only。fallback只是复制lookup表达式，不是实际hook在Electron运行。第十八轮两个React roots/MemoryStorage的actual ModelPill与hook补另一层证据，不能把两层拼写成完整App E2E或真实provider错用。"
+        }
+      ]
+    },
+    {
+      "file": "docs/review-2026-10-12/model-native-round20.md",
+      "hits": [
+        {
+          "line": 35,
+          "text": "| 实际location.origin | `file://` | `file://` |"
+        },
+        {
+          "line": 38,
+          "text": "实际URL为 `file:///private/var/folders/1d/6__4f4y51g90nblfptt8s9v80000gn/T/codeshell-model-storage-round20-2HTCRf/owned-storage.html`，完整身份和路径保存在native-observations.json。本次Electron实际返回origin `file://`；不能用origin字符串相同推导所有file路径共享存储，本实验只验证同一精确file URL。"
+        }
+      ]
+    },
+    {
+      "file": "docs/review-2026-10-12/priority-and-coverage.md",
+      "hits": [
+        {
+          "line": 144,
+          "text": "| Coding | 真实 Git/worktree 回滚、释放，Review 首提交及外部 runtime 路由局部；[工作区](workspace-quality-round11.md)、[终端与 Review](terminal-review-round13.md) | LSP、coding 工具集、external agents/runtimes、quota 和完整真实 CLI 执行/恢复未全面覆盖。Web/桌面 CLI 房间审查不是整包 Coding 或终端 TUI 审查。 |"
+        },
+        {
+          "line": 165,
+          "text": "| 6 | Chat 渠道端到端、TUI 真实交互、Coding LSP/外部工具 | 当前主要缺渠道和独立终端的用户流程审查，不只是补同一 Host handler 的测试。 |"
+        }
+      ]
+    },
+    {
+      "file": "docs/review-remaining-2026-10-12/README.md",
+      "hits": [
+        {
+          "line": 27,
+          "text": "| N15 | P2 | **LSP启动失败可使Host退出或遗留子进程**。spawn error无监听导致Node退出；initialize失败的活child未纳入manager，shutdownAll无法清理。合并启动生命周期1项。 | [client.ts:48](/Users/admin/.codex/worktrees/remaining-modules-review-20261012/codeshell/packages/coding/src/lsp/client.ts:48) | [C4](coding-tui-chat.md) |"
+        },
+        {
+          "line": 28,
+          "text": "| N16 | P2 | **LSP缓存死客户端且并发启动误报不可用**。子进程自然退出仍isAlive；并发get固定等2秒，2.2秒合法初始化使第二次返回undefined。 | [manager.ts:42](/Users/admin/.codex/worktrees/remaining-modules-review-20261012/codeshell/packages/coding/src/lsp/manager.ts:42) | [C5](coding-tui-chat.md) |"
+        }
+      ]
+    },
+    {
+      "file": "docs/review-remaining-2026-10-12/coding-tui-chat.md",
+      "hits": [
+        {
+          "line": 13,
+          "text": "Ten grouped confirmed findings are recommended below. Four LSP observations are consolidated into two lifecycle findings; Slack and DingTalk share one ACK finding. Notebook source decoding and replacement data loss remain two findings because they have separate causes and fixes. Priority is a review recommendation."
+        },
+        {
+          "line": 27,
+          "text": "Final maintained-isolator native smoke: **9 normal/failure observations plus 1 cleanup observation, exit 0**: LSP happy shutdown; failed initialize; concurrent cold initialize; exited server reuse; spawn error host; Codex happy turn; Codex crashed turn; cooperative Claude close; stubborn Claude close. Cleanup reported **`livePids: []`**."
+        },
+        {
+          "line": 84,
+          "text": "### C4 [P2] Failed LSP starts do not have complete error and process ownership"
+        },
+        {
+          "line": 88,
+          "text": "- `/Users/admin/.codex/worktrees/remaining-modules-review-20261012/codeshell/packages/coding/src/lsp/client.ts:48`"
+        },
+        {
+          "line": 89,
+          "text": "- `/Users/admin/.codex/worktrees/remaining-modules-review-20261012/codeshell/packages/coding/src/lsp/manager.ts:72`"
+        },
+        {
+          "line": 90,
+          "text": "- `/Users/admin/.codex/worktrees/remaining-modules-review-20261012/codeshell/packages/coding/src/lsp/manager.ts:84`"
+        },
+        {
+          "line": 92,
+          "text": "Two observed launch-failure manifestations share incomplete startup lifecycle ownership. (a) ChildProcess emits `error` for a now-invalid cwd/missing interpreter after availability probing. LSPClient installs exit but no error handler; native Node raises an unhandled error and terminates the host. (b) A running language server rejects initialize; manager catches and returns undefined, but client is scoped inside try and assigned to managed.client only after successful initialize. The live failed child cannot be reached by shutdownAll; repeated attempts can accumulate children."
+        },
+        {
+          "line": 98,
+          "text": "### C5 [P2] LSP readiness state can return a dead client or false unavailable result"
+        },
+        {
+          "line": 102,
+          "text": "- `/Users/admin/.codex/worktrees/remaining-modules-review-20261012/codeshell/packages/coding/src/lsp/client.ts:58`"
+        },
+        {
+          "line": 103,
+          "text": "- `/Users/admin/.codex/worktrees/remaining-modules-review-20261012/codeshell/packages/coding/src/lsp/client.ts:154`"
+        },
+        {
+          "line": 104,
+          "text": "- `/Users/admin/.codex/worktrees/remaining-modules-review-20261012/codeshell/packages/coding/src/lsp/manager.ts:42`"
+        },
+        {
+          "line": 105,
+          "text": "- `/Users/admin/.codex/worktrees/remaining-modules-review-20261012/codeshell/packages/coding/src/lsp/manager.ts:46`"
+        },
+        {
+          "line": 107,
+          "text": "The manager's ready/starting decisions do not represent actual completion and liveness. After a server exits, process remains assigned and process.killed remains false (it means kill() was called, not process exited); manager keeps returning the same dead client. New LSP operations cannot recover by lazy restart. Concurrent cold calls instead wait a fixed2s and return managed.client regardless of initialize state; a valid server taking2.2s to initialize yields undefined to the second caller while the first succeeds. LSP tool reports server unavailable/install advice in this branch."
+        },
+        {
+          "line": 209,
+          "text": "**coding — source-directed and native/directed fixtures:** `src/lsp/{client,manager,servers,root-path}.ts`, `src/tools/lsp.ts`; `src/external-runtimes/codex/{runtime,app-server-client,model-discovery}.ts`; `src/external-runtimes/claude-code/runtime.ts`; `src/external-runtimes/{session-factory,index}.ts`; `src/external-runtimes/shared/{spawn-env,session-context-store}.ts`; `src/tools/{notebook-edit,brief,check-quota,drive-agent}.ts`; `src/quota/{index,credentials,types}.ts`; `src/cc-orchestrator/{agent-adapter,external-agent-driver,external-agent-bindings,external-agent-session-store,session-discovery,codex-session-discovery,cc-capability}.ts`; `src/external-agents/{config,types}.ts`; `src/capability-runtime.ts`; `src/index{,.capability,.git,.orchestration}.ts`; `src/tools/apply-patch/{index,applier}.ts`; `src/git/{parse-log,worktree/crud,worktree/git-exec}.ts`."
+        }
+      ]
+    },
+    {
+      "file": "docs/review-remaining-2026-10-12/coverage.md",
+      "hits": [
+        {
+          "line": 15,
+          "text": "| Coding LSP、external runtimes、quota/工具 | 实际 owned 协议子进程正常/退出/启动失败/忽略TERM、真实工具Notebook本地文件；quota/orchestrator/其余工具主链静态。见 [Coding/TUI/Chat](coding-tui-chat.md)。 | 真实 Codex/Claude/LSP安装、真实quota服务、OS进程组及完整coding工具矩阵。 |"
+        }
+      ]
+    },
+    {
+      "file": "docs/review-remaining-2026-10-12/evidence-audit.md",
+      "hits": [
+        {
+          "line": 26,
+          "text": "| CLI LSP C4/C5 | failed-start ownership/error 与ready/liveness两组可独立；同组多个现象不再拆。 |"
+        }
+      ]
+    }
+  ],
+  "conclusion": {
+    "new_residual_consumer": "URI replacement exists in tools/lsp.ts output formatter; historic May item is manager.ts spawn cwd, now fixed via rootUriToPath. Not counted as a new manager bug.",
+    "new_document_sync": "Repeated didOpen version 1/no didChange/no didClose not found in historical finding titles/details. Historic diagnostics item is uncaptured notifications/fixed 2-second wait, since replaced.",
+    "excluded": "Old startup/liveness findings, historical manager root path, unrelated N12, all security/native/network/real-server execution."
+  }
+}

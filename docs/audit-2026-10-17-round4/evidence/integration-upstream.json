@@ -1,0 +1,11 @@
+{
+  "auditBaseline": "4ee32f28f78b8315112cca77cfc22b2f2f80ced6",
+  "integrationBase": "51761b53399cc5daa1823d60b6cfdf52b1237ebe",
+  "originMain": "02d5d9a9ecbbb206d5f3d8a1d367e7081d937101",
+  "referencedFilesChangedByOtherTask": [
+    "packages/core/src/engine/engine.ts",
+    "packages/core/src/engine/turn-loop.ts"
+  ],
+  "directBugImplementationFilesUnchanged": true,
+  "dynamicReruns": 0
+}

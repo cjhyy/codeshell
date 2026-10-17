@@ -1,0 +1,449 @@
+{
+  "baseline": "4ee32f28f78b8315112cca77cfc22b2f2f80ced6",
+  "files": [
+    {
+      "path": "AGENTS.md",
+      "bytes": 206,
+      "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "CODESHELL.md",
+      "bytes": 17639,
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "bun.lock",
+      "bytes": 339166,
+      "sha256": "89653da5f19dce556850d5f8ba7de47e400274453ef303d9190ebf6bcb61ac2d",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "package.json",
+      "bytes": 7063,
+      "sha256": "1f1cc2c90ce4e6b8e6cce3f392cd94e6a497464568ceda7c00c7d0c009fbc3d9",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/coding/package.json",
+      "bytes": 1906,
+      "sha256": "bb917373af803be3a1679086cc73275d70009003e669e35171fb4a260b9f2060",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/coding/src/git/resolve-project-root.test.ts",
+      "bytes": 2989,
+      "sha256": "950317ad509233c6a7f317e9b25570df6998373bc0246117f30e933fd0601854",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/coding/src/git/utils.ts",
+      "bytes": 6524,
+      "sha256": "8e3531c2b340359e99e13b35242a88bb12eed51008e2c9ded67b149be7983192",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/coding/src/index.capability.ts",
+      "bytes": 10967,
+      "sha256": "2059d5f6913ef3e73b70a857a5dd9a84117fe723bb58e63e00a6eb0c03ff2f1f",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/coding/src/index.ts",
+      "bytes": 869,
+      "sha256": "633d33c1089f40e2219d0d9ea7a36be4e39fee049334941dad62e1249c477f72",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/coding/src/lsp/client.ts",
+      "bytes": 7365,
+      "sha256": "7884e6ab61bbc5c82dbf7872941d602a3a4d2170b634932dcdb83b4dbe5aa31e",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/coding/src/lsp/manager-lifecycle.test.ts",
+      "bytes": 5479,
+      "sha256": "149d77a060427e6aac3eba6250b45540220d4c480a5f0b74dc93bd85b92073b4",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/coding/src/lsp/manager.test.ts",
+      "bytes": 1066,
+      "sha256": "493fa1d39db49f4d57ac43ba022bdcd3c54f17d29fd53130cd1e702b877d0198",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/coding/src/lsp/manager.ts",
+      "bytes": 8880,
+      "sha256": "ff1a25879fd6a2ce725a9e82f501af543e2afa429ea99020be6513ef0c4e0b7d",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/coding/src/lsp/root-path.test.ts",
+      "bytes": 1432,
+      "sha256": "fcc79e191c841cf4466b17b97db2d7962a0424ca550f8b25c795fef2cf611991",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/coding/src/lsp/root-path.ts",
+      "bytes": 508,
+      "sha256": "11868a6f1b14f0b2a8b642ea741994784834ea9931cfd8b99910861aca415c3c",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/coding/src/lsp/servers.ts",
+      "bytes": 1744,
+      "sha256": "91f5c21df41ebc75bbbf19d21ed7f4d7971c82d850c485b9288b1c688d8ea18c",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/coding/src/prompt/coding.md",
+      "bytes": 5065,
+      "sha256": "00b2f4c4bf89ff2330968a6eb2718338755a4db16e51e9d3329575a0f5baf821",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/coding/src/tools/lsp.ts",
+      "bytes": 8752,
+      "sha256": "c2c3678fcd30d46761e151c716bb905944f3f44daa2312ab9636b5c657233eab",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/package.json",
+      "bytes": 3452,
+      "sha256": "9568730f854ae323815a47c0db7d788983fabf10071ccd5657ebc346c7bb358b",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/context/compaction.ts",
+      "bytes": 43905,
+      "sha256": "981daf03db583c466b7c190efdd9336167978e193690096cec8c9e9c8ec7d81e",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/context/image-history-window.ts",
+      "bytes": 3033,
+      "sha256": "d4465094dfaf9f339c616feed2b6e2dd084b557f9b29e5d9b1c7b04a463faa71",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/context/manager.ts",
+      "bytes": 34508,
+      "sha256": "6af0bc2a40a390351576ef3742a589a8093aa5c9f47da9248bfeca6ad0f1885c",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/context/notes.ts",
+      "bytes": 13654,
+      "sha256": "06f4e83e1c0a1f12b8676b3f5326220ab7d29cfc9461599b7957b21e8d9db2db",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/context/token-counter.ts",
+      "bytes": 3978,
+      "sha256": "f11e4c6175922b1396f2eb622d6e98a62cfc63801c2cd96750339879b5f01328",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/context/tool-output-budget.ts",
+      "bytes": 6990,
+      "sha256": "d1c25d1d8329d37b050fdb9f3fd01508da83c1804f37085a845d65dcdd2e4171",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/context/tool-result-storage.ts",
+      "bytes": 19859,
+      "sha256": "a5bcffa03853d7510775c7db0bef0beb4e89d2272cb0c9954ffcff3a8d3da1db",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/engine/disk-defaults.ts",
+      "bytes": 3608,
+      "sha256": "6e667f80e3e4baad433cacbe771586b387a0c2b72be5f070a29993de7d56caae",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/engine/engine.ts",
+      "bytes": 208703,
+      "sha256": "97f802afa7615eff8e0fc897b0a88cdbd7f62274e2b5a9fca10133602b104c1d",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": false
+    },
+    {
+      "path": "packages/core/src/engine/patch-orphaned-tools.ts",
+      "bytes": 4854,
+      "sha256": "131af860d6be7205d5246d2500f88b832fa9a4d5dcbca1888359c20754bfc025",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/engine/run-context.ts",
+      "bytes": 5588,
+      "sha256": "24b659c85988af12bab398e87510ab94185925e298d4845939a7b2e6f510d230",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/engine/token-budget.ts",
+      "bytes": 1722,
+      "sha256": "f014815be3c3d40a441b93cdc7c9e6f257d1c7ca394202f24f471fb89965d104",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/engine/turn-loop.ts",
+      "bytes": 108746,
+      "sha256": "730280399531e6e6893584800ce89604a1867d8e42a7fdda6259de67f51b5683",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": false
+    },
+    {
+      "path": "packages/core/src/llm/clamp-max-tokens.ts",
+      "bytes": 792,
+      "sha256": "a73f3452ed9a5910c25e7444a11e074d3df85c44bce1be3633fd1bf4342d88e6",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/llm/model-pool.ts",
+      "bytes": 13195,
+      "sha256": "a49da3b3018aaaf92e80e488a4e9d338eb9f2b0f107919f9d521156a6c4137d3",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/llm/provider-catalog.ts",
+      "bytes": 2314,
+      "sha256": "ec80becdb369165c233e38f60bd242aee86170232d8209b20dd9422a6499c642",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/llm/providers/anthropic.ts",
+      "bytes": 22737,
+      "sha256": "0816e99de6261b41892ac4ecf3fbde76c7f2f94c12490752e412d27fa02079f3",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/llm/providers/openai.ts",
+      "bytes": 64200,
+      "sha256": "e45ff0572580ec70bbdba4f2bc95aa32f07c741e1b275e4000fa8b0cf2d25c81",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/llm/token-counter.ts",
+      "bytes": 1698,
+      "sha256": "0f6af230c35dd9d4a5c4a800a54d10b62007ca1c7a741e1bbac225766612aad2",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/logging/logger.ts",
+      "bytes": 17090,
+      "sha256": "9b00534985c026de06feecc88783f796decb399fa5c00715166104318cb3a05d",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/logging/session-recorder.ts",
+      "bytes": 11026,
+      "sha256": "4499badae689adef8e06f4450a6822ea5a6800da74fbc6919e61b98eda7697e1",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/migrate-models.ts",
+      "bytes": 7594,
+      "sha256": "a1be4d0b12e9ee6265b53d358b9cb659c8c51889528de513c7de8d185cf5d4dc",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/prompt/composer.ts",
+      "bytes": 18842,
+      "sha256": "acc59a7875b0afcf3d99e40d8b76139f9c9e95cd54989db8d84426846926f54b",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/protocol/server.ts",
+      "bytes": 195050,
+      "sha256": "1dcf2cba50bdedefb7ff04ce5c26565f59fdef275e8b74e2c5fb35d95af826d5",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/session/transcript.ts",
+      "bytes": 51303,
+      "sha256": "0d2e32dd2e530200c626dd2f94f563d3268f9ae9ad2e37e3497d1a849669d829",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/settings/feature-flags.ts",
+      "bytes": 6075,
+      "sha256": "f7c651347175eebe245977b2a4661a4409fd47690a497c88bb23ff55aa7e5eef",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/settings/manager.ts",
+      "bytes": 46928,
+      "sha256": "0c92e26bbbf252d1f6bbc0859d91bdae40c846aa9d9f597812a35c829ba629ec",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/settings/migrate-config.ts",
+      "bytes": 5819,
+      "sha256": "d47ac81e8bb7894d1162df3d54fc6569abed4e5af7906a131113e56b1deeb6dc",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/settings/personalization.ts",
+      "bytes": 736,
+      "sha256": "e3ff9e3dc6a89543794b73df00894e150d42da3be3c7a4f244b71c1571db74ea",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/settings/recovery.ts",
+      "bytes": 14138,
+      "sha256": "3b8c69fbe3797fd12509bbc51acbc87238f4888bd61a76f9b31f7035e5594cb7",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/settings/schema-export.ts",
+      "bytes": 1738,
+      "sha256": "3432bf0e85a2a37cf7345ea2fb39c36b1c027f8192345aca3acdd52fef9db91a",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/settings/schema.ts",
+      "bytes": 29767,
+      "sha256": "2496b8aefd8ea32f7fc7ac23b26878475809be952a5fdbd8ac247cf0d40b3139",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/tool-system/builtin/config.ts",
+      "bytes": 6251,
+      "sha256": "60736e759bb17cf5081a11c52682ecccb122a1184561a85bbb21ee97d4b5dcdf",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/tool-system/builtin/view-image.ts",
+      "bytes": 9095,
+      "sha256": "6c8544201e18704709f215be6db8de349b9529e11d5af5f72c84a0cd23c3f2b7",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/tool-system/mcp-manager.ts",
+      "bytes": 74360,
+      "sha256": "c910e4c055069e16a8a33c6c3e68a724776f43adf271503f1dd8899a73ec7721",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/desktop/src/main/model-meta-service.ts",
+      "bytes": 6476,
+      "sha256": "fb7e866525ebd5fbd8f0c7b48a7f5e315ce08e1f04439fc78e00eb82aca21801",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/tui/package.json",
+      "bytes": 2110,
+      "sha256": "93ea44cc43ef7392227bef9146901408a49d3acd31c6a852db710eeadfcfee21",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/tui/src/bootstrap/setup.ts",
+      "bytes": 3244,
+      "sha256": "220d6b77898bcc17878f1b2b893f76ec0ebeceeaee0aca1f58e67460b7b19879",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/tui/src/cli/commands/builtin/core-commands.ts",
+      "bytes": 29601,
+      "sha256": "f6384010955e7f271864131d6bedb1549d353e67c9302b727379558c8417f65f",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/tui/src/cli/commands/builtin/extra-commands.ts",
+      "bytes": 15006,
+      "sha256": "29d3189fdc1971492daeca4aa6b426f0e619a7ac8a1d59908aa64d3d21903e86",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/tui/src/cli/commands/registry.ts",
+      "bytes": 7302,
+      "sha256": "0b73681bf81543cedbc220a28b4f7bfaf7cbf0f89784c6ac3cf74ab024689a7c",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "scripts/bun-test-completion.mjs",
+      "bytes": 6518,
+      "sha256": "99808f8f7c67ae5f108243b0649557209991f148f0150785fcde83d47465047e",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "scripts/run-bun-test-shard.mjs",
+      "bytes": 233,
+      "sha256": "dd2b245afbcb5aa7c798c8674d34edb8e02bb42be0be320050adf9be5ed2fd7d",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true
+    },
+    {
+      "path": "tsconfig.json",
+      "bytes": 3723,
+      "sha256": "927ca6a46a23dd9f7f0be6a3e486ab54eee9ce4c0cefaac584ed593bc36f2301",
+      "frozenBlobVerified": true,
+      "currentWorkingTreeMatchesFrozenBlob": true
+    }
+  ],
+  "unresolvedReferences": [],
+  "assemblyWorkingTreeHead": "51761b53399cc5daa1823d60b6cfdf52b1237ebe",
+  "note": "Hashes refer to frozen Git blobs. Concurrent main changes are identified separately; per-file current comparison does not change first-run baseline or imply rerun. Full versus partial reading depth is in reports."
+}
