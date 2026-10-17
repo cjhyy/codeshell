@@ -1,4 +1,4 @@
-import { createHash } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { constants as fsConstants } from "node:fs";
 import {
   appendFile,
@@ -172,8 +172,6 @@ const IMAGE_MIME_EXT: Record<string, string> = {
 
 const ALLOWED_IMAGE_MIMES = new Set(Object.keys(IMAGE_MIME_EXT));
 
-let idCounter = 0;
-
 export async function stageImageDataUrl(
   input: StageImageDataUrlInput,
 ): Promise<InputAttachmentMeta> {
@@ -274,9 +272,8 @@ async function stageImageBuffer(
 
   const relPath = normalizePath(relative(cwd, absPath));
   const createdAt = Date.now();
-  idCounter += 1;
   const meta: InputAttachmentMeta = {
-    id: `att_${sha16}_${idCounter.toString(36)}`,
+    id: `att_${sha16}_${randomUUID()}`,
     sessionId: input.sessionId,
     kind: "image",
     origin: input.origin,
@@ -334,9 +331,8 @@ export async function stageFileBytes(input: StageFileBytesInput): Promise<InputA
 
   const relPath = normalizePath(relative(cwd, absPath));
   const createdAt = Date.now();
-  idCounter += 1;
   const meta: InputAttachmentMeta = {
-    id: `att_${sha16}_${idCounter.toString(36)}`,
+    id: `att_${sha16}_${randomUUID()}`,
     sessionId: input.sessionId,
     kind: "file",
     origin: input.origin,
