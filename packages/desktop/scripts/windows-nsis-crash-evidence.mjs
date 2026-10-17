@@ -272,7 +272,14 @@ export function collectNsisCrashEvidence(
       executable,
       ["-NoLogo", "-NoProfile", "-NonInteractive", "-File", SCRIPT],
       {
-        input: JSON.stringify(target),
+        // Decimal strings bypass ConvertFrom-Json's implicit ISO->DateTime
+        // coercion without requiring the PowerShell 7.5-only DateKind option.
+        input: JSON.stringify({
+          pid: target.pid,
+          path: target.path,
+          fileTime: target.fileTime,
+          observedFileTime: windowsBirthToFileTime(target.observedAt),
+        }),
         env: { SystemRoot: root, WINDIR: root, PATH: win32.join(root, "System32") },
         encoding: "utf8",
         timeout: TIMEOUT,

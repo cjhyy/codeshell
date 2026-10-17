@@ -206,7 +206,17 @@ test("single fixed PS7 query has original 30s read-only budget, stdin identity a
       assert.equal(exe, "C:\\Program Files\\PowerShell\\7\\pwsh.exe");
       assert.deepEqual(args.slice(0, 4), ["-NoLogo", "-NoProfile", "-NonInteractive", "-File"]);
       assert.ok(args[4].endsWith("windows-nsis-crash-evidence.ps1"));
-      assert.deepEqual(JSON.parse(config.input), target);
+      assert.deepEqual(JSON.parse(config.input), {
+        pid: target.pid,
+        path: target.path,
+        fileTime,
+        observedFileTime: windowsBirthToFileTime(target.observedAt),
+      });
+      assert.equal(
+        config.input.includes("2026-"),
+        false,
+        "JSON timestamps must not be auto-coerced by PowerShell",
+      );
       assert.deepEqual(config.env, {
         SystemRoot: "C:\\Windows",
         WINDIR: "C:\\Windows",
@@ -346,6 +356,8 @@ test("actual PS source is finite/read-only and requires full identity before WER
   assert.match(ps, /\$filter.ReportId = \$reportId/);
   assert.match(ps, /-MaxEvents 9 -ErrorAction Stop/);
   assert.match(ps, /ToFileTimeUtc\(\) -ne \$birthExpected/);
+  assert.match(ps, /\[DateTime\]::FromFileTimeUtc/);
+  assert.doesNotMatch(ps, /ParseExact|-DateKind/);
   assert.match(
     ps,
     /\$eventPid -ne \$pidExpected -or \$eventBirth -ne \$birthExpected -or -not \[string\]::Equals\(\$fields.AppPath, \$target.path/,
