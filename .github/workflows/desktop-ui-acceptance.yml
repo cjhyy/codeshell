@@ -408,6 +408,10 @@ jobs:
             ${{ env.ACCEPTANCE_ROOT }}/panels/*.png
             ${{ env.ACCEPTANCE_ROOT }}/panels/report.json
             ${{ env.ACCEPTANCE_ROOT }}/panels/body.txt
+            ${{ env.ACCEPTANCE_ROOT }}/panels/diagnostics.json
+            ${{ env.ACCEPTANCE_ROOT }}/panels/diagnostics.jsonl
+            ${{ env.ACCEPTANCE_ROOT }}/panels/main.stdout.log
+            ${{ env.ACCEPTANCE_ROOT }}/panels/main.stderr.log
             ${{ env.ACCEPTANCE_ROOT }}/composer.log
             ${{ env.ACCEPTANCE_ROOT }}/composer/*.png
             ${{ env.ACCEPTANCE_ROOT }}/composer/report.json
