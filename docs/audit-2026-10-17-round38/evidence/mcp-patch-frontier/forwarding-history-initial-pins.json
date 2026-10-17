@@ -1,0 +1,31 @@
+{
+  "files": [
+    {
+      "path": "packages/desktop/src/preload/index.ts",
+      "bytes": 86436,
+      "sha256": "05dbc9b534bdc68c30f255f53a96617e50fb0c445ce2fc1bde4be31e3f8a6901",
+      "totalLines": 1892,
+      "pinTimeUTC": "2026-10-17T13:14:51.251057+00:00",
+      "purpose": "before narrow data forwarding source / dedicated history comparison read",
+      "initialBeforeSemanticRead": true
+    },
+    {
+      "path": "packages/desktop/src/main/index.ts",
+      "bytes": 299337,
+      "sha256": "105b2b49a28e0a7ef10980ac5feaa3a07ff81e7197f5acbefd95feb2498224c0",
+      "totalLines": 7330,
+      "pinTimeUTC": "2026-10-17T13:14:51.253505+00:00",
+      "purpose": "before narrow data forwarding source / dedicated history comparison read",
+      "initialBeforeSemanticRead": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round26/review-target-report.md",
+      "bytes": 8182,
+      "sha256": "817dfe32e40679b6abfc7993ded08dde2781dec745cbc446ff257d1bd3b9de0c",
+      "totalLines": 28,
+      "pinTimeUTC": "2026-10-17T13:14:51.254565+00:00",
+      "purpose": "before narrow data forwarding source / dedicated history comparison read",
+      "initialBeforeSemanticRead": null
+    }
+  ]
+}

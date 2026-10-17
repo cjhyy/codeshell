@@ -1,0 +1,20 @@
+{
+  "files": [
+    {
+      "path": "packages/desktop/src/main/settings-service.ts",
+      "bytes": 10247,
+      "sha256": "89303dcb539743adbdaff9445c58836608fc9bd50810dc00c1bda80e11c89455",
+      "totalLines": 275,
+      "pinTimeUTC": "2026-10-17T13:09:08.489972+00:00",
+      "purpose": "before selected pure patch merge / schema fields read; no real setting IO"
+    },
+    {
+      "path": "packages/core/src/settings/schema.ts",
+      "bytes": 29767,
+      "sha256": "2496b8aefd8ea32f7fc7ac23b26878475809be952a5fdbd8ac247cf0d40b3139",
+      "totalLines": 731,
+      "pinTimeUTC": "2026-10-17T13:09:08.491282+00:00",
+      "purpose": "before selected pure patch merge / schema fields read; no real setting IO"
+    }
+  ]
+}

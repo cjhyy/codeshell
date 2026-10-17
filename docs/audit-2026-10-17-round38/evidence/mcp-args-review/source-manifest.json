@@ -1,0 +1,318 @@
+{
+  "createdUTC": "2026-10-17T13:26:07.979088+00:00",
+  "prepOnly": true,
+  "formalBaseline": null,
+  "parentContextSuppliedAtStart": "Root frozen36 abbreviatedee5c; not independently Git-verified",
+  "rootReportedEndingBaseline": "bbad45be04dacfecb29cba04ed51caf167fe4e53",
+  "rootReportedEndingBranch": "codex/audit/mcp-inbox-geometry-round38-20261017",
+  "files": [
+    {
+      "path": "packages/desktop/src/renderer/settings/McpSection.tsx",
+      "bytes": 74294,
+      "sha256": "fb38b3514d3c3cab7d0899f6819bf617cbe958181fdc9a00ec5c29f7e735d014",
+      "lineCount": 1893,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          1,
+          30
+        ],
+        [
+          40,
+          78
+        ],
+        [
+          242,
+          267
+        ],
+        [
+          329,
+          343
+        ],
+        [
+          418,
+          449
+        ],
+        [
+          556,
+          556
+        ],
+        [
+          648,
+          663
+        ],
+        [
+          699,
+          716
+        ],
+        [
+          775,
+          775
+        ],
+        [
+          877,
+          888
+        ],
+        [
+          1104,
+          1123
+        ],
+        [
+          1182,
+          1182
+        ],
+        [
+          1207,
+          1210
+        ],
+        [
+          1301,
+          1338
+        ],
+        [
+          1354,
+          1411
+        ],
+        [
+          1465,
+          1482
+        ],
+        [
+          1736,
+          1752
+        ],
+        [
+          1754,
+          1772
+        ],
+        [
+          1870,
+          1893
+        ]
+      ],
+      "semanticReadLines": 389,
+      "initialSemanticReadSha256": "fb38b3514d3c3cab7d0899f6819bf617cbe958181fdc9a00ec5c29f7e735d014",
+      "endingSha256": "fb38b3514d3c3cab7d0899f6819bf617cbe958181fdc9a00ec5c29f7e735d014",
+      "prepPinRow": {
+        "path": "packages/desktop/src/renderer/settings/McpSection.tsx",
+        "bytes": 74294,
+        "sha256": "fb38b3514d3c3cab7d0899f6819bf617cbe958181fdc9a00ec5c29f7e735d014",
+        "lineCount": 1893,
+        "pinBeforeAnyContentRead": true
+      }
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/mcpSettingsPatch.ts",
+      "bytes": 1991,
+      "sha256": "6364bb8818f5a8e883c240d971793205a3f1507b287346e8eb8ee2ba962ef3d1",
+      "lineCount": 62,
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          62
+        ]
+      ],
+      "semanticReadLines": 62,
+      "initialSemanticReadSha256": "6364bb8818f5a8e883c240d971793205a3f1507b287346e8eb8ee2ba962ef3d1",
+      "endingSha256": "6364bb8818f5a8e883c240d971793205a3f1507b287346e8eb8ee2ba962ef3d1",
+      "prepPinRow": {
+        "path": "packages/desktop/src/renderer/settings/mcpSettingsPatch.ts",
+        "bytes": 1991,
+        "sha256": "6364bb8818f5a8e883c240d971793205a3f1507b287346e8eb8ee2ba962ef3d1",
+        "lineCount": 62,
+        "pinBeforeAnyContentRead": true
+      }
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/mcpSettingsPatch.test.ts",
+      "bytes": 4590,
+      "sha256": "7fa81ac16ae441c60943d673e3ebffcbc38d966724734a40bb6f32eba858c037",
+      "lineCount": 114,
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          114
+        ]
+      ],
+      "semanticReadLines": 114,
+      "initialSemanticReadSha256": "7fa81ac16ae441c60943d673e3ebffcbc38d966724734a40bb6f32eba858c037",
+      "endingSha256": "7fa81ac16ae441c60943d673e3ebffcbc38d966724734a40bb6f32eba858c037",
+      "prepPinRow": {
+        "path": "packages/desktop/src/renderer/settings/mcpSettingsPatch.test.ts",
+        "bytes": 4590,
+        "sha256": "7fa81ac16ae441c60943d673e3ebffcbc38d966724734a40bb6f32eba858c037",
+        "lineCount": 114,
+        "pinBeforeAnyContentRead": true
+      }
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/McpDetailDialogs.tsx",
+      "bytes": 4997,
+      "sha256": "0d9ba6096bfc125a30869d9e9a41586d95b263f999c5b36c4ca1cb90a3a4a5c4",
+      "lineCount": 148,
+      "coverage": "hash-only",
+      "selectedLineRanges": [],
+      "semanticReadLines": 0,
+      "initialSemanticReadSha256": null,
+      "endingSha256": "0d9ba6096bfc125a30869d9e9a41586d95b263f999c5b36c4ca1cb90a3a4a5c4",
+      "prepPinRow": {
+        "path": "packages/desktop/src/renderer/settings/McpDetailDialogs.tsx",
+        "bytes": 4997,
+        "sha256": "0d9ba6096bfc125a30869d9e9a41586d95b263f999c5b36c4ca1cb90a3a4a5c4",
+        "lineCount": 148,
+        "pinBeforeAnyContentRead": true
+      }
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/McpSection.lifecycle.test.tsx",
+      "bytes": 848,
+      "sha256": "53ee6e9c58e677aec7457af71a2523bda8a733fb95e1b22e560e360819a95bbe",
+      "lineCount": 34,
+      "coverage": "hash-only",
+      "selectedLineRanges": [],
+      "semanticReadLines": 0,
+      "initialSemanticReadSha256": null,
+      "endingSha256": "53ee6e9c58e677aec7457af71a2523bda8a733fb95e1b22e560e360819a95bbe",
+      "prepPinRow": {
+        "path": "packages/desktop/src/renderer/settings/McpSection.lifecycle.test.tsx",
+        "bytes": 848,
+        "sha256": "53ee6e9c58e677aec7457af71a2523bda8a733fb95e1b22e560e360819a95bbe",
+        "lineCount": 34,
+        "pinBeforeAnyContentRead": true
+      }
+    },
+    {
+      "path": "packages/desktop/src/renderer/settingsAuthority.ts",
+      "bytes": 765,
+      "sha256": "884071554713d9804d50b92dbd0f44d44941222762847f2accc65f12bc09fb1e",
+      "lineCount": 25,
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          25
+        ]
+      ],
+      "semanticReadLines": 25,
+      "initialSemanticReadSha256": "884071554713d9804d50b92dbd0f44d44941222762847f2accc65f12bc09fb1e",
+      "endingSha256": "884071554713d9804d50b92dbd0f44d44941222762847f2accc65f12bc09fb1e",
+      "prepPinRow": {
+        "path": "packages/desktop/src/renderer/settingsAuthority.ts",
+        "bytes": 765,
+        "sha256": "884071554713d9804d50b92dbd0f44d44941222762847f2accc65f12bc09fb1e",
+        "lineCount": 25,
+        "pinBeforeAnyContentRead": true
+      }
+    },
+    {
+      "path": "packages/desktop/src/main/settings-service.ts",
+      "bytes": 10247,
+      "sha256": "89303dcb539743adbdaff9445c58836608fc9bd50810dc00c1bda80e11c89455",
+      "lineCount": 275,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          110,
+          118
+        ],
+        [
+          131,
+          138
+        ],
+        [
+          151,
+          156
+        ],
+        [
+          181,
+          215
+        ],
+        [
+          235,
+          248
+        ]
+      ],
+      "semanticReadLines": 72,
+      "initialSemanticReadSha256": "89303dcb539743adbdaff9445c58836608fc9bd50810dc00c1bda80e11c89455",
+      "endingSha256": "89303dcb539743adbdaff9445c58836608fc9bd50810dc00c1bda80e11c89455",
+      "prepPinRow": {
+        "path": "packages/desktop/src/main/settings-service.ts",
+        "bytes": 10247,
+        "sha256": "89303dcb539743adbdaff9445c58836608fc9bd50810dc00c1bda80e11c89455",
+        "lineCount": 275,
+        "pinBeforeAnyContentRead": true
+      }
+    },
+    {
+      "path": "packages/desktop/src/preload/index.ts",
+      "bytes": 86436,
+      "sha256": "05dbc9b534bdc68c30f255f53a96617e50fb0c445ce2fc1bde4be31e3f8a6901",
+      "lineCount": 1892,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          978,
+          979
+        ]
+      ],
+      "semanticReadLines": 2,
+      "initialSemanticReadSha256": "05dbc9b534bdc68c30f255f53a96617e50fb0c445ce2fc1bde4be31e3f8a6901",
+      "endingSha256": "05dbc9b534bdc68c30f255f53a96617e50fb0c445ce2fc1bde4be31e3f8a6901",
+      "prepPinRow": {
+        "path": "packages/desktop/src/preload/index.ts",
+        "bytes": 86436,
+        "lineCount": 1892,
+        "sha256": "05dbc9b534bdc68c30f255f53a96617e50fb0c445ce2fc1bde4be31e3f8a6901",
+        "pinBeforeAnyContentReadInThisReview": true
+      }
+    },
+    {
+      "path": "packages/desktop/src/main/index.ts",
+      "bytes": 299337,
+      "sha256": "105b2b49a28e0a7ef10980ac5feaa3a07ff81e7197f5acbefd95feb2498224c0",
+      "lineCount": 7330,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          6672,
+          6687
+        ],
+        [
+          6707,
+          6712
+        ]
+      ],
+      "semanticReadLines": 22,
+      "initialSemanticReadSha256": "105b2b49a28e0a7ef10980ac5feaa3a07ff81e7197f5acbefd95feb2498224c0",
+      "endingSha256": "105b2b49a28e0a7ef10980ac5feaa3a07ff81e7197f5acbefd95feb2498224c0",
+      "prepPinRow": {
+        "path": "packages/desktop/src/main/index.ts",
+        "bytes": 299337,
+        "lineCount": 7330,
+        "sha256": "105b2b49a28e0a7ef10980ac5feaa3a07ff81e7197f5acbefd95feb2498224c0",
+        "pinBeforeAnyContentReadInThisReview": true
+      }
+    }
+  ],
+  "totals": {
+    "pinnedRows": 9,
+    "semanticRows": 7,
+    "fullRows": 3,
+    "selectedRows": 4,
+    "hashOnlyRows": 2,
+    "semanticReadLines": 686,
+    "productSourceLines": 572,
+    "testDeclarationLines": 114
+  },
+  "timing": "Every source/test selected range was read after its dedicated pin in this independent review. Current ending SHA matches initial pin after Root reported restored bbad checkout. No own Git command.",
+  "limits": [
+    "This is an independent same-lead source review, not another finding or a review of mutable Root author artifact bytes.",
+    "McpDetailDialogs and lifecycle test are hash-only, no browser fixture/import or lifecycle execution.",
+    "Printed McpSection HTTP/OAuth/credential fragments and probe calls outside selected ranges are incidental, no auth/identity/permission or connection correctness assessment.",
+    "Printed settings-service lock serialization139–150 and sanitizeStoredSettings223–234 are excluded; ordinary JSON/array shape only, no locks/custody review.",
+    "splitArgs whitespace literal was inspected as original codepoint metadata [47,92,115,47], not evaluated as JS or a fixture.",
+    "No product helper, JavaScript/language fixture, React, MCP connection/command, configuration operation, network/native/browser/Git or old failed direction was run."
+  ]
+}

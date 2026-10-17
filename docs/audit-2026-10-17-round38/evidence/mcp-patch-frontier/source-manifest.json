@@ -1,0 +1,472 @@
+{
+  "prepOnly": true,
+  "rootSuppliedFrozenContextShort": "ee5c",
+  "formalBaseline": null,
+  "rootProposedFindingId": "MCP-R38-01",
+  "gitBindingPerformed": false,
+  "finishedAtUTC": "2026-10-17T13:20:17.853552+00:00",
+  "files": [
+    {
+      "path": "packages/desktop/src/renderer/settings/mcpSettingsPatch.ts",
+      "bytes": 1991,
+      "sha256": "6364bb8818f5a8e883c240d971793205a3f1507b287346e8eb8ee2ba962ef3d1",
+      "totalLines": 62,
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          62
+        ]
+      ],
+      "additionalNavigationSnippetLines": [],
+      "declaredReadLineCount": 62,
+      "purpose": "negative helper scope: null tombstones, removed record keys, array copies; field whitelist",
+      "initialBeforeThisPrepSemanticRead": true,
+      "initialFilesystemPin": {
+        "path": "packages/desktop/src/renderer/settings/mcpSettingsPatch.ts",
+        "bytes": 1991,
+        "sha256": "6364bb8818f5a8e883c240d971793205a3f1507b287346e8eb8ee2ba962ef3d1",
+        "totalLines": 62,
+        "pinTimeUTC": "2026-10-17T13:08:02.800788+00:00",
+        "purpose": "before current source read; settings DTO only, no real configuration",
+        "pinArtifact": "initial-pins.json"
+      },
+      "finishFilesystemPin": {
+        "bytes": 1991,
+        "sha256": "6364bb8818f5a8e883c240d971793205a3f1507b287346e8eb8ee2ba962ef3d1",
+        "timeUTC": "2026-10-17T13:20:17.853552+00:00"
+      },
+      "unchangedFromInitialPin": true,
+      "firstEverSemanticReadClaim": false
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/mcpSettingsPatch.test.ts",
+      "bytes": 4590,
+      "sha256": "7fa81ac16ae441c60943d673e3ebffcbc38d966724734a40bb6f32eba858c037",
+      "totalLines": 114,
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          114
+        ]
+      ],
+      "additionalNavigationSnippetLines": [],
+      "declaredReadLineCount": 114,
+      "purpose": "six existing declarations including JSON-host and array-copy contract; no fixture/helper/writer invoked",
+      "initialBeforeThisPrepSemanticRead": true,
+      "initialFilesystemPin": {
+        "path": "packages/desktop/src/renderer/settings/mcpSettingsPatch.test.ts",
+        "bytes": 4590,
+        "sha256": "7fa81ac16ae441c60943d673e3ebffcbc38d966724734a40bb6f32eba858c037",
+        "totalLines": 114,
+        "pinTimeUTC": "2026-10-17T13:08:02.801720+00:00",
+        "purpose": "before current source read; settings DTO only, no real configuration",
+        "pinArtifact": "initial-pins.json"
+      },
+      "finishFilesystemPin": {
+        "bytes": 4590,
+        "sha256": "7fa81ac16ae441c60943d673e3ebffcbc38d966724734a40bb6f32eba858c037",
+        "timeUTC": "2026-10-17T13:20:17.853552+00:00"
+      },
+      "unchangedFromInitialPin": true,
+      "firstEverSemanticReadClaim": false
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/McpSection.tsx",
+      "bytes": 74294,
+      "sha256": "fb38b3514d3c3cab7d0899f6819bf617cbe958181fdc9a00ec5c29f7e735d014",
+      "totalLines": 1893,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          1,
+          66
+        ],
+        [
+          236,
+          275
+        ],
+        [
+          410,
+          482
+        ],
+        [
+          649,
+          668
+        ],
+        [
+          700,
+          720
+        ],
+        [
+          1104,
+          1160
+        ],
+        [
+          1290,
+          1408
+        ],
+        [
+          1434,
+          1485
+        ],
+        [
+          1752,
+          1893
+        ]
+      ],
+      "additionalNavigationSnippetLines": [
+        167,
+        188,
+        190,
+        296,
+        354,
+        398,
+        488,
+        556,
+        948,
+        950,
+        953,
+        955,
+        1520,
+        1522,
+        1527,
+        1531,
+        1533,
+        1538,
+        1543,
+        1550,
+        1746
+      ],
+      "declaredReadLineCount": 611,
+      "purpose": "ordinary Args input/init/save/reopen value flow; adjacent auth/probe text read only, no mechanism review or action",
+      "initialBeforeThisPrepSemanticRead": true,
+      "initialFilesystemPin": {
+        "path": "packages/desktop/src/renderer/settings/McpSection.tsx",
+        "bytes": 74294,
+        "sha256": "fb38b3514d3c3cab7d0899f6819bf617cbe958181fdc9a00ec5c29f7e735d014",
+        "totalLines": 1893,
+        "pinTimeUTC": "2026-10-17T13:08:02.802426+00:00",
+        "purpose": "before current source read; settings DTO only, no real configuration",
+        "pinArtifact": "initial-pins.json"
+      },
+      "finishFilesystemPin": {
+        "bytes": 74294,
+        "sha256": "fb38b3514d3c3cab7d0899f6819bf617cbe958181fdc9a00ec5c29f7e735d014",
+        "timeUTC": "2026-10-17T13:20:17.853552+00:00"
+      },
+      "unchangedFromInitialPin": true,
+      "firstEverSemanticReadClaim": false
+    },
+    {
+      "path": "packages/desktop/src/main/settings-service.ts",
+      "bytes": 10247,
+      "sha256": "89303dcb539743adbdaff9445c58836608fc9bd50810dc00c1bda80e11c89455",
+      "totalLines": 275,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          25,
+          59
+        ],
+        [
+          110,
+          160
+        ],
+        [
+          174,
+          240
+        ]
+      ],
+      "additionalNavigationSnippetLines": [],
+      "declaredReadLineCount": 153,
+      "purpose": "array-preserving read/JSON writer/recursive null merge contract; adjacent FS/mutex/key-guard declarations source only",
+      "initialBeforeThisPrepSemanticRead": true,
+      "initialFilesystemPin": {
+        "path": "packages/desktop/src/main/settings-service.ts",
+        "bytes": 10247,
+        "sha256": "89303dcb539743adbdaff9445c58836608fc9bd50810dc00c1bda80e11c89455",
+        "totalLines": 275,
+        "pinTimeUTC": "2026-10-17T13:09:08.489972+00:00",
+        "purpose": "before selected pure patch merge / schema fields read; no real setting IO",
+        "pinArtifact": "merge-schema-initial-pins.json"
+      },
+      "finishFilesystemPin": {
+        "bytes": 10247,
+        "sha256": "89303dcb539743adbdaff9445c58836608fc9bd50810dc00c1bda80e11c89455",
+        "timeUTC": "2026-10-17T13:20:17.853552+00:00"
+      },
+      "unchangedFromInitialPin": true,
+      "firstEverSemanticReadClaim": false
+    },
+    {
+      "path": "packages/core/src/settings/schema.ts",
+      "bytes": 29767,
+      "sha256": "2496b8aefd8ea32f7fc7ac23b26878475809be952a5fdbd8ac247cf0d40b3139",
+      "totalLines": 731,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          351,
+          429
+        ]
+      ],
+      "additionalNavigationSnippetLines": [
+        50
+      ],
+      "declaredReadLineCount": 80,
+      "purpose": "mcpServers args string-array and override schema declarations; no schema invoked",
+      "initialBeforeThisPrepSemanticRead": true,
+      "initialFilesystemPin": {
+        "path": "packages/core/src/settings/schema.ts",
+        "bytes": 29767,
+        "sha256": "2496b8aefd8ea32f7fc7ac23b26878475809be952a5fdbd8ac247cf0d40b3139",
+        "totalLines": 731,
+        "pinTimeUTC": "2026-10-17T13:09:08.491282+00:00",
+        "purpose": "before selected pure patch merge / schema fields read; no real setting IO",
+        "pinArtifact": "merge-schema-initial-pins.json"
+      },
+      "finishFilesystemPin": {
+        "bytes": 29767,
+        "sha256": "2496b8aefd8ea32f7fc7ac23b26878475809be952a5fdbd8ac247cf0d40b3139",
+        "timeUTC": "2026-10-17T13:20:17.853552+00:00"
+      },
+      "unchangedFromInitialPin": true,
+      "firstEverSemanticReadClaim": false
+    },
+    {
+      "path": "packages/desktop/src/renderer/settingsAuthority.ts",
+      "bytes": 765,
+      "sha256": "884071554713d9804d50b92dbd0f44d44941222762847f2accc65f12bc09fb1e",
+      "totalLines": 25,
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          25
+        ]
+      ],
+      "additionalNavigationSnippetLines": [],
+      "declaredReadLineCount": 25,
+      "purpose": "user/project patch forwarding only; authority helpers not invoked or expanded",
+      "initialBeforeThisPrepSemanticRead": true,
+      "initialFilesystemPin": {
+        "path": "packages/desktop/src/renderer/settingsAuthority.ts",
+        "bytes": 765,
+        "sha256": "884071554713d9804d50b92dbd0f44d44941222762847f2accc65f12bc09fb1e",
+        "totalLines": 25,
+        "pinTimeUTC": "2026-10-17T13:13:49.301524+00:00",
+        "purpose": "before selected patch read/update data forwarding boundary; no authority experiment",
+        "pinArtifact": "settings-adapter-initial-pin.json"
+      },
+      "finishFilesystemPin": {
+        "bytes": 765,
+        "sha256": "884071554713d9804d50b92dbd0f44d44941222762847f2accc65f12bc09fb1e",
+        "timeUTC": "2026-10-17T13:20:17.853552+00:00"
+      },
+      "unchangedFromInitialPin": true,
+      "firstEverSemanticReadClaim": false
+    },
+    {
+      "path": "packages/desktop/src/preload/index.ts",
+      "bytes": 86436,
+      "sha256": "05dbc9b534bdc68c30f255f53a96617e50fb0c445ce2fc1bde4be31e3f8a6901",
+      "totalLines": 1892,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          974,
+          984
+        ],
+        [
+          1377,
+          1385
+        ]
+      ],
+      "additionalNavigationSnippetLines": [],
+      "declaredReadLineCount": 20,
+      "purpose": "user settings get/set and listMerged DTO channel forwarding",
+      "initialBeforeThisPrepSemanticRead": true,
+      "initialFilesystemPin": {
+        "path": "packages/desktop/src/preload/index.ts",
+        "bytes": 86436,
+        "sha256": "05dbc9b534bdc68c30f255f53a96617e50fb0c445ce2fc1bde4be31e3f8a6901",
+        "totalLines": 1892,
+        "pinTimeUTC": "2026-10-17T13:14:51.251057+00:00",
+        "purpose": "before narrow data forwarding source / dedicated history comparison read",
+        "initialBeforeSemanticRead": true,
+        "pinArtifact": "forwarding-history-initial-pins.json"
+      },
+      "finishFilesystemPin": {
+        "bytes": 86436,
+        "sha256": "05dbc9b534bdc68c30f255f53a96617e50fb0c445ce2fc1bde4be31e3f8a6901",
+        "timeUTC": "2026-10-17T13:20:17.853552+00:00"
+      },
+      "unchangedFromInitialPin": true,
+      "firstEverSemanticReadClaim": false
+    },
+    {
+      "path": "packages/desktop/src/main/index.ts",
+      "bytes": 299337,
+      "sha256": "105b2b49a28e0a7ef10980ac5feaa3a07ff81e7197f5acbefd95feb2498224c0",
+      "totalLines": 7330,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          5436,
+          5494
+        ],
+        [
+          6664,
+          6674
+        ],
+        [
+          6703,
+          6712
+        ]
+      ],
+      "additionalNavigationSnippetLines": [
+        978,
+        5498,
+        6714
+      ],
+      "declaredReadLineCount": 83,
+      "purpose": "base config spread/metadata flags and user get/set delegation; no handler/side effect invoked",
+      "initialBeforeThisPrepSemanticRead": true,
+      "initialFilesystemPin": {
+        "path": "packages/desktop/src/main/index.ts",
+        "bytes": 299337,
+        "sha256": "105b2b49a28e0a7ef10980ac5feaa3a07ff81e7197f5acbefd95feb2498224c0",
+        "totalLines": 7330,
+        "pinTimeUTC": "2026-10-17T13:14:51.253505+00:00",
+        "purpose": "before narrow data forwarding source / dedicated history comparison read",
+        "initialBeforeSemanticRead": true,
+        "pinArtifact": "forwarding-history-initial-pins.json"
+      },
+      "finishFilesystemPin": {
+        "bytes": 299337,
+        "sha256": "105b2b49a28e0a7ef10980ac5feaa3a07ff81e7197f5acbefd95feb2498224c0",
+        "timeUTC": "2026-10-17T13:20:17.853552+00:00"
+      },
+      "unchangedFromInitialPin": true,
+      "firstEverSemanticReadClaim": false
+    },
+    {
+      "path": "packages/core/src/plugins/installer/loadPluginMcp.ts",
+      "bytes": 14536,
+      "sha256": "684cbfdbf01d89920f8902d147131618620c4a467b5f12911252dc5fd65bf746",
+      "totalLines": 370,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          330,
+          370
+        ]
+      ],
+      "additionalNavigationSnippetLines": [
+        214,
+        215,
+        216,
+        217,
+        218,
+        219,
+        220,
+        221,
+        222,
+        223,
+        224,
+        225,
+        226,
+        227,
+        230,
+        272,
+        292,
+        301
+      ],
+      "declaredReadLineCount": 59,
+      "purpose": "base config preservation contract and map copy, no loader/approval/Host lifecycle action",
+      "initialBeforeThisPrepSemanticRead": true,
+      "initialFilesystemPin": {
+        "path": "packages/core/src/plugins/installer/loadPluginMcp.ts",
+        "bytes": 14536,
+        "sha256": "684cbfdbf01d89920f8902d147131618620c4a467b5f12911252dc5fd65bf746",
+        "totalLines": 370,
+        "pinTimeUTC": "2026-10-17T13:15:31.628691+00:00",
+        "purpose": "before selected base settings config spread in pure merge consumer, no loader/connection call",
+        "pinArtifact": "merge-display-initial-pin.json"
+      },
+      "finishFilesystemPin": {
+        "bytes": 14536,
+        "sha256": "684cbfdbf01d89920f8902d147131618620c4a467b5f12911252dc5fd65bf746",
+        "timeUTC": "2026-10-17T13:20:17.853552+00:00"
+      },
+      "unchangedFromInitialPin": true,
+      "firstEverSemanticReadClaim": false
+    }
+  ],
+  "historicalReportReads": [
+    {
+      "path": "docs/audit-2026-10-17-round26/review-target-report.md",
+      "bytes": 8182,
+      "sha256": "817dfe32e40679b6abfc7993ded08dde2781dec745cbc446ff257d1bd3b9de0c",
+      "coverage": "full-historical-report",
+      "selectedLineRanges": [
+        [
+          1,
+          28
+        ]
+      ],
+      "initialBeforeSemanticRead": null,
+      "dedicatedLaterPin": {
+        "path": "docs/audit-2026-10-17-round26/review-target-report.md",
+        "bytes": 8182,
+        "sha256": "817dfe32e40679b6abfc7993ded08dde2781dec745cbc446ff257d1bd3b9de0c",
+        "totalLines": 28,
+        "pinTimeUTC": "2026-10-17T13:14:51.254565+00:00",
+        "purpose": "before narrow data forwarding source / dedicated history comparison read",
+        "initialBeforeSemanticRead": null,
+        "pinArtifact": "forwarding-history-initial-pins.json"
+      },
+      "finishTimeUTC": "2026-10-17T13:20:17.853552+00:00",
+      "unchangedFromDedicatedPin": true,
+      "purpose": "distinguish old CLI-R4-01/TARGET-R26-R1 registry whitespace collapse and preserve failed fixture SKIP"
+    }
+  ],
+  "instructionCarryForward": [
+    {
+      "path": "CODESHELL.md",
+      "bytes": 17639,
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "coverage": "instruction-carry-forward",
+      "newSemanticReadLines": 0,
+      "note": "Prior full instruction read remains applicable; byte hash checked only in this prep."
+    },
+    {
+      "path": "AGENTS.md",
+      "bytes": 206,
+      "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "coverage": "instruction-carry-forward",
+      "newSemanticReadLines": 0,
+      "note": "Prior full instruction read remains applicable; byte hash checked only in this prep."
+    }
+  ],
+  "counts": {
+    "productAndTestPins": 9,
+    "fullProductAndTestPins": 3,
+    "selectedProductPins": 6,
+    "productAndTestReadLinesIncludingNavigation": 1207,
+    "historicalReportReadLines": 28,
+    "existingTestDeclarationsRead": 6,
+    "existingTestsExecuted": 0,
+    "newInstructionSemanticReadLines": 0
+  },
+  "allProductInitialFinishStable": true,
+  "priorCoverage": "McpSection same-SHA object rows retain Round30 selected1092–1112, aggregate hash rows and inventory; helper name focused13 hits are inventory/old test receipts. No first-ever unread or borrowed pass claim.",
+  "scopeLimits": [
+    "Only ordinary settings DTO/field retention and form args text roundtrip are assessed.",
+    "No product/helper/schema/React/browser/DOM/fixture/MCP/connection/config-directory/credential/permission/native/network/Git action executed.",
+    "withHostMcpServers implementation and full authority/credential lifecycle are not expanded; base key preservation is the inspected merge function explicit contract.",
+    "McpSection1290–1299 and other neighboring auth/probe text were observed incidentally, not audited as auth/permission behavior."
+  ]
+}

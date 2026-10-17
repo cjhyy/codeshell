@@ -1,0 +1,76 @@
+{
+  "createdUTC": "2026-10-17T12:51:53.266244+00:00",
+  "files": [
+    {
+      "path": "contexts.json",
+      "bytes": 120837,
+      "sha256": "9c70ddc181da2a32abda5e9d35b37d2f3700cf92edce2188c8565ed6c8e57d22"
+    },
+    {
+      "path": "finish-check.first.stderr.txt",
+      "bytes": 138,
+      "sha256": "3382fe5e2ab5ccd334864f1b32dcc6ef5158277809a1cd440c4b5e29da7c353f"
+    },
+    {
+      "path": "finish-checks.json",
+      "bytes": 1141439,
+      "sha256": "9b6dabece36b3eceae66fee8a606fd7b6f302272e4c458d730d6560ce32fa53f"
+    },
+    {
+      "path": "history.json",
+      "bytes": 814642,
+      "sha256": "fb926c10eca5cdcdda525b2d65fedf76f0bf469ec5bb32c475478a5bd0edd63d"
+    },
+    {
+      "path": "initial-pins.json",
+      "bytes": 816583,
+      "sha256": "e25e32e0ab2662a9a7de52b1b16a81174ddfc7bb7994f3386b1eeff55fef0637"
+    },
+    {
+      "path": "inventory.raw.txt",
+      "bytes": 203999,
+      "sha256": "95a5abe5da4489d5dbf1dfe7238f8f958debf1efb66b51fc7e2ee5e573112a26"
+    },
+    {
+      "path": "metadata-notes.json",
+      "bytes": 2288,
+      "sha256": "015b2a16f19f26200edf4be756a1b7531fcd35d43b75b25c9fd7e017fed8571e"
+    },
+    {
+      "path": "review.md",
+      "bytes": 2662,
+      "sha256": "04d4dee31a4edfe4754e831ad1721f8ec9f892780213702fa05a567156bc8ed0"
+    },
+    {
+      "path": "scan-history.py",
+      "bytes": 4835,
+      "sha256": "a364b18be227b175125d47ff258051fc5b7b971cebfebcb382248f17a5958c5b"
+    },
+    {
+      "path": "selected-contexts.first.stderr.txt",
+      "bytes": 89,
+      "sha256": "d8be94676158da5a77c6c57dfd3bc1368758ffea8a6d5a1dc5f4e5ba0c11fe0d"
+    },
+    {
+      "path": "selected-contexts.json",
+      "bytes": 15167,
+      "sha256": "e73769e4920b0f0f7e6f32076754fe66b8962552182c10ad218fc50b31e718d8"
+    },
+    {
+      "path": "supplement.json",
+      "bytes": 153184,
+      "sha256": "fb3c809e67c913c20ff04599c275760d4dc3266934d8ac8bfbf4a588c237e4fa"
+    },
+    {
+      "path": "validation.json",
+      "bytes": 498,
+      "sha256": "357bf8e19f7b63da5772a0268907b21a248f41292b193ff7131a9ac467e8fd7e"
+    }
+  ],
+  "artifactCount": 13,
+  "selfExcluded": "author-receipt.json",
+  "reportLinks": 6,
+  "frozen": true,
+  "productAttempts": 0,
+  "gitCommands": 0
+}

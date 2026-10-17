@@ -1,0 +1,62 @@
+{
+  "files": [
+    {
+      "path": "packages/desktop/src/renderer/settings/mcpSettingsPatch.ts",
+      "bytes": 1991,
+      "sha256": "6364bb8818f5a8e883c240d971793205a3f1507b287346e8eb8ee2ba962ef3d1",
+      "lineCount": 62,
+      "selectedLineRanges": [
+        [
+          1,
+          62
+        ]
+      ],
+      "coverage": "full",
+      "semanticReadLines": 62,
+      "initialSemanticReadSha256": null,
+      "readTiming": "Hash before this direct read; peer precise excerpts already seen, so no backdated first-semantic pin."
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/McpSection.tsx",
+      "bytes": 74294,
+      "sha256": "fb38b3514d3c3cab7d0899f6819bf617cbe958181fdc9a00ec5c29f7e735d014",
+      "lineCount": 1893,
+      "selectedLineRanges": [
+        [
+          21,
+          53
+        ],
+        [
+          390,
+          448
+        ],
+        [
+          1092,
+          1135
+        ],
+        [
+          1357,
+          1405
+        ],
+        [
+          1756,
+          1769
+        ],
+        [
+          1870,
+          1893
+        ]
+      ],
+      "coverage": "selected",
+      "semanticReadLines": 223,
+      "initialSemanticReadSha256": null,
+      "readTiming": "Hash before this direct read; peer precise excerpts already seen, so no backdated first-semantic pin."
+    }
+  ],
+  "productRuns": 0,
+  "testDeclarations": 0,
+  "limitations": [
+    "Direct selected source only; no actual form, helper, language fixture, MCP, process, network, or settings operations.",
+    "Metadata source display errors are not product attempts."
+  ]
+}

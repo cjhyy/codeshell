@@ -1,0 +1,10 @@
+{
+  "productRuns": 0,
+  "notes": [
+    "Parent frozen claim that its original regex was double-escaped is not established. Root checked decoded codepoints and AST literals: single backslashes, normal regex. Expanded queries are a supplement, not a proven regex repair. Original claims and reviewer retraction remain unchanged.",
+    "Root initially requested the nonexistent round35/evidence/verify-evidence.py while locating the template; cat reported missing file. The actual template is verify-audit.py, read subsequently. Metadata navigation only, no product execution or validation retry.",
+    "One combined manifest display was truncated. It was used only for metadata navigation, not claimed as full semantic reading of hidden source or receipts.",
+    "Original root-history.json limitations accidentally mention prep2988/3063 from an earlier scaffold; actual parent and independent prep inventories here are3216. The scanner script wording is corrected without rerunning or rewriting the dated original inventory. Counts, pins and queries are unchanged.",
+    "A future38 source-manifest was requested before the worker had produced it; missing-file diagnostic is metadata navigation, not a failed product direction. Root then pinned and read current product source separately."
+  ]
+}

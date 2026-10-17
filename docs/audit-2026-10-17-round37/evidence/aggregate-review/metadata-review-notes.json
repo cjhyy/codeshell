@@ -1,0 +1,64 @@
+{
+  "recordedUTC": "2026-10-17T13:04:24.176601+00:00",
+  "scope": "Aggregate metadata-only review; audit artifacts were pinned before review; source hashes/range bounds checked as bytes only. No product semantic reading.",
+  "firstReasoningMistake": {
+    "what": "Reviewer initially treated UI/JSON display escaping of independent focused-history patterns as literal doubled regex backslashes, and messaged Root/user-facing commentary that the0/0 was invalid.",
+    "correction": "A direct ord(c)==92 position check showed only single backslashes in independent focused patterns; zero consecutive pairs in all three. The initial allegation was explicitly withdrawn to Root and in commentary.",
+    "codepointCheckToolChunk": "2e8258",
+    "ownProductAttempts": 0
+  },
+  "authorRegexQualification": {
+    "frozenAuthorClaim": "metadata-notes.json says original child patterns were doubly escaped. Original claim/receipt preserved, no author files edited.",
+    "independentObservation": "Both actual stored original-child patterns and original scan-history.py18–22 have zero consecutive backslash pairs; ordinary single-backslash newline/space and quote/hex syntax are present. Therefore this reviewer does not independently confirm the stated double-escape cause.",
+    "howSupplementUsed": "Use actual broadened/clarified query: quote class adds backtick, bound100 becomes120 for quote query and source_name is bounded to a line. Retained6→8 is a supplement result; do not infer a demonstrated escape repair.",
+    "sourceMethodCodepointChunk": "31e8f5",
+    "notBlockingProductLogic": true
+  },
+  "ownNavigationOutputLimits": [
+    {
+      "chunk": "a03bc8",
+      "exitCode": 0,
+      "stdoutTruncated": true,
+      "resolution": "Bounded metadata summaries and codepoint follow-ups; no claim hidden truncated text was read."
+    },
+    {
+      "chunk": "7bfa87",
+      "exitCode": 0,
+      "stdoutTruncated": true,
+      "resolution": "Bounded history-schema/summary read8cefbb; final checks programmatically saved without full console print."
+    }
+  ],
+  "authorMetadataDiagnostics": [
+    {
+      "owner": "main author",
+      "exitCode": 2,
+      "file": "locator-first.stderr.txt",
+      "cause": "mistaken .tsx filename locator; no product execution"
+    },
+    {
+      "owner": "history child",
+      "exitCode": 1,
+      "file": "history-peer/selected-contexts.first.stderr.txt",
+      "cause": "requested historical820–830 overEOF828; partial reached scope retained, unvisited files not claimed"
+    },
+    {
+      "owner": "history child",
+      "exitCode": 1,
+      "file": "history-peer/finish-check.first.stderr.txt",
+      "cause": "strict history byte assertion encountered dated release TODO drift; original inventory retained"
+    },
+    {
+      "owner": "main author",
+      "exitCode": 1,
+      "file": "packaging-first.stderr.txt",
+      "cause": "metadata draft-text precondition assertion; source and frozen child untouched"
+    },
+    {
+      "owner": "Root",
+      "exitCode": 1,
+      "file": "source-reader.first.exit.json",
+      "cause": "requested installedPlugins250–275 overEOF265; assertion before body; corrected actual first range250–265"
+    }
+  ],
+  "diagnosticsAreProductFailures": false
+}

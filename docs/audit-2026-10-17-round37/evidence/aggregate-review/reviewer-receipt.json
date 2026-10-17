@@ -1,0 +1,70 @@
+{
+  "frozenUTC": "2026-10-17T13:05:08.061577+00:00",
+  "directory": "/tmp/codeshell-audit-round37-aggregate-review",
+  "selfExcluded": true,
+  "files": [
+    {
+      "path": "checks.json",
+      "bytes": 123285,
+      "sha256": "49febe7666803a53b0458b0df2adf15471f1d35f680f4139c18fe448720b7b68"
+    },
+    {
+      "path": "initial-artifact-pins.json",
+      "bytes": 16162,
+      "sha256": "25d3de14de75fda56ab8555cbe08147a6c10ad3356e4c3cdd08fce51834ed2f4"
+    },
+    {
+      "path": "metadata-review-notes.json",
+      "bytes": 3242,
+      "sha256": "5425695f66501002d2db9dad76d98282d3c6a0ffe51bb482b3d124206f122ac5"
+    },
+    {
+      "path": "review.md",
+      "bytes": 4629,
+      "sha256": "c76aa114f8491e51cd4b2ea8e32189b86bb39f9fd6254f82401a7d842edfd4e2"
+    }
+  ],
+  "fileCountExcludingSelf": 4,
+  "role": "metadata-only aggregate/counterevidence review, no new product source semantics",
+  "filesSourceRows": 0,
+  "newProductSemanticLines": 0,
+  "supportOneRootFormal": "MARKETPLACE-R37-01/P3",
+  "preserveOriginalAlias": "MARKETPLACE-LOCAL-R37-C1",
+  "newStandaloneFindingIds": 0,
+  "inputArtifacts": 62,
+  "sourceManifestRowsMetadataChecked": [
+    24,
+    19,
+    8
+  ],
+  "receiptRowsChecked": [
+    32,
+    13,
+    18,
+    9
+  ],
+  "productRuns": 0,
+  "tests": 0,
+  "fixtures": 0,
+  "git": 0,
+  "reportLinks": [
+    {
+      "target": "initial-artifact-pins.json",
+      "existsOrSelf": true
+    },
+    {
+      "target": "checks.json",
+      "existsOrSelf": true
+    },
+    {
+      "target": "metadata-review-notes.json",
+      "existsOrSelf": true
+    },
+    {
+      "target": "reviewer-receipt.json",
+      "existsOrSelf": true
+    }
+  ],
+  "authorFrozenFilesModified": false,
+  "productFilesModified": false
+}

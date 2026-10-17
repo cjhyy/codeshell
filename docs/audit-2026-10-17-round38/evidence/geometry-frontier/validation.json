@@ -1,0 +1,22 @@
+{
+  "recordedUTC": "2026-10-17T13:14:45.729312+00:00",
+  "scope": "Future38 ordinary geometry/clip static review only; runs refers to product validation.",
+  "runs": [],
+  "productAttempts": 0,
+  "productPass": 0,
+  "productExpect": 0,
+  "productFunctions": 0,
+  "coordinateOrLanguageFixtures": 0,
+  "testsExecuted": 0,
+  "ttyRendererNativeBrowserModelNetwork": 0,
+  "gitCommands": 0,
+  "authorityPermissionExperiments": 0,
+  "oldFailedTuiAnsiScrollDirectionsRetried": 0,
+  "metadataHistoryScanExitCode": 0,
+  "metadataHistoryScanSessionId": 79389,
+  "metadataDelegationToolFailed": true,
+  "sourceReadLines": 471,
+  "productSourceLines": 429,
+  "testDeclarationLines": 42,
+  "note": "rg/Python stdlib only read files, scan historical values, count declared ranges and compute SHA256. Existing test/code declarations are not executed."
+}

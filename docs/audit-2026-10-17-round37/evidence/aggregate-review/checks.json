@@ -1,0 +1,3146 @@
+{
+  "reviewedUTC": "2026-10-17T13:04:24.176601+00:00",
+  "scope": "metadata-only aggregation and counterevidence assessment from frozen reports;0 new product semantic reads",
+  "files": [],
+  "newProductSemanticReads": 0,
+  "newProductSemanticLines": 0,
+  "sourceHashOnlyBindingPerformedByReviewer": true,
+  "gitBindingPerformed": false,
+  "inputArtifactCount": 62,
+  "inputArtifactChecks": [
+    {
+      "path": "/tmp/codeshell-audit-round37-marketplace-local-frontier/adjacent-pins.json",
+      "relativePath": "adjacent-pins.json",
+      "bytes": 1623,
+      "sha256": "4763f422751d983f07314e36d1b0b1e45258676d49db1659bf28c486b3229d10",
+      "finishBytes": 1623,
+      "finishSha256": "4763f422751d983f07314e36d1b0b1e45258676d49db1659bf28c486b3229d10",
+      "unchanged": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round37-marketplace-local-frontier/author-receipt.json",
+      "relativePath": "author-receipt.json",
+      "bytes": 6093,
+      "sha256": "dabba5faaca4069a9e6cfbee992fb9c652f32b82706d31202fbadf0a3b798f46",
+      "finishBytes": 6093,
+      "finishSha256": "dabba5faaca4069a9e6cfbee992fb9c652f32b82706d31202fbadf0a3b798f46",
+      "unchanged": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round37-marketplace-local-frontier/bridge-pins.json",
+      "relativePath": "bridge-pins.json",
+      "bytes": 1217,
+      "sha256": "76636eb3710fbe2422a69503f79246acb10393df4442ffaf29a1e6e9abf7f071",
+      "finishBytes": 1217,
+      "finishSha256": "76636eb3710fbe2422a69503f79246acb10393df4442ffaf29a1e6e9abf7f071",
+      "unchanged": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round37-marketplace-local-frontier/decisions.json",
+      "relativePath": "decisions.json",
+      "bytes": 3611,
+      "sha256": "b27b0472878b590fd4ec7d787869ee60dd83d60c1da7ddd7862f5c14186185ec",
+      "finishBytes": 3611,
+      "finishSha256": "b27b0472878b590fd4ec7d787869ee60dd83d60c1da7ddd7862f5c14186185ec",
+      "unchanged": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round37-marketplace-local-frontier/finish-checks.json",
+      "relativePath": "finish-checks.json",
+      "bytes": 806839,
+      "sha256": "19ca3626ba16af133e40b3e8b333bae17f39a4b2773590d5a9d74db45eb06a83",
+      "finishBytes": 806839,
+      "finishSha256": "19ca3626ba16af133e40b3e8b333bae17f39a4b2773590d5a9d74db45eb06a83",
+      "unchanged": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round37-marketplace-local-frontier/history-corrected-contexts.json",
+      "relativePath": "history-corrected-contexts.json",
+      "bytes": 256585,
+      "sha256": "6e3a54ed850341dd0fe71bbb80a6894bbc444085eec710e59443ab3f346dff68",
+      "finishBytes": 256585,
+      "finishSha256": "6e3a54ed850341dd0fe71bbb80a6894bbc444085eec710e59443ab3f346dff68",
+      "unchanged": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round37-marketplace-local-frontier/history-corrected-initial-pins.json",
+      "relativePath": "history-corrected-initial-pins.json",
+      "bytes": 708024,
+      "sha256": "85f89fedaa4b1bb10564f1daab7021bf6dc21ddc315fe7bb44b3f495f4e303ea",
+      "finishBytes": 708024,
+      "finishSha256": "85f89fedaa4b1bb10564f1daab7021bf6dc21ddc315fe7bb44b3f495f4e303ea",
+      "unchanged": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round37-marketplace-local-frontier/history-corrected-scan.py",
+      "relativePath": "history-corrected-scan.py",
+      "bytes": 5713,
+      "sha256": "9311ed8176058852c2189a3795f5f80d7e07d96a3f5b3a69574989a22a08a0b9",
+      "finishBytes": 5713,
+      "finishSha256": "9311ed8176058852c2189a3795f5f80d7e07d96a3f5b3a69574989a22a08a0b9",
+      "unchanged": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round37-marketplace-local-frontier/history-corrected-selection.json",
+      "relativePath": "history-corrected-selection.json",
+      "bytes": 12945,
+      "sha256": "880e6ba6dcbf65c3d88394d819c8f5d298eb9464a8af28462180baed648da64f",
+      "finishBytes": 12945,
+      "finishSha256": "880e6ba6dcbf65c3d88394d819c8f5d298eb9464a8af28462180baed648da64f",
+      "unchanged": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round37-marketplace-local-frontier/history-corrected.json",
+      "relativePath": "history-corrected.json",
+      "bytes": 2807,
+      "sha256": "71c8fda1b2eeb6c8cfb649753536eb2c26e14672e8139bfccf90c4db5eb23615",
+      "finishBytes": 2807,
+      "finishSha256": "71c8fda1b2eeb6c8cfb649753536eb2c26e14672e8139bfccf90c4db5eb23615",
+      "unchanged": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round37-marketplace-local-frontier/history-peer/author-receipt.json",
+      "relativePath": "history-peer/author-receipt.json",
+      "bytes": 2218,
+      "sha256": "1a16808467fd91f28dcad362af53e43bf1236a025fa7e9b0ed187ce99c60fa0e",
+      "finishBytes": 2218,
+      "finishSha256": "1a16808467fd91f28dcad362af53e43bf1236a025fa7e9b0ed187ce99c60fa0e",
+      "unchanged": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round37-marketplace-local-frontier/history-peer/contexts.json",
+      "relativePath": "history-peer/contexts.json",
+      "bytes": 120837,
+      "sha256": "9c70ddc181da2a32abda5e9d35b37d2f3700cf92edce2188c8565ed6c8e57d22",
+      "finishBytes": 120837,
+      "finishSha256": "9c70ddc181da2a32abda5e9d35b37d2f3700cf92edce2188c8565ed6c8e57d22",
+      "unchanged": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round37-marketplace-local-frontier/history-peer/finish-check.first.stderr.txt",
+      "relativePath": "history-peer/finish-check.first.stderr.txt",
+      "bytes": 138,
+      "sha256": "3382fe5e2ab5ccd334864f1b32dcc6ef5158277809a1cd440c4b5e29da7c353f",
+      "finishBytes": 138,
+      "finishSha256": "3382fe5e2ab5ccd334864f1b32dcc6ef5158277809a1cd440c4b5e29da7c353f",
+      "unchanged": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round37-marketplace-local-frontier/history-peer/finish-checks.json",
+      "relativePath": "history-peer/finish-checks.json",
+      "bytes": 1141439,
+      "sha256": "9b6dabece36b3eceae66fee8a606fd7b6f302272e4c458d730d6560ce32fa53f",
+      "finishBytes": 1141439,
+      "finishSha256": "9b6dabece36b3eceae66fee8a606fd7b6f302272e4c458d730d6560ce32fa53f",
+      "unchanged": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round37-marketplace-local-frontier/history-peer/history.json",
+      "relativePath": "history-peer/history.json",
+      "bytes": 814642,
+      "sha256": "fb926c10eca5cdcdda525b2d65fedf76f0bf469ec5bb32c475478a5bd0edd63d",
+      "finishBytes": 814642,
+      "finishSha256": "fb926c10eca5cdcdda525b2d65fedf76f0bf469ec5bb32c475478a5bd0edd63d",
+      "unchanged": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round37-marketplace-local-frontier/history-peer/initial-pins.json",
+      "relativePath": "history-peer/initial-pins.json",
+      "bytes": 816583,
+      "sha256": "e25e32e0ab2662a9a7de52b1b16a81174ddfc7bb7994f3386b1eeff55fef0637",
+      "finishBytes": 816583,
+      "finishSha256": "e25e32e0ab2662a9a7de52b1b16a81174ddfc7bb7994f3386b1eeff55fef0637",
+      "unchanged": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round37-marketplace-local-frontier/history-peer/inventory.raw.txt",
+      "relativePath": "history-peer/inventory.raw.txt",
+      "bytes": 203999,
+      "sha256": "95a5abe5da4489d5dbf1dfe7238f8f958debf1efb66b51fc7e2ee5e573112a26",
+      "finishBytes": 203999,
+      "finishSha256": "95a5abe5da4489d5dbf1dfe7238f8f958debf1efb66b51fc7e2ee5e573112a26",
+      "unchanged": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round37-marketplace-local-frontier/history-peer/metadata-notes.json",
+      "relativePath": "history-peer/metadata-notes.json",
+      "bytes": 2288,
+      "sha256": "015b2a16f19f26200edf4be756a1b7531fcd35d43b75b25c9fd7e017fed8571e",
+      "finishBytes": 2288,
+      "finishSha256": "015b2a16f19f26200edf4be756a1b7531fcd35d43b75b25c9fd7e017fed8571e",
+      "unchanged": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round37-marketplace-local-frontier/history-peer/review.md",
+      "relativePath": "history-peer/review.md",
+      "bytes": 2662,
+      "sha256": "04d4dee31a4edfe4754e831ad1721f8ec9f892780213702fa05a567156bc8ed0",
+      "finishBytes": 2662,
+      "finishSha256": "04d4dee31a4edfe4754e831ad1721f8ec9f892780213702fa05a567156bc8ed0",
+      "unchanged": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round37-marketplace-local-frontier/history-peer/scan-history.py",
+      "relativePath": "history-peer/scan-history.py",
+      "bytes": 4835,
+      "sha256": "a364b18be227b175125d47ff258051fc5b7b971cebfebcb382248f17a5958c5b",
+      "finishBytes": 4835,
+      "finishSha256": "a364b18be227b175125d47ff258051fc5b7b971cebfebcb382248f17a5958c5b",
+      "unchanged": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round37-marketplace-local-frontier/history-peer/selected-contexts.first.stderr.txt",
+      "relativePath": "history-peer/selected-contexts.first.stderr.txt",
+      "bytes": 89,
+      "sha256": "d8be94676158da5a77c6c57dfd3bc1368758ffea8a6d5a1dc5f4e5ba0c11fe0d",
+      "finishBytes": 89,
+      "finishSha256": "d8be94676158da5a77c6c57dfd3bc1368758ffea8a6d5a1dc5f4e5ba0c11fe0d",
+      "unchanged": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round37-marketplace-local-frontier/history-peer/selected-contexts.json",
+      "relativePath": "history-peer/selected-contexts.json",
+      "bytes": 15167,
+      "sha256": "e73769e4920b0f0f7e6f32076754fe66b8962552182c10ad218fc50b31e718d8",
+      "finishBytes": 15167,
+      "finishSha256": "e73769e4920b0f0f7e6f32076754fe66b8962552182c10ad218fc50b31e718d8",
+      "unchanged": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round37-marketplace-local-frontier/history-peer/supplement.json",
+      "relativePath": "history-peer/supplement.json",
+      "bytes": 153184,
+      "sha256": "fb3c809e67c913c20ff04599c275760d4dc3266934d8ac8bfbf4a588c237e4fa",
+      "finishBytes": 153184,
+      "finishSha256": "fb3c809e67c913c20ff04599c275760d4dc3266934d8ac8bfbf4a588c237e4fa",
+      "unchanged": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round37-marketplace-local-frontier/history-peer/validation.json",
+      "relativePath": "history-peer/validation.json",
+      "bytes": 498,
+      "sha256": "357bf8e19f7b63da5772a0268907b21a248f41292b193ff7131a9ac467e8fd7e",
+      "finishBytes": 498,
+      "finishSha256": "357bf8e19f7b63da5772a0268907b21a248f41292b193ff7131a9ac467e8fd7e",
+      "unchanged": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round37-marketplace-local-frontier/history.json",
+      "relativePath": "history.json",
+      "bytes": 5395,
+      "sha256": "8536fc80fbf484978b29d19d6b0fe0e1c2a5e0fef085eb56525fccca09702c6a",
+      "finishBytes": 5395,
+      "finishSha256": "8536fc80fbf484978b29d19d6b0fe0e1c2a5e0fef085eb56525fccca09702c6a",
+      "unchanged": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round37-marketplace-local-frontier/initial-pins.json",
+      "relativePath": "initial-pins.json",
+      "bytes": 4345,
+      "sha256": "935d493ea3c81ce2266f5f039874b0ad6507b95a29b5a578992cc37bbcac8325",
+      "finishBytes": 4345,
+      "finishSha256": "935d493ea3c81ce2266f5f039874b0ad6507b95a29b5a578992cc37bbcac8325",
+      "unchanged": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round37-marketplace-local-frontier/locator-first.stderr.txt",
+      "relativePath": "locator-first.stderr.txt",
+      "bytes": 105,
+      "sha256": "f304d43b628c7606541ff82fd17cc7983ae089534168747f064574f986719e5b",
+      "finishBytes": 105,
+      "finishSha256": "f304d43b628c7606541ff82fd17cc7983ae089534168747f064574f986719e5b",
+      "unchanged": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round37-marketplace-local-frontier/market-list-pin.json",
+      "relativePath": "market-list-pin.json",
+      "bytes": 444,
+      "sha256": "7e9e8db8972ba6266fb798350eda96ba0f01221138ec90429f414214541540ca",
+      "finishBytes": 444,
+      "finishSha256": "7e9e8db8972ba6266fb798350eda96ba0f01221138ec90429f414214541540ca",
+      "unchanged": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round37-marketplace-local-frontier/metadata-notes.json",
+      "relativePath": "metadata-notes.json",
+      "bytes": 2342,
+      "sha256": "1b795dec5322cab936e789ac356dae95db3fb3f5f97c6d384d783a81cf17d99d",
+      "finishBytes": 2342,
+      "finishSha256": "1b795dec5322cab936e789ac356dae95db3fb3f5f97c6d384d783a81cf17d99d",
+      "unchanged": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round37-marketplace-local-frontier/packaging-first.stderr.txt",
+      "relativePath": "packaging-first.stderr.txt",
+      "bytes": 88,
+      "sha256": "2ced987dad4029cab6df102c7a5a71733968fec1c359f021f083bd28c6bbfd02",
+      "finishBytes": 88,
+      "finishSha256": "2ced987dad4029cab6df102c7a5a71733968fec1c359f021f083bd28c6bbfd02",
+      "unchanged": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round37-marketplace-local-frontier/proposal.md",
+      "relativePath": "proposal.md",
+      "bytes": 4560,
+      "sha256": "7bb614ac0a8b623b976027e287a4dce1487ccf97cc9d2f5b3e72e0ed121c79cf",
+      "finishBytes": 4560,
+      "finishSha256": "7bb614ac0a8b623b976027e287a4dce1487ccf97cc9d2f5b3e72e0ed121c79cf",
+      "unchanged": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round37-marketplace-local-frontier/source-manifest.json",
+      "relativePath": "source-manifest.json",
+      "bytes": 23256,
+      "sha256": "26e0bc26af6c24c52b29f515877e6e69357b73bce2d64e3dd88e1397f81d6d2d",
+      "finishBytes": 23256,
+      "finishSha256": "26e0bc26af6c24c52b29f515877e6e69357b73bce2d64e3dd88e1397f81d6d2d",
+      "unchanged": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round37-marketplace-local-frontier/validation.json",
+      "relativePath": "validation.json",
+      "bytes": 1307,
+      "sha256": "d69703c382d38a5148010a142efc3735ec2f15c4e28356fc17a76bce7d917620",
+      "finishBytes": 1307,
+      "finishSha256": "d69703c382d38a5148010a142efc3735ec2f15c4e28356fc17a76bce7d917620",
+      "unchanged": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round37-local-marker-review/admission-path-initial-pins.json",
+      "relativePath": "admission-path-initial-pins.json",
+      "bytes": 815,
+      "sha256": "305bad9af241472ac00c2f29d3b70e706211a78a65bf0612b7aa2adc2f590ec8",
+      "finishBytes": 815,
+      "finishSha256": "305bad9af241472ac00c2f29d3b70e706211a78a65bf0612b7aa2adc2f590ec8",
+      "unchanged": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round37-local-marker-review/artifact-receipt.json",
+      "relativePath": "artifact-receipt.json",
+      "bytes": 4120,
+      "sha256": "4112d3fea658aedd692c31f194c675a9a080519d625f257691ac91c405550293",
+      "finishBytes": 4120,
+      "finishSha256": "4112d3fea658aedd692c31f194c675a9a080519d625f257691ac91c405550293",
+      "unchanged": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round37-local-marker-review/classification.json",
+      "relativePath": "classification.json",
+      "bytes": 931,
+      "sha256": "6e71676ba3c13ac74b533579a0eff723fdcc35410f4de4bd169f05fd9e451fb1",
+      "finishBytes": 931,
+      "finishSha256": "6e71676ba3c13ac74b533579a0eff723fdcc35410f4de4bd169f05fd9e451fb1",
+      "unchanged": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round37-local-marker-review/dispatch-initial-pins.json",
+      "relativePath": "dispatch-initial-pins.json",
+      "bytes": 706,
+      "sha256": "d4b03f43654289db563d13a333ff60f24aecf4c7797f5f5b16384f7ca1e48467",
+      "finishBytes": 706,
+      "finishSha256": "d4b03f43654289db563d13a333ff60f24aecf4c7797f5f5b16384f7ca1e48467",
+      "unchanged": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round37-local-marker-review/focused-history.json",
+      "relativePath": "focused-history.json",
+      "bytes": 6910,
+      "sha256": "8bc2021a68a6c82075089c79eb543c22fa04658a4b67be5e626d2196e7bd80fc",
+      "finishBytes": 6910,
+      "finishSha256": "8bc2021a68a6c82075089c79eb543c22fa04658a4b67be5e626d2196e7bd80fc",
+      "unchanged": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round37-local-marker-review/history-decisions.json",
+      "relativePath": "history-decisions.json",
+      "bytes": 2576,
+      "sha256": "e022604e3e8dc638231a00e6520598a837e4f20bfed7294ed0b755bbe684e7d6",
+      "finishBytes": 2576,
+      "finishSha256": "e022604e3e8dc638231a00e6520598a837e4f20bfed7294ed0b755bbe684e7d6",
+      "unchanged": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round37-local-marker-review/history-delta.json",
+      "relativePath": "history-delta.json",
+      "bytes": 16332,
+      "sha256": "38b7378452be64c8ece8b656a254589cc56275c5b71af532170dfdacbac54594",
+      "finishBytes": 16332,
+      "finishSha256": "38b7378452be64c8ece8b656a254589cc56275c5b71af532170dfdacbac54594",
+      "unchanged": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round37-local-marker-review/history-method.py",
+      "relativePath": "history-method.py",
+      "bytes": 3437,
+      "sha256": "bca3797375d9a548c90422fed8660abba8755d850c79b36282c0fd211763c870",
+      "finishBytes": 3437,
+      "finishSha256": "bca3797375d9a548c90422fed8660abba8755d850c79b36282c0fd211763c870",
+      "unchanged": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round37-local-marker-review/history.json",
+      "relativePath": "history.json",
+      "bytes": 717288,
+      "sha256": "8576d62f35c680f16bc9a3ac5f25f4480e28bc85d964e5e0d2d57de67bf20fb2",
+      "finishBytes": 717288,
+      "finishSha256": "8576d62f35c680f16bc9a3ac5f25f4480e28bc85d964e5e0d2d57de67bf20fb2",
+      "unchanged": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round37-local-marker-review/initial-pins.json",
+      "relativePath": "initial-pins.json",
+      "bytes": 3697,
+      "sha256": "b27e808e8ac914ab34f6e820a1c6d97d53c6e4e0a091a23c2ef4ef2ccdb8ce44",
+      "finishBytes": 3697,
+      "finishSha256": "b27e808e8ac914ab34f6e820a1c6d97d53c6e4e0a091a23c2ef4ef2ccdb8ce44",
+      "unchanged": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round37-local-marker-review/links-check.json",
+      "relativePath": "links-check.json",
+      "bytes": 2557,
+      "sha256": "81a3d17b9ee9049ba6904ea6a5be6aaa1c8186eb9a2006d32533f4435edca69a",
+      "finishBytes": 2557,
+      "finishSha256": "81a3d17b9ee9049ba6904ea6a5be6aaa1c8186eb9a2006d32533f4435edca69a",
+      "unchanged": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round37-local-marker-review/old-collision-history-late-pin.json",
+      "relativePath": "old-collision-history-late-pin.json",
+      "bytes": 448,
+      "sha256": "2cda7502c0b60e3fc1e58ad6a73fc10f3aa91fcf759f2dcc7a89c170253866cc",
+      "finishBytes": 448,
+      "finishSha256": "2cda7502c0b60e3fc1e58ad6a73fc10f3aa91fcf759f2dcc7a89c170253866cc",
+      "unchanged": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round37-local-marker-review/prior-source-claims.json",
+      "relativePath": "prior-source-claims.json",
+      "bytes": 191013,
+      "sha256": "816111b41f52ee81bd319f32de9da68723a582d0aa7e0eaa80a4f651c18c504c",
+      "finishBytes": 191013,
+      "finishSha256": "816111b41f52ee81bd319f32de9da68723a582d0aa7e0eaa80a4f651c18c504c",
+      "unchanged": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round37-local-marker-review/registry-admission-initial-pins.json",
+      "relativePath": "registry-admission-initial-pins.json",
+      "bytes": 718,
+      "sha256": "4cb60a6e801782d4d29d969b57b9026c61019b2dff7cb51f93f2e624742a83ee",
+      "finishBytes": 718,
+      "finishSha256": "4cb60a6e801782d4d29d969b57b9026c61019b2dff7cb51f93f2e624742a83ee",
+      "unchanged": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round37-local-marker-review/report.md",
+      "relativePath": "report.md",
+      "bytes": 8075,
+      "sha256": "72e547ef28ed078220f036c67a0a12f046e2cf2babd4f58a7c34190165c14eee",
+      "finishBytes": 8075,
+      "finishSha256": "72e547ef28ed078220f036c67a0a12f046e2cf2babd4f58a7c34190165c14eee",
+      "unchanged": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round37-local-marker-review/scope.json",
+      "relativePath": "scope.json",
+      "bytes": 872,
+      "sha256": "1c3e250f8eb7291cd56925eb7b5b72ea1a7710d85ffe10c8b8e8144b99f9b5c7",
+      "finishBytes": 872,
+      "finishSha256": "1c3e250f8eb7291cd56925eb7b5b72ea1a7710d85ffe10c8b8e8144b99f9b5c7",
+      "unchanged": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round37-local-marker-review/source-manifest.json",
+      "relativePath": "source-manifest.json",
+      "bytes": 31633,
+      "sha256": "8137cda5638a5581625641f15b1acd10136023df5871c74a6f7814de74f66f67",
+      "finishBytes": 31633,
+      "finishSha256": "8137cda5638a5581625641f15b1acd10136023df5871c74a6f7814de74f66f67",
+      "unchanged": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round37-local-marker-review/validation.json",
+      "relativePath": "validation.json",
+      "bytes": 1185,
+      "sha256": "0f7f6b4c39846ed564e1d4e134e08877a265dcec216bf3b073d818e4db8d465b",
+      "finishBytes": 1185,
+      "finishSha256": "0f7f6b4c39846ed564e1d4e134e08877a265dcec216bf3b073d818e4db8d465b",
+      "unchanged": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round37-local-marker-review/writer-type-initial-pins.json",
+      "relativePath": "writer-type-initial-pins.json",
+      "bytes": 1134,
+      "sha256": "d8c3681850e03df93b02064634eeeb9823a27a28069b3b00f360c50568acdf97",
+      "finishBytes": 1134,
+      "finishSha256": "d8c3681850e03df93b02064634eeeb9823a27a28069b3b00f360c50568acdf97",
+      "unchanged": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round37-root-frontier/author-receipt.json",
+      "relativePath": "author-receipt.json",
+      "bytes": 1442,
+      "sha256": "59a084698b3443360922be86db0dda626ac7e9dc953a9b6eca21d132e9f25f71",
+      "finishBytes": 1442,
+      "finishSha256": "59a084698b3443360922be86db0dda626ac7e9dc953a9b6eca21d132e9f25f71",
+      "unchanged": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round37-root-frontier/decisions.json",
+      "relativePath": "decisions.json",
+      "bytes": 2248,
+      "sha256": "c25843bd68330cba304a05db15723750d91f38d057d39222317fe575d3d9cc31",
+      "finishBytes": 2248,
+      "finishSha256": "c25843bd68330cba304a05db15723750d91f38d057d39222317fe575d3d9cc31",
+      "unchanged": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round37-root-frontier/initial-pins.json",
+      "relativePath": "initial-pins.json",
+      "bytes": 3258,
+      "sha256": "c7751b25b9dd1dbd77ba631ee86130c7f2099b870d0ce19816d5a8dafe5050bf",
+      "finishBytes": 3258,
+      "finishSha256": "c7751b25b9dd1dbd77ba631ee86130c7f2099b870d0ce19816d5a8dafe5050bf",
+      "unchanged": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round37-root-frontier/installed-key-pin.json",
+      "relativePath": "installed-key-pin.json",
+      "bytes": 403,
+      "sha256": "2f2b13b20a740bce85f3e2529d7fc0ab606355d75d238d6a91579242b0c6cd59",
+      "finishBytes": 403,
+      "finishSha256": "2f2b13b20a740bce85f3e2529d7fc0ab606355d75d238d6a91579242b0c6cd59",
+      "unchanged": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round37-root-frontier/metadata-notes.json",
+      "relativePath": "metadata-notes.json",
+      "bytes": 329,
+      "sha256": "f43e8f7336084a6662e28971cd4cc460f55dad2445aee3aec0d1d080a49f4576",
+      "finishBytes": 329,
+      "finishSha256": "f43e8f7336084a6662e28971cd4cc460f55dad2445aee3aec0d1d080a49f4576",
+      "unchanged": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round37-root-frontier/proposal.md",
+      "relativePath": "proposal.md",
+      "bytes": 2587,
+      "sha256": "f24005f172238773d7fd28386621a303d3a1beb4894ee4d7e4f190aca7c8a244",
+      "finishBytes": 2587,
+      "finishSha256": "f24005f172238773d7fd28386621a303d3a1beb4894ee4d7e4f190aca7c8a244",
+      "unchanged": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round37-root-frontier/read-ranges.json",
+      "relativePath": "read-ranges.json",
+      "bytes": 1646,
+      "sha256": "5b190156c837d53ab5d884b9162ef867cd19877f831b790fdd33aad42bab0557",
+      "finishBytes": 1646,
+      "finishSha256": "5b190156c837d53ab5d884b9162ef867cd19877f831b790fdd33aad42bab0557",
+      "unchanged": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round37-root-frontier/source-manifest.json",
+      "relativePath": "source-manifest.json",
+      "bytes": 5647,
+      "sha256": "8f647580230aa2133b52863b9dd94c6c906c2e9f0e4e82265979d61adaca1ba1",
+      "finishBytes": 5647,
+      "finishSha256": "8f647580230aa2133b52863b9dd94c6c906c2e9f0e4e82265979d61adaca1ba1",
+      "unchanged": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round37-root-frontier/source-reader.first.exit.json",
+      "relativePath": "source-reader.first.exit.json",
+      "bytes": 574,
+      "sha256": "944b3c501288d909d41e0b91918eba92eb4768b888aaf41cd7be76179ece11bb",
+      "finishBytes": 574,
+      "finishSha256": "944b3c501288d909d41e0b91918eba92eb4768b888aaf41cd7be76179ece11bb",
+      "unchanged": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round37-root-frontier/validation.json",
+      "relativePath": "validation.json",
+      "bytes": 104,
+      "sha256": "cabc6267e8a4ecfa48d593a2d21a603a2b19d3beee9c13272a1a6437e762abc9",
+      "finishBytes": 104,
+      "finishSha256": "cabc6267e8a4ecfa48d593a2d21a603a2b19d3beee9c13272a1a6437e762abc9",
+      "unchanged": true
+    }
+  ],
+  "receiptChecks": [
+    {
+      "receipt": "/tmp/codeshell-audit-round37-marketplace-local-frontier/author-receipt.json",
+      "rowCount": 32,
+      "allMatch": true,
+      "rows": [
+        {
+          "path": "/tmp/codeshell-audit-round37-marketplace-local-frontier/adjacent-pins.json",
+          "bytes": 1623,
+          "sha256": "4763f422751d983f07314e36d1b0b1e45258676d49db1659bf28c486b3229d10",
+          "matchesReceipt": true
+        },
+        {
+          "path": "/tmp/codeshell-audit-round37-marketplace-local-frontier/bridge-pins.json",
+          "bytes": 1217,
+          "sha256": "76636eb3710fbe2422a69503f79246acb10393df4442ffaf29a1e6e9abf7f071",
+          "matchesReceipt": true
+        },
+        {
+          "path": "/tmp/codeshell-audit-round37-marketplace-local-frontier/decisions.json",
+          "bytes": 3611,
+          "sha256": "b27b0472878b590fd4ec7d787869ee60dd83d60c1da7ddd7862f5c14186185ec",
+          "matchesReceipt": true
+        },
+        {
+          "path": "/tmp/codeshell-audit-round37-marketplace-local-frontier/finish-checks.json",
+          "bytes": 806839,
+          "sha256": "19ca3626ba16af133e40b3e8b333bae17f39a4b2773590d5a9d74db45eb06a83",
+          "matchesReceipt": true
+        },
+        {
+          "path": "/tmp/codeshell-audit-round37-marketplace-local-frontier/history-corrected-contexts.json",
+          "bytes": 256585,
+          "sha256": "6e3a54ed850341dd0fe71bbb80a6894bbc444085eec710e59443ab3f346dff68",
+          "matchesReceipt": true
+        },
+        {
+          "path": "/tmp/codeshell-audit-round37-marketplace-local-frontier/history-corrected-initial-pins.json",
+          "bytes": 708024,
+          "sha256": "85f89fedaa4b1bb10564f1daab7021bf6dc21ddc315fe7bb44b3f495f4e303ea",
+          "matchesReceipt": true
+        },
+        {
+          "path": "/tmp/codeshell-audit-round37-marketplace-local-frontier/history-corrected-scan.py",
+          "bytes": 5713,
+          "sha256": "9311ed8176058852c2189a3795f5f80d7e07d96a3f5b3a69574989a22a08a0b9",
+          "matchesReceipt": true
+        },
+        {
+          "path": "/tmp/codeshell-audit-round37-marketplace-local-frontier/history-corrected-selection.json",
+          "bytes": 12945,
+          "sha256": "880e6ba6dcbf65c3d88394d819c8f5d298eb9464a8af28462180baed648da64f",
+          "matchesReceipt": true
+        },
+        {
+          "path": "/tmp/codeshell-audit-round37-marketplace-local-frontier/history-corrected.json",
+          "bytes": 2807,
+          "sha256": "71c8fda1b2eeb6c8cfb649753536eb2c26e14672e8139bfccf90c4db5eb23615",
+          "matchesReceipt": true
+        },
+        {
+          "path": "/tmp/codeshell-audit-round37-marketplace-local-frontier/history-peer/author-receipt.json",
+          "bytes": 2218,
+          "sha256": "1a16808467fd91f28dcad362af53e43bf1236a025fa7e9b0ed187ce99c60fa0e",
+          "matchesReceipt": true
+        },
+        {
+          "path": "/tmp/codeshell-audit-round37-marketplace-local-frontier/history-peer/contexts.json",
+          "bytes": 120837,
+          "sha256": "9c70ddc181da2a32abda5e9d35b37d2f3700cf92edce2188c8565ed6c8e57d22",
+          "matchesReceipt": true
+        },
+        {
+          "path": "/tmp/codeshell-audit-round37-marketplace-local-frontier/history-peer/finish-check.first.stderr.txt",
+          "bytes": 138,
+          "sha256": "3382fe5e2ab5ccd334864f1b32dcc6ef5158277809a1cd440c4b5e29da7c353f",
+          "matchesReceipt": true
+        },
+        {
+          "path": "/tmp/codeshell-audit-round37-marketplace-local-frontier/history-peer/finish-checks.json",
+          "bytes": 1141439,
+          "sha256": "9b6dabece36b3eceae66fee8a606fd7b6f302272e4c458d730d6560ce32fa53f",
+          "matchesReceipt": true
+        },
+        {
+          "path": "/tmp/codeshell-audit-round37-marketplace-local-frontier/history-peer/history.json",
+          "bytes": 814642,
+          "sha256": "fb926c10eca5cdcdda525b2d65fedf76f0bf469ec5bb32c475478a5bd0edd63d",
+          "matchesReceipt": true
+        },
+        {
+          "path": "/tmp/codeshell-audit-round37-marketplace-local-frontier/history-peer/initial-pins.json",
+          "bytes": 816583,
+          "sha256": "e25e32e0ab2662a9a7de52b1b16a81174ddfc7bb7994f3386b1eeff55fef0637",
+          "matchesReceipt": true
+        },
+        {
+          "path": "/tmp/codeshell-audit-round37-marketplace-local-frontier/history-peer/inventory.raw.txt",
+          "bytes": 203999,
+          "sha256": "95a5abe5da4489d5dbf1dfe7238f8f958debf1efb66b51fc7e2ee5e573112a26",
+          "matchesReceipt": true
+        },
+        {
+          "path": "/tmp/codeshell-audit-round37-marketplace-local-frontier/history-peer/metadata-notes.json",
+          "bytes": 2288,
+          "sha256": "015b2a16f19f26200edf4be756a1b7531fcd35d43b75b25c9fd7e017fed8571e",
+          "matchesReceipt": true
+        },
+        {
+          "path": "/tmp/codeshell-audit-round37-marketplace-local-frontier/history-peer/review.md",
+          "bytes": 2662,
+          "sha256": "04d4dee31a4edfe4754e831ad1721f8ec9f892780213702fa05a567156bc8ed0",
+          "matchesReceipt": true
+        },
+        {
+          "path": "/tmp/codeshell-audit-round37-marketplace-local-frontier/history-peer/scan-history.py",
+          "bytes": 4835,
+          "sha256": "a364b18be227b175125d47ff258051fc5b7b971cebfebcb382248f17a5958c5b",
+          "matchesReceipt": true
+        },
+        {
+          "path": "/tmp/codeshell-audit-round37-marketplace-local-frontier/history-peer/selected-contexts.first.stderr.txt",
+          "bytes": 89,
+          "sha256": "d8be94676158da5a77c6c57dfd3bc1368758ffea8a6d5a1dc5f4e5ba0c11fe0d",
+          "matchesReceipt": true
+        },
+        {
+          "path": "/tmp/codeshell-audit-round37-marketplace-local-frontier/history-peer/selected-contexts.json",
+          "bytes": 15167,
+          "sha256": "e73769e4920b0f0f7e6f32076754fe66b8962552182c10ad218fc50b31e718d8",
+          "matchesReceipt": true
+        },
+        {
+          "path": "/tmp/codeshell-audit-round37-marketplace-local-frontier/history-peer/supplement.json",
+          "bytes": 153184,
+          "sha256": "fb3c809e67c913c20ff04599c275760d4dc3266934d8ac8bfbf4a588c237e4fa",
+          "matchesReceipt": true
+        },
+        {
+          "path": "/tmp/codeshell-audit-round37-marketplace-local-frontier/history-peer/validation.json",
+          "bytes": 498,
+          "sha256": "357bf8e19f7b63da5772a0268907b21a248f41292b193ff7131a9ac467e8fd7e",
+          "matchesReceipt": true
+        },
+        {
+          "path": "/tmp/codeshell-audit-round37-marketplace-local-frontier/history.json",
+          "bytes": 5395,
+          "sha256": "8536fc80fbf484978b29d19d6b0fe0e1c2a5e0fef085eb56525fccca09702c6a",
+          "matchesReceipt": true
+        },
+        {
+          "path": "/tmp/codeshell-audit-round37-marketplace-local-frontier/initial-pins.json",
+          "bytes": 4345,
+          "sha256": "935d493ea3c81ce2266f5f039874b0ad6507b95a29b5a578992cc37bbcac8325",
+          "matchesReceipt": true
+        },
+        {
+          "path": "/tmp/codeshell-audit-round37-marketplace-local-frontier/locator-first.stderr.txt",
+          "bytes": 105,
+          "sha256": "f304d43b628c7606541ff82fd17cc7983ae089534168747f064574f986719e5b",
+          "matchesReceipt": true
+        },
+        {
+          "path": "/tmp/codeshell-audit-round37-marketplace-local-frontier/market-list-pin.json",
+          "bytes": 444,
+          "sha256": "7e9e8db8972ba6266fb798350eda96ba0f01221138ec90429f414214541540ca",
+          "matchesReceipt": true
+        },
+        {
+          "path": "/tmp/codeshell-audit-round37-marketplace-local-frontier/metadata-notes.json",
+          "bytes": 2342,
+          "sha256": "1b795dec5322cab936e789ac356dae95db3fb3f5f97c6d384d783a81cf17d99d",
+          "matchesReceipt": true
+        },
+        {
+          "path": "/tmp/codeshell-audit-round37-marketplace-local-frontier/packaging-first.stderr.txt",
+          "bytes": 88,
+          "sha256": "2ced987dad4029cab6df102c7a5a71733968fec1c359f021f083bd28c6bbfd02",
+          "matchesReceipt": true
+        },
+        {
+          "path": "/tmp/codeshell-audit-round37-marketplace-local-frontier/proposal.md",
+          "bytes": 4560,
+          "sha256": "7bb614ac0a8b623b976027e287a4dce1487ccf97cc9d2f5b3e72e0ed121c79cf",
+          "matchesReceipt": true
+        },
+        {
+          "path": "/tmp/codeshell-audit-round37-marketplace-local-frontier/source-manifest.json",
+          "bytes": 23256,
+          "sha256": "26e0bc26af6c24c52b29f515877e6e69357b73bce2d64e3dd88e1397f81d6d2d",
+          "matchesReceipt": true
+        },
+        {
+          "path": "/tmp/codeshell-audit-round37-marketplace-local-frontier/validation.json",
+          "bytes": 1307,
+          "sha256": "d69703c382d38a5148010a142efc3735ec2f15c4e28356fc17a76bce7d917620",
+          "matchesReceipt": true
+        }
+      ],
+      "selfExclusionObserved": true
+    },
+    {
+      "receipt": "/tmp/codeshell-audit-round37-marketplace-local-frontier/history-peer/author-receipt.json",
+      "rowCount": 13,
+      "allMatch": true,
+      "rows": [
+        {
+          "path": "/tmp/codeshell-audit-round37-marketplace-local-frontier/history-peer/contexts.json",
+          "bytes": 120837,
+          "sha256": "9c70ddc181da2a32abda5e9d35b37d2f3700cf92edce2188c8565ed6c8e57d22",
+          "matchesReceipt": true
+        },
+        {
+          "path": "/tmp/codeshell-audit-round37-marketplace-local-frontier/history-peer/finish-check.first.stderr.txt",
+          "bytes": 138,
+          "sha256": "3382fe5e2ab5ccd334864f1b32dcc6ef5158277809a1cd440c4b5e29da7c353f",
+          "matchesReceipt": true
+        },
+        {
+          "path": "/tmp/codeshell-audit-round37-marketplace-local-frontier/history-peer/finish-checks.json",
+          "bytes": 1141439,
+          "sha256": "9b6dabece36b3eceae66fee8a606fd7b6f302272e4c458d730d6560ce32fa53f",
+          "matchesReceipt": true
+        },
+        {
+          "path": "/tmp/codeshell-audit-round37-marketplace-local-frontier/history-peer/history.json",
+          "bytes": 814642,
+          "sha256": "fb926c10eca5cdcdda525b2d65fedf76f0bf469ec5bb32c475478a5bd0edd63d",
+          "matchesReceipt": true
+        },
+        {
+          "path": "/tmp/codeshell-audit-round37-marketplace-local-frontier/history-peer/initial-pins.json",
+          "bytes": 816583,
+          "sha256": "e25e32e0ab2662a9a7de52b1b16a81174ddfc7bb7994f3386b1eeff55fef0637",
+          "matchesReceipt": true
+        },
+        {
+          "path": "/tmp/codeshell-audit-round37-marketplace-local-frontier/history-peer/inventory.raw.txt",
+          "bytes": 203999,
+          "sha256": "95a5abe5da4489d5dbf1dfe7238f8f958debf1efb66b51fc7e2ee5e573112a26",
+          "matchesReceipt": true
+        },
+        {
+          "path": "/tmp/codeshell-audit-round37-marketplace-local-frontier/history-peer/metadata-notes.json",
+          "bytes": 2288,
+          "sha256": "015b2a16f19f26200edf4be756a1b7531fcd35d43b75b25c9fd7e017fed8571e",
+          "matchesReceipt": true
+        },
+        {
+          "path": "/tmp/codeshell-audit-round37-marketplace-local-frontier/history-peer/review.md",
+          "bytes": 2662,
+          "sha256": "04d4dee31a4edfe4754e831ad1721f8ec9f892780213702fa05a567156bc8ed0",
+          "matchesReceipt": true
+        },
+        {
+          "path": "/tmp/codeshell-audit-round37-marketplace-local-frontier/history-peer/scan-history.py",
+          "bytes": 4835,
+          "sha256": "a364b18be227b175125d47ff258051fc5b7b971cebfebcb382248f17a5958c5b",
+          "matchesReceipt": true
+        },
+        {
+          "path": "/tmp/codeshell-audit-round37-marketplace-local-frontier/history-peer/selected-contexts.first.stderr.txt",
+          "bytes": 89,
+          "sha256": "d8be94676158da5a77c6c57dfd3bc1368758ffea8a6d5a1dc5f4e5ba0c11fe0d",
+          "matchesReceipt": true
+        },
+        {
+          "path": "/tmp/codeshell-audit-round37-marketplace-local-frontier/history-peer/selected-contexts.json",
+          "bytes": 15167,
+          "sha256": "e73769e4920b0f0f7e6f32076754fe66b8962552182c10ad218fc50b31e718d8",
+          "matchesReceipt": true
+        },
+        {
+          "path": "/tmp/codeshell-audit-round37-marketplace-local-frontier/history-peer/supplement.json",
+          "bytes": 153184,
+          "sha256": "fb3c809e67c913c20ff04599c275760d4dc3266934d8ac8bfbf4a588c237e4fa",
+          "matchesReceipt": true
+        },
+        {
+          "path": "/tmp/codeshell-audit-round37-marketplace-local-frontier/history-peer/validation.json",
+          "bytes": 498,
+          "sha256": "357bf8e19f7b63da5772a0268907b21a248f41292b193ff7131a9ac467e8fd7e",
+          "matchesReceipt": true
+        }
+      ],
+      "selfExclusionObserved": true
+    },
+    {
+      "receipt": "/tmp/codeshell-audit-round37-local-marker-review/artifact-receipt.json",
+      "rowCount": 18,
+      "allMatch": true,
+      "rows": [
+        {
+          "path": "/tmp/codeshell-audit-round37-local-marker-review/admission-path-initial-pins.json",
+          "bytes": 815,
+          "sha256": "305bad9af241472ac00c2f29d3b70e706211a78a65bf0612b7aa2adc2f590ec8",
+          "matchesReceipt": true
+        },
+        {
+          "path": "/tmp/codeshell-audit-round37-local-marker-review/classification.json",
+          "bytes": 931,
+          "sha256": "6e71676ba3c13ac74b533579a0eff723fdcc35410f4de4bd169f05fd9e451fb1",
+          "matchesReceipt": true
+        },
+        {
+          "path": "/tmp/codeshell-audit-round37-local-marker-review/dispatch-initial-pins.json",
+          "bytes": 706,
+          "sha256": "d4b03f43654289db563d13a333ff60f24aecf4c7797f5f5b16384f7ca1e48467",
+          "matchesReceipt": true
+        },
+        {
+          "path": "/tmp/codeshell-audit-round37-local-marker-review/focused-history.json",
+          "bytes": 6910,
+          "sha256": "8bc2021a68a6c82075089c79eb543c22fa04658a4b67be5e626d2196e7bd80fc",
+          "matchesReceipt": true
+        },
+        {
+          "path": "/tmp/codeshell-audit-round37-local-marker-review/history-decisions.json",
+          "bytes": 2576,
+          "sha256": "e022604e3e8dc638231a00e6520598a837e4f20bfed7294ed0b755bbe684e7d6",
+          "matchesReceipt": true
+        },
+        {
+          "path": "/tmp/codeshell-audit-round37-local-marker-review/history-delta.json",
+          "bytes": 16332,
+          "sha256": "38b7378452be64c8ece8b656a254589cc56275c5b71af532170dfdacbac54594",
+          "matchesReceipt": true
+        },
+        {
+          "path": "/tmp/codeshell-audit-round37-local-marker-review/history-method.py",
+          "bytes": 3437,
+          "sha256": "bca3797375d9a548c90422fed8660abba8755d850c79b36282c0fd211763c870",
+          "matchesReceipt": true
+        },
+        {
+          "path": "/tmp/codeshell-audit-round37-local-marker-review/history.json",
+          "bytes": 717288,
+          "sha256": "8576d62f35c680f16bc9a3ac5f25f4480e28bc85d964e5e0d2d57de67bf20fb2",
+          "matchesReceipt": true
+        },
+        {
+          "path": "/tmp/codeshell-audit-round37-local-marker-review/initial-pins.json",
+          "bytes": 3697,
+          "sha256": "b27e808e8ac914ab34f6e820a1c6d97d53c6e4e0a091a23c2ef4ef2ccdb8ce44",
+          "matchesReceipt": true
+        },
+        {
+          "path": "/tmp/codeshell-audit-round37-local-marker-review/links-check.json",
+          "bytes": 2557,
+          "sha256": "81a3d17b9ee9049ba6904ea6a5be6aaa1c8186eb9a2006d32533f4435edca69a",
+          "matchesReceipt": true
+        },
+        {
+          "path": "/tmp/codeshell-audit-round37-local-marker-review/old-collision-history-late-pin.json",
+          "bytes": 448,
+          "sha256": "2cda7502c0b60e3fc1e58ad6a73fc10f3aa91fcf759f2dcc7a89c170253866cc",
+          "matchesReceipt": true
+        },
+        {
+          "path": "/tmp/codeshell-audit-round37-local-marker-review/prior-source-claims.json",
+          "bytes": 191013,
+          "sha256": "816111b41f52ee81bd319f32de9da68723a582d0aa7e0eaa80a4f651c18c504c",
+          "matchesReceipt": true
+        },
+        {
+          "path": "/tmp/codeshell-audit-round37-local-marker-review/registry-admission-initial-pins.json",
+          "bytes": 718,
+          "sha256": "4cb60a6e801782d4d29d969b57b9026c61019b2dff7cb51f93f2e624742a83ee",
+          "matchesReceipt": true
+        },
+        {
+          "path": "/tmp/codeshell-audit-round37-local-marker-review/report.md",
+          "bytes": 8075,
+          "sha256": "72e547ef28ed078220f036c67a0a12f046e2cf2babd4f58a7c34190165c14eee",
+          "matchesReceipt": true
+        },
+        {
+          "path": "/tmp/codeshell-audit-round37-local-marker-review/scope.json",
+          "bytes": 872,
+          "sha256": "1c3e250f8eb7291cd56925eb7b5b72ea1a7710d85ffe10c8b8e8144b99f9b5c7",
+          "matchesReceipt": true
+        },
+        {
+          "path": "/tmp/codeshell-audit-round37-local-marker-review/source-manifest.json",
+          "bytes": 31633,
+          "sha256": "8137cda5638a5581625641f15b1acd10136023df5871c74a6f7814de74f66f67",
+          "matchesReceipt": true
+        },
+        {
+          "path": "/tmp/codeshell-audit-round37-local-marker-review/validation.json",
+          "bytes": 1185,
+          "sha256": "0f7f6b4c39846ed564e1d4e134e08877a265dcec216bf3b073d818e4db8d465b",
+          "matchesReceipt": true
+        },
+        {
+          "path": "/tmp/codeshell-audit-round37-local-marker-review/writer-type-initial-pins.json",
+          "bytes": 1134,
+          "sha256": "d8c3681850e03df93b02064634eeeb9823a27a28069b3b00f360c50568acdf97",
+          "matchesReceipt": true
+        }
+      ],
+      "selfExclusionObserved": true
+    },
+    {
+      "receipt": "/tmp/codeshell-audit-round37-root-frontier/author-receipt.json",
+      "rowCount": 9,
+      "allMatch": true,
+      "rows": [
+        {
+          "path": "/tmp/codeshell-audit-round37-root-frontier/decisions.json",
+          "bytes": 2248,
+          "sha256": "c25843bd68330cba304a05db15723750d91f38d057d39222317fe575d3d9cc31",
+          "matchesReceipt": true
+        },
+        {
+          "path": "/tmp/codeshell-audit-round37-root-frontier/initial-pins.json",
+          "bytes": 3258,
+          "sha256": "c7751b25b9dd1dbd77ba631ee86130c7f2099b870d0ce19816d5a8dafe5050bf",
+          "matchesReceipt": true
+        },
+        {
+          "path": "/tmp/codeshell-audit-round37-root-frontier/installed-key-pin.json",
+          "bytes": 403,
+          "sha256": "2f2b13b20a740bce85f3e2529d7fc0ab606355d75d238d6a91579242b0c6cd59",
+          "matchesReceipt": true
+        },
+        {
+          "path": "/tmp/codeshell-audit-round37-root-frontier/metadata-notes.json",
+          "bytes": 329,
+          "sha256": "f43e8f7336084a6662e28971cd4cc460f55dad2445aee3aec0d1d080a49f4576",
+          "matchesReceipt": true
+        },
+        {
+          "path": "/tmp/codeshell-audit-round37-root-frontier/proposal.md",
+          "bytes": 2587,
+          "sha256": "f24005f172238773d7fd28386621a303d3a1beb4894ee4d7e4f190aca7c8a244",
+          "matchesReceipt": true
+        },
+        {
+          "path": "/tmp/codeshell-audit-round37-root-frontier/read-ranges.json",
+          "bytes": 1646,
+          "sha256": "5b190156c837d53ab5d884b9162ef867cd19877f831b790fdd33aad42bab0557",
+          "matchesReceipt": true
+        },
+        {
+          "path": "/tmp/codeshell-audit-round37-root-frontier/source-manifest.json",
+          "bytes": 5647,
+          "sha256": "8f647580230aa2133b52863b9dd94c6c906c2e9f0e4e82265979d61adaca1ba1",
+          "matchesReceipt": true
+        },
+        {
+          "path": "/tmp/codeshell-audit-round37-root-frontier/source-reader.first.exit.json",
+          "bytes": 574,
+          "sha256": "944b3c501288d909d41e0b91918eba92eb4768b888aaf41cd7be76179ece11bb",
+          "matchesReceipt": true
+        },
+        {
+          "path": "/tmp/codeshell-audit-round37-root-frontier/validation.json",
+          "bytes": 104,
+          "sha256": "cabc6267e8a4ecfa48d593a2d21a603a2b19d3beee9c13272a1a6437e762abc9",
+          "matchesReceipt": true
+        }
+      ],
+      "selfExclusionObserved": true
+    }
+  ],
+  "authorSourceManifestChecks": [
+    {
+      "owner": "author",
+      "manifest": "/tmp/codeshell-audit-round37-marketplace-local-frontier/source-manifest.json",
+      "sourceRowCount": 24,
+      "coverageCounts": {
+        "full": 6,
+        "selected": 14,
+        "hash-only": 4
+      },
+      "declaredLines": 1238,
+      "rows": [
+        {
+          "path": "CODESHELL.md",
+          "bytes": 17639,
+          "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+          "coverageClaimFromAuthor": "hash-only",
+          "selectedLineRangesFromAuthor": [],
+          "additionalNavigationSnippetLinesFromAuthor": [],
+          "declaredReadLineCount": 0,
+          "unionCountMatches": true,
+          "rangeBoundsValid": true,
+          "currentShaMatches": true,
+          "initialSemanticReadSha256Claim": null,
+          "initialBeforeThisPrepSemanticReadClaim": null,
+          "dedicatedInitialPin": {
+            "path": "CODESHELL.md",
+            "bytes": 17639,
+            "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+            "lineCount": 217,
+            "semanticReadBeforeThisPin": true
+          },
+          "priorFullReadNote": null
+        },
+        {
+          "path": "AGENTS.md",
+          "bytes": 206,
+          "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+          "coverageClaimFromAuthor": "hash-only",
+          "selectedLineRangesFromAuthor": [],
+          "additionalNavigationSnippetLinesFromAuthor": [],
+          "declaredReadLineCount": 0,
+          "unionCountMatches": true,
+          "rangeBoundsValid": true,
+          "currentShaMatches": true,
+          "initialSemanticReadSha256Claim": null,
+          "initialBeforeThisPrepSemanticReadClaim": null,
+          "dedicatedInitialPin": {
+            "path": "AGENTS.md",
+            "bytes": 206,
+            "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+            "lineCount": 5,
+            "semanticReadBeforeThisPin": false
+          },
+          "priorFullReadNote": null
+        },
+        {
+          "path": "packages/core/src/plugins/marketplaceManager.ts",
+          "bytes": 7940,
+          "sha256": "cdebee5c72c8ed253204c4299ed54d6c7f7806ca7768400b2d8a6b94a3846fd0",
+          "coverageClaimFromAuthor": "selected",
+          "selectedLineRangesFromAuthor": [
+            [
+              37,
+              44
+            ],
+            [
+              93,
+              155
+            ],
+            [
+              191,
+              236
+            ]
+          ],
+          "additionalNavigationSnippetLinesFromAuthor": [],
+          "declaredReadLineCount": 117,
+          "unionCountMatches": true,
+          "rangeBoundsValid": true,
+          "currentShaMatches": true,
+          "initialSemanticReadSha256Claim": "cdebee5c72c8ed253204c4299ed54d6c7f7806ca7768400b2d8a6b94a3846fd0",
+          "initialBeforeThisPrepSemanticReadClaim": null,
+          "dedicatedInitialPin": {
+            "path": "packages/core/src/plugins/marketplaceManager.ts",
+            "bytes": 7940,
+            "sha256": "cdebee5c72c8ed253204c4299ed54d6c7f7806ca7768400b2d8a6b94a3846fd0",
+            "lineCount": 236,
+            "semanticReadBeforeThisPin": false
+          },
+          "priorFullReadNote": null
+        },
+        {
+          "path": "packages/core/src/plugins/schemas.ts",
+          "bytes": 6630,
+          "sha256": "26adcd6c186962520f5027d9c9bfd48c15e06916b5ccb214359c3c5b7b6ab142",
+          "coverageClaimFromAuthor": "selected",
+          "selectedLineRangesFromAuthor": [
+            [
+              1,
+              79
+            ],
+            [
+              110,
+              142
+            ],
+            [
+              144,
+              183
+            ]
+          ],
+          "additionalNavigationSnippetLinesFromAuthor": [],
+          "declaredReadLineCount": 152,
+          "unionCountMatches": true,
+          "rangeBoundsValid": true,
+          "currentShaMatches": true,
+          "initialSemanticReadSha256Claim": "26adcd6c186962520f5027d9c9bfd48c15e06916b5ccb214359c3c5b7b6ab142",
+          "initialBeforeThisPrepSemanticReadClaim": null,
+          "dedicatedInitialPin": {
+            "path": "packages/core/src/plugins/schemas.ts",
+            "bytes": 6630,
+            "sha256": "26adcd6c186962520f5027d9c9bfd48c15e06916b5ccb214359c3c5b7b6ab142",
+            "lineCount": 183,
+            "semanticReadBeforeThisPin": false
+          },
+          "priorFullReadNote": null
+        },
+        {
+          "path": "packages/core/src/plugins/types.ts",
+          "bytes": 3237,
+          "sha256": "18660a4e2dbecdddd517356c6d62bf709b48fc1bcadb173441d92739d66c238a",
+          "coverageClaimFromAuthor": "selected",
+          "selectedLineRangesFromAuthor": [
+            [
+              5,
+              60
+            ]
+          ],
+          "additionalNavigationSnippetLinesFromAuthor": [],
+          "declaredReadLineCount": 56,
+          "unionCountMatches": true,
+          "rangeBoundsValid": true,
+          "currentShaMatches": true,
+          "initialSemanticReadSha256Claim": "18660a4e2dbecdddd517356c6d62bf709b48fc1bcadb173441d92739d66c238a",
+          "initialBeforeThisPrepSemanticReadClaim": null,
+          "dedicatedInitialPin": {
+            "path": "packages/core/src/plugins/types.ts",
+            "bytes": 3237,
+            "sha256": "18660a4e2dbecdddd517356c6d62bf709b48fc1bcadb173441d92739d66c238a",
+            "lineCount": 98,
+            "semanticReadBeforeThisPin": false
+          },
+          "priorFullReadNote": null
+        },
+        {
+          "path": "packages/core/src/plugins/pluginCatalog.ts",
+          "bytes": 5601,
+          "sha256": "12215732b14c92e6ef447e83cc74b581f7e72e1ce1467f08badb304544d818e7",
+          "coverageClaimFromAuthor": "full",
+          "selectedLineRangesFromAuthor": [
+            [
+              1,
+              157
+            ]
+          ],
+          "additionalNavigationSnippetLinesFromAuthor": [],
+          "declaredReadLineCount": 157,
+          "unionCountMatches": true,
+          "rangeBoundsValid": true,
+          "currentShaMatches": true,
+          "initialSemanticReadSha256Claim": "12215732b14c92e6ef447e83cc74b581f7e72e1ce1467f08badb304544d818e7",
+          "initialBeforeThisPrepSemanticReadClaim": null,
+          "dedicatedInitialPin": {
+            "path": "packages/core/src/plugins/pluginCatalog.ts",
+            "bytes": 5601,
+            "sha256": "12215732b14c92e6ef447e83cc74b581f7e72e1ce1467f08badb304544d818e7",
+            "lineCount": 157,
+            "semanticReadBeforeThisPin": false
+          },
+          "priorFullReadNote": null
+        },
+        {
+          "path": "packages/core/src/plugins/knownMarketplaces.ts",
+          "bytes": 6280,
+          "sha256": "ac87a4867d5f47361a4df42ced438c69c00ce9150aa25367ddc4592b8c17fcd8",
+          "coverageClaimFromAuthor": "selected",
+          "selectedLineRangesFromAuthor": [
+            [
+              1,
+              32
+            ],
+            [
+              87,
+              101
+            ],
+            [
+              145,
+              148
+            ]
+          ],
+          "additionalNavigationSnippetLinesFromAuthor": [],
+          "declaredReadLineCount": 51,
+          "unionCountMatches": true,
+          "rangeBoundsValid": true,
+          "currentShaMatches": true,
+          "initialSemanticReadSha256Claim": "ac87a4867d5f47361a4df42ced438c69c00ce9150aa25367ddc4592b8c17fcd8",
+          "initialBeforeThisPrepSemanticReadClaim": null,
+          "dedicatedInitialPin": {
+            "path": "packages/core/src/plugins/knownMarketplaces.ts",
+            "bytes": 6280,
+            "sha256": "ac87a4867d5f47361a4df42ced438c69c00ce9150aa25367ddc4592b8c17fcd8",
+            "lineCount": 161,
+            "semanticReadBeforeThisPin": false
+          },
+          "priorFullReadNote": null
+        },
+        {
+          "path": "packages/core/src/plugins/parseMarketplaceInput.ts",
+          "bytes": 3079,
+          "sha256": "25248f360523e9c358b7fd830ff1b0d92e886fc1f2ee96e353c5e707d98d195b",
+          "coverageClaimFromAuthor": "full",
+          "selectedLineRangesFromAuthor": [
+            [
+              1,
+              89
+            ]
+          ],
+          "additionalNavigationSnippetLinesFromAuthor": [],
+          "declaredReadLineCount": 89,
+          "unionCountMatches": true,
+          "rangeBoundsValid": true,
+          "currentShaMatches": true,
+          "initialSemanticReadSha256Claim": "25248f360523e9c358b7fd830ff1b0d92e886fc1f2ee96e353c5e707d98d195b",
+          "initialBeforeThisPrepSemanticReadClaim": null,
+          "dedicatedInitialPin": {
+            "path": "packages/core/src/plugins/parseMarketplaceInput.ts",
+            "bytes": 3079,
+            "sha256": "25248f360523e9c358b7fd830ff1b0d92e886fc1f2ee96e353c5e707d98d195b",
+            "lineCount": 89,
+            "semanticReadBeforeThisPin": false
+          },
+          "priorFullReadNote": null
+        },
+        {
+          "path": "packages/desktop/src/main/marketplace-service.ts",
+          "bytes": 20169,
+          "sha256": "d5f6623dccb27087bdad2f9263bdb5c514252a20a6ba8d6a7ca45cf80e0cafe6",
+          "coverageClaimFromAuthor": "selected",
+          "selectedLineRangesFromAuthor": [
+            [
+              343,
+              358
+            ]
+          ],
+          "additionalNavigationSnippetLinesFromAuthor": [],
+          "declaredReadLineCount": 16,
+          "unionCountMatches": true,
+          "rangeBoundsValid": true,
+          "currentShaMatches": true,
+          "initialSemanticReadSha256Claim": "d5f6623dccb27087bdad2f9263bdb5c514252a20a6ba8d6a7ca45cf80e0cafe6",
+          "initialBeforeThisPrepSemanticReadClaim": null,
+          "dedicatedInitialPin": {
+            "path": "packages/desktop/src/main/marketplace-service.ts",
+            "bytes": 20169,
+            "sha256": "d5f6623dccb27087bdad2f9263bdb5c514252a20a6ba8d6a7ca45cf80e0cafe6",
+            "lineCount": 612,
+            "semanticReadBeforeThisPin": false
+          },
+          "priorFullReadNote": null
+        },
+        {
+          "path": "packages/desktop/src/main/plugins-service.ts",
+          "bytes": 11267,
+          "sha256": "acffed1af5934499848c5a46f025b5aa6d702d50e24e9f9a161edc8c7f2a72ec",
+          "coverageClaimFromAuthor": "selected",
+          "selectedLineRangesFromAuthor": [
+            [
+              1,
+              72
+            ],
+            [
+              129,
+              163
+            ],
+            [
+              194,
+              223
+            ]
+          ],
+          "additionalNavigationSnippetLinesFromAuthor": [],
+          "declaredReadLineCount": 137,
+          "unionCountMatches": true,
+          "rangeBoundsValid": true,
+          "currentShaMatches": true,
+          "initialSemanticReadSha256Claim": "acffed1af5934499848c5a46f025b5aa6d702d50e24e9f9a161edc8c7f2a72ec",
+          "initialBeforeThisPrepSemanticReadClaim": null,
+          "dedicatedInitialPin": {
+            "path": "packages/desktop/src/main/plugins-service.ts",
+            "bytes": 11267,
+            "sha256": "acffed1af5934499848c5a46f025b5aa6d702d50e24e9f9a161edc8c7f2a72ec",
+            "lineCount": 323,
+            "semanticReadBeforeThisPin": false
+          },
+          "priorFullReadNote": null
+        },
+        {
+          "path": "packages/desktop/src/renderer/extensions/uninstallTarget.ts",
+          "bytes": 1840,
+          "sha256": "90ae9788efe607e159e1c6163a849ef903ee6faee38e4552e484a71a4cb3cc50",
+          "coverageClaimFromAuthor": "full",
+          "selectedLineRangesFromAuthor": [
+            [
+              1,
+              39
+            ]
+          ],
+          "additionalNavigationSnippetLinesFromAuthor": [],
+          "declaredReadLineCount": 39,
+          "unionCountMatches": true,
+          "rangeBoundsValid": true,
+          "currentShaMatches": true,
+          "initialSemanticReadSha256Claim": "90ae9788efe607e159e1c6163a849ef903ee6faee38e4552e484a71a4cb3cc50",
+          "initialBeforeThisPrepSemanticReadClaim": null,
+          "dedicatedInitialPin": {
+            "path": "packages/desktop/src/renderer/extensions/uninstallTarget.ts",
+            "bytes": 1840,
+            "sha256": "90ae9788efe607e159e1c6163a849ef903ee6faee38e4552e484a71a4cb3cc50",
+            "lineCount": 39,
+            "semanticReadBeforeThisPin": false
+          },
+          "priorFullReadNote": null
+        },
+        {
+          "path": "packages/desktop/src/renderer/extensions/uninstallTarget.test.ts",
+          "bytes": 2011,
+          "sha256": "69e4a1b52a22085f3f7af7c903bee76948f4055ff3791ee0c5f17a0cd022a6ea",
+          "coverageClaimFromAuthor": "full",
+          "selectedLineRangesFromAuthor": [
+            [
+              1,
+              39
+            ]
+          ],
+          "additionalNavigationSnippetLinesFromAuthor": [],
+          "declaredReadLineCount": 39,
+          "unionCountMatches": true,
+          "rangeBoundsValid": true,
+          "currentShaMatches": true,
+          "initialSemanticReadSha256Claim": "69e4a1b52a22085f3f7af7c903bee76948f4055ff3791ee0c5f17a0cd022a6ea",
+          "initialBeforeThisPrepSemanticReadClaim": null,
+          "dedicatedInitialPin": {
+            "path": "packages/desktop/src/renderer/extensions/uninstallTarget.test.ts",
+            "bytes": 2011,
+            "sha256": "69e4a1b52a22085f3f7af7c903bee76948f4055ff3791ee0c5f17a0cd022a6ea",
+            "lineCount": 39,
+            "semanticReadBeforeThisPin": false
+          },
+          "priorFullReadNote": null
+        },
+        {
+          "path": "packages/desktop/src/renderer/extensions/PluginDetailView.tsx",
+          "bytes": 26214,
+          "sha256": "88aa0ed20a682216164830e5fb59834563d35090d3d5682fbd1735281b519015",
+          "coverageClaimFromAuthor": "hash-only",
+          "selectedLineRangesFromAuthor": [],
+          "additionalNavigationSnippetLinesFromAuthor": [],
+          "declaredReadLineCount": 0,
+          "unionCountMatches": true,
+          "rangeBoundsValid": true,
+          "currentShaMatches": true,
+          "initialSemanticReadSha256Claim": null,
+          "initialBeforeThisPrepSemanticReadClaim": null,
+          "dedicatedInitialPin": {
+            "path": "packages/desktop/src/renderer/extensions/PluginDetailView.tsx",
+            "bytes": 26214,
+            "sha256": "88aa0ed20a682216164830e5fb59834563d35090d3d5682fbd1735281b519015",
+            "lineCount": 711,
+            "semanticReadBeforeThisPin": false
+          },
+          "priorFullReadNote": null
+        },
+        {
+          "path": "packages/desktop/src/renderer/extensions/PluginsTab.tsx",
+          "bytes": 18987,
+          "sha256": "347d6e15c50e20beb4699852bcf6773f017585039996d91c4d781ac6824fc045",
+          "coverageClaimFromAuthor": "selected",
+          "selectedLineRangesFromAuthor": [
+            [
+              73,
+              93
+            ],
+            [
+              131,
+              164
+            ]
+          ],
+          "additionalNavigationSnippetLinesFromAuthor": [],
+          "declaredReadLineCount": 55,
+          "unionCountMatches": true,
+          "rangeBoundsValid": true,
+          "currentShaMatches": true,
+          "initialSemanticReadSha256Claim": "347d6e15c50e20beb4699852bcf6773f017585039996d91c4d781ac6824fc045",
+          "initialBeforeThisPrepSemanticReadClaim": null,
+          "dedicatedInitialPin": {
+            "path": "packages/desktop/src/renderer/extensions/PluginsTab.tsx",
+            "bytes": 18987,
+            "sha256": "347d6e15c50e20beb4699852bcf6773f017585039996d91c4d781ac6824fc045",
+            "lineCount": 530,
+            "semanticReadBeforeThisPin": false
+          },
+          "priorFullReadNote": null
+        },
+        {
+          "path": "packages/tui/src/cli/commands/builtin/plugin-handler.ts",
+          "bytes": 20113,
+          "sha256": "b1ec4d4b35096dddfa73b4232403e54d1b7ff433f389293ff080ff7ca2de1a40",
+          "coverageClaimFromAuthor": "selected",
+          "selectedLineRangesFromAuthor": [
+            [
+              100,
+              124
+            ]
+          ],
+          "additionalNavigationSnippetLinesFromAuthor": [],
+          "declaredReadLineCount": 25,
+          "unionCountMatches": true,
+          "rangeBoundsValid": true,
+          "currentShaMatches": true,
+          "initialSemanticReadSha256Claim": "b1ec4d4b35096dddfa73b4232403e54d1b7ff433f389293ff080ff7ca2de1a40",
+          "initialBeforeThisPrepSemanticReadClaim": null,
+          "dedicatedInitialPin": {
+            "path": "packages/tui/src/cli/commands/builtin/plugin-handler.ts",
+            "bytes": 20113,
+            "sha256": "b1ec4d4b35096dddfa73b4232403e54d1b7ff433f389293ff080ff7ca2de1a40",
+            "lineCount": 500,
+            "semanticReadBeforeThisPin": false
+          },
+          "priorFullReadNote": null
+        },
+        {
+          "path": "packages/tui/src/cli/commands/builtin/plugin-commands-registration.ts",
+          "bytes": 1289,
+          "sha256": "04a2532a74dbec89d006ed3707fcc300d8fc8a106d2f7f3e7f98a400da7cd31b",
+          "coverageClaimFromAuthor": "hash-only",
+          "selectedLineRangesFromAuthor": [],
+          "additionalNavigationSnippetLinesFromAuthor": [],
+          "declaredReadLineCount": 0,
+          "unionCountMatches": true,
+          "rangeBoundsValid": true,
+          "currentShaMatches": true,
+          "initialSemanticReadSha256Claim": null,
+          "initialBeforeThisPrepSemanticReadClaim": null,
+          "dedicatedInitialPin": {
+            "path": "packages/tui/src/cli/commands/builtin/plugin-commands-registration.ts",
+            "bytes": 1289,
+            "sha256": "04a2532a74dbec89d006ed3707fcc300d8fc8a106d2f7f3e7f98a400da7cd31b",
+            "lineCount": 38,
+            "semanticReadBeforeThisPin": false
+          },
+          "priorFullReadNote": null
+        },
+        {
+          "path": "packages/core/src/plugins/pluginInstaller.ts",
+          "bytes": 19962,
+          "sha256": "263ce32aaee6b062513389f93cf29c5f3b5779a160da3979f036fb38b176a30a",
+          "coverageClaimFromAuthor": "selected",
+          "selectedLineRangesFromAuthor": [
+            [
+              45,
+              65
+            ],
+            [
+              238,
+              273
+            ],
+            [
+              334,
+              423
+            ],
+            [
+              442,
+              473
+            ]
+          ],
+          "additionalNavigationSnippetLinesFromAuthor": [],
+          "declaredReadLineCount": 179,
+          "unionCountMatches": true,
+          "rangeBoundsValid": true,
+          "currentShaMatches": true,
+          "initialSemanticReadSha256Claim": null,
+          "initialBeforeThisPrepSemanticReadClaim": null,
+          "dedicatedInitialPin": {
+            "path": "packages/core/src/plugins/pluginInstaller.ts",
+            "bytes": 19962,
+            "sha256": "263ce32aaee6b062513389f93cf29c5f3b5779a160da3979f036fb38b176a30a",
+            "lineCount": 487,
+            "initialSemanticReadSha256": null,
+            "timingNote": "Dedicated pin after rg locator excerpts; selected body reading is after this pin. Do not backfill initial semantic SHA."
+          },
+          "priorFullReadNote": null
+        },
+        {
+          "path": "packages/core/src/plugins/installer/paths.ts",
+          "bytes": 994,
+          "sha256": "323f660b827a86eff5ffaa0b87d60e04b18ae907406ac8d74f123e96239fbbb2",
+          "coverageClaimFromAuthor": "full",
+          "selectedLineRangesFromAuthor": [
+            [
+              1,
+              30
+            ]
+          ],
+          "additionalNavigationSnippetLinesFromAuthor": [],
+          "declaredReadLineCount": 30,
+          "unionCountMatches": true,
+          "rangeBoundsValid": true,
+          "currentShaMatches": true,
+          "initialSemanticReadSha256Claim": null,
+          "initialBeforeThisPrepSemanticReadClaim": null,
+          "dedicatedInitialPin": {
+            "path": "packages/core/src/plugins/installer/paths.ts",
+            "bytes": 994,
+            "sha256": "323f660b827a86eff5ffaa0b87d60e04b18ae907406ac8d74f123e96239fbbb2",
+            "lineCount": 30,
+            "initialSemanticReadSha256": null,
+            "timingNote": "Dedicated pin after rg locator excerpts; selected body reading is after this pin. Do not backfill initial semantic SHA."
+          },
+          "priorFullReadNote": null
+        },
+        {
+          "path": "packages/core/src/plugins/installer/uninstall.ts",
+          "bytes": 907,
+          "sha256": "8eddb1a62908cc8eb4b86495c2ffcfabc3c2cca6fe36dd10d579b8f9dbaa5bc0",
+          "coverageClaimFromAuthor": "full",
+          "selectedLineRangesFromAuthor": [
+            [
+              1,
+              19
+            ]
+          ],
+          "additionalNavigationSnippetLinesFromAuthor": [],
+          "declaredReadLineCount": 19,
+          "unionCountMatches": true,
+          "rangeBoundsValid": true,
+          "currentShaMatches": true,
+          "initialSemanticReadSha256Claim": null,
+          "initialBeforeThisPrepSemanticReadClaim": null,
+          "dedicatedInitialPin": {
+            "path": "packages/core/src/plugins/installer/uninstall.ts",
+            "bytes": 907,
+            "sha256": "8eddb1a62908cc8eb4b86495c2ffcfabc3c2cca6fe36dd10d579b8f9dbaa5bc0",
+            "lineCount": 19,
+            "initialSemanticReadSha256": null,
+            "timingNote": "Dedicated pin after rg locator excerpts; selected body reading is after this pin. Do not backfill initial semantic SHA."
+          },
+          "priorFullReadNote": null
+        },
+        {
+          "path": "packages/core/src/plugins/installedPlugins.ts",
+          "bytes": 9314,
+          "sha256": "e3b7527fd42f9b47555599ed868ca9db04e86b03a055999cd2ac53eb7afd0208",
+          "coverageClaimFromAuthor": "selected",
+          "selectedLineRangesFromAuthor": [
+            [
+              253,
+              265
+            ]
+          ],
+          "additionalNavigationSnippetLinesFromAuthor": [],
+          "declaredReadLineCount": 13,
+          "unionCountMatches": true,
+          "rangeBoundsValid": true,
+          "currentShaMatches": true,
+          "initialSemanticReadSha256Claim": null,
+          "initialBeforeThisPrepSemanticReadClaim": null,
+          "dedicatedInitialPin": {
+            "path": "packages/core/src/plugins/installedPlugins.ts",
+            "bytes": 9314,
+            "sha256": "e3b7527fd42f9b47555599ed868ca9db04e86b03a055999cd2ac53eb7afd0208",
+            "lineCount": 265,
+            "initialSemanticReadSha256": null,
+            "timingNote": "Dedicated pin after rg locator excerpts; selected body reading is after this pin. Do not backfill initial semantic SHA."
+          },
+          "priorFullReadNote": null
+        },
+        {
+          "path": "packages/desktop/src/preload/types.d.ts",
+          "bytes": 102234,
+          "sha256": "cd152ddf606dac52a88370b05808ce5c9eafe9d968b5162a5fb4211161a546ba",
+          "coverageClaimFromAuthor": "selected",
+          "selectedLineRangesFromAuthor": [
+            [
+              2010,
+              2015
+            ]
+          ],
+          "additionalNavigationSnippetLinesFromAuthor": [],
+          "declaredReadLineCount": 6,
+          "unionCountMatches": true,
+          "rangeBoundsValid": true,
+          "currentShaMatches": true,
+          "initialSemanticReadSha256Claim": "cd152ddf606dac52a88370b05808ce5c9eafe9d968b5162a5fb4211161a546ba",
+          "initialBeforeThisPrepSemanticReadClaim": null,
+          "dedicatedInitialPin": {
+            "path": "packages/desktop/src/preload/types.d.ts",
+            "bytes": 102234,
+            "sha256": "cd152ddf606dac52a88370b05808ce5c9eafe9d968b5162a5fb4211161a546ba",
+            "lineCount": 2982,
+            "initialSemanticReadSha256": "cd152ddf606dac52a88370b05808ce5c9eafe9d968b5162a5fb4211161a546ba",
+            "timingNote": "Path-only rg inventory before this pin; no content read."
+          },
+          "priorFullReadNote": null
+        },
+        {
+          "path": "packages/desktop/src/preload/index.ts",
+          "bytes": 86436,
+          "sha256": "05dbc9b534bdc68c30f255f53a96617e50fb0c445ce2fc1bde4be31e3f8a6901",
+          "coverageClaimFromAuthor": "selected",
+          "selectedLineRangesFromAuthor": [
+            [
+              1209,
+              1211
+            ],
+            [
+              1252,
+              1252
+            ]
+          ],
+          "additionalNavigationSnippetLinesFromAuthor": [],
+          "declaredReadLineCount": 4,
+          "unionCountMatches": true,
+          "rangeBoundsValid": true,
+          "currentShaMatches": true,
+          "initialSemanticReadSha256Claim": "05dbc9b534bdc68c30f255f53a96617e50fb0c445ce2fc1bde4be31e3f8a6901",
+          "initialBeforeThisPrepSemanticReadClaim": null,
+          "dedicatedInitialPin": {
+            "path": "packages/desktop/src/preload/index.ts",
+            "bytes": 86436,
+            "sha256": "05dbc9b534bdc68c30f255f53a96617e50fb0c445ce2fc1bde4be31e3f8a6901",
+            "lineCount": 1892,
+            "initialSemanticReadSha256": "05dbc9b534bdc68c30f255f53a96617e50fb0c445ce2fc1bde4be31e3f8a6901",
+            "timingNote": "Path-only rg inventory before this pin; no content read."
+          },
+          "priorFullReadNote": null
+        },
+        {
+          "path": "packages/desktop/src/main/index.ts",
+          "bytes": 299337,
+          "sha256": "105b2b49a28e0a7ef10980ac5feaa3a07ff81e7197f5acbefd95feb2498224c0",
+          "coverageClaimFromAuthor": "selected",
+          "selectedLineRangesFromAuthor": [
+            [
+              4807,
+              4816
+            ],
+            [
+              4934,
+              4934
+            ]
+          ],
+          "additionalNavigationSnippetLinesFromAuthor": [],
+          "declaredReadLineCount": 11,
+          "unionCountMatches": true,
+          "rangeBoundsValid": true,
+          "currentShaMatches": true,
+          "initialSemanticReadSha256Claim": "105b2b49a28e0a7ef10980ac5feaa3a07ff81e7197f5acbefd95feb2498224c0",
+          "initialBeforeThisPrepSemanticReadClaim": null,
+          "dedicatedInitialPin": {
+            "path": "packages/desktop/src/main/index.ts",
+            "bytes": 299337,
+            "sha256": "105b2b49a28e0a7ef10980ac5feaa3a07ff81e7197f5acbefd95feb2498224c0",
+            "lineCount": 7330,
+            "initialSemanticReadSha256": "105b2b49a28e0a7ef10980ac5feaa3a07ff81e7197f5acbefd95feb2498224c0",
+            "timingNote": "Path-only rg inventory before this pin; no content read."
+          },
+          "priorFullReadNote": null
+        },
+        {
+          "path": "packages/desktop/src/renderer/extensions/MarketList.tsx",
+          "bytes": 20235,
+          "sha256": "acdb1ab1fddfa75f19301042559a281eae2925d9a53ec34abc5e2640e07df9b9",
+          "coverageClaimFromAuthor": "selected",
+          "selectedLineRangesFromAuthor": [
+            [
+              175,
+              194
+            ],
+            [
+              308,
+              330
+            ]
+          ],
+          "additionalNavigationSnippetLinesFromAuthor": [],
+          "declaredReadLineCount": 43,
+          "unionCountMatches": true,
+          "rangeBoundsValid": true,
+          "currentShaMatches": true,
+          "initialSemanticReadSha256Claim": "acdb1ab1fddfa75f19301042559a281eae2925d9a53ec34abc5e2640e07df9b9",
+          "initialBeforeThisPrepSemanticReadClaim": null,
+          "dedicatedInitialPin": {
+            "path": "packages/desktop/src/renderer/extensions/MarketList.tsx",
+            "bytes": 20235,
+            "lineCount": 550,
+            "sha256": "acdb1ab1fddfa75f19301042559a281eae2925d9a53ec34abc5e2640e07df9b9",
+            "initialSemanticReadSha256": "acdb1ab1fddfa75f19301042559a281eae2925d9a53ec34abc5e2640e07df9b9",
+            "timingNote": "Path-only locator before pin."
+          },
+          "priorFullReadNote": null
+        }
+      ]
+    },
+    {
+      "owner": "independent-source-reviewer",
+      "manifest": "/tmp/codeshell-audit-round37-local-marker-review/source-manifest.json",
+      "sourceRowCount": 19,
+      "coverageCounts": {
+        "full": 8,
+        "selected": 11,
+        "hash-only": 0
+      },
+      "declaredLines": 1505,
+      "rows": [
+        {
+          "path": "packages/core/src/plugins/pluginCatalog.ts",
+          "bytes": 5601,
+          "sha256": "12215732b14c92e6ef447e83cc74b581f7e72e1ce1467f08badb304544d818e7",
+          "coverageClaimFromAuthor": "full",
+          "selectedLineRangesFromAuthor": [
+            [
+              1,
+              157
+            ]
+          ],
+          "additionalNavigationSnippetLinesFromAuthor": [],
+          "declaredReadLineCount": 157,
+          "unionCountMatches": true,
+          "rangeBoundsValid": true,
+          "currentShaMatches": true,
+          "initialSemanticReadSha256Claim": null,
+          "initialBeforeThisPrepSemanticReadClaim": true,
+          "dedicatedInitialPin": {
+            "path": "packages/core/src/plugins/pluginCatalog.ts",
+            "bytes": 5601,
+            "sha256": "12215732b14c92e6ef447e83cc74b581f7e72e1ce1467f08badb304544d818e7",
+            "totalLines": 157,
+            "pinTimeUTC": "2026-10-17T12:43:49.161374+00:00",
+            "purpose": "before source content read for this independent namespace-contract review",
+            "pinArtifact": "initial-pins.json"
+          },
+          "priorFullReadNote": null
+        },
+        {
+          "path": "packages/core/src/plugins/pluginCatalog.test.ts",
+          "bytes": 5530,
+          "sha256": "ba7383c30272aca56cf9090d375f1c5ec2d17f997dcebfd56bcaeb934e4c321d",
+          "coverageClaimFromAuthor": "full",
+          "selectedLineRangesFromAuthor": [
+            [
+              1,
+              157
+            ]
+          ],
+          "additionalNavigationSnippetLinesFromAuthor": [],
+          "declaredReadLineCount": 157,
+          "unionCountMatches": true,
+          "rangeBoundsValid": true,
+          "currentShaMatches": true,
+          "initialSemanticReadSha256Claim": null,
+          "initialBeforeThisPrepSemanticReadClaim": true,
+          "dedicatedInitialPin": {
+            "path": "packages/core/src/plugins/pluginCatalog.test.ts",
+            "bytes": 5530,
+            "sha256": "ba7383c30272aca56cf9090d375f1c5ec2d17f997dcebfd56bcaeb934e4c321d",
+            "totalLines": 157,
+            "pinTimeUTC": "2026-10-17T12:43:49.162739+00:00",
+            "purpose": "before source content read for this independent namespace-contract review",
+            "pinArtifact": "initial-pins.json"
+          },
+          "priorFullReadNote": null
+        },
+        {
+          "path": "packages/core/src/plugins/installedPlugins.ts",
+          "bytes": 9314,
+          "sha256": "e3b7527fd42f9b47555599ed868ca9db04e86b03a055999cd2ac53eb7afd0208",
+          "coverageClaimFromAuthor": "selected",
+          "selectedLineRangesFromAuthor": [
+            [
+              1,
+              158
+            ],
+            [
+              160,
+              210
+            ],
+            [
+              238,
+              265
+            ]
+          ],
+          "additionalNavigationSnippetLinesFromAuthor": [
+            215,
+            223,
+            225
+          ],
+          "declaredReadLineCount": 240,
+          "unionCountMatches": true,
+          "rangeBoundsValid": true,
+          "currentShaMatches": true,
+          "initialSemanticReadSha256Claim": null,
+          "initialBeforeThisPrepSemanticReadClaim": true,
+          "dedicatedInitialPin": {
+            "path": "packages/core/src/plugins/installedPlugins.ts",
+            "bytes": 9314,
+            "sha256": "e3b7527fd42f9b47555599ed868ca9db04e86b03a055999cd2ac53eb7afd0208",
+            "totalLines": 265,
+            "pinTimeUTC": "2026-10-17T12:43:49.163247+00:00",
+            "purpose": "before source content read for this independent namespace-contract review",
+            "pinArtifact": "initial-pins.json"
+          },
+          "priorFullReadNote": null
+        },
+        {
+          "path": "packages/core/src/plugins/installer/types.ts",
+          "bytes": 5106,
+          "sha256": "88165a54fded210ee1f19e326043ef2be8d8b464af5b63689f798e92bf920c05",
+          "coverageClaimFromAuthor": "selected",
+          "selectedLineRangesFromAuthor": [
+            [
+              134,
+              154
+            ]
+          ],
+          "additionalNavigationSnippetLinesFromAuthor": [],
+          "declaredReadLineCount": 21,
+          "unionCountMatches": true,
+          "rangeBoundsValid": true,
+          "currentShaMatches": true,
+          "initialSemanticReadSha256Claim": null,
+          "initialBeforeThisPrepSemanticReadClaim": true,
+          "dedicatedInitialPin": {
+            "path": "packages/core/src/plugins/installer/types.ts",
+            "bytes": 5106,
+            "sha256": "88165a54fded210ee1f19e326043ef2be8d8b464af5b63689f798e92bf920c05",
+            "totalLines": 154,
+            "pinTimeUTC": "2026-10-17T12:43:49.163817+00:00",
+            "purpose": "before source content read for this independent namespace-contract review",
+            "pinArtifact": "initial-pins.json"
+          },
+          "priorFullReadNote": "docs/audit-2026-10-17-round33/evidence/installer-input-frontier/source-manifest.json; full1–154 / full1–74 respectively; excluded as new semantic coverage claim."
+        },
+        {
+          "path": "packages/core/src/plugins/pluginInstaller.ts",
+          "bytes": 19962,
+          "sha256": "263ce32aaee6b062513389f93cf29c5f3b5779a160da3979f036fb38b176a30a",
+          "coverageClaimFromAuthor": "selected",
+          "selectedLineRangesFromAuthor": [
+            [
+              1,
+              36
+            ],
+            [
+              40,
+              66
+            ],
+            [
+              330,
+              424
+            ]
+          ],
+          "additionalNavigationSnippetLinesFromAuthor": [
+            272,
+            292,
+            314,
+            442,
+            443,
+            462
+          ],
+          "declaredReadLineCount": 164,
+          "unionCountMatches": true,
+          "rangeBoundsValid": true,
+          "currentShaMatches": true,
+          "initialSemanticReadSha256Claim": null,
+          "initialBeforeThisPrepSemanticReadClaim": true,
+          "dedicatedInitialPin": {
+            "path": "packages/core/src/plugins/pluginInstaller.ts",
+            "bytes": 19962,
+            "sha256": "263ce32aaee6b062513389f93cf29c5f3b5779a160da3979f036fb38b176a30a",
+            "totalLines": 487,
+            "pinTimeUTC": "2026-10-17T12:43:49.164323+00:00",
+            "purpose": "before source content read for this independent namespace-contract review",
+            "pinArtifact": "initial-pins.json"
+          },
+          "priorFullReadNote": null
+        },
+        {
+          "path": "packages/desktop/src/main/plugins-service.ts",
+          "bytes": 11267,
+          "sha256": "acffed1af5934499848c5a46f025b5aa6d702d50e24e9f9a161edc8c7f2a72ec",
+          "coverageClaimFromAuthor": "selected",
+          "selectedLineRangesFromAuthor": [
+            [
+              1,
+              81
+            ],
+            [
+              129,
+              162
+            ],
+            [
+              218,
+              225
+            ]
+          ],
+          "additionalNavigationSnippetLinesFromAuthor": [],
+          "declaredReadLineCount": 123,
+          "unionCountMatches": true,
+          "rangeBoundsValid": true,
+          "currentShaMatches": true,
+          "initialSemanticReadSha256Claim": null,
+          "initialBeforeThisPrepSemanticReadClaim": true,
+          "dedicatedInitialPin": {
+            "path": "packages/desktop/src/main/plugins-service.ts",
+            "bytes": 11267,
+            "sha256": "acffed1af5934499848c5a46f025b5aa6d702d50e24e9f9a161edc8c7f2a72ec",
+            "totalLines": 323,
+            "pinTimeUTC": "2026-10-17T12:43:49.164730+00:00",
+            "purpose": "before source content read for this independent namespace-contract review",
+            "pinArtifact": "initial-pins.json"
+          },
+          "priorFullReadNote": null
+        },
+        {
+          "path": "packages/desktop/src/renderer/extensions/uninstallTarget.ts",
+          "bytes": 1840,
+          "sha256": "90ae9788efe607e159e1c6163a849ef903ee6faee38e4552e484a71a4cb3cc50",
+          "coverageClaimFromAuthor": "full",
+          "selectedLineRangesFromAuthor": [
+            [
+              1,
+              39
+            ]
+          ],
+          "additionalNavigationSnippetLinesFromAuthor": [],
+          "declaredReadLineCount": 39,
+          "unionCountMatches": true,
+          "rangeBoundsValid": true,
+          "currentShaMatches": true,
+          "initialSemanticReadSha256Claim": null,
+          "initialBeforeThisPrepSemanticReadClaim": true,
+          "dedicatedInitialPin": {
+            "path": "packages/desktop/src/renderer/extensions/uninstallTarget.ts",
+            "bytes": 1840,
+            "sha256": "90ae9788efe607e159e1c6163a849ef903ee6faee38e4552e484a71a4cb3cc50",
+            "totalLines": 39,
+            "pinTimeUTC": "2026-10-17T12:43:49.165041+00:00",
+            "purpose": "before source content read for this independent namespace-contract review",
+            "pinArtifact": "initial-pins.json"
+          },
+          "priorFullReadNote": null
+        },
+        {
+          "path": "packages/desktop/src/renderer/extensions/uninstallTarget.test.ts",
+          "bytes": 2011,
+          "sha256": "69e4a1b52a22085f3f7af7c903bee76948f4055ff3791ee0c5f17a0cd022a6ea",
+          "coverageClaimFromAuthor": "full",
+          "selectedLineRangesFromAuthor": [
+            [
+              1,
+              39
+            ]
+          ],
+          "additionalNavigationSnippetLinesFromAuthor": [],
+          "declaredReadLineCount": 39,
+          "unionCountMatches": true,
+          "rangeBoundsValid": true,
+          "currentShaMatches": true,
+          "initialSemanticReadSha256Claim": null,
+          "initialBeforeThisPrepSemanticReadClaim": true,
+          "dedicatedInitialPin": {
+            "path": "packages/desktop/src/renderer/extensions/uninstallTarget.test.ts",
+            "bytes": 2011,
+            "sha256": "69e4a1b52a22085f3f7af7c903bee76948f4055ff3791ee0c5f17a0cd022a6ea",
+            "totalLines": 39,
+            "pinTimeUTC": "2026-10-17T12:43:49.165317+00:00",
+            "purpose": "before source content read for this independent namespace-contract review",
+            "pinArtifact": "initial-pins.json"
+          },
+          "priorFullReadNote": null
+        },
+        {
+          "path": "packages/desktop/src/renderer/extensions/PluginsTab.tsx",
+          "bytes": 18987,
+          "sha256": "347d6e15c50e20beb4699852bcf6773f017585039996d91c4d781ac6824fc045",
+          "coverageClaimFromAuthor": "selected",
+          "selectedLineRangesFromAuthor": [
+            [
+              131,
+              164
+            ]
+          ],
+          "additionalNavigationSnippetLinesFromAuthor": [],
+          "declaredReadLineCount": 34,
+          "unionCountMatches": true,
+          "rangeBoundsValid": true,
+          "currentShaMatches": true,
+          "initialSemanticReadSha256Claim": null,
+          "initialBeforeThisPrepSemanticReadClaim": true,
+          "dedicatedInitialPin": {
+            "path": "packages/desktop/src/renderer/extensions/PluginsTab.tsx",
+            "bytes": 18987,
+            "sha256": "347d6e15c50e20beb4699852bcf6773f017585039996d91c4d781ac6824fc045",
+            "totalLines": 530,
+            "pinTimeUTC": "2026-10-17T12:43:49.165661+00:00",
+            "purpose": "before source content read for this independent namespace-contract review",
+            "pinArtifact": "initial-pins.json"
+          },
+          "priorFullReadNote": null
+        },
+        {
+          "path": "packages/desktop/src/preload/types.d.ts",
+          "bytes": 102234,
+          "sha256": "cd152ddf606dac52a88370b05808ce5c9eafe9d968b5162a5fb4211161a546ba",
+          "coverageClaimFromAuthor": "selected",
+          "selectedLineRangesFromAuthor": [
+            [
+              2009,
+              2017
+            ],
+            [
+              2797,
+              2829
+            ]
+          ],
+          "additionalNavigationSnippetLinesFromAuthor": [],
+          "declaredReadLineCount": 42,
+          "unionCountMatches": true,
+          "rangeBoundsValid": true,
+          "currentShaMatches": true,
+          "initialSemanticReadSha256Claim": null,
+          "initialBeforeThisPrepSemanticReadClaim": true,
+          "dedicatedInitialPin": {
+            "path": "packages/desktop/src/preload/types.d.ts",
+            "bytes": 102234,
+            "sha256": "cd152ddf606dac52a88370b05808ce5c9eafe9d968b5162a5fb4211161a546ba",
+            "totalLines": 2982,
+            "pinTimeUTC": "2026-10-17T12:43:49.166704+00:00",
+            "purpose": "before source content read for this independent namespace-contract review",
+            "pinArtifact": "initial-pins.json"
+          },
+          "priorFullReadNote": null
+        },
+        {
+          "path": "packages/core/src/plugins/types.ts",
+          "bytes": 3237,
+          "sha256": "18660a4e2dbecdddd517356c6d62bf709b48fc1bcadb173441d92739d66c238a",
+          "coverageClaimFromAuthor": "full",
+          "selectedLineRangesFromAuthor": [
+            [
+              1,
+              98
+            ]
+          ],
+          "additionalNavigationSnippetLinesFromAuthor": [],
+          "declaredReadLineCount": 98,
+          "unionCountMatches": true,
+          "rangeBoundsValid": true,
+          "currentShaMatches": true,
+          "initialSemanticReadSha256Claim": null,
+          "initialBeforeThisPrepSemanticReadClaim": true,
+          "dedicatedInitialPin": {
+            "path": "packages/core/src/plugins/types.ts",
+            "bytes": 3237,
+            "sha256": "18660a4e2dbecdddd517356c6d62bf709b48fc1bcadb173441d92739d66c238a",
+            "totalLines": 98,
+            "pinTimeUTC": "2026-10-17T12:44:49.856653+00:00",
+            "purpose": "before selected ordinary key/schema writer and local marker record read; execution prohibited",
+            "pinArtifact": "writer-type-initial-pins.json"
+          },
+          "priorFullReadNote": null
+        },
+        {
+          "path": "packages/core/src/plugins/installer/install.ts",
+          "bytes": 3010,
+          "sha256": "1773b85309de88bc25da1f696fa7937c3af7a0e10af732fcc6fb59ca1fbf04aa",
+          "coverageClaimFromAuthor": "full",
+          "selectedLineRangesFromAuthor": [
+            [
+              1,
+              74
+            ]
+          ],
+          "additionalNavigationSnippetLinesFromAuthor": [],
+          "declaredReadLineCount": 74,
+          "unionCountMatches": true,
+          "rangeBoundsValid": true,
+          "currentShaMatches": true,
+          "initialSemanticReadSha256Claim": null,
+          "initialBeforeThisPrepSemanticReadClaim": true,
+          "dedicatedInitialPin": {
+            "path": "packages/core/src/plugins/installer/install.ts",
+            "bytes": 3010,
+            "sha256": "1773b85309de88bc25da1f696fa7937c3af7a0e10af732fcc6fb59ca1fbf04aa",
+            "totalLines": 74,
+            "pinTimeUTC": "2026-10-17T12:44:49.857355+00:00",
+            "purpose": "before selected ordinary key/schema writer and local marker record read; execution prohibited",
+            "pinArtifact": "writer-type-initial-pins.json"
+          },
+          "priorFullReadNote": "docs/audit-2026-10-17-round33/evidence/installer-input-frontier/source-manifest.json; full1–154 / full1–74 respectively; excluded as new semantic coverage claim."
+        },
+        {
+          "path": "packages/core/src/plugins/installer/uninstall.ts",
+          "bytes": 907,
+          "sha256": "8eddb1a62908cc8eb4b86495c2ffcfabc3c2cca6fe36dd10d579b8f9dbaa5bc0",
+          "coverageClaimFromAuthor": "full",
+          "selectedLineRangesFromAuthor": [
+            [
+              1,
+              19
+            ]
+          ],
+          "additionalNavigationSnippetLinesFromAuthor": [],
+          "declaredReadLineCount": 19,
+          "unionCountMatches": true,
+          "rangeBoundsValid": true,
+          "currentShaMatches": true,
+          "initialSemanticReadSha256Claim": null,
+          "initialBeforeThisPrepSemanticReadClaim": true,
+          "dedicatedInitialPin": {
+            "path": "packages/core/src/plugins/installer/uninstall.ts",
+            "bytes": 907,
+            "sha256": "8eddb1a62908cc8eb4b86495c2ffcfabc3c2cca6fe36dd10d579b8f9dbaa5bc0",
+            "totalLines": 19,
+            "pinTimeUTC": "2026-10-17T12:44:49.857598+00:00",
+            "purpose": "before selected ordinary key/schema writer and local marker record read; execution prohibited",
+            "pinArtifact": "writer-type-initial-pins.json"
+          },
+          "priorFullReadNote": null
+        },
+        {
+          "path": "packages/core/src/plugins/marketplaceManager.ts",
+          "bytes": 7940,
+          "sha256": "cdebee5c72c8ed253204c4299ed54d6c7f7806ca7768400b2d8a6b94a3846fd0",
+          "coverageClaimFromAuthor": "selected",
+          "selectedLineRangesFromAuthor": [
+            [
+              1,
+              45
+            ],
+            [
+              85,
+              155
+            ]
+          ],
+          "additionalNavigationSnippetLinesFromAuthor": [
+            64,
+            65,
+            161,
+            164,
+            166,
+            168,
+            170,
+            177,
+            178,
+            179,
+            191,
+            193,
+            194,
+            207,
+            223,
+            224,
+            226,
+            235
+          ],
+          "declaredReadLineCount": 134,
+          "unionCountMatches": true,
+          "rangeBoundsValid": true,
+          "currentShaMatches": true,
+          "initialSemanticReadSha256Claim": null,
+          "initialBeforeThisPrepSemanticReadClaim": true,
+          "dedicatedInitialPin": {
+            "path": "packages/core/src/plugins/marketplaceManager.ts",
+            "bytes": 7940,
+            "sha256": "cdebee5c72c8ed253204c4299ed54d6c7f7806ca7768400b2d8a6b94a3846fd0",
+            "totalLines": 236,
+            "pinTimeUTC": "2026-10-17T12:45:39.107243+00:00",
+            "purpose": "before narrow independent ordinary name admission / path-layout declaration read; no filesystem authority experiment",
+            "pinArtifact": "admission-path-initial-pins.json"
+          },
+          "priorFullReadNote": null
+        },
+        {
+          "path": "packages/core/src/plugins/installer/paths.ts",
+          "bytes": 994,
+          "sha256": "323f660b827a86eff5ffaa0b87d60e04b18ae907406ac8d74f123e96239fbbb2",
+          "coverageClaimFromAuthor": "full",
+          "selectedLineRangesFromAuthor": [
+            [
+              1,
+              30
+            ]
+          ],
+          "additionalNavigationSnippetLinesFromAuthor": [],
+          "declaredReadLineCount": 30,
+          "unionCountMatches": true,
+          "rangeBoundsValid": true,
+          "currentShaMatches": true,
+          "initialSemanticReadSha256Claim": null,
+          "initialBeforeThisPrepSemanticReadClaim": true,
+          "dedicatedInitialPin": {
+            "path": "packages/core/src/plugins/installer/paths.ts",
+            "bytes": 994,
+            "sha256": "323f660b827a86eff5ffaa0b87d60e04b18ae907406ac8d74f123e96239fbbb2",
+            "totalLines": 30,
+            "pinTimeUTC": "2026-10-17T12:45:39.108724+00:00",
+            "purpose": "before narrow independent ordinary name admission / path-layout declaration read; no filesystem authority experiment",
+            "pinArtifact": "admission-path-initial-pins.json"
+          },
+          "priorFullReadNote": null
+        },
+        {
+          "path": "packages/core/src/plugins/knownMarketplaces.ts",
+          "bytes": 6280,
+          "sha256": "ac87a4867d5f47361a4df42ced438c69c00ce9150aa25367ddc4592b8c17fcd8",
+          "coverageClaimFromAuthor": "selected",
+          "selectedLineRangesFromAuthor": [
+            [
+              1,
+              25
+            ],
+            [
+              79,
+              101
+            ],
+            [
+              145,
+              149
+            ]
+          ],
+          "additionalNavigationSnippetLinesFromAuthor": [
+            33,
+            36,
+            103,
+            151,
+            152,
+            155,
+            157
+          ],
+          "declaredReadLineCount": 60,
+          "unionCountMatches": true,
+          "rangeBoundsValid": true,
+          "currentShaMatches": true,
+          "initialSemanticReadSha256Claim": null,
+          "initialBeforeThisPrepSemanticReadClaim": true,
+          "dedicatedInitialPin": {
+            "path": "packages/core/src/plugins/knownMarketplaces.ts",
+            "bytes": 6280,
+            "sha256": "ac87a4867d5f47361a4df42ced438c69c00ce9150aa25367ddc4592b8c17fcd8",
+            "totalLines": 161,
+            "pinTimeUTC": "2026-10-17T12:46:15.707584+00:00",
+            "purpose": "before selected plain name/registry admission read; no schema execution",
+            "pinArtifact": "registry-admission-initial-pins.json"
+          },
+          "priorFullReadNote": null
+        },
+        {
+          "path": "packages/core/src/plugins/schemas.ts",
+          "bytes": 6630,
+          "sha256": "26adcd6c186962520f5027d9c9bfd48c15e06916b5ccb214359c3c5b7b6ab142",
+          "coverageClaimFromAuthor": "selected",
+          "selectedLineRangesFromAuthor": [
+            [
+              146,
+              183
+            ]
+          ],
+          "additionalNavigationSnippetLinesFromAuthor": [
+            2,
+            46,
+            58,
+            59,
+            60,
+            63,
+            68,
+            112,
+            113,
+            123,
+            124,
+            127,
+            135
+          ],
+          "declaredReadLineCount": 51,
+          "unionCountMatches": true,
+          "rangeBoundsValid": true,
+          "currentShaMatches": true,
+          "initialSemanticReadSha256Claim": null,
+          "initialBeforeThisPrepSemanticReadClaim": true,
+          "dedicatedInitialPin": {
+            "path": "packages/core/src/plugins/schemas.ts",
+            "bytes": 6630,
+            "sha256": "26adcd6c186962520f5027d9c9bfd48c15e06916b5ccb214359c3c5b7b6ab142",
+            "totalLines": 183,
+            "pinTimeUTC": "2026-10-17T12:46:15.708510+00:00",
+            "purpose": "before selected plain name/registry admission read; no schema execution",
+            "pinArtifact": "registry-admission-initial-pins.json"
+          },
+          "priorFullReadNote": null
+        },
+        {
+          "path": "packages/desktop/src/preload/index.ts",
+          "bytes": 86436,
+          "sha256": "05dbc9b534bdc68c30f255f53a96617e50fb0c445ce2fc1bde4be31e3f8a6901",
+          "coverageClaimFromAuthor": "selected",
+          "selectedLineRangesFromAuthor": [
+            [
+              1207,
+              1215
+            ]
+          ],
+          "additionalNavigationSnippetLinesFromAuthor": [],
+          "declaredReadLineCount": 9,
+          "unionCountMatches": true,
+          "rangeBoundsValid": true,
+          "currentShaMatches": true,
+          "initialSemanticReadSha256Claim": null,
+          "initialBeforeThisPrepSemanticReadClaim": true,
+          "dedicatedInitialPin": {
+            "path": "packages/desktop/src/preload/index.ts",
+            "bytes": 86436,
+            "sha256": "05dbc9b534bdc68c30f255f53a96617e50fb0c445ce2fc1bde4be31e3f8a6901",
+            "totalLines": 1892,
+            "pinTimeUTC": "2026-10-17T12:47:33.287094+00:00",
+            "purpose": "before selected ordinary IPC name/parameter delegation boundary only",
+            "pinArtifact": "dispatch-initial-pins.json"
+          },
+          "priorFullReadNote": null
+        },
+        {
+          "path": "packages/desktop/src/main/index.ts",
+          "bytes": 299337,
+          "sha256": "105b2b49a28e0a7ef10980ac5feaa3a07ff81e7197f5acbefd95feb2498224c0",
+          "coverageClaimFromAuthor": "selected",
+          "selectedLineRangesFromAuthor": [
+            [
+              4808,
+              4820
+            ]
+          ],
+          "additionalNavigationSnippetLinesFromAuthor": [
+            452
+          ],
+          "declaredReadLineCount": 14,
+          "unionCountMatches": true,
+          "rangeBoundsValid": true,
+          "currentShaMatches": true,
+          "initialSemanticReadSha256Claim": null,
+          "initialBeforeThisPrepSemanticReadClaim": true,
+          "dedicatedInitialPin": {
+            "path": "packages/desktop/src/main/index.ts",
+            "bytes": 299337,
+            "sha256": "105b2b49a28e0a7ef10980ac5feaa3a07ff81e7197f5acbefd95feb2498224c0",
+            "totalLines": 7330,
+            "pinTimeUTC": "2026-10-17T12:47:33.289763+00:00",
+            "purpose": "before selected ordinary IPC name/parameter delegation boundary only",
+            "pinArtifact": "dispatch-initial-pins.json"
+          },
+          "priorFullReadNote": null
+        }
+      ]
+    },
+    {
+      "owner": "root",
+      "manifest": "/tmp/codeshell-audit-round37-root-frontier/source-manifest.json",
+      "sourceRowCount": 8,
+      "coverageCounts": {
+        "full": 5,
+        "selected": 3,
+        "hash-only": 0
+      },
+      "declaredLines": 694,
+      "rows": [
+        {
+          "path": "packages/desktop/src/renderer/extensions/uninstallTarget.ts",
+          "bytes": 1840,
+          "sha256": "90ae9788efe607e159e1c6163a849ef903ee6faee38e4552e484a71a4cb3cc50",
+          "coverageClaimFromAuthor": "full",
+          "selectedLineRangesFromAuthor": [
+            [
+              1,
+              39
+            ]
+          ],
+          "additionalNavigationSnippetLinesFromAuthor": [],
+          "declaredReadLineCount": 39,
+          "unionCountMatches": true,
+          "rangeBoundsValid": true,
+          "currentShaMatches": true,
+          "initialSemanticReadSha256Claim": null,
+          "initialBeforeThisPrepSemanticReadClaim": null,
+          "dedicatedInitialPin": null,
+          "priorFullReadNote": null
+        },
+        {
+          "path": "packages/core/src/plugins/knownMarketplaces.ts",
+          "bytes": 6280,
+          "sha256": "ac87a4867d5f47361a4df42ced438c69c00ce9150aa25367ddc4592b8c17fcd8",
+          "coverageClaimFromAuthor": "full",
+          "selectedLineRangesFromAuthor": [
+            [
+              1,
+              161
+            ]
+          ],
+          "additionalNavigationSnippetLinesFromAuthor": [],
+          "declaredReadLineCount": 161,
+          "unionCountMatches": true,
+          "rangeBoundsValid": true,
+          "currentShaMatches": true,
+          "initialSemanticReadSha256Claim": null,
+          "initialBeforeThisPrepSemanticReadClaim": null,
+          "dedicatedInitialPin": null,
+          "priorFullReadNote": null
+        },
+        {
+          "path": "packages/core/src/plugins/marketplaceManager.ts",
+          "bytes": 7940,
+          "sha256": "cdebee5c72c8ed253204c4299ed54d6c7f7806ca7768400b2d8a6b94a3846fd0",
+          "coverageClaimFromAuthor": "selected",
+          "selectedLineRangesFromAuthor": [
+            [
+              1,
+              45
+            ],
+            [
+              93,
+              156
+            ]
+          ],
+          "additionalNavigationSnippetLinesFromAuthor": [],
+          "declaredReadLineCount": 109,
+          "unionCountMatches": true,
+          "rangeBoundsValid": true,
+          "currentShaMatches": true,
+          "initialSemanticReadSha256Claim": null,
+          "initialBeforeThisPrepSemanticReadClaim": null,
+          "dedicatedInitialPin": null,
+          "priorFullReadNote": null
+        },
+        {
+          "path": "packages/core/src/plugins/pluginCatalog.ts",
+          "bytes": 5601,
+          "sha256": "12215732b14c92e6ef447e83cc74b581f7e72e1ce1467f08badb304544d818e7",
+          "coverageClaimFromAuthor": "full",
+          "selectedLineRangesFromAuthor": [
+            [
+              1,
+              157
+            ]
+          ],
+          "additionalNavigationSnippetLinesFromAuthor": [],
+          "declaredReadLineCount": 157,
+          "unionCountMatches": true,
+          "rangeBoundsValid": true,
+          "currentShaMatches": true,
+          "initialSemanticReadSha256Claim": null,
+          "initialBeforeThisPrepSemanticReadClaim": null,
+          "dedicatedInitialPin": null,
+          "priorFullReadNote": null
+        },
+        {
+          "path": "packages/core/src/plugins/installer/paths.ts",
+          "bytes": 994,
+          "sha256": "323f660b827a86eff5ffaa0b87d60e04b18ae907406ac8d74f123e96239fbbb2",
+          "coverageClaimFromAuthor": "full",
+          "selectedLineRangesFromAuthor": [
+            [
+              1,
+              30
+            ]
+          ],
+          "additionalNavigationSnippetLinesFromAuthor": [],
+          "declaredReadLineCount": 30,
+          "unionCountMatches": true,
+          "rangeBoundsValid": true,
+          "currentShaMatches": true,
+          "initialSemanticReadSha256Claim": null,
+          "initialBeforeThisPrepSemanticReadClaim": null,
+          "dedicatedInitialPin": null,
+          "priorFullReadNote": null
+        },
+        {
+          "path": "packages/core/src/plugins/installer/uninstall.ts",
+          "bytes": 907,
+          "sha256": "8eddb1a62908cc8eb4b86495c2ffcfabc3c2cca6fe36dd10d579b8f9dbaa5bc0",
+          "coverageClaimFromAuthor": "full",
+          "selectedLineRangesFromAuthor": [
+            [
+              1,
+              19
+            ]
+          ],
+          "additionalNavigationSnippetLinesFromAuthor": [],
+          "declaredReadLineCount": 19,
+          "unionCountMatches": true,
+          "rangeBoundsValid": true,
+          "currentShaMatches": true,
+          "initialSemanticReadSha256Claim": null,
+          "initialBeforeThisPrepSemanticReadClaim": null,
+          "dedicatedInitialPin": null,
+          "priorFullReadNote": null
+        },
+        {
+          "path": "packages/core/src/plugins/pluginInstaller.ts",
+          "bytes": 19962,
+          "sha256": "263ce32aaee6b062513389f93cf29c5f3b5779a160da3979f036fb38b176a30a",
+          "coverageClaimFromAuthor": "selected",
+          "selectedLineRangesFromAuthor": [
+            [
+              44,
+              65
+            ],
+            [
+              250,
+              275
+            ],
+            [
+              334,
+              448
+            ]
+          ],
+          "additionalNavigationSnippetLinesFromAuthor": [],
+          "declaredReadLineCount": 163,
+          "unionCountMatches": true,
+          "rangeBoundsValid": true,
+          "currentShaMatches": true,
+          "initialSemanticReadSha256Claim": null,
+          "initialBeforeThisPrepSemanticReadClaim": null,
+          "dedicatedInitialPin": null,
+          "priorFullReadNote": null
+        },
+        {
+          "path": "packages/core/src/plugins/installedPlugins.ts",
+          "bytes": 9314,
+          "sha256": "e3b7527fd42f9b47555599ed868ca9db04e86b03a055999cd2ac53eb7afd0208",
+          "coverageClaimFromAuthor": "selected",
+          "selectedLineRangesFromAuthor": [
+            [
+              250,
+              265
+            ]
+          ],
+          "additionalNavigationSnippetLinesFromAuthor": [],
+          "declaredReadLineCount": 16,
+          "unionCountMatches": true,
+          "rangeBoundsValid": true,
+          "currentShaMatches": true,
+          "initialSemanticReadSha256Claim": null,
+          "initialBeforeThisPrepSemanticReadClaim": null,
+          "dedicatedInitialPin": null,
+          "priorFullReadNote": null
+        }
+      ]
+    }
+  ],
+  "uniquePinnedSourcePathsAcrossGroups": 27,
+  "noAdditionOfOverlappingCoverage": true,
+  "reportLinkChecks": [
+    {
+      "report": "/tmp/codeshell-audit-round37-marketplace-local-frontier/proposal.md",
+      "label": "分类与证据位置",
+      "target": "decisions.json",
+      "exists": true
+    },
+    {
+      "report": "/tmp/codeshell-audit-round37-marketplace-local-frontier/proposal.md",
+      "label": "源码范围与时序",
+      "target": "source-manifest.json",
+      "exists": true
+    },
+    {
+      "report": "/tmp/codeshell-audit-round37-marketplace-local-frontier/proposal.md",
+      "label": "历史总账",
+      "target": "history.json",
+      "exists": true
+    },
+    {
+      "report": "/tmp/codeshell-audit-round37-marketplace-local-frontier/proposal.md",
+      "label": "原扫描与238行选读",
+      "target": "history-peer/review.md",
+      "exists": true
+    },
+    {
+      "report": "/tmp/codeshell-audit-round37-marketplace-local-frontier/proposal.md",
+      "label": "修正后的全量机械补扫",
+      "target": "history-corrected.json",
+      "exists": true
+    },
+    {
+      "report": "/tmp/codeshell-audit-round37-marketplace-local-frontier/proposal.md",
+      "label": "实际选读与对比",
+      "target": "history-corrected-selection.json",
+      "exists": true
+    },
+    {
+      "report": "/tmp/codeshell-audit-round37-marketplace-local-frontier/proposal.md",
+      "label": "结束检查",
+      "target": "finish-checks.json",
+      "exists": true
+    },
+    {
+      "report": "/tmp/codeshell-audit-round37-marketplace-local-frontier/proposal.md",
+      "label": "metadata说明",
+      "target": "metadata-notes.json",
+      "exists": true
+    },
+    {
+      "report": "/tmp/codeshell-audit-round37-marketplace-local-frontier/proposal.md",
+      "label": "产品验证记录",
+      "target": "validation.json",
+      "exists": true
+    },
+    {
+      "report": "/tmp/codeshell-audit-round37-marketplace-local-frontier/proposal.md",
+      "label": "作者收据",
+      "target": "author-receipt.json",
+      "exists": true
+    },
+    {
+      "report": "/tmp/codeshell-audit-round37-local-marker-review/report.md",
+      "label": "名称准入",
+      "target": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/packages/core/src/plugins/knownMarketplaces.ts:14",
+      "exists": true
+    },
+    {
+      "report": "/tmp/codeshell-audit-round37-local-marker-review/report.md",
+      "label": "marketplaceDir",
+      "target": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/packages/core/src/plugins/marketplaceManager.ts:37",
+      "exists": true
+    },
+    {
+      "report": "/tmp/codeshell-audit-round37-local-marker-review/report.md",
+      "label": "该guard",
+      "target": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/packages/core/src/plugins/installer/paths.ts:10",
+      "exists": true
+    },
+    {
+      "report": "/tmp/codeshell-audit-round37-local-marker-review/report.md",
+      "label": "installPlugin334–423",
+      "target": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/packages/core/src/plugins/pluginInstaller.ts:334",
+      "exists": true
+    },
+    {
+      "report": "/tmp/codeshell-audit-round37-local-marker-review/report.md",
+      "label": "pluginInstallKey263–265",
+      "target": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/packages/core/src/plugins/installedPlugins.ts:263",
+      "exists": true
+    },
+    {
+      "report": "/tmp/codeshell-audit-round37-local-marker-review/report.md",
+      "label": "writer58–68",
+      "target": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/packages/core/src/plugins/installer/install.ts:58",
+      "exists": true
+    },
+    {
+      "report": "/tmp/codeshell-audit-round37-local-marker-review/report.md",
+      "label": "实际catalog",
+      "target": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/packages/core/src/plugins/pluginCatalog.ts:93",
+      "exists": true
+    },
+    {
+      "report": "/tmp/codeshell-audit-round37-local-marker-review/report.md",
+      "label": "summary129–162",
+      "target": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/packages/desktop/src/main/plugins-service.ts:134",
+      "exists": true
+    },
+    {
+      "report": "/tmp/codeshell-audit-round37-local-marker-review/report.md",
+      "label": "uninstallTarget31–34",
+      "target": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/packages/desktop/src/renderer/extensions/uninstallTarget.ts:29",
+      "exists": true
+    },
+    {
+      "report": "/tmp/codeshell-audit-round37-local-marker-review/report.md",
+      "label": "真实PluginsTab149–152",
+      "target": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/packages/desktop/src/renderer/extensions/PluginsTab.tsx:149",
+      "exists": true
+    },
+    {
+      "report": "/tmp/codeshell-audit-round37-local-marker-review/report.md",
+      "label": "uninstallPluginByName8–12",
+      "target": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/packages/core/src/plugins/installer/uninstall.ts:8",
+      "exists": true
+    },
+    {
+      "report": "/tmp/codeshell-audit-round37-local-marker-review/report.md",
+      "label": "PROFILE-R5-01历史报告",
+      "target": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17-round5/profile.md:7",
+      "exists": true
+    },
+    {
+      "report": "/tmp/codeshell-audit-round37-local-marker-review/report.md",
+      "label": "history-decisions.json",
+      "target": "/tmp/codeshell-audit-round37-local-marker-review/history-decisions.json",
+      "exists": true
+    },
+    {
+      "report": "/tmp/codeshell-audit-round37-local-marker-review/report.md",
+      "label": "历史source-row gate",
+      "target": "/tmp/codeshell-audit-round37-local-marker-review/prior-source-claims.json",
+      "exists": true
+    },
+    {
+      "report": "/tmp/codeshell-audit-round37-local-marker-review/report.md",
+      "label": "Source manifest",
+      "target": "/tmp/codeshell-audit-round37-local-marker-review/source-manifest.json",
+      "exists": true
+    },
+    {
+      "report": "/tmp/codeshell-audit-round37-local-marker-review/report.md",
+      "label": "validation.json",
+      "target": "/tmp/codeshell-audit-round37-local-marker-review/validation.json",
+      "exists": true
+    },
+    {
+      "report": "/tmp/codeshell-audit-round37-root-frontier/proposal.md",
+      "label": "范围",
+      "target": "source-manifest.json",
+      "exists": true
+    },
+    {
+      "report": "/tmp/codeshell-audit-round37-root-frontier/proposal.md",
+      "label": "判断",
+      "target": "decisions.json",
+      "exists": true
+    },
+    {
+      "report": "/tmp/codeshell-audit-round37-root-frontier/proposal.md",
+      "label": "验证",
+      "target": "validation.json",
+      "exists": true
+    },
+    {
+      "report": "/tmp/codeshell-audit-round37-root-frontier/proposal.md",
+      "label": "metadata说明",
+      "target": "metadata-notes.json",
+      "exists": true
+    },
+    {
+      "report": "/tmp/codeshell-audit-round37-marketplace-local-frontier/history-peer/review.md",
+      "label": "选读上下文",
+      "target": "selected-contexts.json",
+      "exists": true
+    },
+    {
+      "report": "/tmp/codeshell-audit-round37-marketplace-local-frontier/history-peer/review.md",
+      "label": "历史扫描",
+      "target": "history.json",
+      "exists": true
+    },
+    {
+      "report": "/tmp/codeshell-audit-round37-marketplace-local-frontier/history-peer/review.md",
+      "label": "补扫",
+      "target": "supplement.json",
+      "exists": true
+    },
+    {
+      "report": "/tmp/codeshell-audit-round37-marketplace-local-frontier/history-peer/review.md",
+      "label": "结束检查",
+      "target": "finish-checks.json",
+      "exists": true
+    },
+    {
+      "report": "/tmp/codeshell-audit-round37-marketplace-local-frontier/history-peer/review.md",
+      "label": "说明",
+      "target": "metadata-notes.json",
+      "exists": true
+    },
+    {
+      "report": "/tmp/codeshell-audit-round37-marketplace-local-frontier/history-peer/review.md",
+      "label": "本次收据",
+      "target": "author-receipt.json",
+      "exists": true
+    }
+  ],
+  "historyComparison": {
+    "childAndIndependentInventoriesIdenticalBytesSha": true,
+    "initialIncluded": 3216,
+    "correctedIncluded": 3216,
+    "includedAdded": [],
+    "includedRemoved": [],
+    "datedChanges": [
+      {
+        "path": "docs/todo/release-real-operations-2026-10-16.md",
+        "before": [
+          177252,
+          "6d6d93ccacf72a6c6a87555b660b81ee10ba1d389b323db97ccab27220876bbf"
+        ],
+        "after": [
+          189803,
+          "c8cdef20f7d9fcf62b330ef6167fea725d6738e511ac65bb6384c3a6d37842ba"
+        ]
+      }
+    ],
+    "childInitialCounts": {
+      "discovered": 3259,
+      "included": 3216,
+      "excluded": 43,
+      "md": 1330,
+      "json": 1886,
+      "archiveBySubstring": 175,
+      "bytes": 105788857,
+      "jsonStringValues": 762312,
+      "jsonScalarValues": 1126584,
+      "jsonParseErrors": [],
+      "includesFrozenRound34": true
+    },
+    "independentInitialCounts": {
+      "files": 3216,
+      "archivePaths": 169,
+      "markdown": 1330,
+      "json": 1886,
+      "stringLeaves": 762312,
+      "scalarLeaves": 1126584,
+      "parseErrors": 0
+    },
+    "correctedCounts": {
+      "discovered": 3316,
+      "included": 3216,
+      "excluded": 100,
+      "md": 1330,
+      "json": 1886,
+      "bytes": 105801408,
+      "jsonStringValues": 762312,
+      "jsonScalarValues": 1126584,
+      "jsonParseErrors": []
+    },
+    "correctedHits": {
+      "helper": 55,
+      "quoted_marketplace_local": 8,
+      "literal_namespace": 13,
+      "old_branch": 2,
+      "source_name": 0,
+      "unquoted_marketplace_local": 68,
+      "name_local_literal": 4,
+      "local_collision": 32,
+      "chinese_market_local": 5
+    },
+    "correctedAllUnderCap400": true,
+    "childSelected238HistoricalLinesAreNotNewActiveSourceRows": true,
+    "historyNotRescannedHere": true,
+    "rootPromisedFormalFreshHistoryIncludingFrozen35And36NotReviewedYet": true
+  },
+  "regexCodepointChecks": [
+    {
+      "owner": "original-child",
+      "patterns": [
+        {
+          "name": "helper",
+          "storedPattern": "uninstallTarget|getUninstallTarget|resolveUninstallTarget",
+          "backslashPositions": [],
+          "consecutiveBackslashPairs": []
+        },
+        {
+          "name": "local_marketplace",
+          "storedPattern": "marketplace[^\\n]{0,100}[\\\"\\x27]local[\\\"\\x27]|[\\\"\\x27]local[\\\"\\x27][^\\n]{0,100}marketplace",
+          "backslashPositions": [
+            13,
+            24,
+            26,
+            37,
+            39,
+            46,
+            48,
+            59,
+            61,
+            68
+          ],
+          "consecutiveBackslashPairs": []
+        },
+        {
+          "name": "literal_namespace",
+          "storedPattern": "(?:marketplace|marketplaces)[^\\n]{0,180}(?:collision|reserved|literal|namespace|同名|碰撞|保留)|(?:collision|reserved|literal|namespace|同名|碰撞|保留)[^\\n]{0,180}(?:marketplace|marketplaces)",
+          "backslashPositions": [
+            30,
+            141
+          ],
+          "consecutiveBackslashPairs": []
+        },
+        {
+          "name": "old_branch",
+          "storedPattern": "missing.local|truthy.local|marketplace\\s*(?:===|!==|:|=)\\s*[\\\"\\x27]local[\\\"\\x27]",
+          "backslashPositions": [
+            38,
+            56,
+            60,
+            62,
+            73,
+            75
+          ],
+          "consecutiveBackslashPairs": []
+        },
+        {
+          "name": "source_name",
+          "storedPattern": "(?:marketplaceName|marketplace\\s+name|marketplace.*named)[^\\n]{0,120}local",
+          "backslashPositions": [
+            30,
+            59
+          ],
+          "consecutiveBackslashPairs": []
+        }
+      ],
+      "anyConsecutivePairs": false
+    },
+    {
+      "owner": "independent-focused",
+      "patterns": [
+        {
+          "name": "literal-local-comparison",
+          "storedPattern": "marketplace\\s*={1,3}\\s*[\"']local[\"']",
+          "backslashPositions": [
+            11,
+            20
+          ],
+          "consecutiveBackslashPairs": []
+        },
+        {
+          "name": "named-local",
+          "storedPattern": "(?:marketplace(?:Name| name)?|市场名称|市场名).{0,70}(?:named|called|名为|命名|名称|name\\s*[:=]).{0,20}[\"']?local|(?:marketplaceName|name)\\s*:\\s*[\"']local[\"']",
+          "backslashPositions": [
+            75,
+            125,
+            129
+          ],
+          "consecutiveBackslashPairs": []
+        },
+        {
+          "name": "namespace-local",
+          "storedPattern": "(?:reserved|namespace|collision|marker|保留名|命名冲突).{0,100}\\blocal\\b|\\blocal\\b.{0,100}(?:reserved|namespace|collision|marker|保留名|命名冲突)",
+          "backslashPositions": [
+            56,
+            63,
+            66,
+            73
+          ],
+          "consecutiveBackslashPairs": []
+        }
+      ],
+      "anyConsecutivePairs": false
+    },
+    {
+      "owner": "supplement-called-corrected",
+      "patterns": [
+        {
+          "name": "helper",
+          "storedPattern": "uninstallTarget|getUninstallTarget|resolveUninstallTarget",
+          "backslashPositions": [],
+          "consecutiveBackslashPairs": []
+        },
+        {
+          "name": "quoted_marketplace_local",
+          "storedPattern": "marketplace[^\\n]{0,120}[\"'`]local[\"'`]|[\"'`]local[\"'`][^\\n]{0,120}marketplace",
+          "backslashPositions": [
+            13,
+            56
+          ],
+          "consecutiveBackslashPairs": []
+        },
+        {
+          "name": "literal_namespace",
+          "storedPattern": "(?:marketplace|marketplaces)[^\\n]{0,180}(?:collision|reserved|literal|namespace|同名|碰撞|保留)|(?:collision|reserved|literal|namespace|同名|碰撞|保留)[^\\n]{0,180}(?:marketplace|marketplaces)",
+          "backslashPositions": [
+            30,
+            141
+          ],
+          "consecutiveBackslashPairs": []
+        },
+        {
+          "name": "old_branch",
+          "storedPattern": "missing.local|truthy.local|marketplace\\s*(?:===|!==|:|=)\\s*[\"'`]local[\"'`]",
+          "backslashPositions": [
+            38,
+            56
+          ],
+          "consecutiveBackslashPairs": []
+        },
+        {
+          "name": "source_name",
+          "storedPattern": "(?:marketplaceName|marketplace\\s+name|marketplace[^\\n]*named)[^\\n]{0,120}local",
+          "backslashPositions": [
+            30,
+            51,
+            63
+          ],
+          "consecutiveBackslashPairs": []
+        },
+        {
+          "name": "unquoted_marketplace_local",
+          "storedPattern": "marketplace(?:Name|_name)?[^\\n]{0,120}local|local[^\\n]{0,120}marketplace(?:Name|_name)?",
+          "backslashPositions": [
+            28,
+            51
+          ],
+          "consecutiveBackslashPairs": []
+        },
+        {
+          "name": "name_local_literal",
+          "storedPattern": "(?:name|命名|名称)[^\\n]{0,120}[\"'`]local[\"'`]",
+          "backslashPositions": [
+            16
+          ],
+          "consecutiveBackslashPairs": []
+        },
+        {
+          "name": "local_collision",
+          "storedPattern": "(?:collision|collid|reserved|同名|碰撞|保留名)[^\\n]{0,140}local|local[^\\n]{0,140}(?:collision|collid|reserved|同名|碰撞|保留名)",
+          "backslashPositions": [
+            41,
+            64
+          ],
+          "consecutiveBackslashPairs": []
+        },
+        {
+          "name": "chinese_market_local",
+          "storedPattern": "(?:市场|市集)[^\\n]{0,120}local|local[^\\n]{0,120}(?:市场|市集)",
+          "backslashPositions": [
+            11,
+            34
+          ],
+          "consecutiveBackslashPairs": []
+        }
+      ],
+      "anyConsecutivePairs": false
+    }
+  ],
+  "originalChildMethodLines18To22": [
+    {
+      "line": 18,
+      "consecutiveBackslashPairs": 0,
+      "backslashPositions": []
+    },
+    {
+      "line": 19,
+      "consecutiveBackslashPairs": 0,
+      "backslashPositions": [
+        36,
+        47,
+        49,
+        60,
+        62,
+        69,
+        71,
+        82,
+        84,
+        91
+      ]
+    },
+    {
+      "line": 20,
+      "consecutiveBackslashPairs": 0,
+      "backslashPositions": [
+        53,
+        164
+      ]
+    },
+    {
+      "line": 21,
+      "consecutiveBackslashPairs": 0,
+      "backslashPositions": [
+        54,
+        72,
+        76,
+        78,
+        89,
+        91
+      ]
+    },
+    {
+      "line": 22,
+      "consecutiveBackslashPairs": 0,
+      "backslashPositions": [
+        47,
+        76
+      ]
+    }
+  ],
+  "allEightSupplementQuotedContextsReadAsArtifact": true,
+  "classificationAssessment": {
+    "supportRootProposedFormal": "MARKETPLACE-R37-01",
+    "severity": "P3",
+    "oneGlobalIssueOnly": true,
+    "preserveAuthorCandidateId": "MARKETPLACE-LOCAL-R37-C1",
+    "preserveAuthorClassification": {
+      "formal": 0,
+      "candidate": 1,
+      "related": 0
+    },
+    "preserveIndependentOpinion": "P3 static support, no new standalone ID",
+    "newFormalIdsCreatedByThisReviewer": 0,
+    "conditionalStaticEffect": "Ordinary admitted registry key local -> successful marketplace install/catalog DTO suffix -> helper local branch -> local missing-direct-directory refusal. No actual directory outcome observed.",
+    "ordinaryCounterevidenceBlockingInReviewedMaterials": false,
+    "scopeLimits": [
+      "No second product source read; source statements remain attributed to three authors.",
+      "Current static chain does not need runtime to establish branch/parameter/path mismatch.",
+      "Do not claim observed install/delete/corruption, all uninstall entrypoints failing, security/identity correctness or absolute historical novelty.",
+      "Root formal baseline/Git binding and fresh35/36 history are later aggregation work, not certified here."
+    ]
+  },
+  "productRuns": 0,
+  "testRuns": 0,
+  "fixtureRuns": 0,
+  "installUninstallCatalogCalls": 0,
+  "gitCommands": 0
+}

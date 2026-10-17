@@ -1,0 +1,49 @@
+{
+  "recordedUTC": "2026-10-17T13:11:49.416417+00:00",
+  "classification": {
+    "formal": 0,
+    "candidate": 0,
+    "newRelated": 0
+  },
+  "runs": [],
+  "productFunctions": 0,
+  "productImports": 0,
+  "tests": 0,
+  "fixturesOrLanguageExpressions": 0,
+  "reactBrowserDOMTimers": 0,
+  "realInboxOrDirectoryReads": 0,
+  "nativeNetworkModel": 0,
+  "git": 0,
+  "authorityPermissionIdentityExperiments": 0,
+  "metadataFailures": [],
+  "navigationOutputLimits": [
+    {
+      "chunk": "ebb2b5",
+      "exitCode": 0,
+      "stdoutTruncated": true,
+      "scope": "Supplementcase-context printing only; JSON retains100 of126 regexmatches. No claim all savedcontexts or hidden console text semantically read."
+    }
+  ],
+  "ordinaryCounterevidence": [
+    "All8 declared statuses map to intentionally ordered4 groups; cancelled/done terminate into done, interrupted/paused remain attention.",
+    "Filtering intersects source/status/project, searches optional DTO text/artifact labels, writes into new arrays, then sorts by updatedAt desc and taskKey tie-breaker. No fabricated invalid timestamp case supplied.",
+    "Page consumes complete snapshot DTO, filters ordinary navigation records out via explicit isBackgroundWork contract, groups with real filters and resets page size on filter changes; render/status/source keys and load-more consume these same groups.",
+    "Snapshot hook collects all same-version pages keyed by taskKey before publishing; not a runtime/React lifecycle certification.",
+    "Three existing ordinary test declarations cover groups/newest-first, intersecting filters and intended background sources; none executed."
+  ],
+  "historyDecisions": {
+    "oldFullProse": "hosts.md41 and copied source-report explicitly full-read leaf in prior audit. Retained as prior coverage; no old source hash attached there. R28no-row/inventory cannot prove unread or contradict prose.",
+    "noExactNewCause": "Initial exact32 contexts all retained/read,0 parse error, no helper-specific old-failed hit; keywords alone do not prove semantic exhaustion.",
+    "r31CaseBoundary": "Supplement finds old SEARCH-R31-C1 contextual Greek sigma cause. Current helper lowercases whole values and whole query, unlike old per-cell/whole-query literal mismatch. No independent Unicode caseless-substring contract/gap is established here; do not promote another casefold item or run a fixture. No newrelated record counted.",
+    "genericOldHostIssues": "Oldhosts scope includes authority/custody routes; no old findings/pass or validation harness is borrowed into this finite presentation review.",
+    "supplement": "126r31/contextual-case hits cap100 retained; helper-specific ordinary symbols0. Original3318inventory reused,0 drift. Actual source/spec oldR31 reused only as historical boundary; no web/Unicode expression execution."
+  },
+  "sourcePinCount": 10,
+  "allPinsStable": true,
+  "historyFinish": {
+    "initialFiles": 3318,
+    "changed": [],
+    "allUnchanged": true,
+    "newPathsNotCheckedAsOriginal": true
+  }
+}

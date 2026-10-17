@@ -1,0 +1,41 @@
+{
+  "files": [
+    {
+      "path": "/tmp/codeshell-audit-round37-marketplace-local-frontier/proposal.md",
+      "bytes": 4560,
+      "sha256": "7bb614ac0a8b623b976027e287a4dce1487ccf97cc9d2f5b3e72e0ed121c79cf",
+      "beforeRootFrozenReportRead": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round37-marketplace-local-frontier/source-manifest.json",
+      "bytes": 23256,
+      "sha256": "26e0bc26af6c24c52b29f515877e6e69357b73bce2d64e3dd88e1397f81d6d2d",
+      "beforeRootFrozenReportRead": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round37-marketplace-local-frontier/author-receipt.json",
+      "bytes": 6093,
+      "sha256": "dabba5faaca4069a9e6cfbee992fb9c652f32b82706d31202fbadf0a3b798f46",
+      "beforeRootFrozenReportRead": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round37-local-marker-review/report.md",
+      "bytes": 8075,
+      "sha256": "72e547ef28ed078220f036c67a0a12f046e2cf2babd4f58a7c34190165c14eee",
+      "beforeRootFrozenReportRead": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round37-local-marker-review/source-manifest.json",
+      "bytes": 31633,
+      "sha256": "8137cda5638a5581625641f15b1acd10136023df5871c74a6f7814de74f66f67",
+      "beforeRootFrozenReportRead": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round37-local-marker-review/artifact-receipt.json",
+      "bytes": 4120,
+      "sha256": "4112d3fea658aedd692c31f194c675a9a080519d625f257691ac91c405550293",
+      "beforeRootFrozenReportRead": true
+    }
+  ],
+  "productRuns": 0
+}

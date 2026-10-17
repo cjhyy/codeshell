@@ -1,0 +1,21 @@
+{
+  "capturedUTC": "2026-10-17T13:09:48.959028+00:00",
+  "files": [
+    {
+      "path": "packages/desktop/src/preload/task-inbox-api.ts",
+      "bytes": 1388,
+      "lineCount": 46,
+      "sha256": "a86455e8de74944381d69d02e7f1cff0eb0de67eed6401dc3406d72667889d0b",
+      "initialSemanticReadSha256": "a86455e8de74944381d69d02e7f1cff0eb0de67eed6401dc3406d72667889d0b",
+      "timing": "before direct source content lookup/read; only filenames seen"
+    },
+    {
+      "path": "packages/desktop/src/renderer/task-inbox/useTaskInboxSnapshot.ts",
+      "bytes": 3402,
+      "lineCount": 91,
+      "sha256": "809e80bf9b0031efaff990124faeef76d145161fd620044cd7a51bf6fd1a9ff7",
+      "initialSemanticReadSha256": "809e80bf9b0031efaff990124faeef76d145161fd620044cd7a51bf6fd1a9ff7",
+      "timing": "before direct source content lookup/read; only filenames seen"
+    }
+  ]
+}

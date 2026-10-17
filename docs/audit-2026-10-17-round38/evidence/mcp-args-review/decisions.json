@@ -1,0 +1,41 @@
+{
+  "createdUTC": "2026-10-17T13:26:09.059138+00:00",
+  "reviewResult": "Supports same Root ordinary MCP args roundtrip static lead after counterevidence. No independent ID or extra finding count.",
+  "newIndependentIssueIds": [],
+  "newIndependentFindings": 0,
+  "sharedRootLead": "Ordinary stdio full editor loses quoted nonempty whitespace-containing arg grouping across args.join -> splitArgs save roundtrip",
+  "sharedRootIssueId": "Root owned; not assigned by independent reviewer",
+  "proposedSeverityForSameLead": "P3 static data-shape effect; Root final classification separate",
+  "ordinaryProducerConsumerGate": true,
+  "manualStaticExampleOnly": {
+    "initialFormText": "--label \"alpha beta\"",
+    "afterFirstSaveArray": [
+      "--label",
+      "alpha beta"
+    ],
+    "afterReopenFormText": "--label alpha beta",
+    "afterUnchangedSecondSaveArray": [
+      "--label",
+      "alpha",
+      "beta"
+    ],
+    "executed": false
+  },
+  "counterevidence": {
+    "unchangedSavePrevented": false,
+    "existingOwnNameRejected": false,
+    "argsArrayPatchRestoresQuotes": false,
+    "settingsArrayMergeRestoresGrouping": false,
+    "ordinaryUserJsonGuardRejectsSpaceArg": false,
+    "pluginOverrideAffected": false,
+    "httpModeAffected": false
+  },
+  "limits": [
+    "Manual source inference only, no UI/persistence/connection outcome observed.",
+    "Does not infer command startup failure, server behavior or data loss beyond token-boundary-changing settings payload.",
+    "No empty-token, escaping, unmatched-quote, external SDK or auth mechanism expansion.",
+    "Old reports and source coverage inspected only within saved dated scope."
+  ],
+  "rootAuthorReportRead": false,
+  "productAttempts": 0
+}

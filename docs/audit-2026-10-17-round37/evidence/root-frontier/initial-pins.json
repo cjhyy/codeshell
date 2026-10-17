@@ -1,0 +1,72 @@
+{
+  "atUTC": "2026-10-17T12:53:05.425607+00:00",
+  "prepOnly": true,
+  "formalBaseline": null,
+  "parentContext": "Root36 ongoing on refreshedcecd; formal37 baseline not established.",
+  "files": [
+    {
+      "path": "packages/desktop/src/renderer/extensions/uninstallTarget.ts",
+      "bytes": 1840,
+      "lineCount": 39,
+      "sha256": "90ae9788efe607e159e1c6163a849ef903ee6faee38e4552e484a71a4cb3cc50",
+      "beforeDirectRead": true,
+      "initialSemanticReadSha256": null,
+      "limit": "Peer source excerpts and precise branch/contract reports were seen before dedicated Root pin; do not backdate first semantic byte proof."
+    },
+    {
+      "path": "packages/core/src/plugins/knownMarketplaces.ts",
+      "bytes": 6280,
+      "lineCount": 161,
+      "sha256": "ac87a4867d5f47361a4df42ced438c69c00ce9150aa25367ddc4592b8c17fcd8",
+      "beforeDirectRead": true,
+      "initialSemanticReadSha256": null,
+      "limit": "Peer source excerpts and precise branch/contract reports were seen before dedicated Root pin; do not backdate first semantic byte proof."
+    },
+    {
+      "path": "packages/core/src/plugins/marketplaceManager.ts",
+      "bytes": 7940,
+      "lineCount": 236,
+      "sha256": "cdebee5c72c8ed253204c4299ed54d6c7f7806ca7768400b2d8a6b94a3846fd0",
+      "beforeDirectRead": true,
+      "initialSemanticReadSha256": null,
+      "limit": "Peer source excerpts and precise branch/contract reports were seen before dedicated Root pin; do not backdate first semantic byte proof."
+    },
+    {
+      "path": "packages/core/src/plugins/pluginCatalog.ts",
+      "bytes": 5601,
+      "lineCount": 157,
+      "sha256": "12215732b14c92e6ef447e83cc74b581f7e72e1ce1467f08badb304544d818e7",
+      "beforeDirectRead": true,
+      "initialSemanticReadSha256": null,
+      "limit": "Peer source excerpts and precise branch/contract reports were seen before dedicated Root pin; do not backdate first semantic byte proof."
+    },
+    {
+      "path": "packages/core/src/plugins/installer/paths.ts",
+      "bytes": 994,
+      "lineCount": 30,
+      "sha256": "323f660b827a86eff5ffaa0b87d60e04b18ae907406ac8d74f123e96239fbbb2",
+      "beforeDirectRead": true,
+      "initialSemanticReadSha256": null,
+      "limit": "Peer source excerpts and precise branch/contract reports were seen before dedicated Root pin; do not backdate first semantic byte proof."
+    },
+    {
+      "path": "packages/core/src/plugins/installer/uninstall.ts",
+      "bytes": 907,
+      "lineCount": 19,
+      "sha256": "8eddb1a62908cc8eb4b86495c2ffcfabc3c2cca6fe36dd10d579b8f9dbaa5bc0",
+      "beforeDirectRead": true,
+      "initialSemanticReadSha256": null,
+      "limit": "Peer source excerpts and precise branch/contract reports were seen before dedicated Root pin; do not backdate first semantic byte proof."
+    },
+    {
+      "path": "packages/core/src/plugins/pluginInstaller.ts",
+      "bytes": 19962,
+      "lineCount": 487,
+      "sha256": "263ce32aaee6b062513389f93cf29c5f3b5779a160da3979f036fb38b176a30a",
+      "beforeDirectRead": true,
+      "initialSemanticReadSha256": null,
+      "limit": "Peer source excerpts and precise branch/contract reports were seen before dedicated Root pin; do not backdate first semantic byte proof."
+    }
+  ],
+  "productRuns": 0
+}

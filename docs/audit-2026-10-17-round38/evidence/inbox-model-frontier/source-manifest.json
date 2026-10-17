@@ -1,0 +1,319 @@
+{
+  "capturedUTC": "2026-10-17T13:11:49.416417+00:00",
+  "sourceRoot": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell",
+  "prepOnly": true,
+  "formalBaseline": null,
+  "parentReportedFrozenRound36": "ee5c1a90050ce3cdddd3f2ebee2f9a2c0d8824d8",
+  "classification": {
+    "formal": 0,
+    "candidate": 0,
+    "newRelated": 0
+  },
+  "files": [
+    {
+      "path": "packages/desktop/src/renderer/task-inbox/taskInboxViewModel.ts",
+      "bytes": 3342,
+      "sha256": "9c5fa1937a2187110ea497bc402ebb8e0aa1b7b8cc733af6a789e10a9234a1ed",
+      "lineCount": 87,
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          87
+        ]
+      ],
+      "coveredLineCount": 87,
+      "initialSemanticReadSha256": "9c5fa1937a2187110ea497bc402ebb8e0aa1b7b8cc733af6a789e10a9234a1ed",
+      "pinArtifact": "initial-pins.json",
+      "pinTiming": "before any new direct semantic reading; filename inventory preceded pin",
+      "finishSha256": "9c5fa1937a2187110ea497bc402ebb8e0aa1b7b8cc733af6a789e10a9234a1ed",
+      "productExecuted": false,
+      "gitCompared": false,
+      "firstEverReadClaim": false,
+      "priorFullClaim": "Historical hosts.md41 says full implementation read, but no matching source SHA given there; current re-read is not87 novel historical coverage lines. Target63–78 ordinary target DTO read incidentally, not authority/nav verification."
+    },
+    {
+      "path": "packages/desktop/src/renderer/task-inbox/taskInboxViewModel.test.ts",
+      "bytes": 10711,
+      "sha256": "b617e88a422cc67e9f5b5bb2ea27f35b8cb973be8d691680ddd42219caf404d6",
+      "lineCount": 315,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          1,
+          69
+        ],
+        [
+          292,
+          315
+        ]
+      ],
+      "coveredLineCount": 93,
+      "initialSemanticReadSha256": "b617e88a422cc67e9f5b5bb2ea27f35b8cb973be8d691680ddd42219caf404d6",
+      "pinArtifact": "consumer-pins.json",
+      "pinTiming": "before source content lookup/read; filename locator only preceded pin",
+      "finishSha256": "b617e88a422cc67e9f5b5bb2ea27f35b8cb973be8d691680ddd42219caf404d6",
+      "productExecuted": false,
+      "gitCompared": false,
+      "firstEverReadClaim": false,
+      "printedScopeQualification": "First display printed1–315, but ordinary semantic review/conclusions restrict to1–69 and292–315. Printed70–291 navigation/identity scenarios are incidental, no authority review or navigation implementation followed, not counted as ordinary coverage."
+    },
+    {
+      "path": "packages/desktop/src/renderer/task-inbox/TaskInboxPage.tsx",
+      "bytes": 23775,
+      "sha256": "76769f666c1be51aeec954b7bd5eabbeaf862da80c4c83708a8794461da5e295",
+      "lineCount": 597,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          1,
+          165
+        ],
+        [
+          271,
+          291
+        ],
+        [
+          405,
+          482
+        ],
+        [
+          542,
+          559
+        ]
+      ],
+      "coveredLineCount": 282,
+      "initialSemanticReadSha256": "76769f666c1be51aeec954b7bd5eabbeaf862da80c4c83708a8794461da5e295",
+      "pinArtifact": "consumer-pins.json",
+      "pinTiming": "before source content lookup/read; filename locator only preceded pin",
+      "finishSha256": "76769f666c1be51aeec954b7bd5eabbeaf862da80c4c83708a8794461da5e295",
+      "productExecuted": false,
+      "gitCompared": false,
+      "firstEverReadClaim": false
+    },
+    {
+      "path": "docs/review-remaining-2026-10-12/hosts.md",
+      "bytes": 16168,
+      "sha256": "884a2deee6eddfe00a2a4f147e1d964351ab6017928c81e33e303315132870a8",
+      "lineCount": 84,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          30,
+          42
+        ]
+      ],
+      "coveredLineCount": 13,
+      "initialSemanticReadSha256": null,
+      "pinArtifact": "consumer-pins.json",
+      "pinTiming": "history excerpt before dedicated pin; direct reading is subsequent",
+      "finishSha256": "884a2deee6eddfe00a2a4f147e1d964351ab6017928c81e33e303315132870a8",
+      "productExecuted": false,
+      "gitCompared": false,
+      "firstEverReadClaim": false
+    },
+    {
+      "path": "packages/desktop/src/preload/task-inbox-api.ts",
+      "bytes": 1388,
+      "sha256": "a86455e8de74944381d69d02e7f1cff0eb0de67eed6401dc3406d72667889d0b",
+      "lineCount": 46,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          1,
+          20
+        ]
+      ],
+      "coveredLineCount": 20,
+      "initialSemanticReadSha256": "a86455e8de74944381d69d02e7f1cff0eb0de67eed6401dc3406d72667889d0b",
+      "pinArtifact": "dto-pins.json",
+      "pinTiming": "before direct source content lookup/read; only filenames seen",
+      "finishSha256": "a86455e8de74944381d69d02e7f1cff0eb0de67eed6401dc3406d72667889d0b",
+      "productExecuted": false,
+      "gitCompared": false,
+      "firstEverReadClaim": false
+    },
+    {
+      "path": "packages/desktop/src/renderer/task-inbox/useTaskInboxSnapshot.ts",
+      "bytes": 3402,
+      "sha256": "809e80bf9b0031efaff990124faeef76d145161fd620044cd7a51bf6fd1a9ff7",
+      "lineCount": 91,
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          91
+        ]
+      ],
+      "coveredLineCount": 91,
+      "initialSemanticReadSha256": "809e80bf9b0031efaff990124faeef76d145161fd620044cd7a51bf6fd1a9ff7",
+      "pinArtifact": "dto-pins.json",
+      "pinTiming": "before direct source content lookup/read; only filenames seen",
+      "finishSha256": "809e80bf9b0031efaff990124faeef76d145161fd620044cd7a51bf6fd1a9ff7",
+      "productExecuted": false,
+      "gitCompared": false,
+      "firstEverReadClaim": false
+    },
+    {
+      "path": "packages/desktop/src/main/task-inbox/task-inbox-types.ts",
+      "bytes": 9095,
+      "sha256": "2694cf539e698bf9a500d08f6d855cc66f22760ee2f5049fb8d23b565711fb00",
+      "lineCount": 268,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          1,
+          105
+        ]
+      ],
+      "coveredLineCount": 105,
+      "initialSemanticReadSha256": "2694cf539e698bf9a500d08f6d855cc66f22760ee2f5049fb8d23b565711fb00",
+      "pinArtifact": "type-pins.json",
+      "pinTiming": "before content read; import path/filename-only inventory preceded pin",
+      "finishSha256": "2694cf539e698bf9a500d08f6d855cc66f22760ee2f5049fb8d23b565711fb00",
+      "productExecuted": false,
+      "gitCompared": false,
+      "firstEverReadClaim": false
+    }
+  ],
+  "hashOnlyFiles": [
+    {
+      "path": "CODESHELL.md",
+      "bytes": 17639,
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "lineCount": 217,
+      "coverage": "hash-only",
+      "selectedLineRanges": [],
+      "pinArtifact": "initial-pins.json",
+      "note": "Instruction SHA carry-forward only;0 new instruction reading"
+    },
+    {
+      "path": "AGENTS.md",
+      "bytes": 206,
+      "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "lineCount": 5,
+      "coverage": "hash-only",
+      "selectedLineRanges": [],
+      "pinArtifact": "initial-pins.json",
+      "note": "Instruction SHA carry-forward only;0 new instruction reading"
+    },
+    {
+      "path": "docs/review-remaining-2026-10-12/validation/source-reports/codeshell-remaining-hosts-report.md",
+      "bytes": 15692,
+      "sha256": "978ee8e2c95fe68f2b7c45463b0e51d122df884ad590bdb95d2e70d90f594b32",
+      "lineCount": 84,
+      "coverage": "hash-only",
+      "selectedLineRanges": [],
+      "pinArtifact": "consumer-pins.json",
+      "note": "Copied historical report appeared only in stored search contexts; no direct full source-report read."
+    }
+  ],
+  "counts": {
+    "semanticFiles": 7,
+    "productAndTestFiles": 6,
+    "productLines": 585,
+    "testOrdinarySemanticLines": 93,
+    "productAndTestLines": 678,
+    "historicalReportLines": 13,
+    "totalSemanticLines": 691,
+    "hashOnlyFiles": 3,
+    "pins": 10,
+    "existingOrdinaryTestDeclarationsRead": 3,
+    "productRuns": 0
+  },
+  "allSourceFinish": [
+    {
+      "path": "packages/desktop/src/renderer/task-inbox/taskInboxViewModel.ts",
+      "initialSha256": "9c5fa1937a2187110ea497bc402ebb8e0aa1b7b8cc733af6a789e10a9234a1ed",
+      "finishSha256": "9c5fa1937a2187110ea497bc402ebb8e0aa1b7b8cc733af6a789e10a9234a1ed",
+      "unchanged": true
+    },
+    {
+      "path": "CODESHELL.md",
+      "initialSha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "finishSha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "unchanged": true
+    },
+    {
+      "path": "AGENTS.md",
+      "initialSha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "finishSha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "unchanged": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/task-inbox/taskInboxViewModel.test.ts",
+      "initialSha256": "b617e88a422cc67e9f5b5bb2ea27f35b8cb973be8d691680ddd42219caf404d6",
+      "finishSha256": "b617e88a422cc67e9f5b5bb2ea27f35b8cb973be8d691680ddd42219caf404d6",
+      "unchanged": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/task-inbox/TaskInboxPage.tsx",
+      "initialSha256": "76769f666c1be51aeec954b7bd5eabbeaf862da80c4c83708a8794461da5e295",
+      "finishSha256": "76769f666c1be51aeec954b7bd5eabbeaf862da80c4c83708a8794461da5e295",
+      "unchanged": true
+    },
+    {
+      "path": "docs/review-remaining-2026-10-12/hosts.md",
+      "initialSha256": "884a2deee6eddfe00a2a4f147e1d964351ab6017928c81e33e303315132870a8",
+      "finishSha256": "884a2deee6eddfe00a2a4f147e1d964351ab6017928c81e33e303315132870a8",
+      "unchanged": true
+    },
+    {
+      "path": "docs/review-remaining-2026-10-12/validation/source-reports/codeshell-remaining-hosts-report.md",
+      "initialSha256": "978ee8e2c95fe68f2b7c45463b0e51d122df884ad590bdb95d2e70d90f594b32",
+      "finishSha256": "978ee8e2c95fe68f2b7c45463b0e51d122df884ad590bdb95d2e70d90f594b32",
+      "unchanged": true
+    },
+    {
+      "path": "packages/desktop/src/preload/task-inbox-api.ts",
+      "initialSha256": "a86455e8de74944381d69d02e7f1cff0eb0de67eed6401dc3406d72667889d0b",
+      "finishSha256": "a86455e8de74944381d69d02e7f1cff0eb0de67eed6401dc3406d72667889d0b",
+      "unchanged": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/task-inbox/useTaskInboxSnapshot.ts",
+      "initialSha256": "809e80bf9b0031efaff990124faeef76d145161fd620044cd7a51bf6fd1a9ff7",
+      "finishSha256": "809e80bf9b0031efaff990124faeef76d145161fd620044cd7a51bf6fd1a9ff7",
+      "unchanged": true
+    },
+    {
+      "path": "packages/desktop/src/main/task-inbox/task-inbox-types.ts",
+      "initialSha256": "2694cf539e698bf9a500d08f6d855cc66f22760ee2f5049fb8d23b565711fb00",
+      "finishSha256": "2694cf539e698bf9a500d08f6d855cc66f22760ee2f5049fb8d23b565711fb00",
+      "unchanged": true
+    }
+  ],
+  "history": {
+    "file": "history.json",
+    "startedUTC": "2026-10-17T13:08:02.829844+00:00",
+    "completedUTC": "2026-10-17T13:08:11.923317+00:00",
+    "inventoryCount": 3318,
+    "stats": {
+      "markdownFiles": 1342,
+      "jsonFiles": 1976,
+      "stringLeaves": 807880,
+      "scalarLeaves": 1193828
+    },
+    "archives": {
+      "exactArchiveOrUnderscoreArchive": 169,
+      "literalArchive": 162,
+      "substringArchive": 174
+    },
+    "excluded": [
+      "docs/audit-2026-10-17-round37/",
+      "docs/audit-2026-10-17-round38/"
+    ],
+    "includesFrozen35And36": true,
+    "finishUTC": "2026-10-17T13:11:49.416417+00:00",
+    "finishChanged": [],
+    "allInitialUnchanged": true,
+    "newPathsNotAddedToOriginalSnapshot": true
+  },
+  "limits": [
+    "Source ranges mark actual ordinary semantic scope; rg locator snippets and incidental printed adjacent test scenarios do not imply full semantic review.",
+    "No claim first-ever source read; old full prose lacks a leaf hash, and no matching row is not unread proof.",
+    "Historical hosts excerpt preceded dedicated pin; its initialSemanticReadSha256 is null.",
+    "Source-excerpts are post-read sameSHA metadata copy, not another source reading.",
+    "No Git binding, real inbox, native/React/timer/helper/language fixture/product execution, network or authority/identity experiment."
+  ]
+}

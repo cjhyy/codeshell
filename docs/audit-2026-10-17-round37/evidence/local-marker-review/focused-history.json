@@ -1,0 +1,99 @@
+{
+  "readAtUTC": "2026-10-17T12:48:28.300702+00:00",
+  "searchedFiles": 3216,
+  "basedOnInventoryCanonicalSha256": "f562e4b8a180eba179be765419a469810655e4f3d53f6b5a2debbcaa78e9580f",
+  "patterns": {
+    "literal-local-comparison": "marketplace\\s*={1,3}\\s*[\"']local[\"']",
+    "named-local": "(?:marketplace(?:Name| name)?|市场名称|市场名).{0,70}(?:named|called|名为|命名|名称|name\\s*[:=]).{0,20}[\"']?local|(?:marketplaceName|name)\\s*:\\s*[\"']local[\"']",
+    "namespace-local": "(?:reserved|namespace|collision|marker|保留名|命名冲突).{0,100}\\blocal\\b|\\blocal\\b.{0,100}(?:reserved|namespace|collision|marker|保留名|命名冲突)"
+  },
+  "matchCounts": {
+    "literal-local-comparison": 0,
+    "named-local": 0,
+    "namespace-local": 15
+  },
+  "contextCap": null,
+  "hits": {
+    "literal-local-comparison": [],
+    "named-local": [],
+    "namespace-local": [
+      {
+        "path": "docs/archive/todo/plan-group-a-core.md",
+        "location": "443",
+        "excerpt": "- plugin skill 使用 `<plugin>:<skill>` namespace，与 local plain name 不冲突。"
+      },
+      {
+        "path": "docs/audit-2026-10-17/sources.md",
+        "location": "30",
+        "excerpt": "- **格式合法性**：已读 [W3C Namespaces in XML 1.0 §4、§6.1](https://www.w3.org/TR/xml-names/#ns-qualnames)，前缀是 namespace name 的占位符，展开名由 namespace URI 与 local name 确定；fixture 的 `r:id` 和 `rel:id` 展开名相同。已读 [Microsoft Open XML Sheet.Id 属性](https://learn.microsoft.com/en-us/dotnet/api/documentformat.openxml.spreadsheet.sheet.id?view=openxml-3.0.1)，其将该字段定义为 Relationship Id。此处有原始规范和生产 SDK 文档依据，不依赖 parser 接受来证明合法。"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round19/evidence/root-qc.md",
+        "location": "7",
+        "excerpt": "e batch file set, every indexed SHA/byte length, frozen/main/current selected sources, author artifact receipts and all local Markdown file/line targets. It reads only preserved metadata/source; it imports no product and runs no tests. Final numeric file/link totals are emitted by this verifier and retained in the external integration receipt."
+      },
+      {
+        "path": "docs/audit-2026-10-17-round5/profile.md",
+        "location": "31",
+        "excerpt": "| Catalog source-key collision | Promoted as PROFILE-R5-01; actual local reader and remover evidence above. |"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round5/quality-chat.md",
+        "location": "11",
+        "excerpt": "e; no same-root-cause entry was found. The older Core lifecycle profile section records broad normal coverage, not this collision. The source-key grammar mismatch, mismatched local profile directory and literal prototype candidates remain outside the confirmed count; the report does not convert old design behavior or generic reserved-key findings into new findings."
+      },
+      {
+        "path": "docs/audit-2026-10-17-round7/evidence/root-dedup.json",
+        "location": "$[\"matches\"][102][\"excerpt\"]",
+        "excerpt": "1.0 §4、§6.1](https://www.w3.org/TR/xml-names/#ns-qualnames)，前缀是 namespace name 的占位符，展开名由 namespace URI 与 local name 确定；fixture 的 `r:id` 和 `rel:id` 展开名相同。已读 [Microsoft Open XML Sheet.Id 属性](https://learn.microsoft.com/en-us/dotnet/api/document"
+      },
+      {
+        "path": "docs/model-request-boundaries.md",
+        "location": "122",
+        "excerpt": "for commands, preserved failures and the distinction between this local native"
+      },
+      {
+        "path": "docs/nightly-2026-07-12/pet-top-level-agent-design.md",
+        "location": "588",
+        "excerpt": "- `LocalPet`、`PetSessionProjection`、`PendingDecisionProjection` schema/contract；`userId` 固定为 reserved `local-user`；"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-file-root-round27/PLAN.md",
+        "location": "9",
+        "excerpt": "lity-round27.md`. Source main differing from current project primary is explicitly supported by `docs/todo/multi-folder-local-project-plan.md:175–176,261–276`. That same plan's lazy binding for renderer forks is preserved; this proposal does not call missing binding alone a defect. The Files project API already supports rootId/path authorization and is enabled for this real persisted target."
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-file-root-round27/first-authorized/PLAN.md",
+        "location": "9",
+        "excerpt": "lity-round27.md`. Source main differing from current project primary is explicitly supported by `docs/todo/multi-folder-local-project-plan.md:175–176,261–276`. That same plan's lazy binding for renderer forks is preserved; this proposal does not call missing binding alone a defect. The Files project API already supports rootId/path authorization and is enabled for this real persisted target."
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-file-root-round27/prepared-initial/PLAN.md",
+        "location": "9",
+        "excerpt": "lity-round27.md`. Source main differing from current project primary is explicitly supported by `docs/todo/multi-folder-local-project-plan.md:175–176,261–276`. That same plan's lazy binding for renderer forks is preserved; this proposal does not call missing binding alone a defect. The Files project API already supports rootId/path authorization and is enabled for this real persisted target."
+      },
+      {
+        "path": "docs/superpowers/plans/2026-05-26-core-stabilization.md",
+        "location": "107",
+        "excerpt": "k/link-local/multicast/metadata ranges after resolution. *(done — `isBlockedIp` covers IPv4 RFC1918/CGNAT/loopback/link-local/multicast/reserved + IPv6 loopback/ULA/link-local/documentation + IPv4-mapped IPv6)*"
+      },
+      {
+        "path": "docs/todo/cc-room-durable-history-2026-10-12.md",
+        "location": "35",
+        "excerpt": "d snapshot. Page and subscription replies prefer the authenticated viewer connection, avoiding same-device/multiple-tab collisions; two viewers using the same local request counter are tested."
+      },
+      {
+        "path": "docs/todo/core-universalize-plugin-panel-design.md",
+        "location": "426",
+        "excerpt": "| `storage` | 否 | `get/set/delete` 自己 namespace，JSON-only、配额限制 | local filesystem、其他 plugin/panel namespace |"
+      },
+      {
+        "path": "docs/todo/release-real-operations-2026-10-16.md",
+        "location": "665",
+        "excerpt": "Local integration preserved another task's newly added round-eight audit records."
+      }
+    ]
+  },
+  "driftFromFirstInventory": [],
+  "method": "same first full MD-lines/recursive JSON-value inventory, no schema/product/helper evaluation"
+}

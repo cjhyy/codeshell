@@ -1,0 +1,37 @@
+{
+  "findings": [],
+  "candidates": [
+    {
+      "id": "MARKETPLACE-LOCAL-R37-C1",
+      "severity": "P3",
+      "classification": "proposed-static-candidate",
+      "rootOpinion": "Eligible for a static P3 formal issue after final peer/history artifact freeze and formal Git binding; only one global item.",
+      "title": "A legal marketplace named local collides with the local-plugin origin marker in uninstall routing",
+      "location": {
+        "path": "packages/desktop/src/renderer/extensions/uninstallTarget.ts",
+        "start": 29,
+        "end": 34
+      },
+      "ordinaryPreconditions": [
+        "Registered marketplace key is the permitted ASCII literal local; e.g. a valid repository with that derived tail.",
+        "A plugin is successfully installed from that marketplace through the ordinary marketplace flow.",
+        "There is no direct-local plugin directory with the same plugin name, a normal supported state."
+      ],
+      "cause": "Marketplace name admission does not reserve local. Marketplace install keys use plugin@marketplace, catalog splits that suffix without a separate origin tag, and the UI helper interprets marketplace===local as direct-local.",
+      "staticConsequence": "The local uninstall branch looks at plugins/<name> while the ordinary marketplace installation is in plugins/cache/local/<name>/<version>, so its missing-directory guard rejects; the marketplace installation remains. No actual uninstall or filesystem outcome observed.",
+      "counterevidence": [
+        "The legitimate direct-local marker is intentional; old truthy-local missing branch is the reverse direction and is not this admission/namespace issue.",
+        "Valid name paths and known registry parser do not reserve local. Local version cache alias R52 and sourceToRepoKey PROFILE-R5-01 are other causes.",
+        "No actual deletion, data damage, current user state, or auth/custody weakness is claimed."
+      ],
+      "evidence": [
+        "source-manifest.json",
+        "read-ranges.json"
+      ],
+      "validation": "Static repository text only,0 product/helper/fixture/test or business I/O execution.",
+      "finalClassificationPendingArtifactFreeze": true
+    }
+  ],
+  "related": [],
+  "productRuns": 0
+}

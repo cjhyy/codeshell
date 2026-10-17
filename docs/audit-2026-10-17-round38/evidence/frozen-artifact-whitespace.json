@@ -1,0 +1,45 @@
+{
+  "exactArtifacts": [
+    {
+      "path": "docs/audit-2026-10-17-round38/evidence/inbox-model-frontier/source-excerpts.txt",
+      "source": "/tmp/codeshell-audit-round38-inbox-model-frontier/source-excerpts.txt",
+      "bytes": 32797,
+      "sha256": "6691a0edb5071cb2f21f600d7a138868f9421f1276a408ba65f212c75841ec05",
+      "trailingLineNumbers": [
+        4,
+        7,
+        14,
+        21,
+        26,
+        64,
+        70,
+        81,
+        101,
+        119,
+        213,
+        219,
+        251,
+        256,
+        273,
+        280,
+        290,
+        476,
+        478,
+        482,
+        484,
+        498,
+        508,
+        514,
+        528,
+        538,
+        600,
+        631,
+        693
+      ],
+      "newBlankLineAtEof": false,
+      "preservation": "Frozen provenance artifact bytes; never product runtime log or product source mutation."
+    }
+  ],
+  "productRuns": 0,
+  "scope": "Only frozen copied provenance. All other files must pass ordinary whitespace check; full check actual exit retained."
+}

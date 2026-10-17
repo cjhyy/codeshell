@@ -1,0 +1,46 @@
+{
+  "mode": "pure static settings DTO review",
+  "productHelperSchemaParserExecutions": 0,
+  "productImports": 0,
+  "testsExecuted": 0,
+  "existingTestDeclarationsRead": 6,
+  "reactBrowserDOMFixtures": 0,
+  "realSettingsConfigDirectoryAccess": 0,
+  "McpConnectionsOrServerActions": 0,
+  "nativeCLINetworkModelAuthPermissionExperiments": 0,
+  "gitCommands": 0,
+  "repoWrites": 0,
+  "writesOnlyExactOwnedTmp": "/tmp/codeshell-audit-round38-mcp-patch-frontier",
+  "oldFailedDirectionsReopened": false,
+  "historicalPassCountsBorrowed": false,
+  "metadataRuns": [
+    {
+      "name": "initial full history",
+      "sessionId": 60220,
+      "exitCode": 0
+    },
+    {
+      "name": "focused history/legacy object query",
+      "sessionId": 2873,
+      "exitCode": 0
+    }
+  ],
+  "metadataNavigationNotes": [
+    {
+      "exitCode": 2,
+      "path": "packages/core/src/mcp",
+      "detail": "Guessed source directory absent in filename search; actual schema file was already among query paths. No MCP runtime/import/alternate experiment attempted."
+    },
+    {
+      "exitCode": 2,
+      "path": "packages/core/src/tools",
+      "detail": "Guessed source directory absent during undeveloped rename producer navigation. No fallback product or producer experiment; rename stayed unpromoted."
+    },
+    {
+      "kind": "normal-no-match",
+      "detail": "listMergedMcpServers symbol absent from Main filename query; actual IPC channel source was then located by filename inventory, no module execution."
+    }
+  ],
+  "sourceBeforeFinishStable": true,
+  "manualValueFlowNotRuntimeTest": true
+}

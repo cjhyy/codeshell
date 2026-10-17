@@ -1,0 +1,12 @@
+{
+  "capturedUTC": "2026-10-17T13:11:00.797028+00:00",
+  "files": [
+    {
+      "path": "tests/render-screen.test.ts",
+      "bytes": 2869,
+      "sha256": "c3b44ba1c78f6c574960b543203d4bab9037ca6c0a7d14342b029056e2a9fc37",
+      "lineCount": 95,
+      "pinBeforeAnyContentRead": true
+    }
+  ]
+}

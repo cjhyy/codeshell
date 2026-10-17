@@ -1,0 +1,631 @@
+{
+  "createdUTC": "2026-10-17T12:46:29.305623+00:00",
+  "repo": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell",
+  "prepOnly": true,
+  "parentContextSupplied": "Root reports frozen Round34 abbreviation 99e9; not independently Git-verified",
+  "formalBaseline": null,
+  "files": [
+    {
+      "path": "CODESHELL.md",
+      "bytes": 17639,
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "lineCount": 217,
+      "coverage": "hash-only",
+      "selectedLineRanges": [],
+      "semanticReadLines": 0,
+      "initialSemanticReadSha256": null,
+      "endingSha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "prepPinRow": {
+        "path": "CODESHELL.md",
+        "bytes": 17639,
+        "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+        "lineCount": 217,
+        "semanticReadBeforeThisPin": true
+      },
+      "coverageNote": "No declared product semantic read. Initial pin remains in prepPinRow; incidental locator output is excluded. CODESHELL was read as instructions before its pin."
+    },
+    {
+      "path": "AGENTS.md",
+      "bytes": 206,
+      "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "lineCount": 5,
+      "coverage": "hash-only",
+      "selectedLineRanges": [],
+      "semanticReadLines": 0,
+      "initialSemanticReadSha256": null,
+      "endingSha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "prepPinRow": {
+        "path": "AGENTS.md",
+        "bytes": 206,
+        "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+        "lineCount": 5,
+        "semanticReadBeforeThisPin": false
+      },
+      "coverageNote": "No declared product semantic read. Initial pin remains in prepPinRow; incidental locator output is excluded. CODESHELL was read as instructions before its pin."
+    },
+    {
+      "path": "packages/core/src/plugins/marketplaceManager.ts",
+      "bytes": 7940,
+      "sha256": "cdebee5c72c8ed253204c4299ed54d6c7f7806ca7768400b2d8a6b94a3846fd0",
+      "lineCount": 236,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          37,
+          44
+        ],
+        [
+          93,
+          155
+        ],
+        [
+          191,
+          236
+        ]
+      ],
+      "semanticReadLines": 117,
+      "initialSemanticReadSha256": "cdebee5c72c8ed253204c4299ed54d6c7f7806ca7768400b2d8a6b94a3846fd0",
+      "endingSha256": "cdebee5c72c8ed253204c4299ed54d6c7f7806ca7768400b2d8a6b94a3846fd0",
+      "prepPinRow": {
+        "path": "packages/core/src/plugins/marketplaceManager.ts",
+        "bytes": 7940,
+        "sha256": "cdebee5c72c8ed253204c4299ed54d6c7f7806ca7768400b2d8a6b94a3846fd0",
+        "lineCount": 236,
+        "semanticReadBeforeThisPin": false
+      }
+    },
+    {
+      "path": "packages/core/src/plugins/schemas.ts",
+      "bytes": 6630,
+      "sha256": "26adcd6c186962520f5027d9c9bfd48c15e06916b5ccb214359c3c5b7b6ab142",
+      "lineCount": 183,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          1,
+          79
+        ],
+        [
+          110,
+          142
+        ],
+        [
+          144,
+          183
+        ]
+      ],
+      "semanticReadLines": 152,
+      "initialSemanticReadSha256": "26adcd6c186962520f5027d9c9bfd48c15e06916b5ccb214359c3c5b7b6ab142",
+      "endingSha256": "26adcd6c186962520f5027d9c9bfd48c15e06916b5ccb214359c3c5b7b6ab142",
+      "prepPinRow": {
+        "path": "packages/core/src/plugins/schemas.ts",
+        "bytes": 6630,
+        "sha256": "26adcd6c186962520f5027d9c9bfd48c15e06916b5ccb214359c3c5b7b6ab142",
+        "lineCount": 183,
+        "semanticReadBeforeThisPin": false
+      }
+    },
+    {
+      "path": "packages/core/src/plugins/types.ts",
+      "bytes": 3237,
+      "sha256": "18660a4e2dbecdddd517356c6d62bf709b48fc1bcadb173441d92739d66c238a",
+      "lineCount": 98,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          5,
+          60
+        ]
+      ],
+      "semanticReadLines": 56,
+      "initialSemanticReadSha256": "18660a4e2dbecdddd517356c6d62bf709b48fc1bcadb173441d92739d66c238a",
+      "endingSha256": "18660a4e2dbecdddd517356c6d62bf709b48fc1bcadb173441d92739d66c238a",
+      "prepPinRow": {
+        "path": "packages/core/src/plugins/types.ts",
+        "bytes": 3237,
+        "sha256": "18660a4e2dbecdddd517356c6d62bf709b48fc1bcadb173441d92739d66c238a",
+        "lineCount": 98,
+        "semanticReadBeforeThisPin": false
+      }
+    },
+    {
+      "path": "packages/core/src/plugins/pluginCatalog.ts",
+      "bytes": 5601,
+      "sha256": "12215732b14c92e6ef447e83cc74b581f7e72e1ce1467f08badb304544d818e7",
+      "lineCount": 157,
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          157
+        ]
+      ],
+      "semanticReadLines": 157,
+      "initialSemanticReadSha256": "12215732b14c92e6ef447e83cc74b581f7e72e1ce1467f08badb304544d818e7",
+      "endingSha256": "12215732b14c92e6ef447e83cc74b581f7e72e1ce1467f08badb304544d818e7",
+      "prepPinRow": {
+        "path": "packages/core/src/plugins/pluginCatalog.ts",
+        "bytes": 5601,
+        "sha256": "12215732b14c92e6ef447e83cc74b581f7e72e1ce1467f08badb304544d818e7",
+        "lineCount": 157,
+        "semanticReadBeforeThisPin": false
+      }
+    },
+    {
+      "path": "packages/core/src/plugins/knownMarketplaces.ts",
+      "bytes": 6280,
+      "sha256": "ac87a4867d5f47361a4df42ced438c69c00ce9150aa25367ddc4592b8c17fcd8",
+      "lineCount": 161,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          1,
+          32
+        ],
+        [
+          87,
+          101
+        ],
+        [
+          145,
+          148
+        ]
+      ],
+      "semanticReadLines": 51,
+      "initialSemanticReadSha256": "ac87a4867d5f47361a4df42ced438c69c00ce9150aa25367ddc4592b8c17fcd8",
+      "endingSha256": "ac87a4867d5f47361a4df42ced438c69c00ce9150aa25367ddc4592b8c17fcd8",
+      "prepPinRow": {
+        "path": "packages/core/src/plugins/knownMarketplaces.ts",
+        "bytes": 6280,
+        "sha256": "ac87a4867d5f47361a4df42ced438c69c00ce9150aa25367ddc4592b8c17fcd8",
+        "lineCount": 161,
+        "semanticReadBeforeThisPin": false
+      }
+    },
+    {
+      "path": "packages/core/src/plugins/parseMarketplaceInput.ts",
+      "bytes": 3079,
+      "sha256": "25248f360523e9c358b7fd830ff1b0d92e886fc1f2ee96e353c5e707d98d195b",
+      "lineCount": 89,
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          89
+        ]
+      ],
+      "semanticReadLines": 89,
+      "initialSemanticReadSha256": "25248f360523e9c358b7fd830ff1b0d92e886fc1f2ee96e353c5e707d98d195b",
+      "endingSha256": "25248f360523e9c358b7fd830ff1b0d92e886fc1f2ee96e353c5e707d98d195b",
+      "prepPinRow": {
+        "path": "packages/core/src/plugins/parseMarketplaceInput.ts",
+        "bytes": 3079,
+        "sha256": "25248f360523e9c358b7fd830ff1b0d92e886fc1f2ee96e353c5e707d98d195b",
+        "lineCount": 89,
+        "semanticReadBeforeThisPin": false
+      }
+    },
+    {
+      "path": "packages/desktop/src/main/marketplace-service.ts",
+      "bytes": 20169,
+      "sha256": "d5f6623dccb27087bdad2f9263bdb5c514252a20a6ba8d6a7ca45cf80e0cafe6",
+      "lineCount": 612,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          343,
+          358
+        ]
+      ],
+      "semanticReadLines": 16,
+      "initialSemanticReadSha256": "d5f6623dccb27087bdad2f9263bdb5c514252a20a6ba8d6a7ca45cf80e0cafe6",
+      "endingSha256": "d5f6623dccb27087bdad2f9263bdb5c514252a20a6ba8d6a7ca45cf80e0cafe6",
+      "prepPinRow": {
+        "path": "packages/desktop/src/main/marketplace-service.ts",
+        "bytes": 20169,
+        "sha256": "d5f6623dccb27087bdad2f9263bdb5c514252a20a6ba8d6a7ca45cf80e0cafe6",
+        "lineCount": 612,
+        "semanticReadBeforeThisPin": false
+      }
+    },
+    {
+      "path": "packages/desktop/src/main/plugins-service.ts",
+      "bytes": 11267,
+      "sha256": "acffed1af5934499848c5a46f025b5aa6d702d50e24e9f9a161edc8c7f2a72ec",
+      "lineCount": 323,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          1,
+          72
+        ],
+        [
+          129,
+          163
+        ],
+        [
+          194,
+          223
+        ]
+      ],
+      "semanticReadLines": 137,
+      "initialSemanticReadSha256": "acffed1af5934499848c5a46f025b5aa6d702d50e24e9f9a161edc8c7f2a72ec",
+      "endingSha256": "acffed1af5934499848c5a46f025b5aa6d702d50e24e9f9a161edc8c7f2a72ec",
+      "prepPinRow": {
+        "path": "packages/desktop/src/main/plugins-service.ts",
+        "bytes": 11267,
+        "sha256": "acffed1af5934499848c5a46f025b5aa6d702d50e24e9f9a161edc8c7f2a72ec",
+        "lineCount": 323,
+        "semanticReadBeforeThisPin": false
+      }
+    },
+    {
+      "path": "packages/desktop/src/renderer/extensions/uninstallTarget.ts",
+      "bytes": 1840,
+      "sha256": "90ae9788efe607e159e1c6163a849ef903ee6faee38e4552e484a71a4cb3cc50",
+      "lineCount": 39,
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          39
+        ]
+      ],
+      "semanticReadLines": 39,
+      "initialSemanticReadSha256": "90ae9788efe607e159e1c6163a849ef903ee6faee38e4552e484a71a4cb3cc50",
+      "endingSha256": "90ae9788efe607e159e1c6163a849ef903ee6faee38e4552e484a71a4cb3cc50",
+      "prepPinRow": {
+        "path": "packages/desktop/src/renderer/extensions/uninstallTarget.ts",
+        "bytes": 1840,
+        "sha256": "90ae9788efe607e159e1c6163a849ef903ee6faee38e4552e484a71a4cb3cc50",
+        "lineCount": 39,
+        "semanticReadBeforeThisPin": false
+      }
+    },
+    {
+      "path": "packages/desktop/src/renderer/extensions/uninstallTarget.test.ts",
+      "bytes": 2011,
+      "sha256": "69e4a1b52a22085f3f7af7c903bee76948f4055ff3791ee0c5f17a0cd022a6ea",
+      "lineCount": 39,
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          39
+        ]
+      ],
+      "semanticReadLines": 39,
+      "initialSemanticReadSha256": "69e4a1b52a22085f3f7af7c903bee76948f4055ff3791ee0c5f17a0cd022a6ea",
+      "endingSha256": "69e4a1b52a22085f3f7af7c903bee76948f4055ff3791ee0c5f17a0cd022a6ea",
+      "prepPinRow": {
+        "path": "packages/desktop/src/renderer/extensions/uninstallTarget.test.ts",
+        "bytes": 2011,
+        "sha256": "69e4a1b52a22085f3f7af7c903bee76948f4055ff3791ee0c5f17a0cd022a6ea",
+        "lineCount": 39,
+        "semanticReadBeforeThisPin": false
+      }
+    },
+    {
+      "path": "packages/desktop/src/renderer/extensions/PluginDetailView.tsx",
+      "bytes": 26214,
+      "sha256": "88aa0ed20a682216164830e5fb59834563d35090d3d5682fbd1735281b519015",
+      "lineCount": 711,
+      "coverage": "hash-only",
+      "selectedLineRanges": [],
+      "semanticReadLines": 0,
+      "initialSemanticReadSha256": null,
+      "endingSha256": "88aa0ed20a682216164830e5fb59834563d35090d3d5682fbd1735281b519015",
+      "prepPinRow": {
+        "path": "packages/desktop/src/renderer/extensions/PluginDetailView.tsx",
+        "bytes": 26214,
+        "sha256": "88aa0ed20a682216164830e5fb59834563d35090d3d5682fbd1735281b519015",
+        "lineCount": 711,
+        "semanticReadBeforeThisPin": false
+      },
+      "coverageNote": "No declared product semantic read. Initial pin remains in prepPinRow; incidental locator output is excluded. CODESHELL was read as instructions before its pin."
+    },
+    {
+      "path": "packages/desktop/src/renderer/extensions/PluginsTab.tsx",
+      "bytes": 18987,
+      "sha256": "347d6e15c50e20beb4699852bcf6773f017585039996d91c4d781ac6824fc045",
+      "lineCount": 530,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          73,
+          93
+        ],
+        [
+          131,
+          164
+        ]
+      ],
+      "semanticReadLines": 55,
+      "initialSemanticReadSha256": "347d6e15c50e20beb4699852bcf6773f017585039996d91c4d781ac6824fc045",
+      "endingSha256": "347d6e15c50e20beb4699852bcf6773f017585039996d91c4d781ac6824fc045",
+      "prepPinRow": {
+        "path": "packages/desktop/src/renderer/extensions/PluginsTab.tsx",
+        "bytes": 18987,
+        "sha256": "347d6e15c50e20beb4699852bcf6773f017585039996d91c4d781ac6824fc045",
+        "lineCount": 530,
+        "semanticReadBeforeThisPin": false
+      }
+    },
+    {
+      "path": "packages/tui/src/cli/commands/builtin/plugin-handler.ts",
+      "bytes": 20113,
+      "sha256": "b1ec4d4b35096dddfa73b4232403e54d1b7ff433f389293ff080ff7ca2de1a40",
+      "lineCount": 500,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          100,
+          124
+        ]
+      ],
+      "semanticReadLines": 25,
+      "initialSemanticReadSha256": "b1ec4d4b35096dddfa73b4232403e54d1b7ff433f389293ff080ff7ca2de1a40",
+      "endingSha256": "b1ec4d4b35096dddfa73b4232403e54d1b7ff433f389293ff080ff7ca2de1a40",
+      "prepPinRow": {
+        "path": "packages/tui/src/cli/commands/builtin/plugin-handler.ts",
+        "bytes": 20113,
+        "sha256": "b1ec4d4b35096dddfa73b4232403e54d1b7ff433f389293ff080ff7ca2de1a40",
+        "lineCount": 500,
+        "semanticReadBeforeThisPin": false
+      }
+    },
+    {
+      "path": "packages/tui/src/cli/commands/builtin/plugin-commands-registration.ts",
+      "bytes": 1289,
+      "sha256": "04a2532a74dbec89d006ed3707fcc300d8fc8a106d2f7f3e7f98a400da7cd31b",
+      "lineCount": 38,
+      "coverage": "hash-only",
+      "selectedLineRanges": [],
+      "semanticReadLines": 0,
+      "initialSemanticReadSha256": null,
+      "endingSha256": "04a2532a74dbec89d006ed3707fcc300d8fc8a106d2f7f3e7f98a400da7cd31b",
+      "prepPinRow": {
+        "path": "packages/tui/src/cli/commands/builtin/plugin-commands-registration.ts",
+        "bytes": 1289,
+        "sha256": "04a2532a74dbec89d006ed3707fcc300d8fc8a106d2f7f3e7f98a400da7cd31b",
+        "lineCount": 38,
+        "semanticReadBeforeThisPin": false
+      },
+      "coverageNote": "No declared product semantic read. Initial pin remains in prepPinRow; incidental locator output is excluded. CODESHELL was read as instructions before its pin."
+    },
+    {
+      "path": "packages/core/src/plugins/pluginInstaller.ts",
+      "bytes": 19962,
+      "sha256": "263ce32aaee6b062513389f93cf29c5f3b5779a160da3979f036fb38b176a30a",
+      "lineCount": 487,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          45,
+          65
+        ],
+        [
+          238,
+          273
+        ],
+        [
+          334,
+          423
+        ],
+        [
+          442,
+          473
+        ]
+      ],
+      "semanticReadLines": 179,
+      "initialSemanticReadSha256": null,
+      "endingSha256": "263ce32aaee6b062513389f93cf29c5f3b5779a160da3979f036fb38b176a30a",
+      "prepPinRow": {
+        "path": "packages/core/src/plugins/pluginInstaller.ts",
+        "bytes": 19962,
+        "sha256": "263ce32aaee6b062513389f93cf29c5f3b5779a160da3979f036fb38b176a30a",
+        "lineCount": 487,
+        "initialSemanticReadSha256": null,
+        "timingNote": "Dedicated pin after rg locator excerpts; selected body reading is after this pin. Do not backfill initial semantic SHA."
+      }
+    },
+    {
+      "path": "packages/core/src/plugins/installer/paths.ts",
+      "bytes": 994,
+      "sha256": "323f660b827a86eff5ffaa0b87d60e04b18ae907406ac8d74f123e96239fbbb2",
+      "lineCount": 30,
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          30
+        ]
+      ],
+      "semanticReadLines": 30,
+      "initialSemanticReadSha256": null,
+      "endingSha256": "323f660b827a86eff5ffaa0b87d60e04b18ae907406ac8d74f123e96239fbbb2",
+      "prepPinRow": {
+        "path": "packages/core/src/plugins/installer/paths.ts",
+        "bytes": 994,
+        "sha256": "323f660b827a86eff5ffaa0b87d60e04b18ae907406ac8d74f123e96239fbbb2",
+        "lineCount": 30,
+        "initialSemanticReadSha256": null,
+        "timingNote": "Dedicated pin after rg locator excerpts; selected body reading is after this pin. Do not backfill initial semantic SHA."
+      }
+    },
+    {
+      "path": "packages/core/src/plugins/installer/uninstall.ts",
+      "bytes": 907,
+      "sha256": "8eddb1a62908cc8eb4b86495c2ffcfabc3c2cca6fe36dd10d579b8f9dbaa5bc0",
+      "lineCount": 19,
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          19
+        ]
+      ],
+      "semanticReadLines": 19,
+      "initialSemanticReadSha256": null,
+      "endingSha256": "8eddb1a62908cc8eb4b86495c2ffcfabc3c2cca6fe36dd10d579b8f9dbaa5bc0",
+      "prepPinRow": {
+        "path": "packages/core/src/plugins/installer/uninstall.ts",
+        "bytes": 907,
+        "sha256": "8eddb1a62908cc8eb4b86495c2ffcfabc3c2cca6fe36dd10d579b8f9dbaa5bc0",
+        "lineCount": 19,
+        "initialSemanticReadSha256": null,
+        "timingNote": "Dedicated pin after rg locator excerpts; selected body reading is after this pin. Do not backfill initial semantic SHA."
+      }
+    },
+    {
+      "path": "packages/core/src/plugins/installedPlugins.ts",
+      "bytes": 9314,
+      "sha256": "e3b7527fd42f9b47555599ed868ca9db04e86b03a055999cd2ac53eb7afd0208",
+      "lineCount": 265,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          253,
+          265
+        ]
+      ],
+      "semanticReadLines": 13,
+      "initialSemanticReadSha256": null,
+      "endingSha256": "e3b7527fd42f9b47555599ed868ca9db04e86b03a055999cd2ac53eb7afd0208",
+      "prepPinRow": {
+        "path": "packages/core/src/plugins/installedPlugins.ts",
+        "bytes": 9314,
+        "sha256": "e3b7527fd42f9b47555599ed868ca9db04e86b03a055999cd2ac53eb7afd0208",
+        "lineCount": 265,
+        "initialSemanticReadSha256": null,
+        "timingNote": "Dedicated pin after rg locator excerpts; selected body reading is after this pin. Do not backfill initial semantic SHA."
+      }
+    },
+    {
+      "path": "packages/desktop/src/preload/types.d.ts",
+      "bytes": 102234,
+      "sha256": "cd152ddf606dac52a88370b05808ce5c9eafe9d968b5162a5fb4211161a546ba",
+      "lineCount": 2982,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          2010,
+          2015
+        ]
+      ],
+      "semanticReadLines": 6,
+      "initialSemanticReadSha256": "cd152ddf606dac52a88370b05808ce5c9eafe9d968b5162a5fb4211161a546ba",
+      "endingSha256": "cd152ddf606dac52a88370b05808ce5c9eafe9d968b5162a5fb4211161a546ba",
+      "prepPinRow": {
+        "path": "packages/desktop/src/preload/types.d.ts",
+        "bytes": 102234,
+        "sha256": "cd152ddf606dac52a88370b05808ce5c9eafe9d968b5162a5fb4211161a546ba",
+        "lineCount": 2982,
+        "initialSemanticReadSha256": "cd152ddf606dac52a88370b05808ce5c9eafe9d968b5162a5fb4211161a546ba",
+        "timingNote": "Path-only rg inventory before this pin; no content read."
+      }
+    },
+    {
+      "path": "packages/desktop/src/preload/index.ts",
+      "bytes": 86436,
+      "sha256": "05dbc9b534bdc68c30f255f53a96617e50fb0c445ce2fc1bde4be31e3f8a6901",
+      "lineCount": 1892,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          1209,
+          1211
+        ],
+        [
+          1252,
+          1252
+        ]
+      ],
+      "semanticReadLines": 4,
+      "initialSemanticReadSha256": "05dbc9b534bdc68c30f255f53a96617e50fb0c445ce2fc1bde4be31e3f8a6901",
+      "endingSha256": "05dbc9b534bdc68c30f255f53a96617e50fb0c445ce2fc1bde4be31e3f8a6901",
+      "prepPinRow": {
+        "path": "packages/desktop/src/preload/index.ts",
+        "bytes": 86436,
+        "sha256": "05dbc9b534bdc68c30f255f53a96617e50fb0c445ce2fc1bde4be31e3f8a6901",
+        "lineCount": 1892,
+        "initialSemanticReadSha256": "05dbc9b534bdc68c30f255f53a96617e50fb0c445ce2fc1bde4be31e3f8a6901",
+        "timingNote": "Path-only rg inventory before this pin; no content read."
+      }
+    },
+    {
+      "path": "packages/desktop/src/main/index.ts",
+      "bytes": 299337,
+      "sha256": "105b2b49a28e0a7ef10980ac5feaa3a07ff81e7197f5acbefd95feb2498224c0",
+      "lineCount": 7330,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          4807,
+          4816
+        ],
+        [
+          4934,
+          4934
+        ]
+      ],
+      "semanticReadLines": 11,
+      "initialSemanticReadSha256": "105b2b49a28e0a7ef10980ac5feaa3a07ff81e7197f5acbefd95feb2498224c0",
+      "endingSha256": "105b2b49a28e0a7ef10980ac5feaa3a07ff81e7197f5acbefd95feb2498224c0",
+      "prepPinRow": {
+        "path": "packages/desktop/src/main/index.ts",
+        "bytes": 299337,
+        "sha256": "105b2b49a28e0a7ef10980ac5feaa3a07ff81e7197f5acbefd95feb2498224c0",
+        "lineCount": 7330,
+        "initialSemanticReadSha256": "105b2b49a28e0a7ef10980ac5feaa3a07ff81e7197f5acbefd95feb2498224c0",
+        "timingNote": "Path-only rg inventory before this pin; no content read."
+      }
+    },
+    {
+      "path": "packages/desktop/src/renderer/extensions/MarketList.tsx",
+      "bytes": 20235,
+      "sha256": "acdb1ab1fddfa75f19301042559a281eae2925d9a53ec34abc5e2640e07df9b9",
+      "lineCount": 550,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          175,
+          194
+        ],
+        [
+          308,
+          330
+        ]
+      ],
+      "semanticReadLines": 43,
+      "initialSemanticReadSha256": "acdb1ab1fddfa75f19301042559a281eae2925d9a53ec34abc5e2640e07df9b9",
+      "endingSha256": "acdb1ab1fddfa75f19301042559a281eae2925d9a53ec34abc5e2640e07df9b9",
+      "prepPinRow": {
+        "path": "packages/desktop/src/renderer/extensions/MarketList.tsx",
+        "bytes": 20235,
+        "lineCount": 550,
+        "sha256": "acdb1ab1fddfa75f19301042559a281eae2925d9a53ec34abc5e2640e07df9b9",
+        "initialSemanticReadSha256": "acdb1ab1fddfa75f19301042559a281eae2925d9a53ec34abc5e2640e07df9b9",
+        "timingNote": "Path-only locator before pin."
+      }
+    }
+  ],
+  "totals": {
+    "pinnedSourceRows": 24,
+    "semanticRows": 20,
+    "fullRows": 6,
+    "selectedRows": 14,
+    "hashOnlyRows": 4,
+    "semanticReadLines": 1238,
+    "productSourceLines": 1199,
+    "testDeclarationLines": 39
+  },
+  "limits": [
+    "Dedicated adjacent pins followed locator excerpts, so their initial semantic SHA is null; later selected reads and ending SHA do not repair that timing.",
+    "Hash-only coverage can have incidental locator matches printed; no semantic full-file coverage is inferred. CODESHELL instructions were read before its dedicated pin and are outside product semantic total.",
+    "Incidental printed main/index automation fragment 4790–4806, preload neighboring digital-human methods1205–1208 and compact types2007–2009, pluginInstaller SHA-prefix230–236, plugin-handler options96–99, PluginsTab update header165 are excluded from semantic totals.",
+    "Catalog file was fully read for DTO provenance; custody/containment/permission correctness is not audited. Installer install/uninstall code is static ordinary producer/target evidence only; no actual installation, removal or data-loss observation.",
+    "No product functions, helper fixtures, tests, CLI/catalog calls, Git, HTTP, browser/React/native/HOME operations were executed.",
+    "PluginSummary interface was completed with lines70–72. Printed neighboring blank73 / PluginManifest header74–75 are excluded."
+  ]
+}

@@ -1,0 +1,2629 @@
+{
+  "finishedUTC": "2026-10-17T13:30:29.258685+00:00",
+  "files": [],
+  "newProductSemanticReads": 0,
+  "newProductSemanticLines": 0,
+  "scope": "Aggregate metadata/counterevidence review of frozen author artifacts; inbox own-author metadata is explicitly not independent source review. No current product source files opened or hashed here.",
+  "inputArtifactCount": 75,
+  "inputArtifactChecks": [
+    {
+      "path": "/tmp/codeshell-audit-round38-inbox-model-frontier/consumer-pins.json",
+      "relativePath": "consumer-pins.json",
+      "bytes": 1609,
+      "sha256": "7593fec13d788cd620f0676e009f43e21190e1fb01571c7477e0346a9e49b6e5",
+      "freezeStatus": "Parent confirmed final frozen at task dispatch",
+      "finishSha256": "7593fec13d788cd620f0676e009f43e21190e1fb01571c7477e0346a9e49b6e5",
+      "unchanged": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round38-inbox-model-frontier/dto-pins.json",
+      "relativePath": "dto-pins.json",
+      "bytes": 867,
+      "sha256": "98522031948f495a75333c53a5b35b4bb8b2b539defd9d5841e8c9a4a4b40ba8",
+      "freezeStatus": "Parent confirmed final frozen at task dispatch",
+      "finishSha256": "98522031948f495a75333c53a5b35b4bb8b2b539defd9d5841e8c9a4a4b40ba8",
+      "unchanged": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round38-inbox-model-frontier/history-method.py",
+      "relativePath": "history-method.py",
+      "bytes": 3745,
+      "sha256": "9e90de8f359be9f93cca1ea673e75e1904d84e92ec71bd1b39c580d971cad371",
+      "freezeStatus": "Parent confirmed final frozen at task dispatch",
+      "finishSha256": "9e90de8f359be9f93cca1ea673e75e1904d84e92ec71bd1b39c580d971cad371",
+      "unchanged": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round38-inbox-model-frontier/history-supplement.json",
+      "relativePath": "history-supplement.json",
+      "bytes": 38861,
+      "sha256": "9dafc90b26fd31ba2406d9fe9ab12cb890a08884a7ad9891430ece7f329bbdeb",
+      "freezeStatus": "Parent confirmed final frozen at task dispatch",
+      "finishSha256": "9dafc90b26fd31ba2406d9fe9ab12cb890a08884a7ad9891430ece7f329bbdeb",
+      "unchanged": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round38-inbox-model-frontier/history.json",
+      "relativePath": "history.json",
+      "bytes": 666830,
+      "sha256": "bfbd123b5d6bab127096585f8d736a6bbe98108ebe2fcd7da644c5a2027b69c3",
+      "freezeStatus": "Parent confirmed final frozen at task dispatch",
+      "finishSha256": "bfbd123b5d6bab127096585f8d736a6bbe98108ebe2fcd7da644c5a2027b69c3",
+      "unchanged": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round38-inbox-model-frontier/initial-pins.json",
+      "relativePath": "initial-pins.json",
+      "bytes": 1303,
+      "sha256": "d185c81ed002460ff6415d751223dd02d2adf8c50574d4f9923cc9a7e5a6fdb2",
+      "freezeStatus": "Parent confirmed final frozen at task dispatch",
+      "finishSha256": "d185c81ed002460ff6415d751223dd02d2adf8c50574d4f9923cc9a7e5a6fdb2",
+      "unchanged": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round38-inbox-model-frontier/review.md",
+      "relativePath": "review.md",
+      "bytes": 4645,
+      "sha256": "9f96d812220c7401b587052adfa74f3c3879b328031ee8da9bdf4827a08a74f1",
+      "freezeStatus": "Parent confirmed final frozen at task dispatch",
+      "finishSha256": "9f96d812220c7401b587052adfa74f3c3879b328031ee8da9bdf4827a08a74f1",
+      "unchanged": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round38-inbox-model-frontier/reviewer-receipt.json",
+      "relativePath": "reviewer-receipt.json",
+      "bytes": 3442,
+      "sha256": "74f5a5ce03ab078a44b5ac494425a42977f4e67bc800e9914a6caed39f97eeaf",
+      "freezeStatus": "Parent confirmed final frozen at task dispatch",
+      "finishSha256": "74f5a5ce03ab078a44b5ac494425a42977f4e67bc800e9914a6caed39f97eeaf",
+      "unchanged": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round38-inbox-model-frontier/source-excerpts.txt",
+      "relativePath": "source-excerpts.txt",
+      "bytes": 32797,
+      "sha256": "6691a0edb5071cb2f21f600d7a138868f9421f1276a408ba65f212c75841ec05",
+      "freezeStatus": "Parent confirmed final frozen at task dispatch",
+      "finishSha256": "6691a0edb5071cb2f21f600d7a138868f9421f1276a408ba65f212c75841ec05",
+      "unchanged": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round38-inbox-model-frontier/source-manifest.json",
+      "relativePath": "source-manifest.json",
+      "bytes": 12307,
+      "sha256": "75b53e945baebe23e15021119c4841acf632a46ec3268638fd2c37fb453a8d92",
+      "freezeStatus": "Parent confirmed final frozen at task dispatch",
+      "finishSha256": "75b53e945baebe23e15021119c4841acf632a46ec3268638fd2c37fb453a8d92",
+      "unchanged": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round38-inbox-model-frontier/type-pins.json",
+      "relativePath": "type-pins.json",
+      "bytes": 480,
+      "sha256": "3f3b94fd19463baf9097b6c79e3fc346063d276eba502a27969ccd184e22e2be",
+      "freezeStatus": "Parent confirmed final frozen at task dispatch",
+      "finishSha256": "3f3b94fd19463baf9097b6c79e3fc346063d276eba502a27969ccd184e22e2be",
+      "unchanged": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round38-inbox-model-frontier/validation.json",
+      "relativePath": "validation.json",
+      "bytes": 3023,
+      "sha256": "3b8faf8412146ded551c5eac713749e1949ef7f6a9860e4bed1f82d1ac5f7ae9",
+      "freezeStatus": "Parent confirmed final frozen at task dispatch",
+      "finishSha256": "3b8faf8412146ded551c5eac713749e1949ef7f6a9860e4bed1f82d1ac5f7ae9",
+      "unchanged": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round38-geometry-frontier/author-receipt.json",
+      "relativePath": "author-receipt.json",
+      "bytes": 3039,
+      "sha256": "9b5a84bc07329cf20f9be10972bfb5e44d9349f1876bb3ffd8f5f78defc03ead",
+      "freezeStatus": "Parent confirmed final frozen at task dispatch",
+      "finishSha256": "9b5a84bc07329cf20f9be10972bfb5e44d9349f1876bb3ffd8f5f78defc03ead",
+      "unchanged": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round38-geometry-frontier/consumer-initial-pins.json",
+      "relativePath": "consumer-initial-pins.json",
+      "bytes": 2498,
+      "sha256": "9e82ef2893dc3518736c9bcd5652914f5a32bf7a7dd3f755058df243d34b6170",
+      "freezeStatus": "Parent confirmed final frozen at task dispatch",
+      "finishSha256": "9e82ef2893dc3518736c9bcd5652914f5a32bf7a7dd3f755058df243d34b6170",
+      "unchanged": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round38-geometry-frontier/decisions.json",
+      "relativePath": "decisions.json",
+      "bytes": 1932,
+      "sha256": "f93de3616a95dfc259a0591d47db845b17801c797a3c58dde84c52ba7d01a3de",
+      "freezeStatus": "Parent confirmed final frozen at task dispatch",
+      "finishSha256": "f93de3616a95dfc259a0591d47db845b17801c797a3c58dde84c52ba7d01a3de",
+      "unchanged": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round38-geometry-frontier/delegation-diagnostic.txt",
+      "relativePath": "delegation-diagnostic.txt",
+      "bytes": 47,
+      "sha256": "21bf748c7ed0956d7802c80a66c7aa2904144f3d11c91ebd040b96719ee7af0f",
+      "freezeStatus": "Parent confirmed final frozen at task dispatch",
+      "finishSha256": "21bf748c7ed0956d7802c80a66c7aa2904144f3d11c91ebd040b96719ee7af0f",
+      "unchanged": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round38-geometry-frontier/finish-checks.json",
+      "relativePath": "finish-checks.json",
+      "bytes": 1179795,
+      "sha256": "18a9aa0c9e089bc1a3d91ce420b62e04f14b2a2686917185447fb2261c64914a",
+      "freezeStatus": "Parent confirmed final frozen at task dispatch",
+      "finishSha256": "18a9aa0c9e089bc1a3d91ce420b62e04f14b2a2686917185447fb2261c64914a",
+      "unchanged": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round38-geometry-frontier/history-contexts.json",
+      "relativePath": "history-contexts.json",
+      "bytes": 304709,
+      "sha256": "7c93b9d3e7fea99c8ea8359a8315e89e35214a878cf368e086acb8c280c96ba7",
+      "freezeStatus": "Parent confirmed final frozen at task dispatch",
+      "finishSha256": "7c93b9d3e7fea99c8ea8359a8315e89e35214a878cf368e086acb8c280c96ba7",
+      "unchanged": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round38-geometry-frontier/history-initial-pins.json",
+      "relativePath": "history-initial-pins.json",
+      "bytes": 729976,
+      "sha256": "5fcfc2b7f83d84dafa8db5d47e0fed3e728b8978be3c34bb7d35f9eaf73a5030",
+      "freezeStatus": "Parent confirmed final frozen at task dispatch",
+      "finishSha256": "5fcfc2b7f83d84dafa8db5d47e0fed3e728b8978be3c34bb7d35f9eaf73a5030",
+      "unchanged": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round38-geometry-frontier/history-inventory.raw.txt",
+      "relativePath": "history-inventory.raw.txt",
+      "bytes": 213969,
+      "sha256": "5b938db378927055c96c50ba7e839be685f1bacf6e21a87cd292e092e2f67434",
+      "freezeStatus": "Parent confirmed final frozen at task dispatch",
+      "finishSha256": "5b938db378927055c96c50ba7e839be685f1bacf6e21a87cd292e092e2f67434",
+      "unchanged": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round38-geometry-frontier/history.json",
+      "relativePath": "history.json",
+      "bytes": 724650,
+      "sha256": "a0e73a1177968f5c468572e37c243bbd33280ddd71cca1b45e80c88ce1d02b83",
+      "freezeStatus": "Parent confirmed final frozen at task dispatch",
+      "finishSha256": "a0e73a1177968f5c468572e37c243bbd33280ddd71cca1b45e80c88ce1d02b83",
+      "unchanged": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round38-geometry-frontier/initial-pin.json",
+      "relativePath": "initial-pin.json",
+      "bytes": 669,
+      "sha256": "6c0924a0ee702361c1f940779014973b0c194b742cb10160935f1c549e7cfa90",
+      "freezeStatus": "Parent confirmed final frozen at task dispatch",
+      "finishSha256": "6c0924a0ee702361c1f940779014973b0c194b742cb10160935f1c549e7cfa90",
+      "unchanged": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round38-geometry-frontier/metadata-notes.json",
+      "relativePath": "metadata-notes.json",
+      "bytes": 840,
+      "sha256": "ef019b30f8b92dc2f939590fa56f2dfbb41bb4f359e64ee90cd0c59c1cb1b494",
+      "freezeStatus": "Parent confirmed final frozen at task dispatch",
+      "finishSha256": "ef019b30f8b92dc2f939590fa56f2dfbb41bb4f359e64ee90cd0c59c1cb1b494",
+      "unchanged": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round38-geometry-frontier/review.md",
+      "relativePath": "review.md",
+      "bytes": 3104,
+      "sha256": "cb08a718f89af86a88a6d1f052b9a6b639671b9414a44e7d9225c5d3ce0a7b18",
+      "freezeStatus": "Parent confirmed final frozen at task dispatch",
+      "finishSha256": "cb08a718f89af86a88a6d1f052b9a6b639671b9414a44e7d9225c5d3ce0a7b18",
+      "unchanged": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round38-geometry-frontier/scan-history.py",
+      "relativePath": "scan-history.py",
+      "bytes": 5546,
+      "sha256": "b7a8f3ca1b1f2cba17528fc5b7572999e1e2cb8384c346a4a14972db52e26d7d",
+      "freezeStatus": "Parent confirmed final frozen at task dispatch",
+      "finishSha256": "b7a8f3ca1b1f2cba17528fc5b7572999e1e2cb8384c346a4a14972db52e26d7d",
+      "unchanged": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round38-geometry-frontier/selected-history-contexts.json",
+      "relativePath": "selected-history-contexts.json",
+      "bytes": 4746,
+      "sha256": "0e5c2035e403ae99f2106b385134341f158897a2e5df512c3e3fc8ab2541fe7a",
+      "freezeStatus": "Parent confirmed final frozen at task dispatch",
+      "finishSha256": "0e5c2035e403ae99f2106b385134341f158897a2e5df512c3e3fc8ab2541fe7a",
+      "unchanged": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round38-geometry-frontier/source-manifest.json",
+      "relativePath": "source-manifest.json",
+      "bytes": 9674,
+      "sha256": "425f2088e3b0ce32452d2cc21a9620f53f59ac9c32a24be63611fad371aec2fc",
+      "freezeStatus": "Parent confirmed final frozen at task dispatch",
+      "finishSha256": "425f2088e3b0ce32452d2cc21a9620f53f59ac9c32a24be63611fad371aec2fc",
+      "unchanged": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round38-geometry-frontier/test-initial-pin.json",
+      "relativePath": "test-initial-pin.json",
+      "bytes": 297,
+      "sha256": "6d0a0f88f2732283e849743d999e10e3776eeb10edc9c599030ced6dc01f4770",
+      "freezeStatus": "Parent confirmed final frozen at task dispatch",
+      "finishSha256": "6d0a0f88f2732283e849743d999e10e3776eeb10edc9c599030ced6dc01f4770",
+      "unchanged": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round38-geometry-frontier/validation.json",
+      "relativePath": "validation.json",
+      "bytes": 838,
+      "sha256": "1b8d168963e29cb588a7542dd4c05005636beb838ff1591ac516cf841c7d0ce5",
+      "freezeStatus": "Parent confirmed final frozen at task dispatch",
+      "finishSha256": "1b8d168963e29cb588a7542dd4c05005636beb838ff1591ac516cf841c7d0ce5",
+      "unchanged": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round38-root-mcp-frontier/author-receipt.json",
+      "relativePath": "author-receipt.json",
+      "bytes": 1796,
+      "sha256": "d0174f2a6912df60caea1325ea9539db8fca7052804c754ec3e5d97866b38ba5",
+      "freezeStatus": "Parent confirmed final frozen at task dispatch",
+      "finishSha256": "d0174f2a6912df60caea1325ea9539db8fca7052804c754ec3e5d97866b38ba5",
+      "unchanged": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round38-root-mcp-frontier/initial-pins.json",
+      "relativePath": "initial-pins.json",
+      "bytes": 1455,
+      "sha256": "901fbb0d5a0227c6b3b314ec61c4508b20c3a841e7c174f244625eb66d3b8316",
+      "freezeStatus": "Parent confirmed final frozen at task dispatch",
+      "finishSha256": "901fbb0d5a0227c6b3b314ec61c4508b20c3a841e7c174f244625eb66d3b8316",
+      "unchanged": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round38-root-mcp-frontier/review.md",
+      "relativePath": "review.md",
+      "bytes": 2787,
+      "sha256": "ffe8a1d5d99dba20e1a10959457c02e3da8cc4d5af35145aa6992fe94654b4ad",
+      "freezeStatus": "Parent confirmed final frozen at task dispatch",
+      "finishSha256": "ffe8a1d5d99dba20e1a10959457c02e3da8cc4d5af35145aa6992fe94654b4ad",
+      "unchanged": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round38-root-mcp-frontier/source-excerpts.json",
+      "relativePath": "source-excerpts.json",
+      "bytes": 13587,
+      "sha256": "287e2edb5bd34a6bd0c5a30f867feccd6f628c0ce10c436628684061015797f6",
+      "freezeStatus": "Parent confirmed final frozen at task dispatch",
+      "finishSha256": "287e2edb5bd34a6bd0c5a30f867feccd6f628c0ce10c436628684061015797f6",
+      "unchanged": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round38-root-mcp-frontier/source-excerpts.txt",
+      "relativePath": "source-excerpts.txt",
+      "bytes": 12735,
+      "sha256": "ff0dc9a2ad1bbc2c7179ea8f9dfba4690000122917a80689f4aaae0c7c5832fb",
+      "freezeStatus": "Parent confirmed final frozen at task dispatch",
+      "finishSha256": "ff0dc9a2ad1bbc2c7179ea8f9dfba4690000122917a80689f4aaae0c7c5832fb",
+      "unchanged": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round38-root-mcp-frontier/source-manifest.first.json",
+      "relativePath": "source-manifest.first.json",
+      "bytes": 1587,
+      "sha256": "2148ce0a9e5461bd093cb0758b4f0011dcc33ef3c05b13937ee959c0551dea65",
+      "freezeStatus": "Parent confirmed final frozen at task dispatch",
+      "finishSha256": "2148ce0a9e5461bd093cb0758b4f0011dcc33ef3c05b13937ee959c0551dea65",
+      "unchanged": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round38-root-mcp-frontier/source-manifest.json",
+      "relativePath": "source-manifest.json",
+      "bytes": 2724,
+      "sha256": "2e5270378c033ce0bbbd472bb49ca36d082269e25f6206d68e59d73c7ec10355",
+      "freezeStatus": "Parent confirmed final frozen at task dispatch",
+      "finishSha256": "2e5270378c033ce0bbbd472bb49ca36d082269e25f6206d68e59d73c7ec10355",
+      "unchanged": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round38-root-mcp-frontier/source-reader.py",
+      "relativePath": "source-reader.py",
+      "bytes": 1966,
+      "sha256": "cccc5eb8b3a3e25916d2815e5a25f49d4f1b241e0533f409bc554df4c76ca880",
+      "freezeStatus": "Parent confirmed final frozen at task dispatch",
+      "finishSha256": "cccc5eb8b3a3e25916d2815e5a25f49d4f1b241e0533f409bc554df4c76ca880",
+      "unchanged": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round38-root-mcp-frontier/source-supplement.json",
+      "relativePath": "source-supplement.json",
+      "bytes": 3155,
+      "sha256": "3544291f218698cca0dbcf85118ec1f226ac28c32abc35068c428892b7e366b2",
+      "freezeStatus": "Parent confirmed final frozen at task dispatch",
+      "finishSha256": "3544291f218698cca0dbcf85118ec1f226ac28c32abc35068c428892b7e366b2",
+      "unchanged": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round38-root-mcp-frontier/source-supplement2.json",
+      "relativePath": "source-supplement2.json",
+      "bytes": 2395,
+      "sha256": "d4552a08aca2e2a6cbeca942ebfec64f33ab9ae50e2545836912a11e3333ce84",
+      "freezeStatus": "Parent confirmed final frozen at task dispatch",
+      "finishSha256": "d4552a08aca2e2a6cbeca942ebfec64f33ab9ae50e2545836912a11e3333ce84",
+      "unchanged": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round38-root-mcp-frontier/validation.json",
+      "relativePath": "validation.json",
+      "bytes": 405,
+      "sha256": "c774f4c172e1e02ef7eb700f3289f62b3a5156ca8662d86b351d321d6261a5c6",
+      "freezeStatus": "Parent confirmed final frozen at task dispatch",
+      "finishSha256": "c774f4c172e1e02ef7eb700f3289f62b3a5156ca8662d86b351d321d6261a5c6",
+      "unchanged": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round38-mcp-patch-frontier/McpSection-history-object-rows.json",
+      "relativePath": "McpSection-history-object-rows.json",
+      "bytes": 11444,
+      "sha256": "ab5b2ae2e785895a96f8f4759f92037779ff6ce8ef2548c87413d55ea9bb3f40",
+      "freezeStatus": "Final freeze explicitly confirmed by author andRoot before this pin",
+      "finishSha256": "ab5b2ae2e785895a96f8f4759f92037779ff6ce8ef2548c87413d55ea9bb3f40",
+      "unchanged": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round38-mcp-patch-frontier/artifact-receipt.json",
+      "relativePath": "artifact-receipt.json",
+      "bytes": 3738,
+      "sha256": "7d6a1c2b70332e5474c848e7531b3483f4b0b747bf91c300280b274792dcccc7",
+      "freezeStatus": "Final freeze explicitly confirmed by author andRoot before this pin",
+      "finishSha256": "7d6a1c2b70332e5474c848e7531b3483f4b0b747bf91c300280b274792dcccc7",
+      "unchanged": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round38-mcp-patch-frontier/classification.json",
+      "relativePath": "classification.json",
+      "bytes": 1412,
+      "sha256": "fc98b60a848879520e87bd96d79c9ea7b2903feac90f84829d293ad63f625b83",
+      "freezeStatus": "Final freeze explicitly confirmed by author andRoot before this pin",
+      "finishSha256": "fc98b60a848879520e87bd96d79c9ea7b2903feac90f84829d293ad63f625b83",
+      "unchanged": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round38-mcp-patch-frontier/final-source-check.json",
+      "relativePath": "final-source-check.json",
+      "bytes": 4865,
+      "sha256": "c7e265027e5ecc8eac3c731f3e670c2771a4cfad406f7bde71f725ed5401628f",
+      "freezeStatus": "Final freeze explicitly confirmed by author andRoot before this pin",
+      "finishSha256": "c7e265027e5ecc8eac3c731f3e670c2771a4cfad406f7bde71f725ed5401628f",
+      "unchanged": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round38-mcp-patch-frontier/focused-history.json",
+      "relativePath": "focused-history.json",
+      "bytes": 67267,
+      "sha256": "556eec027ac4084652936964f0714fbc9a78d6136b225bbccbd9da341fb5f575",
+      "freezeStatus": "Final freeze explicitly confirmed by author andRoot before this pin",
+      "finishSha256": "556eec027ac4084652936964f0714fbc9a78d6136b225bbccbd9da341fb5f575",
+      "unchanged": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round38-mcp-patch-frontier/forwarding-history-initial-pins.json",
+      "relativePath": "forwarding-history-initial-pins.json",
+      "bytes": 1198,
+      "sha256": "02e021b21ad648f258d0e1105d54b44e7ee87acf308d9aedf39f8e5fc5701b5f",
+      "freezeStatus": "Final freeze explicitly confirmed by author andRoot before this pin",
+      "finishSha256": "02e021b21ad648f258d0e1105d54b44e7ee87acf308d9aedf39f8e5fc5701b5f",
+      "unchanged": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round38-mcp-patch-frontier/history-decisions.json",
+      "relativePath": "history-decisions.json",
+      "bytes": 1456,
+      "sha256": "ae845a5ab60c1b24dfc318465343aade81c84fe470797ff5d83129c9f48be8dd",
+      "freezeStatus": "Final freeze explicitly confirmed by author andRoot before this pin",
+      "finishSha256": "ae845a5ab60c1b24dfc318465343aade81c84fe470797ff5d83129c9f48be8dd",
+      "unchanged": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round38-mcp-patch-frontier/history-delta.json",
+      "relativePath": "history-delta.json",
+      "bytes": 21336,
+      "sha256": "b5b2f7fa30515cd440d74f77cc18d3457e6a11b5747af32a759702c54152c310",
+      "freezeStatus": "Final freeze explicitly confirmed by author andRoot before this pin",
+      "finishSha256": "b5b2f7fa30515cd440d74f77cc18d3457e6a11b5747af32a759702c54152c310",
+      "unchanged": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round38-mcp-patch-frontier/history-method.py",
+      "relativePath": "history-method.py",
+      "bytes": 3251,
+      "sha256": "503dcd79e4603dd0de4919561a172ce546d24b64a19484022bd763aadfd7df95",
+      "freezeStatus": "Final freeze explicitly confirmed by author andRoot before this pin",
+      "finishSha256": "503dcd79e4603dd0de4919561a172ce546d24b64a19484022bd763aadfd7df95",
+      "unchanged": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round38-mcp-patch-frontier/history.json",
+      "relativePath": "history.json",
+      "bytes": 1618153,
+      "sha256": "e1df88faea5ddfab99837cc14fdb489d897021b65ebe7c2da4d358be5d1f0e36",
+      "freezeStatus": "Final freeze explicitly confirmed by author andRoot before this pin",
+      "finishSha256": "e1df88faea5ddfab99837cc14fdb489d897021b65ebe7c2da4d358be5d1f0e36",
+      "unchanged": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round38-mcp-patch-frontier/initial-pins.json",
+      "relativePath": "initial-pins.json",
+      "bytes": 1200,
+      "sha256": "2f4300bd1273180316d88832f9aaff436801af6573ced48924242c137d4a0b7b",
+      "freezeStatus": "Final freeze explicitly confirmed by author andRoot before this pin",
+      "finishSha256": "2f4300bd1273180316d88832f9aaff436801af6573ced48924242c137d4a0b7b",
+      "unchanged": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round38-mcp-patch-frontier/links-check.json",
+      "relativePath": "links-check.json",
+      "bytes": 5176,
+      "sha256": "a30750c9a31b8fe38c29b552062fcdb77bdb14b7709d47c853a111622744f203",
+      "freezeStatus": "Final freeze explicitly confirmed by author andRoot before this pin",
+      "finishSha256": "a30750c9a31b8fe38c29b552062fcdb77bdb14b7709d47c853a111622744f203",
+      "unchanged": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round38-mcp-patch-frontier/merge-display-initial-pin.json",
+      "relativePath": "merge-display-initial-pin.json",
+      "bytes": 403,
+      "sha256": "4780f010fb45eb389c64b448cea8b0813d7e895dfec1f0b574028cf670a246f5",
+      "freezeStatus": "Final freeze explicitly confirmed by author andRoot before this pin",
+      "finishSha256": "4780f010fb45eb389c64b448cea8b0813d7e895dfec1f0b574028cf670a246f5",
+      "unchanged": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round38-mcp-patch-frontier/merge-schema-initial-pins.json",
+      "relativePath": "merge-schema-initial-pins.json",
+      "bytes": 723,
+      "sha256": "41091802945a81b43c3f57a1575166bbc79c4dd93e2434fe40e1371cef668b9d",
+      "freezeStatus": "Final freeze explicitly confirmed by author andRoot before this pin",
+      "finishSha256": "41091802945a81b43c3f57a1575166bbc79c4dd93e2434fe40e1371cef668b9d",
+      "unchanged": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round38-mcp-patch-frontier/report.md",
+      "relativePath": "report.md",
+      "bytes": 9611,
+      "sha256": "f33460cfcd897282d8f70a99a752db15534cb30f5f8802bb839b6a73d743e601",
+      "freezeStatus": "Final freeze explicitly confirmed by author andRoot before this pin",
+      "finishSha256": "f33460cfcd897282d8f70a99a752db15534cb30f5f8802bb839b6a73d743e601",
+      "unchanged": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round38-mcp-patch-frontier/scope.json",
+      "relativePath": "scope.json",
+      "bytes": 526,
+      "sha256": "9253908c1b97f52d91c55cddf0c2934ac611673b368a89ae5b311f8f7febfa72",
+      "freezeStatus": "Final freeze explicitly confirmed by author andRoot before this pin",
+      "finishSha256": "9253908c1b97f52d91c55cddf0c2934ac611673b368a89ae5b311f8f7febfa72",
+      "unchanged": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round38-mcp-patch-frontier/settings-adapter-initial-pin.json",
+      "relativePath": "settings-adapter-initial-pin.json",
+      "bytes": 388,
+      "sha256": "321439c5474669817b9a93da8ecdb725f5191a6b1bd3de3b4e3e73de40cb3a61",
+      "freezeStatus": "Final freeze explicitly confirmed by author andRoot before this pin",
+      "finishSha256": "321439c5474669817b9a93da8ecdb725f5191a6b1bd3de3b4e3e73de40cb3a61",
+      "unchanged": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round38-mcp-patch-frontier/source-manifest.json",
+      "relativePath": "source-manifest.json",
+      "bytes": 16302,
+      "sha256": "e1628a34803c3f9c94b50d6a81c038189b971170b0de42d0401bec0f2c8a63b5",
+      "freezeStatus": "Final freeze explicitly confirmed by author andRoot before this pin",
+      "finishSha256": "e1628a34803c3f9c94b50d6a81c038189b971170b0de42d0401bec0f2c8a63b5",
+      "unchanged": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round38-mcp-patch-frontier/static-value-flow.json",
+      "relativePath": "static-value-flow.json",
+      "bytes": 2016,
+      "sha256": "f7312532b08204d082beb8640a14319ba17e534d4f5a8fd4d27d522d7c52044c",
+      "freezeStatus": "Final freeze explicitly confirmed by author andRoot before this pin",
+      "finishSha256": "f7312532b08204d082beb8640a14319ba17e534d4f5a8fd4d27d522d7c52044c",
+      "unchanged": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round38-mcp-patch-frontier/validation.json",
+      "relativePath": "validation.json",
+      "bytes": 1586,
+      "sha256": "e8dfc723718985a02e420ce9623fb3eeb27ea4ef7a9adb0830838dddea805079",
+      "freezeStatus": "Final freeze explicitly confirmed by author andRoot before this pin",
+      "finishSha256": "e8dfc723718985a02e420ce9623fb3eeb27ea4ef7a9adb0830838dddea805079",
+      "unchanged": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round38-mcp-args-review/author-receipt.json",
+      "relativePath": "author-receipt.json",
+      "bytes": 2879,
+      "sha256": "ef6d8c17f1d33d26a94952fe63f668c27420946e917e4d0a8cdcebd12240d796",
+      "freezeStatus": "Reviewer andRoot explicitly confirmed final freeze before this pin",
+      "finishSha256": "ef6d8c17f1d33d26a94952fe63f668c27420946e917e4d0a8cdcebd12240d796",
+      "unchanged": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round38-mcp-args-review/bridge-initial-pins.json",
+      "relativePath": "bridge-initial-pins.json",
+      "bytes": 569,
+      "sha256": "f00b6e32cdab4cef9276034c1f3d926b35c4be6b0cb5dc6cfe694f23d21b26f1",
+      "freezeStatus": "Reviewer andRoot explicitly confirmed final freeze before this pin",
+      "finishSha256": "f00b6e32cdab4cef9276034c1f3d926b35c4be6b0cb5dc6cfe694f23d21b26f1",
+      "unchanged": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round38-mcp-args-review/decisions.json",
+      "relativePath": "decisions.json",
+      "bytes": 1718,
+      "sha256": "4d8e5e0b76fbf8ddb7e1e6fe076188d7d2418dc3f37f5e24e46cd18d3a604410",
+      "freezeStatus": "Reviewer andRoot explicitly confirmed final freeze before this pin",
+      "finishSha256": "4d8e5e0b76fbf8ddb7e1e6fe076188d7d2418dc3f37f5e24e46cd18d3a604410",
+      "unchanged": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round38-mcp-args-review/finish-checks.json",
+      "relativePath": "finish-checks.json",
+      "bytes": 1179826,
+      "sha256": "d1fb47121b7e4f2cd638df51315803f53d3e10d68b2f9acfc0ef7ef787d8b20f",
+      "freezeStatus": "Reviewer andRoot explicitly confirmed final freeze before this pin",
+      "finishSha256": "d1fb47121b7e4f2cd638df51315803f53d3e10d68b2f9acfc0ef7ef787d8b20f",
+      "unchanged": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round38-mcp-args-review/history-contexts.json",
+      "relativePath": "history-contexts.json",
+      "bytes": 238621,
+      "sha256": "e7bc09e8ee5afc98f19af5c6440b22566d79fb22bf6c00a7c9f2582ab7e30c9d",
+      "freezeStatus": "Reviewer andRoot explicitly confirmed final freeze before this pin",
+      "finishSha256": "e7bc09e8ee5afc98f19af5c6440b22566d79fb22bf6c00a7c9f2582ab7e30c9d",
+      "unchanged": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round38-mcp-args-review/history-initial-pins.json",
+      "relativePath": "history-initial-pins.json",
+      "bytes": 730354,
+      "sha256": "3338e7de1fc1b10c91b0871273a87610734554524368fd637e84dbc2e05797c3",
+      "freezeStatus": "Reviewer andRoot explicitly confirmed final freeze before this pin",
+      "finishSha256": "3338e7de1fc1b10c91b0871273a87610734554524368fd637e84dbc2e05797c3",
+      "unchanged": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round38-mcp-args-review/history-inventory.raw.txt",
+      "relativePath": "history-inventory.raw.txt",
+      "bytes": 214305,
+      "sha256": "b46128c9375ee783677ec575f27381516e5f68f8298901271952087117929410",
+      "freezeStatus": "Reviewer andRoot explicitly confirmed final freeze before this pin",
+      "finishSha256": "b46128c9375ee783677ec575f27381516e5f68f8298901271952087117929410",
+      "unchanged": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round38-mcp-args-review/history.json",
+      "relativePath": "history.json",
+      "bytes": 724678,
+      "sha256": "cacbe8abea537ffd8d296e0dc9cb8c084fcffe09bd479c4083555f018d07edc3",
+      "freezeStatus": "Reviewer andRoot explicitly confirmed final freeze before this pin",
+      "finishSha256": "cacbe8abea537ffd8d296e0dc9cb8c084fcffe09bd479c4083555f018d07edc3",
+      "unchanged": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round38-mcp-args-review/initial-pins.json",
+      "relativePath": "initial-pins.json",
+      "bytes": 1552,
+      "sha256": "d1b5e35bb5077c56b21478fe5257290b8048c5c06b544f49d6da049aabe86b76",
+      "freezeStatus": "Reviewer andRoot explicitly confirmed final freeze before this pin",
+      "finishSha256": "d1b5e35bb5077c56b21478fe5257290b8048c5c06b544f49d6da049aabe86b76",
+      "unchanged": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round38-mcp-args-review/persistence-initial-pins.json",
+      "relativePath": "persistence-initial-pins.json",
+      "bytes": 563,
+      "sha256": "385ca5f15f1f133fbb49d40b1081c544f818a69c619fe9505b13eaafbcd06dac",
+      "freezeStatus": "Reviewer andRoot explicitly confirmed final freeze before this pin",
+      "finishSha256": "385ca5f15f1f133fbb49d40b1081c544f818a69c619fe9505b13eaafbcd06dac",
+      "unchanged": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round38-mcp-args-review/review.md",
+      "relativePath": "review.md",
+      "bytes": 3927,
+      "sha256": "814b02adf90249c3411685999f7530921b0c357641228350340be5ddef912e7f",
+      "freezeStatus": "Reviewer andRoot explicitly confirmed final freeze before this pin",
+      "finishSha256": "814b02adf90249c3411685999f7530921b0c357641228350340be5ddef912e7f",
+      "unchanged": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round38-mcp-args-review/scan-history.py",
+      "relativePath": "scan-history.py",
+      "bytes": 5576,
+      "sha256": "e94e5f66fc98bf862cb632ec349681b4af471d3e8cb78a4b204cee00cd1cac9f",
+      "freezeStatus": "Reviewer andRoot explicitly confirmed final freeze before this pin",
+      "finishSha256": "e94e5f66fc98bf862cb632ec349681b4af471d3e8cb78a4b204cee00cd1cac9f",
+      "unchanged": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round38-mcp-args-review/selected-history-contexts.json",
+      "relativePath": "selected-history-contexts.json",
+      "bytes": 31767,
+      "sha256": "45b4eb3da8d8ea2db20aedc297856693b1ab0646e570f79eafa9fc9fd4fddc9f",
+      "freezeStatus": "Reviewer andRoot explicitly confirmed final freeze before this pin",
+      "finishSha256": "45b4eb3da8d8ea2db20aedc297856693b1ab0646e570f79eafa9fc9fd4fddc9f",
+      "unchanged": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round38-mcp-args-review/source-manifest.json",
+      "relativePath": "source-manifest.json",
+      "bytes": 10127,
+      "sha256": "d1f306ebf1cb62293ee6925167595a90fefee66dfcfd5a0652d8f4198aaca72b",
+      "freezeStatus": "Reviewer andRoot explicitly confirmed final freeze before this pin",
+      "finishSha256": "d1f306ebf1cb62293ee6925167595a90fefee66dfcfd5a0652d8f4198aaca72b",
+      "unchanged": true
+    },
+    {
+      "path": "/tmp/codeshell-audit-round38-mcp-args-review/validation.json",
+      "relativePath": "validation.json",
+      "bytes": 697,
+      "sha256": "0b65a425d8733364fce89ff709f1b4403d358df6cc5b315c2d0e468d0213398e",
+      "freezeStatus": "Reviewer andRoot explicitly confirmed final freeze before this pin",
+      "finishSha256": "0b65a425d8733364fce89ff709f1b4403d358df6cc5b315c2d0e468d0213398e",
+      "unchanged": true
+    }
+  ],
+  "authorGroupChecks": [
+    {
+      "owner": "inbox-own-author",
+      "directory": "/tmp/codeshell-audit-round38-inbox-model-frontier",
+      "roleLimit": "This aggregate reviewer is inbox author; inbox check is author metadata verification, not independent source review.",
+      "sourceManifestRows": [
+        {
+          "path": "packages/desktop/src/renderer/task-inbox/taskInboxViewModel.ts",
+          "bytes": 3342,
+          "sha256": "9c5fa1937a2187110ea497bc402ebb8e0aa1b7b8cc733af6a789e10a9234a1ed",
+          "coverageFromAuthor": "full",
+          "selectedLineRangesFromAuthor": [
+            [
+              1,
+              87
+            ]
+          ],
+          "additionalNavigationSnippetLinesFromAuthor": [],
+          "lineCountFromManifest": 87,
+          "declaredReadLineCount": 87,
+          "rangeAndUnionValid": true,
+          "initialSemanticReadSha256Claim": "9c5fa1937a2187110ea497bc402ebb8e0aa1b7b8cc733af6a789e10a9234a1ed",
+          "initialBeforeThisPrepSemanticReadClaim": null,
+          "sourceWasNotReadHere": true
+        },
+        {
+          "path": "packages/desktop/src/renderer/task-inbox/taskInboxViewModel.test.ts",
+          "bytes": 10711,
+          "sha256": "b617e88a422cc67e9f5b5bb2ea27f35b8cb973be8d691680ddd42219caf404d6",
+          "coverageFromAuthor": "selected",
+          "selectedLineRangesFromAuthor": [
+            [
+              1,
+              69
+            ],
+            [
+              292,
+              315
+            ]
+          ],
+          "additionalNavigationSnippetLinesFromAuthor": [],
+          "lineCountFromManifest": 315,
+          "declaredReadLineCount": 93,
+          "rangeAndUnionValid": true,
+          "initialSemanticReadSha256Claim": "b617e88a422cc67e9f5b5bb2ea27f35b8cb973be8d691680ddd42219caf404d6",
+          "initialBeforeThisPrepSemanticReadClaim": null,
+          "sourceWasNotReadHere": true
+        },
+        {
+          "path": "packages/desktop/src/renderer/task-inbox/TaskInboxPage.tsx",
+          "bytes": 23775,
+          "sha256": "76769f666c1be51aeec954b7bd5eabbeaf862da80c4c83708a8794461da5e295",
+          "coverageFromAuthor": "selected",
+          "selectedLineRangesFromAuthor": [
+            [
+              1,
+              165
+            ],
+            [
+              271,
+              291
+            ],
+            [
+              405,
+              482
+            ],
+            [
+              542,
+              559
+            ]
+          ],
+          "additionalNavigationSnippetLinesFromAuthor": [],
+          "lineCountFromManifest": 597,
+          "declaredReadLineCount": 282,
+          "rangeAndUnionValid": true,
+          "initialSemanticReadSha256Claim": "76769f666c1be51aeec954b7bd5eabbeaf862da80c4c83708a8794461da5e295",
+          "initialBeforeThisPrepSemanticReadClaim": null,
+          "sourceWasNotReadHere": true
+        },
+        {
+          "path": "docs/review-remaining-2026-10-12/hosts.md",
+          "bytes": 16168,
+          "sha256": "884a2deee6eddfe00a2a4f147e1d964351ab6017928c81e33e303315132870a8",
+          "coverageFromAuthor": "selected",
+          "selectedLineRangesFromAuthor": [
+            [
+              30,
+              42
+            ]
+          ],
+          "additionalNavigationSnippetLinesFromAuthor": [],
+          "lineCountFromManifest": 84,
+          "declaredReadLineCount": 13,
+          "rangeAndUnionValid": true,
+          "initialSemanticReadSha256Claim": null,
+          "initialBeforeThisPrepSemanticReadClaim": null,
+          "sourceWasNotReadHere": true
+        },
+        {
+          "path": "packages/desktop/src/preload/task-inbox-api.ts",
+          "bytes": 1388,
+          "sha256": "a86455e8de74944381d69d02e7f1cff0eb0de67eed6401dc3406d72667889d0b",
+          "coverageFromAuthor": "selected",
+          "selectedLineRangesFromAuthor": [
+            [
+              1,
+              20
+            ]
+          ],
+          "additionalNavigationSnippetLinesFromAuthor": [],
+          "lineCountFromManifest": 46,
+          "declaredReadLineCount": 20,
+          "rangeAndUnionValid": true,
+          "initialSemanticReadSha256Claim": "a86455e8de74944381d69d02e7f1cff0eb0de67eed6401dc3406d72667889d0b",
+          "initialBeforeThisPrepSemanticReadClaim": null,
+          "sourceWasNotReadHere": true
+        },
+        {
+          "path": "packages/desktop/src/renderer/task-inbox/useTaskInboxSnapshot.ts",
+          "bytes": 3402,
+          "sha256": "809e80bf9b0031efaff990124faeef76d145161fd620044cd7a51bf6fd1a9ff7",
+          "coverageFromAuthor": "full",
+          "selectedLineRangesFromAuthor": [
+            [
+              1,
+              91
+            ]
+          ],
+          "additionalNavigationSnippetLinesFromAuthor": [],
+          "lineCountFromManifest": 91,
+          "declaredReadLineCount": 91,
+          "rangeAndUnionValid": true,
+          "initialSemanticReadSha256Claim": "809e80bf9b0031efaff990124faeef76d145161fd620044cd7a51bf6fd1a9ff7",
+          "initialBeforeThisPrepSemanticReadClaim": null,
+          "sourceWasNotReadHere": true
+        },
+        {
+          "path": "packages/desktop/src/main/task-inbox/task-inbox-types.ts",
+          "bytes": 9095,
+          "sha256": "2694cf539e698bf9a500d08f6d855cc66f22760ee2f5049fb8d23b565711fb00",
+          "coverageFromAuthor": "selected",
+          "selectedLineRangesFromAuthor": [
+            [
+              1,
+              105
+            ]
+          ],
+          "additionalNavigationSnippetLinesFromAuthor": [],
+          "lineCountFromManifest": 268,
+          "declaredReadLineCount": 105,
+          "rangeAndUnionValid": true,
+          "initialSemanticReadSha256Claim": "2694cf539e698bf9a500d08f6d855cc66f22760ee2f5049fb8d23b565711fb00",
+          "initialBeforeThisPrepSemanticReadClaim": null,
+          "sourceWasNotReadHere": true
+        }
+      ],
+      "sourceRowCount": 7,
+      "declaredLines": 691,
+      "coverageCounts": {
+        "full": 2,
+        "selected": 5,
+        "hash-only": 0
+      },
+      "receipt": "/tmp/codeshell-audit-round38-inbox-model-frontier/reviewer-receipt.json",
+      "receiptRows": [
+        {
+          "path": "/tmp/codeshell-audit-round38-inbox-model-frontier/consumer-pins.json",
+          "bytes": 1609,
+          "sha256": "7593fec13d788cd620f0676e009f43e21190e1fb01571c7477e0346a9e49b6e5",
+          "matchesReceipt": true
+        },
+        {
+          "path": "/tmp/codeshell-audit-round38-inbox-model-frontier/dto-pins.json",
+          "bytes": 867,
+          "sha256": "98522031948f495a75333c53a5b35b4bb8b2b539defd9d5841e8c9a4a4b40ba8",
+          "matchesReceipt": true
+        },
+        {
+          "path": "/tmp/codeshell-audit-round38-inbox-model-frontier/history-method.py",
+          "bytes": 3745,
+          "sha256": "9e90de8f359be9f93cca1ea673e75e1904d84e92ec71bd1b39c580d971cad371",
+          "matchesReceipt": true
+        },
+        {
+          "path": "/tmp/codeshell-audit-round38-inbox-model-frontier/history-supplement.json",
+          "bytes": 38861,
+          "sha256": "9dafc90b26fd31ba2406d9fe9ab12cb890a08884a7ad9891430ece7f329bbdeb",
+          "matchesReceipt": true
+        },
+        {
+          "path": "/tmp/codeshell-audit-round38-inbox-model-frontier/history.json",
+          "bytes": 666830,
+          "sha256": "bfbd123b5d6bab127096585f8d736a6bbe98108ebe2fcd7da644c5a2027b69c3",
+          "matchesReceipt": true
+        },
+        {
+          "path": "/tmp/codeshell-audit-round38-inbox-model-frontier/initial-pins.json",
+          "bytes": 1303,
+          "sha256": "d185c81ed002460ff6415d751223dd02d2adf8c50574d4f9923cc9a7e5a6fdb2",
+          "matchesReceipt": true
+        },
+        {
+          "path": "/tmp/codeshell-audit-round38-inbox-model-frontier/review.md",
+          "bytes": 4645,
+          "sha256": "9f96d812220c7401b587052adfa74f3c3879b328031ee8da9bdf4827a08a74f1",
+          "matchesReceipt": true
+        },
+        {
+          "path": "/tmp/codeshell-audit-round38-inbox-model-frontier/source-excerpts.txt",
+          "bytes": 32797,
+          "sha256": "6691a0edb5071cb2f21f600d7a138868f9421f1276a408ba65f212c75841ec05",
+          "matchesReceipt": true
+        },
+        {
+          "path": "/tmp/codeshell-audit-round38-inbox-model-frontier/source-manifest.json",
+          "bytes": 12307,
+          "sha256": "75b53e945baebe23e15021119c4841acf632a46ec3268638fd2c37fb453a8d92",
+          "matchesReceipt": true
+        },
+        {
+          "path": "/tmp/codeshell-audit-round38-inbox-model-frontier/type-pins.json",
+          "bytes": 480,
+          "sha256": "3f3b94fd19463baf9097b6c79e3fc346063d276eba502a27969ccd184e22e2be",
+          "matchesReceipt": true
+        },
+        {
+          "path": "/tmp/codeshell-audit-round38-inbox-model-frontier/validation.json",
+          "bytes": 3023,
+          "sha256": "3b8faf8412146ded551c5eac713749e1949ef7f6a9860e4bed1f82d1ac5f7ae9",
+          "matchesReceipt": true
+        }
+      ],
+      "receiptRowCount": 11,
+      "excludedSnapshots": []
+    },
+    {
+      "owner": "geometry",
+      "directory": "/tmp/codeshell-audit-round38-geometry-frontier",
+      "roleLimit": "Metadata/attached counterevidence review only; source semantics belong to original author.",
+      "sourceManifestRows": [
+        {
+          "path": "packages/tui/src/render/layout/geometry.ts",
+          "bytes": 2471,
+          "sha256": "13fa5f0dfb7a457c8842e2a31856eb53dfa026d3cb7fd414381ca47b3fcfc5bd",
+          "coverageFromAuthor": "full",
+          "selectedLineRangesFromAuthor": [
+            [
+              1,
+              97
+            ]
+          ],
+          "additionalNavigationSnippetLinesFromAuthor": [],
+          "lineCountFromManifest": 97,
+          "declaredReadLineCount": 97,
+          "rangeAndUnionValid": true,
+          "initialSemanticReadSha256Claim": "13fa5f0dfb7a457c8842e2a31856eb53dfa026d3cb7fd414381ca47b3fcfc5bd",
+          "initialBeforeThisPrepSemanticReadClaim": null,
+          "sourceWasNotReadHere": true
+        },
+        {
+          "path": "packages/tui/src/render/screen.ts",
+          "bytes": 49323,
+          "sha256": "0e44207a3990aa365f2ffde47f9b9dcc7454c422743d1d15443d39fdd2a69880",
+          "coverageFromAuthor": "selected",
+          "selectedLineRangesFromAuthor": [
+            [
+              817,
+              839
+            ],
+            [
+              900,
+              924
+            ],
+            [
+              1015,
+              1047
+            ],
+            [
+              1150,
+              1206
+            ]
+          ],
+          "additionalNavigationSnippetLinesFromAuthor": [],
+          "lineCountFromManifest": 1486,
+          "declaredReadLineCount": 138,
+          "rangeAndUnionValid": true,
+          "initialSemanticReadSha256Claim": "0e44207a3990aa365f2ffde47f9b9dcc7454c422743d1d15443d39fdd2a69880",
+          "initialBeforeThisPrepSemanticReadClaim": null,
+          "sourceWasNotReadHere": true
+        },
+        {
+          "path": "packages/tui/src/render/node-cache.ts",
+          "bytes": 1654,
+          "sha256": "4f462623118630b10ce08c4111277e0596fa1af28533a2f4a43320389bd08fe3",
+          "coverageFromAuthor": "hash-only",
+          "selectedLineRangesFromAuthor": [],
+          "additionalNavigationSnippetLinesFromAuthor": [],
+          "lineCountFromManifest": 54,
+          "declaredReadLineCount": 0,
+          "rangeAndUnionValid": true,
+          "initialSemanticReadSha256Claim": null,
+          "initialBeforeThisPrepSemanticReadClaim": null,
+          "sourceWasNotReadHere": true
+        },
+        {
+          "path": "packages/tui/src/render/output.ts",
+          "bytes": 27146,
+          "sha256": "aa3caa98bfe9af0cf4215f877e08d914b48c715554a53df4bfcbd6a239fcdaef",
+          "coverageFromAuthor": "selected",
+          "selectedLineRangesFromAuthor": [
+            [
+              9,
+              22
+            ],
+            [
+              84,
+              128
+            ],
+            [
+              168,
+              185
+            ],
+            [
+              253,
+              264
+            ],
+            [
+              275,
+              326
+            ]
+          ],
+          "additionalNavigationSnippetLinesFromAuthor": [],
+          "lineCountFromManifest": 814,
+          "declaredReadLineCount": 141,
+          "rangeAndUnionValid": true,
+          "initialSemanticReadSha256Claim": "aa3caa98bfe9af0cf4215f877e08d914b48c715554a53df4bfcbd6a239fcdaef",
+          "initialBeforeThisPrepSemanticReadClaim": null,
+          "sourceWasNotReadHere": true
+        },
+        {
+          "path": "packages/tui/src/render/render-node-to-output.ts",
+          "bytes": 64981,
+          "sha256": "4732b74d399aa690ec56e5d19b8329002f63ae45adeb6bb5652bd53a28b9f324",
+          "coverageFromAuthor": "hash-only",
+          "selectedLineRangesFromAuthor": [],
+          "additionalNavigationSnippetLinesFromAuthor": [],
+          "lineCountFromManifest": 1492,
+          "declaredReadLineCount": 0,
+          "rangeAndUnionValid": true,
+          "initialSemanticReadSha256Claim": null,
+          "initialBeforeThisPrepSemanticReadClaim": null,
+          "sourceWasNotReadHere": true
+        },
+        {
+          "path": "packages/tui/src/render/frame.ts",
+          "bytes": 4652,
+          "sha256": "9061cfec12f262ed5c0e212bd56b5910d3b9ded6c9922f90c21959b2b9d18c37",
+          "coverageFromAuthor": "hash-only",
+          "selectedLineRangesFromAuthor": [],
+          "additionalNavigationSnippetLinesFromAuthor": [],
+          "lineCountFromManifest": 131,
+          "declaredReadLineCount": 0,
+          "rangeAndUnionValid": true,
+          "initialSemanticReadSha256Claim": null,
+          "initialBeforeThisPrepSemanticReadClaim": null,
+          "sourceWasNotReadHere": true
+        },
+        {
+          "path": "packages/tui/src/render/selection.ts",
+          "bytes": 35223,
+          "sha256": "6efa8830f1785e600cf3c2ce50ed7791b651227529669373932c08f3c4d63061",
+          "coverageFromAuthor": "selected",
+          "selectedLineRangesFromAuthor": [
+            [
+              1,
+              28
+            ],
+            [
+              390,
+              414
+            ]
+          ],
+          "additionalNavigationSnippetLinesFromAuthor": [],
+          "lineCountFromManifest": 922,
+          "declaredReadLineCount": 53,
+          "rangeAndUnionValid": true,
+          "initialSemanticReadSha256Claim": "6efa8830f1785e600cf3c2ce50ed7791b651227529669373932c08f3c4d63061",
+          "initialBeforeThisPrepSemanticReadClaim": null,
+          "sourceWasNotReadHere": true
+        },
+        {
+          "path": "packages/tui/src/render/log-update.ts",
+          "bytes": 32029,
+          "sha256": "d399d3713398a9bd1b72f802cea45c12e865c84ed7f8379f2c84dd3394293a89",
+          "coverageFromAuthor": "hash-only",
+          "selectedLineRangesFromAuthor": [],
+          "additionalNavigationSnippetLinesFromAuthor": [],
+          "lineCountFromManifest": 894,
+          "declaredReadLineCount": 0,
+          "rangeAndUnionValid": true,
+          "initialSemanticReadSha256Claim": null,
+          "initialBeforeThisPrepSemanticReadClaim": null,
+          "sourceWasNotReadHere": true
+        },
+        {
+          "path": "tests/render-screen.test.ts",
+          "bytes": 2869,
+          "sha256": "c3b44ba1c78f6c574960b543203d4bab9037ca6c0a7d14342b029056e2a9fc37",
+          "coverageFromAuthor": "selected",
+          "selectedLineRangesFromAuthor": [
+            [
+              1,
+              29
+            ],
+            [
+              83,
+              95
+            ]
+          ],
+          "additionalNavigationSnippetLinesFromAuthor": [],
+          "lineCountFromManifest": 95,
+          "declaredReadLineCount": 42,
+          "rangeAndUnionValid": true,
+          "initialSemanticReadSha256Claim": "c3b44ba1c78f6c574960b543203d4bab9037ca6c0a7d14342b029056e2a9fc37",
+          "initialBeforeThisPrepSemanticReadClaim": null,
+          "sourceWasNotReadHere": true
+        }
+      ],
+      "sourceRowCount": 9,
+      "declaredLines": 471,
+      "coverageCounts": {
+        "full": 1,
+        "selected": 4,
+        "hash-only": 4
+      },
+      "receipt": "/tmp/codeshell-audit-round38-geometry-frontier/author-receipt.json",
+      "receiptRows": [
+        {
+          "path": "/tmp/codeshell-audit-round38-geometry-frontier/consumer-initial-pins.json",
+          "bytes": 2498,
+          "sha256": "9e82ef2893dc3518736c9bcd5652914f5a32bf7a7dd3f755058df243d34b6170",
+          "matchesReceipt": true
+        },
+        {
+          "path": "/tmp/codeshell-audit-round38-geometry-frontier/decisions.json",
+          "bytes": 1932,
+          "sha256": "f93de3616a95dfc259a0591d47db845b17801c797a3c58dde84c52ba7d01a3de",
+          "matchesReceipt": true
+        },
+        {
+          "path": "/tmp/codeshell-audit-round38-geometry-frontier/delegation-diagnostic.txt",
+          "bytes": 47,
+          "sha256": "21bf748c7ed0956d7802c80a66c7aa2904144f3d11c91ebd040b96719ee7af0f",
+          "matchesReceipt": true
+        },
+        {
+          "path": "/tmp/codeshell-audit-round38-geometry-frontier/finish-checks.json",
+          "bytes": 1179795,
+          "sha256": "18a9aa0c9e089bc1a3d91ce420b62e04f14b2a2686917185447fb2261c64914a",
+          "matchesReceipt": true
+        },
+        {
+          "path": "/tmp/codeshell-audit-round38-geometry-frontier/history-contexts.json",
+          "bytes": 304709,
+          "sha256": "7c93b9d3e7fea99c8ea8359a8315e89e35214a878cf368e086acb8c280c96ba7",
+          "matchesReceipt": true
+        },
+        {
+          "path": "/tmp/codeshell-audit-round38-geometry-frontier/history-initial-pins.json",
+          "bytes": 729976,
+          "sha256": "5fcfc2b7f83d84dafa8db5d47e0fed3e728b8978be3c34bb7d35f9eaf73a5030",
+          "matchesReceipt": true
+        },
+        {
+          "path": "/tmp/codeshell-audit-round38-geometry-frontier/history-inventory.raw.txt",
+          "bytes": 213969,
+          "sha256": "5b938db378927055c96c50ba7e839be685f1bacf6e21a87cd292e092e2f67434",
+          "matchesReceipt": true
+        },
+        {
+          "path": "/tmp/codeshell-audit-round38-geometry-frontier/history.json",
+          "bytes": 724650,
+          "sha256": "a0e73a1177968f5c468572e37c243bbd33280ddd71cca1b45e80c88ce1d02b83",
+          "matchesReceipt": true
+        },
+        {
+          "path": "/tmp/codeshell-audit-round38-geometry-frontier/initial-pin.json",
+          "bytes": 669,
+          "sha256": "6c0924a0ee702361c1f940779014973b0c194b742cb10160935f1c549e7cfa90",
+          "matchesReceipt": true
+        },
+        {
+          "path": "/tmp/codeshell-audit-round38-geometry-frontier/metadata-notes.json",
+          "bytes": 840,
+          "sha256": "ef019b30f8b92dc2f939590fa56f2dfbb41bb4f359e64ee90cd0c59c1cb1b494",
+          "matchesReceipt": true
+        },
+        {
+          "path": "/tmp/codeshell-audit-round38-geometry-frontier/review.md",
+          "bytes": 3104,
+          "sha256": "cb08a718f89af86a88a6d1f052b9a6b639671b9414a44e7d9225c5d3ce0a7b18",
+          "matchesReceipt": true
+        },
+        {
+          "path": "/tmp/codeshell-audit-round38-geometry-frontier/scan-history.py",
+          "bytes": 5546,
+          "sha256": "b7a8f3ca1b1f2cba17528fc5b7572999e1e2cb8384c346a4a14972db52e26d7d",
+          "matchesReceipt": true
+        },
+        {
+          "path": "/tmp/codeshell-audit-round38-geometry-frontier/selected-history-contexts.json",
+          "bytes": 4746,
+          "sha256": "0e5c2035e403ae99f2106b385134341f158897a2e5df512c3e3fc8ab2541fe7a",
+          "matchesReceipt": true
+        },
+        {
+          "path": "/tmp/codeshell-audit-round38-geometry-frontier/source-manifest.json",
+          "bytes": 9674,
+          "sha256": "425f2088e3b0ce32452d2cc21a9620f53f59ac9c32a24be63611fad371aec2fc",
+          "matchesReceipt": true
+        },
+        {
+          "path": "/tmp/codeshell-audit-round38-geometry-frontier/test-initial-pin.json",
+          "bytes": 297,
+          "sha256": "6d0a0f88f2732283e849743d999e10e3776eeb10edc9c599030ced6dc01f4770",
+          "matchesReceipt": true
+        },
+        {
+          "path": "/tmp/codeshell-audit-round38-geometry-frontier/validation.json",
+          "bytes": 838,
+          "sha256": "1b8d168963e29cb588a7542dd4c05005636beb838ff1591ac516cf841c7d0ce5",
+          "matchesReceipt": true
+        }
+      ],
+      "receiptRowCount": 16,
+      "excludedSnapshots": []
+    },
+    {
+      "owner": "root-mcp",
+      "directory": "/tmp/codeshell-audit-round38-root-mcp-frontier",
+      "roleLimit": "Metadata/attached counterevidence review only; source semantics belong to original author.",
+      "sourceManifestRows": [
+        {
+          "path": "packages/desktop/src/renderer/settings/mcpSettingsPatch.ts",
+          "bytes": 1991,
+          "sha256": "6364bb8818f5a8e883c240d971793205a3f1507b287346e8eb8ee2ba962ef3d1",
+          "coverageFromAuthor": "full",
+          "selectedLineRangesFromAuthor": [
+            [
+              1,
+              62
+            ]
+          ],
+          "additionalNavigationSnippetLinesFromAuthor": [],
+          "lineCountFromManifest": 62,
+          "declaredReadLineCount": 62,
+          "rangeAndUnionValid": true,
+          "initialSemanticReadSha256Claim": null,
+          "initialBeforeThisPrepSemanticReadClaim": null,
+          "sourceWasNotReadHere": true
+        },
+        {
+          "path": "packages/desktop/src/renderer/settings/McpSection.tsx",
+          "bytes": 74294,
+          "sha256": "fb38b3514d3c3cab7d0899f6819bf617cbe958181fdc9a00ec5c29f7e735d014",
+          "coverageFromAuthor": "selected",
+          "selectedLineRangesFromAuthor": [
+            [
+              418,
+              441
+            ],
+            [
+              449,
+              451
+            ],
+            [
+              649,
+              666
+            ],
+            [
+              699,
+              716
+            ],
+            [
+              1104,
+              1132
+            ],
+            [
+              1300,
+              1320
+            ],
+            [
+              1357,
+              1405
+            ],
+            [
+              1465,
+              1483
+            ],
+            [
+              1756,
+              1769
+            ],
+            [
+              1870,
+              1893
+            ]
+          ],
+          "additionalNavigationSnippetLinesFromAuthor": [],
+          "lineCountFromManifest": 1893,
+          "declaredReadLineCount": 219,
+          "rangeAndUnionValid": true,
+          "initialSemanticReadSha256Claim": null,
+          "initialBeforeThisPrepSemanticReadClaim": null,
+          "sourceWasNotReadHere": true
+        }
+      ],
+      "sourceRowCount": 2,
+      "declaredLines": 281,
+      "coverageCounts": {
+        "full": 1,
+        "selected": 1,
+        "hash-only": 0
+      },
+      "receipt": "/tmp/codeshell-audit-round38-root-mcp-frontier/author-receipt.json",
+      "receiptRows": [
+        {
+          "path": "/tmp/codeshell-audit-round38-root-mcp-frontier/initial-pins.json",
+          "bytes": 1455,
+          "sha256": "901fbb0d5a0227c6b3b314ec61c4508b20c3a841e7c174f244625eb66d3b8316",
+          "matchesReceipt": true
+        },
+        {
+          "path": "/tmp/codeshell-audit-round38-root-mcp-frontier/review.md",
+          "bytes": 2787,
+          "sha256": "ffe8a1d5d99dba20e1a10959457c02e3da8cc4d5af35145aa6992fe94654b4ad",
+          "matchesReceipt": true
+        },
+        {
+          "path": "/tmp/codeshell-audit-round38-root-mcp-frontier/source-excerpts.json",
+          "bytes": 13587,
+          "sha256": "287e2edb5bd34a6bd0c5a30f867feccd6f628c0ce10c436628684061015797f6",
+          "matchesReceipt": true
+        },
+        {
+          "path": "/tmp/codeshell-audit-round38-root-mcp-frontier/source-manifest.first.json",
+          "bytes": 1587,
+          "sha256": "2148ce0a9e5461bd093cb0758b4f0011dcc33ef3c05b13937ee959c0551dea65",
+          "matchesReceipt": true
+        },
+        {
+          "path": "/tmp/codeshell-audit-round38-root-mcp-frontier/source-manifest.json",
+          "bytes": 2724,
+          "sha256": "2e5270378c033ce0bbbd472bb49ca36d082269e25f6206d68e59d73c7ec10355",
+          "matchesReceipt": true
+        },
+        {
+          "path": "/tmp/codeshell-audit-round38-root-mcp-frontier/source-reader.py",
+          "bytes": 1966,
+          "sha256": "cccc5eb8b3a3e25916d2815e5a25f49d4f1b241e0533f409bc554df4c76ca880",
+          "matchesReceipt": true
+        },
+        {
+          "path": "/tmp/codeshell-audit-round38-root-mcp-frontier/source-supplement.json",
+          "bytes": 3155,
+          "sha256": "3544291f218698cca0dbcf85118ec1f226ac28c32abc35068c428892b7e366b2",
+          "matchesReceipt": true
+        },
+        {
+          "path": "/tmp/codeshell-audit-round38-root-mcp-frontier/source-supplement2.json",
+          "bytes": 2395,
+          "sha256": "d4552a08aca2e2a6cbeca942ebfec64f33ab9ae50e2545836912a11e3333ce84",
+          "matchesReceipt": true
+        },
+        {
+          "path": "/tmp/codeshell-audit-round38-root-mcp-frontier/validation.json",
+          "bytes": 405,
+          "sha256": "c774f4c172e1e02ef7eb700f3289f62b3a5156ca8662d86b351d321d6261a5c6",
+          "matchesReceipt": true
+        }
+      ],
+      "receiptRowCount": 9,
+      "excludedSnapshots": [
+        {
+          "path": "source-excerpts.txt",
+          "bytes": 12735,
+          "sha256": "ff0dc9a2ad1bbc2c7179ea8f9dfba4690000122917a80689f4aaae0c7c5832fb",
+          "equivalentEncoding": "source-excerpts.json",
+          "reason": "Exact text bytes recoverable from JSON; original tmp bytes remain unchanged. Formal copy excludes only this snapshot."
+        }
+      ]
+    },
+    {
+      "owner": "mcp-source-author",
+      "directory": "/tmp/codeshell-audit-round38-mcp-patch-frontier",
+      "roleLimit": "Metadata/attached counterevidence review only; source semantics belong to original author.",
+      "sourceManifestRows": [
+        {
+          "path": "packages/desktop/src/renderer/settings/mcpSettingsPatch.ts",
+          "bytes": 1991,
+          "sha256": "6364bb8818f5a8e883c240d971793205a3f1507b287346e8eb8ee2ba962ef3d1",
+          "coverageFromAuthor": "full",
+          "selectedLineRangesFromAuthor": [
+            [
+              1,
+              62
+            ]
+          ],
+          "additionalNavigationSnippetLinesFromAuthor": [],
+          "lineCountFromManifest": 62,
+          "declaredReadLineCount": 62,
+          "rangeAndUnionValid": true,
+          "initialSemanticReadSha256Claim": null,
+          "initialBeforeThisPrepSemanticReadClaim": true,
+          "sourceWasNotReadHere": true
+        },
+        {
+          "path": "packages/desktop/src/renderer/settings/mcpSettingsPatch.test.ts",
+          "bytes": 4590,
+          "sha256": "7fa81ac16ae441c60943d673e3ebffcbc38d966724734a40bb6f32eba858c037",
+          "coverageFromAuthor": "full",
+          "selectedLineRangesFromAuthor": [
+            [
+              1,
+              114
+            ]
+          ],
+          "additionalNavigationSnippetLinesFromAuthor": [],
+          "lineCountFromManifest": 114,
+          "declaredReadLineCount": 114,
+          "rangeAndUnionValid": true,
+          "initialSemanticReadSha256Claim": null,
+          "initialBeforeThisPrepSemanticReadClaim": true,
+          "sourceWasNotReadHere": true
+        },
+        {
+          "path": "packages/desktop/src/renderer/settings/McpSection.tsx",
+          "bytes": 74294,
+          "sha256": "fb38b3514d3c3cab7d0899f6819bf617cbe958181fdc9a00ec5c29f7e735d014",
+          "coverageFromAuthor": "selected",
+          "selectedLineRangesFromAuthor": [
+            [
+              1,
+              66
+            ],
+            [
+              236,
+              275
+            ],
+            [
+              410,
+              482
+            ],
+            [
+              649,
+              668
+            ],
+            [
+              700,
+              720
+            ],
+            [
+              1104,
+              1160
+            ],
+            [
+              1290,
+              1408
+            ],
+            [
+              1434,
+              1485
+            ],
+            [
+              1752,
+              1893
+            ]
+          ],
+          "additionalNavigationSnippetLinesFromAuthor": [
+            167,
+            188,
+            190,
+            296,
+            354,
+            398,
+            488,
+            556,
+            948,
+            950,
+            953,
+            955,
+            1520,
+            1522,
+            1527,
+            1531,
+            1533,
+            1538,
+            1543,
+            1550,
+            1746
+          ],
+          "lineCountFromManifest": 1893,
+          "declaredReadLineCount": 611,
+          "rangeAndUnionValid": true,
+          "initialSemanticReadSha256Claim": null,
+          "initialBeforeThisPrepSemanticReadClaim": true,
+          "sourceWasNotReadHere": true
+        },
+        {
+          "path": "packages/desktop/src/main/settings-service.ts",
+          "bytes": 10247,
+          "sha256": "89303dcb539743adbdaff9445c58836608fc9bd50810dc00c1bda80e11c89455",
+          "coverageFromAuthor": "selected",
+          "selectedLineRangesFromAuthor": [
+            [
+              25,
+              59
+            ],
+            [
+              110,
+              160
+            ],
+            [
+              174,
+              240
+            ]
+          ],
+          "additionalNavigationSnippetLinesFromAuthor": [],
+          "lineCountFromManifest": 275,
+          "declaredReadLineCount": 153,
+          "rangeAndUnionValid": true,
+          "initialSemanticReadSha256Claim": null,
+          "initialBeforeThisPrepSemanticReadClaim": true,
+          "sourceWasNotReadHere": true
+        },
+        {
+          "path": "packages/core/src/settings/schema.ts",
+          "bytes": 29767,
+          "sha256": "2496b8aefd8ea32f7fc7ac23b26878475809be952a5fdbd8ac247cf0d40b3139",
+          "coverageFromAuthor": "selected",
+          "selectedLineRangesFromAuthor": [
+            [
+              351,
+              429
+            ]
+          ],
+          "additionalNavigationSnippetLinesFromAuthor": [
+            50
+          ],
+          "lineCountFromManifest": 731,
+          "declaredReadLineCount": 80,
+          "rangeAndUnionValid": true,
+          "initialSemanticReadSha256Claim": null,
+          "initialBeforeThisPrepSemanticReadClaim": true,
+          "sourceWasNotReadHere": true
+        },
+        {
+          "path": "packages/desktop/src/renderer/settingsAuthority.ts",
+          "bytes": 765,
+          "sha256": "884071554713d9804d50b92dbd0f44d44941222762847f2accc65f12bc09fb1e",
+          "coverageFromAuthor": "full",
+          "selectedLineRangesFromAuthor": [
+            [
+              1,
+              25
+            ]
+          ],
+          "additionalNavigationSnippetLinesFromAuthor": [],
+          "lineCountFromManifest": 25,
+          "declaredReadLineCount": 25,
+          "rangeAndUnionValid": true,
+          "initialSemanticReadSha256Claim": null,
+          "initialBeforeThisPrepSemanticReadClaim": true,
+          "sourceWasNotReadHere": true
+        },
+        {
+          "path": "packages/desktop/src/preload/index.ts",
+          "bytes": 86436,
+          "sha256": "05dbc9b534bdc68c30f255f53a96617e50fb0c445ce2fc1bde4be31e3f8a6901",
+          "coverageFromAuthor": "selected",
+          "selectedLineRangesFromAuthor": [
+            [
+              974,
+              984
+            ],
+            [
+              1377,
+              1385
+            ]
+          ],
+          "additionalNavigationSnippetLinesFromAuthor": [],
+          "lineCountFromManifest": 1892,
+          "declaredReadLineCount": 20,
+          "rangeAndUnionValid": true,
+          "initialSemanticReadSha256Claim": null,
+          "initialBeforeThisPrepSemanticReadClaim": true,
+          "sourceWasNotReadHere": true
+        },
+        {
+          "path": "packages/desktop/src/main/index.ts",
+          "bytes": 299337,
+          "sha256": "105b2b49a28e0a7ef10980ac5feaa3a07ff81e7197f5acbefd95feb2498224c0",
+          "coverageFromAuthor": "selected",
+          "selectedLineRangesFromAuthor": [
+            [
+              5436,
+              5494
+            ],
+            [
+              6664,
+              6674
+            ],
+            [
+              6703,
+              6712
+            ]
+          ],
+          "additionalNavigationSnippetLinesFromAuthor": [
+            978,
+            5498,
+            6714
+          ],
+          "lineCountFromManifest": 7330,
+          "declaredReadLineCount": 83,
+          "rangeAndUnionValid": true,
+          "initialSemanticReadSha256Claim": null,
+          "initialBeforeThisPrepSemanticReadClaim": true,
+          "sourceWasNotReadHere": true
+        },
+        {
+          "path": "packages/core/src/plugins/installer/loadPluginMcp.ts",
+          "bytes": 14536,
+          "sha256": "684cbfdbf01d89920f8902d147131618620c4a467b5f12911252dc5fd65bf746",
+          "coverageFromAuthor": "selected",
+          "selectedLineRangesFromAuthor": [
+            [
+              330,
+              370
+            ]
+          ],
+          "additionalNavigationSnippetLinesFromAuthor": [
+            214,
+            215,
+            216,
+            217,
+            218,
+            219,
+            220,
+            221,
+            222,
+            223,
+            224,
+            225,
+            226,
+            227,
+            230,
+            272,
+            292,
+            301
+          ],
+          "lineCountFromManifest": 370,
+          "declaredReadLineCount": 59,
+          "rangeAndUnionValid": true,
+          "initialSemanticReadSha256Claim": null,
+          "initialBeforeThisPrepSemanticReadClaim": true,
+          "sourceWasNotReadHere": true
+        }
+      ],
+      "sourceRowCount": 9,
+      "declaredLines": 1207,
+      "coverageCounts": {
+        "full": 3,
+        "selected": 6,
+        "hash-only": 0
+      },
+      "receipt": "/tmp/codeshell-audit-round38-mcp-patch-frontier/artifact-receipt.json",
+      "receiptRows": [
+        {
+          "path": "/tmp/codeshell-audit-round38-mcp-patch-frontier/McpSection-history-object-rows.json",
+          "bytes": 11444,
+          "sha256": "ab5b2ae2e785895a96f8f4759f92037779ff6ce8ef2548c87413d55ea9bb3f40",
+          "matchesReceipt": true
+        },
+        {
+          "path": "/tmp/codeshell-audit-round38-mcp-patch-frontier/classification.json",
+          "bytes": 1412,
+          "sha256": "fc98b60a848879520e87bd96d79c9ea7b2903feac90f84829d293ad63f625b83",
+          "matchesReceipt": true
+        },
+        {
+          "path": "/tmp/codeshell-audit-round38-mcp-patch-frontier/final-source-check.json",
+          "bytes": 4865,
+          "sha256": "c7e265027e5ecc8eac3c731f3e670c2771a4cfad406f7bde71f725ed5401628f",
+          "matchesReceipt": true
+        },
+        {
+          "path": "/tmp/codeshell-audit-round38-mcp-patch-frontier/focused-history.json",
+          "bytes": 67267,
+          "sha256": "556eec027ac4084652936964f0714fbc9a78d6136b225bbccbd9da341fb5f575",
+          "matchesReceipt": true
+        },
+        {
+          "path": "/tmp/codeshell-audit-round38-mcp-patch-frontier/forwarding-history-initial-pins.json",
+          "bytes": 1198,
+          "sha256": "02e021b21ad648f258d0e1105d54b44e7ee87acf308d9aedf39f8e5fc5701b5f",
+          "matchesReceipt": true
+        },
+        {
+          "path": "/tmp/codeshell-audit-round38-mcp-patch-frontier/history-decisions.json",
+          "bytes": 1456,
+          "sha256": "ae845a5ab60c1b24dfc318465343aade81c84fe470797ff5d83129c9f48be8dd",
+          "matchesReceipt": true
+        },
+        {
+          "path": "/tmp/codeshell-audit-round38-mcp-patch-frontier/history-delta.json",
+          "bytes": 21336,
+          "sha256": "b5b2f7fa30515cd440d74f77cc18d3457e6a11b5747af32a759702c54152c310",
+          "matchesReceipt": true
+        },
+        {
+          "path": "/tmp/codeshell-audit-round38-mcp-patch-frontier/history-method.py",
+          "bytes": 3251,
+          "sha256": "503dcd79e4603dd0de4919561a172ce546d24b64a19484022bd763aadfd7df95",
+          "matchesReceipt": true
+        },
+        {
+          "path": "/tmp/codeshell-audit-round38-mcp-patch-frontier/history.json",
+          "bytes": 1618153,
+          "sha256": "e1df88faea5ddfab99837cc14fdb489d897021b65ebe7c2da4d358be5d1f0e36",
+          "matchesReceipt": true
+        },
+        {
+          "path": "/tmp/codeshell-audit-round38-mcp-patch-frontier/initial-pins.json",
+          "bytes": 1200,
+          "sha256": "2f4300bd1273180316d88832f9aaff436801af6573ced48924242c137d4a0b7b",
+          "matchesReceipt": true
+        },
+        {
+          "path": "/tmp/codeshell-audit-round38-mcp-patch-frontier/links-check.json",
+          "bytes": 5176,
+          "sha256": "a30750c9a31b8fe38c29b552062fcdb77bdb14b7709d47c853a111622744f203",
+          "matchesReceipt": true
+        },
+        {
+          "path": "/tmp/codeshell-audit-round38-mcp-patch-frontier/merge-display-initial-pin.json",
+          "bytes": 403,
+          "sha256": "4780f010fb45eb389c64b448cea8b0813d7e895dfec1f0b574028cf670a246f5",
+          "matchesReceipt": true
+        },
+        {
+          "path": "/tmp/codeshell-audit-round38-mcp-patch-frontier/merge-schema-initial-pins.json",
+          "bytes": 723,
+          "sha256": "41091802945a81b43c3f57a1575166bbc79c4dd93e2434fe40e1371cef668b9d",
+          "matchesReceipt": true
+        },
+        {
+          "path": "/tmp/codeshell-audit-round38-mcp-patch-frontier/report.md",
+          "bytes": 9611,
+          "sha256": "f33460cfcd897282d8f70a99a752db15534cb30f5f8802bb839b6a73d743e601",
+          "matchesReceipt": true
+        },
+        {
+          "path": "/tmp/codeshell-audit-round38-mcp-patch-frontier/scope.json",
+          "bytes": 526,
+          "sha256": "9253908c1b97f52d91c55cddf0c2934ac611673b368a89ae5b311f8f7febfa72",
+          "matchesReceipt": true
+        },
+        {
+          "path": "/tmp/codeshell-audit-round38-mcp-patch-frontier/settings-adapter-initial-pin.json",
+          "bytes": 388,
+          "sha256": "321439c5474669817b9a93da8ecdb725f5191a6b1bd3de3b4e3e73de40cb3a61",
+          "matchesReceipt": true
+        },
+        {
+          "path": "/tmp/codeshell-audit-round38-mcp-patch-frontier/source-manifest.json",
+          "bytes": 16302,
+          "sha256": "e1628a34803c3f9c94b50d6a81c038189b971170b0de42d0401bec0f2c8a63b5",
+          "matchesReceipt": true
+        },
+        {
+          "path": "/tmp/codeshell-audit-round38-mcp-patch-frontier/static-value-flow.json",
+          "bytes": 2016,
+          "sha256": "f7312532b08204d082beb8640a14319ba17e534d4f5a8fd4d27d522d7c52044c",
+          "matchesReceipt": true
+        },
+        {
+          "path": "/tmp/codeshell-audit-round38-mcp-patch-frontier/validation.json",
+          "bytes": 1586,
+          "sha256": "e8dfc723718985a02e420ce9623fb3eeb27ea4ef7a9adb0830838dddea805079",
+          "matchesReceipt": true
+        }
+      ],
+      "receiptRowCount": 19,
+      "excludedSnapshots": []
+    },
+    {
+      "owner": "mcp-independent-source-review",
+      "directory": "/tmp/codeshell-audit-round38-mcp-args-review",
+      "roleLimit": "Metadata/attached counterevidence review only; source semantics belong to original author.",
+      "sourceManifestRows": [
+        {
+          "path": "packages/desktop/src/renderer/settings/McpSection.tsx",
+          "bytes": 74294,
+          "sha256": "fb38b3514d3c3cab7d0899f6819bf617cbe958181fdc9a00ec5c29f7e735d014",
+          "coverageFromAuthor": "selected",
+          "selectedLineRangesFromAuthor": [
+            [
+              1,
+              30
+            ],
+            [
+              40,
+              78
+            ],
+            [
+              242,
+              267
+            ],
+            [
+              329,
+              343
+            ],
+            [
+              418,
+              449
+            ],
+            [
+              556,
+              556
+            ],
+            [
+              648,
+              663
+            ],
+            [
+              699,
+              716
+            ],
+            [
+              775,
+              775
+            ],
+            [
+              877,
+              888
+            ],
+            [
+              1104,
+              1123
+            ],
+            [
+              1182,
+              1182
+            ],
+            [
+              1207,
+              1210
+            ],
+            [
+              1301,
+              1338
+            ],
+            [
+              1354,
+              1411
+            ],
+            [
+              1465,
+              1482
+            ],
+            [
+              1736,
+              1752
+            ],
+            [
+              1754,
+              1772
+            ],
+            [
+              1870,
+              1893
+            ]
+          ],
+          "additionalNavigationSnippetLinesFromAuthor": [],
+          "lineCountFromManifest": 1893,
+          "declaredReadLineCount": 389,
+          "rangeAndUnionValid": true,
+          "initialSemanticReadSha256Claim": "fb38b3514d3c3cab7d0899f6819bf617cbe958181fdc9a00ec5c29f7e735d014",
+          "initialBeforeThisPrepSemanticReadClaim": null,
+          "sourceWasNotReadHere": true
+        },
+        {
+          "path": "packages/desktop/src/renderer/settings/mcpSettingsPatch.ts",
+          "bytes": 1991,
+          "sha256": "6364bb8818f5a8e883c240d971793205a3f1507b287346e8eb8ee2ba962ef3d1",
+          "coverageFromAuthor": "full",
+          "selectedLineRangesFromAuthor": [
+            [
+              1,
+              62
+            ]
+          ],
+          "additionalNavigationSnippetLinesFromAuthor": [],
+          "lineCountFromManifest": 62,
+          "declaredReadLineCount": 62,
+          "rangeAndUnionValid": true,
+          "initialSemanticReadSha256Claim": "6364bb8818f5a8e883c240d971793205a3f1507b287346e8eb8ee2ba962ef3d1",
+          "initialBeforeThisPrepSemanticReadClaim": null,
+          "sourceWasNotReadHere": true
+        },
+        {
+          "path": "packages/desktop/src/renderer/settings/mcpSettingsPatch.test.ts",
+          "bytes": 4590,
+          "sha256": "7fa81ac16ae441c60943d673e3ebffcbc38d966724734a40bb6f32eba858c037",
+          "coverageFromAuthor": "full",
+          "selectedLineRangesFromAuthor": [
+            [
+              1,
+              114
+            ]
+          ],
+          "additionalNavigationSnippetLinesFromAuthor": [],
+          "lineCountFromManifest": 114,
+          "declaredReadLineCount": 114,
+          "rangeAndUnionValid": true,
+          "initialSemanticReadSha256Claim": "7fa81ac16ae441c60943d673e3ebffcbc38d966724734a40bb6f32eba858c037",
+          "initialBeforeThisPrepSemanticReadClaim": null,
+          "sourceWasNotReadHere": true
+        },
+        {
+          "path": "packages/desktop/src/renderer/settings/McpDetailDialogs.tsx",
+          "bytes": 4997,
+          "sha256": "0d9ba6096bfc125a30869d9e9a41586d95b263f999c5b36c4ca1cb90a3a4a5c4",
+          "coverageFromAuthor": "hash-only",
+          "selectedLineRangesFromAuthor": [],
+          "additionalNavigationSnippetLinesFromAuthor": [],
+          "lineCountFromManifest": 148,
+          "declaredReadLineCount": 0,
+          "rangeAndUnionValid": true,
+          "initialSemanticReadSha256Claim": null,
+          "initialBeforeThisPrepSemanticReadClaim": null,
+          "sourceWasNotReadHere": true
+        },
+        {
+          "path": "packages/desktop/src/renderer/settings/McpSection.lifecycle.test.tsx",
+          "bytes": 848,
+          "sha256": "53ee6e9c58e677aec7457af71a2523bda8a733fb95e1b22e560e360819a95bbe",
+          "coverageFromAuthor": "hash-only",
+          "selectedLineRangesFromAuthor": [],
+          "additionalNavigationSnippetLinesFromAuthor": [],
+          "lineCountFromManifest": 34,
+          "declaredReadLineCount": 0,
+          "rangeAndUnionValid": true,
+          "initialSemanticReadSha256Claim": null,
+          "initialBeforeThisPrepSemanticReadClaim": null,
+          "sourceWasNotReadHere": true
+        },
+        {
+          "path": "packages/desktop/src/renderer/settingsAuthority.ts",
+          "bytes": 765,
+          "sha256": "884071554713d9804d50b92dbd0f44d44941222762847f2accc65f12bc09fb1e",
+          "coverageFromAuthor": "full",
+          "selectedLineRangesFromAuthor": [
+            [
+              1,
+              25
+            ]
+          ],
+          "additionalNavigationSnippetLinesFromAuthor": [],
+          "lineCountFromManifest": 25,
+          "declaredReadLineCount": 25,
+          "rangeAndUnionValid": true,
+          "initialSemanticReadSha256Claim": "884071554713d9804d50b92dbd0f44d44941222762847f2accc65f12bc09fb1e",
+          "initialBeforeThisPrepSemanticReadClaim": null,
+          "sourceWasNotReadHere": true
+        },
+        {
+          "path": "packages/desktop/src/main/settings-service.ts",
+          "bytes": 10247,
+          "sha256": "89303dcb539743adbdaff9445c58836608fc9bd50810dc00c1bda80e11c89455",
+          "coverageFromAuthor": "selected",
+          "selectedLineRangesFromAuthor": [
+            [
+              110,
+              118
+            ],
+            [
+              131,
+              138
+            ],
+            [
+              151,
+              156
+            ],
+            [
+              181,
+              215
+            ],
+            [
+              235,
+              248
+            ]
+          ],
+          "additionalNavigationSnippetLinesFromAuthor": [],
+          "lineCountFromManifest": 275,
+          "declaredReadLineCount": 72,
+          "rangeAndUnionValid": true,
+          "initialSemanticReadSha256Claim": "89303dcb539743adbdaff9445c58836608fc9bd50810dc00c1bda80e11c89455",
+          "initialBeforeThisPrepSemanticReadClaim": null,
+          "sourceWasNotReadHere": true
+        },
+        {
+          "path": "packages/desktop/src/preload/index.ts",
+          "bytes": 86436,
+          "sha256": "05dbc9b534bdc68c30f255f53a96617e50fb0c445ce2fc1bde4be31e3f8a6901",
+          "coverageFromAuthor": "selected",
+          "selectedLineRangesFromAuthor": [
+            [
+              978,
+              979
+            ]
+          ],
+          "additionalNavigationSnippetLinesFromAuthor": [],
+          "lineCountFromManifest": 1892,
+          "declaredReadLineCount": 2,
+          "rangeAndUnionValid": true,
+          "initialSemanticReadSha256Claim": "05dbc9b534bdc68c30f255f53a96617e50fb0c445ce2fc1bde4be31e3f8a6901",
+          "initialBeforeThisPrepSemanticReadClaim": null,
+          "sourceWasNotReadHere": true
+        },
+        {
+          "path": "packages/desktop/src/main/index.ts",
+          "bytes": 299337,
+          "sha256": "105b2b49a28e0a7ef10980ac5feaa3a07ff81e7197f5acbefd95feb2498224c0",
+          "coverageFromAuthor": "selected",
+          "selectedLineRangesFromAuthor": [
+            [
+              6672,
+              6687
+            ],
+            [
+              6707,
+              6712
+            ]
+          ],
+          "additionalNavigationSnippetLinesFromAuthor": [],
+          "lineCountFromManifest": 7330,
+          "declaredReadLineCount": 22,
+          "rangeAndUnionValid": true,
+          "initialSemanticReadSha256Claim": "105b2b49a28e0a7ef10980ac5feaa3a07ff81e7197f5acbefd95feb2498224c0",
+          "initialBeforeThisPrepSemanticReadClaim": null,
+          "sourceWasNotReadHere": true
+        }
+      ],
+      "sourceRowCount": 9,
+      "declaredLines": 686,
+      "coverageCounts": {
+        "full": 3,
+        "selected": 4,
+        "hash-only": 2
+      },
+      "receipt": "/tmp/codeshell-audit-round38-mcp-args-review/author-receipt.json",
+      "receiptRows": [
+        {
+          "path": "/tmp/codeshell-audit-round38-mcp-args-review/bridge-initial-pins.json",
+          "bytes": 569,
+          "sha256": "f00b6e32cdab4cef9276034c1f3d926b35c4be6b0cb5dc6cfe694f23d21b26f1",
+          "matchesReceipt": true
+        },
+        {
+          "path": "/tmp/codeshell-audit-round38-mcp-args-review/decisions.json",
+          "bytes": 1718,
+          "sha256": "4d8e5e0b76fbf8ddb7e1e6fe076188d7d2418dc3f37f5e24e46cd18d3a604410",
+          "matchesReceipt": true
+        },
+        {
+          "path": "/tmp/codeshell-audit-round38-mcp-args-review/finish-checks.json",
+          "bytes": 1179826,
+          "sha256": "d1fb47121b7e4f2cd638df51315803f53d3e10d68b2f9acfc0ef7ef787d8b20f",
+          "matchesReceipt": true
+        },
+        {
+          "path": "/tmp/codeshell-audit-round38-mcp-args-review/history-contexts.json",
+          "bytes": 238621,
+          "sha256": "e7bc09e8ee5afc98f19af5c6440b22566d79fb22bf6c00a7c9f2582ab7e30c9d",
+          "matchesReceipt": true
+        },
+        {
+          "path": "/tmp/codeshell-audit-round38-mcp-args-review/history-initial-pins.json",
+          "bytes": 730354,
+          "sha256": "3338e7de1fc1b10c91b0871273a87610734554524368fd637e84dbc2e05797c3",
+          "matchesReceipt": true
+        },
+        {
+          "path": "/tmp/codeshell-audit-round38-mcp-args-review/history-inventory.raw.txt",
+          "bytes": 214305,
+          "sha256": "b46128c9375ee783677ec575f27381516e5f68f8298901271952087117929410",
+          "matchesReceipt": true
+        },
+        {
+          "path": "/tmp/codeshell-audit-round38-mcp-args-review/history.json",
+          "bytes": 724678,
+          "sha256": "cacbe8abea537ffd8d296e0dc9cb8c084fcffe09bd479c4083555f018d07edc3",
+          "matchesReceipt": true
+        },
+        {
+          "path": "/tmp/codeshell-audit-round38-mcp-args-review/initial-pins.json",
+          "bytes": 1552,
+          "sha256": "d1b5e35bb5077c56b21478fe5257290b8048c5c06b544f49d6da049aabe86b76",
+          "matchesReceipt": true
+        },
+        {
+          "path": "/tmp/codeshell-audit-round38-mcp-args-review/persistence-initial-pins.json",
+          "bytes": 563,
+          "sha256": "385ca5f15f1f133fbb49d40b1081c544f818a69c619fe9505b13eaafbcd06dac",
+          "matchesReceipt": true
+        },
+        {
+          "path": "/tmp/codeshell-audit-round38-mcp-args-review/review.md",
+          "bytes": 3927,
+          "sha256": "814b02adf90249c3411685999f7530921b0c357641228350340be5ddef912e7f",
+          "matchesReceipt": true
+        },
+        {
+          "path": "/tmp/codeshell-audit-round38-mcp-args-review/scan-history.py",
+          "bytes": 5576,
+          "sha256": "e94e5f66fc98bf862cb632ec349681b4af471d3e8cb78a4b204cee00cd1cac9f",
+          "matchesReceipt": true
+        },
+        {
+          "path": "/tmp/codeshell-audit-round38-mcp-args-review/selected-history-contexts.json",
+          "bytes": 31767,
+          "sha256": "45b4eb3da8d8ea2db20aedc297856693b1ab0646e570f79eafa9fc9fd4fddc9f",
+          "matchesReceipt": true
+        },
+        {
+          "path": "/tmp/codeshell-audit-round38-mcp-args-review/source-manifest.json",
+          "bytes": 10127,
+          "sha256": "d1f306ebf1cb62293ee6925167595a90fefee66dfcfd5a0652d8f4198aaca72b",
+          "matchesReceipt": true
+        },
+        {
+          "path": "/tmp/codeshell-audit-round38-mcp-args-review/validation.json",
+          "bytes": 697,
+          "sha256": "0b65a425d8733364fce89ff709f1b4403d358df6cc5b315c2d0e468d0213398e",
+          "matchesReceipt": true
+        }
+      ],
+      "receiptRowCount": 14,
+      "excludedSnapshots": []
+    }
+  ],
+  "sourceHashConsistencyAcrossManifests": {
+    "uniquePaths": 27,
+    "conflicts": [],
+    "method": "Compare claimed SHA values across frozen manifests, not an independent current-product or Git binding."
+  },
+  "noAdditionOfOverlappingCoverage": true,
+  "sourceReadTotalsNotNovelCoverage": {
+    "mcpParent": 1207,
+    "mcpIndependent": 686,
+    "root": 281,
+    "rootIncidentalDisplayed107NotAdded": true,
+    "inboxOwnAuthor": 691,
+    "geometry": 471
+  },
+  "allReportLinkChecks": [
+    {
+      "report": "/tmp/codeshell-audit-round38-inbox-model-frontier/review.md",
+      "target": "initial-pins.json",
+      "exists": true
+    },
+    {
+      "report": "/tmp/codeshell-audit-round38-inbox-model-frontier/review.md",
+      "target": "history.json",
+      "exists": true
+    },
+    {
+      "report": "/tmp/codeshell-audit-round38-inbox-model-frontier/review.md",
+      "target": "history-method.py",
+      "exists": true
+    },
+    {
+      "report": "/tmp/codeshell-audit-round38-inbox-model-frontier/review.md",
+      "target": "source-manifest.json",
+      "exists": true
+    },
+    {
+      "report": "/tmp/codeshell-audit-round38-inbox-model-frontier/review.md",
+      "target": "consumer-pins.json",
+      "exists": true
+    },
+    {
+      "report": "/tmp/codeshell-audit-round38-inbox-model-frontier/review.md",
+      "target": "dto-pins.json",
+      "exists": true
+    },
+    {
+      "report": "/tmp/codeshell-audit-round38-inbox-model-frontier/review.md",
+      "target": "type-pins.json",
+      "exists": true
+    },
+    {
+      "report": "/tmp/codeshell-audit-round38-inbox-model-frontier/review.md",
+      "target": "source-excerpts.txt",
+      "exists": true
+    },
+    {
+      "report": "/tmp/codeshell-audit-round38-inbox-model-frontier/review.md",
+      "target": "history-supplement.json",
+      "exists": true
+    },
+    {
+      "report": "/tmp/codeshell-audit-round38-inbox-model-frontier/review.md",
+      "target": "validation.json",
+      "exists": true
+    },
+    {
+      "report": "/tmp/codeshell-audit-round38-inbox-model-frontier/review.md",
+      "target": "reviewer-receipt.json",
+      "exists": true
+    },
+    {
+      "report": "/tmp/codeshell-audit-round38-geometry-frontier/review.md",
+      "target": "source-manifest.json",
+      "exists": true
+    },
+    {
+      "report": "/tmp/codeshell-audit-round38-geometry-frontier/review.md",
+      "target": "finish-checks.json",
+      "exists": true
+    },
+    {
+      "report": "/tmp/codeshell-audit-round38-geometry-frontier/review.md",
+      "target": "history.json",
+      "exists": true
+    },
+    {
+      "report": "/tmp/codeshell-audit-round38-geometry-frontier/review.md",
+      "target": "selected-history-contexts.json",
+      "exists": true
+    },
+    {
+      "report": "/tmp/codeshell-audit-round38-geometry-frontier/review.md",
+      "target": "decisions.json",
+      "exists": true
+    },
+    {
+      "report": "/tmp/codeshell-audit-round38-geometry-frontier/review.md",
+      "target": "validation.json",
+      "exists": true
+    },
+    {
+      "report": "/tmp/codeshell-audit-round38-geometry-frontier/review.md",
+      "target": "metadata-notes.json",
+      "exists": true
+    },
+    {
+      "report": "/tmp/codeshell-audit-round38-geometry-frontier/review.md",
+      "target": "author-receipt.json",
+      "exists": true
+    },
+    {
+      "report": "/tmp/codeshell-audit-round38-root-mcp-frontier/review.md",
+      "target": "source-manifest.json",
+      "exists": true
+    },
+    {
+      "report": "/tmp/codeshell-audit-round38-root-mcp-frontier/review.md",
+      "target": "initial-pins.json",
+      "exists": true
+    },
+    {
+      "report": "/tmp/codeshell-audit-round38-root-mcp-frontier/review.md",
+      "target": "validation.json",
+      "exists": true
+    },
+    {
+      "report": "/tmp/codeshell-audit-round38-root-mcp-frontier/review.md",
+      "target": "source-excerpts.json",
+      "exists": true
+    },
+    {
+      "report": "/tmp/codeshell-audit-round38-mcp-patch-frontier/report.md",
+      "target": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/packages/desktop/src/renderer/settings/McpSection.tsx:1122",
+      "exists": true
+    },
+    {
+      "report": "/tmp/codeshell-audit-round38-mcp-patch-frontier/report.md",
+      "target": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/packages/desktop/src/renderer/settings/McpSection.tsx:1475",
+      "exists": true
+    },
+    {
+      "report": "/tmp/codeshell-audit-round38-mcp-patch-frontier/report.md",
+      "target": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/packages/desktop/src/renderer/settings/mcpSettingsPatch.ts:43",
+      "exists": true
+    },
+    {
+      "report": "/tmp/codeshell-audit-round38-mcp-patch-frontier/report.md",
+      "target": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/packages/desktop/src/renderer/settingsAuthority.ts:14",
+      "exists": true
+    },
+    {
+      "report": "/tmp/codeshell-audit-round38-mcp-patch-frontier/report.md",
+      "target": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/packages/desktop/src/preload/index.ts:978",
+      "exists": true
+    },
+    {
+      "report": "/tmp/codeshell-audit-round38-mcp-patch-frontier/report.md",
+      "target": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/packages/desktop/src/main/index.ts:6707",
+      "exists": true
+    },
+    {
+      "report": "/tmp/codeshell-audit-round38-mcp-patch-frontier/report.md",
+      "target": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/packages/desktop/src/main/settings-service.ts:131",
+      "exists": true
+    },
+    {
+      "report": "/tmp/codeshell-audit-round38-mcp-patch-frontier/report.md",
+      "target": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/packages/core/src/settings/schema.ts:377",
+      "exists": true
+    },
+    {
+      "report": "/tmp/codeshell-audit-round38-mcp-patch-frontier/report.md",
+      "target": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/packages/core/src/plugins/installer/loadPluginMcp.ts:344",
+      "exists": true
+    },
+    {
+      "report": "/tmp/codeshell-audit-round38-mcp-patch-frontier/report.md",
+      "target": "/tmp/codeshell-audit-round38-mcp-patch-frontier/static-value-flow.json",
+      "exists": true
+    },
+    {
+      "report": "/tmp/codeshell-audit-round38-mcp-patch-frontier/report.md",
+      "target": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/packages/desktop/src/renderer/settings/mcpSettingsPatch.ts",
+      "exists": true
+    },
+    {
+      "report": "/tmp/codeshell-audit-round38-mcp-patch-frontier/report.md",
+      "target": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/packages/desktop/src/renderer/settings/mcpSettingsPatch.test.ts",
+      "exists": true
+    },
+    {
+      "report": "/tmp/codeshell-audit-round38-mcp-patch-frontier/report.md",
+      "target": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17-round26/review-target-report.md",
+      "exists": true
+    },
+    {
+      "report": "/tmp/codeshell-audit-round38-mcp-patch-frontier/report.md",
+      "target": "/tmp/codeshell-audit-round38-mcp-patch-frontier/source-manifest.json",
+      "exists": true
+    },
+    {
+      "report": "/tmp/codeshell-audit-round38-mcp-patch-frontier/report.md",
+      "target": "/tmp/codeshell-audit-round38-mcp-patch-frontier/final-source-check.json",
+      "exists": true
+    },
+    {
+      "report": "/tmp/codeshell-audit-round38-mcp-patch-frontier/report.md",
+      "target": "/tmp/codeshell-audit-round38-mcp-patch-frontier/validation.json",
+      "exists": true
+    },
+    {
+      "report": "/tmp/codeshell-audit-round38-mcp-args-review/review.md",
+      "target": "source-manifest.json",
+      "exists": true
+    },
+    {
+      "report": "/tmp/codeshell-audit-round38-mcp-args-review/review.md",
+      "target": "finish-checks.json",
+      "exists": true
+    },
+    {
+      "report": "/tmp/codeshell-audit-round38-mcp-args-review/review.md",
+      "target": "history.json",
+      "exists": true
+    },
+    {
+      "report": "/tmp/codeshell-audit-round38-mcp-args-review/review.md",
+      "target": "selected-history-contexts.json",
+      "exists": true
+    },
+    {
+      "report": "/tmp/codeshell-audit-round38-mcp-args-review/review.md",
+      "target": "decisions.json",
+      "exists": true
+    },
+    {
+      "report": "/tmp/codeshell-audit-round38-mcp-args-review/review.md",
+      "target": "validation.json",
+      "exists": true
+    },
+    {
+      "report": "/tmp/codeshell-audit-round38-mcp-args-review/review.md",
+      "target": "author-receipt.json",
+      "exists": true
+    }
+  ],
+  "rootSnapshotEncoding": {
+    "originalTxtRetainedInTmp": true,
+    "bytes": 12735,
+    "sha256": "ff0dc9a2ad1bbc2c7179ea8f9dfba4690000122917a80689f4aaae0c7c5832fb",
+    "jsonReconstructsBytesExactly": true,
+    "receiptExplicitlyExcludedSnapshot": true,
+    "formalCopyMayOmitOnlyTxt": true,
+    "firstWideManifestRetained": true,
+    "rootSemanticTotal": 281,
+    "sectionSemantic": 219,
+    "sectionDisplayed": 326,
+    "sectionIncidental": 107
+  },
+  "whitespaceProvenance": {
+    "inboxSnapshotSha256": "6691a0edb5071cb2f21f600d7a138868f9421f1276a408ba65f212c75841ec05",
+    "trailingWhitespaceLines": 29,
+    "lineNumbers": [
+      4,
+      7,
+      14,
+      21,
+      26,
+      64,
+      70,
+      81,
+      101,
+      119,
+      213,
+      219,
+      251,
+      256,
+      273,
+      280,
+      290,
+      476,
+      478,
+      482,
+      484,
+      498,
+      508,
+      514,
+      528,
+      538,
+      600,
+      631,
+      693
+    ],
+    "sourceSnapshotPreservedByteForByte": true,
+    "rootAnnouncedWhitelistOnly": "docs/audit-2026-10-17-round38/evidence/inbox-model-frontier/source-excerpts.txt",
+    "gitCommandsRunByThisReviewer": 0,
+    "fullGitDiffCheckStatus": "Root reports expected exit2 for the pinned snapshot; actual final Git check not executed or certified by this reviewer. Do not claim fullcheck0. Ordinary remaining-files check belongs to Root.",
+    "rootTxtSnapshotDifferentTreatment": "Root separate txt is excluded from formal copy with exact JSON encoding; it is not the inbox whitelist exception."
+  },
+  "historyMetadata": {
+    "allFourPrepInventoriesSame3318BytesSha": true,
+    "prepCounts": {
+      "files": 3318,
+      "MD": 1342,
+      "JSON": 1976,
+      "strings": 807880,
+      "scalars": 1193828
+    },
+    "formalReadtimeArtifact": {
+      "path": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17-round38/evidence/root-history.json",
+      "bytes": 829377,
+      "sha256": "940be8d907e56a30513521a0a3013da575071da4d367f0d75f9182e83145de31",
+      "timing": "before read-time metadata inspection; current38artifact, not baseline product source or final author freeze claim"
+    },
+    "formalInventoryCount": 3413,
+    "formalStats": {
+      "markdownFiles": 1352,
+      "jsonFiles": 2061,
+      "stringLeaves": 887511,
+      "scalarLeaves": 1329022
+    },
+    "addedFrozen37": 95,
+    "addedPaths": [
+      "docs/audit-2026-10-17-round37/README.md",
+      "docs/audit-2026-10-17-round37/candidates.json",
+      "docs/audit-2026-10-17-round37/coverage.json",
+      "docs/audit-2026-10-17-round37/evidence-index.json",
+      "docs/audit-2026-10-17-round37/evidence/aggregate-review/checks.json",
+      "docs/audit-2026-10-17-round37/evidence/aggregate-review/initial-artifact-pins.json",
+      "docs/audit-2026-10-17-round37/evidence/aggregate-review/metadata-review-notes.json",
+      "docs/audit-2026-10-17-round37/evidence/aggregate-review/review.md",
+      "docs/audit-2026-10-17-round37/evidence/aggregate-review/reviewer-receipt.json",
+      "docs/audit-2026-10-17-round37/evidence/freeze-checks.json",
+      "docs/audit-2026-10-17-round37/evidence/frozen-artifact-whitespace.json",
+      "docs/audit-2026-10-17-round37/evidence/history-post-refresh-checks.json",
+      "docs/audit-2026-10-17-round37/evidence/history-supplement/checks.json",
+      "docs/audit-2026-10-17-round37/evidence/history-supplement/initial-pins.json",
+      "docs/audit-2026-10-17-round37/evidence/history-supplement/inventory-comparison.json",
+      "docs/audit-2026-10-17-round37/evidence/history-supplement/new-delta-md-contexts.json",
+      "docs/audit-2026-10-17-round37/evidence/history-supplement/query-results.json",
+      "docs/audit-2026-10-17-round37/evidence/history-supplement/review.md",
+      "docs/audit-2026-10-17-round37/evidence/history-supplement/reviewer-receipt.json",
+      "docs/audit-2026-10-17-round37/evidence/history-supplement/selected-contexts.json",
+      "docs/audit-2026-10-17-round37/evidence/history-supplement/window-results.json",
+      "docs/audit-2026-10-17-round37/evidence/incoming-main-paths.json",
+      "docs/audit-2026-10-17-round37/evidence/integration-before.json",
+      "docs/audit-2026-10-17-round37/evidence/integration-plan.json",
+      "docs/audit-2026-10-17-round37/evidence/local-marker-review/admission-path-initial-pins.json",
+      "docs/audit-2026-10-17-round37/evidence/local-marker-review/artifact-receipt.json",
+      "docs/audit-2026-10-17-round37/evidence/local-marker-review/classification.json",
+      "docs/audit-2026-10-17-round37/evidence/local-marker-review/dispatch-initial-pins.json",
+      "docs/audit-2026-10-17-round37/evidence/local-marker-review/focused-history.json",
+      "docs/audit-2026-10-17-round37/evidence/local-marker-review/history-decisions.json",
+      "docs/audit-2026-10-17-round37/evidence/local-marker-review/history-delta.json",
+      "docs/audit-2026-10-17-round37/evidence/local-marker-review/history.json",
+      "docs/audit-2026-10-17-round37/evidence/local-marker-review/initial-pins.json",
+      "docs/audit-2026-10-17-round37/evidence/local-marker-review/links-check.json",
+      "docs/audit-2026-10-17-round37/evidence/local-marker-review/old-collision-history-late-pin.json",
+      "docs/audit-2026-10-17-round37/evidence/local-marker-review/prior-source-claims.json",
+      "docs/audit-2026-10-17-round37/evidence/local-marker-review/registry-admission-initial-pins.json",
+      "docs/audit-2026-10-17-round37/evidence/local-marker-review/report.md",
+      "docs/audit-2026-10-17-round37/evidence/local-marker-review/scope.json",
+      "docs/audit-2026-10-17-round37/evidence/local-marker-review/source-manifest.json",
+      "docs/audit-2026-10-17-round37/evidence/local-marker-review/validation.json",
+      "docs/audit-2026-10-17-round37/evidence/local-marker-review/writer-type-initial-pins.json",
+      "docs/audit-2026-10-17-round37/evidence/marketplace-local-frontier/adjacent-pins.json",
+      "docs/audit-2026-10-17-round37/evidence/marketplace-local-frontier/author-receipt.json",
+      "docs/audit-2026-10-17-round37/evidence/marketplace-local-frontier/bridge-pins.json",
+      "docs/audit-2026-10-17-round37/evidence/marketplace-local-frontier/decisions.json",
+      "docs/audit-2026-10-17-round37/evidence/marketplace-local-frontier/finish-checks.json",
+      "docs/audit-2026-10-17-round37/evidence/marketplace-local-frontier/history-corrected-contexts.json",
+      "docs/audit-2026-10-17-round37/evidence/marketplace-local-frontier/history-corrected-initial-pins.json",
+      "docs/audit-2026-10-17-round37/evidence/marketplace-local-frontier/history-corrected-selection.json",
+      "docs/audit-2026-10-17-round37/evidence/marketplace-local-frontier/history-corrected.json",
+      "docs/audit-2026-10-17-round37/evidence/marketplace-local-frontier/history-peer/author-receipt.json",
+      "docs/audit-2026-10-17-round37/evidence/marketplace-local-frontier/history-peer/contexts.json",
+      "docs/audit-2026-10-17-round37/evidence/marketplace-local-frontier/history-peer/finish-checks.json",
+      "docs/audit-2026-10-17-round37/evidence/marketplace-local-frontier/history-peer/history.json",
+      "docs/audit-2026-10-17-round37/evidence/marketplace-local-frontier/history-peer/initial-pins.json",
+      "docs/audit-2026-10-17-round37/evidence/marketplace-local-frontier/history-peer/metadata-notes.json",
+      "docs/audit-2026-10-17-round37/evidence/marketplace-local-frontier/history-peer/review.md",
+      "docs/audit-2026-10-17-round37/evidence/marketplace-local-frontier/history-peer/selected-contexts.json",
+      "docs/audit-2026-10-17-round37/evidence/marketplace-local-frontier/history-peer/supplement.json",
+      "docs/audit-2026-10-17-round37/evidence/marketplace-local-frontier/history-peer/validation.json",
+      "docs/audit-2026-10-17-round37/evidence/marketplace-local-frontier/history.json",
+      "docs/audit-2026-10-17-round37/evidence/marketplace-local-frontier/initial-pins.json",
+      "docs/audit-2026-10-17-round37/evidence/marketplace-local-frontier/market-list-pin.json",
+      "docs/audit-2026-10-17-round37/evidence/marketplace-local-frontier/metadata-notes.json",
+      "docs/audit-2026-10-17-round37/evidence/marketplace-local-frontier/proposal.md",
+      "docs/audit-2026-10-17-round37/evidence/marketplace-local-frontier/source-manifest.json",
+      "docs/audit-2026-10-17-round37/evidence/marketplace-local-frontier/validation.json",
+      "docs/audit-2026-10-17-round37/evidence/prep-copy-receipt.json",
+      "docs/audit-2026-10-17-round37/evidence/review-aggregate.md",
+      "docs/audit-2026-10-17-round37/evidence/root-frontier/author-receipt.json",
+      "docs/audit-2026-10-17-round37/evidence/root-frontier/decisions.json",
+      "docs/audit-2026-10-17-round37/evidence/root-frontier/initial-pins.json",
+      "docs/audit-2026-10-17-round37/evidence/root-frontier/installed-key-pin.json",
+      "docs/audit-2026-10-17-round37/evidence/root-frontier/metadata-notes.json",
+      "docs/audit-2026-10-17-round37/evidence/root-frontier/proposal.md",
+      "docs/audit-2026-10-17-round37/evidence/root-frontier/read-ranges.json",
+      "docs/audit-2026-10-17-round37/evidence/root-frontier/source-manifest.json",
+      "docs/audit-2026-10-17-round37/evidence/root-frontier/source-reader.first.exit.json",
+      "docs/audit-2026-10-17-round37/evidence/root-frontier/validation.json",
+      "docs/audit-2026-10-17-round37/evidence/root-history.json",
+      "docs/audit-2026-10-17-round37/evidence/root-metadata-notes.json",
+      "docs/audit-2026-10-17-round37/evidence/root-receipt-checks.json",
+      "docs/audit-2026-10-17-round37/evidence/root-review/author-receipt.json",
+      "docs/audit-2026-10-17-round37/evidence/root-review/initial-artifact-pins.json",
+      "docs/audit-2026-10-17-round37/evidence/root-review/regex-codepoint-checks.json",
+      "docs/audit-2026-10-17-round37/evidence/root-review/review.md",
+      "docs/audit-2026-10-17-round37/evidence/root-review/source-checks.json",
+      "docs/audit-2026-10-17-round37/evidence/root-review/validation.json",
+      "docs/audit-2026-10-17-round37/evidence/worktrees-before.json",
+      "docs/audit-2026-10-17-round37/findings.json",
+      "docs/audit-2026-10-17-round37/marketplace-local.md",
+      "docs/audit-2026-10-17-round37/related.json",
+      "docs/audit-2026-10-17-round37/source-manifest.json",
+      "docs/audit-2026-10-17-round37/validation.json"
+    ],
+    "changed": [],
+    "removed": [],
+    "formalQueryCounts": {
+      "sources": 162,
+      "args-roundtrip": 154,
+      "exact-form": 0
+    },
+    "formalCap": 80,
+    "rootReportedNew95Queries": {
+      "sources": 4,
+      "args-roundtrip": 2,
+      "exact-form": 0,
+      "actualContextsReadByRoot": 6,
+      "notAnotherReadByThisReviewer": true
+    },
+    "noncanonicalGeometryLocatorLimit": "Formal sources pattern tui/src/ink/geometry is not the canonical geometry source path. It is not borrowed as geometry source evidence; canonical geometry history belongs to its author.",
+    "capsAndSemanticLimits": [
+      "MCP parent initial196/286/0 cap100 retains100/100/0, first25 target contexts actually read; focused13/84/0 uncapped97 plus10 object rows attributed to author.",
+      "MCP reviewer69/77/11/3 below160cap; source locators and selected old objects/3args/8additional filename contexts read, not all77contexts.",
+      "Geometry22/22/2/139 below160cap; selected source/SHA/locators and oneoldclip context read per author, not whole historical files.",
+      "Inbox exact32 full retained/read; R31case126 cap100, no allretained-semantic claim; oldwholefullprose and first315display vs actual93ordinarytest scope retained.",
+      "Mechanical counts and boundedcontexts do not prove semantic exhaustion or historical originality."
+    ]
+  },
+  "classificationOpinion": {
+    "supportSingleGlobalP3": "MCP-R38-01",
+    "newStandaloneIdsFromThisReviewer": 0,
+    "mcpCause": "Actual full stdio form can produce a nonempty whitespace-bearing argument; array join initializes unquoted text; unchanged Save reparses and writes altered argument boundaries.",
+    "ordinaryCounterevidence": "Creator/inline state supplies valid producer; save lacks dirty short-circuit; scope writer preserves array strings/replaces array, does not re-quote; override and HTTP excluded. No remaining blocker was reported by independent source review.",
+    "renameExtras": "Unfinished boundary, not finding/candidate; initial loader-dropping conjecture refuted by raw spread.",
+    "helperStandaloneFindings": 0,
+    "inbox": {
+      "formal": 0,
+      "candidate": 0,
+      "newRelated": 0,
+      "independence": "own author scope, metadata check only"
+    },
+    "geometry": {
+      "formal": 0,
+      "candidate": 0,
+      "newRelated": 0
+    },
+    "oldCauseExclusions": [
+      "Old MCP header delimiter display has separate parser/formatter and current compatible path.",
+      "CLI-R4-01/TARGET-R26-R1 is TUI split-then-join of quoted command text; old import failure staysSKIP, not retried or borrowed.",
+      "PLUGIN-R8-01 is empty quote-token loss in plugin tokenizer; this issue uses a nonempty whitespace-bearing argument in different form producer.",
+      "R31candidate remains original per-cell helper/unreachable query boundary; currentInbox does not prove its UI reachability, and no blanket Unicode-family exclusion is inferred.",
+      "Geometry raw three-arg edges concern is old and has no established ordinary overload caller; not upgraded."
+    ],
+    "noClaim": [
+      "No actual form interaction/config write/MCP connection/process start or connection failure observation.",
+      "No authority/permission/credential/native correctness claim.",
+      "No all-settings/rename/renderer/global-no-bug claim."
+    ]
+  },
+  "metadataDiagnostics": {
+    "mcpParent": "Two guessed source directories rg exit2; normal no-match locator; actual source selection followed, not product retries.",
+    "root": "One pending source-manifest requested before it existed; metadata only. First broad manifest and corrected semantic/display separation retained.",
+    "geometry": "Agent thread limit; no child started, own freshmetadata scan; earlier display-escape misdiagnosis explicitly corrected.",
+    "aggregate": "No failed metadata commands in this task; no semantic source or product runtime."
+  },
+  "runtime": {
+    "product": 0,
+    "helper": 0,
+    "productImports": 0,
+    "tests": 0,
+    "fixtures": 0,
+    "reactBrowserDOM": 0,
+    "settingsOperations": 0,
+    "mcpConnectionsOrCommands": 0,
+    "nativeNetwork": 0,
+    "git": 0
+  }
+}

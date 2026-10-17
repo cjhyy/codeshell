@@ -1,0 +1,11 @@
+{
+  "runs": [],
+  "productRuns": 0,
+  "passedTests": 0,
+  "expectations": 0,
+  "productReruns": 0,
+  "metadataNotes": [
+    "One pending worker source-manifest was requested before it existed; missing-file metadata diagnostic, not product failure.",
+    "Source readers display repository text only; did not execute splitArgs, expression fixtures, form, MCP, probes, commands, settings or network."
+  ]
+}

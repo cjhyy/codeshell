@@ -1,0 +1,104 @@
+{
+  "createdUTC": "2026-10-17T13:15:00.823726+00:00",
+  "scope": "Future38 geometry static prep exact directory only; self-excludes author-receipt.json.",
+  "prepOnly": true,
+  "formalBaseline": null,
+  "files": [
+    {
+      "path": "consumer-initial-pins.json",
+      "bytes": 2498,
+      "sha256": "9e82ef2893dc3518736c9bcd5652914f5a32bf7a7dd3f755058df243d34b6170"
+    },
+    {
+      "path": "decisions.json",
+      "bytes": 1932,
+      "sha256": "f93de3616a95dfc259a0591d47db845b17801c797a3c58dde84c52ba7d01a3de"
+    },
+    {
+      "path": "delegation-diagnostic.txt",
+      "bytes": 47,
+      "sha256": "21bf748c7ed0956d7802c80a66c7aa2904144f3d11c91ebd040b96719ee7af0f"
+    },
+    {
+      "path": "finish-checks.json",
+      "bytes": 1179795,
+      "sha256": "18a9aa0c9e089bc1a3d91ce420b62e04f14b2a2686917185447fb2261c64914a"
+    },
+    {
+      "path": "history-contexts.json",
+      "bytes": 304709,
+      "sha256": "7c93b9d3e7fea99c8ea8359a8315e89e35214a878cf368e086acb8c280c96ba7"
+    },
+    {
+      "path": "history-initial-pins.json",
+      "bytes": 729976,
+      "sha256": "5fcfc2b7f83d84dafa8db5d47e0fed3e728b8978be3c34bb7d35f9eaf73a5030"
+    },
+    {
+      "path": "history-inventory.raw.txt",
+      "bytes": 213969,
+      "sha256": "5b938db378927055c96c50ba7e839be685f1bacf6e21a87cd292e092e2f67434"
+    },
+    {
+      "path": "history.json",
+      "bytes": 724650,
+      "sha256": "a0e73a1177968f5c468572e37c243bbd33280ddd71cca1b45e80c88ce1d02b83"
+    },
+    {
+      "path": "initial-pin.json",
+      "bytes": 669,
+      "sha256": "6c0924a0ee702361c1f940779014973b0c194b742cb10160935f1c549e7cfa90"
+    },
+    {
+      "path": "metadata-notes.json",
+      "bytes": 840,
+      "sha256": "ef019b30f8b92dc2f939590fa56f2dfbb41bb4f359e64ee90cd0c59c1cb1b494"
+    },
+    {
+      "path": "review.md",
+      "bytes": 3104,
+      "sha256": "cb08a718f89af86a88a6d1f052b9a6b639671b9414a44e7d9225c5d3ce0a7b18"
+    },
+    {
+      "path": "scan-history.py",
+      "bytes": 5546,
+      "sha256": "b7a8f3ca1b1f2cba17528fc5b7572999e1e2cb8384c346a4a14972db52e26d7d"
+    },
+    {
+      "path": "selected-history-contexts.json",
+      "bytes": 4746,
+      "sha256": "0e5c2035e403ae99f2106b385134341f158897a2e5df512c3e3fc8ab2541fe7a"
+    },
+    {
+      "path": "source-manifest.json",
+      "bytes": 9674,
+      "sha256": "425f2088e3b0ce32452d2cc21a9620f53f59ac9c32a24be63611fad371aec2fc"
+    },
+    {
+      "path": "test-initial-pin.json",
+      "bytes": 297,
+      "sha256": "6d0a0f88f2732283e849743d999e10e3776eeb10edc9c599030ced6dc01f4770"
+    },
+    {
+      "path": "validation.json",
+      "bytes": 838,
+      "sha256": "1b8d168963e29cb588a7542dd4c05005636beb838ff1591ac516cf841c7d0ce5"
+    }
+  ],
+  "artifactCount": 16,
+  "reportLocalLinks": 8,
+  "classification": {
+    "formal": 0,
+    "candidate": 0,
+    "related": 0
+  },
+  "sourceRows": 9,
+  "semanticSourceRows": 5,
+  "semanticLines": 471,
+  "productSourceLines": 429,
+  "testDeclarationLines": 42,
+  "productAttempts": 0,
+  "gitCommands": 0,
+  "networkRequests": 0,
+  "frozen": true
+}

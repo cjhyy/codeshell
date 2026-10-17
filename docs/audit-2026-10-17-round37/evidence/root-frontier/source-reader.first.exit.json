@@ -1,0 +1,16 @@
+{
+  "direction": "Source metadata reader only",
+  "exitCode": 1,
+  "output": "packages/core/src/plugins/installedPlugins.ts\nTraceback (most recent call last):\n  File \"<stdin>\", line 8, in <module>\nAssertionError\n",
+  "completeVisibleOutput": true,
+  "requestedRanges": [
+    [
+      250,
+      275
+    ]
+  ],
+  "actualLineCount": 265,
+  "failure": "Pre-read range assertion before any source lines in this command were printed; only first filename header printed. Subsequent manager/known ranges were not reached.",
+  "productExecution": false,
+  "productReruns": 0
+}

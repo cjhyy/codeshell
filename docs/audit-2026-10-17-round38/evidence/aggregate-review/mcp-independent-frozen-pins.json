@@ -1,0 +1,110 @@
+{
+  "capturedUTC": "2026-10-17T13:28:40.328358+00:00",
+  "files": [
+    {
+      "path": "/tmp/codeshell-audit-round38-mcp-args-review/author-receipt.json",
+      "relativePath": "author-receipt.json",
+      "bytes": 2879,
+      "sha256": "ef6d8c17f1d33d26a94952fe63f668c27420946e917e4d0a8cdcebd12240d796",
+      "freezeStatus": "Reviewer andRoot explicitly confirmed final freeze before this pin"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round38-mcp-args-review/bridge-initial-pins.json",
+      "relativePath": "bridge-initial-pins.json",
+      "bytes": 569,
+      "sha256": "f00b6e32cdab4cef9276034c1f3d926b35c4be6b0cb5dc6cfe694f23d21b26f1",
+      "freezeStatus": "Reviewer andRoot explicitly confirmed final freeze before this pin"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round38-mcp-args-review/decisions.json",
+      "relativePath": "decisions.json",
+      "bytes": 1718,
+      "sha256": "4d8e5e0b76fbf8ddb7e1e6fe076188d7d2418dc3f37f5e24e46cd18d3a604410",
+      "freezeStatus": "Reviewer andRoot explicitly confirmed final freeze before this pin"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round38-mcp-args-review/finish-checks.json",
+      "relativePath": "finish-checks.json",
+      "bytes": 1179826,
+      "sha256": "d1fb47121b7e4f2cd638df51315803f53d3e10d68b2f9acfc0ef7ef787d8b20f",
+      "freezeStatus": "Reviewer andRoot explicitly confirmed final freeze before this pin"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round38-mcp-args-review/history-contexts.json",
+      "relativePath": "history-contexts.json",
+      "bytes": 238621,
+      "sha256": "e7bc09e8ee5afc98f19af5c6440b22566d79fb22bf6c00a7c9f2582ab7e30c9d",
+      "freezeStatus": "Reviewer andRoot explicitly confirmed final freeze before this pin"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round38-mcp-args-review/history-initial-pins.json",
+      "relativePath": "history-initial-pins.json",
+      "bytes": 730354,
+      "sha256": "3338e7de1fc1b10c91b0871273a87610734554524368fd637e84dbc2e05797c3",
+      "freezeStatus": "Reviewer andRoot explicitly confirmed final freeze before this pin"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round38-mcp-args-review/history-inventory.raw.txt",
+      "relativePath": "history-inventory.raw.txt",
+      "bytes": 214305,
+      "sha256": "b46128c9375ee783677ec575f27381516e5f68f8298901271952087117929410",
+      "freezeStatus": "Reviewer andRoot explicitly confirmed final freeze before this pin"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round38-mcp-args-review/history.json",
+      "relativePath": "history.json",
+      "bytes": 724678,
+      "sha256": "cacbe8abea537ffd8d296e0dc9cb8c084fcffe09bd479c4083555f018d07edc3",
+      "freezeStatus": "Reviewer andRoot explicitly confirmed final freeze before this pin"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round38-mcp-args-review/initial-pins.json",
+      "relativePath": "initial-pins.json",
+      "bytes": 1552,
+      "sha256": "d1b5e35bb5077c56b21478fe5257290b8048c5c06b544f49d6da049aabe86b76",
+      "freezeStatus": "Reviewer andRoot explicitly confirmed final freeze before this pin"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round38-mcp-args-review/persistence-initial-pins.json",
+      "relativePath": "persistence-initial-pins.json",
+      "bytes": 563,
+      "sha256": "385ca5f15f1f133fbb49d40b1081c544f818a69c619fe9505b13eaafbcd06dac",
+      "freezeStatus": "Reviewer andRoot explicitly confirmed final freeze before this pin"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round38-mcp-args-review/review.md",
+      "relativePath": "review.md",
+      "bytes": 3927,
+      "sha256": "814b02adf90249c3411685999f7530921b0c357641228350340be5ddef912e7f",
+      "freezeStatus": "Reviewer andRoot explicitly confirmed final freeze before this pin"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round38-mcp-args-review/scan-history.py",
+      "relativePath": "scan-history.py",
+      "bytes": 5576,
+      "sha256": "e94e5f66fc98bf862cb632ec349681b4af471d3e8cb78a4b204cee00cd1cac9f",
+      "freezeStatus": "Reviewer andRoot explicitly confirmed final freeze before this pin"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round38-mcp-args-review/selected-history-contexts.json",
+      "relativePath": "selected-history-contexts.json",
+      "bytes": 31767,
+      "sha256": "45b4eb3da8d8ea2db20aedc297856693b1ab0646e570f79eafa9fc9fd4fddc9f",
+      "freezeStatus": "Reviewer andRoot explicitly confirmed final freeze before this pin"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round38-mcp-args-review/source-manifest.json",
+      "relativePath": "source-manifest.json",
+      "bytes": 10127,
+      "sha256": "d1f306ebf1cb62293ee6925167595a90fefee66dfcfd5a0652d8f4198aaca72b",
+      "freezeStatus": "Reviewer andRoot explicitly confirmed final freeze before this pin"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round38-mcp-args-review/validation.json",
+      "relativePath": "validation.json",
+      "bytes": 697,
+      "sha256": "0b65a425d8733364fce89ff709f1b4403d358df6cc5b315c2d0e468d0213398e",
+      "freezeStatus": "Reviewer andRoot explicitly confirmed final freeze before this pin"
+    }
+  ]
+}

@@ -1,0 +1,709 @@
+FILE packages/desktop/src/renderer/task-inbox/taskInboxViewModel.ts SHA256 9c5fa1937a2187110ea497bc402ebb8e0aa1b7b8cc733af6a789e10a9234a1ed; post-read same-byte metadata snapshot,0 additional semantic reads
+RANGE 1-87
+   1: import type { TaskInboxRecordV1, TaskStatus } from "../../preload/task-inbox-api";
+   2: 
+   3: export const TASK_INBOX_GROUPS = ["waiting", "running", "failed", "done"] as const;
+   4: export type TaskInboxGroup = (typeof TASK_INBOX_GROUPS)[number];
+   5: 
+   6: export function taskInboxGroup(status: TaskStatus): TaskInboxGroup {
+   7:   if (status === "waiting" || status === "paused" || status === "interrupted") return "waiting";
+   8:   if (status === "queued" || status === "running") return "running";
+   9:   if (status === "failed") return "failed";
+  10:   return "done";
+  11: }
+  12: 
+  13: export interface TaskInboxFilters {
+  14:   source: string;
+  15:   status: string;
+  16:   project: string;
+  17:   search: string;
+  18: }
+  19: 
+  20: /** Missing project IDs still have a useful workspace filter and visible path. */
+  21: export function taskInboxProject(record: TaskInboxRecordV1): string {
+  22:   return record.projectId ?? record.workspacePath ?? "";
+  23: }
+  24: 
+  25: export function groupTaskInboxRecords(
+  26:   records: readonly TaskInboxRecordV1[],
+  27:   filters: TaskInboxFilters,
+  28: ): Record<TaskInboxGroup, TaskInboxRecordV1[]> {
+  29:   const result: Record<TaskInboxGroup, TaskInboxRecordV1[]> = {
+  30:     waiting: [],
+  31:     running: [],
+  32:     failed: [],
+  33:     done: [],
+  34:   };
+  35:   const search = filters.search.trim().toLocaleLowerCase();
+  36:   for (const record of records) {
+  37:     if (filters.source && record.source !== filters.source) continue;
+  38:     if (filters.status && record.status !== filters.status) continue;
+  39:     if (filters.project && taskInboxProject(record) !== filters.project) continue;
+  40:     if (
+  41:       search &&
+  42:       ![
+  43:         record.title,
+  44:         record.taskKey,
+  45:         record.sourceId,
+  46:         record.sessionId,
+  47:         record.workspacePath,
+  48:         record.projectId,
+  49:         record.summary,
+  50:         record.error,
+  51:         ...record.artifacts.map((artifact) => `${artifact.label} ${artifact.uri}`),
+  52:       ].some((value) => value?.toLocaleLowerCase().includes(search))
+  53:     )
+  54:       continue;
+  55:     result[taskInboxGroup(record.status)].push(record);
+  56:   }
+  57:   for (const group of TASK_INBOX_GROUPS) {
+  58:     result[group].sort((a, b) => b.updatedAt - a.updatedAt || a.taskKey.localeCompare(b.taskKey));
+  59:   }
+  60:   return result;
+  61: }
+  62: 
+  63: export type TaskInboxOpenTarget =
+  64:   | { kind: "session"; sessionId: string }
+  65:   | { kind: "mimi"; taskId: string }
+  66:   | { kind: "automation"; automationId: string }
+  67:   | { kind: "run"; runId: string };
+  68: 
+  69: export function taskInboxOpenTarget(record: TaskInboxRecordV1): TaskInboxOpenTarget | null {
+  70:   if (record.sessionId) return { kind: "session", sessionId: record.sessionId };
+  71:   if (record.source === "mimi-delegation") return { kind: "mimi", taskId: record.sourceId };
+  72:   if (record.automationId || record.source === "automation") {
+  73:     return { kind: "automation", automationId: record.automationId ?? record.sourceId };
+  74:   }
+  75:   if (record.source === "legacy-run") return { kind: "run", runId: record.sourceId };
+  76:   if (record.parentSessionId) return { kind: "session", sessionId: record.parentSessionId };
+  77:   return null;
+  78: }
+  79: 
+  80: /** Ordinary conversations and schedule definitions are navigation records, not background work. */
+  81: export function isBackgroundWork(record: TaskInboxRecordV1): boolean {
+  82:   return (
+  83:     ["mimi-delegation", "subagent", "background-shell", "background-job"].includes(record.source) ||
+  84:     record.capabilities.includes("verify") ||
+  85:     (record.source === "session" && !!(record.automationId || record.parentSessionId))
+  86:   );
+  87: }
+FILE packages/desktop/src/renderer/task-inbox/taskInboxViewModel.test.ts SHA256 b617e88a422cc67e9f5b5bb2ea27f35b8cb973be8d691680ddd42219caf404d6; post-read same-byte metadata snapshot,0 additional semantic reads
+RANGE 1-69
+   1: import { describe, expect, test } from "bun:test";
+   2: import type { TaskInboxRecordV1 } from "../../preload/task-inbox-api";
+   3: import {
+   4:   groupTaskInboxRecords,
+   5:   isBackgroundWork,
+   6:   taskInboxOpenTarget,
+   7:   TASK_INBOX_GROUPS,
+   8: } from "./taskInboxViewModel";
+   9: import { openTaskInboxRecord, type TaskInboxNavigationAdapter } from "./taskInboxNavigation";
+  10: 
+  11: export function record(id: string, patch: Partial<TaskInboxRecordV1> = {}): TaskInboxRecordV1 {
+  12:   return {
+  13:     schemaVersion: 1,
+  14:     taskKey: `session:${id}`,
+  15:     source: "session",
+  16:     sourceId: id,
+  17:     title: `任务 ${id}`,
+  18:     status: "running",
+  19:     artifacts: [],
+  20:     capabilities: ["open"],
+  21:     createdAt: 1_800_000_000_000,
+  22:     updatedAt: 1_800_000_001_000,
+  23:     sourceRevision: "r1",
+  24:     ...patch,
+  25:   };
+  26: }
+  27: const filters = { source: "", status: "", project: "", search: "" };
+  28: 
+  29: describe("task inbox presentation", () => {
+  30:   test("attention is first and interrupted items remain actionable, with stable newest-first order", () => {
+  31:     const rows = [
+  32:       record("running"),
+  33:       record("paused", { status: "paused" }),
+  34:       record("interrupted", { status: "interrupted", updatedAt: 1_800_000_002_000 }),
+  35:       record("failed", { status: "failed" }),
+  36:       record("done", { status: "done" }),
+  37:       record("cancelled", { status: "cancelled" }),
+  38:     ];
+  39:     const grouped = groupTaskInboxRecords(rows, filters);
+  40:     expect(TASK_INBOX_GROUPS).toEqual(["waiting", "running", "failed", "done"]);
+  41:     expect(grouped.waiting.map((row) => row.sourceId)).toEqual(["interrupted", "paused"]);
+  42:     expect(grouped.running).toHaveLength(1);
+  43:     expect(grouped.failed).toHaveLength(1);
+  44:     expect(grouped.done).toHaveLength(2);
+  45:   });
+  46:   test("source, status, workspace fallback, and title search intersect", () => {
+  47:     const rows = [
+  48:       record("a", {
+  49:         source: "background-job",
+  50:         status: "waiting",
+  51:         workspacePath: "/work/one",
+  52:         title: "Build Report",
+  53:       }),
+  54:       record("b", {
+  55:         source: "background-job",
+  56:         status: "waiting",
+  57:         workspacePath: "/work/two",
+  58:         title: "Build Report",
+  59:       }),
+  60:       record("c", { workspacePath: "/work/one", title: "Build Report" }),
+  61:     ];
+  62:     const grouped = groupTaskInboxRecords(rows, {
+  63:       source: "background-job",
+  64:       status: "waiting",
+  65:       project: "/work/one",
+  66:       search: "  REPORT  ",
+  67:     });
+  68:     expect(grouped.waiting.map((row) => row.sourceId)).toEqual(["a"]);
+  69:   });
+RANGE 292-315
+ 292: test("background work excludes ordinary sessions and schedules while retaining actionable operations", () => {
+ 293:   const records = [
+ 294:     record("ordinary"),
+ 295:     record("external", { source: "external-runtime" }),
+ 296:     record("definition", { source: "automation", automationId: "cron" }),
+ 297:     record("legacy", { source: "legacy-run" }),
+ 298:     record("verify", { capabilities: ["open", "verify"] }),
+ 299:     record("cron-run", { automationId: "cron" }),
+ 300:     record("child", { parentSessionId: "parent" }),
+ 301:     record("delegated", { source: "mimi-delegation" }),
+ 302:     record("worker", { source: "subagent" }),
+ 303:     record("shell", { source: "background-shell" }),
+ 304:     record("job", { source: "background-job" }),
+ 305:   ];
+ 306:   expect(records.filter(isBackgroundWork).map((record) => record.sourceId)).toEqual([
+ 307:     "verify",
+ 308:     "cron-run",
+ 309:     "child",
+ 310:     "delegated",
+ 311:     "worker",
+ 312:     "shell",
+ 313:     "job",
+ 314:   ]);
+ 315: });
+FILE packages/desktop/src/renderer/task-inbox/TaskInboxPage.tsx SHA256 76769f666c1be51aeec954b7bd5eabbeaf862da80c4c83708a8794461da5e295; post-read same-byte metadata snapshot,0 additional semantic reads
+RANGE 1-165
+   1: import { useTaskInboxSnapshot } from "./useTaskInboxSnapshot";
+   2: import { OperationBatchForm } from "./OperationBatchForm";
+   3: import React, { useEffect, useId, useMemo, useRef, useState } from "react";
+   4: import { Inbox, ListFilter, Loader2, RefreshCw } from "lucide-react";
+   5: import type {
+   6:   TaskInboxRecordV1,
+   7:   TaskInboxAction,
+   8:   TaskSource,
+   9:   TaskStatus,
+  10: } from "../../preload/task-inbox-api";
+  11: import { Button } from "@/components/ui/button";
+  12: import { Input } from "@/components/ui/input";
+  13: import { SimpleSelect } from "@/components/ui/simple-select";
+  14: import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+  15: import { useT } from "../i18n/I18nProvider";
+  16: import { useOptionalConfirm } from "../ui/DialogProvider";
+  17: import { OperationResolutionReview } from "./OperationResolutionReview";
+  18: import {
+  19:   TASK_INBOX_GROUPS,
+  20:   groupTaskInboxRecords,
+  21:   isBackgroundWork,
+  22:   taskInboxProject,
+  23:   type TaskInboxFilters,
+  24:   type TaskInboxGroup,
+  25: } from "./taskInboxViewModel";
+  26: 
+  27: const SubagentSessionDetail = React.lazy(() =>
+  28:   import("../subagents/SubagentSessionDetail").then((module) => ({
+  29:     default: module.SubagentSessionDetail,
+  30:   })),
+  31: );
+  32: 
+  33: const SOURCES: TaskSource[] = [
+  34:   "session",
+  35:   "mimi-delegation",
+  36:   "subagent",
+  37:   "background-shell",
+  38:   "background-job",
+  39:   "external-runtime",
+  40: ];
+  41: const STATUSES: TaskStatus[] = [
+  42:   "queued",
+  43:   "running",
+  44:   "waiting",
+  45:   "paused",
+  46:   "done",
+  47:   "failed",
+  48:   "cancelled",
+  49:   "interrupted",
+  50: ];
+  51: const EMPTY_FILTERS: TaskInboxFilters = { source: "", status: "", project: "", search: "" };
+  52: const PAGE_SIZE = 50;
+  53: function formatTaskTime(timestamp: number, lang: string): { iso?: string; label: string } {
+  54:   const date = new Date(timestamp);
+  55:   if (!Number.isFinite(date.getTime())) return { label: "—" };
+  56:   return { iso: date.toISOString(), label: date.toLocaleString(lang === "zh" ? "zh-CN" : "en-US") };
+  57: }
+  58: const initialCounts = (): Record<TaskInboxGroup, number> => ({
+  59:   waiting: PAGE_SIZE,
+  60:   running: PAGE_SIZE,
+  61:   failed: PAGE_SIZE,
+  62:   done: PAGE_SIZE,
+  63: });
+  64: 
+  65: export interface TaskInboxPageProps {
+  66:   onOpenTrace?: (sessionId?: string, traceId?: string) => void;
+  67:   onOpenTaskInboxRecord?: (record: TaskInboxRecordV1) => void | Promise<void>;
+  68: }
+  69: 
+  70: export function TaskInboxPage({ onOpenTaskInboxRecord, onOpenTrace }: TaskInboxPageProps = {}) {
+  71:   const { t, lang } = useT();
+  72:   const confirm = useOptionalConfirm();
+  73:   const id = useId();
+  74:   const [selectedSubagent, setSelectedSubagent] = useState<TaskInboxRecordV1 | null>(null);
+  75:   const { snapshot, loading, error, refresh } = useTaskInboxSnapshot();
+  76:   const [actionError, setActionError] = useState<string | null>(null);
+  77:   const [filters, setFilters] = useState(EMPTY_FILTERS);
+  78:   const [filtersOpen, setFiltersOpen] = useState(false);
+  79:   const containerRef = useRef<HTMLElement>(null);
+  80:   const searchRef = useRef<HTMLInputElement>(null);
+  81:   const [visibleCounts, setVisibleCounts] = useState(initialCounts);
+  82:   const [pending, setPending] = useState<ReadonlySet<string>>(new Set());
+  83:   const pendingRef = useRef(new Set<string>());
+  84:   const refreshRef = useRef<HTMLButtonElement>(null);
+  85:   const mounted = useRef(false);
+  86: 
+  87:   useEffect(() => {
+  88:     mounted.current = true;
+  89:     return () => {
+  90:       mounted.current = false;
+  91:     };
+  92:   }, []);
+  93: 
+  94:   useEffect(() => {
+  95:     const container = containerRef.current;
+  96:     if (!container || typeof ResizeObserver === "undefined") return;
+  97:     const observer = new ResizeObserver(([entry]) => {
+  98:       if (entry.contentRect.width >= 1000) setFiltersOpen(false);
+  99:     });
+ 100:     observer.observe(container);
+ 101:     return () => observer.disconnect();
+ 102:   }, [selectedSubagent]);
+ 103: 
+ 104:   const backgroundRecords = useMemo(
+ 105:     () => (snapshot?.records ?? []).filter(isBackgroundWork),
+ 106:     [snapshot],
+ 107:   );
+ 108:   const grouped = useMemo(
+ 109:     () => groupTaskInboxRecords(backgroundRecords, filters),
+ 110:     [backgroundRecords, filters],
+ 111:   );
+ 112:   const projects = useMemo(
+ 113:     () => [...new Set(backgroundRecords.map(taskInboxProject).filter(Boolean))].sort(),
+ 114:     [backgroundRecords],
+ 115:   );
+ 116:   const filteredCount = TASK_INBOX_GROUPS.reduce(
+ 117:     (count, group) => count + grouped[group].length,
+ 118:     0,
+ 119:   );
+ 120:   const filter = (key: keyof TaskInboxFilters, value: string) => {
+ 121:     setFilters((current) => ({ ...current, [key]: value }));
+ 122:     setVisibleCounts(initialCounts());
+ 123:   };
+ 124:   const activeFilterCount = [filters.source, filters.project, filters.status].filter(
+ 125:     Boolean,
+ 126:   ).length;
+ 127:   const clearFilters = () => {
+ 128:     setFilters(EMPTY_FILTERS);
+ 129:     setVisibleCounts(initialCounts());
+ 130:     searchRef.current?.focus({ preventScroll: true });
+ 131:   };
+ 132:   const renderFilters = (suffix = "") => (
+ 133:     <>
+ 134:       <FilterSelect
+ 135:         id={`${id}-source${suffix}`}
+ 136:         label={t("taskInbox.source")}
+ 137:         all={t("taskInbox.all")}
+ 138:         value={filters.source}
+ 139:         onChange={(value) => filter("source", value)}
+ 140:         options={SOURCES.map((source) => ({
+ 141:           value: source,
+ 142:           label: t(`taskInbox.sources.${source}`),
+ 143:         }))}
+ 144:       />
+ 145:       <FilterSelect
+ 146:         id={`${id}-project${suffix}`}
+ 147:         label={t("taskInbox.project")}
+ 148:         all={t("taskInbox.all")}
+ 149:         value={filters.project}
+ 150:         onChange={(value) => filter("project", value)}
+ 151:         options={projects.map((project) => ({ value: project, label: project }))}
+ 152:       />
+ 153:       <FilterSelect
+ 154:         id={`${id}-status${suffix}`}
+ 155:         label={t("taskInbox.status")}
+ 156:         all={t("taskInbox.all")}
+ 157:         value={filters.status}
+ 158:         onChange={(value) => filter("status", value)}
+ 159:         options={STATUSES.map((status) => ({
+ 160:           value: status,
+ 161:           label: t(`taskInbox.statuses.${status}`),
+ 162:         }))}
+ 163:       />
+ 164:     </>
+ 165:   );
+RANGE 271-291
+ 271:         <label
+ 272:           className="min-w-0 space-y-1.5 text-xs text-muted-foreground"
+ 273:           htmlFor={`${id}-search`}
+ 274:         >
+ 275:           <span className="sr-only @min-[1000px]/tasks:not-sr-only">{t("taskInbox.search")}</span>
+ 276:           <Input
+ 277:             id={`${id}-search`}
+ 278:             ref={searchRef}
+ 279:             type="search"
+ 280:             placeholder={t("activity.taskSearch")}
+ 281:             value={filters.search}
+ 282:             onChange={(event) => filter("search", event.target.value)}
+ 283:             className="h-9 rounded-lg"
+ 284:           />
+ 285:         </label>
+ 286:         <div className="@min-[1000px]/tasks:hidden">
+ 287:           <Popover open={filtersOpen} onOpenChange={setFiltersOpen}>
+ 288:             <PopoverTrigger asChild>
+ 289:               <Button type="button" variant="outline" className="h-9 gap-2 rounded-lg">
+ 290:                 <ListFilter size={14} aria-hidden />
+ 291:                 {t("taskInbox.filters")}
+RANGE 405-482
+ 405:           </div>
+ 406:         ) : (
+ 407:           <div className="space-y-5">
+ 408:             {TASK_INBOX_GROUPS.map(
+ 409:               (group) =>
+ 410:                 grouped[group].length > 0 && (
+ 411:                   <section key={group} aria-labelledby={`${id}-${group}`}>
+ 412:                     <h2 id={`${id}-${group}`} className="mb-2.5 flex gap-2 text-sm font-semibold">
+ 413:                       {t(`taskInbox.groups.${group}`)}
+ 414:                       <span className="font-normal tabular-nums text-muted-foreground">
+ 415:                         {grouped[group].length}
+ 416:                       </span>
+ 417:                     </h2>
+ 418:                     <ul className="grid gap-3 @min-[1000px]/tasks:grid-cols-2">
+ 419:                       {grouped[group].slice(0, visibleCounts[group]).map((record) => (
+ 420:                         <li key={record.taskKey}>
+ 421:                           <article
+ 422:                             aria-label={record.title}
+ 423:                             data-task-key={record.taskKey}
+ 424:                             className="flex h-full min-w-0 flex-col gap-3 rounded-2xl border border-border/70 bg-card/70 p-4"
+ 425:                           >
+ 426:                             <div className="flex min-w-0 flex-wrap items-start justify-between gap-2">
+ 427:                               <h3 className="min-w-0 flex-1 break-words text-sm font-semibold">
+ 428:                                 {record.title}
+ 429:                               </h3>
+ 430:                               <span
+ 431:                                 className={`text-xs ${group === "failed" ? "text-status-err" : group === "waiting" ? "text-status-warn" : "text-muted-foreground"}`}
+ 432:                               >
+ 433:                                 {t(`taskInbox.statuses.${record.status}`)}
+ 434:                               </span>
+ 435:                             </div>
+ 436:                             <div className="flex min-w-0 flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground">
+ 437:                               <span>{t(`taskInbox.sources.${record.source}`)}</span>
+ 438:                               {taskInboxProject(record) && (
+ 439:                                 <span
+ 440:                                   title={record.workspacePath ?? record.projectId}
+ 441:                                   className="min-w-0 break-all"
+ 442:                                 >
+ 443:                                   {record.workspacePath ?? record.projectId}
+ 444:                                 </span>
+ 445:                               )}
+ 446:                               <time
+ 447:                                 dateTime={formatTaskTime(record.updatedAt, lang).iso}
+ 448:                                 title={t("taskInbox.updated")}
+ 449:                               >
+ 450:                                 {formatTaskTime(record.updatedAt, lang).label}
+ 451:                               </time>
+ 452:                             </div>
+ 453:                             {record.summary && (
+ 454:                               <p
+ 455:                                 className="max-h-48 overflow-auto whitespace-pre-wrap break-words text-sm leading-relaxed [overflow-wrap:anywhere]"
+ 456:                                 tabIndex={0}
+ 457:                                 aria-label={t("activity.summary")}
+ 458:                               >
+ 459:                                 {record.summary}
+ 460:                               </p>
+ 461:                             )}
+ 462:                             {record.error && (
+ 463:                               <p
+ 464:                                 className="max-h-48 overflow-auto whitespace-pre-wrap break-words text-xs text-status-err [overflow-wrap:anywhere]"
+ 465:                                 tabIndex={0}
+ 466:                                 aria-label={t("activity.taskError")}
+ 467:                               >
+ 468:                                 {record.error}
+ 469:                               </p>
+ 470:                             )}
+ 471:                             {record.artifacts.length > 0 && (
+ 472:                               <ul
+ 473:                                 aria-label={t("taskInbox.artifacts")}
+ 474:                                 className="space-y-1 text-xs text-muted-foreground"
+ 475:                               >
+ 476:                                 {record.artifacts.slice(0, 8).map((artifact, index) => (
+ 477:                                   <li
+ 478:                                     key={`${artifact.uri}:${index}`}
+ 479:                                     className="break-all"
+ 480:                                     title={artifact.uri}
+ 481:                                   >
+ 482:                                     {artifact.label}
+RANGE 542-559
+ 542:                     {grouped[group].length > visibleCounts[group] && (
+ 543:                       <Button
+ 544:                         type="button"
+ 545:                         size="sm"
+ 546:                         variant="outline"
+ 547:                         className="mt-3"
+ 548:                         onClick={() =>
+ 549:                           setVisibleCounts((counts) => ({
+ 550:                             ...counts,
+ 551:                             [group]: counts[group] + PAGE_SIZE,
+ 552:                           }))
+ 553:                         }
+ 554:                         aria-label={`${t("taskInbox.loadMore")}：${t(`taskInbox.groups.${group}`)}`}
+ 555:                       >
+ 556:                         {t("taskInbox.loadMore")}
+ 557:                       </Button>
+ 558:                     )}
+ 559:                   </section>
+FILE docs/review-remaining-2026-10-12/hosts.md SHA256 884a2deee6eddfe00a2a4f147e1d964351ab6017928c81e33e303315132870a8; post-read same-byte metadata snapshot,0 additional semantic reads
+RANGE 30-42
+  30: “Full” below means the implementation file was read through in this review; “selected” distinguishes relevant ranges/diff/rg inspection from exhaustive file review. Static inspection is not execution. Some long command outputs were truncated, and those files are labeled selected rather than asserting complete line coverage.
+  31: 
+  32: ### Desktop account/sidebar/cloud availability (a66f..62a)
+  33: 
+  34: - Read diff names and changed hunks for all 13 Desktop paths: main `cloud-account-ipc.ts`, `cloud-account-manager.ts`, their tests, `desktop-remote-services.test.ts`; preload `cloud-account-api.ts`; renderer `Sidebar.tsx`, `account/AccountSidebarEntry.tsx`, fixture/test, `i18n/ns/settings.ts`, `settings/CloudAccountSettings.tsx`; shared `cloud-account.ts`. Read `docs/desktop-cloud-account.md`.
+  35: - Full implementation reads additionally: `main/cloud-account-http.ts`, `main/cloud-account-ipc.ts`, `main/cloud-account-manager.ts`, renderer account/settings components.
+  36: - Checked top-frame/main-window IPC authorization, canonical relay origin, bounded HTTPS body/deadline/no redirects, capability booleans, login/logout/refresh generations, reply origin fences, event-over-initial-status ordering. These provide positive counterevidence; no new defect established. Tests were inspected selectively, not run.
+  37: 
+  38: ### Desktop task inbox / logs / runs / subagents
+  39: 
+  40: - Full inbox implementations: `main/task-inbox/{task-inbox-actions,task-inbox-service,task-inbox-ipc,task-inbox-background-host,task-inbox-projector,task-inbox-store,task-inbox-mappers}.ts`. Selected extensive source adapter read: `task-inbox-sources.ts` (session/subagent/background/automation/Mimi action ownership); `main/index.ts:6870-6995` glue. Pure types/Pet view were not independently exhaustively audited.
+  41: - Full renderer reads: `task-inbox/{useTaskInboxFeature,taskInboxViewModel,taskInboxNavigation}.ts`; `TaskInboxPage.tsx:1-320` selected (fetch/pagination, version queues, cancel/retry/open actions and navigation). `OperationResolutionReview.tsx` not re-reviewed here.
+  42: - Full `main/{logs-service,runs-service,run-history-service}.ts`; renderer `logs/LogsView.tsx`, `runs/RunsView.tsx`, `subagents/{SubagentSessionDetail.tsx,SubagentNavigation.ts}`. Existing tests selectively read, not executed.
+FILE packages/desktop/src/preload/task-inbox-api.ts SHA256 a86455e8de74944381d69d02e7f1cff0eb0de67eed6401dc3406d72667889d0b; post-read same-byte metadata snapshot,0 additional semantic reads
+RANGE 1-20
+   1: import type { IpcRenderer, IpcRendererEvent } from "electron";
+   2: import type {
+   3:   TaskInboxRecordV1,
+   4:   TaskInboxQuery,
+   5:   TaskInboxListResult,
+   6:   TaskInboxAction,
+   7:   TaskInboxActionResult,
+   8: } from "../main/task-inbox/task-inbox-types";
+   9: 
+  10: export type {
+  11:   TaskInboxRecordV1,
+  12:   TaskInboxQuery,
+  13:   TaskInboxListResult,
+  14:   TaskInboxAction,
+  15:   TaskInboxActionResult,
+  16:   TaskSource,
+  17:   TaskStatus,
+  18: } from "../main/task-inbox/task-inbox-types";
+  19: 
+  20: export interface TaskInboxApi {
+FILE packages/desktop/src/renderer/task-inbox/useTaskInboxSnapshot.ts SHA256 809e80bf9b0031efaff990124faeef76d145161fd620044cd7a51bf6fd1a9ff7; post-read same-byte metadata snapshot,0 additional semantic reads
+RANGE 1-91
+   1: import { useCallback, useEffect, useRef, useState } from "react";
+   2: import type { TaskInboxListResult, TaskInboxRecordV1 } from "../../preload/task-inbox-api";
+   3: 
+   4: /** Publish complete snapshots; source updates queue behind pagination instead of starving it. */
+   5: export function useTaskInboxSnapshot() {
+   6:   const [snapshot, setSnapshot] = useState<TaskInboxListResult | null>(null);
+   7:   const [loading, setLoading] = useState(true);
+   8:   const [error, setError] = useState<string | null>(null);
+   9:   const [revision, setRevision] = useState(0);
+  10:   const currentVersion = useRef(-1);
+  11:   const notifiedVersion = useRef(-1);
+  12:   const inFlight = useRef(true);
+  13:   const refresh = useCallback(() => {
+  14:     inFlight.current = true;
+  15:     setRevision((value) => value + 1);
+  16:   }, []);
+  17: 
+  18:   useEffect(
+  19:     () =>
+  20:       window.codeshell.taskInbox.onChanged((version) => {
+  21:         if (version <= Math.max(currentVersion.current, notifiedVersion.current)) return;
+  22:         notifiedVersion.current = version;
+  23:         if (!inFlight.current) refresh();
+  24:       }),
+  25:     [refresh],
+  26:   );
+  27: 
+  28:   useEffect(() => {
+  29:     let cancelled = false;
+  30:     const notifiedAtStart = notifiedVersion.current;
+  31:     let published = false;
+  32:     inFlight.current = true;
+  33:     setLoading(true);
+  34:     setError(null);
+  35:     void (async () => {
+  36:       try {
+  37:         // Retry an expired/mixed snapshot at most twice. A broken provider must
+  38:         // surface a recoverable error instead of spinning forever.
+  39:         for (let attempt = 0; attempt < 3; attempt += 1) {
+  40:           const records = new Map<string, TaskInboxRecordV1>();
+  41:           const cursors = new Set<string>();
+  42:           let first: TaskInboxListResult | null = null;
+  43:           let cursor: string | undefined;
+  44:           let mixed = false;
+  45:           do {
+  46:             const page = await window.codeshell.taskInbox.list({
+  47:               limit: 200,
+  48:               ...(cursor ? { cursor } : {}),
+  49:             });
+  50:             if (cancelled) return;
+  51:             if (!first) first = page;
+  52:             if (page.version !== first.version) {
+  53:               mixed = true;
+  54:               break;
+  55:             }
+  56:             for (const record of page.records) records.set(record.taskKey, record);
+  57:             cursor = page.nextCursor;
+  58:             if (cursor) {
+  59:               if (cursors.has(cursor)) throw new Error("Task pagination did not advance");
+  60:               cursors.add(cursor);
+  61:             }
+  62:           } while (cursor);
+  63:           if (mixed) continue;
+  64:           if (first) {
+  65:             currentVersion.current = first.version;
+  66:             setSnapshot({ ...first, records: [...records.values()], nextCursor: undefined });
+  67:             published = true;
+  68:           }
+  69:           return;
+  70:         }
+  71:         throw new Error("Task snapshot changed repeatedly. Please refresh to retry.");
+  72:       } catch (cause) {
+  73:         if (!cancelled) setError(cause instanceof Error ? cause.message : String(cause));
+  74:       } finally {
+  75:         if (!cancelled) {
+  76:           inFlight.current = false;
+  77:           setLoading(false);
+  78:           // A newer notification during a failed read must not be swallowed.
+  79:           // Only follow genuinely new notifications to avoid a hot retry loop.
+  80:           if (notifiedVersion.current > (published ? currentVersion.current : notifiedAtStart))
+  81:             refresh();
+  82:         }
+  83:       }
+  84:     })();
+  85:     return () => {
+  86:       cancelled = true;
+  87:     };
+  88:   }, [revision, refresh]);
+  89: 
+  90:   return { snapshot, loading, error, refresh };
+  91: }
+FILE packages/desktop/src/main/task-inbox/task-inbox-types.ts SHA256 2694cf539e698bf9a500d08f6d855cc66f22760ee2f5049fb8d23b565711fb00; post-read same-byte metadata snapshot,0 additional semantic reads
+RANGE 1-105
+   1: /** Browser-safe wire model. This module must never import a host or filesystem API. */
+   2: export const TASK_SOURCES = [
+   3:   "session",
+   4:   "legacy-run",
+   5:   "automation",
+   6:   "mimi-delegation",
+   7:   "subagent",
+   8:   "background-shell",
+   9:   "background-job",
+  10:   "external-runtime",
+  11: ] as const;
+  12: export type TaskSource = (typeof TASK_SOURCES)[number];
+  13: export const TASK_STATUSES = [
+  14:   "queued",
+  15:   "running",
+  16:   "waiting",
+  17:   "paused",
+  18:   "done",
+  19:   "failed",
+  20:   "cancelled",
+  21:   "interrupted",
+  22: ] as const;
+  23: export type TaskStatus = (typeof TASK_STATUSES)[number];
+  24: export const TASK_ACTIONS = ["open", "cancel", "pause", "resume", "retry", "verify"] as const;
+  25: export type TaskAction = (typeof TASK_ACTIONS)[number];
+  26: export type TaskInboxAction = TaskAction;
+  27: 
+  28: export interface TaskInboxRecordV1 {
+  29:   schemaVersion: 1;
+  30:   taskKey: string;
+  31:   source: TaskSource;
+  32:   sourceId: string;
+  33:   attempt?: number;
+  34:   title: string;
+  35:   status: TaskStatus;
+  36:   sessionId?: string;
+  37:   /** Actual execution identity for precise historical Run association. */
+  38:   runId?: string;
+  39:   parentSessionId?: string;
+  40:   automationId?: string;
+  41:   projectId?: string;
+  42:   workspacePath?: string;
+  43:   /** Navigation locator for an observed CLI transcript; never grants runtime control. */
+  44:   externalCli?: "codex" | "claude";
+  45:   summary?: string;
+  46:   error?: string;
+  47:   artifacts: Array<{ kind: string; label: string; uri: string }>;
+  48:   capabilities: TaskAction[];
+  49:   createdAt: number;
+  50:   updatedAt: number;
+  51:   terminalAt?: number;
+  52:   sourceRevision: string;
+  53:   stale?: boolean;
+  54: }
+  55: export interface TaskInboxSourceError {
+  56:   source: TaskSource;
+  57:   message: string;
+  58: }
+  59: export interface TaskInboxSnapshot {
+  60:   version: number;
+  61:   records: TaskInboxRecordV1[];
+  62:   errors: TaskInboxSourceError[];
+  63: }
+  64: export interface TaskInboxListQuery {
+  65:   status?: TaskStatus;
+  66:   source?: TaskSource;
+  67:   projectId?: string;
+  68:   search?: string;
+  69:   cursor?: string;
+  70:   limit?: number;
+  71: }
+  72: export interface TaskInboxListResult extends TaskInboxSnapshot {
+  73:   nextCursor?: string;
+  74: }
+  75: export type TaskInboxQuery = TaskInboxListQuery;
+  76: export interface TaskInboxActionRequest {
+  77:   taskKey: string;
+  78:   action: TaskAction;
+  79:   expectedRevision: string;
+  80: }
+  81: export interface TaskInboxActionContext {
+  82:   webContentsId: number;
+  83: }
+  84: export interface TaskInboxActionResult {
+  85:   status: "ok" | "stale" | "unavailable" | "rejected" | "failed";
+  86:   message?: string;
+  87:   record?: TaskInboxRecordV1;
+  88: }
+  89: 
+  90: const RECORD_FIELDS = new Set([
+  91:   "schemaVersion",
+  92:   "taskKey",
+  93:   "source",
+  94:   "sourceId",
+  95:   "attempt",
+  96:   "title",
+  97:   "status",
+  98:   "sessionId",
+  99:   "runId",
+ 100:   "parentSessionId",
+ 101:   "automationId",
+ 102:   "projectId",
+ 103:   "workspacePath",
+ 104:   "externalCli",
+ 105:   "summary",

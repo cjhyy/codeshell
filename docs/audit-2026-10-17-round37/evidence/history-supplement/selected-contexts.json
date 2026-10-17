@@ -1,0 +1,245 @@
+{
+  "createdUTC": "2026-10-17T13:16:54.544115+00:00",
+  "source": "query-results/window-results metadata only, no product source",
+  "selected": [
+    {
+      "index": 0,
+      "path": "docs/audit-2026-10-17-round35/evidence/root-history.json",
+      "at": "$[\"hits\"][\"extensions-data\"][0][\"context\"]",
+      "unitSha256": "3442567dbe375bb78ec168ec44ab7a20f4e3034ffd14f1913b9a9f7c58d17355",
+      "fullUnit": "跑测试看通过 + 全 installer 测试不回归。\n- [ ] commit。\n- [ ] UI 接线(LocalAddPanel 检测同名 + confirm + overwrite),desktop 跑 `bunx tsc --noEmit`。\n- [ ] commit。\n\n## Task B:本地插件可卸载(uninstallTarget + UI)\n\n**真相:** `uninstallTarget.ts:18` 对 `marketplace===null` 直接返回 `uninstallable:false`,UI 隐藏卸载按钮。本地插件应走 core 已有的 `uninstallPluginByName(name)`(删目录+删 `name@local` 条目)。\n\n**Files:**\n- `packages/desktop/src/renderer/extensions/uninstallTarget.ts` — 加一种 target:本地插件返回 `{ uninstallable:true, kind:\"local\", pluginName }`(区别于 marketplace 的 `kind:\"marketplace\"`)。\n- `packages/desktop/src/renderer/extensions/uninstallTarget.test.ts` — 新测试。\n- `packages/desktop/src/renderer/extensions/PluginsTab.tsx:86` — uninstall 按 kind 分派:local 调新 IPC `uninstallLocalPlugin(name)`",
+      "selection": "All unique unit locators behind all53 retained collision windows; full units<=1800 chars, to be read in bounded batches."
+    },
+    {
+      "index": 1,
+      "path": "docs/audit-2026-10-17-round35/evidence/root-history.json",
+      "at": "$[\"hits\"][\"extensions-data\"][1][\"context\"]",
+      "unitSha256": "c38d8199b00cd9a8331a6635962b69eb63e2c9c0ad664a8dfe79bc6e3b25d539",
+      "fullUnit": "] commit。\n- [ ] UI 接线(LocalAddPanel 检测同名 + confirm + overwrite),desktop 跑 `bunx tsc --noEmit`。\n- [ ] commit。\n\n## Task B:本地插件可卸载(uninstallTarget + UI)\n\n**真相:** `uninstallTarget.ts:18` 对 `marketplace===null` 直接返回 `uninstallable:false`,UI 隐藏卸载按钮。本地插件应走 core 已有的 `uninstallPluginByName(name)`(删目录+删 `name@local` 条目)。\n\n**Files:**\n- `packages/desktop/src/renderer/extensions/uninstallTarget.ts` — 加一种 target:本地插件返回 `{ uninstallable:true, kind:\"local\", pluginName }`(区别于 marketplace 的 `kind:\"marketplace\"`)。\n- `packages/desktop/src/renderer/extensions/uninstallTarget.test.ts` — 新测试。\n- `packages/desktop/src/renderer/extensions/PluginsTab.tsx:86` — uninstall 按 kind 分派:local 调新 IPC `uninstallLocalPlugin(name)`,marketplace 走原路径。\n- preload + m",
+      "selection": "All unique unit locators behind all53 retained collision windows; full units<=1800 chars, to be read in bounded batches."
+    },
+    {
+      "index": 2,
+      "path": "docs/audit-2026-10-17-round35/evidence/root-history.json",
+      "at": "$[\"hits\"][\"ordinary-contract\"][6][\"context\"]",
+      "unitSha256": "97b58fec103d133b1495918b7e29688212e6817ac7d924e3509e674eaeede345",
+      "fullUnit": "。\n- [ ] 跑测试看通过 + 全 installer 测试不回归。\n- [ ] commit。\n- [ ] UI 接线(LocalAddPanel 检测同名 + confirm + overwrite),desktop 跑 `bunx tsc --noEmit`。\n- [ ] commit。\n\n## Task B:本地插件可卸载(uninstallTarget + UI)\n\n**真相:** `uninstallTarget.ts:18` 对 `marketplace===null` 直接返回 `uninstallable:false`,UI 隐藏卸载按钮。本地插件应走 core 已有的 `uninstallPluginByName(name)`(删目录+删 `name@local` 条目)。\n\n**Files:**\n- `packages/desktop/src/renderer/extensions/uninstallTarget.ts` — 加一种 target:本地插件返回 `{ uninstallable:true, kind:\"local\", pluginName }`(区别于 marketplace 的 `kind:\"marketplace\"`)。\n- `packages/desktop/src/renderer/extensions/uninstallTarget.test.ts` — 新测试。\n- `packages/desktop/src/renderer/extensions/PluginsTab.tsx:86` — uninstall 按 kind 分派:local 调新 IPC `uninstallLocalPlugin(",
+      "selection": "All unique unit locators behind all53 retained collision windows; full units<=1800 chars, to be read in bounded batches."
+    },
+    {
+      "index": 3,
+      "path": "docs/archive/local-plugin-upgrade-uninstall-plan-2026-06-22.md",
+      "at": [
+        15,
+        20
+      ],
+      "unitSha256": "cfaffdbf5345a3028b816046355b0daec3e2a90ea5def4171fd5f76ec15403a9",
+      "fullUnit": "**Files:**\n- `packages/core/src/plugins/installer/installFromArchive.ts` — 给 `installLocalPlugin` 加 `{ overwrite?: boolean }` 选项:overwrite 时若同名已装,走 `updatePluginByName(name, installedAt, true)` 而非 `installPluginFromPath`。\n- `packages/core/src/plugins/installer/installFromArchive.test.ts` — 新测试。\n- `packages/desktop/src/main/marketplace-service.ts:174` — `installLocalPluginForUi` 透传 overwrite。\n- `packages/desktop/src/preload/index.ts:518` — `installLocalPlugin` 签名加 overwrite。\n- `packages/desktop/src/renderer/settings/PluginsAndSkillsSection.tsx` LocalAddPanel — 装前检测同名;已装则 `confirm()` 弹\"覆盖升级\"(复用 existSameNameMsg 文案或新增),确认后带 overwrite=true 重调。",
+      "selection": "All unique unit locators behind all53 retained collision windows; full units<=1800 chars, to be read in bounded batches."
+    },
+    {
+      "index": 4,
+      "path": "docs/audit-2026-10-17-round33/evidence/local-install-review/history.json",
+      "at": "$[\"hits\"][\"local-install-await\"][16][\"context\"]",
+      "unitSha256": "4971c661a4805d6cf3ba930712b55c4a70c095c45348ac9e98e92157add8c04e",
+      "fullUnit": "me`)和本地卸载(`uninstallPluginByName`)core 早已实现,缺的是 UI 接线 + 卸载不清 settings。\n\n---\n\n## Task A:本地导入支持覆盖升级(LocalAddPanel)\n\n**真相:** `installPluginFromArchive`/`installLocalPlugin` 在目录已存在时由 `installPluginFromPath` 硬抛 \"already installed\"。`updatePluginByName(name, installedAt, force=true)` 已实现原子覆盖重装。缺口=本地导入流程不检测同名、不走 update。\n\n**Files:**\n- `packages/core/src/plugins/installer/installFromArchive.ts` — 给 `installLocalPlugin` 加 `{ overwrite?: boolean }` 选项:overwrite 时若同名已装,走 `updatePluginByName(name, installedAt, true)` 而非 `installPluginFromPath`。\n- `packages/core/src/plugins/installer/installFromArchive.test.ts` — 新测试。\n- `packages/desktop/src/main/marketplace-service.ts:174` — `installLocalPluginForUi` 透传 overwrite。\n- `packages/desktop/src/preload/index.ts:518` — `installLocalPlugin` 签名加 overwrite。\n- `packages/desktop/src/renderer/settings/PluginsAndSkill",
+      "selection": "All unique unit locators behind all53 retained collision windows; full units<=1800 chars, to be read in bounded batches."
+    },
+    {
+      "index": 5,
+      "path": "docs/audit-2026-10-17-round33/evidence/local-install-review/history.json",
+      "at": "$[\"hits\"][\"local-install-await\"][17][\"context\"]",
+      "unitSha256": "4863554b8caafea4aeb5fa33934f4cf3b8de2d94c6abd7a7db05643a4d25fbdc",
+      "fullUnit": "ages/core/src/plugins/installer/installFromArchive.ts` — 给 `installLocalPlugin` 加 `{ overwrite?: boolean }` 选项:overwrite 时若同名已装,走 `updatePluginByName(name, installedAt, true)` 而非 `installPluginFromPath`。\n- `packages/core/src/plugins/installer/installFromArchive.test.ts` — 新测试。\n- `packages/desktop/src/main/marketplace-service.ts:174` — `installLocalPluginForUi` 透传 overwrite。\n- `packages/desktop/src/preload/index.ts:518` — `installLocalPlugin` 签名加 overwrite。\n- `packages/desktop/src/renderer/settings/PluginsAndSkillsSection.tsx` LocalAddPanel — 装前检测同名;已装则 `confirm()` 弹\"覆盖升级\"(复用 existSameNameMsg 文案或新增),确认后带 overwrite=true 重调。\n\n**TDD steps(core 部分):**\n- [ ] RED: 写测试 `installLocalPlugin overwrite reinstalls an already-installed plugin`:先装 v1,改源 plugin.json 版本为 v2,不带 overwrite 再装 → 期望抛 already installed;带 `{overwrite:true}` 再装 → 期望成功且 `.cs-meta.j",
+      "selection": "All unique unit locators behind all53 retained collision windows; full units<=1800 chars, to be read in bounded batches."
+    },
+    {
+      "index": 6,
+      "path": "docs/audit-2026-10-17-round33/evidence/local-install-review/history.json",
+      "at": "$[\"hits\"][\"local-install-await\"][18][\"context\"]",
+      "unitSha256": "c69bccf28a89756b9416c349292d079dfc71e68899e94f157cde01813b685ab0",
+      "fullUnit": "+ overwrite → 调 `updatePluginByName`。注意 update 需要源记录在 `.cs-meta.json`,而本地装的 meta.source 指向原 sourceDir;zip 场景 source 是临时解压目录(用完即删)——所以 **overwrite 重装必须直接走\"先 uninstallPluginByName 再 installPluginFromPath\"或复用 reinstallAtomic 思路**,不能依赖 meta.source 回查(zip 临时目录已删)。最小实现:overwrite 时先 `uninstallPluginByName(name)` 再正常装(非原子,但简单);或更稳妥用 update.ts 里 reinstallAtomic 的 rename-backup 思路。实现者择优,但必须有测试覆盖\"覆盖后旧版没了、新版在\"。\n- [ ] 跑测试看通过 + 全 installer 测试不回归。\n- [ ] commit。\n- [ ] UI 接线(LocalAddPanel 检测同名 + confirm + overwrite),desktop 跑 `bunx tsc --noEmit`。\n- [ ] commit。\n\n## Task B:本地插件可卸载(uninstallTarget + UI)\n\n**真相:** `uninstallTarget.ts:18` 对 `marketplace===null` 直接返回 `uninstallable:false`,UI 隐藏卸载按钮。本地插件应走 core 已有的 `uninstallPluginByName(name)`(删目录+删 `name@local` 条目)。\n\n**Files:**\n- `packages/desktop/src/renderer/extensions/uninstallTarget.ts` — 加一种 target:本地插件返回 `",
+      "selection": "All unique unit locators behind all53 retained collision windows; full units<=1800 chars, to be read in bounded batches."
+    },
+    {
+      "index": 7,
+      "path": "docs/audit-2026-10-17-round33/evidence/plugin-input-review/history.json",
+      "at": "$[\"hits\"][\"source-normalization\"][75][\"context\"]",
+      "unitSha256": "7b34b99c87a713611181f30d88ab0d95d020babd182d2f05e7050bd8d0e6d4ea",
+      "fullUnit": "** at `marketplaces/<name>/.claude-plugin/marketplace.json`, validated against the CC `PluginMarketplaceSchema` subset we support (name, owner, plugins[], optional metadata).\n5. **Plugin entry source** subset: `path` (inline, relative to marketplace root) and `{ source: \"git\" | \"github\" | \"git-subdir\", url, path?, ref?, sha? }`. The Adobe-style `git-subdir` is essential since `anthropics/skills` uses it.\n6. **Cache layout**: `~/.code-shell/plugins/cache/<marketplace>/<plugin>/<version>/` (version = git short SHA, \"unknown\" if local path).\n7. **Skill discovery integration**: extend `scanSkills()` to also walk every installed plugin's `skills/` dir; namespace each as `<plugin>:<skill>`.\n8. **Slash commands**: `/plugin marketplace add <git-url>`, `/plugin marketplace remove <name>`, `/plugin marketplace list`, `/plugin install <plugin>@<marketplace>`, `/plugin uninstall <plugin>@<marketplace>`, `/plugin list`. All non-interactive (no Dialog UI — codeshell's existing slash commands write to",
+      "selection": "All unique unit locators behind all53 retained collision windows; full units<=1800 chars, to be read in bounded batches."
+    },
+    {
+      "index": 8,
+      "path": "docs/audit-2026-10-17-round33/evidence/root-history.json",
+      "at": "$[\"hits\"][\"local-await\"][20][\"context\"]",
+      "unitSha256": "8552d0521cd4d9a23fb3d43e53212a3f03022731b6b39d4f922e6223fdd6f654",
+      "fullUnit": "PluginByName`)core 早已实现,缺的是 UI 接线 + 卸载不清 settings。\n\n---\n\n## Task A:本地导入支持覆盖升级(LocalAddPanel)\n\n**真相:** `installPluginFromArchive`/`installLocalPlugin` 在目录已存在时由 `installPluginFromPath` 硬抛 \"already installed\"。`updatePluginByName(name, installedAt, force=true)` 已实现原子覆盖重装。缺口=本地导入流程不检测同名、不走 update。\n\n**Files:**\n- `packages/core/src/plugins/installer/installFromArchive.ts` — 给 `installLocalPlugin` 加 `{ overwrite?: boolean }` 选项:overwrite 时若同名已装,走 `updatePluginByName(name, installedAt, true)` 而非 `installPluginFromPath`。\n- `packages/core/src/plugins/installer/installFromArchive.test.ts` — 新测试。\n- `packages/desktop/src/main/marketplace-service.ts:174` — `installLocalPluginForUi` 透传 overwrite。\n- `packages/desktop/src/preload/index.ts:518` — `in",
+      "selection": "All unique unit locators behind all53 retained collision windows; full units<=1800 chars, to be read in bounded batches."
+    },
+    {
+      "index": 9,
+      "path": "docs/audit-2026-10-17-round33/evidence/root-history.json",
+      "at": "$[\"hits\"][\"local-await\"][21][\"context\"]",
+      "unitSha256": "d175c0abcd8bd72aae3dedc8b36825a3f32ad6d11313496f01f1cfa7ffc2bc4b",
+      "fullUnit": "s/installer/installFromArchive.ts` — 给 `installLocalPlugin` 加 `{ overwrite?: boolean }` 选项:overwrite 时若同名已装,走 `updatePluginByName(name, installedAt, true)` 而非 `installPluginFromPath`。\n- `packages/core/src/plugins/installer/installFromArchive.test.ts` — 新测试。\n- `packages/desktop/src/main/marketplace-service.ts:174` — `installLocalPluginForUi` 透传 overwrite。\n- `packages/desktop/src/preload/index.ts:518` — `installLocalPlugin` 签名加 overwrite。\n- `packages/desktop/src/renderer/settings/PluginsAndSkillsSection.tsx` LocalAddPanel — 装前检测同名;已装则 `confirm()` 弹\"覆盖升级\"(复用 existSameNameMsg 文案或新增),确认后带 overwrite=true 重调。\n\n**TDD steps(core 部分):**\n- [ ] RED: 写测试 `installLocalPlugin overwrite reinstalls an already-installed plugin`:先装 v1,改源 plugin.json ",
+      "selection": "All unique unit locators behind all53 retained collision windows; full units<=1800 chars, to be read in bounded batches."
+    },
+    {
+      "index": 10,
+      "path": "docs/audit-2026-10-17-round33/evidence/root-history.json",
+      "at": "$[\"hits\"][\"local-await\"][22][\"context\"]",
+      "unitSha256": "8363a92f89712932ccf0bf9e2601ca3051b74bfc3d904a5bff40150d8fdb5465",
+      "fullUnit": "atePluginByName`。注意 update 需要源记录在 `.cs-meta.json`,而本地装的 meta.source 指向原 sourceDir;zip 场景 source 是临时解压目录(用完即删)——所以 **overwrite 重装必须直接走\"先 uninstallPluginByName 再 installPluginFromPath\"或复用 reinstallAtomic 思路**,不能依赖 meta.source 回查(zip 临时目录已删)。最小实现:overwrite 时先 `uninstallPluginByName(name)` 再正常装(非原子,但简单);或更稳妥用 update.ts 里 reinstallAtomic 的 rename-backup 思路。实现者择优,但必须有测试覆盖\"覆盖后旧版没了、新版在\"。\n- [ ] 跑测试看通过 + 全 installer 测试不回归。\n- [ ] commit。\n- [ ] UI 接线(LocalAddPanel 检测同名 + confirm + overwrite),desktop 跑 `bunx tsc --noEmit`。\n- [ ] commit。\n\n## Task B:本地插件可卸载(uninstallTarget + UI)\n\n**真相:** `uninstallTarget.ts:18` 对 `marketplace===null` 直接返回 `uninstallable:false`,UI 隐藏卸载按钮。本地插件应走 core 已有的 `uninstallPluginByName(name)`(删目录+删 `name@local` 条目)。\n\n**File",
+      "selection": "All unique unit locators behind all53 retained collision windows; full units<=1800 chars, to be read in bounded batches."
+    },
+    {
+      "index": 11,
+      "path": "docs/audit-2026-10-17-round35/evidence/extensions-data-frontier/focused-history.json",
+      "at": "$[\"hits\"][\"known-local-route\"][6][\"excerpt\"]",
+      "unitSha256": "e945d5fb5d4c6e94e78e67bb77cfbbfa1ac2a8bd2ea72b3653c3c4c3c8900bb5",
+      "fullUnit": "] commit。\n- [ ] UI 接线(LocalAddPanel 检测同名 + confirm + overwrite),desktop 跑 `bunx tsc --noEmit`。\n- [ ] commit。\n\n## Task B:本地插件可卸载(uninstallTarget + UI)\n\n**真相:** `uninstallTarget.ts:18` 对 `marketplace===null` 直接返回 `uninstallable:false`,UI 隐藏卸载按钮。本地插件应走 core 已有的 `uninstallPluginByName(name)`(删目录+删 `name@local` 条目)。\n\n**Files:**\n- `packages/desktop/src/renderer/extensions/uninstallTarget.ts` — 加一种 target:本地插件返回 `",
+      "selection": "All unique unit locators behind all53 retained collision windows; full units<=1800 chars, to be read in bounded batches."
+    },
+    {
+      "index": 12,
+      "path": "docs/audit-2026-10-17-round35/evidence/extensions-data-frontier/focused-history.json",
+      "at": "$[\"hits\"][\"known-local-route\"][8][\"excerpt\"]",
+      "unitSha256": "86efcdbcc78eb0970b40b3ba659f14f7579e5e0de0045ae03cea44926fac2d42",
+      "fullUnit": "] commit。\n- [ ] UI 接线(LocalAddPanel 检测同名 + confirm + overwrite),desktop 跑 `bunx tsc --noEmit`。\n- [ ] commit。\n\n## Task B:本地插件可卸载(uninstallTarget + UI)\n\n**真相:** `uninstallTarget.ts:18` 对 `marketplace===null` 直接返回 `uninstallable:false`,UI 隐藏卸载按钮。本地插件应走 core 已有的 `uninstallPluginByName(name)`(删目录+删 `name@local` 条目)。\n\n**File",
+      "selection": "All unique unit locators behind all53 retained collision windows; full units<=1800 chars, to be read in bounded batches."
+    },
+    {
+      "index": 13,
+      "path": "docs/audit-2026-10-17-round35/evidence/extensions-data-frontier/history.json",
+      "at": "$[\"hits\"][\"targets\"][17][\"excerpt\"]",
+      "unitSha256": "c1c3da6e2a50daaa199c68a372481daca6c86b264ca99fad286675653757c5c1",
+      "fullUnit": " 测试不回归。\n- [ ] commit。\n- [ ] UI 接线(LocalAddPanel 检测同名 + confirm + overwrite),desktop 跑 `bunx tsc --noEmit`。\n- [ ] commit。\n\n## Task B:本地插件可卸载(uninstallTarget + UI)\n\n**真相:** `uninstallTarget.ts:18` 对 `marketplace===null` 直接返回 `uninstallable:false`,UI 隐藏卸载按钮。本地插件应走 core 已有的 `uninstallPluginByName(name)`(删目录+删 `name@local` 条目)。\n\n**Files:**\n- `packages/desktop/src/renderer/extensions/uninstallTarget.ts` — 加一种 target:本地插件返回 `",
+      "selection": "All unique unit locators behind all53 retained collision windows; full units<=1800 chars, to be read in bounded batches."
+    },
+    {
+      "index": 14,
+      "path": "docs/audit-2026-10-17-round35/evidence/extensions-data-frontier/history.json",
+      "at": "$[\"hits\"][\"targets\"][18][\"excerpt\"]",
+      "unitSha256": "3a9b72792118c4ee2803a9a8c1a55c69359940539d35fea67d62be41659f2913",
+      "fullUnit": "线(LocalAddPanel 检测同名 + confirm + overwrite),desktop 跑 `bunx tsc --noEmit`。\n- [ ] commit。\n\n## Task B:本地插件可卸载(uninstallTarget + UI)\n\n**真相:** `uninstallTarget.ts:18` 对 `marketplace===null` 直接返回 `uninstallable:false`,UI 隐藏卸载按钮。本地插件应走 core 已有的 `uninstallPluginByName(name)`(删目录+删 `name@local` 条目)。\n\n**Files:**\n- `packages/desktop/src/renderer/extensions/uninstallTarget.ts` — 加一种 target:本地插件返回 `",
+      "selection": "All unique unit locators behind all53 retained collision windows; full units<=1800 chars, to be read in bounded batches."
+    },
+    {
+      "index": 15,
+      "path": "docs/audit-2026-10-17-round35/evidence/extensions-data-frontier/history.json",
+      "at": "$[\"hits\"][\"targets\"][20][\"excerpt\"]",
+      "unitSha256": "0fe5a5c7a9cd0f5e5e6cdfad8810cd19b01f74470a2dd6c1a4bd1c23ab6ad74a",
+      "fullUnit": " 测试不回归。\n- [ ] commit。\n- [ ] UI 接线(LocalAddPanel 检测同名 + confirm + overwrite),desktop 跑 `bunx tsc --noEmit`。\n- [ ] commit。\n\n## Task B:本地插件可卸载(uninstallTarget + UI)\n\n**真相:** `uninstallTarget.ts:18` 对 `marketplace===null` 直接返回 `uninstallable:false`,UI 隐藏卸载按钮。本地插件应走 core 已有的 `uninstallPluginByName(name)`(删目录+删 `name@local` 条目)。\n\n**File",
+      "selection": "All unique unit locators behind all53 retained collision windows; full units<=1800 chars, to be read in bounded batches."
+    },
+    {
+      "index": 16,
+      "path": "docs/audit-2026-10-17-round35/evidence/extensions-data-frontier/history.json",
+      "at": "$[\"hits\"][\"targets\"][21][\"excerpt\"]",
+      "unitSha256": "1c3e2acbbc68aac54df02e2ae0dfbdcf47648e3bb6ff81fcabde3ab62155adc9",
+      "fullUnit": "线(LocalAddPanel 检测同名 + confirm + overwrite),desktop 跑 `bunx tsc --noEmit`。\n- [ ] commit。\n\n## Task B:本地插件可卸载(uninstallTarget + UI)\n\n**真相:** `uninstallTarget.ts:18` 对 `marketplace===null` 直接返回 `uninstallable:false`,UI 隐藏卸载按钮。本地插件应走 core 已有的 `uninstallPluginByName(name)`(删目录+删 `name@local` 条目)。\n\n**File",
+      "selection": "All unique unit locators behind all53 retained collision windows; full units<=1800 chars, to be read in bounded batches."
+    },
+    {
+      "index": 17,
+      "path": "docs/audit-2026-10-17-round35/evidence/root-history.json",
+      "at": "$[\"hits\"][\"extensions-data\"][17][\"context\"]",
+      "unitSha256": "3b13f366f3f2172f79ef2a1bd193978438252e1706276363333a8f9d120f8df6",
+      "fullUnit": "跑测试看通过 + 全 installer 测试不回归。\n- [ ] commit。\n- [ ] UI 接线(LocalAddPanel 检测同名 + confirm + overwrite),desktop 跑 `bunx tsc --noEmit`。\n- [ ] commit。\n\n## Task B:本地插件可卸载(uninstallTarget + UI)\n\n**真相:** `uninstallTarget.ts:18` 对 `marketplace===null` 直接返回 `uninstallable:false`,UI 隐藏卸载按钮。本地插件应走 core 已有的 `uninstallPluginByName(name)`(删目录+删 `name@local` 条目)。\n\n**Files:**\n- `packages/desktop/src/renderer/extensions/uninstallTarget.ts` — 加一种 target:本地插件返回 `",
+      "selection": "All unique unit locators behind all53 retained collision windows; full units<=1800 chars, to be read in bounded batches."
+    },
+    {
+      "index": 18,
+      "path": "docs/audit-2026-10-17-round35/evidence/root-history.json",
+      "at": "$[\"hits\"][\"extensions-data\"][18][\"context\"]",
+      "unitSha256": "e945d5fb5d4c6e94e78e67bb77cfbbfa1ac2a8bd2ea72b3653c3c4c3c8900bb5",
+      "fullUnit": "] commit。\n- [ ] UI 接线(LocalAddPanel 检测同名 + confirm + overwrite),desktop 跑 `bunx tsc --noEmit`。\n- [ ] commit。\n\n## Task B:本地插件可卸载(uninstallTarget + UI)\n\n**真相:** `uninstallTarget.ts:18` 对 `marketplace===null` 直接返回 `uninstallable:false`,UI 隐藏卸载按钮。本地插件应走 core 已有的 `uninstallPluginByName(name)`(删目录+删 `name@local` 条目)。\n\n**Files:**\n- `packages/desktop/src/renderer/extensions/uninstallTarget.ts` — 加一种 target:本地插件返回 `",
+      "selection": "All unique unit locators behind all53 retained collision windows; full units<=1800 chars, to be read in bounded batches."
+    },
+    {
+      "index": 19,
+      "path": "docs/audit-2026-10-17-round35/evidence/root-history.json",
+      "at": "$[\"hits\"][\"extensions-data\"][20][\"context\"]",
+      "unitSha256": "a6e62180d9c9463701e544731472200192272a3b6f60d343759a189630b4c9b8",
+      "fullUnit": "跑测试看通过 + 全 installer 测试不回归。\n- [ ] commit。\n- [ ] UI 接线(LocalAddPanel 检测同名 + confirm + overwrite),desktop 跑 `bunx tsc --noEmit`。\n- [ ] commit。\n\n## Task B:本地插件可卸载(uninstallTarget + UI)\n\n**真相:** `uninstallTarget.ts:18` 对 `marketplace===null` 直接返回 `uninstallable:false`,UI 隐藏卸载按钮。本地插件应走 core 已有的 `uninstallPluginByName(name)`(删目录+删 `name@local` 条目)。\n\n**File",
+      "selection": "All unique unit locators behind all53 retained collision windows; full units<=1800 chars, to be read in bounded batches."
+    },
+    {
+      "index": 20,
+      "path": "docs/audit-2026-10-17-round35/evidence/root-history.json",
+      "at": "$[\"hits\"][\"extensions-data\"][21][\"context\"]",
+      "unitSha256": "86efcdbcc78eb0970b40b3ba659f14f7579e5e0de0045ae03cea44926fac2d42",
+      "fullUnit": "] commit。\n- [ ] UI 接线(LocalAddPanel 检测同名 + confirm + overwrite),desktop 跑 `bunx tsc --noEmit`。\n- [ ] commit。\n\n## Task B:本地插件可卸载(uninstallTarget + UI)\n\n**真相:** `uninstallTarget.ts:18` 对 `marketplace===null` 直接返回 `uninstallable:false`,UI 隐藏卸载按钮。本地插件应走 core 已有的 `uninstallPluginByName(name)`(删目录+删 `name@local` 条目)。\n\n**File",
+      "selection": "All unique unit locators behind all53 retained collision windows; full units<=1800 chars, to be read in bounded batches."
+    },
+    {
+      "index": 21,
+      "path": "docs/superpowers/specs/2026-05-19-plugin-marketplace-design.md",
+      "at": [
+        26,
+        34
+      ],
+      "unitSha256": "01ed5218f79ae1f4d3f871868e292639cbd8e246e9bd103ef8139530a6b02e47",
+      "fullUnit": "1. **Source types**: `github` (`anthropics/skills`) and `git` (`https://github.com/...git`). NPM, pip, file, directory, hostPattern deferred.\n2. **Marketplace persistence**: `~/.code-shell/plugins/known_marketplaces.json`. Schema: `Record<name, { source: MarketplaceSource, installLocation, lastUpdated }>`.\n3. **Plugin install persistence**: `~/.code-shell/plugins/installed_plugins.json` V2 only (no V1 migration since codeshell starts fresh). Schema: `{ version: 2, plugins: Record<\"<plugin>@<marketplace>\", PluginInstallEntry[]> }`.\n4. **Marketplace JSON** at `marketplaces/<name>/.claude-plugin/marketplace.json`, validated against the CC `PluginMarketplaceSchema` subset we support (name, owner, plugins[], optional metadata).\n5. **Plugin entry source** subset: `path` (inline, relative to marketplace root) and `{ source: \"git\" | \"github\" | \"git-subdir\", url, path?, ref?, sha? }`. The Adobe-style `git-subdir` is essential since `anthropics/skills` uses it.\n6. **Cache layout**: `~/.code-shell/plugins/cache/<marketplace>/<plugin>/<version>/` (version = git short SHA, \"unknown\" if local path).\n7. **Skill discovery integration**: extend `scanSkills()` to also walk every installed plugin's `skills/` dir; namespace each as `<plugin>:<skill>`.\n8. **Slash commands**: `/plugin marketplace add <git-url>`, `/plugin marketplace remove <name>`, `/plugin marketplace list`, `/plugin install <plugin>@<marketplace>`, `/plugin uninstall <plugin>@<marketplace>`, `/plugin list`. All non-interactive (no Dialog UI — codeshell's existing slash commands write to `ctx.addStatus`).\n9. **Error handling**: git clone retry once, schema validation gives `marketplace-load-failed` with a clear message, missing plugin → `plugin-not-found`. Always recoverable; never throw out of slash-command execute.",
+      "selection": "All unique unit locators behind all53 retained collision windows; full units<=1800 chars, to be read in bounded batches."
+    },
+    {
+      "index": 22,
+      "path": "docs/architecture/07-plugins-capabilities-credentials-memory.md",
+      "at": [
+        37,
+        45
+      ],
+      "unitSha256": "7e2b8e8921eb5b95d51f9c308f9a083e003547fc4d35b2a00f26e19179972201",
+      "fullUnit": "**Conversational lifecycle.** `InstallCapability` exposes list, inspect, install,\nupdate, enable, disable, and uninstall actions for marketplace plugins,\nstandalone project Skills, and MCP servers. Plugin installs reuse\n`pluginInstaller`; Skill operations use the reviewed `skills` CLI argument\nbuilders and collision checks; MCP writes go through `SettingsManager` at the\nlocal-private, project-shared, or user layer. Lists and plugin/MCP inspection\nare preset-allowed reads. Mutations and external Skill repository discovery are\napproval-gated, secret values are rejected from MCP arguments, and installed\ncapabilities notify live hosts to refresh for the next message.",
+      "selection": "All unique unit locators behind all53 retained collision windows; full units<=1800 chars, to be read in bounded batches."
+    },
+    {
+      "index": 23,
+      "path": "docs/archive/local-install-and-hot-reload-plan-2026-06-18.md",
+      "at": [
+        78,
+        81
+      ],
+      "unitSha256": "22e622e4e61474d3acf84d27db8462a2c7cf03fbadcca0e02e17779b7cd29238",
+      "fullUnit": "- 入口位置:`PluginsAndSkillsSection.tsx`(skill 区,已有\"安装本地 skill\"的雏形 install() at 766-777 — 先确认是否已部分存在,可能只差按钮可见性)。\n- UI:一个\"安装本地 Skill\"按钮 → 选目录(含 SKILL.md)→ **默认 scope=user(全局)** → 调 installLocalSkill → 成功后走块 1b 的热生效 + toast。\n- **不弹 user/project 选择**(与市场安装一致,避免体验割裂 —— 见用户决策)。底层 installLocalSkill 的 scope 参数仍传 \"user\"。\n- 失败提示:SKILL.md 不存在 / 同名已存在 → 走 DialogProvider + toast(禁原生 alert)。",
+      "selection": "All unique unit locators behind all53 retained collision windows; full units<=1800 chars, to be read in bounded batches."
+    },
+    {
+      "index": 24,
+      "path": "docs/audit-2026-10-17-round28/evidence/dialog-dedup.json",
+      "at": "$[\"contexts\"][\"exact-source\"][2][\"context\"]",
+      "unitSha256": "a518d80954544770500a9a419b105711847e7a546af4ee0e8be755de350e5ca4",
+      "fullUnit": "LocalSkill → 成功后走块 1b 的热生效 + toast。\n- **不弹 user/project 选择**(与市场安装一致,避免体验割裂 —— 见用户决策)。底层 installLocalSkill 的 scope 参数仍传 \"user\"。\n- 失败提示:SKILL.md 不存在 / 同名已存在 → 走 DialogProvider + toast(禁原生 alert)。\n\n**验证 2:** skill-creator 在某目录产出 SKILL.md → 点\"安装本地 Skill\"→ 选 project → 该项目立即可用,别的项目不可见。\n\n---\n\n### 块 3:扩展本地安装(zip + 目录)\n\n**3a. core:installer 支持 zip**\n- 现状:`installPluginFromPath(sourceDir)` 只吃已解压目录(install.ts:21-96);无任何解压逻辑;仓库无 unzip 依赖。\n- 改:新增 `installPluginFromArchive(zipPath)` 或在入口探测扩展名:\n  - 解压到临时目录(`os.tmpdir()` 下),再走已有 `installPluginFromPath`。\n  - **解压放 core,用 async**(main 进程禁同步 fs — 记忆 project_main_sync_fs_freeze)。\n  - 解压库:需新增依赖。候选 `unzipper` / `yauzl`(纯 zip,无原生编译)或 `adm-zip`(同步,不选)。倾向流式 async 的 `unzipper`。**装依赖后必重生成 lock(bun)。**\n  - 安全:解压要防 zip-slip(条目路径 `..` 逃逸)——校验",
+      "selection": "All unique unit locators behind all53 retained collision windows; full units<=1800 chars, to be read in bounded batches."
+    }
+  ],
+  "selectedUnitCount": 25,
+  "actualReadStatus": "All25 selected complete units read in bounded batches; these units represent all53 collision-local-marketplace windows; no giant units fully read.",
+  "strongQueryWindows": 0,
+  "actualReadBatches": [
+    {
+      "indices": [
+        0,
+        7
+      ],
+      "chunk": "c7e833"
+    },
+    {
+      "indices": [
+        8,
+        16
+      ],
+      "chunk": "e30ce6"
+    },
+    {
+      "indices": [
+        17,
+        24
+      ],
+      "chunk": "1cf870"
+    }
+  ],
+  "actualReadCompletedUTC": "2026-10-17T13:18:08.287947+00:00"
+}

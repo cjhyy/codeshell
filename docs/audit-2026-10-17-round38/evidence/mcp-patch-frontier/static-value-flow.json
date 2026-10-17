@@ -1,0 +1,53 @@
+{
+  "kind": "manual static source inference, no evaluated fixture",
+  "findingIdFromRoot": "MCP-R38-01",
+  "ordinaryCondition": "User-added editable stdio server, valid name/nonempty command, normal writable user scope; no external MCP connection needed for the DTO inference.",
+  "stages": [
+    {
+      "stage": "first input",
+      "source": "McpSection1475–1481,1746",
+      "text": "\"project notes\"",
+      "claim": "Ordinary quoted nonempty single argument entered through the real Args Input."
+    },
+    {
+      "stage": "first save DTO",
+      "source": "McpSection1301–1313,1383–1384,1870–1893",
+      "inferredArgs": [
+        "project notes"
+      ],
+      "claim": "Quote branch keeps the interior space inside one nonempty argument."
+    },
+    {
+      "stage": "patch and persisted representation",
+      "source": "McpSection700–714,418–436; mcpSettingsPatch43–60; settings-service110–160,181–214",
+      "inferredArgs": [
+        "project notes"
+      ],
+      "claim": "Copies/replaces string array and serializes JSON; no source stage re-quotes user text because it stores structured args."
+    },
+    {
+      "stage": "reopen",
+      "source": "McpSection438–449,649–668,700–706,1122; optional reload245–270,1756–1769",
+      "text": "project notes",
+      "claim": "Stored array or just-saved next state is passed to initial; join(\" \") removes the argument boundary representation."
+    },
+    {
+      "stage": "unchanged second save",
+      "source": "McpSection1384,1874–1891; helper59; settings-service181–214",
+      "inferredArgs": [
+        "project",
+        "notes"
+      ],
+      "claim": "Without quotes the whitespace branch produces two strings; replacement patch can persist that changed array."
+    }
+  ],
+  "runtimeObservations": [],
+  "notClaimed": [
+    "actual UI clicks",
+    "actual settings file written",
+    "real MCP connection failure",
+    "process execution",
+    "credential or auth effect",
+    "full lifecycle correctness"
+  ]
+}

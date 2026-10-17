@@ -1,0 +1,23 @@
+{
+  "role": "independent source reviewer opinion for Root aggregation",
+  "supportedNamespaceConcerns": 1,
+  "suggestedSeverity": "P3",
+  "opinion": "support static ordinary producer/consumer contract violation",
+  "assignedGlobalFindingId": null,
+  "unifiedClassificationOwner": "Root",
+  "standaloneFormalRecordsCreated": 0,
+  "standaloneCandidateRecordsCreated": 0,
+  "newRelatedRecordsCreated": 0,
+  "ordinaryProducerEstablishedBySource": true,
+  "dynamicValidation": false,
+  "exactScope": "Allowed registered marketplace name local -> marketplace install key suffix local -> catalog/summary marker collision -> local uninstall callee; source-derived absent direct dir rejection only.",
+  "notClaimed": [
+    "actual successful clone/install",
+    "real catalog invocation",
+    "UI click observed",
+    "directory exists/missing observed",
+    "actual deletion",
+    "data corruption",
+    "security/permission bypass"
+  ]
+}

@@ -1,0 +1,51 @@
+{
+  "selfExcluded": true,
+  "artifacts": [
+    {
+      "path": "decisions.json",
+      "bytes": 2248,
+      "sha256": "c25843bd68330cba304a05db15723750d91f38d057d39222317fe575d3d9cc31"
+    },
+    {
+      "path": "initial-pins.json",
+      "bytes": 3258,
+      "sha256": "c7751b25b9dd1dbd77ba631ee86130c7f2099b870d0ce19816d5a8dafe5050bf"
+    },
+    {
+      "path": "installed-key-pin.json",
+      "bytes": 403,
+      "sha256": "2f2b13b20a740bce85f3e2529d7fc0ab606355d75d238d6a91579242b0c6cd59"
+    },
+    {
+      "path": "metadata-notes.json",
+      "bytes": 329,
+      "sha256": "f43e8f7336084a6662e28971cd4cc460f55dad2445aee3aec0d1d080a49f4576"
+    },
+    {
+      "path": "proposal.md",
+      "bytes": 2587,
+      "sha256": "f24005f172238773d7fd28386621a303d3a1beb4894ee4d7e4f190aca7c8a244"
+    },
+    {
+      "path": "read-ranges.json",
+      "bytes": 1646,
+      "sha256": "5b190156c837d53ab5d884b9162ef867cd19877f831b790fdd33aad42bab0557"
+    },
+    {
+      "path": "source-manifest.json",
+      "bytes": 5647,
+      "sha256": "8f647580230aa2133b52863b9dd94c6c906c2e9f0e4e82265979d61adaca1ba1"
+    },
+    {
+      "path": "source-reader.first.exit.json",
+      "bytes": 574,
+      "sha256": "944b3c501288d909d41e0b91918eba92eb4768b888aaf41cd7be76179ece11bb"
+    },
+    {
+      "path": "validation.json",
+      "bytes": 104,
+      "sha256": "cabc6267e8a4ecfa48d593a2d21a603a2b19d3beee9c13272a1a6437e762abc9"
+    }
+  ],
+  "productRuns": 0
+}

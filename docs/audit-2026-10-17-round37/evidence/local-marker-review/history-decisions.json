@@ -1,0 +1,53 @@
+{
+  "snapshotFiles": 3216,
+  "initialQueryCounts": {
+    "targets": 68,
+    "namespace-contract": 91,
+    "old-failed": 17
+  },
+  "initialContextCap": 100,
+  "all176RetainedContextsInspected": true,
+  "focusedCounts": {
+    "literal-local-comparison": 0,
+    "named-local": 0,
+    "namespace-local": 15
+  },
+  "focusedContextCap": null,
+  "all15FocusedContextsInspected": true,
+  "focusedDrift": 0,
+  "exactCauseAssessment": "No record found within these full-corpus queries/read contexts for admitted marketplace name local being confused with direct-install marker. This is bounded dedup evidence, not proof that no human has previously considered it.",
+  "oldCauseExclusions": [
+    {
+      "cause": "missing local branch / truthy local marker",
+      "references": [
+        "docs/archive/local-plugin-upgrade-uninstall-plan-2026-06-22.md:31–44",
+        "uninstallTarget.ts:20–27",
+        "uninstallTarget.test.ts:17–25"
+      ],
+      "difference": "Old: real direct/local origin was sent to marketplace route. New: real registered marketplace named local is sent to local route. Reverting local support would revive old case; producer/discriminator namespace must be handled."
+    },
+    {
+      "cause": "PROFILE-R5-01 catalog source-key collision",
+      "reference": "docs/audit-2026-10-17-round5/profile.md full65",
+      "difference": "owner/repository delimiter loss in profile cache sourceToRepoKey, separate reader/remover and key grammar; no marketplace origin marker or uninstall DTO branch."
+    },
+    {
+      "cause": "R52/W19 constant local version cache invalid update",
+      "references": [
+        "docs/review-2026-10-12/plugin-quality-round9.md:23–27",
+        "docs/review-2026-10-12/plugins-round7.md:52–56"
+      ],
+      "difference": "local denotes version cache directory for path source in a marketplace, followed by invalid update replacement, not registered marketplace name local or UI source classification."
+    },
+    {
+      "cause": "PLUGIN-R8-03 Windows derived marketplace name",
+      "reference": "docs/audit-2026-10-17-round8/plugins.md:29",
+      "difference": "accepted source derives unsafe separator name then rejected; local is safe and remains admitted."
+    }
+  ],
+  "priorFullReadExclusions": [
+    "Round33 same-SHA installer/types154 and install74 full semantic reading reused, not new coverage",
+    "Future35 leaf/summary/caller selected/full reading reused; namespace admission/catalog-origin contract was outside its negative conclusion and old prep unchanged"
+  ],
+  "historicalPassesBorrowed": false
+}

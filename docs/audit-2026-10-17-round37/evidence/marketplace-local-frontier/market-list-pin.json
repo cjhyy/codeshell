@@ -1,0 +1,13 @@
+{
+  "capturedUTC": "2026-10-17T12:45:16.126695+00:00",
+  "files": [
+    {
+      "path": "packages/desktop/src/renderer/extensions/MarketList.tsx",
+      "bytes": 20235,
+      "lineCount": 550,
+      "sha256": "acdb1ab1fddfa75f19301042559a281eae2925d9a53ec34abc5e2640e07df9b9",
+      "initialSemanticReadSha256": "acdb1ab1fddfa75f19301042559a281eae2925d9a53ec34abc5e2640e07df9b9",
+      "timingNote": "Path-only locator before pin."
+    }
+  ]
+}

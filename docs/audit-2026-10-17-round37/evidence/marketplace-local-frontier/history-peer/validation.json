@@ -1,0 +1,16 @@
+{
+  "createdUTC": "2026-10-17T12:51:53.231488+00:00",
+  "runs": [],
+  "productAttempts": 0,
+  "productPass": 0,
+  "productExpect": 0,
+  "productFailures": 0,
+  "gitCommands": 0,
+  "networkRequests": 0,
+  "newProductSourceSemanticReads": 0,
+  "metadataFirstRangeAssertionExit": 1,
+  "metadataFirstDriftAssertionExit": 1,
+  "sameCauseStatus": "bounded-no-exact-match-at-initial-dated-history",
+  "permissionsAndCustody": "not reviewed or exercised",
+  "scope": "Historical MD/JSON-value gate only"
+}
