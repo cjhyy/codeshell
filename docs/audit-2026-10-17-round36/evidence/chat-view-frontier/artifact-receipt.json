@@ -1,0 +1,92 @@
+{
+  "frozenAtUTC": "2026-10-17T12:42:45.383622+00:00",
+  "prepOnly": true,
+  "rootSuppliedFrozenContextShort": "40d79ff",
+  "formalBaseline": null,
+  "files": [
+    {
+      "path": "/tmp/codeshell-audit-round36-chat-view-frontier/classification.json",
+      "bytes": 1316,
+      "sha256": "0c3ffe6054c2a89ed898532e37ba7a04dbfbbea4d64b7137033352600f9c4075"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round36-chat-view-frontier/consumer-history-initial-pins.json",
+      "bytes": 2881,
+      "sha256": "fcf5a310da54bb16dee52972b4c34c3aa3f5fb8abf7dede76e45104b28a120b6"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round36-chat-view-frontier/focused-history.json",
+      "bytes": 27482,
+      "sha256": "5b85f7f0b7e33a4cc75a721997ef6a80d363ba4570c6a0b47c68c20c5f73a73b"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round36-chat-view-frontier/history-delta.json",
+      "bytes": 256,
+      "sha256": "ed568a9c2ec00ce740e90bd2b1abe522de4dc3ebaeaf6630f0b6b4e4e37d441e"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round36-chat-view-frontier/history-method.py",
+      "bytes": 3351,
+      "sha256": "7102c99443a316e3ff5e0a2c5784e6f95597ece3fe0dce91137784cf6ab884d8"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round36-chat-view-frontier/history.json",
+      "bytes": 705686,
+      "sha256": "8526bc9cc05eef33a280e73446683f25bec0c2cc0c644085471290acc8906530"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round36-chat-view-frontier/initial-pins.json",
+      "bytes": 1468,
+      "sha256": "8a2b4fba960cb8a16527117359ca9f2e70eb2a12cf64040ef3a277c84128cbe9"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round36-chat-view-frontier/known-cause-late-pin.json",
+      "bytes": 403,
+      "sha256": "cdd69032c90575b7d41b313718bb7d0308d6fb757828f11ab50886fc7202a54a"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round36-chat-view-frontier/links-check.json",
+      "bytes": 2229,
+      "sha256": "b76b8ba4c25475af3f02edf3f34ab718e7982f86055c42f62518c276301d44c9"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round36-chat-view-frontier/message-stream-initial-pin.json",
+      "bytes": 344,
+      "sha256": "dfe9dcd011dc22f9fb4b03ae45419929a37d4979aff2347b866c501c770bd44b"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round36-chat-view-frontier/parent-caller-initial-pins.json",
+      "bytes": 737,
+      "sha256": "a624295ee1ae526ec339ebc47782a4f4e46f0ede52b9e0a9241c5889418bbea4"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round36-chat-view-frontier/prior-coverage.json",
+      "bytes": 1710,
+      "sha256": "773ed0d9bba4a224000c64f9114033cc3616420a778035c51879385fbe8572aa"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round36-chat-view-frontier/report.md",
+      "bytes": 6408,
+      "sha256": "96de25be63fb54a3c12c6e137fe0b86efb964359f97e40b69a6c7936a4e74d39"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round36-chat-view-frontier/source-manifest.json",
+      "bytes": 20864,
+      "sha256": "ad334f20513f2dcedb9be323028da3d329bbcc527c8e3449aee0ee1e8d4263c4"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round36-chat-view-frontier/validation.json",
+      "bytes": 1200,
+      "sha256": "6a384e6b5798c4856691ebe098746af9262d56b091a0a98bec62c6d414b5b06d"
+    }
+  ],
+  "selfExcluded": true,
+  "sourceBeforeFinishStable": true,
+  "classification": {
+    "newFormal": 0,
+    "newCandidate": 0,
+    "newRelated": 0
+  },
+  "onlyWrittenDirectory": "/tmp/codeshell-audit-round36-chat-view-frontier",
+  "productOrGitExecuted": false
+}

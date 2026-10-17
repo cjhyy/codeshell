@@ -1,0 +1,39 @@
+{
+  "prepOnly": true,
+  "rootSuppliedFrozenContextShort": "40d79ff",
+  "formalBaseline": null,
+  "files": [
+    {
+      "path": "packages/desktop/src/renderer/chat/anchorBuckets.ts",
+      "bytes": 2961,
+      "sha256": "d81fae043047c2de19141184a9f02c80ff2ff429e991004668fbef75d0cfca46",
+      "totalLines": 80,
+      "pinTimeUTC": "2026-10-17T12:37:42.156551+00:00",
+      "purpose": "first filesystem pin before current source reading"
+    },
+    {
+      "path": "packages/desktop/src/renderer/chat/anchorBuckets.test.ts",
+      "bytes": 3028,
+      "sha256": "fad5194d523d55614b482b2b891ffdad83330bd2bf5454e6f01647ea82e202c5",
+      "totalLines": 76,
+      "pinTimeUTC": "2026-10-17T12:37:42.158222+00:00",
+      "purpose": "first filesystem pin before current source reading"
+    },
+    {
+      "path": "packages/desktop/src/renderer/chat/followState.ts",
+      "bytes": 3454,
+      "sha256": "aa9ddaf79e2cbf85c554bce7e04d94f1e16fde1887f3afb4604e2aa27fad1615",
+      "totalLines": 85,
+      "pinTimeUTC": "2026-10-17T12:37:42.158994+00:00",
+      "purpose": "first filesystem pin before current source reading"
+    },
+    {
+      "path": "packages/desktop/src/renderer/chat/followState.test.ts",
+      "bytes": 3713,
+      "sha256": "4c90ffd1e902800e839c40285549b551299286e9a73c02b0101697ef569fc45b",
+      "totalLines": 119,
+      "pinTimeUTC": "2026-10-17T12:37:42.159575+00:00",
+      "purpose": "first filesystem pin before current source reading"
+    }
+  ]
+}

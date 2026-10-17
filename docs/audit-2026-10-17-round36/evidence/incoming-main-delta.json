@@ -1,0 +1,23 @@
+{
+  "baseline": "41d7d62bd39f141228146106383648017b5a8fb4",
+  "mainHead": "cecd79dc876da244bf7dd3277774e82d3d3866db",
+  "changedPaths": [
+    ".github/workflows/desktop-ui-acceptance.yml",
+    "docs/todo/release-real-operations-2026-10-16.md",
+    "packages/core/src/session/turn-diff.bom.test.ts",
+    "packages/core/src/session/turn-diff.case-alias.test.ts",
+    "packages/core/src/session/turn-diff.ts",
+    "packages/desktop/scripts/e2e-review-draft-operations.mjs",
+    "packages/desktop/scripts/review-draft-response-gate.test.mjs",
+    "packages/desktop/src/renderer/diff/composeFileEdits.containment.test.ts",
+    "packages/desktop/src/renderer/diff/composeFileEdits.test.ts",
+    "packages/desktop/src/renderer/diff/composeFileEdits.ts",
+    "packages/desktop/src/renderer/messages/fileChangeAggregator.ts",
+    "packages/desktop/src/renderer/types.ts",
+    "packages/desktop/src/renderer/types.turn-diff.test.ts"
+  ],
+  "scope": "Git path inventory only.",
+  "selectedSourceIntersections": [],
+  "selectedSourcesUnchanged": true,
+  "log": "cecd79dc8 Merge commit 'ee3628612ff7e2cfd0efa88b25608277a652b198' into codex/desktop/real-operation-cycles-20261016\nee3628612 docs: record frozen CI20 combined source checks\nc36568c8e Merge commit '41d7d62bd39f141228146106383648017b5a8fb4' into codex/desktop/real-operation-cycles-20261016\n635bed14e test(ci): cover execution-owned turn diff regressions\ndfb153a3b Merge commit '63447e30edad5ab9cf5f627af85afa15513843a3' into codex/desktop/real-operation-cycles-20261016\n63447e30e fix(core): preserve UTF-8 BOM in turn diff capture\n3c1cf800b Merge commit '8041caccac3903470428fd776918e6d1bd2720ac' into codex/desktop/real-operation-cycles-20261016\n8041cacca fix(core): unify turn diff filesystem case aliases\n866d88d54 Merge commit 'acb288f9099b1ef95be4516ede7e601eeca132e3' into codex/desktop/real-operation-cycles-20261016\nacb288f90 fix(desktop): retain external changes beyond turn snapshots\nb8103d8f1 Merge commit 'caf91bfeab0f53661a95d55889ba47556b6eaed5' into codex/desktop/real-operation-cycles-20261016\ncaf91bfea docs(acceptance): distinguish observed exit from process liveness\n84e6c0b5f Merge commit '4ad2052b6fd697af6141d8e60df1724cff509383' into codex/desktop/real-operation-cycles-20261016\ndd3e4b8db docs(acceptance): preserve CI19 failures and scoped repairs\n686a05377 Merge commit 'ae059b2732894916224fa98edd1d42a15e973b4c' into codex/desktop/real-operation-cycles-20261016\nae059b273 test(ci): run conservative snippet composition regressions\nf69bbe0ad Merge conservative snippet composition source for CI gate\n9c23bd458 Merge commit '99357a70e3da855052f7b7483de762fa10e7b507' into codex/desktop/real-operation-cycles-20261016\nc6502afd9 Merge commit '56cee4415482ab16439250172ed793aa74897b3b' into codex/desktop/real-operation-cycles-20261016\n99357a70e test(desktop): bind Electron evaluation payloads correctly\n56cee4415 fix(desktop): keep uncertain enclosing edit previews separate\n43d76261c test(desktop): reproduce ambiguous outer snippet containment\n"
+}

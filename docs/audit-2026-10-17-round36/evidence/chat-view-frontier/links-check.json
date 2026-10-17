@@ -1,0 +1,62 @@
+{
+  "checkedAtUTC": "2026-10-17T12:42:45.283580+00:00",
+  "files": [
+    {
+      "target": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/packages/desktop/src/renderer/chat/anchorBuckets.ts:19",
+      "exists": true
+    },
+    {
+      "target": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/packages/desktop/src/renderer/app/usePanelBuckets.ts:175",
+      "exists": true
+    },
+    {
+      "target": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/packages/desktop/src/renderer/app/SessionPanelDock.tsx:210",
+      "exists": true
+    },
+    {
+      "target": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/packages/desktop/src/renderer/chat/followState.ts:54",
+      "exists": true
+    },
+    {
+      "target": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/packages/desktop/src/renderer/chat/stickToBottom.ts:133",
+      "exists": true
+    },
+    {
+      "target": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/packages/desktop/src/renderer/MessageStream.tsx:217",
+      "exists": true
+    },
+    {
+      "target": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/archive/todo/review-desktop-2026-07-08.md:69",
+      "exists": true
+    },
+    {
+      "target": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/archive/review-2026-07-09/02-desktop-stream-walkthrough.md:93",
+      "exists": true
+    },
+    {
+      "target": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/archive/todo/desktop-streaming-markdown-autoscroll-plan.md:645",
+      "exists": true
+    },
+    {
+      "target": "/tmp/codeshell-audit-round36-chat-view-frontier/history.json",
+      "exists": true
+    },
+    {
+      "target": "/tmp/codeshell-audit-round36-chat-view-frontier/focused-history.json",
+      "exists": true
+    },
+    {
+      "target": "/tmp/codeshell-audit-round36-chat-view-frontier/prior-coverage.json",
+      "exists": true
+    },
+    {
+      "target": "/tmp/codeshell-audit-round36-chat-view-frontier/source-manifest.json",
+      "exists": true
+    },
+    {
+      "target": "/tmp/codeshell-audit-round36-chat-view-frontier/validation.json",
+      "exists": true
+    }
+  ],
+  "existenceOnly": true
+}

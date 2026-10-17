@@ -1,0 +1,552 @@
+{
+  "capturedUTC": "2026-10-17T12:40:30.086042+00:00",
+  "baseHistory": "history.json",
+  "inventoryCount": 3137,
+  "method": "Reuse exact original inventory; compare each SHA before whole Markdown / recursive JSON value scalar scan; do not include newly created docs. Keys excluded.",
+  "patterns": {
+    "all-exact-leaf": "dialogState|toastState",
+    "toast-contract": "toastFromOptions|addToast|dismissToast|markToastHistoryRead|clearToastHistory|MAX_TOAST(?:S|_HISTORY)|(?:toast|notification).{0,40}(?:history|stack|cap|expire|read)"
+  },
+  "counts": {
+    "all-exact-leaf": 70,
+    "toast-contract": 36
+  },
+  "capEach": 100,
+  "hits": {
+    "all-exact-leaf": [
+      {
+        "path": "docs/audit-2026-10-16/inventory.json",
+        "at": "$[\"source_inventory\"][1810]",
+        "context": "packages/desktop/src/renderer/ui/dialogState.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-16/inventory.json",
+        "at": "$[\"source_inventory\"][1815]",
+        "context": "packages/desktop/src/renderer/ui/toastState.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round28/coverage-report.md",
+        "at": "whole Markdown",
+        "context": "索引规则，不证明旧审查没做。\n\n242个零runtime-import文本候选还经过命名/语法导航过滤；regex不会证明helper纯、不会排除所有副作用。前三个实质提议是splitStreamingMarkdown、dialogState、sessionStatus，Root先读真实源码和调用边界后才各自审查，没有直接运行候选。sessionStatus在旧R18导航/设计prose已被提到，却没有matching structured row，正好是“no row不等于从未读过”的反例。TUI/Core的旧失败方向和权限、native、模型等没有被索引提议当作执行授权。\n\n原shortlist去重是当前2677 docs/bugs MD+JSON value scalars，1262MD/1415JSON、"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round28/dialog-report.md",
+        "at": "whole Markdown",
+        "context": "React/browser、VM、native、网络或模型。本轮只读源码/历史文档与文件hash，没有修产品或恢复任何旧失败方向。\n\n按rg库存先固定before-read filesystem pins，随后完整读 [dialogState](../../packages/desktop/src/renderer/ui/dialogState.ts)、[unit test声明](../../packages/desktop/src/renderer/ui/dialogState.test.ts)、[DialogProvider](../../packages/desktop/src/renderer/ui/DialogProvider.tsx)、[interaction wrapper](../../packa"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round28/dialog-report.md",
+        "at": "whole Markdown",
+        "context": "产品或恢复任何旧失败方向。\n\n按rg库存先固定before-read filesystem pins，随后完整读 [dialogState](../../packages/desktop/src/renderer/ui/dialogState.ts)、[unit test声明](../../packages/desktop/src/renderer/ui/dialogState.test.ts)、[DialogProvider](../../packages/desktop/src/renderer/ui/DialogProvider.tsx)、[interaction wrapper](../../packages/desktop/src/renderer/ui/DialogProvider.interacti"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round28/dialog-report.md",
+        "at": "whole Markdown",
+        "context": "](../../packages/desktop/src/renderer/ui/dialogState.ts)、[unit test声明](../../packages/desktop/src/renderer/ui/dialogState.test.ts)、[DialogProvider](../../packages/desktop/src/renderer/ui/DialogProvider.tsx)、[interaction wrapper](../../packages/desktop/src/renderer/ui/DialogProvider.interaction.test.tsx)、[ConfirmDialog兼容层](../../packages/desktop/src/renderer/u"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round28/dialog-report.md",
+        "at": "whole Markdown",
+        "context": "前filesystem证明不回填为作者Git冻结blob验证。interaction wrapper引用的browser fixture没有展开或执行。\n\n普通合同反证足够，本轮没有新的可达缺陷：\n\n- `initialDialogState`为空，`enqueue`在无active时立即显示，其余追加FIFO；`resolveActive`空状态no-op，完成active后从queue取下一项。正常由这些操作产生的状态，不存在active为空而queue仍积压的异常形状。\n- Provider的`open`用原生Promise创建resolver，正常值由Confirm的true/false、Alert的undefined和Prompt的string/null产生；Alert API又明确把结果映射void。"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/README.md",
+        "at": "whole Markdown",
+        "context": "gh也记过，不将这些边界当新bug。不要借本提议恢复旧parseDocument失败方向，不运行Markdown/React/parser。\n2. **`packages/desktop/src/renderer/ui/dialogState.ts`，78行，SHA `b7a6b81ccff93ebdd63bd96816373ead1d94d9bc793588312f492f31ac4c28f4`。** 显式无React/DOM的queue状态helper，0imports；但resolveActive会调用传入resolve回调，提议静态核queue/promotion与真实hook消费者的时序合同。将来若需要验证也只能由Root另选owned fake callback，当前没有调用函数/Promise/UI"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-ranking.json",
+        "at": "$[\"rankedCandidates\"][124][\"path\"]",
+        "context": "packages/desktop/src/renderer/ui/dialogState.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/coverage-ranking.json",
+        "at": "$[\"rankedCandidates\"][139][\"path\"]",
+        "context": "packages/desktop/src/renderer/ui/toastState.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+        "at": "$[\"files\"][3197][\"path\"]",
+        "context": "packages/desktop/src/renderer/ui/dialogState.test.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+        "at": "$[\"files\"][3198][\"path\"]",
+        "context": "packages/desktop/src/renderer/ui/dialogState.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+        "at": "$[\"files\"][3202][\"path\"]",
+        "context": "packages/desktop/src/renderer/ui/toastState.test.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+        "at": "$[\"files\"][3203][\"path\"]",
+        "context": "packages/desktop/src/renderer/ui/toastState.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/receipt.json",
+        "at": "$[\"recommendedFrontiers\"][1][\"path\"]",
+        "context": "packages/desktop/src/renderer/ui/dialogState.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/shortlist-history.json",
+        "at": "$[\"patterns\"][\"dialog-state\"]",
+        "context": "dialogState(?:\\.test)?\\.ts|initialDialogState|resolveActive\\("
+      },
+      {
+        "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/shortlist-history.json",
+        "at": "$[\"patterns\"][\"dialog-state\"]",
+        "context": "dialogState(?:\\.test)?\\.ts|initialDialogState|resolveActive\\("
+      },
+      {
+        "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/shortlist-history.json",
+        "at": "$[\"hits\"][\"dialog-state\"][0][\"excerpt\"]",
+        "context": "packages/desktop/src/renderer/ui/dialogState.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/shortlist-history.json",
+        "at": "$[\"hits\"][\"dialog-state\"][1][\"excerpt\"]",
+        "context": "packages/desktop/src/renderer/ui/dialogState.test.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/shortlist-history.json",
+        "at": "$[\"hits\"][\"dialog-state\"][2][\"excerpt\"]",
+        "context": "/tmp/codeshell-review-20261012/desktop-baseline/277-dialogState.test.ts.log"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/shortlist-history.json",
+        "at": "$[\"hits\"][\"dialog-state\"][3][\"excerpt\"]",
+        "context": "packages/desktop/src/renderer/ui/dialogState.test.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/shortlist-history.json",
+        "at": "$[\"hits\"][\"dialog-state\"][4][\"excerpt\"]",
+        "context": "/tmp/codeshell-review-20261012/desktop-baseline/277-dialogState.test.ts.log"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/shortlist-history.json",
+        "at": "$[\"hits\"][\"dialog-state\"][5][\"excerpt\"]",
+        "context": "/private/tmp/codeshell-review-20261012/desktop-baseline/277-dialogState.test.ts.log"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/shortlist-history.json",
+        "at": "$[\"hits\"][\"dialog-state\"][6][\"excerpt\"]",
+        "context": "277-dialogState.test.ts.log"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/shortlist-history.json",
+        "at": "$[\"hits\"][\"dialog-state\"][7][\"excerpt\"]",
+        "context": "packages/desktop/src/renderer/ui/dialogState.test.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/shortlist-history.json",
+        "at": "$[\"hits\"][\"dialog-state\"][8][\"excerpt\"]",
+        "context": "/tmp/codeshell-review-20261012/desktop-baseline/277-dialogState.test.ts.log"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/shortlist-history.json",
+        "at": "$[\"hits\"][\"dialog-state\"][9][\"excerpt\"]",
+        "context": "desktop-renderer/277-dialogState.test.ts.log"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round28/evidence/dialog-consumer-initial-pins.json",
+        "at": "$[\"files\"][0][\"path\"]",
+        "context": "packages/desktop/src/renderer/ui/dialogState.test.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round28/evidence/dialog-dedup.json",
+        "at": "$[\"patterns\"][\"exact-source\"]",
+        "context": "dialogState|DialogProvider|DialogController|dialog-state"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round28/evidence/dialog-dedup.json",
+        "at": "$[\"contexts\"][\"exact-source\"][6][\"context\"]",
+        "context": "packages/desktop/src/renderer/ui/dialogState.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round28/evidence/dialog-dedup.json",
+        "at": "$[\"contexts\"][\"exact-source\"][28][\"context\"]",
+        "context": "packages/desktop/src/renderer/ui/dialogState.test.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round28/evidence/dialog-dedup.json",
+        "at": "$[\"contexts\"][\"exact-source\"][29][\"context\"]",
+        "context": "/tmp/codeshell-review-20261012/desktop-baseline/277-dialogState.test.ts.log"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round28/evidence/dialog-dedup.json",
+        "at": "$[\"contexts\"][\"exact-source\"][34][\"context\"]",
+        "context": "packages/desktop/src/renderer/ui/dialogState.test.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round28/evidence/dialog-dedup.json",
+        "at": "$[\"contexts\"][\"exact-source\"][35][\"context\"]",
+        "context": "/tmp/codeshell-review-20261012/desktop-baseline/277-dialogState.test.ts.log"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round28/evidence/dialog-dedup.json",
+        "at": "$[\"contexts\"][\"exact-source\"][36][\"context\"]",
+        "context": "/private/tmp/codeshell-review-20261012/desktop-baseline/277-dialogState.test.ts.log"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round28/evidence/dialog-dedup.json",
+        "at": "$[\"contexts\"][\"exact-source\"][37][\"context\"]",
+        "context": "277-dialogState.test.ts.log"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round28/evidence/dialog-dedup.json",
+        "at": "$[\"contexts\"][\"exact-source\"][41][\"context\"]",
+        "context": "packages/desktop/src/renderer/ui/dialogState.test.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round28/evidence/dialog-dedup.json",
+        "at": "$[\"contexts\"][\"exact-source\"][42][\"context\"]",
+        "context": "/tmp/codeshell-review-20261012/desktop-baseline/277-dialogState.test.ts.log"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round28/evidence/dialog-dedup.json",
+        "at": "$[\"contexts\"][\"exact-source\"][43][\"context\"]",
+        "context": "desktop-renderer/277-dialogState.test.ts.log"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round28/evidence/dialog-history-decisions.json",
+        "at": "$[\"historyCases\"][0][\"meaning\"]",
+        "context": "Structured coverage-prep lacking dialogState is not historical unread proof; full prior value scan actually has54exact occurrences including source inventories, old test receipts and DialogProvider consumers."
+      },
+      {
+        "path": "docs/audit-2026-10-17-round28/evidence/dialog-history-decisions.json",
+        "at": "$[\"historyCases\"][1][\"meaning\"]",
+        "context": "ialogProvider identities caused by copied trailing-slash module paths. This is old harness history, not a new dialogState reducer issue or permission to rerun."
+      },
+      {
+        "path": "docs/audit-2026-10-17-round28/evidence/dialog-initial-source-pins.json",
+        "at": "$[\"files\"][2][\"path\"]",
+        "context": "packages/desktop/src/renderer/ui/dialogState.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round28/evidence/dialog-source-manifest.json",
+        "at": "$[\"files\"][2][\"path\"]",
+        "context": "packages/desktop/src/renderer/ui/dialogState.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round28/evidence/dialog-source-manifest.json",
+        "at": "$[\"files\"][3][\"path\"]",
+        "context": "packages/desktop/src/renderer/ui/dialogState.test.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round28/evidence/dialog-validation.json",
+        "at": "$[\"note\"]",
+        "context": "Six dialogState unit test declarations and six interaction-wrapper scenario names are static source only. No Bun spawn/browser fixture or hook/modal/reducer invocation. Round27 compose first failure remains SKIP."
+      },
+      {
+        "path": "docs/audit-2026-10-17-round28/source-manifest.json",
+        "at": "$[\"files\"][23][\"path\"]",
+        "context": "packages/desktop/src/renderer/ui/dialogState.test.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round28/source-manifest.json",
+        "at": "$[\"files\"][24][\"path\"]",
+        "context": "packages/desktop/src/renderer/ui/dialogState.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round28/source-manifest.json",
+        "at": "$[\"workerSourceChecks\"][28][\"path\"]",
+        "context": "packages/desktop/src/renderer/ui/dialogState.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round28/source-manifest.json",
+        "at": "$[\"workerSourceChecks\"][29][\"path\"]",
+        "context": "packages/desktop/src/renderer/ui/dialogState.test.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round28/source-manifest.json",
+        "at": "$[\"priorPrepHashOnlyChecks\"][49][\"path\"]",
+        "context": "packages/desktop/src/renderer/ui/dialogState.ts"
+      },
+      {
+        "path": "docs/nightly-2026-07-12/pet-desktop-ui-design.md",
+        "at": "whole Markdown",
+        "context": "sage/variant/durationMs`，card click 只 dismiss，没有 action target 或 dedupe key（`packages/desktop/src/renderer/ui/toastState.ts:13`、`packages/desktop/src/renderer/ui/ToastProvider.tsx:129`）。建议新增 `PetPeekHost`，复用 Toast 的视觉 token/stack/aria-live，增加：\n\n- `dedupeKey`、`action`、`onDismiss`、`createdAt`、aggregation payload；\n- 单项 `open_session` 与多项 `open_pet_pending` 两种结构"
+      },
+      {
+        "path": "docs/nightly-2026-07-12/pet-phase1-implementation-plan.md",
+        "at": "whole Markdown",
+        "context": "/desktop/src/renderer/pet/PetPeekHost.test.tsx`\n- `[desktop-renderer]` 预计修改 `packages/desktop/src/renderer/ui/toastState.ts`、`ToastProvider.tsx`（增加 typed action/dedupe，或复用视觉 token 的独立 stack；二选一，推测）\n- `[desktop-renderer]` 预计修改 `packages/desktop/src/renderer/App.tsx`（active session上报 + dock badge数据源）\n\n**依赖**\n\n- Step 11、Step 13。\n\n**TDD 测试点**\n\n1. fake clock：crea"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/desktop-renderer-results.json",
+        "at": "$[277][\"file\"]",
+        "context": "packages/desktop/src/renderer/ui/dialogState.test.ts"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/desktop-renderer-results.json",
+        "at": "$[277][\"log\"]",
+        "context": "/tmp/codeshell-review-20261012/desktop-baseline/277-dialogState.test.ts.log"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/desktop-renderer-results.json",
+        "at": "$[278][\"file\"]",
+        "context": "packages/desktop/src/renderer/ui/toastState.test.ts"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/desktop-renderer-results.json",
+        "at": "$[278][\"log\"]",
+        "context": "/tmp/codeshell-review-20261012/desktop-baseline/278-toastState.test.ts.log"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-baseline-evidence-round28/independent-existing-tests.receipt.json",
+        "at": "$[\"groups\"][1][\"rawLogs\"][277][\"file\"]",
+        "context": "packages/desktop/src/renderer/ui/dialogState.test.ts"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-baseline-evidence-round28/independent-existing-tests.receipt.json",
+        "at": "$[\"groups\"][1][\"rawLogs\"][277][\"log\"]",
+        "context": "/tmp/codeshell-review-20261012/desktop-baseline/277-dialogState.test.ts.log"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-baseline-evidence-round28/independent-existing-tests.receipt.json",
+        "at": "$[\"groups\"][1][\"rawLogs\"][277][\"resolvedLog\"]",
+        "context": "/private/tmp/codeshell-review-20261012/desktop-baseline/277-dialogState.test.ts.log"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-baseline-evidence-round28/independent-existing-tests.receipt.json",
+        "at": "$[\"groups\"][1][\"rawLogs\"][277][\"archiveMemberBasename\"]",
+        "context": "277-dialogState.test.ts.log"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-baseline-evidence-round28/independent-existing-tests.receipt.json",
+        "at": "$[\"groups\"][1][\"rawLogs\"][278][\"file\"]",
+        "context": "packages/desktop/src/renderer/ui/toastState.test.ts"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-baseline-evidence-round28/independent-existing-tests.receipt.json",
+        "at": "$[\"groups\"][1][\"rawLogs\"][278][\"log\"]",
+        "context": "/tmp/codeshell-review-20261012/desktop-baseline/278-toastState.test.ts.log"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-baseline-evidence-round28/independent-existing-tests.receipt.json",
+        "at": "$[\"groups\"][1][\"rawLogs\"][278][\"resolvedLog\"]",
+        "context": "/private/tmp/codeshell-review-20261012/desktop-baseline/278-toastState.test.ts.log"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-baseline-evidence-round28/independent-existing-tests.receipt.json",
+        "at": "$[\"groups\"][1][\"rawLogs\"][278][\"archiveMemberBasename\"]",
+        "context": "278-toastState.test.ts.log"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-baseline-evidence-round28/manifest.json",
+        "at": "$[\"logs\"][418][\"file\"]",
+        "context": "packages/desktop/src/renderer/ui/dialogState.test.ts"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-baseline-evidence-round28/manifest.json",
+        "at": "$[\"logs\"][418][\"originalLog\"]",
+        "context": "/tmp/codeshell-review-20261012/desktop-baseline/277-dialogState.test.ts.log"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-baseline-evidence-round28/manifest.json",
+        "at": "$[\"logs\"][418][\"tarMember\"]",
+        "context": "desktop-renderer/277-dialogState.test.ts.log"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-baseline-evidence-round28/manifest.json",
+        "at": "$[\"logs\"][419][\"file\"]",
+        "context": "packages/desktop/src/renderer/ui/toastState.test.ts"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-baseline-evidence-round28/manifest.json",
+        "at": "$[\"logs\"][419][\"originalLog\"]",
+        "context": "/tmp/codeshell-review-20261012/desktop-baseline/278-toastState.test.ts.log"
+      },
+      {
+        "path": "docs/review-2026-10-12/validation/original-baseline-evidence-round28/manifest.json",
+        "at": "$[\"logs\"][419][\"tarMember\"]",
+        "context": "desktop-renderer/278-toastState.test.ts.log"
+      }
+    ],
+    "toast-contract": [
+      {
+        "path": "docs/archive/architecture/14-engine-call-paths.md",
+        "at": "whole Markdown",
+        "context": "   tool calls produced events that went nowhere — the run's UI never\n   saw the task list update.\n2. **Status notifications** — `running` / `ready` / `shutdown` were\n   broadcast only when the request went through `AgentServer`.\n3. **In-process running lock** — `AgentServer` rejects a concurrent\n   `Run` request with `AlreadyRunning`. Direct `engine.run` callers\n   could re-enter an"
+      },
+      {
+        "path": "docs/archive/review-2026-05-30/backlog_confirmed.json",
+        "at": "$[13][\"verify_note\"]",
+        "context": " The implementation is internally consistent (doesn't crash), but incomplete — callers get a message to check notifications that are never captured or surfaced. Severity: medium because the tool is non-functional rather than dangerous."
+      },
+      {
+        "path": "docs/archive/review-2026-05-30/backlog_verdicts.json",
+        "at": "$[62][\"note\"]",
+        "context": " The implementation is internally consistent (doesn't crash), but incomplete — callers get a message to check notifications that are never captured or surfaced. Severity: medium because the tool is non-functional rather than dangerous."
+      },
+      {
+        "path": "docs/archive/todo/review-tui-cdp-2026-07-08.md",
+        "at": "whole Markdown",
+        "context": "r submit or another injection reserves the guard between the effect checks and the `submitToEngine` call, the notification items are already removed and the main agent never sees the background-agent completion.\n\nFix: reserve the query slot before draining, or make `submitToEngine` return an accepted/rejected boolean and requeue drained items on rejection. Avoid fire-and-forge"
+      },
+      {
+        "path": "docs/audit-2026-10-16/inventory.json",
+        "at": "$[\"source_inventory\"][1807]",
+        "context": "packages/desktop/src/renderer/ui/NotificationHistory.tsx"
+      },
+      {
+        "path": "docs/audit-2026-10-16/inventory.json",
+        "at": "$[\"source_inventory\"][1814]",
+        "context": "packages/desktop/src/renderer/ui/toastHistoryStorage.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round11/evidence/chat-source-manifest.json",
+        "at": "$[\"files\"][20][\"scope\"]",
+        "context": "notification contract excerpt read"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round12/evidence/desktop-dedup.json",
+        "at": "$[\"hits\"][\"header_only\"][38][\"snippet\"]",
+        "context": "                                 | 独立通过（已含 wrapper）    |\n|  51 | PanelAppBridge > sends title-prefixed system notifications under a dedicated per-window cap                                                       "
+      },
+      {
+        "path": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "at": "$[\"matches\"][\"user-display\"][151][\"excerpt\"]",
+        "context": " The implementation is internally consistent (doesn't crash), but incomplete — callers get a message to check notifications that are never captured or surfaced. Severity: medium because the tool is non-functional rather than dangerous.\", \"verify_reason\": \"The 2-second timeout in getDiagnostics (line 103) is indeed arbitrary and serves no purpose. The function sends didOpen, waits"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round26/evidence/prior-negative-prep/history.json",
+        "at": "$[\"matches\"][\"user-display\"][155][\"excerpt\"]",
+        "context": " The implementation is internally consistent (doesn't crash), but incomplete — callers get a message to check notifications that are never captured or surfaced. Severity: medium because the tool is non-functional rather than dangerous.\", \"verify_reason\": \"The 2-second timeout in getDiagnostics (line 103) is indeed arbitrary and serves no purpose. The function sends didOpen, waits"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round26/evidence/root-branch-scan.json",
+        "at": "$[\"hits\"][\"queryguard\"][19][\"context\"]",
+        "context": "r submit or another injection reserves the guard between the effect checks and the `submitToEngine` call, the notification items are already removed and the main agent never sees the background-agent completion.\n\nFix: reserve the query slot before draining, or make `submitToEngine` return an accepted/rejected boolean and requeue drained items on rejection. Avoid fire-and-forge"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+        "at": "$[\"files\"][3193][\"path\"]",
+        "context": "packages/desktop/src/renderer/ui/NotificationHistory.tsx"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+        "at": "$[\"files\"][3200][\"path\"]",
+        "context": "packages/desktop/src/renderer/ui/toastHistoryStorage.test.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round28/evidence/coverage-prep/package-inventory.json",
+        "at": "$[\"files\"][3201][\"path\"]",
+        "context": "packages/desktop/src/renderer/ui/toastHistoryStorage.ts"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round30/evidence/data-review-prep/author-freeze-pins.json",
+        "at": "$[\"timing\"]",
+        "context": "After author freeze notification, before independent artifact semantic reads"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round30/evidence/review-data-source-manifest.json",
+        "at": "$[\"formalAuthorArtifactInitialPinTiming\"]",
+        "context": "After author freeze notification, before formal report/receipt/history semantic metadata review"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round32/evidence/review-selection-source-manifest.json",
+        "at": "$[\"formalArtifactInitialPinTiming\"]",
+        "context": "After selection author freeze notification, before reading formal artifact metadata/report"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+        "at": "$[\"hits\"][\"settings-navigation\"][1][\"text\"]",
+        "context": " The implementation is internally consistent (doesn't crash), but incomplete — callers get a message to check notifications that are never captured or surfaced. Severity: medium because the tool is non-functional rather than dangerous.\", \"verify_reason\": \"The 2-second timeout in getDiagnostics (line 103) is indeed arbitrary and serves no purpose. The function sends didOpen, waits"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round6/evidence/desktop-dedup.json",
+        "at": "$[\"hits\"][\"sidebar-projection\"][9][\"text\"]",
+        "context": " The implementation is internally consistent (doesn't crash), but incomplete — callers get a message to check notifications that are never captured or surfaced. Severity: medium because the tool is non-functional rather than dangerous.\", \"verify_reason\": \"The 2-second timeout in getDiagnostics (line 103) is indeed arbitrary and serves no purpose. The function sends didOpen, waits"
+      },
+      {
+        "path": "docs/nightly-2026-07-10/codex-capability-catalog.md",
+        "at": "whole Markdown",
+        "context": "://` 使用 JSONL-over-stdio JSON-RPC。 | <https://developers.openai.com/codex/app-server#protocol> |\n| app-server notifications | app-server 流式通知 thread、turn、item 和 server request 状态。 | <https://developers.openai.com/codex/app-server#event-stream> |\n| `doctor --json` | 诊断报告可输出 redacted machine-readable JSON。 | <https://developers.openai.com/codex/developer-commands?surface=cli#cli-codex-do"
+      },
+      {
+        "path": "docs/nightly-2026-07-12/pet-desktop-ui-design.md",
+        "at": "whole Markdown",
+        "context": "renderer/ui/toastState.ts:13`、`packages/desktop/src/renderer/ui/ToastProvider.tsx:129`）。建议新增 `PetPeekHost`，复用 Toast 的视觉 token/stack/aria-live，增加：\n\n- `dedupeKey`、`action`、`onDismiss`、`createdAt`、aggregation payload；\n- 单项 `open_session` 与多项 `open_pet_pending` 两种结构化 action；\n- sticky 8–12s（设计建议）后自动关闭，pending badge 继续存在；\n- keyboard focusable CTA，关闭按钮不触发 action；\n- 文案脱敏，不展示 c"
+      },
+      {
+        "path": "docs/nightly-2026-07-12/pet-desktop-ui-design.md",
+        "at": "whole Markdown",
+        "context": "`RiskPill`：tool approval 风险展示，但只消费 host 给出的结构化 risk。\n- `handleSelectSession` 的 navigation 结果：打开目标后切回原 chat。\n- Toast 的位置、色彩、stack 与 aria-live 视觉规范；Pet action/dedupe 需新增 contract。\n\n### 6.3 需抽取后复用，而非复制粘贴\n\n- `SidebarItem` 当前是 `Sidebar.tsx` file-local function（`packages/desktop/src/renderer/Sidebar.tsx:357`）；建议抽成可带 avatar/subtitle/badge 的共享 primitive，或让 `PetSidebarEntry`"
+      },
+      {
+        "path": "docs/nightly-2026-07-12/pet-desktop-ui-design.md",
+        "at": "whole Markdown",
+        "context": "为 —— ✅已拍板：复用右下角 toast 位置，单项直达、多项聚合开 overview。**  \n   复用现有 `ToastProvider`（`bottom-4 right-4`）的右下角非模态可关闭位置，与现有 toast stack 一致（对齐 VS Code/Linear 习惯）；**单条**待决策 peek 点击 → 直达那个 session（由原 approval route 处理，pet 不代批）；**多条**聚合成一条「N 个 session 等你决定」→ 点击打开 Pet overview 的 pending 区。备选「贴 Sidebar Pet 入口左上气泡」已否决（易挡项目列表、与现有 toast 机制不一致）。关闭 peek 只写 receipt、不 resolve pending、b"
+      },
+      {
+        "path": "docs/research/codex-side-chat-history-behavior.md",
+        "at": "whole Markdown",
+        "context": "6e7487259f61669823ff/codex-rs/tui/src/app/thread_events.rs#L41-L50)。\n\n通知进入时，调用者必须提供 thread ID。`enqueue_thread_notification(thread_id, ...)` 只写对应 store；\n只有该 store 是 active 时才把事件发送给当前渲染 receiver，否则只缓冲。parent 若是当前 side 的父亲，\n额外只更新 side parent status；\n[`thread_routing.rs#L877-L935`](https://github.com/openai/codex/blob/5c19155cbd93bfa099016e7487259f61669823ff/codex-rs/tui"
+      },
+      {
+        "path": "docs/review-2026-10-12/search-routing-round11.md",
+        "at": "whole Markdown",
+        "context": "thout a click target protocol (`main/desktop-notifier.ts:8–14,131–138`; `main/index.ts:3349–3357`). A missing notification-click navigation capability is not reported as a new implementation defect.\n- Widget navigation intentionally selects one preferred main window: focused live main window, otherwise first live main window; it restores/shows/focuses that target and sends only to"
+      },
+      {
+        "path": "docs/superpowers/plans/2026-05-20-bg-agent-completion-notification.md",
+        "at": "whole Markdown",
+        "context": "rn (...)`:\n\n```tsx\n      if (sysEntry.subtype === \"bg_agent_notification\") {\n        // Pre-formatted by buildNotificationSummary — already a multi-line\n        // string. Render each line with dim styling so it reads as a\n        // system marker, not as user content.\n        const lines = (sysEntry.text ?? \"\").split(\"\\n\");\n        return (\n          <Box key={key} flexDirec"
+      },
+      {
+        "path": "docs/superpowers/plans/2026-07-17-plugin-contribution-points.md",
+        "at": "whole Markdown",
+        "context": "(`useSyncExternalStore`, `React.lazy`/`Suspense`), lucide-react ^0.460, zod (core installer), Electron main (`Notification`), bun test (renderer contract tests read source text; main-process bridge tests run in the isolated Electron-mock fixture).\n\n**Branch/commits:** one feature branch (e.g. `feat/plugin-contribution-points`), conventional commits, one commit per task step group as written below.\n\n**"
+      },
+      {
+        "path": "docs/superpowers/plans/2026-07-17-plugin-contribution-points.md",
+        "at": "whole Markdown",
+        "context": "idated lucide-name allowlist (explicit list, bundle-size safe) | Task 5 |\n| Permissions: +`workspace.info`, +`notifications.send`, same RPC/rate-limit pattern, cap stays 8 | Task 6 |\n| Core `installer/types.ts` validation sync | Tasks 5, 6 |\n| `docs/plugin-panels.md` sync | Task 7 |\n| Non-goals | Non-goals section below |\n\n## Non-goals (explicitly out of scope this round)\n\n- **No UI contribution fiel"
+      },
+      {
+        "path": "docs/superpowers/plans/2026-07-17-plugin-contribution-points.md",
+        "at": "whole Markdown",
+        "context": "s` (options, binding, dispatch, 2 handlers)\n- Modify: `packages/desktop/src/main/index.ts:428-433` (wire `showNotification`; `Notification` already imported at L15)\n- Test: `packages/desktop/tests/.fixtures/plugin-panel-main.test.ts` (extend, +2 tests)\n- Modify: `packages/desktop/src/main/plugin-panel-protocol.test.ts:19` (`\"10 pass\"` → `\"12 pass\"`)\n- Test: `packages/core/src/plugins"
+      },
+      {
+        "path": "docs/superpowers/plans/2026-07-17-plugin-contribution-points.md",
+        "at": "whole Markdown",
+        "context": "    rmSync(workspaceRoot, { recursive: true, force: true });\n    }\n  });\n\n  test(\"sends title-prefixed system notifications under a dedicated per-window cap\", async () => {\n    const shown: { title: string; body: string }[] = [];\n    const bridge = new PluginPanelBridge({\n      isTrustedHost: () => true,\n      isWorkspaceTrusted: () => false,\n      getAgentBridge: () => null,\n      showNotific"
+      },
+      {
+        "path": "docs/superpowers/specs/2026-05-20-bg-agent-completion-notification-design.md",
+        "at": "whole Markdown",
+        "context": "QueryActive`\nholds. After the turn completes (`isQueryActive` transitions to false), the\neffect fires and the notification is delivered. Sub-agent may have stacked\ntwo completions during that time — both get batched into one XML in\n`drainAll`.\n\n**Main agent cancels mid-turn (ESC / Ctrl+C).** Existing cancellation logic\nsets `isQueryActive` back to false. Effect fires, notification delivered as a\nfr"
+      },
+      {
+        "path": "docs/superpowers/specs/2026-05-31-automation-run-sidebar-attribution-design.md",
+        "at": "whole Markdown",
+        "context": "\nit without a restart. Reuse the existing run-event/notification path: on a\nrun-completed notification (`agentNotificationBus → Notification`, already wired\nin P3), trigger the same single-run import used by backfill, keyed by\n`sessionId` so it's idempotent against the backfill that will also see it later.\n\n### Component 4 — Unified delete (renderer + main)\n\nDeleting an automation sessi"
+      },
+      {
+        "path": "docs/todo/2026-09-11-skipped-test-audit.md",
+        "at": "whole Markdown",
+        "context": "                                 | 独立通过（已含 wrapper）    |\n|  51 | PanelAppBridge > sends title-prefixed system notifications under a dedicated per-window cap                                                                                 | 独立通过（已含 wrapper）    |\n|  52 | external agent driver > runAgentOnce（真机集成,需 CODESHELL_RUN_REAL_AGENT_TESTS=1） > spawns claude and returns a sessionId + final t"
+      },
+      {
+        "path": "docs/todo/independent-output-journal-delivery.md",
+        "at": "whole Markdown",
+        "context": "ast cursor actually applied to Main. An RPC response is not a notification\napplication fence. Only exact late notifications already applied from disk are\nsuppressed, using their actual cursor and canonical payload hash. Changed\nreplayed payloads and unknown backwards notifications retain coverage barriers.\nHost events keep the external UI route; replayed worker events"
+      },
+      {
+        "path": "docs/todo/parent-child-bidirectional-notification-phase0-design.md",
+        "at": "whole Markdown",
+        "context": "result → background_agent_completed`，`progress → agent_heartbeat`。不能在 queue 和协议层各 publish 一次。新客户端可增加统一 `agent_notification` 事件；是否发送新旧投影由协议 capability 决定，避免双发导致 UI 重复。\n\n## 6. Live child control 与单写者模型\n\n### 6.1 Registry 扩展\n\n`asyncAgentRegistry` 继续作为运行中 child 的权威目录，给 `AsyncAgentEntry` 增加窄接口而不是导入具体 `Engine`：\n\n```ts\nexport type LiveChildState =\n  | \"starting\"\n  | \"model\"\n  | \"tool-bat"
+      },
+      {
+        "path": "docs/todo/release-ui-20261015.md",
+        "at": "whole Markdown",
+        "context": ".43` publication;\npreserve that later release and collect UI work under Unreleased.\n\nRoot's production TopBar→NotificationHistory audit passed 16 language/theme/\nwindow combinations down to 320×240 with 40 complete long notifications, native\nwheel, keyboard reachability, full final actions and exact Escape focus return.\nNo product change is needed; evidence\n`/tmp/cod"
+      }
+    ]
+  },
+  "drift": []
+}

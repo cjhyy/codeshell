@@ -1,0 +1,55 @@
+{
+  "capturedUTC": "2026-10-17T12:41:31.326880+00:00",
+  "classification": {
+    "formal": 0,
+    "candidate": 0,
+    "newRelated": 0
+  },
+  "runtimeCounts": {
+    "productImports": 0,
+    "productFunctions": 0,
+    "tests": 0,
+    "fixtures": 0,
+    "react": 0,
+    "browser": 0,
+    "dom": 0,
+    "timerOrPromiseLanguageFixtures": 0,
+    "native": 0,
+    "network": 0,
+    "model": 0,
+    "git": 0,
+    "authorityOrIdentityExperiments": 0
+  },
+  "metadataFailures": [],
+  "historyFinish": {
+    "inventoryCount": 3137,
+    "allInitialFilesUnchanged": true,
+    "changes": [],
+    "newPathsNotRescanned": true,
+    "exclusionsPreserved": [
+      "docs/audit-2026-10-17-round34/",
+      "docs/audit-2026-10-17-round35/",
+      "docs/audit-2026-10-17-round36/"
+    ]
+  },
+  "historyDecision": {
+    "dialogState": "Explicit Round28 sameSHA full78 proves previously full reading; current hash-only exclusion. No source semantic reread.",
+    "toastState": "No explicit full/selected row found in gate; dated inventory/no-row, test receipts and older design prose do not prove historically unread.",
+    "oldRelated": "No new samecause finding identified. Archived TUI notification drain/requeue and native notification-click capability prose are different producers; not rerun and not re-reported.",
+    "designDrift": "Old Pet design says ToastOptions lacks detail/sessionId; current source has both. Treat dated design proposal as historical context, not current bug evidence.",
+    "oldTests": "Historical test receipt paths and current test declaration source do not imply any current execution or pass.",
+    "retainedContexts": "Initial gate 70/101/0 occurrences retains60/60/0; supplemental exact70/70 and toast-contract36/36 all retained. Counts are regex matches, not findings or complete semantic history review."
+  },
+  "finiteNegativeReasons": [
+    "Active stack cap4 and history cap100 intentionally differ, while dismiss preserves history.",
+    "markRead keeps active notifications; clearHistory preserves active notifications; ordinary history consumer calls these same state operations.",
+    "Provider composes Toast DTO, creates unique sequence-bearing ids, applies functional state updates, removes inactive timer entries in source, supplies history hooks, and renders state messages. This is static code evidence, not timing/UI verification.",
+    "Normal ToolOutputBlock copy-failure path supplies message plus error variant; main ordinary root mounts ToastProvider. Clipboard operation itself and host behavior were not invoked or certified.",
+    "Storage source validates ordinary DTO fields and bounds restored history, saving bounded history; runtime storage availability and quota are not certified."
+  ],
+  "notPromoted": [
+    "Negative/nonfinite duration or artificial duplicate ids are not demonstrated ordinary producer inputs.",
+    "No UI focus, timer behavior, React lifecycle, clipboard or cross-window outcome was observed.",
+    "No security, identity, session navigation or permission correctness claim."
+  ]
+}

@@ -1,0 +1,12 @@
+{
+  "files": [
+    {
+      "path": "packages/desktop/src/renderer/MessageStream.tsx",
+      "bytes": 37921,
+      "sha256": "f74d19bddcdc48c0de2e63921ba598d733e2f1c3d58f68e7c8c0b32046ddbd4c",
+      "totalLines": 928,
+      "pinTimeUTC": "2026-10-17T12:38:41.336919+00:00",
+      "purpose": "before actual hook caller selected read"
+    }
+  ]
+}

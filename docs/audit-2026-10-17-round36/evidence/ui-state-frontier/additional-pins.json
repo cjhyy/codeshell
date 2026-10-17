@@ -1,0 +1,29 @@
+{
+  "capturedUTC": "2026-10-17T12:39:42.158418+00:00",
+  "files": [
+    {
+      "path": "packages/desktop/src/renderer/ui/toastHistoryStorage.ts",
+      "bytes": 1816,
+      "lineCount": 48,
+      "sha256": "1ea0debab95ad55fd851de7154884f86b4f0646bbeffdcef7d9fd630bb3deafa",
+      "initialSemanticReadSha256": "1ea0debab95ad55fd851de7154884f86b4f0646bbeffdcef7d9fd630bb3deafa",
+      "timing": "before direct source semantic read; filename-only inventory preceded pin"
+    },
+    {
+      "path": "packages/desktop/src/renderer/ui/toastHistoryStorage.test.ts",
+      "bytes": 4827,
+      "lineCount": 140,
+      "sha256": "13804c16ca9e76984f42b89c883b00b5977c5d6a2e594bb72a193f4d568f5cfa",
+      "initialSemanticReadSha256": "13804c16ca9e76984f42b89c883b00b5977c5d6a2e594bb72a193f4d568f5cfa",
+      "timing": "before direct source semantic read; filename-only inventory preceded pin"
+    },
+    {
+      "path": "packages/desktop/src/renderer/ui/ToastProvider.interaction.test.tsx",
+      "bytes": 10787,
+      "lineCount": 297,
+      "sha256": "cdadc4aced33fd6e3db7c344de36a647d36aac42c60f5839dd2c5acc99b650eb",
+      "initialSemanticReadSha256": "cdadc4aced33fd6e3db7c344de36a647d36aac42c60f5839dd2c5acc99b650eb",
+      "timing": "before direct source semantic read; filename-only inventory preceded pin"
+    }
+  ]
+}

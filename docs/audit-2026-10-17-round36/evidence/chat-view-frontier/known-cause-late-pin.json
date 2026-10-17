@@ -1,0 +1,13 @@
+{
+  "files": [
+    {
+      "path": "docs/archive/todo/review-desktop-2026-07-08.md",
+      "bytes": 12291,
+      "sha256": "9c46ca9b1c398daad86cc300059f417e9a9cab787213ade80dfe5b9fcd85c12d",
+      "totalLines": 92,
+      "pinTimeUTC": "2026-10-17T12:40:19.477561+00:00",
+      "initialBeforeSemanticRead": null,
+      "purpose": "dedicated pin after focused history excerpts; not backdated"
+    }
+  ]
+}
