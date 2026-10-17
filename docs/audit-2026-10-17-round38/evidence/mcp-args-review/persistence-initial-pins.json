@@ -1,0 +1,19 @@
+{
+  "capturedUTC": "2026-10-17T13:18:22.101001+00:00",
+  "files": [
+    {
+      "path": "packages/desktop/src/renderer/settingsAuthority.ts",
+      "bytes": 765,
+      "sha256": "884071554713d9804d50b92dbd0f44d44941222762847f2accc65f12bc09fb1e",
+      "lineCount": 25,
+      "pinBeforeAnyContentRead": true
+    },
+    {
+      "path": "packages/desktop/src/main/settings-service.ts",
+      "bytes": 10247,
+      "sha256": "89303dcb539743adbdaff9445c58836608fc9bd50810dc00c1bda80e11c89455",
+      "lineCount": 275,
+      "pinBeforeAnyContentRead": true
+    }
+  ]
+}

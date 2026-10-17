@@ -1,0 +1,521 @@
+{
+  "readAtUTC": "2026-10-17T13:10:30.799551+00:00",
+  "basedOnOriginalInventoryCount": 3318,
+  "newPathsIncluded": false,
+  "patterns": {
+    "r31-contextual-case": "SEARCH-R31-C1|Greek|sigma|Σ",
+    "inbox-contract": "groupTaskInboxRecords|taskInboxGroup|isBackgroundWork|taskInboxProject|task inbox presentation|task inbox original detail routing"
+  },
+  "counts": {
+    "r31-contextual-case": 126,
+    "inbox-contract": 0
+  },
+  "capEach": 100,
+  "hits": {
+    "r31-contextual-case": [
+      {
+        "path": "docs/audit-2026-10-17-round31/README.md",
+        "at": "whole Markdown",
+        "context": "# 第31批：搜索大小写候选与入口边界\n\n本批 **0新增正式问题、1候选SEARCH-R31-C1、0新关联**。冻结父提交 `4dad999bd43b776995b5d212dde275dab86a1ddd`，整合前main `4dad999bd43b776995b5d212dde275dab86a1ddd`；未修产品，审查继续。\n\n[候选报告](root-report.md)：逐cell小写与整段查询小写保留的希腊词尾上下文不同，相同字面查询可能静态推演漏匹配。原独立[source评估](evidence/review-search.md)支持P3 helper原因；[入口追踪](entry-report.md)未找到可达Ap"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round31/candidates.json",
+        "at": "$[\"candidates\"][0][\"id\"]",
+        "context": "SEARCH-R31-C1"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round31/candidates.json",
+        "at": "$[\"candidates\"][0][\"title\"]",
+        "context": "Per-cell lowercasing loses Greek final-sigma context"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round31/candidates.json",
+        "at": "$[\"candidates\"][0][\"title\"]",
+        "context": "Per-cell lowercasing loses Greek final-sigma context"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round31/candidates.json",
+        "at": "$[\"candidates\"][0][\"input\"][\"rowCells\"][1]",
+        "context": "Σ"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round31/candidates.json",
+        "at": "$[\"candidates\"][0][\"input\"][\"query\"]",
+        "context": "ΟΣ"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round31/candidates.json",
+        "at": "$[\"candidates\"][0][\"staticDerivation\"][\"perCellRow\"]",
+        "context": "οσ"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round31/candidates.json",
+        "at": "$[\"candidates\"][0][\"staticDerivation\"][\"wholeQuery\"]",
+        "context": "ος"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round31/entry-report.md",
+        "at": "whole Markdown",
+        "context": "# Round31 search 实际入口静态检查\n\n本方向 **0新增 formal / 0新增 candidate / 0新增 related**；入口证据支持 Root 将 Greek lowercase 线索保留为 helper candidate / unused boundary，未建立普通 App/UI 的非空 query 入口，不能声称生产 UI 已暴露漏搜。独立 source reviewer 的 P3 helper 原意见应单独保留；判断差异在生产可达性证据要求，非对 per-cell/whole-query 源码事实的分歧。\n\n正式 baseline 由 Root 提供为4dad999bd43b776995b5d212dde275dab86a1ddd；复用原 parent19ef 时的同一次 [入口"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round31/entry-report.md",
+        "at": "whole Markdown",
+        "context": "aseline，本作者Git命令为0。\n\nsearchMatches/searchHighlight/render-to-screen全文可见按cell lower与query整体lower的不同位置；本入口子任务未执行Greek字符串、JS语言eval或产品函数，也未独立重取规范文本，未观察匹配结果/真实屏幕/用户漏搜。未新增全历史扫描或“首次语义审查”宣称，旧根因去重和候选归属由Root/snapshot汇总。[validation](evidence/entry-validation.json) runs为空，产品/import/test/fixture/React/TTY/native/network/Git/auth/identity实验均为0，旧失败方向继续SKIP。结论仅限入口证据，不断言全部TUI搜索功能无bug。\n"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round31/evidence/entry-prep/entry-decision.json",
+        "at": "$[\"leafConcernBoundary\"]",
+        "context": "Parent-provided Greek contextual lowercase suspicion remains a helper-level static candidate/unused-API boundary. This entry subtask independently observes per-cell lowercase38 vs whole-query lowercase151/33 source only; it does not run a Greek string operation, ECMAScript evaluator or lang"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round31/evidence/entry-prep/entry-decision.json",
+        "at": "$[\"leafConcernBoundary\"]",
+        "context": "ask independently observes per-cell lowercase38 vs whole-query lowercase151/33 source only; it does not run a Greek string operation, ECMAScript evaluator or language implementation and does not claim observed wrong output."
+      },
+      {
+        "path": "docs/audit-2026-10-17-round31/evidence/entry-prep/entry-decision.json",
+        "at": "$[\"classification\"]",
+        "context": "roduction UI formal. No separate new candidate or related entry created by this subtask; parent owns existing Greek candidate classification."
+      },
+      {
+        "path": "docs/audit-2026-10-17-round31/evidence/entry-prep/report.md",
+        "at": "whole Markdown",
+        "context": "# Round31 search 高亮实际入口检查\n\n未建立普通 App/UI 的非空 query 入口，也未建立 package 对外支持的 search API；不能把 Greek 上下文 lowercase 线索升级为生产 UI formal。本子任务不新增独立 candidate/related，保留父任务的 helper candidate / unused boundary 分类。父提供 baseline19ef 只作上下文，0 Git 命令。\n\n真实接线与边界如下：\n\n- use-search-highlight.ts 全文53：setQuery48 -> Ink.setSearchHighlight；scanElement49 -> Ink.scanElementSubtree。它需要真实 Ink "
+      },
+      {
+        "path": "docs/audit-2026-10-17-round31/evidence/entry-prep/report.md",
+        "at": "whole Markdown",
+        "context": "Matches56、searchHighlight52、render-to-screen198已全文静态读；能看见 row按cell.char.toLowerCase而query整体toLowerCase的不同源码位置。Greek内容由父任务提出，本入口子任务没有执行Greek字符串、语言eval、React、Bun、renderer或任何产品函数，也未重新取规范文本；不声称观察到匹配结果或用户可见漏搜。\n\n[来源清单](source-manifest.json)保留12个文件读前SHA/结束SHA，全部一致，11 full / 1 selected，共1198声明行：815产品源码、143既有test源码、202 package JSON、38 build脚本文本。Ink整体1968行只选读197行，另rg import31/34只作导航。无新全历史扫描/首"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round31/evidence/entry-prep/report.md",
+        "at": "whole Markdown",
+        "context": "t52、render-to-screen198已全文静态读；能看见 row按cell.char.toLowerCase而query整体toLowerCase的不同源码位置。Greek内容由父任务提出，本入口子任务没有执行Greek字符串、语言eval、React、Bun、renderer或任何产品函数，也未重新取规范文本；不声称观察到匹配结果或用户可见漏搜。\n\n[来源清单](source-manifest.json)保留12个文件读前SHA/结束SHA，全部一致，11 full / 1 selected，共1198声明行：815产品源码、143既有test源码、202 package JSON、38 build脚本文本。Ink整体1968行只选读197行，另rg import31/34只作导航。无新全历史扫描/首次审查宣称；父任务与snapshot负责旧根因去"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round31/evidence/integration-plan.json",
+        "at": "$[\"scope\"]",
+        "context": "Docs/evidence only. Greek search helper candidate; no demonstrated production UI caller. Preserve reviewer assessments and Root classification separately.0 product runs."
+      },
+      {
+        "path": "docs/audit-2026-10-17-round31/evidence/review-aggregate-independent-checks.json",
+        "at": "$[\"primarySpecificationChecks\"][1][\"conclusion\"]",
+        "context": "Final sigma conditional mapping to03C2; nonfinal03C3; context belongs to original input string."
+      },
+      {
+        "path": "docs/audit-2026-10-17-round31/evidence/review-aggregate-independent-checks.json",
+        "at": "$[\"primarySpecificationChecks\"][2][\"conclusion\"]",
+        "context": "Table3-17 defines Final_Sigma using a preceding cased letter and no following cased letter (ignoring case-ignorable sequences). Single Σ lacks preceding letter; whole ΟΣ includes one."
+      },
+      {
+        "path": "docs/audit-2026-10-17-round31/evidence/review-aggregate-independent-checks.json",
+        "at": "$[\"primarySpecificationChecks\"][2][\"conclusion\"]",
+        "context": "igma using a preceding cased letter and no following cased letter (ignoring case-ignorable sequences). Single Σ lacks preceding letter; whole ΟΣ includes one."
+      },
+      {
+        "path": "docs/audit-2026-10-17-round31/evidence/review-aggregate-independent-checks.json",
+        "at": "$[\"primarySpecificationChecks\"][2][\"conclusion\"]",
+        "context": "er and no following cased letter (ignoring case-ignorable sequences). Single Σ lacks preceding letter; whole ΟΣ includes one."
+      },
+      {
+        "path": "docs/audit-2026-10-17-round31/evidence/review-aggregate-independent-checks.json",
+        "at": "$[\"classificationAssessment\"][\"rootFinal\"][\"candidate\"]",
+        "context": "SEARCH-R31-C1"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round31/evidence/review-aggregate-independent.md",
+        "at": "whole Markdown",
+        "context": "# Round31 候选边界与整合元数据独立复核\n\n支持 [Root终态](../root-report.md) **0 formal / 1 SEARCH-R31-C1 candidate / 0 related**。逐cell与整query小写的静态原因充分；普通生产/公开入口尚未建立，所以不将它表述为已观察到的用户漏搜或正式UI故障。独立 [source reviewer](review-search.md) 的P3 helper-contract原判断保留，与Root最终candidate分类分开，不能为了统一计数改写原意见。\n\n## 源码、规格与入口\n\n独立全文读searchMatches56、searchHighlight52与既有test143，选读render-to-screen125"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round31/evidence/review-aggregate-independent.md",
+        "at": "whole Markdown",
+        "context": "SpecialCasing的Unicode默认转换；[SpecialCasing](https://www.unicode.org/Public/UCD/latest/ucd/SpecialCasing.txt)给出词尾sigma条件映射；独立补读 [Unicode17 Table3-17](https://www.unicode.org/versions/Unicode17.0.0/core-spec/chapter-3/)确认条件需要前置cased字母且后方没有cased字母。因此相同的两个窄cell `Ο`、`Σ`和整query `ΟΣ`，按规范/源码静态推导会分别形成`οσ`与`ος`，indexOf无法匹配。此处没有执行语言表达式、Intl、产品函数、fixture或终端，也没有观测安装的Node/Bun/ICU行为。\n\n入口事实支持Root的边界："
+      },
+      {
+        "path": "docs/audit-2026-10-17-round31/evidence/review-aggregate-independent.md",
+        "at": "whole Markdown",
+        "context": "s://www.unicode.org/versions/Unicode17.0.0/core-spec/chapter-3/)确认条件需要前置cased字母且后方没有cased字母。因此相同的两个窄cell `Ο`、`Σ`和整query `ΟΣ`，按规范/源码静态推导会分别形成`οσ`与`ος`，indexOf无法匹配。此处没有执行语言表达式、Intl、产品函数、fixture或终端，也没有观测安装的Node/Bun/ICU行为。\n\n入口事实支持Root的边界：[entry报告](../entry-report.md)与本次直接阅读均显示Ink query初值空，hook只是转调setter/scan，root的Instance/Root和返回对象未暴露这些方法，render/index及package entry也未提供搜索API。源码/测试rg库"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round31/evidence/review-aggregate-independent.md",
+        "at": "whole Markdown",
+        "context": "ode.org/versions/Unicode17.0.0/core-spec/chapter-3/)确认条件需要前置cased字母且后方没有cased字母。因此相同的两个窄cell `Ο`、`Σ`和整query `ΟΣ`，按规范/源码静态推导会分别形成`οσ`与`ος`，indexOf无法匹配。此处没有执行语言表达式、Intl、产品函数、fixture或终端，也没有观测安装的Node/Bun/ICU行为。\n\n入口事实支持Root的边界：[entry报告](../entry-report.md)与本次直接阅读均显示Ink query初值空，hook只是转调setter/scan，root的Instance/Root和返回对象未暴露这些方法，render/index及package entry也未提供搜索API。源码/测试rg库存只找到定义、注释和ho"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round31/evidence/review-aggregate-independent.md",
+        "at": "whole Markdown",
+        "context": "code17.0.0/core-spec/chapter-3/)确认条件需要前置cased字母且后方没有cased字母。因此相同的两个窄cell `Ο`、`Σ`和整query `ΟΣ`，按规范/源码静态推导会分别形成`οσ`与`ος`，indexOf无法匹配。此处没有执行语言表达式、Intl、产品函数、fixture或终端，也没有观测安装的Node/Bun/ICU行为。\n\n入口事实支持Root的边界：[entry报告](../entry-report.md)与本次直接阅读均显示Ink query初值空，hook只是转调setter/scan，root的Instance/Root和返回对象未暴露这些方法，render/index及package entry也未提供搜索API。源码/测试rg库存只找到定义、注释和hook内部转调，没有建立App非空quer"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round31/evidence/review-aggregate-independent.md",
+        "at": "whole Markdown",
+        "context": "7.0.0/core-spec/chapter-3/)确认条件需要前置cased字母且后方没有cased字母。因此相同的两个窄cell `Ο`、`Σ`和整query `ΟΣ`，按规范/源码静态推导会分别形成`οσ`与`ος`，indexOf无法匹配。此处没有执行语言表达式、Intl、产品函数、fixture或终端，也没有观测安装的Node/Bun/ICU行为。\n\n入口事实支持Root的边界：[entry报告](../entry-report.md)与本次直接阅读均显示Ink query初值空，hook只是转调setter/scan，root的Instance/Root和返回对象未暴露这些方法，render/index及package entry也未提供搜索API。源码/测试rg库存只找到定义、注释和hook内部转调，没有建立App非空query pro"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round31/evidence/review-aggregate.md",
+        "at": "whole Markdown",
+        "context": "# Round31 Root 聚合复核\n\n最终0正式/1候选SEARCH-R31-C1/0新关联。算法静态原因由Root/source独立review与官方规格支持；入口追踪和独立汇总未建立可达App/公共package消费者，因此不把相同字面查询的推演升级成已确认生产UI故障。原P3helper评估保留，差异来自普通生产可达性证据要求。没有产品修复。\n\nRoot已读root/entry/source review/independent aggregate终态报告。15个唯一source绑定冻结/current/main，38项active source checks=Root7+entry12+source rev"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round31/evidence/review-search-receipt.json",
+        "at": "$[\"rootFinalClassification\"]",
+        "context": "SEARCH-R31-C1 candidate; no separate formal finding from this review"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round31/evidence/review-search-source-manifest.json",
+        "at": "$[\"limits\"][1]",
+        "context": "Root final SEARCH-R31-C1 classification is candidate because entry review did not establish a production/public API nonempty query consumer."
+      },
+      {
+        "path": "docs/audit-2026-10-17-round31/evidence/review-search-validation.json",
+        "at": "$[\"classificationAuthority\"][\"rootFinalId\"]",
+        "context": "SEARCH-R31-C1"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round31/evidence/review-search.md",
+        "at": "whole Markdown",
+        "context": "ad999bd43b776995b5d212dde275dab86a1ddd` on `codex/audit/search-case-round31-20261017`. **Root's final item is SEARCH-R31-C1, a candidate: 0 formal findings, 1 candidate, 0 related.** This review does not add another item. The [original independent prep](search-review-prep/review.md) retains its assessment of a new P3 static helper-contract defect, with its explicit lack of an actual applica"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round31/evidence/review-search.md",
+        "at": "whole Markdown",
+        "context": "lowercases each grapheme cell, while both consumers lowercase the whole query. Under contextual Unicode final-sigma rules, the same ordinary `ΟΣ` row/query can differ as `οσ` versus `ος` before matching. The inspected ordinary output path stores the original grapheme values; no row-wide fold cancels the mismatch. Existing `İ` expansion handling and old PET-R10-02 snippet-coordinate "
+      },
+      {
+        "path": "docs/audit-2026-10-17-round31/evidence/review-search.md",
+        "at": "whole Markdown",
+        "context": "ile both consumers lowercase the whole query. Under contextual Unicode final-sigma rules, the same ordinary `ΟΣ` row/query can differ as `οσ` versus `ος` before matching. The inspected ordinary output path stores the original grapheme values; no row-wide fold cancels the mismatch. Existing `İ` expansion handling and old PET-R10-02 snippet-coordinate evidence do not resolve or du"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round31/evidence/review-search.md",
+        "at": "whole Markdown",
+        "context": "the whole query. Under contextual Unicode final-sigma rules, the same ordinary `ΟΣ` row/query can differ as `οσ` versus `ος` before matching. The inspected ordinary output path stores the original grapheme values; no row-wide fold cancels the mismatch. Existing `İ` expansion handling and old PET-R10-02 snippet-coordinate evidence do not resolve or duplicate this cross-cell conte"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round31/evidence/review-search.md",
+        "at": "whole Markdown",
+        "context": "ery. Under contextual Unicode final-sigma rules, the same ordinary `ΟΣ` row/query can differ as `οσ` versus `ος` before matching. The inspected ordinary output path stores the original grapheme values; no row-wide fold cancels the mismatch. Existing `İ` expansion handling and old PET-R10-02 snippet-coordinate evidence do not resolve or duplicate this cross-cell contextual cause."
+      },
+      {
+        "path": "docs/audit-2026-10-17-round31/evidence/root-candidates.first.json",
+        "at": "$[0][\"id\"]",
+        "context": "SEARCH-R31-C1"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round31/evidence/root-candidates.first.json",
+        "at": "$[0][\"title\"]",
+        "context": "Per-cell lowercasing loses Greek final-sigma context"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round31/evidence/root-candidates.first.json",
+        "at": "$[0][\"title\"]",
+        "context": "Per-cell lowercasing loses Greek final-sigma context"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round31/evidence/root-candidates.first.json",
+        "at": "$[0][\"input\"][\"rowCells\"][1]",
+        "context": "Σ"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round31/evidence/root-candidates.first.json",
+        "at": "$[0][\"input\"][\"query\"]",
+        "context": "ΟΣ"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round31/evidence/root-candidates.first.json",
+        "at": "$[0][\"staticDerivation\"][\"perCellRow\"]",
+        "context": "οσ"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round31/evidence/root-candidates.first.json",
+        "at": "$[0][\"staticDerivation\"][\"wholeQuery\"]",
+        "context": "ος"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round31/evidence/root-candidates.json",
+        "at": "$[0][\"id\"]",
+        "context": "SEARCH-R31-C1"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round31/evidence/root-candidates.json",
+        "at": "$[0][\"title\"]",
+        "context": "Per-cell lowercasing loses Greek final-sigma context"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round31/evidence/root-candidates.json",
+        "at": "$[0][\"title\"]",
+        "context": "Per-cell lowercasing loses Greek final-sigma context"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round31/evidence/root-candidates.json",
+        "at": "$[0][\"input\"][\"rowCells\"][1]",
+        "context": "Σ"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round31/evidence/root-candidates.json",
+        "at": "$[0][\"input\"][\"query\"]",
+        "context": "ΟΣ"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round31/evidence/root-candidates.json",
+        "at": "$[0][\"staticDerivation\"][\"perCellRow\"]",
+        "context": "οσ"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round31/evidence/root-candidates.json",
+        "at": "$[0][\"staticDerivation\"][\"wholeQuery\"]",
+        "context": "ος"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round31/evidence/root-dedup.json",
+        "at": "$[\"patterns\"][\"greek-case\"]",
+        "context": "(?:sigma|Σ|ς|Greek|希腊).{0,100}(?:case|search|搜索|lower|大小写)|(?:case|search|搜索|lower).{0,100}(?:sigma|Σ|ς|Greek|希腊)"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round31/evidence/root-dedup.json",
+        "at": "$[\"patterns\"][\"greek-case\"]",
+        "context": "(?:sigma|Σ|ς|Greek|希腊).{0,100}(?:case|search|搜索|lower|大小写)|(?:case|search|搜索|lower).{0,100}(?:sigma|Σ|ς|Greek|希腊)"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round31/evidence/root-dedup.json",
+        "at": "$[\"patterns\"][\"greek-case\"]",
+        "context": "(?:sigma|Σ|ς|Greek|希腊).{0,100}(?:case|search|搜索|lower|大小写)|(?:case|search|搜索|lower).{0,100}(?:sigma|Σ|ς|Greek|希腊)"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round31/evidence/root-dedup.json",
+        "at": "$[\"patterns\"][\"greek-case\"]",
+        "context": "(?:sigma|Σ|ς|Greek|希腊).{0,100}(?:case|search|搜索|lower|大小写)|(?:case|search|搜索|lower).{0,100}(?:sigma|Σ|ς|Greek|希腊)"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round31/evidence/root-dedup.json",
+        "at": "$[\"patterns\"][\"greek-case\"]",
+        "context": "(?:sigma|Σ|ς|Greek|希腊).{0,100}(?:case|search|搜索|lower|大小写)|(?:case|search|搜索|lower).{0,100}(?:sigma|Σ|ς|Greek|希腊)"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round31/evidence/root-dedup.json",
+        "at": "$[\"patterns\"][\"greek-case\"]",
+        "context": "(?:sigma|Σ|ς|Greek|希腊).{0,100}(?:case|search|搜索|lower|大小写)|(?:case|search|搜索|lower).{0,100}(?:sigma|Σ|ς|Greek|希腊)"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round31/evidence/root-dedup.json",
+        "at": "$[\"patterns\"][\"greek-case\"]",
+        "context": "(?:sigma|Σ|ς|Greek|希腊).{0,100}(?:case|search|搜索|lower|大小写)|(?:case|search|搜索|lower).{0,100}(?:sigma|Σ|ς|Greek|希腊)"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round31/evidence/root-dedup.json",
+        "at": "$[\"patterns\"][\"greek-case\"]",
+        "context": "(?:sigma|Σ|ς|Greek|希腊).{0,100}(?:case|search|搜索|lower|大小写)|(?:case|search|搜索|lower).{0,100}(?:sigma|Σ|ς|Greek|希腊)"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round31/evidence/root-prep/classification.json",
+        "at": "$[\"candidates\"][0][\"id\"]",
+        "context": "SEARCH-R31-C1"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round31/evidence/root-prep/classification.json",
+        "at": "$[\"candidates\"][0][\"title\"]",
+        "context": "Per-cell lowercasing loses Greek final-sigma context"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round31/evidence/root-prep/classification.json",
+        "at": "$[\"candidates\"][0][\"title\"]",
+        "context": "Per-cell lowercasing loses Greek final-sigma context"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round31/evidence/root-prep/classification.json",
+        "at": "$[\"candidates\"][0][\"input\"][\"rowCells\"][1]",
+        "context": "Σ"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round31/evidence/root-prep/classification.json",
+        "at": "$[\"candidates\"][0][\"input\"][\"query\"]",
+        "context": "ΟΣ"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round31/evidence/root-prep/classification.json",
+        "at": "$[\"candidates\"][0][\"staticDerivation\"][\"perCellRow\"]",
+        "context": "οσ"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round31/evidence/root-prep/classification.json",
+        "at": "$[\"candidates\"][0][\"staticDerivation\"][\"wholeQuery\"]",
+        "context": "ος"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round31/evidence/root-prep/external-sources.json",
+        "at": "$[\"sources\"][0][\"rule\"]",
+        "context": "03A3; 03C2; 03A3; 03A3; Final_Sigma;"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round31/evidence/root-prep/external-sources.json",
+        "at": "$[\"sources\"][0][\"paraphrase\"]",
+        "context": "Final sigma has a context-sensitive lowercase mapping. Non-final sigma uses U+03C3. Context is taken from the original complete string."
+      },
+      {
+        "path": "docs/audit-2026-10-17-round31/evidence/root-prep/external-sources.json",
+        "at": "$[\"sources\"][0][\"paraphrase\"]",
+        "context": "Final sigma has a context-sensitive lowercase mapping. Non-final sigma uses U+03C3. Context is taken from the original complete string."
+      },
+      {
+        "path": "docs/audit-2026-10-17-round31/evidence/root-prep/history.json",
+        "at": "$[\"patterns\"][\"greek-case\"]",
+        "context": "(?:sigma|Σ|ς|Greek|希腊).{0,100}(?:case|search|搜索|lower|大小写)|(?:case|search|搜索|lower).{0,100}(?:sigma|Σ|ς|Greek|希腊)"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round31/evidence/root-prep/history.json",
+        "at": "$[\"patterns\"][\"greek-case\"]",
+        "context": "(?:sigma|Σ|ς|Greek|希腊).{0,100}(?:case|search|搜索|lower|大小写)|(?:case|search|搜索|lower).{0,100}(?:sigma|Σ|ς|Greek|希腊)"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round31/evidence/root-prep/history.json",
+        "at": "$[\"patterns\"][\"greek-case\"]",
+        "context": "(?:sigma|Σ|ς|Greek|希腊).{0,100}(?:case|search|搜索|lower|大小写)|(?:case|search|搜索|lower).{0,100}(?:sigma|Σ|ς|Greek|希腊)"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round31/evidence/root-prep/history.json",
+        "at": "$[\"patterns\"][\"greek-case\"]",
+        "context": "(?:sigma|Σ|ς|Greek|希腊).{0,100}(?:case|search|搜索|lower|大小写)|(?:case|search|搜索|lower).{0,100}(?:sigma|Σ|ς|Greek|希腊)"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round31/evidence/root-prep/history.json",
+        "at": "$[\"patterns\"][\"greek-case\"]",
+        "context": "(?:sigma|Σ|ς|Greek|希腊).{0,100}(?:case|search|搜索|lower|大小写)|(?:case|search|搜索|lower).{0,100}(?:sigma|Σ|ς|Greek|希腊)"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round31/evidence/root-prep/history.json",
+        "at": "$[\"patterns\"][\"greek-case\"]",
+        "context": "(?:sigma|Σ|ς|Greek|希腊).{0,100}(?:case|search|搜索|lower|大小写)|(?:case|search|搜索|lower).{0,100}(?:sigma|Σ|ς|Greek|希腊)"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round31/evidence/root-prep/history.json",
+        "at": "$[\"patterns\"][\"greek-case\"]",
+        "context": "(?:sigma|Σ|ς|Greek|希腊).{0,100}(?:case|search|搜索|lower|大小写)|(?:case|search|搜索|lower).{0,100}(?:sigma|Σ|ς|Greek|希腊)"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round31/evidence/root-prep/history.json",
+        "at": "$[\"patterns\"][\"greek-case\"]",
+        "context": "(?:sigma|Σ|ς|Greek|希腊).{0,100}(?:case|search|搜索|lower|大小写)|(?:case|search|搜索|lower).{0,100}(?:sigma|Σ|ς|Greek|希腊)"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round31/evidence/root-prep/proposal.md",
+        "at": "whole Markdown",
+        "context": "xt19efab9225723c76af447f8b9d9f65aace3b0780, not future formalbaseline. **0formal /1candidate /0new-related**, SEARCH-R31-C1.\n\nfindRowSearchMatches lowercases each cell independently, but scanPositions/applySearchHighlight lowercase the entire query. For ordinary two narrow grapheme cells `Ο`,`Σ` and identical query `ΟΣ`, contextual final-sigma rules yield row `οσ` but query `ος`. Source ind"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round31/evidence/root-prep/proposal.md",
+        "at": "whole Markdown",
+        "context": "ut scanPositions/applySearchHighlight lowercase the entire query. For ordinary two narrow grapheme cells `Ο`,`Σ` and identical query `ΟΣ`, contextual final-sigma rules yield row `οσ` but query `ος`. Source indexOf thus derives no match despite the documented case-insensitive helper contract. This is a static derivation, never an observed function result or terminal screenshot.\n\n"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round31/evidence/root-prep/proposal.md",
+        "at": "whole Markdown",
+        "context": "rchHighlight lowercase the entire query. For ordinary two narrow grapheme cells `Ο`,`Σ` and identical query `ΟΣ`, contextual final-sigma rules yield row `οσ` but query `ος`. Source indexOf thus derives no match despite the documented case-insensitive helper contract. This is a static derivation, never an observed function result or terminal screenshot.\n\n[Primary references](exte"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round31/evidence/root-prep/proposal.md",
+        "at": "whole Markdown",
+        "context": "e the entire query. For ordinary two narrow grapheme cells `Ο`,`Σ` and identical query `ΟΣ`, contextual final-sigma rules yield row `οσ` but query `ος`. Source indexOf thus derives no match despite the documented case-insensitive helper contract. This is a static derivation, never an observed function result or terminal screenshot.\n\n[Primary references](external-sources.json) identi"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round31/evidence/root-prep/proposal.md",
+        "at": "whole Markdown",
+        "context": "ordinary two narrow grapheme cells `Ο`,`Σ` and identical query `ΟΣ`, contextual final-sigma rules yield row `οσ` but query `ος`. Source indexOf thus derives no match despite the documented case-insensitive helper contract. This is a static derivation, never an observed function result or terminal screenshot.\n\n[Primary references](external-sources.json) identify ECMAScript lowerc"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round31/evidence/root-prep/proposal.md",
+        "at": "whole Markdown",
+        "context": "rrow grapheme cells `Ο`,`Σ` and identical query `ΟΣ`, contextual final-sigma rules yield row `οσ` but query `ος`. Source indexOf thus derives no match despite the documented case-insensitive helper contract. This is a static derivation, never an observed function result or terminal screenshot.\n\n[Primary references](external-sources.json) identify ECMAScript lowercasing and Unico"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round31/evidence/root-prep/proposal.md",
+        "at": "whole Markdown",
+        "context": "rimary references](external-sources.json) identify ECMAScript lowercasing and Unicode context-sensitive final-sigma rules. No installed runtime/ICU version was tested. [Source scope](source-manifest.json) separates full leaves/tests and selected consumers. warn.ts first durable hash was after its read; other6 source pins preceded declared ranges. Existing9 parameterized search cases"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round31/evidence/root-prep/proposal.md",
+        "at": "whole Markdown",
+        "context": ". Existing9 parameterized search cases include ASCII/CJK/emoji/combining/dotted-I/exclusion/row-local but not sigma; none ran.\n\nIndependent source review supports P3 helper defect, but independent entry tracing has not found an App caller or package-public surface: hook is unexported/unused, Ink query starts empty, root Instance does not expose setter/scan. Root keeps candidate beca"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round31/evidence/root-prep/proposal.md",
+        "at": "whole Markdown",
+        "context": "json) includes2851 MD/JSON files and recursive JSON value scalars, excludes mutable30/future31; search-leaf6, Greek-case0 and broad case-map5155 occurrences, retained6/0/100. Exact6 contexts were read; broad capped context is not semantic exhaustion. Earlier scanner/code-unit and dotted-I work is distinct, no exact Greek cause found. Independent reviewer uses more precise21/29 conte"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round31/evidence/root-prep/proposal.md",
+        "at": "whole Markdown",
+        "context": " capped context is not semantic exhaustion. Earlier scanner/code-unit and dotted-I work is distinct, no exact Greek cause found. Independent reviewer uses more precise21/29 contextual/case navigation counts; no conflicting new old-cause evidence.\n\n[Classification](classification.json) and [validation](validation.json) preserve0product/import/function/fixture/Intl/TTY/native/test exe"
+      },
+      {
+        "path": "docs/audit-2026-10-17-round31/evidence/search-review-prep/decisions.json",
+        "at": "$[\"dedupDisposition\"]",
+        "context": "No same final-sigma cause found in the complete scanned inventory/56 retained contexts. This is bounded search, not historical semantic exhaustion."
+      },
+      {
+        "path": "docs/audit-2026-10-17-round31/evidence/search-review-prep/decisions.json",
+        "at": "$[\"proposedCause\"][\"input\"]",
+        "context": "Ordinary two-grapheme uppercase Greek text ΟΣ in a rendered row, with identical query ΟΣ."
+      },
+      {
+        "path": "docs/audit-2026-10-17-round31/evidence/search-review-prep/decisions.json",
+        "at": "$[\"proposedCause\"][\"input\"]",
+        "context": "Ordinary two-grapheme uppercase Greek text ΟΣ in a rendered row, with identical query ΟΣ."
+      },
+      {
+        "path": "docs/audit-2026-10-17-round31/evidence/search-review-prep/decisions.json",
+        "at": "$[\"proposedCause\"][\"input\"]",
+        "context": "Ordinary two-grapheme uppercase Greek text ΟΣ in a rendered row, with identical query ΟΣ."
+      },
+      {
+        "path": "docs/audit-2026-10-17-round31/evidence/search-review-prep/decisions.json",
+        "at": "$[\"proposedCause\"][\"reasoning\"]",
+        "context": "Under Unicode default contextual final-sigma lowercasing, the whole query lowers to ος; isolated Ο and Σ cells lower to ο and σ, concatenated οσ. The same displayed/query string therefore differs before indexOf. This is a manual static language-rule walkthrough, not an executed output."
+      },
+      {
+        "path": "docs/audit-2026-10-17-round31/evidence/search-review-prep/decisions.json",
+        "at": "$[\"proposedCause\"][\"reasoning\"]",
+        "context": "Under Unicode default contextual final-sigma lowercasing, the whole query lowers to ος; isolated Ο and Σ cells lower to ο and σ, concatenated οσ. The same displayed/query string therefore differs before indexOf. This is a manual static language-rule walkthrough, not an executed output."
+      },
+      {
+        "path": "docs/audit-2026-10-17-round31/evidence/search-review-prep/decisions.json",
+        "at": "$[\"proposedCause\"][\"reasoning\"]",
+        "context": "Under Unicode default contextual final-sigma lowercasing, the whole query lowers to ος; isolated Ο and Σ cells lower to ο and σ, concatenated οσ. The same displayed/query string therefore differs before indexOf. This is a manual static language-rule walkthrough, not an executed output."
+      },
+      {
+        "path": "docs/audit-2026-10-17-round31/evidence/search-review-prep/decisions.json",
+        "at": "$[\"proposedCause\"][\"reasoning\"]",
+        "context": "fault contextual final-sigma lowercasing, the whole query lowers to ος; isolated Ο and Σ cells lower to ο and σ, concatenated οσ. The same displayed/query string therefore differs before indexOf. This is a manual static language-rule walkthrough, not an executed output."
+      },
+      {
+        "path": "docs/audit-2026-10-17-round31/evidence/search-review-prep/decisions.json",
+        "at": "$[\"proposedCause\"][\"reasoning\"]",
+        "context": "final-sigma lowercasing, the whole query lowers to ος; isolated Ο and Σ cells lower to ο and σ, concatenated οσ. The same displayed/query string therefore differs before indexOf. This is a manual static language-rule walkthrough, not an executed output."
+      },
+      {
+        "path": "docs/audit-2026-10-17-round31/evidence/search-review-prep/decisions.json",
+        "at": "$[\"counterEvidenceConsidered\"][0][\"result\"]",
+        "context": "to-cell mapping intentionally handles expansion and later columns; it does not preserve cross-cell contextual sigma lowercasing."
+      },
+      {
+        "path": "docs/audit-2026-10-17-round31/evidence/search-review-prep/decisions.json",
+        "at": "$[\"counterEvidenceConsidered\"][1][\"result\"]",
+        "context": "Grapheme segmentation keeps ordinary adjacent Greek letters separate; stored character strings retain original case. No row-wide fold cancels mismatch."
+      },
+      {
+        "path": "docs/audit-2026-10-17-round31/evidence/search-review-prep/decisions.json",
+        "at": "$[\"counterEvidenceConsidered\"][2][\"result\"]",
+        "context": "Nine declared cases cover ASCII/İ/CJK/emoji/combining/noSelect/spacers/row-local/empty query, with no sigma/context-sensitive multi-grapheme case; not executed."
+      },
+      {
+        "path": "docs/audit-2026-10-17-round31/evidence/search-review-prep/decisions.json",
+        "at": "$[\"counterEvidenceConsidered\"][3][\"result\"]",
+        "context": "sion in another module; TUI existing İ coverage and September scanner dedup refactor are distinct and not old sigma findings."
+      }
+    ],
+    "inbox-contract": []
+  },
+  "driftFromInitial": [],
+  "scope": "Dated metadata-only follow-up for actual helper symbols and old contextual-case cause; whole MD and recursive JSON values, no keys; not a product/language fixture or proof of novelty."
+}

@@ -1,0 +1,145 @@
+{
+  "capturedUTC": "2026-10-17T13:24:31.989541+00:00",
+  "files": [
+    {
+      "path": "/tmp/codeshell-audit-round38-mcp-patch-frontier/McpSection-history-object-rows.json",
+      "relativePath": "McpSection-history-object-rows.json",
+      "bytes": 11444,
+      "sha256": "ab5b2ae2e785895a96f8f4759f92037779ff6ce8ef2548c87413d55ea9bb3f40",
+      "freezeStatus": "Final freeze explicitly confirmed by author andRoot before this pin"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round38-mcp-patch-frontier/artifact-receipt.json",
+      "relativePath": "artifact-receipt.json",
+      "bytes": 3738,
+      "sha256": "7d6a1c2b70332e5474c848e7531b3483f4b0b747bf91c300280b274792dcccc7",
+      "freezeStatus": "Final freeze explicitly confirmed by author andRoot before this pin"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round38-mcp-patch-frontier/classification.json",
+      "relativePath": "classification.json",
+      "bytes": 1412,
+      "sha256": "fc98b60a848879520e87bd96d79c9ea7b2903feac90f84829d293ad63f625b83",
+      "freezeStatus": "Final freeze explicitly confirmed by author andRoot before this pin"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round38-mcp-patch-frontier/final-source-check.json",
+      "relativePath": "final-source-check.json",
+      "bytes": 4865,
+      "sha256": "c7e265027e5ecc8eac3c731f3e670c2771a4cfad406f7bde71f725ed5401628f",
+      "freezeStatus": "Final freeze explicitly confirmed by author andRoot before this pin"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round38-mcp-patch-frontier/focused-history.json",
+      "relativePath": "focused-history.json",
+      "bytes": 67267,
+      "sha256": "556eec027ac4084652936964f0714fbc9a78d6136b225bbccbd9da341fb5f575",
+      "freezeStatus": "Final freeze explicitly confirmed by author andRoot before this pin"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round38-mcp-patch-frontier/forwarding-history-initial-pins.json",
+      "relativePath": "forwarding-history-initial-pins.json",
+      "bytes": 1198,
+      "sha256": "02e021b21ad648f258d0e1105d54b44e7ee87acf308d9aedf39f8e5fc5701b5f",
+      "freezeStatus": "Final freeze explicitly confirmed by author andRoot before this pin"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round38-mcp-patch-frontier/history-decisions.json",
+      "relativePath": "history-decisions.json",
+      "bytes": 1456,
+      "sha256": "ae845a5ab60c1b24dfc318465343aade81c84fe470797ff5d83129c9f48be8dd",
+      "freezeStatus": "Final freeze explicitly confirmed by author andRoot before this pin"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round38-mcp-patch-frontier/history-delta.json",
+      "relativePath": "history-delta.json",
+      "bytes": 21336,
+      "sha256": "b5b2f7fa30515cd440d74f77cc18d3457e6a11b5747af32a759702c54152c310",
+      "freezeStatus": "Final freeze explicitly confirmed by author andRoot before this pin"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round38-mcp-patch-frontier/history-method.py",
+      "relativePath": "history-method.py",
+      "bytes": 3251,
+      "sha256": "503dcd79e4603dd0de4919561a172ce546d24b64a19484022bd763aadfd7df95",
+      "freezeStatus": "Final freeze explicitly confirmed by author andRoot before this pin"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round38-mcp-patch-frontier/history.json",
+      "relativePath": "history.json",
+      "bytes": 1618153,
+      "sha256": "e1df88faea5ddfab99837cc14fdb489d897021b65ebe7c2da4d358be5d1f0e36",
+      "freezeStatus": "Final freeze explicitly confirmed by author andRoot before this pin"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round38-mcp-patch-frontier/initial-pins.json",
+      "relativePath": "initial-pins.json",
+      "bytes": 1200,
+      "sha256": "2f4300bd1273180316d88832f9aaff436801af6573ced48924242c137d4a0b7b",
+      "freezeStatus": "Final freeze explicitly confirmed by author andRoot before this pin"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round38-mcp-patch-frontier/links-check.json",
+      "relativePath": "links-check.json",
+      "bytes": 5176,
+      "sha256": "a30750c9a31b8fe38c29b552062fcdb77bdb14b7709d47c853a111622744f203",
+      "freezeStatus": "Final freeze explicitly confirmed by author andRoot before this pin"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round38-mcp-patch-frontier/merge-display-initial-pin.json",
+      "relativePath": "merge-display-initial-pin.json",
+      "bytes": 403,
+      "sha256": "4780f010fb45eb389c64b448cea8b0813d7e895dfec1f0b574028cf670a246f5",
+      "freezeStatus": "Final freeze explicitly confirmed by author andRoot before this pin"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round38-mcp-patch-frontier/merge-schema-initial-pins.json",
+      "relativePath": "merge-schema-initial-pins.json",
+      "bytes": 723,
+      "sha256": "41091802945a81b43c3f57a1575166bbc79c4dd93e2434fe40e1371cef668b9d",
+      "freezeStatus": "Final freeze explicitly confirmed by author andRoot before this pin"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round38-mcp-patch-frontier/report.md",
+      "relativePath": "report.md",
+      "bytes": 9611,
+      "sha256": "f33460cfcd897282d8f70a99a752db15534cb30f5f8802bb839b6a73d743e601",
+      "freezeStatus": "Final freeze explicitly confirmed by author andRoot before this pin"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round38-mcp-patch-frontier/scope.json",
+      "relativePath": "scope.json",
+      "bytes": 526,
+      "sha256": "9253908c1b97f52d91c55cddf0c2934ac611673b368a89ae5b311f8f7febfa72",
+      "freezeStatus": "Final freeze explicitly confirmed by author andRoot before this pin"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round38-mcp-patch-frontier/settings-adapter-initial-pin.json",
+      "relativePath": "settings-adapter-initial-pin.json",
+      "bytes": 388,
+      "sha256": "321439c5474669817b9a93da8ecdb725f5191a6b1bd3de3b4e3e73de40cb3a61",
+      "freezeStatus": "Final freeze explicitly confirmed by author andRoot before this pin"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round38-mcp-patch-frontier/source-manifest.json",
+      "relativePath": "source-manifest.json",
+      "bytes": 16302,
+      "sha256": "e1628a34803c3f9c94b50d6a81c038189b971170b0de42d0401bec0f2c8a63b5",
+      "freezeStatus": "Final freeze explicitly confirmed by author andRoot before this pin"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round38-mcp-patch-frontier/static-value-flow.json",
+      "relativePath": "static-value-flow.json",
+      "bytes": 2016,
+      "sha256": "f7312532b08204d082beb8640a14319ba17e534d4f5a8fd4d27d522d7c52044c",
+      "freezeStatus": "Final freeze explicitly confirmed by author andRoot before this pin"
+    },
+    {
+      "path": "/tmp/codeshell-audit-round38-mcp-patch-frontier/validation.json",
+      "relativePath": "validation.json",
+      "bytes": 1586,
+      "sha256": "e8dfc723718985a02e420ce9623fb3eeb27ea4ef7a9adb0830838dddea805079",
+      "freezeStatus": "Final freeze explicitly confirmed by author andRoot before this pin"
+    }
+  ]
+}

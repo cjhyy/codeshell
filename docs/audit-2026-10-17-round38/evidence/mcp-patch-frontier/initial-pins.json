@@ -1,0 +1,31 @@
+{
+  "prepOnly": true,
+  "rootSuppliedFrozenContextShort": "ee5c",
+  "formalBaseline": null,
+  "files": [
+    {
+      "path": "packages/desktop/src/renderer/settings/mcpSettingsPatch.ts",
+      "bytes": 1991,
+      "sha256": "6364bb8818f5a8e883c240d971793205a3f1507b287346e8eb8ee2ba962ef3d1",
+      "totalLines": 62,
+      "pinTimeUTC": "2026-10-17T13:08:02.800788+00:00",
+      "purpose": "before current source read; settings DTO only, no real configuration"
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/mcpSettingsPatch.test.ts",
+      "bytes": 4590,
+      "sha256": "7fa81ac16ae441c60943d673e3ebffcbc38d966724734a40bb6f32eba858c037",
+      "totalLines": 114,
+      "pinTimeUTC": "2026-10-17T13:08:02.801720+00:00",
+      "purpose": "before current source read; settings DTO only, no real configuration"
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/McpSection.tsx",
+      "bytes": 74294,
+      "sha256": "fb38b3514d3c3cab7d0899f6819bf617cbe958181fdc9a00ec5c29f7e735d014",
+      "totalLines": 1893,
+      "pinTimeUTC": "2026-10-17T13:08:02.802426+00:00",
+      "purpose": "before current source read; settings DTO only, no real configuration"
+    }
+  ]
+}

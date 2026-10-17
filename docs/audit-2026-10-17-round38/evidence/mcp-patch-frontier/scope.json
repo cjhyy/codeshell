@@ -1,0 +1,15 @@
+{
+  "ownedOutput": "/tmp/codeshell-audit-round38-mcp-patch-frontier",
+  "prepOnly": true,
+  "rootSuppliedFrozenContextShort": "ee5c",
+  "formalBaseline": null,
+  "rootProposedFindingId": "MCP-R38-01",
+  "staticScope": "ordinary patch merge/schema and same form nonempty quoted args array retention only",
+  "authorityLifecycleOutOfScope": true,
+  "excludedMutableFutureHistory": [
+    "docs/audit-2026-10-17-round37/**",
+    "docs/audit-2026-10-17-round38/**"
+  ],
+  "repoAndGitReadOnly": true,
+  "noProductExecution": true
+}

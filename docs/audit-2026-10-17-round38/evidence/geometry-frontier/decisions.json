@@ -1,0 +1,31 @@
+{
+  "createdUTC": "2026-10-17T13:14:45.729629+00:00",
+  "prepOnly": true,
+  "classification": {
+    "formal": 0,
+    "candidate": 0,
+    "related": 0
+  },
+  "assessment": "Bounded negative ordinary rectangle/clip coordinate helper review. No new ordinary producer-supported counterexample.",
+  "oldExcluded": [
+    {
+      "path": "docs/archive/review-2026-05-30/findings.json",
+      "jsonPointer": "/177",
+      "title": "Unsafe non-null assertion on parameter d in edges() function",
+      "reason": "Existing raw weak concern about three implementation arguments. Public TypeScript overloads accept1/2/4; no ordinary3-arg producer established. Excluded without upgrading archive certainty or adding related."
+    }
+  ],
+  "priorCoverageGate": "Current SHA appears only in datedR28 package inventory / coverage-ranking metadata among scanned immediate-object records. No sameSHA full semantic claim established; no-row does not prove historically unread.",
+  "negativeContracts": [
+    "edges1/2/4, addEdges component sums, resolveEdges defaults read statically; no malformed3arg fixture.",
+    "unionRect min/max envelope and ordinary damage region consumers agree for finite rectangles; clipping calculations use tighter min/max bounds and undefined axes as unbounded.",
+    "clampRect and withinBounds formulas read without NaN/Infinity or fake-layout experiments. Global use/absence is not claimed.",
+    "clamp ordinary row range consumer only; no expansion to old scroll replay / ANSI / TTY runtime direction."
+  ],
+  "scopeBoundaries": [
+    "Only selected current renderer source and42 ordinary box/wrap test declaration lines.",
+    "Native-ts yoga-layout index was a path-only match; not read or executed. Hash-only neighboring render files have no semantic coverage claim.",
+    "No authority, permission, native-runtime, installed host behavior or full-renderer correctness conclusion."
+  ],
+  "productAttempts": 0
+}

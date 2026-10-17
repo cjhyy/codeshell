@@ -1,0 +1,20 @@
+{
+  "createdUTC": "2026-10-17T13:26:09.058685+00:00",
+  "runs": [],
+  "productAttempts": 0,
+  "productPass": 0,
+  "productExpect": 0,
+  "testsExecuted": 0,
+  "languageOrJsFixtures": 0,
+  "reactBrowserNativeActions": 0,
+  "mcpConnectionsOrCommands": 0,
+  "settingsOperations": 0,
+  "networkRequests": 0,
+  "gitCommands": 0,
+  "permissionAuthCustodyExperiments": 0,
+  "metadataHistoryScanExitCode": 0,
+  "metadataHistoryScanSessionId": 95501,
+  "sourceFirstPinsAllMatchAfterRootReportedBbadCheckout": true,
+  "sourceSemanticLines": 686,
+  "note": "All read/write tools are metadata/source file bookkeeping; no imported or invoked product code, actual UI/config operations, or fixture evaluation."
+}

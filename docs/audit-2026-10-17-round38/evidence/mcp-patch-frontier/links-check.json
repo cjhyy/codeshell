@@ -1,0 +1,159 @@
+{
+  "kind": "artifact metadata/link/range checks only, no product execution",
+  "capturedAtUTC": "2026-10-17T13:23:47.490942+00:00",
+  "reportLinks": [
+    {
+      "target": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/packages/desktop/src/renderer/settings/McpSection.tsx:1122",
+      "exists": true,
+      "line": 1122,
+      "inDeclaredSourceRange": true
+    },
+    {
+      "target": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/packages/desktop/src/renderer/settings/McpSection.tsx:1475",
+      "exists": true,
+      "line": 1475,
+      "inDeclaredSourceRange": true
+    },
+    {
+      "target": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/packages/desktop/src/renderer/settings/mcpSettingsPatch.ts:43",
+      "exists": true,
+      "line": 43,
+      "inDeclaredSourceRange": true
+    },
+    {
+      "target": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/packages/desktop/src/renderer/settingsAuthority.ts:14",
+      "exists": true,
+      "line": 14,
+      "inDeclaredSourceRange": true
+    },
+    {
+      "target": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/packages/desktop/src/preload/index.ts:978",
+      "exists": true,
+      "line": 978,
+      "inDeclaredSourceRange": true
+    },
+    {
+      "target": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/packages/desktop/src/main/index.ts:6707",
+      "exists": true,
+      "line": 6707,
+      "inDeclaredSourceRange": true
+    },
+    {
+      "target": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/packages/desktop/src/main/settings-service.ts:131",
+      "exists": true,
+      "line": 131,
+      "inDeclaredSourceRange": true
+    },
+    {
+      "target": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/packages/core/src/settings/schema.ts:377",
+      "exists": true,
+      "line": 377,
+      "inDeclaredSourceRange": true
+    },
+    {
+      "target": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/packages/core/src/plugins/installer/loadPluginMcp.ts:344",
+      "exists": true,
+      "line": 344,
+      "inDeclaredSourceRange": true
+    },
+    {
+      "target": "/tmp/codeshell-audit-round38-mcp-patch-frontier/static-value-flow.json",
+      "exists": true
+    },
+    {
+      "target": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/packages/desktop/src/renderer/settings/mcpSettingsPatch.ts",
+      "exists": true
+    },
+    {
+      "target": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/packages/desktop/src/renderer/settings/mcpSettingsPatch.test.ts",
+      "exists": true
+    },
+    {
+      "target": "/Users/admin/.codex/worktrees/repo-audit-20261016/codeshell/docs/audit-2026-10-17-round26/review-target-report.md",
+      "exists": true
+    },
+    {
+      "target": "/tmp/codeshell-audit-round38-mcp-patch-frontier/source-manifest.json",
+      "exists": true
+    },
+    {
+      "target": "/tmp/codeshell-audit-round38-mcp-patch-frontier/final-source-check.json",
+      "exists": true
+    },
+    {
+      "target": "/tmp/codeshell-audit-round38-mcp-patch-frontier/validation.json",
+      "exists": true
+    }
+  ],
+  "linkCount": 16,
+  "allLinksValid": true,
+  "sourceRangeChecks": [
+    {
+      "path": "packages/desktop/src/renderer/settings/mcpSettingsPatch.ts",
+      "declared": 62,
+      "uniqueDeclaredRangesAndNavigation": 62,
+      "matches": true,
+      "withinTotalLines": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/mcpSettingsPatch.test.ts",
+      "declared": 114,
+      "uniqueDeclaredRangesAndNavigation": 114,
+      "matches": true,
+      "withinTotalLines": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/McpSection.tsx",
+      "declared": 611,
+      "uniqueDeclaredRangesAndNavigation": 611,
+      "matches": true,
+      "withinTotalLines": true
+    },
+    {
+      "path": "packages/desktop/src/main/settings-service.ts",
+      "declared": 153,
+      "uniqueDeclaredRangesAndNavigation": 153,
+      "matches": true,
+      "withinTotalLines": true
+    },
+    {
+      "path": "packages/core/src/settings/schema.ts",
+      "declared": 80,
+      "uniqueDeclaredRangesAndNavigation": 80,
+      "matches": true,
+      "withinTotalLines": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/settingsAuthority.ts",
+      "declared": 25,
+      "uniqueDeclaredRangesAndNavigation": 25,
+      "matches": true,
+      "withinTotalLines": true
+    },
+    {
+      "path": "packages/desktop/src/preload/index.ts",
+      "declared": 20,
+      "uniqueDeclaredRangesAndNavigation": 20,
+      "matches": true,
+      "withinTotalLines": true
+    },
+    {
+      "path": "packages/desktop/src/main/index.ts",
+      "declared": 83,
+      "uniqueDeclaredRangesAndNavigation": 83,
+      "matches": true,
+      "withinTotalLines": true
+    },
+    {
+      "path": "packages/core/src/plugins/installer/loadPluginMcp.ts",
+      "declared": 59,
+      "uniqueDeclaredRangesAndNavigation": 59,
+      "matches": true,
+      "withinTotalLines": true
+    }
+  ],
+  "declaredSourceLinesTotal": 1207,
+  "sourceRangeCountChecksPass": true,
+  "productExecutions": 0,
+  "newProductSemanticReadLines": 0
+}

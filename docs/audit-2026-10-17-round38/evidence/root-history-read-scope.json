@@ -1,0 +1,12 @@
+{
+  "actualReadContexts": {
+    "sources": 4,
+    "args-roundtrip": 2,
+    "exact-form": 0
+  },
+  "totalRead": 6,
+  "readScope": "All six saved bounded contexts in new95 delta, not full original old docs or all3413 Root query contexts.",
+  "oldHistoryDirectSemanticReads": 0,
+  "parentFullHistoryAttributed": true,
+  "productRuns": 0
+}

@@ -1,0 +1,36 @@
+{
+  "baseline": "bbad45be04dacfecb29cba04ed51caf167fe4e53",
+  "count": 1,
+  "findings": [
+    {
+      "id": "MCP-R38-01",
+      "severity": "P3",
+      "status": "confirmed-statically",
+      "title": "Reopening and saving a stdio MCP form loses structured argument boundaries",
+      "location": {
+        "path": "packages/desktop/src/renderer/settings/McpSection.tsx",
+        "start": 1122,
+        "end": 1122
+      },
+      "trigger": "The ordinary full stdio editor first saves a nonempty quoted argument containing spaces; the user reopens and saves without editing Args.",
+      "expected": "Keep the existing string[] argument boundaries.",
+      "actual": "args.join(\" \") loses quoting, and submit unconditionally splitArgs parses the unquoted text into different array elements before the ordinary patch write.",
+      "cause": "The array-to-text initializer is not an inverse of the supported quoted-segment parser.",
+      "evidence": [
+        "mcp-args.md",
+        "evidence/mcp-patch-frontier/report.md",
+        "evidence/root-mcp-frontier/review.md",
+        "evidence/aggregate-review/review.md"
+      ],
+      "counterevidence": [
+        "Plugin override locks args and is outside the finding.",
+        "The ordinary name/command validation and save guards do not preserve unchanged structured args.",
+        "Array copy/deepMerge preserves the newly changed array rather than restoring original boundaries.",
+        "Old MCP headers, TUI command split/join and plugin empty quoted-token cases have distinct producers and repair sites."
+      ],
+      "validation": "Ordinary source producer, UI entry, serialization/parser and patch data flow read statically; zero product/helper/language fixture/form/test/MCP/probe/settings/process/network execution. No runtime launch or connection result claimed.",
+      "remediation": "Use a lossless serializer compatible with the parser, a structured args editor, or preserve the original array when the field is unchanged.",
+      "classificationNote": "Single P3 static opinion shared by author, Root and independent reviewer; no duplicate item. Rename extra-fields remains an uncompleted boundary, not a candidate."
+    }
+  ]
+}

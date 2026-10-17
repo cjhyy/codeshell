@@ -1,0 +1,68 @@
+{
+  "capturedUTC": "2026-10-17T13:10:22.887961+00:00",
+  "files": [
+    {
+      "path": "packages/tui/src/render/screen.ts",
+      "bytes": 49323,
+      "sha256": "0e44207a3990aa365f2ffde47f9b9dcc7454c422743d1d15443d39fdd2a69880",
+      "lineCount": 1486,
+      "initialSemanticReadSha256": null,
+      "pinBeforeAnyContentLocatorOrSemanticRead": true,
+      "coverage": "hash-only pending selected read"
+    },
+    {
+      "path": "packages/tui/src/render/node-cache.ts",
+      "bytes": 1654,
+      "sha256": "4f462623118630b10ce08c4111277e0596fa1af28533a2f4a43320389bd08fe3",
+      "lineCount": 54,
+      "initialSemanticReadSha256": null,
+      "pinBeforeAnyContentLocatorOrSemanticRead": true,
+      "coverage": "hash-only pending selected read"
+    },
+    {
+      "path": "packages/tui/src/render/output.ts",
+      "bytes": 27146,
+      "sha256": "aa3caa98bfe9af0cf4215f877e08d914b48c715554a53df4bfcbd6a239fcdaef",
+      "lineCount": 814,
+      "initialSemanticReadSha256": null,
+      "pinBeforeAnyContentLocatorOrSemanticRead": true,
+      "coverage": "hash-only pending selected read"
+    },
+    {
+      "path": "packages/tui/src/render/render-node-to-output.ts",
+      "bytes": 64981,
+      "sha256": "4732b74d399aa690ec56e5d19b8329002f63ae45adeb6bb5652bd53a28b9f324",
+      "lineCount": 1492,
+      "initialSemanticReadSha256": null,
+      "pinBeforeAnyContentLocatorOrSemanticRead": true,
+      "coverage": "hash-only pending selected read"
+    },
+    {
+      "path": "packages/tui/src/render/frame.ts",
+      "bytes": 4652,
+      "sha256": "9061cfec12f262ed5c0e212bd56b5910d3b9ded6c9922f90c21959b2b9d18c37",
+      "lineCount": 131,
+      "initialSemanticReadSha256": null,
+      "pinBeforeAnyContentLocatorOrSemanticRead": true,
+      "coverage": "hash-only pending selected read"
+    },
+    {
+      "path": "packages/tui/src/render/selection.ts",
+      "bytes": 35223,
+      "sha256": "6efa8830f1785e600cf3c2ce50ed7791b651227529669373932c08f3c4d63061",
+      "lineCount": 922,
+      "initialSemanticReadSha256": null,
+      "pinBeforeAnyContentLocatorOrSemanticRead": true,
+      "coverage": "hash-only pending selected read"
+    },
+    {
+      "path": "packages/tui/src/render/log-update.ts",
+      "bytes": 32029,
+      "sha256": "d399d3713398a9bd1b72f802cea45c12e865c84ed7f8379f2c84dd3394293a89",
+      "lineCount": 894,
+      "initialSemanticReadSha256": null,
+      "pinBeforeAnyContentLocatorOrSemanticRead": true,
+      "coverage": "hash-only pending selected read"
+    }
+  ]
+}

@@ -1,0 +1,265 @@
+{
+  "createdUTC": "2026-10-17T13:13:09.039454+00:00",
+  "prepOnly": true,
+  "parentContextSupplied": "Root frozen36 abbreviatedee5c; no Git verification",
+  "formalBaseline": null,
+  "files": [
+    {
+      "path": "packages/tui/src/render/layout/geometry.ts",
+      "bytes": 2471,
+      "sha256": "13fa5f0dfb7a457c8842e2a31856eb53dfa026d3cb7fd414381ca47b3fcfc5bd",
+      "lineCount": 97,
+      "coverage": "full",
+      "selectedLineRanges": [
+        [
+          1,
+          97
+        ]
+      ],
+      "semanticReadLines": 97,
+      "initialSemanticReadSha256": "13fa5f0dfb7a457c8842e2a31856eb53dfa026d3cb7fd414381ca47b3fcfc5bd",
+      "endingSha256": "13fa5f0dfb7a457c8842e2a31856eb53dfa026d3cb7fd414381ca47b3fcfc5bd",
+      "prepPinRow": {
+        "path": "packages/tui/src/render/layout/geometry.ts",
+        "bytes": 2471,
+        "sha256": "13fa5f0dfb7a457c8842e2a31856eb53dfa026d3cb7fd414381ca47b3fcfc5bd",
+        "lineCount": 97,
+        "initialSemanticReadSha256": null,
+        "pinBeforeAnySemanticReadingByThisFrontier": true,
+        "coverage": "hash-only pending prior-history gate"
+      }
+    },
+    {
+      "path": "packages/tui/src/render/screen.ts",
+      "bytes": 49323,
+      "sha256": "0e44207a3990aa365f2ffde47f9b9dcc7454c422743d1d15443d39fdd2a69880",
+      "lineCount": 1486,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          817,
+          839
+        ],
+        [
+          900,
+          924
+        ],
+        [
+          1015,
+          1047
+        ],
+        [
+          1150,
+          1206
+        ]
+      ],
+      "semanticReadLines": 138,
+      "initialSemanticReadSha256": "0e44207a3990aa365f2ffde47f9b9dcc7454c422743d1d15443d39fdd2a69880",
+      "endingSha256": "0e44207a3990aa365f2ffde47f9b9dcc7454c422743d1d15443d39fdd2a69880",
+      "prepPinRow": {
+        "path": "packages/tui/src/render/screen.ts",
+        "bytes": 49323,
+        "sha256": "0e44207a3990aa365f2ffde47f9b9dcc7454c422743d1d15443d39fdd2a69880",
+        "lineCount": 1486,
+        "initialSemanticReadSha256": null,
+        "pinBeforeAnyContentLocatorOrSemanticRead": true,
+        "coverage": "hash-only pending selected read"
+      }
+    },
+    {
+      "path": "packages/tui/src/render/node-cache.ts",
+      "bytes": 1654,
+      "sha256": "4f462623118630b10ce08c4111277e0596fa1af28533a2f4a43320389bd08fe3",
+      "lineCount": 54,
+      "coverage": "hash-only",
+      "selectedLineRanges": [],
+      "semanticReadLines": 0,
+      "initialSemanticReadSha256": null,
+      "endingSha256": "4f462623118630b10ce08c4111277e0596fa1af28533a2f4a43320389bd08fe3",
+      "prepPinRow": {
+        "path": "packages/tui/src/render/node-cache.ts",
+        "bytes": 1654,
+        "sha256": "4f462623118630b10ce08c4111277e0596fa1af28533a2f4a43320389bd08fe3",
+        "lineCount": 54,
+        "initialSemanticReadSha256": null,
+        "pinBeforeAnyContentLocatorOrSemanticRead": true,
+        "coverage": "hash-only pending selected read"
+      }
+    },
+    {
+      "path": "packages/tui/src/render/output.ts",
+      "bytes": 27146,
+      "sha256": "aa3caa98bfe9af0cf4215f877e08d914b48c715554a53df4bfcbd6a239fcdaef",
+      "lineCount": 814,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          9,
+          22
+        ],
+        [
+          84,
+          128
+        ],
+        [
+          168,
+          185
+        ],
+        [
+          253,
+          264
+        ],
+        [
+          275,
+          326
+        ]
+      ],
+      "semanticReadLines": 141,
+      "initialSemanticReadSha256": "aa3caa98bfe9af0cf4215f877e08d914b48c715554a53df4bfcbd6a239fcdaef",
+      "endingSha256": "aa3caa98bfe9af0cf4215f877e08d914b48c715554a53df4bfcbd6a239fcdaef",
+      "prepPinRow": {
+        "path": "packages/tui/src/render/output.ts",
+        "bytes": 27146,
+        "sha256": "aa3caa98bfe9af0cf4215f877e08d914b48c715554a53df4bfcbd6a239fcdaef",
+        "lineCount": 814,
+        "initialSemanticReadSha256": null,
+        "pinBeforeAnyContentLocatorOrSemanticRead": true,
+        "coverage": "hash-only pending selected read"
+      }
+    },
+    {
+      "path": "packages/tui/src/render/render-node-to-output.ts",
+      "bytes": 64981,
+      "sha256": "4732b74d399aa690ec56e5d19b8329002f63ae45adeb6bb5652bd53a28b9f324",
+      "lineCount": 1492,
+      "coverage": "hash-only",
+      "selectedLineRanges": [],
+      "semanticReadLines": 0,
+      "initialSemanticReadSha256": null,
+      "endingSha256": "4732b74d399aa690ec56e5d19b8329002f63ae45adeb6bb5652bd53a28b9f324",
+      "prepPinRow": {
+        "path": "packages/tui/src/render/render-node-to-output.ts",
+        "bytes": 64981,
+        "sha256": "4732b74d399aa690ec56e5d19b8329002f63ae45adeb6bb5652bd53a28b9f324",
+        "lineCount": 1492,
+        "initialSemanticReadSha256": null,
+        "pinBeforeAnyContentLocatorOrSemanticRead": true,
+        "coverage": "hash-only pending selected read"
+      }
+    },
+    {
+      "path": "packages/tui/src/render/frame.ts",
+      "bytes": 4652,
+      "sha256": "9061cfec12f262ed5c0e212bd56b5910d3b9ded6c9922f90c21959b2b9d18c37",
+      "lineCount": 131,
+      "coverage": "hash-only",
+      "selectedLineRanges": [],
+      "semanticReadLines": 0,
+      "initialSemanticReadSha256": null,
+      "endingSha256": "9061cfec12f262ed5c0e212bd56b5910d3b9ded6c9922f90c21959b2b9d18c37",
+      "prepPinRow": {
+        "path": "packages/tui/src/render/frame.ts",
+        "bytes": 4652,
+        "sha256": "9061cfec12f262ed5c0e212bd56b5910d3b9ded6c9922f90c21959b2b9d18c37",
+        "lineCount": 131,
+        "initialSemanticReadSha256": null,
+        "pinBeforeAnyContentLocatorOrSemanticRead": true,
+        "coverage": "hash-only pending selected read"
+      }
+    },
+    {
+      "path": "packages/tui/src/render/selection.ts",
+      "bytes": 35223,
+      "sha256": "6efa8830f1785e600cf3c2ce50ed7791b651227529669373932c08f3c4d63061",
+      "lineCount": 922,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          1,
+          28
+        ],
+        [
+          390,
+          414
+        ]
+      ],
+      "semanticReadLines": 53,
+      "initialSemanticReadSha256": "6efa8830f1785e600cf3c2ce50ed7791b651227529669373932c08f3c4d63061",
+      "endingSha256": "6efa8830f1785e600cf3c2ce50ed7791b651227529669373932c08f3c4d63061",
+      "prepPinRow": {
+        "path": "packages/tui/src/render/selection.ts",
+        "bytes": 35223,
+        "sha256": "6efa8830f1785e600cf3c2ce50ed7791b651227529669373932c08f3c4d63061",
+        "lineCount": 922,
+        "initialSemanticReadSha256": null,
+        "pinBeforeAnyContentLocatorOrSemanticRead": true,
+        "coverage": "hash-only pending selected read"
+      }
+    },
+    {
+      "path": "packages/tui/src/render/log-update.ts",
+      "bytes": 32029,
+      "sha256": "d399d3713398a9bd1b72f802cea45c12e865c84ed7f8379f2c84dd3394293a89",
+      "lineCount": 894,
+      "coverage": "hash-only",
+      "selectedLineRanges": [],
+      "semanticReadLines": 0,
+      "initialSemanticReadSha256": null,
+      "endingSha256": "d399d3713398a9bd1b72f802cea45c12e865c84ed7f8379f2c84dd3394293a89",
+      "prepPinRow": {
+        "path": "packages/tui/src/render/log-update.ts",
+        "bytes": 32029,
+        "sha256": "d399d3713398a9bd1b72f802cea45c12e865c84ed7f8379f2c84dd3394293a89",
+        "lineCount": 894,
+        "initialSemanticReadSha256": null,
+        "pinBeforeAnyContentLocatorOrSemanticRead": true,
+        "coverage": "hash-only pending selected read"
+      }
+    },
+    {
+      "path": "tests/render-screen.test.ts",
+      "bytes": 2869,
+      "sha256": "c3b44ba1c78f6c574960b543203d4bab9037ca6c0a7d14342b029056e2a9fc37",
+      "lineCount": 95,
+      "coverage": "selected",
+      "selectedLineRanges": [
+        [
+          1,
+          29
+        ],
+        [
+          83,
+          95
+        ]
+      ],
+      "semanticReadLines": 42,
+      "initialSemanticReadSha256": "c3b44ba1c78f6c574960b543203d4bab9037ca6c0a7d14342b029056e2a9fc37",
+      "endingSha256": "c3b44ba1c78f6c574960b543203d4bab9037ca6c0a7d14342b029056e2a9fc37",
+      "prepPinRow": {
+        "path": "tests/render-screen.test.ts",
+        "bytes": 2869,
+        "sha256": "c3b44ba1c78f6c574960b543203d4bab9037ca6c0a7d14342b029056e2a9fc37",
+        "lineCount": 95,
+        "pinBeforeAnyContentRead": true
+      }
+    }
+  ],
+  "totals": {
+    "pinnedRows": 9,
+    "semanticRows": 5,
+    "fullRows": 1,
+    "selectedRows": 4,
+    "hashOnlyRows": 4,
+    "semanticReadLines": 471,
+    "productSourceLines": 429,
+    "testDeclarationLines": 42
+  },
+  "timing": "All product/test selected ranges read after their dedicated byte pin. initial source fields were null while pending, final initialSemanticReadSha records the before-read pin. Original pending rows retained.",
+  "limits": [
+    "Hash-only neighboring renderer files were discovered/pinned, not semantically reviewed. Locator matches are navigation, not full read coverage.",
+    "tests/render-screen.test.ts95lines printed; only1–29 and83–95 counted as ordinary box/wrap declaration scope. Printed ANSI/hyperlink/NoSelect tests31–81 excluded and never executed.",
+    "Incidental output imports1–8 and23–30, debug270–274, blit header327–346, screen boundary lines815–816/840–841/1207–1208, Output next type129–130 were printed but excluded from declared scope.",
+    "clip intersection arithmetic in output84–128 and stack dispatch275–326 are source-only ordinary coordinate contracts. No renderer/TTY/ANSI/scroll old failed runtime direction was retried.",
+    "No NaN, Infinity, malformed layout or coordinate fixture was evaluated. No product helper, test, renderer/native/browser/network/Git/permission experiment."
+  ]
+}

@@ -1,0 +1,19 @@
+{
+  "capturedUTC": "2026-10-17T13:08:06.557942+00:00",
+  "prepOnly": true,
+  "parentContextSupplied": "Root reports frozen36 abbreviationee5c; not independently Git-verified. Mutable37/future38 excluded from dated history.",
+  "formalBaseline": null,
+  "files": [
+    {
+      "path": "packages/tui/src/render/layout/geometry.ts",
+      "bytes": 2471,
+      "sha256": "13fa5f0dfb7a457c8842e2a31856eb53dfa026d3cb7fd414381ca47b3fcfc5bd",
+      "lineCount": 97,
+      "initialSemanticReadSha256": null,
+      "pinBeforeAnySemanticReadingByThisFrontier": true,
+      "coverage": "hash-only pending prior-history gate"
+    }
+  ],
+  "productAttempts": 0,
+  "gitCommands": 0
+}

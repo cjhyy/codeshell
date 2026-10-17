@@ -1,0 +1,132 @@
+{
+  "frozenUTC": "2026-10-17T13:12:29.730097+00:00",
+  "directory": "/tmp/codeshell-audit-round38-inbox-model-frontier",
+  "selfExcluded": true,
+  "files": [
+    {
+      "path": "consumer-pins.json",
+      "bytes": 1609,
+      "sha256": "7593fec13d788cd620f0676e009f43e21190e1fb01571c7477e0346a9e49b6e5"
+    },
+    {
+      "path": "dto-pins.json",
+      "bytes": 867,
+      "sha256": "98522031948f495a75333c53a5b35b4bb8b2b539defd9d5841e8c9a4a4b40ba8"
+    },
+    {
+      "path": "history-method.py",
+      "bytes": 3745,
+      "sha256": "9e90de8f359be9f93cca1ea673e75e1904d84e92ec71bd1b39c580d971cad371"
+    },
+    {
+      "path": "history-supplement.json",
+      "bytes": 38861,
+      "sha256": "9dafc90b26fd31ba2406d9fe9ab12cb890a08884a7ad9891430ece7f329bbdeb"
+    },
+    {
+      "path": "history.json",
+      "bytes": 666830,
+      "sha256": "bfbd123b5d6bab127096585f8d736a6bbe98108ebe2fcd7da644c5a2027b69c3"
+    },
+    {
+      "path": "initial-pins.json",
+      "bytes": 1303,
+      "sha256": "d185c81ed002460ff6415d751223dd02d2adf8c50574d4f9923cc9a7e5a6fdb2"
+    },
+    {
+      "path": "review.md",
+      "bytes": 4645,
+      "sha256": "9f96d812220c7401b587052adfa74f3c3879b328031ee8da9bdf4827a08a74f1"
+    },
+    {
+      "path": "source-excerpts.txt",
+      "bytes": 32797,
+      "sha256": "6691a0edb5071cb2f21f600d7a138868f9421f1276a408ba65f212c75841ec05"
+    },
+    {
+      "path": "source-manifest.json",
+      "bytes": 12307,
+      "sha256": "75b53e945baebe23e15021119c4841acf632a46ec3268638fd2c37fb453a8d92"
+    },
+    {
+      "path": "type-pins.json",
+      "bytes": 480,
+      "sha256": "3f3b94fd19463baf9097b6c79e3fc346063d276eba502a27969ccd184e22e2be"
+    },
+    {
+      "path": "validation.json",
+      "bytes": 3023,
+      "sha256": "3b8faf8412146ded551c5eac713749e1949ef7f6a9860e4bed1f82d1ac5f7ae9"
+    }
+  ],
+  "fileCountExcludingSelf": 11,
+  "classification": {
+    "formal": 0,
+    "candidate": 0,
+    "newRelated": 0
+  },
+  "sourceSemanticRows": 7,
+  "productAndTestRows": 6,
+  "productLines": 585,
+  "ordinaryTestDeclarationLines": 93,
+  "historicalReportLines": 13,
+  "totalSemanticLines": 691,
+  "sourcePins": 10,
+  "hashOnlyRows": 3,
+  "newInstructionSemanticReadLines": 0,
+  "existingOrdinaryTestDeclarationsRead": 3,
+  "historyInitialFiles": 3318,
+  "historyExclusions": [
+    "docs/audit-2026-10-17-round37/",
+    "docs/audit-2026-10-17-round38/"
+  ],
+  "productExecution": 0,
+  "gitCommands": 0,
+  "reportLinks": [
+    {
+      "target": "initial-pins.json",
+      "existsOrSelf": true
+    },
+    {
+      "target": "history.json",
+      "existsOrSelf": true
+    },
+    {
+      "target": "history-method.py",
+      "existsOrSelf": true
+    },
+    {
+      "target": "source-manifest.json",
+      "existsOrSelf": true
+    },
+    {
+      "target": "consumer-pins.json",
+      "existsOrSelf": true
+    },
+    {
+      "target": "dto-pins.json",
+      "existsOrSelf": true
+    },
+    {
+      "target": "type-pins.json",
+      "existsOrSelf": true
+    },
+    {
+      "target": "source-excerpts.txt",
+      "existsOrSelf": true
+    },
+    {
+      "target": "history-supplement.json",
+      "existsOrSelf": true
+    },
+    {
+      "target": "validation.json",
+      "existsOrSelf": true
+    },
+    {
+      "target": "reviewer-receipt.json",
+      "existsOrSelf": true
+    }
+  ],
+  "limits": "Prep only; old full source prose preserved; no claim first-ever or novel full coverage. Exact owned tmp writes only, no runtime."
+}

@@ -1,0 +1,689 @@
+{
+  "baseline": "bbad45be04dacfecb29cba04ed51caf167fe4e53",
+  "mainHead": "bbad45be04dacfecb29cba04ed51caf167fe4e53",
+  "files": [
+    {
+      "path": "AGENTS.md",
+      "bytes": 206,
+      "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "currentBytes": 206,
+      "currentSha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "mainBytes": 206,
+      "mainSha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true
+    },
+    {
+      "path": "CODESHELL.md",
+      "bytes": 17639,
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "currentBytes": 17639,
+      "currentSha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "mainBytes": 17639,
+      "mainSha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true
+    },
+    {
+      "path": "docs/audit-2026-10-17-round26/review-target-report.md",
+      "bytes": 8182,
+      "sha256": "817dfe32e40679b6abfc7993ded08dde2781dec745cbc446ff257d1bd3b9de0c",
+      "currentBytes": 8182,
+      "currentSha256": "817dfe32e40679b6abfc7993ded08dde2781dec745cbc446ff257d1bd3b9de0c",
+      "mainBytes": 8182,
+      "mainSha256": "817dfe32e40679b6abfc7993ded08dde2781dec745cbc446ff257d1bd3b9de0c",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true
+    },
+    {
+      "path": "docs/review-remaining-2026-10-12/hosts.md",
+      "bytes": 16168,
+      "sha256": "884a2deee6eddfe00a2a4f147e1d964351ab6017928c81e33e303315132870a8",
+      "currentBytes": 16168,
+      "currentSha256": "884a2deee6eddfe00a2a4f147e1d964351ab6017928c81e33e303315132870a8",
+      "mainBytes": 16168,
+      "mainSha256": "884a2deee6eddfe00a2a4f147e1d964351ab6017928c81e33e303315132870a8",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true
+    },
+    {
+      "path": "docs/review-remaining-2026-10-12/validation/source-reports/codeshell-remaining-hosts-report.md",
+      "bytes": 15692,
+      "sha256": "978ee8e2c95fe68f2b7c45463b0e51d122df884ad590bdb95d2e70d90f594b32",
+      "currentBytes": 15692,
+      "currentSha256": "978ee8e2c95fe68f2b7c45463b0e51d122df884ad590bdb95d2e70d90f594b32",
+      "mainBytes": 15692,
+      "mainSha256": "978ee8e2c95fe68f2b7c45463b0e51d122df884ad590bdb95d2e70d90f594b32",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/plugins/installer/loadPluginMcp.ts",
+      "bytes": 14536,
+      "sha256": "684cbfdbf01d89920f8902d147131618620c4a467b5f12911252dc5fd65bf746",
+      "currentBytes": 14536,
+      "currentSha256": "684cbfdbf01d89920f8902d147131618620c4a467b5f12911252dc5fd65bf746",
+      "mainBytes": 14536,
+      "mainSha256": "684cbfdbf01d89920f8902d147131618620c4a467b5f12911252dc5fd65bf746",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/core/src/settings/schema.ts",
+      "bytes": 29767,
+      "sha256": "2496b8aefd8ea32f7fc7ac23b26878475809be952a5fdbd8ac247cf0d40b3139",
+      "currentBytes": 29767,
+      "currentSha256": "2496b8aefd8ea32f7fc7ac23b26878475809be952a5fdbd8ac247cf0d40b3139",
+      "mainBytes": 29767,
+      "mainSha256": "2496b8aefd8ea32f7fc7ac23b26878475809be952a5fdbd8ac247cf0d40b3139",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/desktop/src/main/index.ts",
+      "bytes": 299337,
+      "sha256": "105b2b49a28e0a7ef10980ac5feaa3a07ff81e7197f5acbefd95feb2498224c0",
+      "currentBytes": 299337,
+      "currentSha256": "105b2b49a28e0a7ef10980ac5feaa3a07ff81e7197f5acbefd95feb2498224c0",
+      "mainBytes": 299337,
+      "mainSha256": "105b2b49a28e0a7ef10980ac5feaa3a07ff81e7197f5acbefd95feb2498224c0",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/desktop/src/main/settings-service.ts",
+      "bytes": 10247,
+      "sha256": "89303dcb539743adbdaff9445c58836608fc9bd50810dc00c1bda80e11c89455",
+      "currentBytes": 10247,
+      "currentSha256": "89303dcb539743adbdaff9445c58836608fc9bd50810dc00c1bda80e11c89455",
+      "mainBytes": 10247,
+      "mainSha256": "89303dcb539743adbdaff9445c58836608fc9bd50810dc00c1bda80e11c89455",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/desktop/src/main/task-inbox/task-inbox-types.ts",
+      "bytes": 9095,
+      "sha256": "2694cf539e698bf9a500d08f6d855cc66f22760ee2f5049fb8d23b565711fb00",
+      "currentBytes": 9095,
+      "currentSha256": "2694cf539e698bf9a500d08f6d855cc66f22760ee2f5049fb8d23b565711fb00",
+      "mainBytes": 9095,
+      "mainSha256": "2694cf539e698bf9a500d08f6d855cc66f22760ee2f5049fb8d23b565711fb00",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/desktop/src/preload/index.ts",
+      "bytes": 86436,
+      "sha256": "05dbc9b534bdc68c30f255f53a96617e50fb0c445ce2fc1bde4be31e3f8a6901",
+      "currentBytes": 86436,
+      "currentSha256": "05dbc9b534bdc68c30f255f53a96617e50fb0c445ce2fc1bde4be31e3f8a6901",
+      "mainBytes": 86436,
+      "mainSha256": "05dbc9b534bdc68c30f255f53a96617e50fb0c445ce2fc1bde4be31e3f8a6901",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/desktop/src/preload/task-inbox-api.ts",
+      "bytes": 1388,
+      "sha256": "a86455e8de74944381d69d02e7f1cff0eb0de67eed6401dc3406d72667889d0b",
+      "currentBytes": 1388,
+      "currentSha256": "a86455e8de74944381d69d02e7f1cff0eb0de67eed6401dc3406d72667889d0b",
+      "mainBytes": 1388,
+      "mainSha256": "a86455e8de74944381d69d02e7f1cff0eb0de67eed6401dc3406d72667889d0b",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/McpDetailDialogs.tsx",
+      "bytes": 4997,
+      "sha256": "0d9ba6096bfc125a30869d9e9a41586d95b263f999c5b36c4ca1cb90a3a4a5c4",
+      "currentBytes": 4997,
+      "currentSha256": "0d9ba6096bfc125a30869d9e9a41586d95b263f999c5b36c4ca1cb90a3a4a5c4",
+      "mainBytes": 4997,
+      "mainSha256": "0d9ba6096bfc125a30869d9e9a41586d95b263f999c5b36c4ca1cb90a3a4a5c4",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/McpSection.lifecycle.test.tsx",
+      "bytes": 848,
+      "sha256": "53ee6e9c58e677aec7457af71a2523bda8a733fb95e1b22e560e360819a95bbe",
+      "currentBytes": 848,
+      "currentSha256": "53ee6e9c58e677aec7457af71a2523bda8a733fb95e1b22e560e360819a95bbe",
+      "mainBytes": 848,
+      "mainSha256": "53ee6e9c58e677aec7457af71a2523bda8a733fb95e1b22e560e360819a95bbe",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/McpSection.tsx",
+      "bytes": 74294,
+      "sha256": "fb38b3514d3c3cab7d0899f6819bf617cbe958181fdc9a00ec5c29f7e735d014",
+      "currentBytes": 74294,
+      "currentSha256": "fb38b3514d3c3cab7d0899f6819bf617cbe958181fdc9a00ec5c29f7e735d014",
+      "mainBytes": 74294,
+      "mainSha256": "fb38b3514d3c3cab7d0899f6819bf617cbe958181fdc9a00ec5c29f7e735d014",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/mcpSettingsPatch.test.ts",
+      "bytes": 4590,
+      "sha256": "7fa81ac16ae441c60943d673e3ebffcbc38d966724734a40bb6f32eba858c037",
+      "currentBytes": 4590,
+      "currentSha256": "7fa81ac16ae441c60943d673e3ebffcbc38d966724734a40bb6f32eba858c037",
+      "mainBytes": 4590,
+      "mainSha256": "7fa81ac16ae441c60943d673e3ebffcbc38d966724734a40bb6f32eba858c037",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/settings/mcpSettingsPatch.ts",
+      "bytes": 1991,
+      "sha256": "6364bb8818f5a8e883c240d971793205a3f1507b287346e8eb8ee2ba962ef3d1",
+      "currentBytes": 1991,
+      "currentSha256": "6364bb8818f5a8e883c240d971793205a3f1507b287346e8eb8ee2ba962ef3d1",
+      "mainBytes": 1991,
+      "mainSha256": "6364bb8818f5a8e883c240d971793205a3f1507b287346e8eb8ee2ba962ef3d1",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/settingsAuthority.ts",
+      "bytes": 765,
+      "sha256": "884071554713d9804d50b92dbd0f44d44941222762847f2accc65f12bc09fb1e",
+      "currentBytes": 765,
+      "currentSha256": "884071554713d9804d50b92dbd0f44d44941222762847f2accc65f12bc09fb1e",
+      "mainBytes": 765,
+      "mainSha256": "884071554713d9804d50b92dbd0f44d44941222762847f2accc65f12bc09fb1e",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/task-inbox/TaskInboxPage.tsx",
+      "bytes": 23775,
+      "sha256": "76769f666c1be51aeec954b7bd5eabbeaf862da80c4c83708a8794461da5e295",
+      "currentBytes": 23775,
+      "currentSha256": "76769f666c1be51aeec954b7bd5eabbeaf862da80c4c83708a8794461da5e295",
+      "mainBytes": 23775,
+      "mainSha256": "76769f666c1be51aeec954b7bd5eabbeaf862da80c4c83708a8794461da5e295",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/task-inbox/taskInboxViewModel.test.ts",
+      "bytes": 10711,
+      "sha256": "b617e88a422cc67e9f5b5bb2ea27f35b8cb973be8d691680ddd42219caf404d6",
+      "currentBytes": 10711,
+      "currentSha256": "b617e88a422cc67e9f5b5bb2ea27f35b8cb973be8d691680ddd42219caf404d6",
+      "mainBytes": 10711,
+      "mainSha256": "b617e88a422cc67e9f5b5bb2ea27f35b8cb973be8d691680ddd42219caf404d6",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/task-inbox/taskInboxViewModel.ts",
+      "bytes": 3342,
+      "sha256": "9c5fa1937a2187110ea497bc402ebb8e0aa1b7b8cc733af6a789e10a9234a1ed",
+      "currentBytes": 3342,
+      "currentSha256": "9c5fa1937a2187110ea497bc402ebb8e0aa1b7b8cc733af6a789e10a9234a1ed",
+      "mainBytes": 3342,
+      "mainSha256": "9c5fa1937a2187110ea497bc402ebb8e0aa1b7b8cc733af6a789e10a9234a1ed",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/desktop/src/renderer/task-inbox/useTaskInboxSnapshot.ts",
+      "bytes": 3402,
+      "sha256": "809e80bf9b0031efaff990124faeef76d145161fd620044cd7a51bf6fd1a9ff7",
+      "currentBytes": 3402,
+      "currentSha256": "809e80bf9b0031efaff990124faeef76d145161fd620044cd7a51bf6fd1a9ff7",
+      "mainBytes": 3402,
+      "mainSha256": "809e80bf9b0031efaff990124faeef76d145161fd620044cd7a51bf6fd1a9ff7",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/tui/src/render/frame.ts",
+      "bytes": 4652,
+      "sha256": "9061cfec12f262ed5c0e212bd56b5910d3b9ded6c9922f90c21959b2b9d18c37",
+      "currentBytes": 4652,
+      "currentSha256": "9061cfec12f262ed5c0e212bd56b5910d3b9ded6c9922f90c21959b2b9d18c37",
+      "mainBytes": 4652,
+      "mainSha256": "9061cfec12f262ed5c0e212bd56b5910d3b9ded6c9922f90c21959b2b9d18c37",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/tui/src/render/layout/geometry.ts",
+      "bytes": 2471,
+      "sha256": "13fa5f0dfb7a457c8842e2a31856eb53dfa026d3cb7fd414381ca47b3fcfc5bd",
+      "currentBytes": 2471,
+      "currentSha256": "13fa5f0dfb7a457c8842e2a31856eb53dfa026d3cb7fd414381ca47b3fcfc5bd",
+      "mainBytes": 2471,
+      "mainSha256": "13fa5f0dfb7a457c8842e2a31856eb53dfa026d3cb7fd414381ca47b3fcfc5bd",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/tui/src/render/log-update.ts",
+      "bytes": 32029,
+      "sha256": "d399d3713398a9bd1b72f802cea45c12e865c84ed7f8379f2c84dd3394293a89",
+      "currentBytes": 32029,
+      "currentSha256": "d399d3713398a9bd1b72f802cea45c12e865c84ed7f8379f2c84dd3394293a89",
+      "mainBytes": 32029,
+      "mainSha256": "d399d3713398a9bd1b72f802cea45c12e865c84ed7f8379f2c84dd3394293a89",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/tui/src/render/node-cache.ts",
+      "bytes": 1654,
+      "sha256": "4f462623118630b10ce08c4111277e0596fa1af28533a2f4a43320389bd08fe3",
+      "currentBytes": 1654,
+      "currentSha256": "4f462623118630b10ce08c4111277e0596fa1af28533a2f4a43320389bd08fe3",
+      "mainBytes": 1654,
+      "mainSha256": "4f462623118630b10ce08c4111277e0596fa1af28533a2f4a43320389bd08fe3",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/tui/src/render/output.ts",
+      "bytes": 27146,
+      "sha256": "aa3caa98bfe9af0cf4215f877e08d914b48c715554a53df4bfcbd6a239fcdaef",
+      "currentBytes": 27146,
+      "currentSha256": "aa3caa98bfe9af0cf4215f877e08d914b48c715554a53df4bfcbd6a239fcdaef",
+      "mainBytes": 27146,
+      "mainSha256": "aa3caa98bfe9af0cf4215f877e08d914b48c715554a53df4bfcbd6a239fcdaef",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/tui/src/render/render-node-to-output.ts",
+      "bytes": 64981,
+      "sha256": "4732b74d399aa690ec56e5d19b8329002f63ae45adeb6bb5652bd53a28b9f324",
+      "currentBytes": 64981,
+      "currentSha256": "4732b74d399aa690ec56e5d19b8329002f63ae45adeb6bb5652bd53a28b9f324",
+      "mainBytes": 64981,
+      "mainSha256": "4732b74d399aa690ec56e5d19b8329002f63ae45adeb6bb5652bd53a28b9f324",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/tui/src/render/screen.ts",
+      "bytes": 49323,
+      "sha256": "0e44207a3990aa365f2ffde47f9b9dcc7454c422743d1d15443d39fdd2a69880",
+      "currentBytes": 49323,
+      "currentSha256": "0e44207a3990aa365f2ffde47f9b9dcc7454c422743d1d15443d39fdd2a69880",
+      "mainBytes": 49323,
+      "mainSha256": "0e44207a3990aa365f2ffde47f9b9dcc7454c422743d1d15443d39fdd2a69880",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true
+    },
+    {
+      "path": "packages/tui/src/render/selection.ts",
+      "bytes": 35223,
+      "sha256": "6efa8830f1785e600cf3c2ce50ed7791b651227529669373932c08f3c4d63061",
+      "currentBytes": 35223,
+      "currentSha256": "6efa8830f1785e600cf3c2ce50ed7791b651227529669373932c08f3c4d63061",
+      "mainBytes": 35223,
+      "mainSha256": "6efa8830f1785e600cf3c2ce50ed7791b651227529669373932c08f3c4d63061",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true
+    },
+    {
+      "path": "tests/render-screen.test.ts",
+      "bytes": 2869,
+      "sha256": "c3b44ba1c78f6c574960b543203d4bab9037ca6c0a7d14342b029056e2a9fc37",
+      "currentBytes": 2869,
+      "currentSha256": "c3b44ba1c78f6c574960b543203d4bab9037ca6c0a7d14342b029056e2a9fc37",
+      "mainBytes": 2869,
+      "mainSha256": "c3b44ba1c78f6c574960b543203d4bab9037ca6c0a7d14342b029056e2a9fc37",
+      "currentWorkingTreeMatchesFrozenBlob": true,
+      "mainMatchesFrozenBlob": true
+    }
+  ],
+  "workerSourceChecks": [
+    {
+      "manifest": "mcp-patch-frontier/source-manifest.json",
+      "collection": "files",
+      "path": "packages/desktop/src/renderer/settings/mcpSettingsPatch.ts",
+      "sha256": "6364bb8818f5a8e883c240d971793205a3f1507b287346e8eb8ee2ba962ef3d1",
+      "coverage": "full",
+      "note": "Original timing/ranges/null and same-read limitations retained; formalization adds no repeated semantic read."
+    },
+    {
+      "manifest": "mcp-patch-frontier/source-manifest.json",
+      "collection": "files",
+      "path": "packages/desktop/src/renderer/settings/mcpSettingsPatch.test.ts",
+      "sha256": "7fa81ac16ae441c60943d673e3ebffcbc38d966724734a40bb6f32eba858c037",
+      "coverage": "full",
+      "note": "Original timing/ranges/null and same-read limitations retained; formalization adds no repeated semantic read."
+    },
+    {
+      "manifest": "mcp-patch-frontier/source-manifest.json",
+      "collection": "files",
+      "path": "packages/desktop/src/renderer/settings/McpSection.tsx",
+      "sha256": "fb38b3514d3c3cab7d0899f6819bf617cbe958181fdc9a00ec5c29f7e735d014",
+      "coverage": "selected",
+      "note": "Original timing/ranges/null and same-read limitations retained; formalization adds no repeated semantic read."
+    },
+    {
+      "manifest": "mcp-patch-frontier/source-manifest.json",
+      "collection": "files",
+      "path": "packages/desktop/src/main/settings-service.ts",
+      "sha256": "89303dcb539743adbdaff9445c58836608fc9bd50810dc00c1bda80e11c89455",
+      "coverage": "selected",
+      "note": "Original timing/ranges/null and same-read limitations retained; formalization adds no repeated semantic read."
+    },
+    {
+      "manifest": "mcp-patch-frontier/source-manifest.json",
+      "collection": "files",
+      "path": "packages/core/src/settings/schema.ts",
+      "sha256": "2496b8aefd8ea32f7fc7ac23b26878475809be952a5fdbd8ac247cf0d40b3139",
+      "coverage": "selected",
+      "note": "Original timing/ranges/null and same-read limitations retained; formalization adds no repeated semantic read."
+    },
+    {
+      "manifest": "mcp-patch-frontier/source-manifest.json",
+      "collection": "files",
+      "path": "packages/desktop/src/renderer/settingsAuthority.ts",
+      "sha256": "884071554713d9804d50b92dbd0f44d44941222762847f2accc65f12bc09fb1e",
+      "coverage": "full",
+      "note": "Original timing/ranges/null and same-read limitations retained; formalization adds no repeated semantic read."
+    },
+    {
+      "manifest": "mcp-patch-frontier/source-manifest.json",
+      "collection": "files",
+      "path": "packages/desktop/src/preload/index.ts",
+      "sha256": "05dbc9b534bdc68c30f255f53a96617e50fb0c445ce2fc1bde4be31e3f8a6901",
+      "coverage": "selected",
+      "note": "Original timing/ranges/null and same-read limitations retained; formalization adds no repeated semantic read."
+    },
+    {
+      "manifest": "mcp-patch-frontier/source-manifest.json",
+      "collection": "files",
+      "path": "packages/desktop/src/main/index.ts",
+      "sha256": "105b2b49a28e0a7ef10980ac5feaa3a07ff81e7197f5acbefd95feb2498224c0",
+      "coverage": "selected",
+      "note": "Original timing/ranges/null and same-read limitations retained; formalization adds no repeated semantic read."
+    },
+    {
+      "manifest": "mcp-patch-frontier/source-manifest.json",
+      "collection": "files",
+      "path": "packages/core/src/plugins/installer/loadPluginMcp.ts",
+      "sha256": "684cbfdbf01d89920f8902d147131618620c4a467b5f12911252dc5fd65bf746",
+      "coverage": "selected",
+      "note": "Original timing/ranges/null and same-read limitations retained; formalization adds no repeated semantic read."
+    },
+    {
+      "manifest": "mcp-patch-frontier/source-manifest.json",
+      "collection": "historicalReportReads",
+      "path": "docs/audit-2026-10-17-round26/review-target-report.md",
+      "sha256": "817dfe32e40679b6abfc7993ded08dde2781dec745cbc446ff257d1bd3b9de0c",
+      "coverage": "full-historical-report",
+      "note": "Original timing/ranges/null and same-read limitations retained; formalization adds no repeated semantic read."
+    },
+    {
+      "manifest": "inbox-model-frontier/source-manifest.json",
+      "collection": "files",
+      "path": "packages/desktop/src/renderer/task-inbox/taskInboxViewModel.ts",
+      "sha256": "9c5fa1937a2187110ea497bc402ebb8e0aa1b7b8cc733af6a789e10a9234a1ed",
+      "coverage": "full",
+      "note": "Original timing/ranges/null and same-read limitations retained; formalization adds no repeated semantic read."
+    },
+    {
+      "manifest": "inbox-model-frontier/source-manifest.json",
+      "collection": "files",
+      "path": "packages/desktop/src/renderer/task-inbox/taskInboxViewModel.test.ts",
+      "sha256": "b617e88a422cc67e9f5b5bb2ea27f35b8cb973be8d691680ddd42219caf404d6",
+      "coverage": "selected",
+      "note": "Original timing/ranges/null and same-read limitations retained; formalization adds no repeated semantic read."
+    },
+    {
+      "manifest": "inbox-model-frontier/source-manifest.json",
+      "collection": "files",
+      "path": "packages/desktop/src/renderer/task-inbox/TaskInboxPage.tsx",
+      "sha256": "76769f666c1be51aeec954b7bd5eabbeaf862da80c4c83708a8794461da5e295",
+      "coverage": "selected",
+      "note": "Original timing/ranges/null and same-read limitations retained; formalization adds no repeated semantic read."
+    },
+    {
+      "manifest": "inbox-model-frontier/source-manifest.json",
+      "collection": "files",
+      "path": "docs/review-remaining-2026-10-12/hosts.md",
+      "sha256": "884a2deee6eddfe00a2a4f147e1d964351ab6017928c81e33e303315132870a8",
+      "coverage": "selected",
+      "note": "Original timing/ranges/null and same-read limitations retained; formalization adds no repeated semantic read."
+    },
+    {
+      "manifest": "inbox-model-frontier/source-manifest.json",
+      "collection": "files",
+      "path": "packages/desktop/src/preload/task-inbox-api.ts",
+      "sha256": "a86455e8de74944381d69d02e7f1cff0eb0de67eed6401dc3406d72667889d0b",
+      "coverage": "selected",
+      "note": "Original timing/ranges/null and same-read limitations retained; formalization adds no repeated semantic read."
+    },
+    {
+      "manifest": "inbox-model-frontier/source-manifest.json",
+      "collection": "files",
+      "path": "packages/desktop/src/renderer/task-inbox/useTaskInboxSnapshot.ts",
+      "sha256": "809e80bf9b0031efaff990124faeef76d145161fd620044cd7a51bf6fd1a9ff7",
+      "coverage": "full",
+      "note": "Original timing/ranges/null and same-read limitations retained; formalization adds no repeated semantic read."
+    },
+    {
+      "manifest": "inbox-model-frontier/source-manifest.json",
+      "collection": "files",
+      "path": "packages/desktop/src/main/task-inbox/task-inbox-types.ts",
+      "sha256": "2694cf539e698bf9a500d08f6d855cc66f22760ee2f5049fb8d23b565711fb00",
+      "coverage": "selected",
+      "note": "Original timing/ranges/null and same-read limitations retained; formalization adds no repeated semantic read."
+    },
+    {
+      "manifest": "geometry-frontier/source-manifest.json",
+      "collection": "files",
+      "path": "packages/tui/src/render/layout/geometry.ts",
+      "sha256": "13fa5f0dfb7a457c8842e2a31856eb53dfa026d3cb7fd414381ca47b3fcfc5bd",
+      "coverage": "full",
+      "note": "Original timing/ranges/null and same-read limitations retained; formalization adds no repeated semantic read."
+    },
+    {
+      "manifest": "geometry-frontier/source-manifest.json",
+      "collection": "files",
+      "path": "packages/tui/src/render/screen.ts",
+      "sha256": "0e44207a3990aa365f2ffde47f9b9dcc7454c422743d1d15443d39fdd2a69880",
+      "coverage": "selected",
+      "note": "Original timing/ranges/null and same-read limitations retained; formalization adds no repeated semantic read."
+    },
+    {
+      "manifest": "geometry-frontier/source-manifest.json",
+      "collection": "files",
+      "path": "packages/tui/src/render/output.ts",
+      "sha256": "aa3caa98bfe9af0cf4215f877e08d914b48c715554a53df4bfcbd6a239fcdaef",
+      "coverage": "selected",
+      "note": "Original timing/ranges/null and same-read limitations retained; formalization adds no repeated semantic read."
+    },
+    {
+      "manifest": "geometry-frontier/source-manifest.json",
+      "collection": "files",
+      "path": "packages/tui/src/render/selection.ts",
+      "sha256": "6efa8830f1785e600cf3c2ce50ed7791b651227529669373932c08f3c4d63061",
+      "coverage": "selected",
+      "note": "Original timing/ranges/null and same-read limitations retained; formalization adds no repeated semantic read."
+    },
+    {
+      "manifest": "geometry-frontier/source-manifest.json",
+      "collection": "files",
+      "path": "tests/render-screen.test.ts",
+      "sha256": "c3b44ba1c78f6c574960b543203d4bab9037ca6c0a7d14342b029056e2a9fc37",
+      "coverage": "selected",
+      "note": "Original timing/ranges/null and same-read limitations retained; formalization adds no repeated semantic read."
+    },
+    {
+      "manifest": "root-mcp-frontier/source-manifest.json",
+      "collection": "files",
+      "path": "packages/desktop/src/renderer/settings/mcpSettingsPatch.ts",
+      "sha256": "6364bb8818f5a8e883c240d971793205a3f1507b287346e8eb8ee2ba962ef3d1",
+      "coverage": "full",
+      "note": "Original timing/ranges/null and same-read limitations retained; formalization adds no repeated semantic read."
+    },
+    {
+      "manifest": "root-mcp-frontier/source-manifest.json",
+      "collection": "files",
+      "path": "packages/desktop/src/renderer/settings/McpSection.tsx",
+      "sha256": "fb38b3514d3c3cab7d0899f6819bf617cbe958181fdc9a00ec5c29f7e735d014",
+      "coverage": "selected",
+      "note": "Original timing/ranges/null and same-read limitations retained; formalization adds no repeated semantic read."
+    },
+    {
+      "manifest": "mcp-args-review/source-manifest.json",
+      "collection": "files",
+      "path": "packages/desktop/src/renderer/settings/McpSection.tsx",
+      "sha256": "fb38b3514d3c3cab7d0899f6819bf617cbe958181fdc9a00ec5c29f7e735d014",
+      "coverage": "selected",
+      "note": "Original timing/ranges/null and same-read limitations retained; formalization adds no repeated semantic read."
+    },
+    {
+      "manifest": "mcp-args-review/source-manifest.json",
+      "collection": "files",
+      "path": "packages/desktop/src/renderer/settings/mcpSettingsPatch.ts",
+      "sha256": "6364bb8818f5a8e883c240d971793205a3f1507b287346e8eb8ee2ba962ef3d1",
+      "coverage": "full",
+      "note": "Original timing/ranges/null and same-read limitations retained; formalization adds no repeated semantic read."
+    },
+    {
+      "manifest": "mcp-args-review/source-manifest.json",
+      "collection": "files",
+      "path": "packages/desktop/src/renderer/settings/mcpSettingsPatch.test.ts",
+      "sha256": "7fa81ac16ae441c60943d673e3ebffcbc38d966724734a40bb6f32eba858c037",
+      "coverage": "full",
+      "note": "Original timing/ranges/null and same-read limitations retained; formalization adds no repeated semantic read."
+    },
+    {
+      "manifest": "mcp-args-review/source-manifest.json",
+      "collection": "files",
+      "path": "packages/desktop/src/renderer/settingsAuthority.ts",
+      "sha256": "884071554713d9804d50b92dbd0f44d44941222762847f2accc65f12bc09fb1e",
+      "coverage": "full",
+      "note": "Original timing/ranges/null and same-read limitations retained; formalization adds no repeated semantic read."
+    },
+    {
+      "manifest": "mcp-args-review/source-manifest.json",
+      "collection": "files",
+      "path": "packages/desktop/src/main/settings-service.ts",
+      "sha256": "89303dcb539743adbdaff9445c58836608fc9bd50810dc00c1bda80e11c89455",
+      "coverage": "selected",
+      "note": "Original timing/ranges/null and same-read limitations retained; formalization adds no repeated semantic read."
+    },
+    {
+      "manifest": "mcp-args-review/source-manifest.json",
+      "collection": "files",
+      "path": "packages/desktop/src/preload/index.ts",
+      "sha256": "05dbc9b534bdc68c30f255f53a96617e50fb0c445ce2fc1bde4be31e3f8a6901",
+      "coverage": "selected",
+      "note": "Original timing/ranges/null and same-read limitations retained; formalization adds no repeated semantic read."
+    },
+    {
+      "manifest": "mcp-args-review/source-manifest.json",
+      "collection": "files",
+      "path": "packages/desktop/src/main/index.ts",
+      "sha256": "105b2b49a28e0a7ef10980ac5feaa3a07ff81e7197f5acbefd95feb2498224c0",
+      "coverage": "selected",
+      "note": "Original timing/ranges/null and same-read limitations retained; formalization adds no repeated semantic read."
+    }
+  ],
+  "hashOnlyChecks": [
+    {
+      "manifest": "mcp-patch-frontier/source-manifest.json",
+      "collection": "instructionCarryForward",
+      "path": "CODESHELL.md",
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "coverage": "instruction-carry-forward",
+      "note": "Original timing/ranges/null and same-read limitations retained; formalization adds no repeated semantic read."
+    },
+    {
+      "manifest": "mcp-patch-frontier/source-manifest.json",
+      "collection": "instructionCarryForward",
+      "path": "AGENTS.md",
+      "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "coverage": "instruction-carry-forward",
+      "note": "Original timing/ranges/null and same-read limitations retained; formalization adds no repeated semantic read."
+    },
+    {
+      "manifest": "inbox-model-frontier/source-manifest.json",
+      "collection": "hashOnlyFiles",
+      "path": "CODESHELL.md",
+      "sha256": "56d9ffdd81b6f6f615ed7a7392ddfa60ec4338c0ccb88eef20c4b73ad8dad5a2",
+      "coverage": "hash-only",
+      "note": "Original timing/ranges/null and same-read limitations retained; formalization adds no repeated semantic read."
+    },
+    {
+      "manifest": "inbox-model-frontier/source-manifest.json",
+      "collection": "hashOnlyFiles",
+      "path": "AGENTS.md",
+      "sha256": "2980647020f0ae72522f7f717ffa89f4c5ec7fb1efe48066e881b864cd428917",
+      "coverage": "hash-only",
+      "note": "Original timing/ranges/null and same-read limitations retained; formalization adds no repeated semantic read."
+    },
+    {
+      "manifest": "inbox-model-frontier/source-manifest.json",
+      "collection": "hashOnlyFiles",
+      "path": "docs/review-remaining-2026-10-12/validation/source-reports/codeshell-remaining-hosts-report.md",
+      "sha256": "978ee8e2c95fe68f2b7c45463b0e51d122df884ad590bdb95d2e70d90f594b32",
+      "coverage": "hash-only",
+      "note": "Original timing/ranges/null and same-read limitations retained; formalization adds no repeated semantic read."
+    },
+    {
+      "manifest": "geometry-frontier/source-manifest.json",
+      "collection": "files",
+      "path": "packages/tui/src/render/node-cache.ts",
+      "sha256": "4f462623118630b10ce08c4111277e0596fa1af28533a2f4a43320389bd08fe3",
+      "coverage": "hash-only",
+      "note": "Original timing/ranges/null and same-read limitations retained; formalization adds no repeated semantic read."
+    },
+    {
+      "manifest": "geometry-frontier/source-manifest.json",
+      "collection": "files",
+      "path": "packages/tui/src/render/render-node-to-output.ts",
+      "sha256": "4732b74d399aa690ec56e5d19b8329002f63ae45adeb6bb5652bd53a28b9f324",
+      "coverage": "hash-only",
+      "note": "Original timing/ranges/null and same-read limitations retained; formalization adds no repeated semantic read."
+    },
+    {
+      "manifest": "geometry-frontier/source-manifest.json",
+      "collection": "files",
+      "path": "packages/tui/src/render/frame.ts",
+      "sha256": "9061cfec12f262ed5c0e212bd56b5910d3b9ded6c9922f90c21959b2b9d18c37",
+      "coverage": "hash-only",
+      "note": "Original timing/ranges/null and same-read limitations retained; formalization adds no repeated semantic read."
+    },
+    {
+      "manifest": "geometry-frontier/source-manifest.json",
+      "collection": "files",
+      "path": "packages/tui/src/render/log-update.ts",
+      "sha256": "d399d3713398a9bd1b72f802cea45c12e865c84ed7f8379f2c84dd3394293a89",
+      "coverage": "hash-only",
+      "note": "Original timing/ranges/null and same-read limitations retained; formalization adds no repeated semantic read."
+    },
+    {
+      "manifest": "mcp-args-review/source-manifest.json",
+      "collection": "files",
+      "path": "packages/desktop/src/renderer/settings/McpDetailDialogs.tsx",
+      "sha256": "0d9ba6096bfc125a30869d9e9a41586d95b263f999c5b36c4ca1cb90a3a4a5c4",
+      "coverage": "hash-only",
+      "note": "Original timing/ranges/null and same-read limitations retained; formalization adds no repeated semantic read."
+    },
+    {
+      "manifest": "mcp-args-review/source-manifest.json",
+      "collection": "files",
+      "path": "packages/desktop/src/renderer/settings/McpSection.lifecycle.test.tsx",
+      "sha256": "53ee6e9c58e677aec7457af71a2523bda8a733fb95e1b22e560e360819a95bbe",
+      "coverage": "hash-only",
+      "note": "Original timing/ranges/null and same-read limitations retained; formalization adds no repeated semantic read."
+    }
+  ],
+  "changedFromFrozenPaths": [],
+  "note": "Original scope/first-pin/selected/hash distinctions preserved. Root snapshot txt remains in tmp with exact JSON encoding archived; no product execution or source reread added."
+}

@@ -1,0 +1,96 @@
+{
+  "frozenUTC": "2026-10-17T13:31:19.488792+00:00",
+  "directory": "/tmp/codeshell-audit-round38-aggregate-review",
+  "selfExcluded": true,
+  "files": [
+    {
+      "path": "checks.json",
+      "bytes": 108296,
+      "sha256": "cfefb8500e2b46ba7ad78529e26015e2dbbc2dbc6c5f03cb3580e253f8681edb"
+    },
+    {
+      "path": "formal-history-readtime-pin.json",
+      "bytes": 459,
+      "sha256": "aeb80395872d9b934d4aa12042fea5d63bc2925cee46b3f436261a111f3f0056"
+    },
+    {
+      "path": "initial-frozen-artifact-pins.json",
+      "bytes": 12924,
+      "sha256": "c8542d6b668aff949e11db7866d36c7c3d82062924724aaac4155e1e7d6e200f"
+    },
+    {
+      "path": "mcp-independent-frozen-pins.json",
+      "bytes": 5139,
+      "sha256": "f9ae0d5babb3fddecc98731117860a874be19ad5a319f91f029160ecad0112eb"
+    },
+    {
+      "path": "mcp-parent-frozen-pins.json",
+      "bytes": 6966,
+      "sha256": "46a679daf46f9f2842fb38c07b9cfd7ff55e5862b7e2e714b83f092cb0a2c0e6"
+    },
+    {
+      "path": "review.md",
+      "bytes": 5109,
+      "sha256": "c51540509aa94515d03f13e049fa2f36dad2304a4a7793317f7deedc31092798"
+    }
+  ],
+  "fileCountExcludingSelf": 6,
+  "scope": "Metadata/counterevidence aggregation; inbox own author is not independent source review.",
+  "sourceFilesHere": 0,
+  "newProductSemanticLines": 0,
+  "supportSingleGlobalP3": "MCP-R38-01",
+  "newStandaloneFindingIds": 0,
+  "inputArtifacts": 75,
+  "authorReceiptRowsChecked": [
+    11,
+    16,
+    9,
+    19,
+    14
+  ],
+  "sourceMetadataRowsChecked": [
+    7,
+    9,
+    2,
+    9,
+    9
+  ],
+  "negativeScopes": [
+    "inbox0/0/0",
+    "geometry0/0/0"
+  ],
+  "rootSnapshotExcludedExplicitlyAndRecoverable": true,
+  "inboxWhitespaceSnapshot29LinesPreserved": true,
+  "fullGitCheckNotCertifiedByReviewer": true,
+  "productRuns": 0,
+  "tests": 0,
+  "fixtures": 0,
+  "git": 0,
+  "reportLinks": [
+    {
+      "target": "initial-frozen-artifact-pins.json",
+      "existsOrSelf": true
+    },
+    {
+      "target": "mcp-parent-frozen-pins.json",
+      "existsOrSelf": true
+    },
+    {
+      "target": "mcp-independent-frozen-pins.json",
+      "existsOrSelf": true
+    },
+    {
+      "target": "checks.json",
+      "existsOrSelf": true
+    },
+    {
+      "target": "formal-history-readtime-pin.json",
+      "existsOrSelf": true
+    },
+    {
+      "target": "reviewer-receipt.json",
+      "existsOrSelf": true
+    }
+  ],
+  "allFrozenAuthorInputsUnmodified": true
+}
