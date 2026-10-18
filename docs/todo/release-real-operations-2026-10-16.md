@@ -8,12 +8,13 @@ The release target is macOS, Windows, Linux Desktop and Web. Authorized native C
 has now executed; its passing and incomplete boundaries are recorded below.
 Cross-platform fixture tests alone are not native acceptance.
 
-The latest completed run, CI33, **FAILED** overall: Web, macOS and Linux pass;
-both Windows jobs fail in the installer contract tests before native installation.
-See the [CI33 actual results](#ci33--completed-results-and-two-attachment-repairs).
-The contract test correction passes its fifteen local cases. CI32's earlier
-independent Windows replacement timeout remains unexplained, and the diagnostic
-collector has not yet reached its native trigger. This is not a release-ready result.
+The latest completed run, CI34, **FAILED** overall: Web, macOS and Linux pass;
+the Windows matrix fails during Main identity verification before Panel operations,
+and independent Windows installation times out during replacement after first-install
+UI passes. The diagnostic desktop frame shows an old-version installation warning
+with code 2; its underlying file/installer cause remains under investigation.
+See the [CI34 actual results](#ci34--completed-results-and-quickchat-image-capacity).
+The earlier CI33 contract failure remains retained. This is not a release-ready result.
 
 CI29 failed overall across five jobs; its original result remains unchanged. macOS, Linux
 and Web pass their stated audited scopes. The original Windows matrix accepts
@@ -4029,3 +4030,94 @@ phases, six normal roots and 26 UI checks remain unchanged. The fifteen-case
 crash-contract correction and the new renderer tests still require hosted
 execution on the combined source. No CI34 push or native result is claimed at
 this preparation checkpoint; CI33 remains failed overall.
+
+## CI34 — completed results and QuickChat image capacity
+
+[CI34 run 39084864336](https://github.com/cjhyy/codeshell/actions/runs/39084864336)
+executes immutable source `282c6869c070c2919c6e58baa7b386161a24b35e`, attempt one,
+and finishes **failed**, with three passing jobs and two Windows failures.
+The [terminal API snapshot](/private/tmp/codeshell-real-operation-cycles-20261016/ci34-progress4-run-api-20261018.json)
+records the completed status; it does not replace the earlier in-progress snapshots.
+
+Web passes its 31 browser operations and separate finite log/RPC checks. Root
+views two of the 33 PNGs. macOS and Linux pass the original 83 operations/12 Mains,
+separate Review drafts three/one and Goal deletion one in an existing preferences
+Main. macOS also passes the installed/reinstalled DMG thirteen operations each;
+Linux passes the AppImage custody, source/cache permission and ten-GET checks.
+Root views two frames each for macOS and Linux. The [Web final binding](/private/tmp/codeshell-real-operation-cycles-20261016/ci-39084864336-web-independent-20261018/Root-Web-final-results-and-two-visuals.json)
+and [Mac/Linux final reference verification](/private/tmp/codeshell-real-operation-cycles-20261016/Root-ci34-Mac-Linux-final-freeze-reference-verification.json)
+bind the exact raw sources, reader outputs and selected views. PNG CRC checks
+cover integrity; they do not mean every frame was visually reviewed. The new
+no-repository six/267 and main-composer quantity five/230 logs pass as separate
+pure tests, not additional native operations or the later QuickChat repair.
+
+Windows matrix Panel launch first fails at `harness-main-identity` with
+`electronApplication.evaluate: Resulting promise was garbage collected.` There
+are no completed Panel cases. Four recorded cleanup signal requests precede the
+later observed Main exit `1/null`; this is not proof of an earlier Main crash.
+Network-service and GPU warnings in stderr do not establish their causal order
+relative to the first evaluation error. The [independent source/raw assessment](/private/tmp/codeshell-real-operation-cycles-20261016/ci34-Windows-matrix-first-failure-20261018/independent-panel-launch-gc-source-and-facts-peer.json)
+retains this uncertainty. No retry, weaker identity assertion or normal-exit
+exception is introduced. This Windows failure cannot inherit the complete 83/12
+scope from passing platforms.
+
+Independent Windows NSIS completes ten phases through `replacement-marker`,
+three normal controllers (build, install, first UI), and the first thirteen
+installed UI operations. Replacement reaches its unchanged 180,000 ms budget,
+then requests termination of Setup PID 8184 and observes exit `1/null`.
+The subsequent `1 !== 0` assertion is later than that timeout. Replacement,
+replacement identity/UI, uninstall, cache cleanup and final integrity do not
+complete. The original sixteen phases, six required normal controllers and 26
+installed UI operations remain required. The two admitted offline readers pass
+116 and 88 metadata conditions while retaining native acceptance **failed**;
+the separate pure logs pass 90, 16 and 33 tests. Conditions and pure tests are
+not additional native operations.
+
+The diagnostic collector reaches its native trigger on this run. It is separate
+from the six Setup/UI controllers: one capture operation, two observed owned
+incarnations, no recorded capture signal requests, and a 1024×768 public PNG.
+Root [actually views this one frame](/private/tmp/codeshell-real-operation-cycles-20261016/ci-39084864336-independent-windows-nsis-panel-peer-20261018/Root-primary-desktop-actual-one-view.json):
+a visible code-shell Setup dialog says “Failed to install old application files.
+Please try running the installer again: 2.” This establishes the displayed
+warning, not window/process ownership, a blocking wait site or its underlying
+cause. Capture and independent custody queries consume resources; later native
+validation without this collector remains due. No local installer, PowerShell,
+Electron, browser or OS process query runs for these checks.
+
+QuickChat's separate image-capacity reproduction now confirms the earlier source
+lead. With five images already present, two competing picks originally retain
+seven images without an overflow warning. The baseline has two passes, one
+meaningful failure and 142 expectations; serial-limit and within-capacity
+controls pass. Commit `66a12b7f9d56ebfaf2cd198b3bf882b9f26afd40` stores images and
+attachment errors under the live bucket/session/creation nonce, commits against
+the latest image array, and invalidates old completion on explicit clear/send,
+including a send while the image array is still empty. Removing an image frees
+capacity for pending results; closed/restarted owners reject late results and
+errors. The real owner hook and actual QuickChatPanel/ChatView pass six finite
+cases/241 expectations before formatting. The fake parent lifecycle is not an
+actual Main/App session or provider-delivery proof. Already issued staging calls
+are not cancelled; unused staged files retain their existing cleanup policy.
+
+One format pass leaves all six production AST structures equal. The test's JSX
+whitespace changes produce an original AST mismatch; a separate TypeScript raw
+output comparison also differs on printer-retained commas/newlines. Both first
+results remain retained. Neither is called a product failure or a successful
+seven-file equivalence check. Root reads the complete formatting diff and
+requires actual checks on the final formatted, combined source.
+
+Workflow commit `cd4efdcc14c1ca4cc44f2e746c9502d6eea0192c` adds one exact guarded
+QuickChat shard command and two log upload literals. Public profiles become Web
+28, native early/final 109/186 and independent NSIS 61. Existing native commands,
+installation arguments, identity/exit/custody checks and budgets are unchanged.
+The combined non-document source is `2cc1270ffe2be21af96ea530a87d4fb8a063e9c1`.
+All eleven final combined commands run once and pass: seven independent guarded
+Bun groups have 47/238, 3/7, 23/437, 8/18, 6/267, 5/230 and the formatted
+QuickChat six/241 tests/expectations, each complete with zero failures and skips.
+Explicit nine-file lint, Desktop/mobile no-emit and the static renderer bundle
+also pass. One nonfatal React `act` warning in the App integration fixture and
+the existing Vite chunk-size warning remain visible; neither is suppressed or
+called zero warnings. The [Root final combined result](/private/tmp/codeshell-quick-chat-combined-validation-preread-20261018/Root-eleven-final-combined-gate.json)
+binds actual arguments/results, complete streams, seven observed test counts
+and unchanged source pins. These are renderer/static checks, not native Main,
+browser, installer or provider execution. This preparation checkpoint does not
+claim a CI35 push or native pass; Windows release acceptance remains incomplete.
