@@ -8,15 +8,14 @@ The release target is macOS, Windows, Linux Desktop and Web. Authorized native C
 has now executed; its passing and incomplete boundaries are recorded below.
 Cross-platform fixture tests alone are not native acceptance.
 
-The latest completed run, CI37, **FAILED** overall: Web, macOS, Linux and the
-Windows matrix jobs succeed; independent Windows NSIS fails during initial
-installation with exit code `3221225477` (`0xC0000005`). Its six completed phases
-include no installed UI operation. The bounded Application event-query window
-returns zero rows, WER is not queried, and the cause remains unknown.
-The Windows matrix separately passes its original UI scopes and all 16 NSIS
-phases, six normal controller roots and 26 installed UI operations. That result
-does not transfer to the independent failure or establish a repair.
-See the [CI37 actual results](#ci37--completed-results-and-independent-initial-install-failure).
+The latest completed run, CI38, **FAILED** overall: Web, macOS and Linux
+succeed; both Windows jobs fail. The matrix stops at the first Review Main
+identity evaluation with `Resulting promise was garbage collected.` The
+independent NSIS job stops during installer compilation with `Abort not valid
+outside Section or Function`; no installer or installed UI is reached there.
+The matrix identity failure remains unexplained, and this compile failure does
+not establish a repair for earlier Windows runtime failures.
+See the [CI38 actual results](#ci38--completed-results-and-two-windows-failures).
 Earlier failures and their preparation checkpoints remain retained. This is not
 a release-ready result.
 
@@ -4525,3 +4524,133 @@ source-confirmed defect correction does not identify CI37's crash cause or
 retroactively repair that failed run. The acceptance branch is the only
 authorized remote target; no remote main, tag, release, signing or publication
 is included.
+
+## CI38 — completed results and two Windows failures
+
+[Run 39099055462](https://github.com/cjhyy/codeshell/actions/runs/39099055462),
+push attempt 1, executes source
+`32b6d877933e650c72eb3f304bbb627b9abc4490`. The terminal API records three
+successful jobs and two failures. The preceding CI38 preparation checkpoint
+remains a historical statement; this section records the completed run.
+
+| Job | Actual accepted or incomplete scope | Frozen evidence |
+| --- | --- | --- |
+| Web `117591376438` — success | 31 browser checks (11 + 4 + 8 + 8), six complete settled RPC arrays, 33 PNG chunk-CRC checks. Two controls and six expected negative UI cases remain separate. | [Summary](/private/tmp/codeshell-real-operation-cycles-20261016/ci-39099055462-web-independent-20261018/verified-summary.json) `1fd4e9cd04bb…`; [freeze](/private/tmp/codeshell-real-operation-cycles-20261016/ci-39099055462-web-independent-20261018/final-evidence-freeze.json) `98bdcfb9346a…`. |
+| macOS `117591376422` — success | Seven offline readers exit 0: original 83 operations / 12 Mains; draft 3 / 1 and required Goal 1 on the original Preferences Main separately. DMG installed and reinstalled UI each pass 13 operations across two Mains. 27 map copies / 307 parent edges, no recorded chronology violations; 49 PNG CRC checks. | [Summary](/private/tmp/codeshell-real-operation-cycles-20261016/ci-39099055462-mac-independent-20261018/verified-summary.json) `2c3df9ee889d…`; [freeze](/private/tmp/codeshell-real-operation-cycles-20261016/ci-39099055462-mac-independent-20261018/final-evidence-freeze.json) `68180226a2fc…`. |
+| Linux `117591376474` — success | Nine offline readers exit 0: original 83 / 12; draft 3 / 1 and required Goal 1 separately. AppImage Main and runtime launcher exit normally; ten feed GETs, zero asset downloads, source/cache integrity gates pass. 22 map copies / 223 parent edges, no recorded chronology violations; 35 PNG CRC checks. | [Summary](/private/tmp/codeshell-real-operation-cycles-20261016/ci-39099055462-linux-panel-independent-20261018/verified-summary.json) `4a33540a9baa…`; [freeze](/private/tmp/codeshell-real-operation-cycles-20261016/ci-39099055462-linux-panel-independent-20261018/final-evidence-freeze.json) `cc501a671ac0…`. |
+| Windows matrix `117591376329` — failure | Startup receipt reports seven operations / three normal Mains. Review completes zero operations; later draft, Panels, Composer, Memory, Preferences, packaged UI, updater and NSIS steps are skipped. This does not supply the full original 83 / 12 or any matrix NSIS acceptance. | [First-error facts](/private/tmp/codeshell-ci38-review-first-error-source-map-20261018/actual-matrix-review-first-error-facts.json) `7eb41fa1df0d…`. |
+| Independent Windows NSIS `117591376428` — failure | Four phases complete: preflight, baseline, stage-copy and toolchain. NSIS compilation fails; one build controller is recorded, zero normal installer roots and zero installed UI operations. The required 16 phases / six normal controllers / 26 UI operations are unmet. | [Failed summary](/private/tmp/codeshell-real-operation-cycles-20261016/ci-39099055462-independent-windows-nsis-panel-peer-20261018/verified-failed-NSIS-summary.json) `b7c359530b9f…`; [freeze](/private/tmp/codeshell-real-operation-cycles-20261016/ci-39099055462-independent-windows-nsis-panel-peer-20261018/final-independent-NSIS-evidence-freeze.json) `d6cc94f084d1…`. |
+
+The passing macOS/Linux scope retains its original normal-Main, full recorded
+birth/custody, HOME, integrity and updater predicates. Both required 401 error
+disclosures and Composer durable evidence pass. These observed owned-process
+checks do not prove every OS process or every external service. The hosted pure
+logs remain separate from native operations: macOS aggregates 445 / 3550 / 32
+and Linux 445 / 3547 / 32. Independent Windows pure contracts pass 115 NSIS,
+16 passive-startup/Goal and 33 operation-evidence cases despite its native build
+failure; those counts do not establish an installer launch.
+
+The matrix first error is the first `verifyElectronMainIdentity` evaluation for
+Main PID 2076, before launch returns. Its cached child state has not observed an
+exit. Cleanup and four recorded SIGTERM requests follow; Main exit 1 / null is
+observed afterward. The original error remains primary, the later normal-exit
+assertion also fails, the finite observed owned set cleans from 34 to zero, and
+HOME remains retained. This sequence does not identify an earlier crash, SDK
+cause, delivered signal or kernel ordering. No Review menu is reached, so CI38
+does not exercise the menu-capture barrier.
+
+Independent NSIS compiler output reports
+`Abort not valid outside Section or Function` in `PAGE_INSTALL_MODE`, macro line
+18, included from `assistedInstaller.nsh:75` in the `BUILD_UNINSTALLER` branch.
+The outer failure is the subsequent exit-1 assertion. Both include hashes match
+this run's source, but build failure prevents native validation of the bounded
+copy hook, installation, replacement, uninstall, cache cleanup and final OS
+restoration. The desktop collector is not triggered. Earlier `0xC0000005`
+failures are neither reproduced nor proven fixed by this compiler diagnostic.
+
+Root's selected visual review totals **two new view calls and four exact-byte
+reuses**: current Web logout and Linux staged Review are newly viewed; Web
+390px multiline, Linux 390px dark settings and two macOS settings/DMG frames
+reuse previously viewed identical bytes. The current Linux scope menu is closed
+without the earlier faint overlay; Web logout pixels remain supplementary to
+its passed behavior receipt. These are selected frames, not all-pixel review
+or additional native operations. See the [Web visual receipt](/private/tmp/codeshell-real-operation-cycles-20261016/ci-39099055462-web-independent-20261018/Root-Web-final-results-and-selected-visuals.json),
+[macOS visual receipt](/private/tmp/codeshell-real-operation-cycles-20261016/ci-39099055462-mac-independent-20261018/Root-Mac-final-results-and-selected-visuals.json)
+and [Linux visual receipt](/private/tmp/codeshell-real-operation-cycles-20261016/ci-39099055462-linux-panel-independent-20261018/Root-Linux-final-results-and-selected-visuals.json).
+
+Terminal [run](/private/tmp/codeshell-real-operation-cycles-20261016/ci38-progress8-run-api-20261018.json),
+[jobs](/private/tmp/codeshell-real-operation-cycles-20261016/ci38-progress8-jobs-api-20261018.json) and
+[artifacts](/private/tmp/codeshell-real-operation-cycles-20261016/ci38-progress8-artifacts-api-20261018.json)
+anchor these five scopes. Full input hashes are retained in the
+[private draft input index](/private/tmp/codeshell-ci38-release-results-draft-20261018/verified-input-hashes.json).
+Subsequent source candidates remain separate and unvalidated at this checkpoint;
+this section claims no candidate checks, new native repair or release readiness.
+
+## CI39 — combined Windows corrections prepared, native acceptance pending
+
+The next acceptance candidate combines three reviewed changes on the task
+branch: the early NSIS root hooks, a fixed synchronous Windows source-Main
+identity read, and production replacement validation without the desktop
+collector. Their source commits are `a6919a66c27ab791b349d4fe9e1e92ad0a4244fa`,
+`cb25bb091822b3529e353625362e298481c07b89` and
+`90238a8f368fadd9dbd6149f532de4fe64d51cf2`; combined formatting is
+`8cfa48c8432c806973e9330cc3abd979169b4499`. These changes are preparation for a
+new hosted run and do not alter CI38's failed result.
+
+The NSIS override now expands from `customWelcomePage` and
+`customUnWelcomePage`, before the vendor install-mode page macros. The existing
+uninstall welcome page and `customUnInit` are retained. The bounded-copy setter
+body remains identical. Explicit root guards reject incompatible one-click,
+all-users-page and removed-uninstall-welcome configurations; the current
+assisted per-user configuration remains unchanged. Official NSIS v304 source
+shows macro-buffer compaction on `!macroundef` and an active-cursor relocation
+rule that motivates moving the override earlier. This is a source inference
+consistent with the compiler diagnostic, not a binary/PC attestation of the
+hosted compiler or proof of successful compilation. See the
+[source review](/private/tmp/codeshell-ci38-nsis-macro-expansion-source-review-20261018/official-macro-buffer-facts-and-minimal-early-hook-proposal.json).
+
+Windows source identity verification borrows the already owned in-process
+Playwright 1.64.0 Main session and default execution context. A single fixed
+`Runtime.evaluate` with `returnByValue: true` and `awaitPromise: false` reads
+PID, parent PID, executable and HOME. Client/server child references, session,
+context, module handle and exact four-field data are checked before/after;
+the original four identity gates, captured monitor, first-error ordering and
+cleanup authority remain. Ordinary business evaluation retains its existing
+API. The fixed read avoids target Promise awaiting for these synchronous
+metadata only. Neither source review nor fake-graph tests establish CI38's
+collection cause or a general GC repair. Waiting for the existing SDK module
+handle still has the prior no-timeout lifecycle boundary. See the
+[independent peer review](/private/tmp/codeshell-windows-main-sync-identity-panel-source-peer-20261018/independent-four-source-and-pinned-playwright-peer.json).
+
+The NSIS production runner removes the collector import, construction,
+replacement callback wrapper and finish step. It passes the identical existing
+role-observer callback directly to the watchdog. Its report declares exactly
+`{status: "not-enabled", enabled: false, reason:
+"production-validation-without-collector"}`. The original role observation,
+budgets, first-error/custody checks and 13 static source hashes remain, including
+two collector-source provenance reads. This does not claim zero observation
+cost, zero child processes or absence of OS dialogs. Future evidence must show
+the exact disabled marker and absence of collector JSON/PNG; the required
+16 phases, six normal controller roots and 26 installed UI operations remain
+unchanged. See the
+[two-source peer review](/private/tmp/codeshell-windows-main-sync-identity-implementation-proof-20261018/peer-without-collector-two-source-review.json).
+
+Root ran one combined guarded Node invocation with 12 explicit test files:
+**159 tests passed, zero failed, cancelled, skipped or todo**. This includes the
+original NSIS contract vector and the three Main-harness test files; it is not
+an additional native operation count. Seven explicit MJS files were formatted
+once; the full format-only diff was reviewed. Targeted ESLint for those seven
+files reports zero warnings, and the eight-path diff check passes. All 53
+protected source/config/tool references and validated source bytes are retained
+across the checks. Full isolated invocation/stdout/stderr/result receipts are
+bound by the [combined check result](/private/tmp/codeshell-ci39-combined-checks-20261018/combined-checks-final-result.json)
+(`9e8282c473bb…`). No local Electron, installer, PowerShell, Keychain, native OS
+query or SDK application was run in these checks. Owned temporary files, finite
+timers and ordinary Node test/refusal child processes are included.
+
+Only the previously authorized acceptance branch may be pushed for the next
+full hosted run. Native compiler passes, real in-process identity behavior,
+normal Main exit, full UI/installer acceptance and the earlier unexplained
+Windows runtime failures still require new actual evidence. No release
+readiness, remote-main push, tag, signing, notarization or publication is
+claimed here.
