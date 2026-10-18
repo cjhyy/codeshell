@@ -4263,3 +4263,32 @@ CI35 remains failed and release is not recommended. Only the authorized dedicate
 acceptance branch was pushed; no remote-main, tag, release or publication action
 is claimed. All earlier failure records and preparation checkpoints above keep
 their original time-bound statements.
+
+## CI36 preparation — crash-query accounting and Review capture
+
+Source checkpoint `541d59b601e4ecfb9e00f06b2660a495434d1a7e` combines the
+previously recorded two-file Review capture barrier with four-file diagnostic
+commit `609647a66422acdd1d4cb3087e7e3734b33c2ad6`. This is preparation only;
+no CI36 push, run or native result is claimed at this checkpoint.
+
+The existing bounded PowerShell query transport now emits schema-two accounting:
+provider/rejection counts and the exact query window/start/finish times. The
+helper checks their fixed shape, caps, arithmetic and time bounds. Exact
+PID/full-birth/path matching stays mandatory; a same-microsecond birth mismatch
+remains rejected. Seven-digit formatting does not restore the 100 ns precision
+that CIM's microsecond representation may lack. No additional query, process,
+retry, delay, event-content exposure or installer-budget change is introduced.
+Explicit schema-one compatibility remains for historical records; the current
+PowerShell producer emits schema two. These diagnostics do not repair or
+establish the cause of the CI35 initial-install failure.
+
+The [fixed diagnostic source and actual-check proof](/private/tmp/codeshell-nsis-crash-query-accounting-proof-20261018/verified-source-summary.json)
+binds all four committed files. Its exact two-file isolated Node run passes
+41 cases (33 original plus eight new), with no failures, skips or cancellations;
+three-file lint and diff checking also pass. The original case bodies remain
+preserved. The [actual result sequence](/private/tmp/codeshell-nsis-crash-query-accounting-proof-20261018/tests-and-lint-once/sequence-result.json)
+is separate from the Review barrier's thirteen tests. These are injected pure
+contracts, not actual PowerShell/EventLog or native installer execution.
+The original identity, normal-exit, custody, HOME, OS/cache and sixteen-phase /
+six-controller / 26-UI gates remain required. Hosted validation of both follow-ups
+is pending; the completed CI35 failure and unknown cause above remain unchanged.
