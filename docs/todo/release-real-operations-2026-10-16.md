@@ -8,16 +8,16 @@ The release target is macOS, Windows, Linux Desktop and Web. Authorized native C
 has now executed; its passing and incomplete boundaries are recorded below.
 Cross-platform fixture tests alone are not native acceptance.
 
-The latest completed run, CI38, **FAILED** overall: Web, macOS and Linux
-succeed; both Windows jobs fail. The matrix stops at the first Review Main
-identity evaluation with `Resulting promise was garbage collected.` The
-independent NSIS job stops during installer compilation with `Abort not valid
-outside Section or Function`; no installer or installed UI is reached there.
-The matrix identity failure remains unexplained, and this compile failure does
-not establish a repair for earlier Windows runtime failures.
-See the [CI38 actual results](#ci38--completed-results-and-two-windows-failures).
-Earlier failures and their preparation checkpoints remain retained. This is not
-a release-ready result.
+The latest completed run, CI39, **FAILED** overall: Web, macOS, Linux and the
+independent Windows NSIS job succeed; the Windows matrix fails during its
+acceptance fixture's packaged UI launch. Main PID 5976 exits with
+`3221225477` (`0xC0000005`) before the SDK launch returns, with zero packaged UI
+operations and HOME retained. The cause remains unknown; ordinary startup
+without the harness was not established. Independent NSIS separately passes
+16 phases, six normal controller roots and 26 UI operations; it does not
+overwrite the matrix failure or establish a repair or release readiness.
+See the [CI39 actual results](#ci39--completed-results-and-windows-packaged-ui-launch-failure).
+Earlier failures and their preparation checkpoints remain retained.
 
 CI35 failed its original Windows matrix during initial installation: Setup exits
 with code `3221225477` (`0xC0000005`), while queried crash metadata identifies no
@@ -4654,3 +4654,75 @@ normal Main exit, full UI/installer acceptance and the earlier unexplained
 Windows runtime failures still require new actual evidence. No release
 readiness, remote-main push, tag, signing, notarization or publication is
 claimed here.
+
+## CI39 — completed results and Windows packaged UI launch failure
+
+本节记录 [run 39101744806](https://github.com/cjhyy/codeshell/actions/runs/39101744806)，
+`push` attempt 1，实际源码 `bf3b7b0b8dcc3196428a5faa060bca127cec3234`。
+终态 API 为 **4 success / 1 failure，overall FAILED**；API 成功与完整证据
+验收分列。前面的 CI39 准备段保留其当时“原生待验证”的历史时点。
+
+| 范围 / job | 当前已验证的范围及限制 | 固定来源 |
+| --- | --- | --- |
+| Web `117599255111`，成功 | 2 个 reader 各一次退出 0；31 项浏览器行为（11 + 4 + 8 + 8）、6 个完整 settled RPC 数组 exact-once、33 张 PNG chunk CRC。 | [summary](/private/tmp/codeshell-real-operation-cycles-20261016/ci-39101744806-web-independent-20261018/verified-summary.json) `d5851503…`；[freeze](/private/tmp/codeshell-real-operation-cycles-20261016/ci-39101744806-web-independent-20261018/final-evidence-freeze.json) `97bfca8f…`。 |
+| macOS `117599255217`，成功 | 7 个 reader 各一次退出 0；原 83 操作 / 12 Main、另计 draft 3 / 1 与同一 Preferences Main 上的 Goal 1。DMG 安装及重装各 13 操作、共 2 Main；27 份 map / 303 条父边，无记录内时序冲突，49 张 PNG CRC。 | [summary](/private/tmp/codeshell-real-operation-cycles-20261016/ci-39101744806-mac-independent-20261018/verified-summary.json) `01abcb17…`；[freeze](/private/tmp/codeshell-real-operation-cycles-20261016/ci-39101744806-mac-independent-20261018/final-evidence-freeze.json) `0f3b4b73…`。 |
+| Linux `117599255278`，成功 | 前 8 项及实际 parent 绑定后的第 9 项各一次退出 0；原 83 / 12、另计 draft 3 / 1 与 Goal 1。AppImage Main 9789、runtime 9785 各正常结束；10 次 feed GET、0 下载；22 份 map / 202 条父边，无记录内冲突，35 张 PNG CRC。 | [summary](/private/tmp/codeshell-real-operation-cycles-20261016/ci-39101744806-linux-panel-independent-20261018/verified-summary.json) `1f0be5a1…`；[freeze](/private/tmp/codeshell-real-operation-cycles-20261016/ci-39101744806-linux-panel-independent-20261018/final-evidence-freeze.json) `8aa92202…`。 |
+| Windows matrix `117599255226`，失败 | `playwright-launch` 未返回；Main 5976 退出 `3221225477/null`，packaged UI 0 操作。5 个 success-only reader 未运行，不能据此前步骤的 API 成功补填完整原 83 / 12 或后续 NSIS。 | [固定 6 文件独立首错 peer](/private/tmp/codeshell-ci39-packaged-ui-first-error-source-plan-20261018/actual-six-file-packaged-first-error-independent-peer.json) `46b0a789…`。 |
+| 独立 Windows NSIS `117599255261`，成功 | Main / Role / Desktop 各一次退出 0；严格完成 16 阶段、6 个正常 controller root、26 项 installed UI（首次 13 + 替换后 13）。原 fullbirth、normal、HOME、OS/cache/absence 门槛保留。 | [summary](/private/tmp/codeshell-real-operation-cycles-20261016/ci-39101744806-independent-windows-nsis-panel-peer-20261018/verified-independent-NSIS-summary.json) `59346d09…`；[freeze](/private/tmp/codeshell-real-operation-cycles-20261016/ci-39101744806-independent-windows-nsis-panel-peer-20261018/final-independent-NSIS-evidence-freeze.json) `d8bbfdec…`；[Root 收据](/private/tmp/codeshell-real-operation-cycles-20261016/ci-39101744806-independent-windows-nsis-panel-peer-20261018/Root-Independent-NSIS-final-review.json) `db3bd3c9…`。 |
+
+Mac/Linux 保留原 normal Main、完整记录出生身份、owned cleanup 顺序、custody、
+HOME、源码/缓存完整性及各自 DMG/AppImage 判据；required 401 错误详情键盘
+展开/收起与 Composer durable stdio/guard 也通过。有限 owned 集合不代表 OS
+全部进程，也不等于所有子进程自然正常退出。
+
+纯测试不加入原生操作数：Mac 聚合 **445 / 3550 / 32**，Linux **445 / 3547 / 32**；
+49 个 operation-evidence、Core 27 / 85 及 9 组 Goal/附件日志按其原范围另列。
+Web 的 synthetic 9 / 45、64 个纯生命周期合同及 2 个对照 / 6 个预期失败 UI
+也与 31 项实际浏览器行为分开。Windows-only 合同不从 Mac/Linux 的 skipped
+标记推成执行通过；此前本地组合 159 项的准备记录也不是新增原生验收。
+
+Windows 首错为 `electron.launch: Process failed to launch!`，阶段
+`playwright-launch`。Main 5976 / parent 6184 的完整 birth 已记录；既有 preload
+结果和私有 receipt 写入均 fulfilled，7 个 Main guard probes 已观察，但 SDK
+没有返回，后续 packaged identity/UI 未进入。其 `0xC0000005` 仍未定位到
+故障模块或根因；这不是 source launcher 同步身份读取的失败调用路径。
+这是**验收 harness 下的 Windows packaged 启动失败**；尚未证明未加 harness 的
+普通用户启动是否同样崩溃，产品与验收仪器的根因都仍未知。Root 的
+[固定首错复核收据](/private/tmp/codeshell-real-operation-cycles-20261016/ci-39101744806-windows-matrix-independent-20261018/Root-Windows-matrix-first-failure-review.json)
+（`6560b72f…`）保留同一范围与清理边界。
+
+原生 `taskkill` 被拒绝，监视器记录的 signal requests 为空；同一出生身份的
+owned 集合从 1 清至 0，HOME 保留。清理完成不能替代 normal Main 或 UI 成功；
+SDK kill/close 日志顺序也不能认定谁触发该退出。固定窄窗 Application 查询
+返回 0 行、WER 未查询，没有关联故障模块/原生堆栈。旧 GC、NSIS 与本次
+相同数值状态码不构成同因或已修复的证据。
+
+独立 NSIS 是同一构建、未签名 per-user CI 夹具的一次完整通过，不扩展为跨版本
+升级、签名/公证或整个 Windows matrix 通过。Main / Role / Desktop 的
+172 / 70 / 6 是离线元数据条件，另有 **118 / 16 / 33** 个纯合同日志，均不加入
+16 / 6 / 26 原生计数。13 个 fixture source keys、两 include 与原 8 + 3 vendor
+pins 绑定当前源码；原 180 秒预算等门槛不变。collector 的 exact 三键状态为
+`{status: "not-enabled", enabled: false, reason: "production-validation-without-collector"}`，
+固定 collector JSON/PNG 均不存在；这不等于零观察成本。collector 本身没有
+截图/像素查看；另行查看的两张 installed UI 图不属于 collector 产物。
+独立成功不能覆盖 matrix 的 packaged 启动失败，或证明旧 GC/崩溃已经修复。
+
+本轮 Root 视觉抽查为 **4 次当前实际查看 + 4 次精确字节复用**：新看 Web
+logout/re-authentication 1 张、Mac 390px 主题设置 1 张、独立 Windows NSIS
+installed UI 2 张；复用 Web 390px multiline、Mac DMG reload 及 Linux
+设置/Review 两帧。Windows 两张分别为首次安装的 settings-390-dark 和替换后
+reload-390-dark；标题、搜索、主题选中、导入控件、换行说明与预览可读，垂直
+滚动可见，所选 viewport 无可见横向溢出或重叠。它们不是 disabled collector 图。
+Mac 所选画面也可读、无可见横向截断。主题持久性仍依原 13 + 13 行为收据，
+Web 像素本身也不证明旧 pending state 已清，须依行为/RPC 收据。各平台 PNG
+CRC 不等于查看了全部像素，也不增加 native 操作。对应 [Web](/private/tmp/codeshell-real-operation-cycles-20261016/ci-39101744806-web-independent-20261018/Root-Web-final-results-and-selected-visuals.json)
+`9191bb0d…`、[Mac](/private/tmp/codeshell-real-operation-cycles-20261016/ci-39101744806-mac-independent-20261018/Root-Mac-final-results-and-selected-visuals.json) `c537f02e…`、
+[Linux](/private/tmp/codeshell-real-operation-cycles-20261016/ci-39101744806-linux-panel-independent-20261018/Root-Linux-final-results-and-selected-visuals.json) `4beb0281…`；另见 [独立 Windows installed UI 视觉收据](/private/tmp/codeshell-real-operation-cycles-20261016/ci-39101744806-independent-windows-nsis-panel-peer-20261018/Root-Independent-NSIS-selected-UI-visual-review.json)
+`10720fbf…`。
+
+[终态 run API](/private/tmp/codeshell-real-operation-cycles-20261016/ci39-progress6-run-api-20261018.json)、
+[jobs API](/private/tmp/codeshell-real-operation-cycles-20261016/ci39-progress6-jobs-api-20261018.json) 与
+[artifacts API](/private/tmp/codeshell-real-operation-cycles-20261016/ci39-progress6-artifacts-api-20261018.json) 固定本轮身份。
+完整引用 SHA 见 [私有输入索引](/private/tmp/codeshell-ci39-release-results-draft-20261018/verified-input-hashes-v3.json)。
+四个成功 job 已按各自范围完成证据验收；Windows matrix 失败与未知原因不变。
+当前不建议发版，不声称 remote main/tag/release/publication 或下一轮结果。
