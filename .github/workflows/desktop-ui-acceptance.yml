@@ -239,7 +239,7 @@ jobs:
         timeout-minutes: 2
         run: |
           set -euo pipefail
-          node scripts/run-isolated-node-smoke.mjs --test packages/desktop/scripts/windows-nsis-acceptance.test.mjs packages/desktop/scripts/packaged-signal-diagnostics.test.mjs packages/desktop/scripts/smoke-windows-nsis-install.test.mjs packages/desktop/scripts/windows-nsis-checkpoint-diagnostics.test.mjs packages/desktop/scripts/windows-nsis-crash-evidence.test.mjs packages/desktop/scripts/windows-packaged-main-crash-evidence.test.mjs packages/desktop/scripts/windows-nsis-desktop-observation.test.mjs packages/desktop/scripts/nsis-initial-identity-observation.test.mjs 2>&1 | tee "$ACCEPTANCE_ROOT/windows-nsis-contracts.log"
+          node scripts/run-isolated-node-smoke.mjs --test packages/desktop/scripts/windows-nsis-acceptance.test.mjs packages/desktop/scripts/packaged-signal-diagnostics.test.mjs packages/desktop/scripts/smoke-windows-nsis-install.test.mjs packages/desktop/scripts/windows-nsis-checkpoint-diagnostics.test.mjs packages/desktop/scripts/windows-nsis-crash-evidence.test.mjs packages/desktop/scripts/windows-packaged-main-crash-evidence.test.mjs packages/desktop/scripts/windows-nsis-desktop-observation.test.mjs packages/desktop/scripts/nsis-initial-identity-observation.test.mjs packages/desktop/scripts/nsis-safe-per-user-install-mode.test.mjs 2>&1 | tee "$ACCEPTANCE_ROOT/windows-nsis-contracts.log"
 
       - name: operation evidence and paused Goal fixture contracts
         timeout-minutes: 2
@@ -857,7 +857,7 @@ jobs:
         timeout-minutes: 2
         run: |
           set -euo pipefail
-          node scripts/run-isolated-node-smoke.mjs --test packages/desktop/scripts/windows-nsis-acceptance.test.mjs packages/desktop/scripts/packaged-signal-diagnostics.test.mjs packages/desktop/scripts/smoke-windows-nsis-install.test.mjs packages/desktop/scripts/windows-nsis-checkpoint-diagnostics.test.mjs packages/desktop/scripts/windows-nsis-crash-evidence.test.mjs packages/desktop/scripts/windows-packaged-main-crash-evidence.test.mjs packages/desktop/scripts/windows-nsis-desktop-observation.test.mjs packages/desktop/scripts/nsis-initial-identity-observation.test.mjs 2>&1 | tee "$ACCEPTANCE_ROOT/windows-nsis-contracts.log"
+          node scripts/run-isolated-node-smoke.mjs --test packages/desktop/scripts/windows-nsis-acceptance.test.mjs packages/desktop/scripts/packaged-signal-diagnostics.test.mjs packages/desktop/scripts/smoke-windows-nsis-install.test.mjs packages/desktop/scripts/windows-nsis-checkpoint-diagnostics.test.mjs packages/desktop/scripts/windows-nsis-crash-evidence.test.mjs packages/desktop/scripts/windows-packaged-main-crash-evidence.test.mjs packages/desktop/scripts/windows-nsis-desktop-observation.test.mjs packages/desktop/scripts/nsis-initial-identity-observation.test.mjs packages/desktop/scripts/nsis-safe-per-user-install-mode.test.mjs 2>&1 | tee "$ACCEPTANCE_ROOT/windows-nsis-contracts.log"
 
       # Integrated by Root only after this exact pending test source is reviewed.
       - name: passive startup and Goal fixture contracts

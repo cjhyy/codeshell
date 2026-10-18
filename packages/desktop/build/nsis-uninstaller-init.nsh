@@ -3,3 +3,8 @@
 !macro customUnInit
   SetOutPath "$TEMP"
 !macroend
+
+# Assisted mode expands this hook before its per-user install/uninstall paths.
+!macro customInstallMode
+  !include "nsis-safe-per-user-install-mode.nsh"
+!macroend
