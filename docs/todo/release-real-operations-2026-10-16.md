@@ -17,6 +17,7 @@ roots and 26 installed UI operations. That success does not transfer to the
 independent failure or explain historical failures.
 See the [CI36 actual results](#ci36--completed-results-and-independent-uninstall-identity-failure).
 Earlier failures remain retained. This is not a release-ready result.
+CI37's diagnostic candidate passes its local checks; hosted execution is pending.
 
 CI35 failed its original Windows matrix during initial installation: Setup exits
 with code `3221225477` (`0xC0000005`), while queried crash metadata identifies no
@@ -4376,3 +4377,45 @@ outputs. Preparation/reader metadata errors remain separately retained.
 CI36 is not release-ready. Its matrix success does not explain CI35's earlier
 initial-install exit or prior GC/replacement failures. No remote-main push, tag,
 release, signing or publication is performed by this acceptance run.
+
+## CI37 — bounded initial-identity diagnostics prepared
+
+Source commit `42c9a56a1e825b865294b55a3c3b8fe65ce37e7c` changes exactly four
+files. The watchdog can retain a small diagnostic projection when its existing
+initial snapshot cannot establish the child PID/parent/birth tuple. It records
+the total row count and at most four matching-target rows, with bounded parent
+and timestamp fields. It omits foreign process identities, paths, arguments and
+environment values. This is the same already-returned snapshot; no second query,
+retry, delay or new authority is introduced. The installer runner stores that
+projection separately from its failed operation. The workflow adds the new
+explicit test file to its two existing Windows NSIS pure-test vectors.
+
+The original identity error, cleanup behavior and 180-second installer budget
+remain unchanged. Observer exceptions cannot replace that error. A late zero
+exit still cannot establish birth, settlement or successful uninstall. The
+initial snapshot's missing-identity cause remains unknown; this is additional
+diagnostic coverage, not a demonstrated race repair.
+
+Root executes the exact eight-file vector once through the isolated Node runner:
+**108/108**, zero failures, skips, cancellations or todos. These are the original
+98 tests plus ten new tests, not 108 native operations. The vector includes
+bounded owned temporary filesystem work, controlled source-fragment evaluation
+and one actual Node CLI child that verifies non-hosted refusal. That child never
+starts an installer or application. ESLint checks the three JavaScript files
+with zero warnings; `git diff --check` passes. Formatting preserves the three
+syntax trees, and the four committed files equal the tested source bytes.
+
+The [Root local gate](/private/tmp/codeshell-real-operation-cycles-20261016/ci37-Root-combined-local-gate-20261018.json)
+binds combined source `5f6ed25bc09bf8755e3a1305d39f684413ef3de1`, all 21 current
+source pins, the original 19-pin CI36 checkpoint and 17 unchanged prior pins.
+The old watchdog hash remains a separate historical value. Prior renderer,
+typecheck and build results retain their original source/time boundaries; those
+commands were not all repeated at this head. The [single actual local sequence](/private/tmp/codeshell-nsis-initial-identity-observation-proof-20261018/Root-tests-and-lint-once/sequence-result.json)
+retains full outputs and unchanged-source verification.
+
+CI37 has no hosted result at this preparation checkpoint. Native identity,
+normal exit, custody, HOME, all 16 installer phases/six controllers/26 installed
+UI operations, uninstall absence, cache and final OS predicates remain required.
+CI36 and earlier failures retain their failed and unexplained status. Only the
+already-authorized acceptance-branch push and hosted CI are prepared; no remote
+main, tag, release, signing or publication is included.
