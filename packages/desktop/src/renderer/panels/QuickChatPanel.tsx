@@ -10,6 +10,7 @@ import type { QuickChatContextMode, QuickChatCreationStatus } from "../quickChat
 import type { PermissionMode } from "../chat/PermissionPill";
 import type { ModelOption } from "../chat/ModelPill";
 import type { ImageAttachment } from "../chat/attachments";
+import type { QuickChatImageComposer } from "../chat/useQuickChatImages";
 import type { ImageDetail } from "../chat/compress";
 import { ChatView } from "../ChatView";
 
@@ -30,6 +31,7 @@ interface Props {
   copiedEventCount?: number;
   draft: string;
   attachments: ImageAttachment[];
+  imageComposer?: QuickChatImageComposer;
   permissionMode: PermissionMode;
   modelOptions: ModelOption[];
   activeModelKey: string | null;
@@ -71,6 +73,7 @@ export function QuickChatPanel({
   copiedEventCount,
   draft,
   attachments,
+  imageComposer,
   permissionMode,
   modelOptions,
   activeModelKey,
@@ -259,8 +262,9 @@ export function QuickChatPanel({
             }
             draft={draft}
             onDraftChange={onDraftChange}
-            attachments={attachments}
+            attachments={imageComposer?.attachments ?? attachments}
             onAttachmentsChange={onAttachmentsChange}
+            imageComposer={imageComposer}
             onPrepareAttachmentSession={() =>
               cwd ? { cwd, sessionId, quickChatClaimId: creationNonce } : null
             }

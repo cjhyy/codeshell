@@ -271,6 +271,7 @@ interface Props {
   onDraftChange: React.Dispatch<React.SetStateAction<string>>;
   attachments: ImageAttachment[];
   onAttachmentsChange: React.Dispatch<React.SetStateAction<ImageAttachment[]>>;
+  imageComposer?: import("./chat/useQuickChatImages").QuickChatImageComposer;
   composerMetadata?: ComposerMetadata;
   onComposerMetadataChange?: React.Dispatch<React.SetStateAction<ComposerMetadata>>;
   /** Comment anchors pinned from the panels; shown as chips above the composer. */
@@ -473,6 +474,7 @@ export function ChatView({
   onDraftChange,
   attachments,
   onAttachmentsChange,
+  imageComposer,
   composerMetadata,
   onComposerMetadataChange,
   anchors = [],
@@ -497,14 +499,23 @@ export function ChatView({
   const [localComposerMetadata, setLocalComposerMetadata] = useState(() =>
     emptyComposerMetadata(draft),
   );
-  const { attachmentError, inputReferences, mentionReferences, localFilePaths } =
-    composerMetadata ?? localComposerMetadata;
+  const {
+    attachmentError: metadataAttachmentError,
+    inputReferences,
+    mentionReferences,
+    localFilePaths,
+  } = composerMetadata ?? localComposerMetadata;
+  const attachmentError = imageComposer ? imageComposer.attachmentError : metadataAttachmentError;
   const updateMetadata = onComposerMetadataChange ?? setLocalComposerMetadata;
   function updateMetadataField<K extends keyof ComposerMetadata>(
     key: K,
     next: React.SetStateAction<ComposerMetadata[K]>,
     selection?: AttachmentSelection | null,
   ): void {
+    if (key === "attachmentError" && imageComposer) {
+      imageComposer.setAttachmentError(next as React.SetStateAction<string | null>);
+      return;
+    }
     const update = (current: ComposerMetadata): ComposerMetadata => {
       const value =
         typeof next === "function"
@@ -536,7 +547,7 @@ export function ChatView({
     },
     [cancelCaretRestore, onDraftChange],
   );
-  const setAttachments = onAttachmentsChange;
+  const setAttachments = imageComposer?.setAttachments ?? onAttachmentsChange;
   const mentionEditSelection = useRef<{ draft: string; start: number; end: number } | null>(null);
   const captureMentionEditSelection = (target = textareaRef.current) => {
     const start = target?.selectionStart ?? draft.length;
@@ -1293,10 +1304,15 @@ export function ChatView({
       return;
     }
     if (selection === undefined) selection = onBeginAttachmentSelection?.();
-    if (!attachmentSelectionIsCurrent(selection)) return;
-    updateMetadataField("attachmentError", null, selection);
+    const imageSelection = imageComposer?.beginSelection();
+    const selectionIsCurrent = () =>
+      attachmentSelectionIsCurrent(selection) &&
+      (!imageComposer || Boolean(imageSelection?.isCurrent()));
+    if (!selectionIsCurrent()) return;
+    if (imageSelection) imageSelection.setAttachmentError(null);
+    else updateMetadataField("attachmentError", null, selection);
     const { accepted, errors } = await buildAttachments(files, attachments);
-    if (!attachmentSelectionIsCurrent(selection)) return;
+    if (!selectionIsCurrent()) return;
     let attachmentErrorsCommitted = false;
     if (accepted.length > 0) {
       // Compress before staging so the chip thumbnail and the wire
@@ -1305,9 +1321,9 @@ export function ChatView({
       // back to the original if encoding fails (engine policy still
       // gates oversize bytes downstream).
       const compressed = await compressBatch(accepted, imageDetail);
-      if (!attachmentSelectionIsCurrent(selection)) return;
+      if (!selectionIsCurrent()) return;
       const context = selection ? selection.prepare() : onPrepareAttachmentSession?.();
-      if (!attachmentSelectionIsCurrent(selection)) return;
+      if (!selectionIsCurrent()) return;
       if (!context) {
         errors.push({
           kind: "staging-failed",
@@ -1341,7 +1357,7 @@ export function ChatView({
               };
             }),
           );
-          if (!attachmentSelectionIsCurrent(selection)) return;
+          if (!selectionIsCurrent()) return;
           if (selection) {
             selection.appendImages(
               staged,
@@ -1349,9 +1365,16 @@ export function ChatView({
               errors.map((error) => error.message),
             );
             attachmentErrorsCommitted = true;
+          } else if (imageSelection) {
+            imageSelection.appendImages(
+              staged,
+              t("chat.attachment.tooManySimple", { max: ATTACHMENT_LIMITS.maxImagesPerMessage }),
+              errors.map((error) => error.message),
+            );
+            attachmentErrorsCommitted = true;
           } else setAttachments((cur) => [...cur, ...staged]);
         } catch (e) {
-          if (!attachmentSelectionIsCurrent(selection)) return;
+          if (!selectionIsCurrent()) return;
           errors.push({
             kind: "staging-failed",
             message: t("chat.attachment.stagingFailed", {
@@ -1361,12 +1384,10 @@ export function ChatView({
         }
       }
     }
-    if (
-      !attachmentErrorsCommitted &&
-      attachmentSelectionIsCurrent(selection) &&
-      errors.length > 0
-    ) {
-      updateMetadataField("attachmentError", errors.map((e) => e.message).join("；"), selection);
+    if (!attachmentErrorsCommitted && selectionIsCurrent() && errors.length > 0) {
+      const message = errors.map((e) => e.message).join("；");
+      if (imageSelection) imageSelection.setAttachmentError(message);
+      else updateMetadataField("attachmentError", message, selection);
     }
   };
 

@@ -137,6 +137,7 @@ import { useHostSubscriptions } from "./app/useHostSubscriptions";
 import { useRunController } from "./app/useRunController";
 import { createChatLinkReadHandler } from "./chat/linkResourceIntents";
 import { usePanelBuckets } from "./app/usePanelBuckets";
+import { useQuickChatImages } from "./chat/useQuickChatImages";
 import { AppMainView, AppShell } from "./app/AppShell";
 import { switchActiveModel } from "./app/switchActiveModel";
 import { useActiveSessionUiAuthority } from "./sessionUiAuthority";
@@ -410,13 +411,15 @@ function App() {
     {},
   );
   const [quickChatDrafts, setQuickChatDrafts] = useState<Record<string, string>>({});
-  const [quickChatAttachments, setQuickChatAttachments] = useState<
-    Record<string, ImageAttachment[]>
-  >({});
   const quickChatSessionsRef = useRef<Record<string, QuickChatSessionRef>>({});
+  quickChatSessionsRef.current = quickChatSessions;
+  const {
+    attachments: quickChatAttachments,
+    setAttachments: setQuickChatAttachments,
+    forSession: quickChatImageComposer,
+  } = useQuickChatImages(quickChatSessionsRef);
   const activeBucketRef = useRef(activeBucket);
   activeBucketRef.current = activeBucket;
-  quickChatSessionsRef.current = quickChatSessions;
   useEffect(() => {
     if (!activeSessionId || isExternalRuntimeModelKey(activeModelKey)) return;
     window.codeshell.registerBrowserSessionBucket({
@@ -3026,6 +3029,7 @@ function App() {
                     defaultActiveModelKey={quickChatDefaultModelKey}
                     quickChatDrafts={quickChatDrafts}
                     quickChatAttachments={quickChatAttachments}
+                    quickChatImageComposer={quickChatImageComposer}
                     modelOptions={quickChatModelOptions}
                     imageDetail={imageDetail}
                     setQuickChatPermission={setQuickChatPermission}
