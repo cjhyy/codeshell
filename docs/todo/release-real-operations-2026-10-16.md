@@ -3873,3 +3873,58 @@ emitted-code execution, full application runtime or native acceptance. The
 renderer repair and hosted gates are locally combined at `00b0dc510da2ca0c85cacc82d35138167fa2d5a4`;
 no follow-up acceptance push or native UI validation is claimed at this checkpoint.
 CI32's completed failed result and all earlier checkpoints remain unchanged.
+
+## CI33 preparation — composer ownership and Windows timeout diagnostics
+
+The next renderer audit reproduces completed PDF paths, structured references
+and a visible attachment error remaining in the other selected session. Its
+first finite baseline has 12 passes/three meaningful failures/238 expectations.
+The first repair run has 17 passes/two failures/340 expectations and stops before
+the compatibility and static checks. One failure exposes a real pending-session
+gap: a PDF drop materializes a sidebar session, but a subsequent image cannot
+stage before the first send creates its Core Session. The other failure is an
+incorrect test expectation that the pending configuration target is already a
+persisted Session. Both first outcomes remain retained.
+
+The final candidate stores paths, references and attachment errors with each
+composer bucket. Returning to a session restores that session's unsent state.
+Only an attachment prepare that itself created a pending session records a
+renderer-memory project/root pin. Continuing that pending session requires the
+same live, local, unarchived, unbound pending row, registered primary root and
+available UI project fallback. Restored rows, revoked pending state, replaced
+roots and resolved authority errors still reject. Existing persisted-session
+authority and Main's staging path checks remain unchanged. This pin does not
+establish a persisted Core Session, confirmed absence or filesystem identity.
+
+The final formatted candidate passes 23 tests/437 expectations, the separate
+quick-chat shard passes 8/18, five-file lint has zero warnings, both Desktop and
+mobile no-emit checks pass, and the static renderer bundle passes. The renderer
+index is 1,472.00 kB; the existing chunk warning remains. These are finite inert
+renderer tests and private static compilation, without native UI acceptance.
+The [Root-bound six-command result](/private/tmp/codeshell-composer-local-owner-proof-20261018/Root-v2-six-actual-result-binding.json)
+binds the exact source, arguments and original output.
+
+Windows diagnostic commit `d0823f3486a72deb5805e576d6f64c9406f386b7` adds a
+single bounded primary-desktop capture only when the original replacement
+observer reaches 170 seconds. The separate collector has its own process
+custody and fixed output paths. It adds timing and query costs; the original
+180-second Setup budget, arguments, first failure, 16 phases, six normal roots
+and 26 UI checks remain. The image may include OS or other UI and does not
+identify an owned window, reached installer branch or timeout cause. Missing or
+invalid images remain unknown. A later production check without this collector
+is still required.
+
+The diagnostic's three finite Node files pass 51 tests. That run precedes one
+reviewed test-only `let` to `const` correction; final four-file lint and diff
+checks pass, without calling the final bytes a fresh 51-test run. No PowerShell,
+desktop capture or NSIS operation was executed locally. The
+[final source and checks](/private/tmp/codeshell-nsis-timeout-visual-diagnostic-proof-20261018/final-source-checks-summary-v5.json)
+retain the first lint warning and all source-review corrections.
+
+The combined hosted workflow adds separate ownership and quick-chat guarded
+shards, the collector contract file, and two fixed diagnostic artifacts. Public
+upload patterns are Web 28, native early/final 106/183 and independent NSIS 61.
+No follow-up push or CI33 native result is claimed at this checkpoint. CI32
+remains failed. Concurrent image capacity and repeated no-repo pending-session
+attachments are separate source leads awaiting their own finite reproductions;
+they are not covered by this repair or a release-readiness claim.
