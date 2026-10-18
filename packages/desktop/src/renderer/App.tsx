@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useReducer, useRef, useState } from "react";
 import type { StreamEvent } from "@cjhyy/code-shell-core";
 import { ChatView, type AttachmentSelection } from "./ChatView";
+import { emptyComposerMetadata, type ComposerMetadata } from "./chat/composerMetadata";
 import { useProjectRuntimeSelection } from "./projects/useProjectRuntimeSelection";
 import { useCloudProjectRuntime } from "./runtime/useCloudProjectRuntime";
 import { CloudProjectWorkspace } from "./runtime/CloudProjectWorkspace";
@@ -302,6 +303,9 @@ function App() {
 
   const { sessionIndices, setSessionIndices, archivedPetSessionIds } = useSessionIndices();
   const locallyCreatedSessionIdsRef = useRef<Set<string>>(new Set());
+  const pendingAttachmentRootsRef = useRef(
+    new Map<string, { projectId: string; rootId: string; cwd: string }>(),
+  );
 
   /**
    * Create a fresh session on demand (lazy: only when the user actually
@@ -463,6 +467,25 @@ function App() {
   ) => {
     const targetBucket = activeBucketRef.current;
     updateComposerAttachmentsForTarget(targetBucket, next);
+  };
+  function updateComposerMetadataForTarget(
+    targetBucket: string,
+    next: React.SetStateAction<ComposerMetadata>,
+    isCurrent = () => isAttachmentTargetCurrent(targetBucket),
+  ): void {
+    if (!isCurrent()) return;
+    setComposerDrafts((prev) => {
+      if (!isCurrent()) return prev;
+      const current = prev[targetBucket] ?? { text: "", attachments: EMPTY_ATTACHMENTS };
+      const metadata = current.metadata ?? emptyComposerMetadata(current.text);
+      const updated = typeof next === "function" ? next(metadata) : next;
+      if (updated === metadata) return prev;
+      return { ...prev, [targetBucket]: { ...current, metadata: updated } };
+    });
+  }
+  const setComposerMetadata: React.Dispatch<React.SetStateAction<ComposerMetadata>> = (next) => {
+    // A render's ordinary editor callback may never adopt a later live bucket.
+    updateComposerMetadataForTarget(activeBucket, next);
   };
   // Attach an on-disk image to the composer by absolute path (file-panel add —
   // TODO 2.1). The staged attachment keeps the real path as its name so the
@@ -639,6 +662,36 @@ function App() {
         sessionUiAuthority.configurationTarget.sessionId !== engineSessionId ||
         !sessionUiAuthority.workspaceRoot
       ) {
+        // Only this App's own attachment prepare can continue a pre-send UI
+        // Session. Staging has not created a Core Session or its authority.
+        const summary = loadSessionIndex(projectId).sessions.find(
+          (candidate) => candidate.id === liveBucket.sessionId,
+        );
+        const pin = pendingAttachmentRootsRef.current.get(liveBucket.sessionId);
+        const project = loadProjects().find((candidate) => candidate.id === projectId);
+        const root = project?.roots.find((candidate) => candidate.id === project.primaryRootId);
+        if (
+          pin &&
+          project &&
+          root &&
+          summary?.pendingFirstRun === true &&
+          summary.engineSessionId === undefined &&
+          !summary.archived &&
+          locallyCreatedSessionIdsRef.current.has(liveBucket.sessionId) &&
+          pin.projectId === projectId &&
+          pin.rootId === project.primaryRootId &&
+          root.path === project.path &&
+          project.path === pin.cwd &&
+          sessionUiAuthority.configurationAvailable &&
+          "projectId" in sessionUiAuthority.configurationTarget &&
+          sessionUiAuthority.configurationTarget.projectId === projectId &&
+          sessionUiAuthority.rootStatus === "loading" &&
+          sessionUiAuthority.mainRootId === pin.rootId &&
+          sessionUiAuthority.mainRoot === pin.cwd &&
+          sessionUiAuthority.workspaceRoot === pin.cwd
+        ) {
+          return { cwd: pin.cwd, sessionId: liveBucket.sessionId };
+        }
         return null;
       }
       return { cwd: sessionUiAuthority.workspaceRoot, sessionId: engineSessionId };
@@ -651,6 +704,27 @@ function App() {
     const draftBucket = bucketKey(projectId, null);
     const { index, sessionId } = createSession(projectId);
     locallyCreatedSessionIdsRef.current.add(sessionId);
+    const registered = loadProjects().find((candidate) => candidate.id === projectId);
+    const root = registered?.roots.find((candidate) => candidate.id === registered.primaryRootId);
+    if (
+      registered &&
+      root &&
+      root.path === cwd &&
+      registered.path === cwd &&
+      sessionUiAuthority.configurationAvailable &&
+      "projectId" in sessionUiAuthority.configurationTarget &&
+      sessionUiAuthority.configurationTarget.projectId === projectId &&
+      sessionUiAuthority.rootStatus === "ok" &&
+      sessionUiAuthority.mainRootId === root.id &&
+      sessionUiAuthority.mainRoot === cwd &&
+      sessionUiAuthority.workspaceRoot === cwd
+    ) {
+      pendingAttachmentRootsRef.current.set(sessionId, {
+        projectId: registered.id,
+        rootId: root.id,
+        cwd,
+      });
+    }
     const nextBucket = bucketKey(projectId, sessionId);
     activeBucketRef.current = nextBucket;
     setSessionIndices((prev) => ({ ...prev, [projectBucketSegmentFor(projectId)]: index }));
@@ -702,6 +776,9 @@ function App() {
       },
       updateAttachments: (next) => {
         if (isCurrent()) updateComposerAttachmentsForTarget(targetBucket, next, isCurrent);
+      },
+      updateMetadata: (next) => {
+        if (isCurrent()) updateComposerMetadataForTarget(targetBucket, next, isCurrent);
       },
     };
   }
@@ -2722,6 +2799,10 @@ function App() {
                     onDraftChange={setComposerDraftText}
                     attachments={composerDraft.attachments}
                     onAttachmentsChange={setComposerDraftAttachments}
+                    composerMetadata={
+                      composerDraft.metadata ?? emptyComposerMetadata(composerDraft.text)
+                    }
+                    onComposerMetadataChange={setComposerMetadata}
                     anchors={anchors}
                     onRemoveAnchor={removeAnchor}
                     onClearAnchors={clearAnchors}

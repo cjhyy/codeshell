@@ -60,12 +60,12 @@ import {
   pathForRendererFile,
 } from "./chat/localFilePaths";
 import { compressBatch, type ImageDetail } from "./chat/compress";
+import { emptyComposerMetadata, type ComposerMetadata } from "./chat/composerMetadata";
 import { MentionPopover, type MentionItem } from "./chat/MentionPopover";
 import {
   bindMentionReference,
   currentMentionReferences,
   reconcileMentionReferences,
-  type MentionReferences,
 } from "./chat/mentionReferences";
 import { ComposerSuggestions, suggestionOptionId } from "./chat/ComposerSuggestions";
 import { detectMention } from "./chat/mention";
@@ -101,6 +101,7 @@ export interface AttachmentSelection {
   isCurrent: () => boolean;
   prepare: () => { cwd: string; sessionId: string; quickChatClaimId?: string } | null;
   updateAttachments: React.Dispatch<React.SetStateAction<ImageAttachment[]>>;
+  updateMetadata?: React.Dispatch<React.SetStateAction<ComposerMetadata>>;
 }
 
 interface Props {
@@ -264,6 +265,8 @@ interface Props {
   onDraftChange: React.Dispatch<React.SetStateAction<string>>;
   attachments: ImageAttachment[];
   onAttachmentsChange: React.Dispatch<React.SetStateAction<ImageAttachment[]>>;
+  composerMetadata?: ComposerMetadata;
+  onComposerMetadataChange?: React.Dispatch<React.SetStateAction<ComposerMetadata>>;
   /** Comment anchors pinned from the panels; shown as chips above the composer. */
   anchors?: Anchor[];
   onRemoveAnchor?: (id: string) => void;
@@ -464,6 +467,8 @@ export function ChatView({
   onDraftChange,
   attachments,
   onAttachmentsChange,
+  composerMetadata,
+  onComposerMetadataChange,
   anchors = [],
   onRemoveAnchor,
   onClearAnchors,
@@ -483,7 +488,36 @@ export function ChatView({
     JSON.stringify([activeProjectId, engineSessionId, variant]),
   );
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [attachmentError, setAttachmentError] = useState<string | null>(null);
+  const [localComposerMetadata, setLocalComposerMetadata] = useState(() =>
+    emptyComposerMetadata(draft),
+  );
+  const { attachmentError, inputReferences, mentionReferences, localFilePaths } =
+    composerMetadata ?? localComposerMetadata;
+  const updateMetadata = onComposerMetadataChange ?? setLocalComposerMetadata;
+  function updateMetadataField<K extends keyof ComposerMetadata>(
+    key: K,
+    next: React.SetStateAction<ComposerMetadata[K]>,
+    selection?: AttachmentSelection | null,
+  ): void {
+    const update = (current: ComposerMetadata): ComposerMetadata => {
+      const value =
+        typeof next === "function"
+          ? (next as (value: ComposerMetadata[K]) => ComposerMetadata[K])(current[key])
+          : next;
+      return value === current[key] ? current : { ...current, [key]: value };
+    };
+    if (selection?.updateMetadata) selection.updateMetadata(update);
+    else updateMetadata(update);
+  }
+  const setAttachmentError: React.Dispatch<React.SetStateAction<string | null>> = (next) =>
+    updateMetadataField("attachmentError", next);
+  const setInputReferences: React.Dispatch<React.SetStateAction<InputAttachmentMeta[]>> = (next) =>
+    updateMetadataField("inputReferences", next);
+  const setMentionReferences: React.Dispatch<
+    React.SetStateAction<ComposerMetadata["mentionReferences"]>
+  > = (next) => updateMetadataField("mentionReferences", next);
+  const setLocalFilePaths: React.Dispatch<React.SetStateAction<string[]>> = (next) =>
+    updateMetadataField("localFilePaths", next);
   const [dragOver, setDragOver] = useState(false);
   const [contextSelectionOpen, setContextSelectionOpen] = useState(false);
   // Lightbox for staged attachment thumbnails (click to zoom). Mirrors
@@ -497,11 +531,6 @@ export function ChatView({
     [cancelCaretRestore, onDraftChange],
   );
   const setAttachments = onAttachmentsChange;
-  const [inputReferences, setInputReferences] = useState<InputAttachmentMeta[]>([]);
-  const [mentionReferences, setMentionReferences] = useState<MentionReferences>({
-    draft,
-    bindings: [],
-  });
   const mentionEditSelection = useRef<{ draft: string; start: number; end: number } | null>(null);
   const captureMentionEditSelection = (target = textareaRef.current) => {
     const start = target?.selectionStart ?? draft.length;
@@ -512,7 +541,6 @@ export function ChatView({
   }, [draft]);
   const referencesForDraft = () =>
     currentMentionReferences(mentionReferences, draft).reduce(appendReference, inputReferences);
-  const [localFilePaths, setLocalFilePaths] = useState<string[]>([]);
   const toast = useToast();
   const [linkIntents, setLinkIntents] = useState<ChatLinkResourceIntent[]>([]);
   const linkProvenance = useRef<ChatLinkResourceIntent[]>([]);
@@ -996,30 +1024,35 @@ export function ChatView({
   const addLocalFilePaths = (
     paths: readonly string[],
     origin: "os-drop" | "file-panel" | "picker",
+    selection = onBeginAttachmentSelection?.(),
   ): void => {
+    if (onBeginAttachmentSelection && !selection?.isCurrent()) return;
     const normalized = normalizeLocalFilePaths(paths);
     if (normalized.length === 0) return;
     const combined = normalizeLocalFilePaths([...localFilePaths, ...normalized]);
     const accepted = combined.filter((path) => !localFilePaths.includes(path));
     if (accepted.length === 0) return;
-    setLocalFilePaths(combined);
+    updateMetadataField("localFilePaths", combined, selection);
 
-    const attachmentContext = onPrepareAttachmentSession?.();
+    const attachmentContext = selection ? selection.prepare() : onPrepareAttachmentSession?.();
     if (!attachmentContext) return;
-    setInputReferences((current) =>
-      accepted.reduce(
-        (references, path) =>
-          appendReference(
-            references,
-            referenceFromAbsPath(
-              path,
-              attachmentContext.cwd ?? conversationRoot,
-              attachmentContext.sessionId ?? engineSessionId,
-              origin,
+    updateMetadataField(
+      "inputReferences",
+      (current) =>
+        accepted.reduce(
+          (references, path) =>
+            appendReference(
+              references,
+              referenceFromAbsPath(
+                path,
+                attachmentContext.cwd ?? conversationRoot,
+                attachmentContext.sessionId ?? engineSessionId,
+                origin,
+              ),
             ),
-          ),
-        current,
-      ),
+          current,
+        ),
+      selection,
     );
   };
 
@@ -1032,6 +1065,8 @@ export function ChatView({
 
   const applyMentionPick = (item: MentionItem): void => {
     if (!mention) return;
+    const selection = onBeginAttachmentSelection?.();
+    if (onBeginAttachmentSelection && !selection?.isCurrent()) return;
     const ta = textareaRef.current;
     const caret = ta?.selectionStart ?? draft.length;
     const before = draft.slice(0, mention.start);
@@ -1044,29 +1079,35 @@ export function ChatView({
           : `@${item.file.path} `;
     const next = before + insertion + after;
     if (item.kind === "file") {
-      const attachmentContext = onPrepareAttachmentSession?.();
-      setMentionReferences((cur) =>
-        bindMentionReference(
-          cur,
-          next,
-          before.length,
-          before.length + insertion.length - 1,
-          referenceFromFileHit(
-            item.file,
-            attachmentContext?.cwd ?? conversationRoot,
-            attachmentContext?.sessionId ?? engineSessionId,
+      const attachmentContext = selection ? selection.prepare() : onPrepareAttachmentSession?.();
+      updateMetadataField(
+        "mentionReferences",
+        (cur) =>
+          bindMentionReference(
+            cur,
+            next,
+            before.length,
+            before.length + insertion.length - 1,
+            referenceFromFileHit(
+              item.file,
+              attachmentContext?.cwd ?? conversationRoot,
+              attachmentContext?.sessionId ?? engineSessionId,
+            ),
           ),
-        ),
+        selection,
       );
     } else if (item.kind === "recent") {
-      setMentionReferences((cur) =>
-        bindMentionReference(
-          cur,
-          next,
-          before.length,
-          before.length + insertion.length - 1,
-          item.attachment,
-        ),
+      updateMetadataField(
+        "mentionReferences",
+        (cur) =>
+          bindMentionReference(
+            cur,
+            next,
+            before.length,
+            before.length + insertion.length - 1,
+            item.attachment,
+          ),
+        selection,
       );
     }
     setDraft(next);
@@ -1247,7 +1288,7 @@ export function ChatView({
     }
     if (selection === undefined) selection = onBeginAttachmentSelection?.();
     if (!attachmentSelectionIsCurrent(selection)) return;
-    setAttachmentError(null);
+    updateMetadataField("attachmentError", null, selection);
     const { accepted, errors } = await buildAttachments(files, attachments);
     if (!attachmentSelectionIsCurrent(selection)) return;
     if (accepted.length > 0) {
@@ -1308,7 +1349,7 @@ export function ChatView({
       }
     }
     if (attachmentSelectionIsCurrent(selection) && errors.length > 0) {
-      setAttachmentError(errors.map((e) => e.message).join("；"));
+      updateMetadataField("attachmentError", errors.map((e) => e.message).join("；"), selection);
     }
   };
 
@@ -1336,7 +1377,7 @@ export function ChatView({
     }
     const selection = onBeginAttachmentSelection?.();
     if (!attachmentSelectionIsCurrent(selection)) return;
-    setAttachmentError(null);
+    updateMetadataField("attachmentError", null, selection);
     const images: File[] = [];
     const paths: string[] = [];
     const unavailable: string[] = [];
@@ -1354,9 +1395,13 @@ export function ChatView({
 
     if (images.length > 0) await acceptFiles(images, origin, selection);
     if (!attachmentSelectionIsCurrent(selection)) return;
-    if (paths.length > 0) addLocalFilePaths(paths, origin);
+    if (paths.length > 0) addLocalFilePaths(paths, origin, selection);
     if (unavailable.length > 0) {
-      setAttachmentError(t("chat.composer.filePathUnavailable", { names: unavailable.join("、") }));
+      updateMetadataField(
+        "attachmentError",
+        t("chat.composer.filePathUnavailable", { names: unavailable.join("、") }),
+        selection,
+      );
     }
   };
 
