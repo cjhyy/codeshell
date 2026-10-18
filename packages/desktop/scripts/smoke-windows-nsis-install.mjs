@@ -230,6 +230,9 @@ export async function runNsisOwnedProcess({
         operation.child.birth ??= pinned?.birth;
         return rows;
       },
+      onInitialIdentityFailure: (observation) => {
+        operation.initialIdentityObservation = observation;
+      },
       reportFailure: (message) => {
         recordError(message);
         checkpoint("custody-error", { label });
