@@ -510,8 +510,10 @@ test("actual outer catch preserves first error before one specific absence diagn
     await readFile(new URL("./smoke-windows-nsis-install.mjs", import.meta.url), "utf8")
   ).replace(/\r\n/g, "\n");
   const begin = source.indexOf('  } catch (error) {\n    report.status = "failed";');
-  const end = source.indexOf("  } finally {\n    report.finished", begin);
+  const boundary = "\n  } finally {";
+  const end = source.indexOf(boundary, begin) + 1;
   assert.ok(begin > 0 && end > begin);
+  assert.equal(source.indexOf(boundary, end), -1);
   const AsyncFunction = Object.getPrototypeOf(async function () {}).constructor;
   const run = new AsyncFunction(
     "error",

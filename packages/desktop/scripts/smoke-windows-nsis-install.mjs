@@ -28,6 +28,7 @@ import { createNsisCheckpointDiagnostics } from "./windows-nsis-checkpoint-diagn
 import { collectNsisCrashEvidence } from "./windows-nsis-crash-evidence.mjs";
 import { observeNsisUninstallLeftovers } from "./windows-nsis-leftover-metadata.mjs";
 import { createNsisReplacementRoleObserver } from "./windows-nsis-process-roles.mjs";
+import { createNsisDesktopObservation } from "./windows-nsis-desktop-observation.mjs";
 import { localPackageConfiguration } from "./smoke-local-package.mjs";
 import { readPackagedUiBuildReceipt } from "./run-packaged-ui-acceptance.mjs";
 import {
@@ -134,8 +135,9 @@ async function writeExclusive(path, value) {
   });
 }
 
-/** Injectable only for pure Node process-contract tests; production calls the
- * existing watchdog with its real snapshot/fresh-birth authority unchanged. */
+/** Setup calls retain the real spawn/watch defaults. Pure contracts replace
+ * effects; the separate desktop collector's real adapters only add its stdin
+ * gate and preserve the original snapshot/fresh-birth signaling authority. */
 export async function runNsisOwnedProcess({
   executable,
   args,
@@ -149,6 +151,7 @@ export async function runNsisOwnedProcess({
   watch = watchElectronTestProcess,
   takeSnapshot = snapshotElectronTestProcesses,
   replacementRoles,
+  replacementDesktopObservation,
 }) {
   const operation = {
     label,
@@ -239,7 +242,22 @@ export async function runNsisOwnedProcess({
         checkpoint("cleanup-signal-request", { label });
         process.kill(pid, signal);
       },
-      ...(roleObserver ? { onOwnedSnapshot: roleObserver.onOwnedSnapshot } : {}),
+      ...(roleObserver
+        ? {
+            onOwnedSnapshot: replacementDesktopObservation
+              ? (observation) => {
+                  const before = roleObserver.receipt.sampleCount;
+                  roleObserver.onOwnedSnapshot(observation);
+                  if (roleObserver.receipt.sampleCount !== before + 1) return;
+                  replacementDesktopObservation.observe({
+                    ...observation,
+                    sample: roleObserver.receipt.samples.at(-1),
+                    child: operation.child,
+                  });
+                }
+              : roleObserver.onOwnedSnapshot,
+          }
+        : {}),
     });
     assert.ok(
       typeof candidate === "function" &&
@@ -431,6 +449,7 @@ export async function runWindowsNsisAcceptance(args) {
   const privateBuild = join(root, "private-build");
   const temporary = join(privateBuild, "tmp");
   let environment;
+  let replacementDesktopObservation;
   const processStep = (label, executable, argv, env, timeoutMs, replacementRoles) =>
     runNsisOwnedProcess({
       label,
@@ -442,6 +461,9 @@ export async function runWindowsNsisAcceptance(args) {
       report,
       checkpoint,
       ...(replacementRoles ? { replacementRoles } : {}),
+      ...(label === "replace" && replacementDesktopObservation
+        ? { replacementDesktopObservation }
+        : {}),
     });
   let baselineInventory;
   let postUninstallAbsenceFailed = false;
@@ -458,6 +480,14 @@ export async function runWindowsNsisAcceptance(args) {
       TEMP: temporary,
       TMPDIR: temporary,
     };
+    replacementDesktopObservation = createNsisDesktopObservation({
+      root,
+      ci,
+      environment,
+      script: join(here, "windows-nsis-desktop-observation.ps1"),
+      runProcess: runNsisOwnedProcess,
+    });
+    report.replacementDesktopObservation = replacementDesktopObservation.receipt;
     const space = await statfs(root);
     report.space = { available: space.bavail * space.bsize, required: 10 * 1024 ** 3 };
     assert.ok(report.space.available >= report.space.required);
@@ -501,6 +531,8 @@ export async function runWindowsNsisAcceptance(args) {
         await Promise.all(
           [
             "smoke-windows-nsis-install.mjs",
+            "windows-nsis-desktop-observation.mjs",
+            "windows-nsis-desktop-observation.ps1",
             "windows-nsis-acceptance.mjs",
             "windows-nsis-observe.ps1",
             "e2e-ui-packaged.mjs",
@@ -843,6 +875,15 @@ export async function runWindowsNsisAcceptance(args) {
       }
     }
   } finally {
+    // Original operation cleanup and original outer first-error persistence are
+    // already complete. Never await this collector in Setup's watchdog callback.
+    if (replacementDesktopObservation) {
+      const observation = await replacementDesktopObservation.finish();
+      if (observation.custodyUnproven)
+        recordingFailure("Independent desktop collector custody unproven");
+      if (observation.recordingFailed)
+        recordingFailure("Independent desktop observation recording failed");
+    }
     report.finished = new Date().toISOString();
     checkpoint("controller-final");
     if (report.recordingFailures.length) {

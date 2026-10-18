@@ -239,7 +239,7 @@ jobs:
         timeout-minutes: 2
         run: |
           set -euo pipefail
-          node scripts/run-isolated-node-smoke.mjs --test packages/desktop/scripts/windows-nsis-acceptance.test.mjs packages/desktop/scripts/packaged-signal-diagnostics.test.mjs packages/desktop/scripts/smoke-windows-nsis-install.test.mjs packages/desktop/scripts/windows-nsis-checkpoint-diagnostics.test.mjs packages/desktop/scripts/windows-nsis-crash-evidence.test.mjs packages/desktop/scripts/windows-packaged-main-crash-evidence.test.mjs 2>&1 | tee "$ACCEPTANCE_ROOT/windows-nsis-contracts.log"
+          node scripts/run-isolated-node-smoke.mjs --test packages/desktop/scripts/windows-nsis-acceptance.test.mjs packages/desktop/scripts/packaged-signal-diagnostics.test.mjs packages/desktop/scripts/smoke-windows-nsis-install.test.mjs packages/desktop/scripts/windows-nsis-checkpoint-diagnostics.test.mjs packages/desktop/scripts/windows-nsis-crash-evidence.test.mjs packages/desktop/scripts/windows-packaged-main-crash-evidence.test.mjs packages/desktop/scripts/windows-nsis-desktop-observation.test.mjs 2>&1 | tee "$ACCEPTANCE_ROOT/windows-nsis-contracts.log"
 
       - name: operation evidence and paused Goal fixture contracts
         timeout-minutes: 2
@@ -745,6 +745,8 @@ jobs:
             ${{ env.ACCEPTANCE_ROOT }}/windows-nsis.log
             ${{ env.ACCEPTANCE_ROOT }}/windows-nsis/receipt.json
             ${{ env.ACCEPTANCE_ROOT }}/windows-nsis/journal.jsonl
+            ${{ env.ACCEPTANCE_ROOT }}/windows-nsis/replacement-desktop-observation.json
+            ${{ env.ACCEPTANCE_ROOT }}/windows-nsis/replacement-desktop-observation/desktop.png
             ${{ env.ACCEPTANCE_ROOT }}/windows-nsis/install-crash-evidence.json
             ${{ env.ACCEPTANCE_ROOT }}/windows-nsis/baseline-inventory.json
             ${{ env.ACCEPTANCE_ROOT }}/windows-nsis/payload-inventory.json
@@ -846,7 +848,7 @@ jobs:
         timeout-minutes: 2
         run: |
           set -euo pipefail
-          node scripts/run-isolated-node-smoke.mjs --test packages/desktop/scripts/windows-nsis-acceptance.test.mjs packages/desktop/scripts/packaged-signal-diagnostics.test.mjs packages/desktop/scripts/smoke-windows-nsis-install.test.mjs packages/desktop/scripts/windows-nsis-checkpoint-diagnostics.test.mjs packages/desktop/scripts/windows-nsis-crash-evidence.test.mjs packages/desktop/scripts/windows-packaged-main-crash-evidence.test.mjs 2>&1 | tee "$ACCEPTANCE_ROOT/windows-nsis-contracts.log"
+          node scripts/run-isolated-node-smoke.mjs --test packages/desktop/scripts/windows-nsis-acceptance.test.mjs packages/desktop/scripts/packaged-signal-diagnostics.test.mjs packages/desktop/scripts/smoke-windows-nsis-install.test.mjs packages/desktop/scripts/windows-nsis-checkpoint-diagnostics.test.mjs packages/desktop/scripts/windows-nsis-crash-evidence.test.mjs packages/desktop/scripts/windows-packaged-main-crash-evidence.test.mjs packages/desktop/scripts/windows-nsis-desktop-observation.test.mjs 2>&1 | tee "$ACCEPTANCE_ROOT/windows-nsis-contracts.log"
 
       # Integrated by Root only after this exact pending test source is reviewed.
       - name: passive startup and Goal fixture contracts
@@ -945,6 +947,8 @@ jobs:
             ${{ env.ACCEPTANCE_ROOT }}/windows-nsis.log
             ${{ env.ACCEPTANCE_ROOT }}/windows-nsis/receipt.json
             ${{ env.ACCEPTANCE_ROOT }}/windows-nsis/journal.jsonl
+            ${{ env.ACCEPTANCE_ROOT }}/windows-nsis/replacement-desktop-observation.json
+            ${{ env.ACCEPTANCE_ROOT }}/windows-nsis/replacement-desktop-observation/desktop.png
             ${{ env.ACCEPTANCE_ROOT }}/windows-nsis/install-crash-evidence.json
             ${{ env.ACCEPTANCE_ROOT }}/windows-nsis/baseline-inventory.json
             ${{ env.ACCEPTANCE_ROOT }}/windows-nsis/payload-inventory.json
