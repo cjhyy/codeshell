@@ -313,6 +313,7 @@ jobs:
           node scripts/run-bun-test-shard.mjs --timeout 30000 packages/desktop/src/renderer/ChatView.ephemeral-lifecycle.test.tsx 2>&1 | tee "$ACCEPTANCE_ROOT/attachment-quick-chat-lifecycle.log"
           node scripts/run-bun-test-shard.mjs --timeout 30000 packages/desktop/src/renderer/App.no-repo-attachments.test.tsx 2>&1 | tee "$ACCEPTANCE_ROOT/attachment-no-repo.log"
           node scripts/run-bun-test-shard.mjs --timeout 30000 packages/desktop/src/renderer/App.attachment-quantity.test.tsx 2>&1 | tee "$ACCEPTANCE_ROOT/attachment-quantity.log"
+          node scripts/run-bun-test-shard.mjs --timeout 30000 packages/desktop/src/renderer/ChatView.attachment-quantity-fallback.test.tsx 2>&1 | tee "$ACCEPTANCE_ROOT/attachment-quick-chat-quantity.log"
 
       - name: materialize production workspace packages
         timeout-minutes: 5
@@ -521,6 +522,7 @@ jobs:
             ${{ env.ACCEPTANCE_ROOT }}/attachment-quick-chat-lifecycle.log
             ${{ env.ACCEPTANCE_ROOT }}/attachment-no-repo.log
             ${{ env.ACCEPTANCE_ROOT }}/attachment-quantity.log
+            ${{ env.ACCEPTANCE_ROOT }}/attachment-quick-chat-quantity.log
             ${{ env.ACCEPTANCE_ROOT }}/review-diagnostic-contracts.log
             ${{ env.ACCEPTANCE_ROOT }}/review-draft-contracts.log
             ${{ env.ACCEPTANCE_ROOT }}/review-draft-operations.log
@@ -648,6 +650,7 @@ jobs:
             ${{ env.ACCEPTANCE_ROOT }}/attachment-quick-chat-lifecycle.log
             ${{ env.ACCEPTANCE_ROOT }}/attachment-no-repo.log
             ${{ env.ACCEPTANCE_ROOT }}/attachment-quantity.log
+            ${{ env.ACCEPTANCE_ROOT }}/attachment-quick-chat-quantity.log
             ${{ env.ACCEPTANCE_ROOT }}/review-diagnostic-contracts.log
             ${{ env.ACCEPTANCE_ROOT }}/review-draft-contracts.log
             ${{ env.ACCEPTANCE_ROOT }}/review-draft-operations.log
