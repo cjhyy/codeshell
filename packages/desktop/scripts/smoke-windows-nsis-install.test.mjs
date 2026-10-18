@@ -595,3 +595,152 @@ test("actual outer catch preserves first error before one specific absence diagn
     /try \{\n {8}await absent\(installation\);\n {6}\} catch \(error\) \{\n {8}postUninstallAbsenceFailed = true;\n {8}postUninstallAbsenceError = error;\n {8}throw error;/,
   );
 });
+
+
+test("production replacement forwards the exact role observer without a desktop collector wrapper", async () => {
+  const source = (
+    await readFile(new URL("./smoke-windows-nsis-install.mjs", import.meta.url), "utf8")
+  ).replace(/\r\n/g, "\n");
+  const start = "export async function runNsisOwnedProcess({";
+  const end = "\nexport async function runWindowsNsisAcceptance(args) {";
+  assert.equal(source.split(start).length, 2);
+  assert.equal(source.split(end).length, 2);
+  const runner = source.slice(source.indexOf(start) + "export ".length, source.indexOf(end));
+  const compileRunner = new Function(
+    "assert",
+    "spawn",
+    "watchElectronTestProcess",
+    "snapshotElectronTestProcesses",
+    "createNsisReplacementRoleObserver",
+    "MAX_LOG",
+    "BUDGETS",
+    "join",
+    "writeFileSync",
+    "plainFile",
+    "safeError",
+    "assertNormalNsisProcess",
+    "process",
+    "setTimeout",
+    "clearTimeout",
+    `return (${runner});`,
+  );
+  const denied = (name) => () => assert.fail(`Unexpected real adapter: ${name}`);
+  const child = Object.assign(new EventEmitter(), {
+    pid: 42,
+    exitCode: null,
+    signalCode: null,
+    stdout: new PassThrough(),
+    stderr: new PassThrough(),
+    unref: denied("unref without custody"),
+  });
+  const pinned = { pid: 42, ppid: 99, birth: "2026-10-18T06:00:00.1234567Z" };
+  const settlement = {
+    status: "cleaned",
+    owned: [pinned],
+    ownedCount: 1,
+    remaining: [],
+    remainingCount: 0,
+    queryFailed: false,
+    evidenceTruncated: false,
+  };
+  const report = { processes: [] };
+  const environment = { OWNED: "inert replacement fixture" };
+  const replacementRoles = {
+    root: "inert-owned-root",
+    setup: "inert-owned-setup.exe",
+    uninstaller: "inert-owned-uninstaller.exe",
+    temporary: "inert-owned-tmp",
+  };
+  const roleCalls = [];
+  const roleObserver = {
+    receipt: { sampleCount: 0, samples: [] },
+    snapshot: () => [pinned],
+    onOwnedSnapshot: (value) => roleCalls.push(value),
+    markFailure: denied("role failure on normal operation"),
+  };
+  const logFiles = new Map();
+  const filePin = { size: 1, sha256: "a".repeat(64) };
+  const timer = {};
+  let settle;
+  const completed = new Promise((resolve) => {
+    settle = resolve;
+  });
+  let roleCreations = 0,
+    watches = 0,
+    normalChecks = 0,
+    stopped = 0;
+  const run = compileRunner(
+    assert,
+    denied("default spawn"),
+    denied("default watchdog"),
+    denied("default process snapshot"),
+    (options) => {
+      roleCreations++;
+      assert.deepEqual(options, { ...replacementRoles, environment });
+      return roleObserver;
+    },
+    1024 * 1024,
+    { closeAfterCustody: 5000 },
+    join,
+    (path, bytes) => logFiles.set(path, Buffer.from(bytes)),
+    async () => filePin,
+    (error) => ({ name: error.name, message: error.message }),
+    (operation) => {
+      normalChecks++;
+      assert.deepEqual(operation.result, { code: 0, signal: null });
+      assert.equal(operation.settlement, settlement);
+      assert.deepEqual(operation.errors, []);
+      assert.deepEqual(operation.signalRequests, []);
+    },
+    { pid: 99, kill: denied("process.kill") },
+    (_callback, delay) => {
+      assert.equal(delay, 5000);
+      return timer;
+    },
+    (value) => assert.equal(value, timer),
+  );
+  const sample = { phase: "owned-sample", rows: [pinned] };
+  const operation = await run({
+    executable: "inert-owned-setup.exe",
+    args: ["/S", "/currentuser", "/D=inert-owned-root"],
+    environment,
+    cwd: "inert-owned-root",
+    label: "replace",
+    timeoutMs: 180_000,
+    report,
+    checkpoint: () => {},
+    replacementRoles,
+    // A previously forwarded legacy option must not wrap the role callback.
+    replacementDesktopObservation: { observe: denied("desktop collector observation") },
+    spawnProcess: () => child,
+    takeSnapshot: denied("direct process snapshot with role observer"),
+    watch: (actual, options) => {
+      watches++;
+      assert.equal(actual, child);
+      assert.equal(options.timeoutMs, 180_000);
+      assert.equal(options.onOwnedSnapshot, roleObserver.onOwnedSnapshot);
+      assert.deepEqual(options.snapshotProcesses(), [pinned]);
+      options.onOwnedSnapshot(sample);
+      queueMicrotask(() => {
+        child.exitCode = 0;
+        child.emit("exit", 0, null);
+        child.emit("close", 0, null);
+        settle(settlement);
+      });
+      return Object.assign(() => stopped++, {
+        completed,
+        terminate: denied("cleanup fallback on normal operation"),
+      });
+    },
+  });
+  assert.equal(roleCreations, 1);
+  assert.equal(watches, 1);
+  assert.equal(normalChecks, 1);
+  assert.equal(stopped, 1);
+  assert.deepEqual(roleCalls, [sample]);
+  assert.equal(operation.status, "passed");
+  assert.equal(operation.child.birth, pinned.birth);
+  assert.equal(operation.roleObservation, roleObserver.receipt);
+  assert.equal(report.unprovenProcess, undefined);
+  assert.equal(logFiles.size, 2, "Only the two inert initial logs are recorded");
+});
