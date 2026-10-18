@@ -28,7 +28,6 @@ import { createNsisCheckpointDiagnostics } from "./windows-nsis-checkpoint-diagn
 import { collectNsisCrashEvidence } from "./windows-nsis-crash-evidence.mjs";
 import { observeNsisUninstallLeftovers } from "./windows-nsis-leftover-metadata.mjs";
 import { createNsisReplacementRoleObserver } from "./windows-nsis-process-roles.mjs";
-import { createNsisDesktopObservation } from "./windows-nsis-desktop-observation.mjs";
 import { localPackageConfiguration } from "./smoke-local-package.mjs";
 import { readPackagedUiBuildReceipt } from "./run-packaged-ui-acceptance.mjs";
 import {
@@ -151,7 +150,6 @@ export async function runNsisOwnedProcess({
   watch = watchElectronTestProcess,
   takeSnapshot = snapshotElectronTestProcesses,
   replacementRoles,
-  replacementDesktopObservation,
 }) {
   const operation = {
     label,
@@ -247,18 +245,7 @@ export async function runNsisOwnedProcess({
       },
       ...(roleObserver
         ? {
-            onOwnedSnapshot: replacementDesktopObservation
-              ? (observation) => {
-                  const before = roleObserver.receipt.sampleCount;
-                  roleObserver.onOwnedSnapshot(observation);
-                  if (roleObserver.receipt.sampleCount !== before + 1) return;
-                  replacementDesktopObservation.observe({
-                    ...observation,
-                    sample: roleObserver.receipt.samples.at(-1),
-                    child: operation.child,
-                  });
-                }
-              : roleObserver.onOwnedSnapshot,
+            onOwnedSnapshot: roleObserver.onOwnedSnapshot,
           }
         : {}),
     });
@@ -385,6 +372,11 @@ export async function runWindowsNsisAcceptance(args) {
     publishing: false,
     developerIdentity: false,
     userdataAcrossReplacement: "Not tested; both installed UI invocations use fresh private HOME",
+    replacementDesktopObservation: {
+      status: "not-enabled",
+      enabled: false,
+      reason: "production-validation-without-collector",
+    },
     readonlyMetadataBoundary:
       "Fixed bounded PowerShell product observations use execFileSync, not the App/installer custody API. A query timeout stops all later stages and is not an all-descendant cleanup proof.",
   };
@@ -452,7 +444,6 @@ export async function runWindowsNsisAcceptance(args) {
   const privateBuild = join(root, "private-build");
   const temporary = join(root, "tmp");
   let environment;
-  let replacementDesktopObservation;
   const processStep = (label, executable, argv, env, timeoutMs, replacementRoles) =>
     runNsisOwnedProcess({
       label,
@@ -464,9 +455,6 @@ export async function runWindowsNsisAcceptance(args) {
       report,
       checkpoint,
       ...(replacementRoles ? { replacementRoles } : {}),
-      ...(label === "replace" && replacementDesktopObservation
-        ? { replacementDesktopObservation }
-        : {}),
     });
   let baselineInventory;
   let postUninstallAbsenceFailed = false;
@@ -483,14 +471,6 @@ export async function runWindowsNsisAcceptance(args) {
       TEMP: temporary,
       TMPDIR: temporary,
     };
-    replacementDesktopObservation = createNsisDesktopObservation({
-      root,
-      ci,
-      environment,
-      script: join(here, "windows-nsis-desktop-observation.ps1"),
-      runProcess: runNsisOwnedProcess,
-    });
-    report.replacementDesktopObservation = replacementDesktopObservation.receipt;
     const space = await statfs(root);
     report.space = { available: space.bavail * space.bsize, required: 10 * 1024 ** 3 };
     assert.ok(report.space.available >= report.space.required);
@@ -904,15 +884,6 @@ export async function runWindowsNsisAcceptance(args) {
       }
     }
   } finally {
-    // Original operation cleanup and original outer first-error persistence are
-    // already complete. Never await this collector in Setup's watchdog callback.
-    if (replacementDesktopObservation) {
-      const observation = await replacementDesktopObservation.finish();
-      if (observation.custodyUnproven)
-        recordingFailure("Independent desktop collector custody unproven");
-      if (observation.recordingFailed)
-        recordingFailure("Independent desktop observation recording failed");
-    }
     report.finished = new Date().toISOString();
     checkpoint("controller-final");
     if (report.recordingFailures.length) {
