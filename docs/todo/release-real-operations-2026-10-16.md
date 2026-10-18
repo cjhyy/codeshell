@@ -8,12 +8,12 @@ The release target is macOS, Windows, Linux Desktop and Web. Authorized native C
 has now executed; its passing and incomplete boundaries are recorded below.
 Cross-platform fixture tests alone are not native acceptance.
 
-The latest completed run, CI32, **FAILED** overall: Web, macOS, Linux and the
-Windows matrix pass; independent Windows NSIS times out during replacement.
-See the [CI32 actual results](#ci32--completed-five-job-results-and-attachment-ui-follow-up).
-The matrix completes installation, replacement and uninstall acceptance with the
-configured hook. The independent timeout cause remains unknown; this is not a
-release-ready result.
+The latest completed run, CI33, **FAILED** overall: Web, macOS and Linux pass;
+both Windows jobs fail in the installer contract tests before native installation.
+See the [CI33 actual results](#ci33--completed-results-and-two-attachment-repairs).
+The contract test correction passes its fifteen local cases. CI32's earlier
+independent Windows replacement timeout remains unexplained, and the diagnostic
+collector has not yet reached its native trigger. This is not a release-ready result.
 
 CI29 failed overall across five jobs; its original result remains unchanged. macOS, Linux
 and Web pass their stated audited scopes. The original Windows matrix accepts
@@ -3928,3 +3928,104 @@ No follow-up push or CI33 native result is claimed at this checkpoint. CI32
 remains failed. Concurrent image capacity and repeated no-repo pending-session
 attachments are separate source leads awaiting their own finite reproductions;
 they are not covered by this repair or a release-readiness claim.
+
+## CI33 — completed results and two attachment repairs
+
+[Run 39082745570](https://github.com/cjhyy/codeshell/actions/runs/39082745570)
+completed with three successful jobs and two failures at source
+`8dfa3ef20cb9e860f4154180d4819a7d81c54915`. Web, macOS and Linux report success;
+their evidence review is scoped separately. Both Windows jobs fail at
+“Windows installer ownership and failure contracts”, before installation or
+native UI acceptance. Each Windows artifact contains only the contract log.
+The seven-file command reports 85 passing named cases plus a failed test module;
+five crash-mode cases were never registered. These are not NSIS timeout results.
+
+The crash test extracted its runner catch body by requiring `report.finished`
+immediately after `finally`. The new diagnostic finalizer precedes that field,
+so the source marker stopped matching. Commit
+`be004047d881731251e527e87805390fe8848e57` uses the unique `finally` boundary
+without changing the fifteen test bodies, five awaited modes or production
+runner. Its exact finite file passes fifteen tests; explicit lint and diff
+checks pass. The [source and actual result](/private/tmp/codeshell-nsis-crash-catch-boundary-proof-20261018/verified-single-test-source-and-results.json)
+retain both original hosted failures. No Windows PowerShell, installer or
+desktop capture ran locally. CI32's replacement timeout remains unknown; CI33
+did not reach the new collector, and later validation without it remains due.
+
+Web's independent review verifies the exact artifact digest, all 57 safe public
+files and CRCs, source pins, 31 browser operations, six complete RPC payload
+arrays and the separate finite test logs. Root viewed the narrow multiline and
+explicit logout screenshots; it did not visually inspect all 33 PNGs. The
+[final Web freeze](/private/tmp/codeshell-real-operation-cycles-20261016/ci-39082745570-web-root-20261018/Root-Web-final-source-and-evidence-freeze.json)
+binds these observations. This does not validate the later two attachment fixes.
+
+The next finite no-repository test reproduces a second pending-session gap:
+dropping a PDF creates a sidebar session, but a subsequent image cannot stage.
+Its baseline has two passes/one meaningful failure/145 expectations. Commit
+`2026fdfae2039113da3399ed81a78a3a408d31c5` records an explicit no-repository
+attachment pin only when that prepare created the pending row. Continuation
+requires the same current Main-provided cwd, fresh live pending row and available
+no-repository UI fallback; revoked, restored and resolved-invalid authority
+controls still reject. It does not establish a persisted Core Session,
+filesystem identity or confirmed absence. The original three cases plus three
+negative controls pass six tests/267 expectations; two-file lint and Desktop
+no-emit pass. The [commit and checked bytes](/private/tmp/codeshell-no-repo-pending-attachment-proof-20261018/final-two-path-commit-content-mapping.json)
+bind the original failure and final checks.
+
+Two concurrent image picks from an existing five-image main composer reproduce
+seven images and no overflow message. Its baseline has two passes/one meaningful
+failure/130 expectations; the serial and within-capacity controls pass. Commit
+`462b2ebfd61a750c37adf2310386fd1df50f816d` limits the accepted results against
+the latest owning draft inside one state update, committing attachment errors
+there as well. Original images remain intact, a concurrent pair below the limit
+keeps both results, and an invalidated session cannot receive the late result
+or error. A mixed invalid-file control preserves its validation message along
+with the overflow warning. The first five-case repair run has four passes/one
+test-fixture failure because capacity validation precedes MIME validation for
+the second file. Reordering the two fixture files makes that intended validation
+path run; all original cases and assertions remain. The corrected five tests
+pass with 230 expectations and zero skips; explicit three-file lint passes.
+The [commit and complete retained outcomes](/private/tmp/codeshell-composer-image-capacity-proof-20261018/final-commit-source-proof.json)
+separate the real baseline failure, fixture correction and final result.
+
+The capacity repair applies to the main owning composer. Embedded QuickChat
+fallback capacity is a separate source lead; current Pet chat has its own composer
+and is not validated by that lead. Already issued staging calls are
+not cancelled; excess results can leave unused staged files under the existing
+retention policy. These finite inert renderer tests do not prove native UI,
+provider delivery, filesystem authority or immediate staging cleanup. Combined
+source checks and the next hosted run are still pending at this checkpoint.
+
+## CI34 preparation — combined attachment checks and hosted follow-up
+
+The combined non-document source is
+`e57e6fcb0dc2cd4e75a45c82f9affde95556460a`. Four separate guarded renderer
+shards pass 23/437, 8/18, 6/267 and 5/230 tests/expectations, each with zero
+failures and skips. Explicit four-file lint, Desktop and mobile no-emit checks,
+and the static renderer bundle all pass on that combined source. The renderer
+index is 1,473.27 kB and retains the existing 1,000 kB chunk warning. The
+[Root-bound eight-command result](/private/tmp/codeshell-real-operation-cycles-20261016/ci34-Root-combined-local-gate-20261018.json)
+binds all arguments, raw output and unchanged source pins. These checks do not
+launch the application, installer, browser or a provider.
+
+CI33 macOS and Linux evidence review also completes. Each retains the original
+83 operations/12 Main processes, separate Review drafts three/one and Goal
+deletion one in the existing preferences Main. macOS additionally verifies the
+two installed DMG UI runs of thirteen operations each; Linux verifies the
+AppImage runtime's ten exact GETs, full permission modes and cleanup. The
+[Mac result and two viewed frames](/private/tmp/codeshell-real-operation-cycles-20261016/ci-39082745570-mac-independent-20261018/Root-seven-actual-results-and-two-visuals.json)
+and [Linux result and two viewed frames](/private/tmp/codeshell-real-operation-cycles-20261016/ci-39082745570-linux-panel-independent-20261018/Root-nine-actual-results-and-two-visuals.json)
+bind the independent offline checks. PNG chunk CRC checks cover 49 Mac and 35
+Linux images; Root actually views only two from each. These are separate facts.
+Both also verify the CI33 ownership 23/437 and quick-chat 8/18 pure logs; the
+later no-repository and capacity repairs were not in CI33. Reader preparation
+and summary-writer metadata errors remain retained without rerunning acceptance
+operations or weakening a predicate.
+
+Workflow commit `9550714c61c8dd4cc925535903cc3c914e2d778f` adds only two exact
+guarded shard commands and their four native early/final upload literals.
+Public pattern counts become Web 28, native early/final 108/185 and independent
+NSIS 61. Existing installation arguments, 180-second replacement budget, sixteen
+phases, six normal roots and 26 UI checks remain unchanged. The fifteen-case
+crash-contract correction and the new renderer tests still require hosted
+execution on the combined source. No CI34 push or native result is claimed at
+this preparation checkpoint; CI33 remains failed overall.
