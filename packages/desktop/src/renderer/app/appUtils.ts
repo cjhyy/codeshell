@@ -1,6 +1,7 @@
 import type { MobilePermissionMode } from "../../preload/types";
 import type { OpenCliSessionRequest } from "../cc-room/types";
 import type { ImageAttachment } from "../chat/attachments";
+import type { ComposerMetadata } from "../chat/composerMetadata";
 import type { PermissionMode } from "../chat/PermissionPill";
 import type { MessagesReducerState } from "../types";
 import type { PanelTab } from "../view";
@@ -47,6 +48,7 @@ export function fromMobilePermissionMode(mode: MobilePermissionMode): Permission
 export interface ComposerDraftState {
   text: string;
   attachments: ImageAttachment[];
+  metadata?: ComposerMetadata;
 }
 
 export type ComposerDraftsMap = Record<string, ComposerDraftState>;

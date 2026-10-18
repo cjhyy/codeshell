@@ -36,6 +36,12 @@ mock.module("qrcode", () => ({
 
 let chatProps: Record<string, any> | null = null;
 let sidebarProps: Record<string, any> | null = null;
+const sendCalls: Array<{
+  text: string;
+  opts: Record<string, any> | undefined;
+  configurationTarget: unknown;
+  sendBucket: unknown;
+}> = [];
 mock.module("./MessageStream", () => ({ MessageStream: () => null }));
 mock.module("./app/AppSidebar", () => ({
   Sidebar(props: Record<string, any>) {
@@ -58,11 +64,25 @@ const { ChatView: ActualChatView } = await import("./ChatView.tsx?attachment-own
 mock.module("./ChatView", () => ({
   ChatView(props: Record<string, any>) {
     chatProps = props;
-    return <ActualChatView {...props} />;
+    return (
+      <ActualChatView
+        {...props}
+        onSend={(text: string, opts: Record<string, any> | undefined) => {
+          // Observe the real composer's output without entering App.send/Main.
+          sendCalls.push({
+            text,
+            opts: opts === undefined ? undefined : JSON.parse(JSON.stringify(opts)),
+            configurationTarget: { ...props.configurationTarget },
+            sendBucket: props.sendBucket,
+          });
+        }}
+      />
+    );
   },
 }));
 // @ts-expect-error Bun supports query-suffixed TypeScript module imports.
 const { App } = await import("./App.tsx?attachment-ownership");
+const { loadProjects, saveProjects } = await import("./projects");
 
 function deferred<T>() {
   let resolve!: (value: T) => void;
@@ -302,6 +322,67 @@ async function pick(name = "from-A.png") {
     await settle();
   });
 }
+async function dropPdf(path: string) {
+  Object.assign(window.codeshell, { getPathForFile: () => path });
+  await act(async () => {
+    propsOf(find((props) => props["data-chat-variant"] === "main")).onDrop({
+      preventDefault() {},
+      dataTransfer: {
+        getData: () => "",
+        files: [new File(["%PDF-1.0"], path.split("/").at(-1)!, { type: "application/pdf" })],
+      },
+    });
+    await settle();
+  });
+  expect(ControlledFileReader.reads).toHaveLength(0);
+  expect(staged).toHaveLength(0);
+  expect(propsOf(find((props) => props.title === path)).title).toBe(path);
+}
+async function submitText(text: string) {
+  expect(chatProps?.busy).toBe(false);
+  expect(Boolean(chatProps?.composerDisabled)).toBe(false);
+  await act(async () => {
+    propsOf(find((props) => props.rows === 1)).onChange({
+      target: { value: text, selectionStart: text.length },
+    });
+    await settle();
+  });
+  expect(chatProps?.draft).toBe(text);
+  let prevented = false;
+  await act(async () => {
+    const textarea = find((props) => props.rows === 1);
+    propsOf(textarea).onKeyDown({
+      key: "Enter",
+      shiftKey: false,
+      ctrlKey: false,
+      metaKey: false,
+      nativeEvent: { isComposing: false },
+      currentTarget: textarea,
+      preventDefault() {
+        prevented = true;
+      },
+    });
+    await settle();
+  });
+  expect(prevented).toBe(true);
+  expect(sendCalls).toHaveLength(1);
+}
+async function preparePdfDraft(path: string) {
+  const create = sidebarProps?.onNewConversationForProject;
+  expect(typeof create).toBe("function");
+  await act(async () => {
+    create("repoA");
+    await settle();
+  });
+  expect(chatProps?.configurationTarget).toEqual({ projectId: "repoA" });
+  await dropPdf(path);
+  const index = JSON.parse(storage.getItem("codeshell.sessionIndex.repoA")!);
+  const owner = index.sessions.find((session: any) => session.id === index.activeSessionId);
+  expect(owner).toBeDefined();
+  expect(owner.pendingFirstRun).toBe(true);
+  expect(owner.engineSessionId).toBeUndefined();
+  return owner;
+}
 beforeEach(async () => {
   ensureMiniDom();
   Object.defineProperty(globalThis, "localStorage", {
@@ -332,6 +413,7 @@ beforeEach(async () => {
   storage.clear();
   staged.length = 0;
   imageReads.length = 0;
+  sendCalls.length = 0;
   ControlledFileReader.reads.length = 0;
   storage.setItem(
     "codeshell.repos",
@@ -640,4 +722,329 @@ test("navigation's live owner fences a late A stage before React commits B", asy
   expect(chatProps?.configurationTarget).toEqual({ sessionId: "engine-b" });
   expect(chatProps?.configurationAvailable).toBe(true);
   expect(chatProps?.attachments).toEqual([]);
+});
+
+test("a completed A PDF selection is not displayed as a B composer chip", async () => {
+  const path = "/fixture/repo-a/selected-A.pdf";
+  await dropPdf(path);
+  expect(chatProps?.configurationTarget).toEqual({ sessionId: "engine-a" });
+  await selectB();
+  expect(descendants(container).filter((node) => propsOf(node).title === path)).toHaveLength(0);
+});
+
+test("B's real Enter submit contains neither A's selected path nor its structured reference", async () => {
+  const path = "/fixture/repo-a/selected-A.pdf";
+  await dropPdf(path);
+  const aBucket = chatProps?.sendBucket;
+  await selectB();
+  const bBucket = chatProps?.sendBucket;
+  expect(typeof bBucket).toBe("string");
+  expect(bBucket).not.toBe(aBucket);
+  await submitText("B own text");
+  expect(sendCalls[0]).toMatchObject({
+    configurationTarget: { sessionId: "engine-b" },
+    sendBucket: bBucket,
+    opts: { bucket: bBucket },
+  });
+  expect({
+    text: sendCalls[0].text,
+    displayText: sendCalls[0].opts?.displayText,
+    attachments: sendCalls[0].opts?.attachments,
+  }).toEqual({ text: "B own text", displayText: "B own text", attachments: [] });
+});
+
+test("an already-visible A attachment error is not displayed after selecting B", async () => {
+  await pick("already-failed-A.png");
+  await act(async () => {
+    ControlledFileReader.reads[0].finish();
+    await settle();
+  });
+  expect(staged).toHaveLength(1);
+  await act(async () => {
+    staged[0].result.reject(new Error("already-visible-A-attachment-error"));
+    await settle();
+  });
+  expect(renderedText()).toContain("already-visible-A-attachment-error");
+  await selectB();
+  expect(renderedText()).not.toContain("already-visible-A-attachment-error");
+});
+
+test("A can submit its own completed PDF selection through the real composer", async () => {
+  const path = "/fixture/repo-a/selected-A.pdf";
+  await dropPdf(path);
+  const aBucket = chatProps?.sendBucket;
+  const controls = {
+    model: chatProps?.activeModelKey,
+    permission: chatProps?.permissionMode,
+  };
+  await submitText("A own text");
+  expect(sendCalls[0]).toMatchObject({
+    configurationTarget: { sessionId: "engine-a" },
+    sendBucket: aBucket,
+    opts: { bucket: aBucket },
+  });
+  expect(sendCalls[0].text).toContain(`- ${JSON.stringify(path)}`);
+  expect(sendCalls[0].opts?.displayText).toContain(path);
+  expect(sendCalls[0].opts?.attachments).toHaveLength(1);
+  expect(sendCalls[0].opts?.attachments[0]).toMatchObject({
+    sessionId: "engine-a",
+    kind: "file",
+    origin: "os-drop",
+    path: "selected-A.pdf",
+    absPath: path,
+    relPath: "selected-A.pdf",
+  });
+  expect({
+    model: chatProps?.activeModelKey,
+    permission: chatProps?.permissionMode,
+  }).toEqual(controls);
+});
+
+test("returning to A restores its own selected paths, references, and unsent controls", async () => {
+  const aPath = "/fixture/repo-a/return-A.pdf";
+  const bPath = "/fixture/repo-a/return-B.pdf";
+  await act(async () => {
+    propsOf(find((props) => props.rows === 1)).onChange({
+      target: { value: "A unsent text", selectionStart: 13 },
+    });
+    chatProps?.onModelChange({ key: "fixture-text", label: "Fixture text", provider: "fixture" });
+    chatProps?.onPermissionChange("plan");
+    await settle();
+  });
+  await dropPdf(aPath);
+  expect(chatProps?.composerMetadata).toBeDefined();
+  const aMetadata = JSON.parse(JSON.stringify(chatProps?.composerMetadata));
+  expect(aMetadata.localFilePaths).toEqual([aPath]);
+  expect(aMetadata.inputReferences).toHaveLength(1);
+  expect(aMetadata.inputReferences[0].sessionId).toBe("engine-a");
+  await selectB();
+  await dropPdf(bPath);
+  expect(chatProps?.composerMetadata.localFilePaths).toEqual([bPath]);
+  const select = sidebarProps?.onSelectSession;
+  expect(typeof select).toBe("function");
+  await act(async () => {
+    select("repoA", "session-a");
+    await settle();
+  });
+  expect(chatProps?.configurationTarget).toEqual({ sessionId: "engine-a" });
+  expect(chatProps?.composerMetadata).toEqual(aMetadata);
+  expect(chatProps?.draft).toBe("A unsent text");
+  expect(chatProps?.activeModelKey).toBe("fixture-text");
+  expect(chatProps?.permissionMode).toBe("plan");
+  await submitText("return A only");
+  expect(sendCalls[0].text).toContain(aPath);
+  expect(sendCalls[0].text).not.toContain(bPath);
+  expect(sendCalls[0].opts?.attachments).toEqual(aMetadata.inputReferences);
+});
+
+test("a PDF drop materializes its own draft metadata and a later image keeps that owner", async () => {
+  const create = sidebarProps?.onNewConversationForProject;
+  expect(typeof create).toBe("function");
+  await act(async () => {
+    create("repoA");
+    await settle();
+  });
+  expect(chatProps?.configurationTarget).toEqual({ projectId: "repoA" });
+  await act(async () => {
+    propsOf(find((props) => props.rows === 1)).onChange({
+      target: { value: "draft PDF text", selectionStart: 14 },
+    });
+    chatProps?.onModelChange({ key: "fixture-text", label: "Fixture text", provider: "fixture" });
+    chatProps?.onPermissionChange("plan");
+    await settle();
+  });
+  expect(chatProps?.configurationTarget).toEqual({ projectId: "repoA" });
+  const path = "/fixture/repo-a/draft-owned.pdf";
+  await dropPdf(path);
+  const index = JSON.parse(storage.getItem("codeshell.sessionIndex.repoA")!);
+  const owner = index.sessions.find((session: any) => session.id === index.activeSessionId);
+  expect(owner).toBeDefined();
+  expect(owner.pendingFirstRun).toBe(true);
+  expect(owner.id).not.toBe("session-a");
+  expect(owner.id).not.toBe("session-b");
+  expect(chatProps?.composerMetadata).toBeDefined();
+  const pdfMetadata = JSON.parse(JSON.stringify(chatProps?.composerMetadata));
+  expect(pdfMetadata.localFilePaths).toEqual([path]);
+  expect(pdfMetadata.inputReferences).toHaveLength(1);
+  expect(pdfMetadata.inputReferences[0]).toMatchObject({
+    sessionId: owner.id,
+    kind: "file",
+    absPath: path,
+  });
+  await pick("same-owner-image.png");
+  await act(async () => {
+    ControlledFileReader.reads[0].finish();
+    await settle();
+  });
+  expect(staged).toHaveLength(1);
+  expect(staged[0].input.sessionId).toBe(owner.id);
+  await act(async () => {
+    staged[0].result.resolve(imageMeta(staged[0].input));
+    await settle();
+  });
+  expect(chatProps?.composerMetadata).toEqual(pdfMetadata);
+  expect(chatProps?.attachments).toHaveLength(1);
+  expect(chatProps?.attachments[0].sessionId).toBe(owner.id);
+  expect(chatProps?.draft).toBe("draft PDF text");
+  expect(chatProps?.activeModelKey).toBe("fixture-text");
+  expect(chatProps?.permissionMode).toBe("plan");
+});
+
+test("B independently submits only its own selected PDF after A's selection", async () => {
+  const aPath = "/fixture/repo-a/independent-A.pdf";
+  const bPath = "/fixture/repo-a/independent-B.pdf";
+  await dropPdf(aPath);
+  await selectB();
+  await dropPdf(bPath);
+  const bBucket = chatProps?.sendBucket;
+  await submitText("B own PDF");
+  expect(sendCalls[0]).toMatchObject({
+    configurationTarget: { sessionId: "engine-b" },
+    opts: { bucket: bBucket },
+  });
+  expect(sendCalls[0].text).toContain(bPath);
+  expect(sendCalls[0].text).not.toContain(aPath);
+  expect(sendCalls[0].opts?.attachments).toHaveLength(1);
+  expect(sendCalls[0].opts?.attachments[0]).toMatchObject({
+    sessionId: "engine-b",
+    absPath: bPath,
+    origin: "os-drop",
+  });
+});
+
+test("an image stage error after its own draft materialization stays with that new owner", async () => {
+  const create = sidebarProps?.onNewConversationForProject;
+  expect(typeof create).toBe("function");
+  await act(async () => {
+    create("repoA");
+    await settle();
+  });
+  expect(chatProps?.configurationTarget).toEqual({ projectId: "repoA" });
+  await pick("materialized-failure.png");
+  await act(async () => {
+    ControlledFileReader.reads[0].finish();
+    await settle();
+  });
+  expect(staged).toHaveLength(1);
+  const index = JSON.parse(storage.getItem("codeshell.sessionIndex.repoA")!);
+  const owner = index.sessions.find((session: any) => session.id === staged[0].input.sessionId);
+  expect(owner).toBeDefined();
+  expect(index.activeSessionId).toBe(owner.id);
+  await act(async () => {
+    staged[0].result.reject(new Error("new-owner-stage-error"));
+    await settle();
+  });
+  expect(chatProps?.configurationTarget).toEqual({ projectId: "repoA" });
+  expect(chatProps?.configurationAvailable).toBe(true);
+  expect(chatProps?.conversationRootStatus).toBe("loading");
+  expect(chatProps?.engineSessionId).toBe(owner.id);
+  expect(chatProps?.sendBucket).toBe(`repoA::${owner.id}`);
+  expect(chatProps?.composerMetadata.attachmentError).toContain("new-owner-stage-error");
+  expect(renderedText()).toContain("new-owner-stage-error");
+  await selectB();
+  expect(renderedText()).not.toContain("new-owner-stage-error");
+  const select = sidebarProps?.onSelectSession;
+  expect(typeof select).toBe("function");
+  await act(async () => {
+    select("repoA", owner.id);
+    await settle();
+  });
+  expect(chatProps?.configurationTarget).toEqual({ projectId: "repoA" });
+  expect(chatProps?.engineSessionId).toBe(owner.id);
+  expect(chatProps?.sendBucket).toBe(`repoA::${owner.id}`);
+  expect(renderedText()).toContain("new-owner-stage-error");
+});
+
+test("a restored pending UI row without this App's creation pin cannot stage an image", async () => {
+  const index = JSON.parse(storage.getItem("codeshell.sessionIndex.repoA")!);
+  const restored = index.sessions.find((session: any) => session.id === "session-b");
+  delete restored.engineSessionId;
+  restored.pendingFirstRun = true;
+  storage.setItem("codeshell.sessionIndex.repoA", JSON.stringify(index));
+  const select = sidebarProps?.onSelectSession;
+  expect(typeof select).toBe("function");
+  await act(async () => {
+    select("repoA", "session-b");
+    await settle();
+  });
+  expect(chatProps?.configurationTarget).toEqual({ projectId: "repoA" });
+  expect(chatProps?.conversationRootStatus).toBe("loading");
+  expect(chatProps?.engineSessionId).toBe("session-b");
+  await pick("unowned-pending.png");
+  await act(async () => {
+    ControlledFileReader.reads[0].finish();
+    await settle();
+  });
+  expect(staged).toHaveLength(0);
+  expect(renderedText()).toContain("当前会话还没有可用的附件保存目录");
+});
+
+test("an App-created row that is no longer pending cannot reuse its draft staging pin", async () => {
+  const owner = await preparePdfDraft("/fixture/repo-a/invalidated-pending.pdf");
+  const index = JSON.parse(storage.getItem("codeshell.sessionIndex.repoA")!);
+  index.sessions.find((session: any) => session.id === owner.id).pendingFirstRun = false;
+  storage.setItem("codeshell.sessionIndex.repoA", JSON.stringify(index));
+  const select = sidebarProps?.onSelectSession;
+  expect(typeof select).toBe("function");
+  await act(async () => {
+    select("repoA", owner.id);
+    await settle();
+  });
+  expect(chatProps?.configurationTarget).toEqual({ projectId: "repoA" });
+  await pick("no-longer-pending.png");
+  await act(async () => {
+    ControlledFileReader.reads[0].finish();
+    await settle();
+  });
+  expect(staged).toHaveLength(0);
+});
+
+test("a changed registered primary root cannot reuse an earlier pending staging pin", async () => {
+  const owner = await preparePdfDraft("/fixture/repo-a/original-root.pdf");
+  const project = loadProjects().find((item) => item.id === "repoA")!;
+  expect(project.primaryRootId).toBe("root-a");
+  await act(async () => {
+    saveProjects([
+      {
+        ...project,
+        path: "/fixture/replaced-root",
+        primaryRootId: "root-replaced",
+        roots: [
+          { id: "root-replaced", path: "/fixture/replaced-root", name: "Replacement", addedAt: 2 },
+        ],
+      },
+    ]);
+    await settle();
+  });
+  expect(chatProps?.engineSessionId).toBe(owner.id);
+  expect(chatProps?.configurationTarget).toEqual({ projectId: "repoA" });
+  expect(chatProps?.conversationRoot).toBe("/fixture/replaced-root");
+  expect(chatProps?.conversationRootId).toBe("root-replaced");
+  await pick("changed-root.png");
+  await act(async () => {
+    ControlledFileReader.reads[0].finish();
+    await settle();
+  });
+  expect(staged).toHaveLength(0);
+});
+
+test("a resolved corrupt Session authority cannot reuse an App-created pending staging pin", async () => {
+  const originalAuthority = window.codeshell.getSessionWorkspaceAuthority;
+  Object.assign(window.codeshell, {
+    getSessionWorkspaceAuthority: async (sessionId: string) => {
+      if (sessionId === "engine-a" || sessionId === "engine-b") return originalAuthority(sessionId);
+      throw new Error("fixture Session exists but its state is invalid");
+    },
+  });
+  const owner = await preparePdfDraft("/fixture/repo-a/corrupt-authority.pdf");
+  expect(chatProps?.engineSessionId).toBe(owner.id);
+  expect(chatProps?.configurationTarget).toEqual({ sessionId: owner.id });
+  expect(chatProps?.configurationAvailable).toBe(false);
+  expect(chatProps?.conversationRootStatus).toBe("unavailable");
+  await pick("corrupt-authority.png");
+  await act(async () => {
+    ControlledFileReader.reads[0].finish();
+    await settle();
+  });
+  expect(staged).toHaveLength(0);
 });
