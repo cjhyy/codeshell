@@ -4726,3 +4726,46 @@ CRC 不等于查看了全部像素，也不增加 native 操作。对应 [Web](/
 完整引用 SHA 见 [私有输入索引](/private/tmp/codeshell-ci39-release-results-draft-20261018/verified-input-hashes-v3.json)。
 四个成功 job 已按各自范围完成证据验收；Windows matrix 失败与未知原因不变。
 当前不建议发版，不声称 remote main/tag/release/publication 或下一轮结果。
+
+## CI40 — bounded Windows launch diagnostics preparation
+
+CI39 的 Windows packaged 启动 `0xC0000005` 仍是未定位的发版阻塞。当前准备的
+诊断候选用于增加下一次 hosted CI 的可判别证据，不声称修复崩溃，也不改用
+重复运行直到成功的结论。最新已完成运行仍为上节 CI39，overall FAILED。
+
+作者任务从最新已获取的 `origin/main` 开始，正常接入验收基线；exact 五路径提交
+`512f78e459bbf043949a427323441e16d7fb3a70` 已经过独立源码 peer，随后在任务
+整合分支完成格式整理及标准时钟导入。最终受检查源码提交为
+`c2c1a124a8bc5cc67dec0fad6c24b365a0bff15e`；此段仅追加记录，不改变源码。
+
+只有现有 hosted Windows x64/win22 仓库身份满足条件的 packaged UI 调用显式
+启用诊断，默认关闭。诊断在同一个 captured ChildProcess 上记录退出、关闭、
+stdio 与 SDK 清理请求的有限回调顺序和缓存状态，并在原私有日志 append 成功后
+保留 stdout/stderr 各最多 64 KiB 的副本。每次最多 64 条事件，最多 8 次启动；
+文本另有同等上限及已知路径/URL/控制字符处理。它不提供通用秘密清洗、内核
+顺序、OS 存活或原生崩溃原因证明。结果进入现有 receipt 的独立 sibling 字段；
+原 startupObservation schema、first-error、preload、正常退出、出生身份、
+watchdog、taskkill 拒绝、HOME 与全部原生验收条件保持。
+
+本地首次：格式整理 0，显式 7 文件 Node 合同 **83/83**，lint 发现
+`performance` 的 `no-undef`，该失败与完整日志保留。修正仅为从
+`node:perf_hooks` 显式导入标准 `performance`；Root 逐字核对其余源码未变。
+在新证据目录重新验证最终源码：同 7 文件 **83/83**，fail/cancel/skip/todo
+均 0，lint 与 scoped diff-check 各退出 0；66 项受保护依赖/源码 pins 保持。
+这 83 项是纯 Node 合同，不是原生 UI 83 操作。新增 7 例覆盖退出与清理先后、
+不吞原 error 的 errorMonitor、事件和日志上限、UTF-8/快照隔离及回调故障。
+
+[最终本地 gate 与源码 pins](/private/tmp/codeshell-ci40-combined-checks-perf-hooks-repair-20261018/final-local-gate-and-source-review.json)
+（3808 B，`f4f7352134754c72146db55120aa7abbc9ad86a5259ac106e8f6f720196155bf`）
+绑定最终五路径；[原完整差异与冻结](/private/tmp/codeshell-packaged-launch-event-diagnostics-proof-20261018/five-source-v1-freeze.json)
+及 [独立 peer](/private/tmp/codeshell-packaged-launch-event-diagnostics-panel-source-peer-20261018/independent-five-source-v1-peer.json)
+保留作者基线，格式变化与单行导入修正由 Root 后续记录约束。没有本地运行
+Electron、安装器、PowerShell、原生进程查询、Keychain 或真实 inspector。
+既往裸 Node 的整体效果仍为 UNKNOWN；已审的纯测试含普通 Node CLI 拒绝子进程、
+自有临时文件及 fake SDK/VM，不能概称全任务零子进程或零 native 效果。
+
+工作流选择及上传 profile 均未变。未来 hosted 纯日志预期为 operation-evidence
+49 + 7 = 56、独立 passive-startup-goal 16 + 7 = 23；须再以实际 TAP 验证。
+独立 operation 33、NSIS 118 及原生 83/12、draft 3/1、Goal 1、NSIS 16/6/26
+各自保留，不能混计。此准备记录不包含 CI40 run/job/artifact 或原生结果；
+下一次仅推送已获授权的验收分支。未推送 remote main、打 tag、签名、公证或发版。
