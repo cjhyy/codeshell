@@ -433,10 +433,16 @@ const runnerSource = readFileSync(
   "utf8",
 ).replace(/\r\n/g, "\n");
 const catchStart = runnerSource.indexOf('  } catch (error) {\n    report.status = "failed";');
-const catchEnd = runnerSource.indexOf("  } finally {\n    report.finished", catchStart);
+const catchBoundary = "\n  } finally {";
+const catchEnd = runnerSource.indexOf(catchBoundary, catchStart) + 1;
 assert.ok(
   catchStart > 0 && catchEnd > catchStart,
   "Actual runner outer failure boundary must be present",
+);
+assert.equal(
+  runnerSource.indexOf(catchBoundary, catchEnd),
+  -1,
+  "Actual runner outer finally must be unique after the catch",
 );
 const catchBody = runnerSource.slice(catchStart + "  } catch (error) {".length, catchEnd);
 const AsyncFunction = Object.getPrototypeOf(async function () {}).constructor;
