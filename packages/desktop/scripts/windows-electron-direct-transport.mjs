@@ -244,6 +244,18 @@ function installPermanentKillGuard(children, syncExports) {
       settlement: null,
     };
     entry.cleanupRequests.push(request);
+    if (entry.onCleanupRequested) {
+      // Observation cannot authorize or suppress the existing custody cleanup.
+      // Accept only a journal sequence, never arbitrary callback text/objects.
+      try {
+        const sequence = entry.onCleanupRequested(entry.child);
+        request.launchDiagnostics = Number.isSafeInteger(sequence) && sequence > 0
+          ? { status: "recorded", sequence }
+          : { status: "unavailable", sequence: null };
+      } catch {
+        request.launchDiagnostics = { status: "callback-failed", sequence: null };
+      }
+    }
     try {
       // terminate starts its fresh-query, per-incarnation cleanup synchronously.
       // spawnSync cannot await it. The fixture still awaits monitor.completed
@@ -287,6 +299,7 @@ export function installWindowsElectronDirectTransport(
     home,
     cwd,
     onCapturedSpawn,
+    onCleanupRequested,
     reportFailure = defaultFailure,
     platform = process.platform,
     playwrightVersion = installedVersion,
@@ -349,6 +362,7 @@ export function installWindowsElectronDirectTransport(
       child,
       monitor: undefined,
       reportFailure,
+      onCleanupRequested,
       failures,
       cleanupRequests: [],
     };

@@ -18,7 +18,10 @@ import { canCleanupPackagedProcesses } from "./packaged-process-exits.mjs";
 import { describePackagedAppLayout } from "./packaged-app-layout.mjs";
 import { readPackagedLinuxEnvironment } from "./packaged-linux-environment.mjs";
 import { installWindowsElectronDirectTransport } from "./windows-electron-direct-transport.mjs";
-import { createPackagedStartupObservation } from "./packaged-startup-observation.mjs";
+import {
+  createPackagedLaunchDiagnostics,
+  createPackagedStartupObservation,
+} from "./packaged-startup-observation.mjs";
 
 const hash = (value) => createHash("sha256").update(value).digest("hex");
 
@@ -31,8 +34,10 @@ export async function preparePackagedPetFixture({
   requireWorkerEvidence = true,
   appImageRuntime,
   onLaunchError,
+  launchDiagnostics = false,
 }) {
   assert.equal(typeof requireWorkerEvidence, "boolean");
+  assert.equal(typeof launchDiagnostics, "boolean");
   if (appImageRuntime) {
     assert.equal(process.platform, "linux");
     assert.equal(requireWorkerEvidence, false, "AppImage fixture covers manifest UI only");
@@ -130,6 +135,9 @@ export async function preparePackagedPetFixture({
   const windowsTransports = [];
   const transportFailures = [];
   const startupObservation = createPackagedStartupObservation();
+  const passiveLaunchDiagnostics = launchDiagnostics && process.platform === "win32"
+    ? createPackagedLaunchDiagnostics({ redactRoots: [fixtureRoot, isolated.home, officialApp] })
+    : undefined;
   let launchFailed = false;
   const terminateChild = async (child) => {
     const monitor = monitorsByChild.get(child);
@@ -174,6 +182,7 @@ export async function preparePackagedPetFixture({
         assert.equal(captured, undefined, "Packaged launcher captured more than once");
         captured = child;
         children.push(child);
+        passiveLaunchDiagnostics?.captured(child);
         let rootIdentity;
         const monitor = watchElectronTestProcess(child, {
           timeoutMs: 120_000,
@@ -194,11 +203,12 @@ export async function preparePackagedPetFixture({
         monitorsByChild.set(child, monitor);
         startupRecord = startupObservation.captured(child.pid);
         for (const stream of ["stdout", "stderr"])
-          child[stream].on("data", (chunk) =>
+          child[stream].on("data", (chunk) => {
             appendFileSync(join(isolated.home, `official-main-${child.pid}.${stream}`), chunk, {
               mode: 0o600,
-            }),
-          );
+            });
+            passiveLaunchDiagnostics?.appended(child, stream, chunk);
+          });
         preload = preloadPausedPackagedMain(child, bootstrap, {
           // Initial ESM Break-on-start precedes the first dependency body.
           // Parsing the graph is expected; ordinary later pauses are denied.
@@ -257,6 +267,9 @@ export async function preparePackagedPetFixture({
           cwd: isolated.home,
           onCapturedSpawn: captureMain,
           reportFailure: (message) => transportFailures.push(message),
+          ...(passiveLaunchDiagnostics
+            ? { onCleanupRequested: (child) => passiveLaunchDiagnostics.cleanupRequested(child) }
+            : {}),
         });
         windowsTransports.push(windowsTransport);
       } else {
@@ -503,6 +516,9 @@ export async function preparePackagedPetFixture({
       return {
         ...after,
         startupObservation: startupObservation.snapshot(),
+        ...(passiveLaunchDiagnostics
+          ? { packagedLaunchDiagnostics: passiveLaunchDiagnostics.snapshot() }
+          : {}),
         beforeAppTreeSHA256: before.appTreeSHA256,
         unchangedAfterRuntime: true,
         ...(runtime ? { appImageRuntime: runtime } : {}),

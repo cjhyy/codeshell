@@ -14,6 +14,7 @@ import {
   collectPackagedMainCrashEvidence,
   recordPackagedMainFirstError,
 } from "./windows-packaged-main-crash-evidence.mjs";
+import { hostedWindowsLaunchDiagnosticsEnabled } from "./packaged-startup-observation.mjs";
 import { preparePackagedPetFixture } from "./packaged-pet-fixture.mjs";
 import { settlePackagedPet } from "./packaged-pet-shutdown.mjs";
 import { startMockProviderServer } from "./mock-provider-server.mjs";
@@ -224,6 +225,7 @@ try {
     keychainReferenceFile: options.get("--default-keychain-reference"),
     requireWorkerEvidence: false,
     onLaunchError: recordFirstError,
+    launchDiagnostics: hostedWindowsLaunchDiagnosticsEnabled(process.platform, process.arch, process.env),
   });
   await step(
     "Start the supplied package with first-instruction Main guard and private HOME",
