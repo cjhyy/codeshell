@@ -4484,3 +4484,44 @@ The underlying installation cause remains unknown. A separate upstream-source
 backport candidate is being prepared; no tested or hosted repair is established
 by this record. No remote main, tag, release, signing or publication is performed,
 and this overall failed result does not support shipping.
+
+## CI38 — bounded per-user installer folder copy prepared
+
+Source commit `a3403f1ac0d2c4d6a29eec88bde9822df94c0454` backports the
+[upstream bounded folder-copy repair](https://github.com/electron-userland/electron-builder/commit/a356198ec7c54c7795659342bff36d9a5162cd93)
+to the locked app-builder-lib 25.1.8 template. The previous fixed-width read could
+read beyond a short Shell-allocated path. A fixed secondary include replaces
+that block before both installer and uninstaller setter expansion. It preserves
+the existing HKCU installation path, LocalAppData fallback, original `/D`
+override and complete uninstall initialization. Dependencies and production
+installation options are unchanged. The runner records and rechecks both
+project includes and the three relevant vendor-template hashes around build.
+Independent source review finds no actionable issue in this scope.
+
+The exact nine-file isolated Node vector passes **115/115**, with zero failures,
+skips, cancellations or todos. Seven new source-contract/dataflow callbacks
+cover bounded Unicode copying, failure cleanup, register/stack balance and path
+precedence. They do not run NSIS or prove its ABI. The original eight files
+retain their bounded owned-filesystem work, controlled source fragments,
+intentional deny probes and real Node CLI refusal child. ESLint checks two files
+with zero warnings; the staged diff check covers all five changed paths.
+
+Root merges the tested source normally as
+`0a0c5e11ed9a1d40668134896087b66b713b7d54`; all five merged blobs equal the
+tested files. The [local gate](/private/tmp/codeshell-real-operation-cycles-20261016/ci38-Root-combined-local-gate-20261018.json)
+binds 24 current pins, the CI37 21-pin checkpoint and 19 unchanged prior pins.
+The historical watchdog pin remains bound to its original ee4 source. Earlier
+renderer, typecheck and build results keep their original source/time bounds.
+[Actual local results](/private/tmp/codeshell-nsis-safe-copy-implementation-proof-20261018/actual115-lint2-and-source-final-summary.json)
+retain complete first outputs and unchanged-source checks. Formatting changes
+two test property-name spellings and one callback parenthesis; their exact
+syntax changes are explicit in the final strict comparison. Its first failed
+expectation is retained, and source was not changed to satisfy that comparison.
+
+Hosted execution is pending at this checkpoint. Both fresh Windows jobs still
+require all 16 phases, six normal controller roots, two installed Mains and 26 UI
+operations, plus exact source/custody/HOME/uninstall/cache/final OS checks. This
+source-confirmed defect correction does not identify CI37's crash cause or
+retroactively repair that failed run. The acceptance branch is the only
+authorized remote target; no remote main, tag, release, signing or publication
+is included.
