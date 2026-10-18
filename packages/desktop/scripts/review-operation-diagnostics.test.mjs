@@ -401,9 +401,44 @@ test("actual LF and CRLF driver sources execute identical success, late-failure 
 });
 
 test("original eleven-operation body, all assertions and budgets retain their frozen syntax", () => {
-  const start = driver.indexOf('  let review = await openPanel("review");');
-  const end = driver.indexOf("\n} catch (error) {", start);
-  const body = driver.slice(start, end).replace(/^\s*diagnostics\.caseCompleted[^\n]*\n/gm, "");
+  function normalizeReviewScopeMenuBarrier(source) {
+    const originalSelection = [
+      '  await review.getByRole("button", { name: /^(选择审查范围|Choose review scope)$/ }).click();',
+      '  await win.getByRole("menuitem", { name: /^(已暂存|Staged)$/ }).click();',
+      "",
+    ].join("\n");
+    const expectedBarrier = [
+      '  const scopeTrigger = review.getByRole("button", { name: /^(选择审查范围|Choose review scope)$/, includeHidden: true });',
+      "  await scopeTrigger.click();",
+      '  const scopeMenuId = await scopeTrigger.getAttribute("aria-controls");',
+      '  assert.ok(scopeMenuId, "Opened Review scope menu must expose its content identity");',
+      "  const scopeMenu = win.locator(`[id=${JSON.stringify(scopeMenuId)}]`);",
+      '  await scopeMenu.getByRole("menuitem", { name: /^(已暂存|Staged)$/ }).click();',
+      '  await scopeMenu.waitFor({ state: "hidden" });',
+      "",
+    ].join("\n");
+    const marker = "  const scopeTrigger = review.getByRole(";
+    const start = source.indexOf(marker);
+    const end = source.indexOf(
+      '  await review.getByText("new-normal", { exact: true }).waitFor();',
+      start,
+    );
+    assert.notEqual(start, -1, "Review menu close barrier must be present");
+    assert.notEqual(end, -1, "Review menu close barrier must precede the original card wait");
+    assert.equal(source.indexOf(marker, start + 1), -1, "Review menu close barrier must be unique");
+    assert.deepEqual(
+      shape(parse(`async function proof(){\n${source.slice(start, end)}\n}`)),
+      shape(parse(`async function proof(){\n${expectedBarrier}\n}`)),
+      "Review menu identity, scoped selection and hidden wait must retain their exact syntax",
+    );
+    return source.slice(0, start) + originalSelection + source.slice(end);
+  }
+  const normalizedDriver = normalizeReviewScopeMenuBarrier(driver);
+  const start = normalizedDriver.indexOf('  let review = await openPanel("review");');
+  const end = normalizedDriver.indexOf("\n} catch (error) {", start);
+  const body = normalizedDriver
+    .slice(start, end)
+    .replace(/^\s*diagnostics\.caseCompleted[^\n]*\n/gm, "");
   assert.equal(
     digest(JSON.stringify(shape(parse(`async function proof(){\n${body}\n}`)))),
     "d14e9354f2d72da3666807d3d85dbf18625d4764ff91dcd6710d127f05cf050c",
@@ -426,7 +461,7 @@ test("original eleven-operation body, all assertions and budgets retain their fr
       assertions.push(shape(node));
     ts.forEachChild(node, visit);
   };
-  visit(parse(driver));
+  visit(parse(normalizedDriver));
   assert.equal(
     digest(JSON.stringify(assertions)),
     "b41c4e5b7abcf9862c7222f0ab383d815ac440cd26a7b650d07bc8b24613917e",

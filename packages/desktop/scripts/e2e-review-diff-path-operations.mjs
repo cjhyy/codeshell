@@ -352,8 +352,16 @@ ipcMain.on=(channel,listener)=>on(channel,channel!=="agent:msg"?listener:(event,
   assert.equal(report.confinement.workerCreated, false);
   diagnostics.phase("review-ui-operations");
   let review = await openPanel("review");
-  await review.getByRole("button", { name: /^(选择审查范围|Choose review scope)$/ }).click();
-  await win.getByRole("menuitem", { name: /^(已暂存|Staged)$/ }).click();
+  const scopeTrigger = review.getByRole("button", {
+    name: /^(选择审查范围|Choose review scope)$/,
+    includeHidden: true,
+  });
+  await scopeTrigger.click();
+  const scopeMenuId = await scopeTrigger.getAttribute("aria-controls");
+  assert.ok(scopeMenuId, "Opened Review scope menu must expose its content identity");
+  const scopeMenu = win.locator(`[id=${JSON.stringify(scopeMenuId)}]`);
+  await scopeMenu.getByRole("menuitem", { name: /^(已暂存|Staged)$/ }).click();
+  await scopeMenu.waitFor({ state: "hidden" });
   await review.getByText("new-normal", { exact: true }).waitFor();
   report.cards = await review.locator("button[aria-expanded]").evaluateAll((buttons) =>
     buttons.map((button) => ({
