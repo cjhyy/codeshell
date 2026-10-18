@@ -8,14 +8,21 @@ The release target is macOS, Windows, Linux Desktop and Web. Authorized native C
 has now executed; its passing and incomplete boundaries are recorded below.
 Cross-platform fixture tests alone are not native acceptance.
 
-The latest completed run, CI35, **FAILED** overall: four jobs succeed (Web,
-macOS, Linux and independent Windows NSIS), while the Windows matrix fails in
-its initial NSIS installation. Setup exits with code `3221225477` (`0xC0000005`);
-the queried crash metadata identifies no exact application event or fault module.
-The cause remains unknown. Independent installation success does not transfer
-to the failed matrix or establish the cause of earlier failures.
-See the [CI35 actual results](#ci35--completed-results-and-windows-initial-install-failure).
+The latest completed run, CI36, **FAILED** overall: Web, macOS, Linux and the
+Windows matrix succeed; independent Windows NSIS fails while establishing the
+uninstaller's initial PID/parent/birth identity. Its later recorded exit `0/null`
+does not supply the missing birth, settlement or final absence/cache/OS checks.
+The Windows matrix separately completes all 16 NSIS phases, six normal process
+roots and 26 installed UI operations. That success does not transfer to the
+independent failure or explain historical failures.
+See the [CI36 actual results](#ci36--completed-results-and-independent-uninstall-identity-failure).
 Earlier failures remain retained. This is not a release-ready result.
+
+CI35 failed its original Windows matrix during initial installation: Setup exits
+with code `3221225477` (`0xC0000005`), while queried crash metadata identifies no
+exact application event or fault module. The cause remains unknown; CI36 does
+not establish a repair for that failure.
+See the [CI35 actual results](#ci35--completed-results-and-windows-initial-install-failure).
 
 CI29 failed overall across five jobs; its original result remains unchanged. macOS, Linux
 and Web pass their stated audited scopes. The original Windows matrix accepts
@@ -4292,3 +4299,80 @@ contracts, not actual PowerShell/EventLog or native installer execution.
 The original identity, normal-exit, custody, HOME, OS/cache and sixteen-phase /
 six-controller / 26-UI gates remain required. Hosted validation of both follow-ups
 is pending; the completed CI35 failure and unknown cause above remain unchanged.
+
+## CI36 — completed results and independent uninstall identity failure
+
+[Run 39091671102](https://github.com/cjhyy/codeshell/actions/runs/39091671102)
+executes source `ee4b4aa8080a515c793821d73ccc2e201bdc4036`, attempt one, from the
+authorized acceptance branch. It finishes **failed**, with four successful jobs
+and one independent Windows NSIS failure. The workflow retains the native final
+186-pattern, independent installer 61-pattern and Web 28-pattern profiles.
+
+| Scope | Actual audited result |
+| --- | --- |
+| Web | Passed: 31 operations, six complete RPC arrays and 33 PNG containers. Root viewed the 390px multiline comment and explicit logout/relogin frames. |
+| Linux | Passed: original 83 operations/12 Mains, separate drafts 3/1, Goal deletion in an existing Main, and AppImage startup/update checks. Nine offline readers pass once; 35 PNG containers and 22 recorded map copies/201 parent edges have no chronology contradiction. |
+| macOS arm64 | Passed: original 83/12, separate drafts 3/1, Goal deletion and DMG installed/reinstalled UI 13+13. Seven offline readers pass once; 49 PNG containers and 27 recorded map copies/304 parent edges have no chronology contradiction. |
+| Windows matrix | Passed: original 83/12, separate drafts 3/1 and Goal deletion. Required updater error disclosure, Composer durable diagnostics and nine separate pure groups pass. NSIS separately completes all 16 phases, six normal controller roots and 26 installed UI operations, including uninstall absence/cache/final OS checks. |
+| Independent Windows NSIS | Failed at uninstall identity establishment after 13 completed phases and two normal installed UI runs of 13 operations each. Uninstall, cache cleanup and final integrity remain unaccepted. |
+
+Each reader runs only once after its source and actual immutable inputs are
+reviewed. Native results come from hosted jobs; local ZIP/JSON/source readers and
+PNG checks are separate. Original 83/12, drafts 3/1, Goal deletion, installer UI
+and pure regressions are not added together as a single native operation count.
+Windows original-suite recorded Main exits are all `0/null`; its complete
+uploaded map traversal has 28 map copies/429 parent edges and no contradiction.
+
+The independent failure is exactly `Cannot establish Electron test child PID,
+parent PID and birth identity`. Uninstaller PID 7624/reported parent 3248 has no
+recorded birth or settlement. Its result and cached exit code are null when failure
+is recorded; the later exit observation is `0/null`. Journal events 45–47 retain
+the process/outer first error before event 48 records that exit. A later zero
+exit cannot replace the missing identity or prove successful uninstall cleanup.
+The five preceding controllers are normal and cleaned; both installed Mains
+3892 and 5348 exit normally with their private HOMEs removed.
+
+Source review identifies a possible observation race: the runner starts its
+child before the watchdog's synchronous CIM query establishes the initial full
+tuple. Windows completion can precede delivery of the JavaScript exit callback.
+The actual initial rows were not uploaded, so missing PID, mismatched parent,
+missing birth and the precise OS exit time cannot be distinguished in this run.
+This is a source-supported possibility, not an established cause or repair.
+No retry, zero-exit exception, weaker custody predicate or longer installer
+budget is accepted. A held native launch adapter remains an unimplemented design.
+
+The matrix role reader retains its independent-job pure-log expectation of 33;
+its resulting `incomplete-or-failed` label is preserved. The matrix workflow
+actually invokes four explicit files and reports **49/49**, zero failures,
+skips or cancellations. The separate additive reader strictly checks 49, and
+the [scope correction](/private/tmp/codeshell-real-operation-cycles-20261016/ci-39091671102-windows-matrix-independent-20261018/nsis-metadata/operation-evidence-scope-count-correction.json)
+records both vectors without changing or rerunning the original reader.
+The independent two-file group remains 33. Both Windows NSIS pure groups report
+98/98; these tests do not establish native installer success.
+
+Root's selected Linux Review frame shows the menu closed without the earlier
+faint text residue. Its 390px dark Settings frame is readable without horizontal
+clipping. Root also views macOS DMG Settings/Review draft and both independent
+Windows installed/replaced 390px Settings frames. The matrix installer frames
+are byte-identical to those two already-viewed images; visual reuse is recorded
+without counting additional pixel views. These selected images do not imply
+that every screenshot or OS window was inspected.
+
+Root additionally views the Windows generated-image tool card: the full path
+including spaces wraps, and its thumbnail/file card and controls are readable.
+The standalone 390px Settings frame is byte-identical to an already-viewed
+installer frame, so its visual observation is reused without another pixel view.
+
+Fixed evidence summaries are retained for
+[Web](/private/tmp/codeshell-real-operation-cycles-20261016/ci-39091671102-web-independent-20261018/verified-summary.json),
+[Linux](/private/tmp/codeshell-real-operation-cycles-20261016/ci-39091671102-linux-panel-independent-20261018/verified-summary.json),
+[macOS](/private/tmp/codeshell-real-operation-cycles-20261016/ci-39091671102-mac-independent-20261018/panel-verified-summary.json),
+[Windows original UI](/private/tmp/codeshell-real-operation-cycles-20261016/ci-39091671102-windows-matrix-independent-20261018/original-ui/original-native-summary.json),
+[matrix installer](/private/tmp/codeshell-real-operation-cycles-20261016/ci-39091671102-windows-matrix-independent-20261018/nsis-metadata/verified-summary.json)
+and the [independent failure](/private/tmp/codeshell-real-operation-cycles-20261016/ci-39091671102-independent-windows-nsis-panel-peer-20261018/verified-failed-summary.json).
+Their freezes bind raw inputs, exact reader sources and full first execution
+outputs. Preparation/reader metadata errors remain separately retained.
+
+CI36 is not release-ready. Its matrix success does not explain CI35's earlier
+initial-install exit or prior GC/replacement failures. No remote-main push, tag,
+release, signing or publication is performed by this acceptance run.
