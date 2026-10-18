@@ -9,6 +9,7 @@ import {
 } from "../panels/apps/quickChatPanelApp";
 import { anchorsIn, type AnchorsByBucket } from "../chat/anchorBuckets";
 import type { ImageAttachment } from "../chat/attachments";
+import type { QuickChatImageComposer } from "../chat/useQuickChatImages";
 import type { ModelOption } from "../chat/ModelPill";
 import {
   toCorePermissionMode,
@@ -62,6 +63,7 @@ interface SessionPanelDockProps {
   defaultActiveModelKey: string | null;
   quickChatDrafts: Record<string, string>;
   quickChatAttachments: Record<string, ImageAttachment[]>;
+  quickChatImageComposer: (session: QuickChatSessionRef) => QuickChatImageComposer;
   modelOptions: ModelOption[];
   imageDetail: "low" | "standard" | "high" | undefined;
   setQuickChatPermission: (bucket: string, mode: PermissionMode) => void;
@@ -130,6 +132,7 @@ export function SessionPanelDock(props: SessionPanelDockProps) {
                   ? (props.quickChatAttachments[session.bucket] ?? EMPTY_ATTACHMENTS)
                   : EMPTY_ATTACHMENTS
               }
+              imageComposer={session ? props.quickChatImageComposer(session) : undefined}
               permissionMode={permissionMode}
               modelOptions={props.modelOptions}
               activeModelKey={activeModelKey}

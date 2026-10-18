@@ -3,6 +3,7 @@ import React from "react";
 import type { ApprovalRequestEnvelope, InputAttachmentMeta } from "../../preload/types";
 import type { ApproveChoice, ApprovePathScope } from "../approvals/approvalDecision";
 import type { ImageAttachment } from "../chat/attachments";
+import type { QuickChatImageComposer } from "../chat/useQuickChatImages";
 import type { ModelOption } from "../chat/ModelPill";
 import type { PermissionMode } from "../chat/PermissionPill";
 import { useT } from "../i18n/I18nProvider";
@@ -18,6 +19,7 @@ interface QuickChatPanelHostProps {
   busy: boolean;
   draft: string;
   attachments: ImageAttachment[];
+  imageComposer?: QuickChatImageComposer;
   permissionMode: PermissionMode;
   modelOptions: ModelOption[];
   activeModelKey: string | null;
@@ -51,6 +53,7 @@ export function QuickChatPanelHost({
   busy,
   draft,
   attachments,
+  imageComposer,
   permissionMode,
   modelOptions,
   activeModelKey,
@@ -95,6 +98,7 @@ export function QuickChatPanelHost({
       copiedEventCount={session.copiedEventCount}
       draft={draft}
       attachments={attachments}
+      imageComposer={imageComposer}
       permissionMode={permissionMode}
       modelOptions={modelOptions}
       activeModelKey={activeModelKey}
