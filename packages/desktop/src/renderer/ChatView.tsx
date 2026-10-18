@@ -46,6 +46,7 @@ import type {
   RendererConfigurationTarget,
 } from "../preload/types";
 import {
+  ATTACHMENT_LIMITS,
   buildAttachments,
   decodeWireForDisplay,
   encodeAttachmentsForWire,
@@ -101,6 +102,11 @@ export interface AttachmentSelection {
   isCurrent: () => boolean;
   prepare: () => { cwd: string; sessionId: string; quickChatClaimId?: string } | null;
   updateAttachments: React.Dispatch<React.SetStateAction<ImageAttachment[]>>;
+  appendImages: (
+    images: ImageAttachment[],
+    overflowMessage: string,
+    validationMessages: string[],
+  ) => void;
   updateMetadata?: React.Dispatch<React.SetStateAction<ComposerMetadata>>;
 }
 
@@ -1291,6 +1297,7 @@ export function ChatView({
     updateMetadataField("attachmentError", null, selection);
     const { accepted, errors } = await buildAttachments(files, attachments);
     if (!attachmentSelectionIsCurrent(selection)) return;
+    let attachmentErrorsCommitted = false;
     if (accepted.length > 0) {
       // Compress before staging so the chip thumbnail and the wire
       // payload share the same bytes — keeps the UI honest about what
@@ -1335,8 +1342,14 @@ export function ChatView({
             }),
           );
           if (!attachmentSelectionIsCurrent(selection)) return;
-          if (selection) selection.updateAttachments((cur) => [...cur, ...staged]);
-          else setAttachments((cur) => [...cur, ...staged]);
+          if (selection) {
+            selection.appendImages(
+              staged,
+              t("chat.attachment.tooManySimple", { max: ATTACHMENT_LIMITS.maxImagesPerMessage }),
+              errors.map((error) => error.message),
+            );
+            attachmentErrorsCommitted = true;
+          } else setAttachments((cur) => [...cur, ...staged]);
         } catch (e) {
           if (!attachmentSelectionIsCurrent(selection)) return;
           errors.push({
@@ -1348,7 +1361,11 @@ export function ChatView({
         }
       }
     }
-    if (attachmentSelectionIsCurrent(selection) && errors.length > 0) {
+    if (
+      !attachmentErrorsCommitted &&
+      attachmentSelectionIsCurrent(selection) &&
+      errors.length > 0
+    ) {
       updateMetadataField("attachmentError", errors.map((e) => e.message).join("；"), selection);
     }
   };
