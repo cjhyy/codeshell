@@ -11,6 +11,7 @@ import {
   assertSourceElectronTransportSettled,
   createElectronTestDiagnostics,
   launchCodeShellElectron,
+  verifyElectronMainIdentity,
 } from "./electron-harness.mjs";
 
 let nextPid = 700000;
@@ -31,7 +32,9 @@ async function fakeLaunch(t, mode = "success") {
   let unrefs = 0,
     quits = 0,
     terminations = 0,
-    spawns = 0;
+    spawns = 0,
+    protocolReads = 0,
+    publicEvaluations = 0;
   child.unref = () => unrefs++;
   child.stdout = child.stderr = { unref() {} };
   const order = [],
@@ -70,6 +73,28 @@ async function fakeLaunch(t, mode = "success") {
   const app = {
     process: () => child,
     evaluate: async () => {
+      publicEvaluations++;
+      return "owned unrelated public evaluation";
+    },
+    close: async () => {
+      quits++;
+    },
+  };
+  const connection = { _closed: false, _sessions: new Map() };
+  const session = {
+    _connection: connection,
+    _sessionId: "",
+    _closed: false,
+    _crashed: false,
+    send: async (method, params) => {
+      protocolReads++;
+      assert.equal(method, "Runtime.evaluate");
+      assert.deepEqual(params, {
+        expression: "({pid:process.pid,ppid:process.ppid,executable:process.execPath,home:process.env.HOME})",
+        contextId: 37,
+        returnByValue: true,
+        awaitPromise: false,
+      });
       if (mode === "null rejection") throw null;
       if (mode === "undefined rejection") throw undefined;
       if (mode === "hostile rejection")
@@ -88,16 +113,39 @@ async function fakeLaunch(t, mode = "success") {
         throw error;
       }
       return {
-        pid: mode === "wrong Main" ? child.pid + 1 : child.pid,
-        ppid: process.pid,
-        executable,
-        home,
+        result: {
+          type: "object",
+          value: {
+            pid: mode === "wrong Main" ? child.pid + 1 : child.pid,
+            ppid: mode === "wrong parent" ? process.pid + 1 : process.pid,
+            executable: mode === "wrong executable" ? loader : executable,
+            home: mode === "wrong identity HOME" ? home + "-foreign" : home,
+          },
+        },
       };
     },
-    close: async () => {
-      quits++;
+  };
+  connection.rootSession = session;
+  connection._sessions.set("", session);
+  const context = { delegate: { _client: session, _contextId: 37 } };
+  const implementation = {
+    process: () => child,
+    _nodeConnection: connection,
+    _nodeSession: session,
+    _nodeExecutionContext: context,
+    _nodeElectronHandlePromise: Promise.resolve({
+      _context: context,
+      _disposed: false,
+      _objectId: "owned Main module handle",
+    }),
+  };
+  app._connection = {
+    toImpl(value) {
+      assert.equal(value, app);
+      return implementation;
     },
   };
+  if (mode === "remote client") delete app._connection.toImpl;
   const run = () =>
     launchCodeShellElectron(
       { appDir, home, mainEntry: 'owned argument "quoted" %PATH% & ^ 中文' },
@@ -147,7 +195,8 @@ async function fakeLaunch(t, mode = "success") {
     failures,
     diagnostics: diagnostics.receipt,
     observer: diagnostics,
-    state: () => ({ unrefs, quits, terminations, spawns }),
+    identityContext: { executable, home },
+    state: () => ({ unrefs, quits, terminations, spawns, protocolReads, publicEvaluations }),
   };
 }
 
@@ -263,6 +312,42 @@ test("source Windows rejects a connected Main whose PID differs from the capture
   await assert.rejects(fixture.run(), /Main PID differs/);
   assert.equal(fixture.state().terminations, 1);
   assert.equal(fixture.state().quits, 0);
+});
+
+for (const [mode, message] of [
+  ["wrong parent", /Main parent differs/],
+  ["wrong identity HOME", /Main HOME differs/],
+  ["wrong executable", /Main executable differs/],
+])
+  test(`source Windows synchronous identity retains the ${mode} gate`, async (t) => {
+    const fixture = await fakeLaunch(t, mode);
+    await assert.rejects(fixture.run(), message);
+    assert.equal(fixture.state().protocolReads, 1);
+    assert.equal(fixture.state().publicEvaluations, 0);
+    assert.equal(fixture.state().terminations, 1);
+    assert.equal(fixture.state().quits, 0);
+  });
+
+test("source Windows remote clients fail before any identity read and still use existing custody", async (t) => {
+  const fixture = await fakeLaunch(t, "remote client");
+  await assert.rejects(fixture.run(), /requires in-process Playwright/);
+  assert.equal(fixture.state().protocolReads, 0);
+  assert.equal(fixture.state().publicEvaluations, 0);
+  assert.equal(fixture.state().terminations, 1);
+  assert.equal(fixture.state().quits, 0);
+  assert.equal(fixture.diagnostics.firstError.phase, "harness-main-identity");
+});
+
+test("the same registered reader verifies later confinement without replacing public evaluation", async (t) => {
+  const fixture = await fakeLaunch(t);
+  await fixture.run();
+  const identity = await verifyElectronMainIdentity(fixture.app, fixture.identityContext);
+  assert.equal(identity.pid, fixture.child.pid);
+  assert.equal(fixture.state().protocolReads, 2);
+  assert.equal(fixture.state().publicEvaluations, 0);
+  assert.equal(await fixture.app.evaluate(() => "not invoked by this pure fake"), "owned unrelated public evaluation");
+  assert.equal(fixture.state().publicEvaluations, 1);
+  assert.equal(fixture.state().protocolReads, 2);
 });
 
 test("a late library taskkill cannot pass a settled source receipt even if exit code is zero", async (t) => {
