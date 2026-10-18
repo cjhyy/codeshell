@@ -66,8 +66,37 @@ const wer = () => ({
   eventUTC: "2026-10-17T17:45:01.9999999Z",
   reportId: guid,
 });
-const projection = (rows = [applicationRow()], windowsErrors = [wer()]) =>
-  JSON.stringify({ schemaVersion: 1, queryStatus: "ok", applicationErrors: rows, windowsErrors });
+const projection = (rows = [applicationRow()], windowsErrors = rows.length === 1 ? [wer()] : []) =>
+  // Historical unbound-WER input is intentionally schema 1; PS v2 never emits it.
+  rows.length === 0 && windowsErrors.length > 0
+    ? JSON.stringify({
+        schemaVersion: 1,
+        queryStatus: "ok",
+        applicationErrors: rows,
+        windowsErrors,
+      })
+    : JSON.stringify({
+        schemaVersion: 2,
+        queryStatus: "ok",
+        applicationErrors: rows,
+        windowsErrors,
+        accounting: {
+          windowStartUTC: birth,
+          windowEndUTC: "2026-10-17T17:45:03.0000000Z",
+          queryStartedUTC: "2026-10-17T17:45:03.1000000Z",
+          queryFinishedUTC: "2026-10-17T17:45:03.2000000Z",
+          application: {
+            providerRows: rows.length,
+            rejectedPid: 0,
+            rejectedBirth: 0,
+            rejectedPath: 0,
+            acceptedTriple: rows.length,
+            sameMicrosecondDifferentBirth: 0,
+          },
+          werQueried: rows.length === 1,
+          werProviderRows: windowsErrors.length,
+        },
+      });
 const options = () => ({
   failed: true,
   ci: { ...ci },
@@ -805,4 +834,40 @@ test("two actual isolation layers preserve only new CI metadata while provider f
   } finally {
     rmSync(root, { recursive: true });
   }
+});
+
+test("shared Main collector consumes schema 2 accounting through one injected transport", () => {
+  let calls = 0;
+  const result = collect(options(), {
+    query: () => {
+      calls++;
+      return projection();
+    },
+  });
+  assert.equal(calls, 1);
+  assert.equal(result.status, "matched");
+  assert.equal(result.queryAccounting.application.acceptedTriple, 1);
+  assert.equal(result.queryAccounting.windowStartUTC, birth);
+  assert.equal(result.queryAccounting.werQueried, true);
+  assert.equal(nativeAttempts, 0);
+});
+
+test("shared Main near-birth accounting remains unknown and malformed accounting fails closed", () => {
+  const value = JSON.parse(projection([], []));
+  Object.assign(value.accounting.application, {
+    providerRows: 1,
+    rejectedBirth: 1,
+    sameMicrosecondDifferentBirth: 1,
+  });
+  const result = collect(options(), { query: () => JSON.stringify(value) });
+  assert.equal(result.status, "unknown");
+  assert.equal(result.reason, "no-exact-application-event");
+  assert.equal(result.queryAccounting.application.sameMicrosecondDifferentBirth, 1);
+  assert.equal(Object.hasOwn(result, "applicationError"), false);
+  value.accounting.queryFinishedUTC = "malformed";
+  assert.equal(
+    collect(options(), { query: () => JSON.stringify(value) }).reason,
+    "invalid-projection",
+  );
+  assert.equal(nativeAttempts, 0);
 });
