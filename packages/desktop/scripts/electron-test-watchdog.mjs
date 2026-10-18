@@ -49,6 +49,7 @@ export function watchElectronTestProcess(child, options = {}) {
     reportFailure: fail = reportFailure,
     now = Date.now,
     onOwnedSnapshot,
+    onInitialIdentityFailure,
   } = options;
   if (!Number.isInteger(timeoutMs) || timeoutMs <= 0 || timeoutMs > 2_147_483_647)
     throw new Error("Electron test timeoutMs must be an integer between 1 and 2147483647");
@@ -74,8 +75,47 @@ export function watchElectronTestProcess(child, options = {}) {
   const root = initial.find(
     (item) => item.pid === child.pid && item.ppid === parentPid && item.birth,
   );
-  if (!root)
+  if (!root) {
+    if (typeof onInitialIdentityFailure === "function") {
+      try {
+        const safePid = (value) =>
+          Number.isSafeInteger(value) && value >= 0 && value <= 0xffff_ffff ? value : null;
+        const matches = [];
+        let matchingPidRows = 0;
+        for (const item of initial) {
+          if (item.pid !== child.pid) continue;
+          matchingPidRows++;
+          if (matches.length === 4) continue;
+          // Timestamp shape is diagnostic only; it never grants custody.
+          const birthAvailable =
+            typeof item.birth === "string" &&
+            item.birth.length <= 80 &&
+            /^(?:\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{7}Z|(?:Sun|Mon|Tue|Wed|Thu|Fri|Sat) (?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec) {1,2}\d{1,2} \d{2}:\d{2}:\d{2} \d{4})$/.test(
+              item.birth,
+            );
+          matches.push({
+            ppid: safePid(item.ppid),
+            birthAvailable,
+            birth: birthAvailable ? item.birth : null,
+          });
+        }
+        onInitialIdentityFailure({
+          schemaVersion: 1,
+          targetPid: safePid(child.pid),
+          expectedParentPid: safePid(parentPid),
+          snapshotRows: initial.length,
+          matchingPidRows,
+          matches,
+          truncated: matchingPidRows > matches.length,
+          boundary:
+            "Same initial snapshot rows only; diagnostic projection, not custody authority or process liveness.",
+        });
+      } catch {
+        // Diagnostics never change the original missing-identity failure.
+      }
+    }
     throw new Error("Cannot establish Electron test child PID, parent PID and birth identity");
+  }
   const owned = new Map([[root.pid, root]]);
   rememberOwnedProcesses(owned, initial);
   let state = "watching";
