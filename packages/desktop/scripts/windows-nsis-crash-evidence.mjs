@@ -20,7 +20,8 @@ const exactKeys = (row, keys) =>
   !Array.isArray(row) &&
   Object.keys(row).sort().join(",") === keys.sort().join(",");
 
-/** CIM supplies seven fractional digits; Date milliseconds alone lose birth identity. */
+/** Preserve the complete ISO birth representation without tolerating a one-tick
+ * mismatch. Formatting CIM microseconds with seven digits cannot restore 100ns precision. */
 export function windowsBirthToFileTime(birth) {
   if (typeof birth !== "string" || !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{7}Z$/.test(birth))
     throw Error("Invalid complete Windows birth");
@@ -52,6 +53,58 @@ function canonicalPath(value) {
   )
     throw Error("Invalid owned executable path");
   return value.toLowerCase();
+}
+
+function checkedAccounting(data, target) {
+  const value = data.accounting;
+  if (
+    !exactKeys(value, [
+      "windowStartUTC",
+      "windowEndUTC",
+      "queryStartedUTC",
+      "queryFinishedUTC",
+      "application",
+      "werQueried",
+      "werProviderRows",
+    ]) ||
+    !exactKeys(value.application, [
+      "providerRows",
+      "rejectedPid",
+      "rejectedBirth",
+      "rejectedPath",
+      "acceptedTriple",
+      "sameMicrosecondDifferentBirth",
+    ])
+  )
+    throw Error("Invalid query accounting");
+  const counts = value.application;
+  for (const count of [...Object.values(counts), value.werProviderRows]) {
+    if (!Number.isSafeInteger(count) || count < 0 || count > MAX_EVENTS)
+      throw Error("Invalid query accounting");
+  }
+  if (
+    counts.providerRows !==
+      counts.rejectedPid + counts.rejectedBirth + counts.rejectedPath + counts.acceptedTriple ||
+    counts.acceptedTriple !== data.applicationErrors.length ||
+    counts.sameMicrosecondDifferentBirth > counts.rejectedBirth ||
+    typeof value.werQueried !== "boolean" ||
+    value.werQueried !== (data.applicationErrors.length === 1) ||
+    value.werProviderRows < data.windowsErrors.length ||
+    (!value.werQueried && value.werProviderRows !== 0)
+  )
+    throw Error("Invalid query accounting");
+  const start = utcTicks(value.queryStartedUTC),
+    finish = utcTicks(value.queryFinishedUTC);
+  if (
+    utcTicks(value.windowStartUTC) !== utcTicks(target.birth) ||
+    utcTicks(value.windowEndUTC) !== utcTicks(target.observedAt) ||
+    start < utcTicks(target.observedAt) ||
+    finish < start ||
+    finish - start > BigInt(TIMEOUT) * 10_000n
+  )
+    throw Error("Invalid query accounting time");
+  // Bounded counts/time only. A same-microsecond rejection never grants identity.
+  return { ...value, application: { ...counts } };
 }
 
 function checkedTarget({ operation, installer, root, observedAt, ci }) {
@@ -118,12 +171,21 @@ export function matchNsisCrashEvents(output, target) {
     if (typeof output !== "string" || Buffer.byteLength(output) > MAX_BYTES)
       return unknown("output-limit");
     const data = JSON.parse(output.replace(/^\uFEFF/, ""));
+    const legacy = data?.schemaVersion === 1;
     if (
-      !exactKeys(data, ["schemaVersion", "queryStatus", "applicationErrors", "windowsErrors"]) ||
-      data.schemaVersion !== 1
+      // Historical schema 1 remains readable; the actual PS producer emits schema 2.
+      !exactKeys(data, [
+        "schemaVersion",
+        "queryStatus",
+        "applicationErrors",
+        "windowsErrors",
+        ...(legacy ? [] : ["accounting"]),
+      ]) ||
+      (!legacy && data.schemaVersion !== 2)
     )
       return unknown("invalid-projection");
     if (data.queryStatus !== "ok") {
+      if (!legacy && data.accounting !== null) return unknown("invalid-projection");
       return unknown(
         ["permission", "event-limit", "event-shape", "query-failed", "input-invalid"].includes(
           data.queryStatus,
@@ -136,7 +198,9 @@ export function matchNsisCrashEvents(output, target) {
       return unknown("invalid-projection");
     if (data.applicationErrors.length > MAX_EVENTS || data.windowsErrors.length > MAX_EVENTS)
       return unknown("event-limit");
-    if (data.applicationErrors.length === 0) return unknown("no-exact-application-event");
+    const accounting = legacy ? {} : { queryAccounting: checkedAccounting(data, target) };
+    if (data.applicationErrors.length === 0)
+      return { ...unknown("no-exact-application-event"), ...accounting };
     const lower = canonicalPath(target.path);
     const matched = [];
     for (const row of data.applicationErrors) {
@@ -208,6 +272,7 @@ export function matchNsisCrashEvents(output, target) {
     return {
       status: "matched",
       reason: "exact-application-error-event",
+      ...accounting,
       applicationError: event,
       windowsErrorReporting:
         related.length === 1

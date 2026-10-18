@@ -40,8 +40,35 @@ const wer = () => ({
   eventUTC: "2026-10-17T13:51:51.9999999Z",
   reportId: guid,
 });
-const projection = (applicationErrors = [row()], windowsErrors = [wer()]) =>
-  JSON.stringify({ schemaVersion: 1, queryStatus: "ok", applicationErrors, windowsErrors });
+const projection = (
+  applicationErrors = [row()],
+  windowsErrors = applicationErrors.length === 1 ? [wer()] : [],
+) =>
+  // Historical unbound-WER input is intentionally schema 1; PS v2 never emits it.
+  applicationErrors.length === 0 && windowsErrors.length > 0
+    ? JSON.stringify({ schemaVersion: 1, queryStatus: "ok", applicationErrors, windowsErrors })
+    : JSON.stringify({
+        schemaVersion: 2,
+        queryStatus: "ok",
+        applicationErrors,
+        windowsErrors,
+        accounting: {
+          windowStartUTC: target.birth,
+          windowEndUTC: target.observedAt,
+          queryStartedUTC: "2026-10-17T13:51:52.1000000Z",
+          queryFinishedUTC: "2026-10-17T13:51:52.2000000Z",
+          application: {
+            providerRows: applicationErrors.length,
+            rejectedPid: 0,
+            rejectedBirth: 0,
+            rejectedPath: 0,
+            acceptedTriple: applicationErrors.length,
+            sameMicrosecondDifferentBirth: 0,
+          },
+          werQueried: applicationErrors.length === 1,
+          werProviderRows: windowsErrors.length,
+        },
+      });
 const privateEnvironment = {
   HOME: "D:\\owned\\private-build\\home",
   USERPROFILE: "D:\\owned\\private-build\\home",
@@ -525,3 +552,178 @@ for (const mode of ["match", "unknown", "query-throw", "write-throw", "other-sta
     );
   });
 }
+
+test("schema 2 requires accounting while historical schema 1 remains explicitly readable", () => {
+  const current = JSON.parse(projection());
+  const result = matchNsisCrashEvents(JSON.stringify(current), target);
+  assert.equal(result.status, "matched");
+  assert.deepEqual(result.queryAccounting, current.accounting);
+  const historical = { ...current, schemaVersion: 1 };
+  delete historical.accounting;
+  const oldResult = matchNsisCrashEvents(JSON.stringify(historical), target);
+  assert.equal(oldResult.status, "matched");
+  assert.equal(Object.hasOwn(oldResult, "queryAccounting"), false);
+  delete current.accounting;
+  assert.equal(matchNsisCrashEvents(JSON.stringify(current), target).reason, "invalid-projection");
+});
+
+test("zero visible provider rows and rejected rows stay unknown with distinct bounded accounting", () => {
+  const empty = JSON.parse(projection([], []));
+  const rejected = JSON.parse(projection([], []));
+  Object.assign(rejected.accounting.application, {
+    providerRows: 3,
+    rejectedPid: 1,
+    rejectedBirth: 1,
+    rejectedPath: 1,
+    sameMicrosecondDifferentBirth: 1,
+  });
+  for (const value of [empty, rejected]) {
+    const result = matchNsisCrashEvents(JSON.stringify(value), target);
+    assert.equal(result.status, "unknown");
+    assert.equal(result.reason, "no-exact-application-event");
+    assert.deepEqual(result.queryAccounting, value.accounting);
+    assert.equal(Object.hasOwn(result, "applicationError"), false);
+  }
+  assert.notDeepEqual(empty.accounting.application, rejected.accounting.application);
+});
+
+test("same floor-microsecond advisory never accepts a different FILETIME tick", () => {
+  const ticks = BigInt(fileTime);
+  assert.equal((ticks + 1n) / 10n, ticks / 10n);
+  assert.notEqual(ticks + 1n, ticks);
+  const value = JSON.parse(projection([], []));
+  Object.assign(value.accounting.application, {
+    providerRows: 1,
+    rejectedBirth: 1,
+    sameMicrosecondDifferentBirth: 1,
+  });
+  const result = matchNsisCrashEvents(JSON.stringify(value), target);
+  assert.equal(result.reason, "no-exact-application-event");
+  assert.equal(result.queryAccounting.application.sameMicrosecondDifferentBirth, 1);
+  assert.equal(Object.hasOwn(result, "applicationError"), false);
+  assert.equal(
+    matchNsisCrashEvents(
+      projection([{ ...row(), processCreationTime: `0x${(ticks + 1n).toString(16)}` }]),
+      target,
+    ).reason,
+    "identity-mismatch",
+  );
+});
+
+test("schema 2 accounting rejects extra keys, invalid counts, inconsistent totals and invalid UTC", () => {
+  for (const change of [
+    (v) => {
+      v.accounting = null;
+    },
+    (v) => {
+      v.accounting.private = "not public";
+    },
+    (v) => {
+      v.accounting.application.private = 1;
+    },
+    (v) => {
+      v.accounting.application.providerRows = 9;
+    },
+    (v) => {
+      v.accounting.application.rejectedPid = -1;
+    },
+    (v) => {
+      v.accounting.application.rejectedPath = 0.5;
+    },
+    (v) => {
+      v.accounting.application.rejectedBirth = true;
+    },
+    (v) => {
+      v.accounting.application.acceptedTriple = 0;
+    },
+    (v) => {
+      v.accounting.application.sameMicrosecondDifferentBirth = 1;
+    },
+    (v) => {
+      v.accounting.werQueried = false;
+    },
+    (v) => {
+      v.accounting.werProviderRows = 0;
+    },
+    (v) => {
+      v.applicationErrors = [];
+      v.windowsErrors = [wer()];
+      Object.assign(v.accounting.application, { providerRows: 0, acceptedTriple: 0 });
+      v.accounting.werQueried = false;
+      v.accounting.werProviderRows = 1;
+    },
+    (v) => {
+      v.accounting.windowStartUTC = target.observedAt;
+    },
+    (v) => {
+      v.accounting.windowEndUTC = birth;
+    },
+    (v) => {
+      v.accounting.queryStartedUTC = birth;
+    },
+    (v) => {
+      v.accounting.queryFinishedUTC = target.observedAt;
+    },
+    (v) => {
+      v.accounting.queryFinishedUTC = "2026-10-17T13:52:23.0000000Z";
+    },
+    (v) => {
+      v.accounting.queryStartedUTC = "invalid";
+    },
+    (v) => {
+      v.accounting.queryFinishedUTC = "2026-10-17T13:51:52.2Z";
+    },
+  ]) {
+    const value = JSON.parse(projection());
+    change(value);
+    assert.equal(matchNsisCrashEvents(JSON.stringify(value), target).reason, "invalid-projection");
+  }
+});
+
+test("schema 2 query faults keep their original unknown reason and cannot attach successful accounting", () => {
+  for (const queryStatus of [
+    "permission",
+    "event-limit",
+    "event-shape",
+    "query-failed",
+    "input-invalid",
+  ]) {
+    const value = {
+      schemaVersion: 2,
+      queryStatus,
+      applicationErrors: [],
+      windowsErrors: [],
+      accounting: null,
+    };
+    assert.equal(matchNsisCrashEvents(JSON.stringify(value), target).reason, queryStatus);
+    value.accounting = JSON.parse(projection()).accounting;
+    assert.equal(matchNsisCrashEvents(JSON.stringify(value), target).reason, "invalid-projection");
+  }
+});
+
+test("PS accounting retains one transport, original exact triple and exact decimal rejection arithmetic", () => {
+  const ps = readFileSync(new URL("./windows-nsis-crash-evidence.ps1", import.meta.url), "utf8");
+  assert.match(ps, /schemaVersion = 2/);
+  assert.equal((ps.match(/Get-WinEvent /g) ?? []).length, 1);
+  assert.match(ps, /-MaxEvents 9 -ErrorAction Stop/);
+  assert.match(
+    ps,
+    /\$eventPid -ne \$pidExpected -or \$eventBirth -ne \$birthExpected -or -not \[string\]::Equals\(\$fields.AppPath, \$target.path/,
+  );
+  assert.equal((ps.match(/\[decimal\]::Remainder/g) ?? []).length, 2);
+  assert.doesNotMatch(
+    ps,
+    /\$eventBirth\s*\/|\$birthExpected\s*\/|Start-Sleep|Get-Process|Get-CimInstance/,
+  );
+  assert.ok(ps.indexOf("$counts.sameMicrosecondDifferentBirth++") < ps.indexOf("      continue"));
+  let calls = 0;
+  const result = collect(options(), {
+    query: () => {
+      calls++;
+      return projection();
+    },
+  });
+  assert.equal(calls, 1);
+  assert.equal(result.status, "matched");
+  assert.equal(result.queryAccounting.application.acceptedTriple, 1);
+});
