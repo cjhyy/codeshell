@@ -197,12 +197,14 @@ export async function verifyElectronMainIdentity(
     "Actual Electron child PID is required",
   );
   const read = windowsSourceMainIdentityReaders.get(application);
-  const identity = read ? await read() : await application.evaluate(() => ({
-    pid: process.pid,
-    ppid: process.ppid,
-    executable: process.execPath,
-    home: process.env.HOME,
-  }));
+  const identity = read
+    ? await read()
+    : await application.evaluate(() => ({
+        pid: process.pid,
+        ppid: process.ppid,
+        executable: process.execPath,
+        home: process.env.HOME,
+      }));
   assert(identity.pid === child.pid, "Connected Main PID differs from the direct captured child");
   assert(
     identity.ppid === parentPid,

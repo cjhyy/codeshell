@@ -10,7 +10,12 @@ import {
 function identityFixture() {
   const captured = { pid: 101 };
   const calls = [];
-  const value = { pid: 101, ppid: 99, executable: "C:\\owned\\electron.exe", home: "C:\\owned\\home" };
+  const value = {
+    pid: 101,
+    ppid: 99,
+    executable: "C:\\owned\\electron.exe",
+    home: "C:\\owned\\home",
+  };
   const connection = { _closed: false, _sessions: new Map() };
   const session = {
     _connection: connection,
@@ -46,11 +51,24 @@ function identityFixture() {
     },
   };
   const f = {
-    captured, calls, value, connection, session, context, handle, implementation, application,
+    captured,
+    calls,
+    value,
+    connection,
+    session,
+    context,
+    handle,
+    implementation,
+    application,
     response: () => ({ result: { type: "object", value } }),
-    reader: (extra = {}) => createWindowsSourceMainIdentityReader({
-      application, captured, playwrightVersion: "1.64.0", platform: "win32", ...extra,
-    }),
+    reader: (extra = {}) =>
+      createWindowsSourceMainIdentityReader({
+        application,
+        captured,
+        playwrightVersion: "1.64.0",
+        platform: "win32",
+        ...extra,
+      }),
   };
   return f;
 }
@@ -61,16 +79,19 @@ test("synchronous identity borrows one existing Main session and sends only a fi
   const actual = await read();
   assert.deepEqual(actual, f.value);
   assert.notEqual(actual, f.value);
-  assert.deepEqual(f.calls, [{
-    method: "Runtime.evaluate",
-    receiver: f.session,
-    params: {
-      expression: "({pid:process.pid,ppid:process.ppid,executable:process.execPath,home:process.env.HOME})",
-      contextId: 17,
-      returnByValue: true,
-      awaitPromise: false,
+  assert.deepEqual(f.calls, [
+    {
+      method: "Runtime.evaluate",
+      receiver: f.session,
+      params: {
+        expression:
+          "({pid:process.pid,ppid:process.ppid,executable:process.execPath,home:process.env.HOME})",
+        contextId: 17,
+        returnByValue: true,
+        awaitPromise: false,
+      },
     },
-  }]);
+  ]);
   f.value.home = "C:\\changed\\home";
   assert.equal(actual.home, "C:\\owned\\home", "Returned identity is copied");
 });
@@ -79,10 +100,22 @@ test("synchronous identity rejects unsupported versions, remote clients and fore
   for (const mutate of [
     (f) => f.reader({ playwrightVersion: "1.65.0" }),
     (f) => f.reader({ platform: "linux" }),
-    (f) => { delete f.application._connection.toImpl; return f.reader(); },
-    (f) => { f.implementation.process = () => ({ pid: 101 }); return f.reader(); },
-    (f) => { f.application.process = () => ({ pid: 101 }); return f.reader(); },
-    (f) => { f.implementation._nodeElectronHandlePromise = null; return f.reader(); },
+    (f) => {
+      delete f.application._connection.toImpl;
+      return f.reader();
+    },
+    (f) => {
+      f.implementation.process = () => ({ pid: 101 });
+      return f.reader();
+    },
+    (f) => {
+      f.application.process = () => ({ pid: 101 });
+      return f.reader();
+    },
+    (f) => {
+      f.implementation._nodeElectronHandlePromise = null;
+      return f.reader();
+    },
   ]) {
     const f = identityFixture();
     await assert.rejects(mutate(f));
@@ -92,22 +125,54 @@ test("synchronous identity rejects unsupported versions, remote clients and fore
 
 test("synchronous identity refuses changed protocol and context bindings without reacquiring or retrying", async () => {
   for (const mutate of [
-    (f) => { f.application._connection = {}; },
-    (f) => { f.application._connection.toImpl = () => f.implementation; },
-    (f) => { f.implementation._nodeConnection = {}; },
-    (f) => { f.connection.rootSession = {}; },
-    (f) => { f.connection._sessions.set("", {}); },
-    (f) => { f.session._connection = {}; },
-    (f) => { f.session._sessionId = "foreign"; },
-    (f) => { f.connection._closed = true; },
-    (f) => { f.session._closed = true; },
-    (f) => { f.session._crashed = true; },
-    (f) => { f.implementation._nodeExecutionContext = { delegate: f.context.delegate }; },
-    (f) => { f.context.delegate = { _client: f.session, _contextId: 17 }; },
-    (f) => { f.context.delegate._contextId = 18; },
-    (f) => { f.context.delegate._client = {}; },
-    (f) => { f.handle._disposed = true; },
-    (f) => { f.handle._context = {}; },
+    (f) => {
+      f.application._connection = {};
+    },
+    (f) => {
+      f.application._connection.toImpl = () => f.implementation;
+    },
+    (f) => {
+      f.implementation._nodeConnection = {};
+    },
+    (f) => {
+      f.connection.rootSession = {};
+    },
+    (f) => {
+      f.connection._sessions.set("", {});
+    },
+    (f) => {
+      f.session._connection = {};
+    },
+    (f) => {
+      f.session._sessionId = "foreign";
+    },
+    (f) => {
+      f.connection._closed = true;
+    },
+    (f) => {
+      f.session._closed = true;
+    },
+    (f) => {
+      f.session._crashed = true;
+    },
+    (f) => {
+      f.implementation._nodeExecutionContext = { delegate: f.context.delegate };
+    },
+    (f) => {
+      f.context.delegate = { _client: f.session, _contextId: 17 };
+    },
+    (f) => {
+      f.context.delegate._contextId = 18;
+    },
+    (f) => {
+      f.context.delegate._client = {};
+    },
+    (f) => {
+      f.handle._disposed = true;
+    },
+    (f) => {
+      f.handle._context = {};
+    },
   ]) {
     const f = identityFixture();
     const read = await f.reader();
@@ -126,16 +191,32 @@ test("synchronous identity refuses changed protocol and context bindings without
 });
 
 test("synchronous identity rejects exceptions and malformed or remote-object responses after one read", async () => {
-  const getter = Object.defineProperty({}, "result", { get() { throw Error("must not run getter"); } });
+  const getter = Object.defineProperty({}, "result", {
+    get() {
+      throw Error("must not run getter");
+    },
+  });
   for (const response of [
     {},
     { exceptionDetails: { text: "owned error" }, result: { type: "undefined" } },
     { result: { type: "object", subtype: "promise", objectId: "remote" } },
     { result: { type: "object", objectId: "remote", value: {} } },
     { result: { type: "object", value: null } },
-    { result: { type: "object", value: { pid: 101, ppid: 99, executable: "C:\\owned", home: "C:\\owned", extra: true } } },
-    { result: { type: "object", value: { pid: 101, ppid: 99, executable: "C:\\owned", home: "" } } },
-    { result: { type: "object", value: { pid: 0, ppid: 99, executable: "C:\\owned", home: "C:\\owned" } } },
+    {
+      result: {
+        type: "object",
+        value: { pid: 101, ppid: 99, executable: "C:\\owned", home: "C:\\owned", extra: true },
+      },
+    },
+    {
+      result: { type: "object", value: { pid: 101, ppid: 99, executable: "C:\\owned", home: "" } },
+    },
+    {
+      result: {
+        type: "object",
+        value: { pid: 0, ppid: 99, executable: "C:\\owned", home: "C:\\owned" },
+      },
+    },
     getter,
   ]) {
     const f = identityFixture();
@@ -150,7 +231,9 @@ test("synchronous identity propagates the original protocol failure once without
   const f = identityFixture();
   const read = await f.reader();
   const original = Error("owned protocol rejection");
-  f.response = () => { throw original; };
+  f.response = () => {
+    throw original;
+  };
   await assert.rejects(read(), (error) => error === original);
   assert.equal(f.calls.length, 1);
 });
@@ -158,7 +241,9 @@ test("synchronous identity propagates the original protocol failure once without
 test("synchronous identity waits for the existing module handle and refuses a different resolved context", async () => {
   const f = identityFixture();
   let resolveHandle;
-  f.implementation._nodeElectronHandlePromise = new Promise((resolve) => { resolveHandle = resolve; });
+  f.implementation._nodeElectronHandlePromise = new Promise((resolve) => {
+    resolveHandle = resolve;
+  });
   const pending = f.reader();
   assert.equal(f.calls.length, 0);
   f.implementation._nodeExecutionContext = { delegate: f.context.delegate };

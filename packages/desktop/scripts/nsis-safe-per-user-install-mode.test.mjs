@@ -253,7 +253,9 @@ test("both early assisted hooks precede page expansion and preserve the existing
       ['!include "nsis-safe-per-user-install-mode.nsh"', "!insertmacro MUI_UNPAGE_WELCOME"],
     ],
   ]) {
-    const matches = [...hook.matchAll(new RegExp(`!macro ${name}\\r?\\n([\\s\\S]*?)!macroend`, "gu"))];
+    const matches = [
+      ...hook.matchAll(new RegExp(`!macro ${name}\\r?\\n([\\s\\S]*?)!macroend`, "gu")),
+    ];
     assert.equal(matches.length, 1);
     assert.deepEqual(lines(matches[0][1]), body);
   }
@@ -286,9 +288,15 @@ test("both early assisted hooks precede page expansion and preserve the existing
 test("unsupported modes stop at the root without rejecting the required all-users helper", () => {
   const hook = read("../build/nsis-uninstaller-init.nsh");
   const firstHook = hook.indexOf("!macro customWelcomePage");
-  for (const flag of ["ONE_CLICK", "INSTALL_MODE_PER_ALL_USERS", "removeDefaultUninstallWelcomePage"]) {
+  for (const flag of [
+    "ONE_CLICK",
+    "INSTALL_MODE_PER_ALL_USERS",
+    "removeDefaultUninstallWelcomePage",
+  ]) {
     const matches = [
-      ...hook.matchAll(new RegExp(`!ifdef ${flag}\\r?\\n\\s*!error "[^"\\r\\n]+"\\r?\\n!endif`, "gu")),
+      ...hook.matchAll(
+        new RegExp(`!ifdef ${flag}\\r?\\n\\s*!error "[^"\\r\\n]+"\\r?\\n!endif`, "gu"),
+      ),
     ];
     assert.equal(matches.length, 1);
     assert.ok(matches[0].index < firstHook);
@@ -333,12 +341,18 @@ test("the compacting macro-buffer model retains early cursors and exposes the hi
   for (const name of ["customWelcomePage", "customUnWelcomePage"]) {
     const active = entries.find((entry) => entry.name === name);
     assert.ok(active && active.offset + active.bytes.length <= removed.offset);
-    assert.deepEqual(compacted.subarray(active.offset, active.offset + active.bytes.length), active.bytes);
+    assert.deepEqual(
+      compacted.subarray(active.offset, active.offset + active.bytes.length),
+      active.bytes,
+    );
   }
   for (const name of ["PAGE_INSTALL_MODE", "FUNCTION_INSTALL_MODE_PAGE_FUNCTION"]) {
     const active = entries.find((entry) => entry.name === name);
     assert.ok(active && active.offset > removed.offset);
-    assert.notDeepEqual(compacted.subarray(active.offset, active.offset + active.bytes.length), active.bytes);
+    assert.notDeepEqual(
+      compacted.subarray(active.offset, active.offset + active.bytes.length),
+      active.bytes,
+    );
   }
 });
 

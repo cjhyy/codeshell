@@ -90,7 +90,8 @@ async function fakeLaunch(t, mode = "success") {
       protocolReads++;
       assert.equal(method, "Runtime.evaluate");
       assert.deepEqual(params, {
-        expression: "({pid:process.pid,ppid:process.ppid,executable:process.execPath,home:process.env.HOME})",
+        expression:
+          "({pid:process.pid,ppid:process.ppid,executable:process.execPath,home:process.env.HOME})",
         contextId: 37,
         returnByValue: true,
         awaitPromise: false,
@@ -345,7 +346,10 @@ test("the same registered reader verifies later confinement without replacing pu
   assert.equal(identity.pid, fixture.child.pid);
   assert.equal(fixture.state().protocolReads, 2);
   assert.equal(fixture.state().publicEvaluations, 0);
-  assert.equal(await fixture.app.evaluate(() => "not invoked by this pure fake"), "owned unrelated public evaluation");
+  assert.equal(
+    await fixture.app.evaluate(() => "not invoked by this pure fake"),
+    "owned unrelated public evaluation",
+  );
   assert.equal(fixture.state().publicEvaluations, 1);
   assert.equal(fixture.state().protocolReads, 2);
 });

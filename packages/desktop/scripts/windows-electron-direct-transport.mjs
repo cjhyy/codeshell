@@ -28,9 +28,16 @@ export async function createWindowsSourceMainIdentityReader({
   platform = process.platform,
 }) {
   assert.equal(platform, "win32", "Synchronous Main identity is Windows source-only");
-  assert.equal(installedVersion, reviewedPlaywrightElectronVersion, "Unreviewed installed Playwright identity version");
+  assert.equal(
+    installedVersion,
+    reviewedPlaywrightElectronVersion,
+    "Unreviewed installed Playwright identity version",
+  );
   assert.equal(playwrightVersion, installedVersion, "Unreviewed Playwright identity version");
-  assert.ok(Number.isSafeInteger(captured?.pid) && captured.pid > 0, "Captured Main PID is required");
+  assert.ok(
+    Number.isSafeInteger(captured?.pid) && captured.pid > 0,
+    "Captured Main PID is required",
+  );
   const client = application?._connection;
   const toImpl = client?.toImpl;
   assert.equal(typeof toImpl, "function", "Windows identity requires in-process Playwright");
@@ -39,12 +46,23 @@ export async function createWindowsSourceMainIdentityReader({
   const serverProcess = implementation?.process;
   assert.equal(typeof publicProcess, "function", "Public Main process reference is missing");
   assert.equal(typeof serverProcess, "function", "Server Main process reference is missing");
-  assert.equal(publicProcess.call(application), captured, "Public Main differs from captured child");
-  assert.equal(serverProcess.call(implementation), captured, "Server Main differs from captured child");
+  assert.equal(
+    publicProcess.call(application),
+    captured,
+    "Public Main differs from captured child",
+  );
+  assert.equal(
+    serverProcess.call(implementation),
+    captured,
+    "Server Main differs from captured child",
+  );
   const connection = implementation._nodeConnection;
   const session = implementation._nodeSession;
   const handlePromise = implementation._nodeElectronHandlePromise;
-  assert.ok(handlePromise instanceof Promise && typeof handlePromise.then === "function", "Main context handle promise is missing");
+  assert.ok(
+    handlePromise instanceof Promise && typeof handlePromise.then === "function",
+    "Main context handle promise is missing",
+  );
   assert.ok(connection && session, "Existing Main protocol connection is missing");
   const send = session.send;
   assert.equal(typeof send, "function", "Existing Main protocol send is missing");
@@ -59,8 +77,16 @@ export async function createWindowsSourceMainIdentityReader({
     assert.equal(toImpl.call(client, application), implementation, "Main implementation changed");
     assert.equal(application.process, publicProcess, "Public Main process method changed");
     assert.equal(implementation.process, serverProcess, "Server Main process method changed");
-    assert.equal(publicProcess.call(application), captured, "Public Main differs from captured child");
-    assert.equal(serverProcess.call(implementation), captured, "Server Main differs from captured child");
+    assert.equal(
+      publicProcess.call(application),
+      captured,
+      "Public Main differs from captured child",
+    );
+    assert.equal(
+      serverProcess.call(implementation),
+      captured,
+      "Server Main differs from captured child",
+    );
     assert.equal(implementation._nodeConnection, connection, "Main protocol connection changed");
     assert.equal(implementation._nodeSession, session, "Main protocol session changed");
     assert.equal(connection.rootSession, session, "Main protocol root session changed");
@@ -72,44 +98,82 @@ export async function createWindowsSourceMainIdentityReader({
     assert.equal(session._closed, false, "Main protocol session is closed");
     assert.equal(session._crashed, false, "Main protocol session crashed");
     assert.equal(session.send, send, "Main protocol send changed");
-    assert.equal(implementation._nodeElectronHandlePromise, handlePromise, "Main handle promise changed");
+    assert.equal(
+      implementation._nodeElectronHandlePromise,
+      handlePromise,
+      "Main handle promise changed",
+    );
     assert.equal(implementation._nodeExecutionContext, context, "Default Main context changed");
     assert.equal(context.delegate, delegate, "Default Main context delegate changed");
     assert.equal(delegate._client, session, "Default Main context has another session");
     assert.equal(delegate._contextId, contextId, "Default Main context ID changed");
     assert.equal(handle?._context, context, "Main module handle has another context");
     assert.equal(handle?._disposed, false, "Main module handle was disposed");
-    assert.ok(typeof handle?._objectId === "string" && handle._objectId.length > 0, "Main module handle is missing");
+    assert.ok(
+      typeof handle?._objectId === "string" && handle._objectId.length > 0,
+      "Main module handle is missing",
+    );
   };
   sameBinding();
   const data = (value, label) => {
-    assert.ok(value && Object.getPrototypeOf(value) === Object.prototype, `${label} must be plain data`);
+    assert.ok(
+      value && Object.getPrototypeOf(value) === Object.prototype,
+      `${label} must be plain data`,
+    );
     const fields = Object.getOwnPropertyDescriptors(value);
-    assert.ok(Reflect.ownKeys(fields).every((key) => typeof key === "string" && "value" in fields[key]), `${label} must contain own data fields`);
+    assert.ok(
+      Reflect.ownKeys(fields).every((key) => typeof key === "string" && "value" in fields[key]),
+      `${label} must contain own data fields`,
+    );
     return fields;
   };
   return async () => {
     sameBinding();
     const response = await send.call(session, "Runtime.evaluate", {
-      expression: "({pid:process.pid,ppid:process.ppid,executable:process.execPath,home:process.env.HOME})",
+      expression:
+        "({pid:process.pid,ppid:process.ppid,executable:process.execPath,home:process.env.HOME})",
       contextId,
       returnByValue: true,
       awaitPromise: false,
     });
     sameBinding();
     const envelope = data(response, "Main identity response");
-    assert.deepEqual(Object.keys(envelope), ["result"], "Main identity evaluation raised an exception or malformed response");
+    assert.deepEqual(
+      Object.keys(envelope),
+      ["result"],
+      "Main identity evaluation raised an exception or malformed response",
+    );
     const remote = data(envelope.result.value, "Main identity remote result");
-    assert.ok(Object.keys(remote).every((key) => ["type", "value", "className", "description"].includes(key)), "Main identity must be returned by value");
+    assert.ok(
+      Object.keys(remote).every((key) =>
+        ["type", "value", "className", "description"].includes(key),
+      ),
+      "Main identity must be returned by value",
+    );
     assert.equal(remote.type?.value, "object", "Main identity result is not an object");
     const value = remote.value?.value;
     const fields = data(value, "Main identity value");
-    assert.deepEqual(Object.keys(fields).sort(), ["executable", "home", "pid", "ppid"], "Main identity must have exactly four fields");
+    assert.deepEqual(
+      Object.keys(fields).sort(),
+      ["executable", "home", "pid", "ppid"],
+      "Main identity must have exactly four fields",
+    );
     for (const key of ["pid", "ppid"])
-      assert.ok(Number.isSafeInteger(fields[key].value) && fields[key].value > 0, `Main identity ${key} is invalid`);
+      assert.ok(
+        Number.isSafeInteger(fields[key].value) && fields[key].value > 0,
+        `Main identity ${key} is invalid`,
+      );
     for (const key of ["executable", "home"])
-      assert.ok(typeof fields[key].value === "string" && fields[key].value.length > 0 && fields[key].value.length <= 4096 && !/[\r\n\0]/.test(fields[key].value), `Main identity ${key} is invalid`);
-    return Object.fromEntries(["pid", "ppid", "executable", "home"].map((key) => [key, fields[key].value]));
+      assert.ok(
+        typeof fields[key].value === "string" &&
+          fields[key].value.length > 0 &&
+          fields[key].value.length <= 4096 &&
+          !/[\r\n\0]/.test(fields[key].value),
+        `Main identity ${key} is invalid`,
+      );
+    return Object.fromEntries(
+      ["pid", "ppid", "executable", "home"].map((key) => [key, fields[key].value]),
+    );
   };
 }
 

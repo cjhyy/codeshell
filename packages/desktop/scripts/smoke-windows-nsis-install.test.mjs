@@ -596,7 +596,6 @@ test("actual outer catch preserves first error before one specific absence diagn
   );
 });
 
-
 test("production replacement forwards the exact role observer without a desktop collector wrapper", async () => {
   const source = (
     await readFile(new URL("./smoke-windows-nsis-install.mjs", import.meta.url), "utf8")
