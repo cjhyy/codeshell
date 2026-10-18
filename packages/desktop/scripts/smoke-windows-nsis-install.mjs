@@ -500,6 +500,9 @@ export async function runWindowsNsisAcceptance(args) {
       await absent(join(desktop, "build", name));
     const nsisUninstallerInit = join(desktop, "build", pkg.build.nsis.include);
     const nsisUninstallerInitIdentity = await plainFile(nsisUninstallerInit);
+    const nsisPerUserInstallModeName = "nsis-safe-per-user-install-mode.nsh";
+    const nsisPerUserInstallMode = join(desktop, "build", nsisPerUserInstallModeName);
+    const nsisPerUserInstallModeIdentity = await plainFile(nsisPerUserInstallMode);
     const observer = join(here, "windows-nsis-observe.ps1");
     const systemRoot = process.env.SystemRoot ?? process.env.SYSTEMROOT;
     assert.match(systemRoot ?? "", /^[a-z]:\\[^\r\n\0]+$/i);
@@ -527,6 +530,10 @@ export async function runWindowsNsisAcceptance(args) {
       nsisUninstallerInit: {
         include: pkg.build.nsis.include,
         ...nsisUninstallerInitIdentity,
+      },
+      nsisPerUserInstallMode: {
+        include: nsisPerUserInstallModeName,
+        ...nsisPerUserInstallModeIdentity,
       },
       directoryBuildReceiptSHA256: sha256(await readFile(options.buildReceipt)),
       directoryBuild: original,
@@ -604,11 +611,24 @@ export async function runWindowsNsisAcceptance(args) {
       "templates/nsis/include/installUtil.nsh",
       "templates/nsis/uninstaller.nsh",
     ];
+    const perUserModeVendor = [
+      "templates/nsis/multiUser.nsh",
+      "templates/nsis/multiUserUi.nsh",
+      "templates/nsis/assistedInstaller.nsh",
+    ];
     report.toolchain = {
       appBuilder: "25.1.8",
       sha256: Object.fromEntries(
         await Promise.all(
           vendor.map(async (file) => [file, sha256(await readFile(join(library, file)))]),
+        ),
+      ),
+      perUserModeSourceSHA256: Object.fromEntries(
+        await Promise.all(
+          perUserModeVendor.map(async (file) => [
+            file,
+            sha256(await readFile(join(library, file))),
+          ]),
         ),
       ),
     };
@@ -632,6 +652,12 @@ export async function runWindowsNsisAcceptance(args) {
       ),
     );
     assert.deepEqual(await plainFile(nsisUninstallerInit), nsisUninstallerInitIdentity);
+    assert.deepEqual(await plainFile(nsisPerUserInstallMode), nsisPerUserInstallModeIdentity);
+    for (const file of perUserModeVendor)
+      assert.equal(
+        sha256(await readFile(join(library, file))),
+        report.toolchain.perUserModeSourceSHA256[file],
+      );
     assert.equal((await plainFile(builderCli)).sha256, report.toolchain.builderCli.sha256);
     report.phase = "payload-identity";
     checkpoint("stage-start");
