@@ -304,7 +304,11 @@ function App() {
   const { sessionIndices, setSessionIndices, archivedPetSessionIds } = useSessionIndices();
   const locallyCreatedSessionIdsRef = useRef<Set<string>>(new Set());
   const pendingAttachmentRootsRef = useRef(
-    new Map<string, { projectId: string; rootId: string; cwd: string }>(),
+    new Map<
+      string,
+      | { kind: "project"; projectId: string; rootId: string; cwd: string }
+      | { kind: "noRepo"; cwd: string }
+    >(),
   );
 
   /**
@@ -668,6 +672,27 @@ function App() {
           (candidate) => candidate.id === liveBucket.sessionId,
         );
         const pin = pendingAttachmentRootsRef.current.get(liveBucket.sessionId);
+        if (pin?.kind === "noRepo") {
+          if (
+            projectId === null &&
+            summary?.pendingFirstRun === true &&
+            summary.engineSessionId === undefined &&
+            !summary.archived &&
+            locallyCreatedSessionIdsRef.current.has(liveBucket.sessionId) &&
+            noRepoCwdRef.current === pin.cwd &&
+            sessionUiAuthority.configurationAvailable &&
+            "noRepo" in sessionUiAuthority.configurationTarget &&
+            sessionUiAuthority.configurationTarget.noRepo === true &&
+            sessionUiAuthority.projectId === null &&
+            sessionUiAuthority.rootStatus === "loading" &&
+            sessionUiAuthority.mainRootId === null &&
+            sessionUiAuthority.mainRoot === pin.cwd &&
+            sessionUiAuthority.workspaceRoot === pin.cwd
+          ) {
+            return { cwd: pin.cwd, sessionId: liveBucket.sessionId };
+          }
+          return null;
+        }
         const project = loadProjects().find((candidate) => candidate.id === projectId);
         const root = project?.roots.find((candidate) => candidate.id === project.primaryRootId);
         if (
@@ -720,10 +745,26 @@ function App() {
       sessionUiAuthority.workspaceRoot === cwd
     ) {
       pendingAttachmentRootsRef.current.set(sessionId, {
+        kind: "project",
         projectId: registered.id,
         rootId: root.id,
         cwd,
       });
+    } else if (
+      projectId === null &&
+      noRepoCwdRef.current === cwd &&
+      sessionUiAuthority.configurationAvailable &&
+      "noRepo" in sessionUiAuthority.configurationTarget &&
+      sessionUiAuthority.configurationTarget.noRepo === true &&
+      sessionUiAuthority.projectId === null &&
+      sessionUiAuthority.rootStatus === "ok" &&
+      sessionUiAuthority.mainRootId === null &&
+      sessionUiAuthority.mainRoot === cwd &&
+      sessionUiAuthority.workspaceRoot === cwd
+    ) {
+      // Main supplies this cwd; the token only continues this UI's own draft
+      // staging. It neither creates a Core Session nor proves its absence.
+      pendingAttachmentRootsRef.current.set(sessionId, { kind: "noRepo", cwd });
     }
     const nextBucket = bucketKey(projectId, sessionId);
     activeBucketRef.current = nextBucket;
