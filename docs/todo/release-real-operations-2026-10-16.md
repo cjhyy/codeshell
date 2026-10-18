@@ -8,15 +8,15 @@ The release target is macOS, Windows, Linux Desktop and Web. Authorized native C
 has now executed; its passing and incomplete boundaries are recorded below.
 Cross-platform fixture tests alone are not native acceptance.
 
-The latest completed run, CI39, **FAILED** overall: Web, macOS, Linux and the
-independent Windows NSIS job succeed; the Windows matrix fails during its
-acceptance fixture's packaged UI launch. Main PID 5976 exits with
-`3221225477` (`0xC0000005`) before the SDK launch returns, with zero packaged UI
-operations and HOME retained. The cause remains unknown; ordinary startup
-without the harness was not established. Independent NSIS separately passes
-16 phases, six normal controller roots and 26 UI operations; it does not
-overwrite the matrix failure or establish a repair or release readiness.
-See the [CI39 actual results](#ci39--completed-results-and-windows-packaged-ui-launch-failure).
+The latest completed run, CI40 (`39104976943`, head `01757d1796c6d08b4e81423632eace07f508d281`), **FAILED** overall.
+Web, macOS and Linux pass their recorded scoped audits. The Windows matrix fails
+its 20-second first-window wait after SDK readiness; Main PID 1152 later exits
+normally during failure cleanup and HOME is removed, but zero UI operations pass.
+Independent Windows NSIS fails initial uninstall child identity acquisition after
+13 completed phases. Its late zero exit cannot establish birth/custody or a full
+16/6/26 pass. CI39's unexplained `0xC0000005` remains a separate retained failure;
+these new failure frontiers establish neither recurrence nor repair.
+See the [CI40 actual results](#ci40--completed-results-and-two-windows-acceptance-failures).
 Earlier failures and their preparation checkpoints remain retained.
 
 CI35 failed its original Windows matrix during initial installation: Setup exits
@@ -4769,3 +4769,119 @@ Electron、安装器、PowerShell、原生进程查询、Keychain 或真实 insp
 独立 operation 33、NSIS 118 及原生 83/12、draft 3/1、Goal 1、NSIS 16/6/26
 各自保留，不能混计。此准备记录不包含 CI40 run/job/artifact 或原生结果；
 下一次仅推送已获授权的验收分支。未推送 remote main、打 tag、签名、公证或发版。
+
+## CI40 — completed results and two Windows acceptance failures
+
+Run **39104976943**（push / attempt 1），source head
+`01757d1796c6d08b4e81423632eace07f508d281`，已终态 **overall FAILED**。
+上节保留的是运行前准备时点；本节记录本轮实际结果，不回写历史失败或准备证据。
+
+| 范围 | Job 结论 | 本次证据状态 |
+| --- | --- | --- |
+| Web | success | **31 行为检查 / 6 whole RPC arrays**；Root **1 张实际查看 + 1 张精确字节复用**。 |
+| macOS | success | 当前 7 个严格离线读者均一次 0；原 **83/12**、draft **3/1**、Goal **1**、DMG installed/reinstalled UI **13+13 / 2 Main** 各自通过。 |
+| Linux | success | 当前 9 个验收阶段通过；原 **83/12**、draft **3/1**、Goal **1**、AppImage Main/runtime 身份和正常退出门槛各自通过；首个离线绑定错误另行保留。 |
+| Windows matrix | failure | step 36 packaged UI 的 `firstWindow` 等待 **20 秒超时**；SDK 已返回、preload 已完成，实际 Main **1152** 在失败清理后退出 `0/null`，**0 UI operations**，HOME 已移除。 |
+| Independent Windows NSIS | failure | 完成 **13 phases** 后在 `uninstall` 初始身份观测失败；目标 **6420 / expected parent 6108** 没有 full birth，后续退出 `0/null` 不授予 custody。 |
+
+Windows matrix 本轮是 first-window 超时，不是已读证据中的 CI39 启动
+`0xC0000005` 复现。SDK ready、preload fulfilled、Main normal 与 HOME removed
+不能替代实际窗口和 UI 操作；CI39 的原生异常退出原因仍未定位，也不能声称
+新增被动诊断修好了崩溃。普通用户无验收仪器启动的范围仍未由这些结果确立。
+Root 已完整读取固定首错文件；诊断 sidecar 的独立有限元数据校验一次 0，
+保留 `classification=unknown / nativeStatus=not-established / authority=false`。
+7 个回调事件、11 个保留时刻以及 stdout 214 B / 5 chunks、stderr 405 B /
+4 chunks 均无记录失败、丢弃或截断。这些数据没有定位窗口未被观察到的原因；
+它们不提供窗口存在、内核时序、崩溃因果或清理权限证明。
+
+独立 NSIS 的根收据为 `status=failed`、`phase=uninstall`、controller exit **1**。
+首错为 `Cannot establish Electron test child PID, parent PID and birth identity`。
+被复制的 `owned-uninstaller.exe` SHA 与替换后已记录 uninstaller 相同；这不是
+Electron Main，也不是 installed UI 的 Node controller。唯一初始 snapshot 记录
+**128 rows / matching PID rows 0 / matches [] / truncated false**。target birth
+缺失，`result` 与 `settlement` 均 null，cached exit 为 null，`unprovenProcess=true`；
+记录的 driver signal requests 为空。没有身份匹配不等于查询抛错，也不能证明
+查询时该进程仍存活或已退出。
+
+两份已固定公开日志独立对齐为同一 **49 条** controller 观测，末段顺序如下：
+
+| sequence | 已记录回调/写入 |
+| --- | --- |
+| 44 | uninstall process-spawn |
+| 45 | process-first-error；birth/cached exit/result 均 null |
+| 46 | process-final |
+| 47 | 外层 first-error，保留同一身份错误 |
+| 48 | controller-final |
+| 49 | 晚到的 process-exit 回调 |
+
+`0/null` 来自同一 uninstall 根收据的 `exitObserved`；seq 49 的 journal/mirror
+本身不含退出码。这是 Node 回调与 controller 写入先后，不是内核退出时刻；
+不能把 cached null 当作 OS 存活证据，或用晚到 0 回补 full birth、monitor 与
+settlement。卸载验收阶段没有完成；**uninstall、cache-cleanup、final-integrity**
+后三阶段未通过，最终安装目录、注册与 cache 的实际状态未在本段重查。
+
+此前五个 controller/root process 条目报告 `passed`、正常 `0/null` 和 cleaned
+settlement；根收据的两份 installed UI 摘要分别报告 Main **7468 / 1188**、
+**13 + 13** operations、normal `0/null` 与 private HOME removed。这些摘要不等于
+本次已独立复审 nested UI 全部数据，更不能替代完整 **16 phases / 6 normal
+controller roots / 26 UI** 验收。collector 仍为既有 disabled 三键状态；其缺席不
+能填补身份或全局进程完整性证据。
+
+本段独立核对仅使用以下既有固定文件；没有补跑安装器、查询、读者或测试：
+
+- [sole NSIS 根收据](/private/tmp/codeshell-real-operation-cycles-20261016/ci-39104976943-independent-windows-nsis-panel-peer-20261018/raw/nsis-receipt.json)：52472 B，SHA `443cb7510040058d4389339050745b41923e6cbd4337dda823d6525cfcbdd4f4`。
+- [journal](/private/tmp/codeshell-real-operation-cycles-20261016/ci-39104976943-independent-windows-nsis-panel-peer-20261018/fixed-nsis-first-failure/journal.jsonl)：4585 B，SHA `7c6ed6df9ee182be15cf01b4fa592d444c39312dc2b8764ded667c7664b69a78`。
+- [outer NSIS log](/private/tmp/codeshell-real-operation-cycles-20261016/ci-39104976943-independent-windows-nsis-panel-peer-20261018/fixed-nsis-first-failure/windows-nsis.log)：8388 B，SHA `0ed4cc40f113507d407df5fd38c9215835677c9616fafee491adac4987ad8a9f`。
+
+三个成功范围均已由本轮实际产物验收，保留各自原有 source、full birth、normal Main、
+observed custody、HOME、OS/cache/absence 与顺序门槛。Web 为 11 + 4 + 8 + 8 =
+31 实际浏览器行为，6 组完整 RPC 数组 exact-once；106 source pins 与 33 PNG
+container CRC 通过。synthetic 9/45、纯 Node 64、2 controls / 6 expected-negative
+另列，不加入 31。PNG CRC 不等于逐像素查看，行为仍依实际收据。
+
+Mac 原 83/12、独立 draft 3/1、同 Preferences Main 20998 的 Goal 1 与 DMG
+13+13/two Main 各自绑定；27 份 birth-map 副本 / 324 parent edges 无时序矛盾，
+49 PNG CRC 通过。Linux 对应 Goal Main 8941，AppImage Main 9774 与 runtime
+9772 均保留独立正常退出与身份门槛；22 maps / 249 edges 无矛盾，35 PNG CRC
+通过。AppImage 原 75 normalization / 10 GET / 0 assets 与模式/cache 检查保留，
+不扩展为 FUSE、签名或真实更新资产安装验收。
+
+Linux 离线读者首次 stage 2 因作者漏绑 run/job 的 `None` 常量退出 1；旧源码、
+完整 stdout/stderr/result 与 sequence 保留。Root 独立源码扫描补全两个读者中的
+4 个精确 metadata 常量，其余验收等式不变。在新目录执行修正 stage 2→8 各
+一次 0；stage 1 原 0 只复用、不重跑。第 9 阶段再绑定实际 stage 5 parent SHA
+`f8fbc578afb5d9d9a01c0d8cf14ab5b966a1bb0c6b003d2145c3924510f6a974`，
+独立一次 0 / 28 metadata conditions。该离线绑定错误不改写 Linux 原生 job 为
+失败，也不通过重复原生运行覆盖首错。
+
+本轮 Mac / Linux 分别验证 Bun **445/3550/32** 与 **445/3547/32**，另有实际
+operation-evidence Node **56**、Core **27/85** 和 9 组纯日志，均不加入原生
+83 或当前 UI 操作数。本地先前 **83** 个纯 Node 合同保持其独立边界；不能用
+它代替 hosted 56 或原生 83。两条 Windows 成功专用读者链保持冻结，没有把
+失败产物套进完整成功计数。
+
+Root 当前视觉抽查共 **1 次实际查看 + 5 次精确字节复用**：Web logout/re-auth
+1 张实际查看、390 multiline 1 张复用；Mac 390 dark settings 与 DMG reload
+2 张复用；Linux 390 dark settings 与 Review staged 2 张复用。每个复用都核对
+当前 copy、当前 PNG 元数据、旧 copy 与前次 Root visual receipt 的精确字节。
+所选视口文字/控件可读，无可见水平溢出或重叠；像素本身不证明状态清除、
+持久性、真实 scope 操作或所有 OS 进程均被观察到。Windows 本轮没有新看图。
+
+本轮完整结果与精确 hash 保留于以下 Root 收据：
+
+- [Web final](/private/tmp/codeshell-real-operation-cycles-20261016/ci-39104976943-web-independent-20261018/Root-Web-final-results-and-selected-visuals.json)：2640 B，`55bba4ccec0e43f9b50d55013f21af2f4a62eee3b30626fc54d4884b494a6293`。
+- [Mac final](/private/tmp/codeshell-real-operation-cycles-20261016/ci-39104976943-mac-independent-20261018/Root-Mac-final-results-and-selected-visuals.json)：3351 B，`746849376643d98baa92bf53999e7ec9f7eaaaf67a568be114b63f550cb01bec`。
+- [Linux final](/private/tmp/codeshell-real-operation-cycles-20261016/ci-39104976943-linux-panel-independent-20261018/Root-Linux-final-results-and-selected-visuals.json)：4846 B，`0c8bcc94410671512b0da2191a91050ed2457394494d0d702b8128eb06afa1c2`。
+- [Windows matrix first failure](/private/tmp/codeshell-real-operation-cycles-20261016/ci-39104976943-windows-matrix-independent-20261018/Root-Windows-matrix-first-failure-review.json)：3067 B，`c9a137951da3c8c3438d0dfdfbd9d9bb56f4f7eeebfeaf470400022bc72a1e2c`。
+- [Independent NSIS first failure](/private/tmp/codeshell-real-operation-cycles-20261016/ci-39104976943-independent-windows-nsis-panel-peer-20261018/Root-Independent-NSIS-first-failure-review.json)：4998 B，`058bec2da275dd06a5120bc29fd93b37f383c50ab0fcf6b9c0f0c97c193f0eed`。
+
+[CI40 run](https://github.com/cjhyy/codeshell/actions/runs/39104976943) 的最终
+[run API](/private/tmp/codeshell-real-operation-cycles-20261016/ci40-progress4-run-api-20261018.json)、
+[jobs API](/private/tmp/codeshell-real-operation-cycles-20261016/ci40-progress4-jobs-api-20261018.json) 与
+[artifacts API](/private/tmp/codeshell-real-operation-cycles-20261016/ci40-progress4-artifacts-api-20261018.json)
+绑定 3 success / 2 failure。只有获准验收分支推送到 `01757d17`；remote main
+未推送。本轮记录不声称旧原生崩溃修复、签名/公证、跨版本升级或正式发布。
+
+当前 Windows 首窗超时、卸载初始身份缺失，以及此前未定位的 `0xC0000005`
+仍需处理；Windows 被跳过的打包更新恢复等后续范围须补验。签名/公证和跨版本
+升级也未完成正式验收。**目前不建议发版。**
