@@ -61,7 +61,12 @@ import {
   type SessionIndex,
 } from "./transcripts";
 import { resolveAttachmentSessionId } from "./attachmentSession";
-import { buildPathAttachment, sha256FromDataUrl, type ImageAttachment } from "./chat/attachments";
+import {
+  ATTACHMENT_LIMITS,
+  buildPathAttachment,
+  sha256FromDataUrl,
+  type ImageAttachment,
+} from "./chat/attachments";
 import { findAskUserOrigin } from "./streamRouting";
 import { statusForBucket, type SessionStatus } from "./sessionStatus";
 import type { AgentPanelHostRequest, AgentPanelHostResponse } from "../shared/agent-panels";
@@ -462,6 +467,43 @@ function App() {
       return { ...prev, [targetBucket]: { ...current, attachments } };
     });
   }
+  function appendComposerImagesForTarget(
+    targetBucket: string,
+    images: ImageAttachment[],
+    overflowMessage: string,
+    validationMessages: string[],
+    isCurrent: () => boolean,
+  ): void {
+    if (!isCurrent()) return;
+    setComposerDrafts((prev) => {
+      if (!isCurrent()) return prev;
+      const current = prev[targetBucket] ?? { text: "", attachments: EMPTY_ATTACHMENTS };
+      const available = Math.max(
+        0,
+        ATTACHMENT_LIMITS.maxImagesPerMessage - current.attachments.length,
+      );
+      const accepted = images.slice(0, available);
+      const messages =
+        images.length > available ? [...validationMessages, overflowMessage] : validationMessages;
+      if (accepted.length === 0 && messages.length === 0) return prev;
+      return {
+        ...prev,
+        [targetBucket]: {
+          ...current,
+          attachments:
+            accepted.length > 0 ? [...current.attachments, ...accepted] : current.attachments,
+          ...(messages.length > 0
+            ? {
+                metadata: {
+                  ...(current.metadata ?? emptyComposerMetadata(current.text)),
+                  attachmentError: messages.join("；"),
+                },
+              }
+            : {}),
+        },
+      };
+    });
+  }
   const setComposerDraftAttachments: React.Dispatch<React.SetStateAction<ImageAttachment[]>> = (
     next,
   ) => {
@@ -776,6 +818,15 @@ function App() {
       },
       updateAttachments: (next) => {
         if (isCurrent()) updateComposerAttachmentsForTarget(targetBucket, next, isCurrent);
+      },
+      appendImages: (images, overflowMessage, validationMessages) => {
+        appendComposerImagesForTarget(
+          targetBucket,
+          images,
+          overflowMessage,
+          validationMessages,
+          isCurrent,
+        );
       },
       updateMetadata: (next) => {
         if (isCurrent()) updateComposerMetadataForTarget(targetBucket, next, isCurrent);
