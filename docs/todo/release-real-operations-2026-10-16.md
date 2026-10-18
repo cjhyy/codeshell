@@ -8,16 +8,17 @@ The release target is macOS, Windows, Linux Desktop and Web. Authorized native C
 has now executed; its passing and incomplete boundaries are recorded below.
 Cross-platform fixture tests alone are not native acceptance.
 
-The latest completed run, CI36, **FAILED** overall: Web, macOS, Linux and the
-Windows matrix succeed; independent Windows NSIS fails while establishing the
-uninstaller's initial PID/parent/birth identity. Its later recorded exit `0/null`
-does not supply the missing birth, settlement or final absence/cache/OS checks.
-The Windows matrix separately completes all 16 NSIS phases, six normal process
-roots and 26 installed UI operations. That success does not transfer to the
-independent failure or explain historical failures.
-See the [CI36 actual results](#ci36--completed-results-and-independent-uninstall-identity-failure).
-Earlier failures remain retained. This is not a release-ready result.
-CI37's diagnostic candidate passes its local checks; hosted execution is pending.
+The latest completed run, CI37, **FAILED** overall: Web, macOS, Linux and the
+Windows matrix jobs succeed; independent Windows NSIS fails during initial
+installation with exit code `3221225477` (`0xC0000005`). Its six completed phases
+include no installed UI operation. The bounded Application event-query window
+returns zero rows, WER is not queried, and the cause remains unknown.
+The Windows matrix separately passes its original UI scopes and all 16 NSIS
+phases, six normal controller roots and 26 installed UI operations. That result
+does not transfer to the independent failure or establish a repair.
+See the [CI37 actual results](#ci37--completed-results-and-independent-initial-install-failure).
+Earlier failures and their preparation checkpoints remain retained. This is not
+a release-ready result.
 
 CI35 failed its original Windows matrix during initial installation: Setup exits
 with code `3221225477` (`0xC0000005`), while queried crash metadata identifies no
@@ -4419,3 +4420,67 @@ UI operations, uninstall absence, cache and final OS predicates remain required.
 CI36 and earlier failures retain their failed and unexplained status. Only the
 already-authorized acceptance-branch push and hosted CI are prepared; no remote
 main, tag, release, signing or publication is included.
+
+## CI37 — completed results and independent initial-install failure
+
+[Run 39095013874](https://github.com/cjhyy/codeshell/actions/runs/39095013874)
+executes source `29c677f1e672b67763c65fbc5b26c683ea6e4ddb`, attempt 1, from a
+normal acceptance-branch push. The final API records **four successful jobs and
+one failed job**; overall status is **FAILED**. These results bind this source,
+not a later local candidate. The CI37 preparation checkpoint above remains a
+historical statement of what had been verified before this run.
+
+| Scope | Audited result |
+| --- | --- |
+| Web | 31 browser behaviors and six complete payload-checked RPC arrays pass. |
+| macOS | Seven offline readers pass once: original 83 operations/12 Mains, separate Review drafts 3/1, required Goal deletion in an existing Preferences Main, and DMG installed/reinstalled UI 13+13/two Mains. The artifact has 27 uploaded map copies/247 parent edges and 49 PNG container CRC checks. |
+| Linux | Nine offline readers pass once: original 83/12, separate drafts 3/1, required Goal and AppImage checks. Actual AppImage Main and launcher remain separate normal processes; ten GETs/zero asset downloads and source/cache integrity pass. There are 22 map copies/248 edges and 35 PNG container CRC checks. |
+| Windows matrix | Five UI readers pass once: original 83/12, separate drafts 3/1 and required Goal in an existing Preferences Main. The separate strict NSIS audit passes all 16 phases, six normal controller roots and 26 installed UI operations, including uninstall absence/cache/final OS predicates. |
+| Independent Windows NSIS | Initial installation fails after six completed phases, before installed identity or UI. No installed UI operation is accepted; replacement, uninstall, cache and final OS restoration are not reached. |
+
+Independent Setup exits `3221225477/null` before the first process error and
+cleanup. The original failure is retained. Its exact PID/parent/full-birth record
+does not establish why it exits. The bounded Application query reports zero
+provider rows only in its fixed narrow window; WER is not queried and no exact
+fault module is identified. This is not whole-system event absence. The new
+initial-snapshot-miss observer is not runtime recorded on these process records;
+its pure tests do not demonstrate that diagnostic branch or resolve the missing identity.
+The separate matrix installer success cannot supply this failed job's evidence.
+
+Pure checks remain separate from native operations. Mac Bun aggregation is
+445 tests/3550 expectations/32 files; Linux is 445/3547/32. Required disclosure,
+Composer durable diagnostics and the nine attachment/Goal pure groups retain
+separate results. Matrix Windows NSIS contracts are 108 and operation-evidence
+contracts are 49; its standalone passive-startup-goal log is **not uploaded**,
+which does not establish zero execution. Independent NSIS separately records
+108/16/33. These values are not additional native operations or a repeated full
+local type/build result at this source.
+
+Root performs **six current pixel-view calls**: two Mac frames, one Linux Review
+frame, two Windows original-UI frames and one matrix installed-UI frame. Four
+observations are reused only after exact ZIP/copy byte identity: two Web frames
+and Linux Settings match previously viewed CI36 frames; matrix replaced UI
+matches this run's already viewed installed frame. Current Review
+menus are closed and readable in the selected frames. This covers selected
+images only, not every PNG, every pixel or the complete interface. Reused images
+are not new view calls or new native actions.
+
+Evidence is retained in the [Web summary](/private/tmp/codeshell-real-operation-cycles-20261016/ci-39095013874-web-independent-20261018/verified-summary.json)
+and [freeze](/private/tmp/codeshell-real-operation-cycles-20261016/ci-39095013874-web-independent-20261018/final-evidence-freeze.json),
+[Mac summary](/private/tmp/codeshell-real-operation-cycles-20261016/ci-39095013874-mac-independent-20261018/verified-summary.json)
+and [freeze](/private/tmp/codeshell-real-operation-cycles-20261016/ci-39095013874-mac-independent-20261018/final-evidence-freeze.json),
+[Linux summary](/private/tmp/codeshell-real-operation-cycles-20261016/ci-39095013874-linux-panel-independent-20261018/verified-summary.json)
+and [freeze](/private/tmp/codeshell-real-operation-cycles-20261016/ci-39095013874-linux-panel-independent-20261018/final-evidence-freeze.json),
+[Windows UI summary](/private/tmp/codeshell-real-operation-cycles-20261016/ci-39095013874-windows-matrix-independent-20261018/original-ui/verified-UI-summary.json)
+and [freeze](/private/tmp/codeshell-real-operation-cycles-20261016/ci-39095013874-windows-matrix-independent-20261018/original-ui/final-UI-evidence-freeze.json),
+[matrix NSIS summary](/private/tmp/codeshell-real-operation-cycles-20261016/ci-39095013874-windows-matrix-independent-20261018/nsis-metadata/verified-summary.json)
+and [freeze](/private/tmp/codeshell-real-operation-cycles-20261016/ci-39095013874-windows-matrix-independent-20261018/nsis-metadata/final-evidence-freeze.json),
+and the [independent NSIS failed summary](/private/tmp/codeshell-real-operation-cycles-20261016/ci-39095013874-independent-windows-nsis-panel-peer-20261018/verified-failed-summary.json)
+and [freeze](/private/tmp/codeshell-real-operation-cycles-20261016/ci-39095013874-independent-windows-nsis-panel-peer-20261018/final-evidence-freeze.json).
+The six freezes bind exact raw inputs, reviewed reader sources and first
+execution outputs; Root view receipts retain the selected-image bindings.
+
+The underlying installation cause remains unknown. A separate upstream-source
+backport candidate is being prepared; no tested or hosted repair is established
+by this record. No remote main, tag, release, signing or publication is performed,
+and this overall failed result does not support shipping.
