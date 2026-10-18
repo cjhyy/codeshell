@@ -249,9 +249,10 @@ function installPermanentKillGuard(children, syncExports) {
       // Accept only a journal sequence, never arbitrary callback text/objects.
       try {
         const sequence = entry.onCleanupRequested(entry.child);
-        request.launchDiagnostics = Number.isSafeInteger(sequence) && sequence > 0
-          ? { status: "recorded", sequence }
-          : { status: "unavailable", sequence: null };
+        request.launchDiagnostics =
+          Number.isSafeInteger(sequence) && sequence > 0
+            ? { status: "recorded", sequence }
+            : { status: "unavailable", sequence: null };
       } catch {
         request.launchDiagnostics = { status: "callback-failed", sequence: null };
       }

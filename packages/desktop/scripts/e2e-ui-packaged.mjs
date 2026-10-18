@@ -225,7 +225,11 @@ try {
     keychainReferenceFile: options.get("--default-keychain-reference"),
     requireWorkerEvidence: false,
     onLaunchError: recordFirstError,
-    launchDiagnostics: hostedWindowsLaunchDiagnosticsEnabled(process.platform, process.arch, process.env),
+    launchDiagnostics: hostedWindowsLaunchDiagnosticsEnabled(
+      process.platform,
+      process.arch,
+      process.env,
+    ),
   });
   await step(
     "Start the supplied package with first-instruction Main guard and private HOME",

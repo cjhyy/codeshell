@@ -135,9 +135,10 @@ export async function preparePackagedPetFixture({
   const windowsTransports = [];
   const transportFailures = [];
   const startupObservation = createPackagedStartupObservation();
-  const passiveLaunchDiagnostics = launchDiagnostics && process.platform === "win32"
-    ? createPackagedLaunchDiagnostics({ redactRoots: [fixtureRoot, isolated.home, officialApp] })
-    : undefined;
+  const passiveLaunchDiagnostics =
+    launchDiagnostics && process.platform === "win32"
+      ? createPackagedLaunchDiagnostics({ redactRoots: [fixtureRoot, isolated.home, officialApp] })
+      : undefined;
   let launchFailed = false;
   const terminateChild = async (child) => {
     const monitor = monitorsByChild.get(child);

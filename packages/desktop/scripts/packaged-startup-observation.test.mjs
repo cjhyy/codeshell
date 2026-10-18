@@ -292,7 +292,6 @@ test("actual pure shutdown preserves artifacts and first cause before the final 
   }
 });
 
-
 // Additional passive tests use actual module exports and fake EventEmitters.
 // The transport import in the final case reads only its installed package version;
 // it receives an entirely fake transport, never an SDK, native child or query.
@@ -300,10 +299,15 @@ const { EventEmitter, errorMonitor } = await import("node:events");
 const { createHash } = await import("node:crypto");
 const { createPackagedLaunchDiagnostics, hostedWindowsLaunchDiagnosticsEnabled } =
   await import("./packaged-startup-observation.mjs");
-const diagnosticChild = (pid = 101) => Object.assign(new EventEmitter(), {
-  pid, exitCode: null, signalCode: null, killed: false,
-  stdout: new EventEmitter(), stderr: new EventEmitter(),
-});
+const diagnosticChild = (pid = 101) =>
+  Object.assign(new EventEmitter(), {
+    pid,
+    exitCode: null,
+    signalCode: null,
+    killed: false,
+    stdout: new EventEmitter(),
+    stderr: new EventEmitter(),
+  });
 const diagnosticFixture = (options = {}) => {
   let time = 10;
   const observation = createPackagedLaunchDiagnostics({ now: () => time++, ...options });
@@ -315,25 +319,40 @@ const tailHash = (bytes) => createHash("sha256").update(bytes).digest("hex");
 
 test("passive launch diagnostics opt in only to the existing hosted Windows CI identity", () => {
   const ci = {
-    GITHUB_ACTIONS: "true", RUNNER_OS: "Windows", RUNNER_ARCH: "X64",
-    RUNNER_ENVIRONMENT: "github-hosted", ImageOS: "win22",
-    GITHUB_REPOSITORY: "cjhyy/codeshell", GITHUB_RUN_ID: "39101744806",
+    GITHUB_ACTIONS: "true",
+    RUNNER_OS: "Windows",
+    RUNNER_ARCH: "X64",
+    RUNNER_ENVIRONMENT: "github-hosted",
+    ImageOS: "win22",
+    GITHUB_REPOSITORY: "cjhyy/codeshell",
+    GITHUB_RUN_ID: "39101744806",
     GITHUB_SHA: "b".repeat(40),
   };
   const enabled = (env = ci, platform = "win32", arch = "x64") =>
     hostedWindowsLaunchDiagnosticsEnabled(platform, arch, env);
   assert.equal(enabled(), true);
   for (const [key, value] of [
-    ["GITHUB_ACTIONS", "false"], ["RUNNER_OS", "Linux"], ["RUNNER_ARCH", "ARM64"],
-    ["RUNNER_ENVIRONMENT", "self-hosted"], ["ImageOS", "win25"],
-    ["GITHUB_REPOSITORY", "foreign/repo"], ["GITHUB_RUN_ID", "0"],
-    ["GITHUB_SHA", "B".repeat(40)], ["ACT", "true"],
-  ]) assert.equal(enabled({ ...ci, [key]: value }), false);
+    ["GITHUB_ACTIONS", "false"],
+    ["RUNNER_OS", "Linux"],
+    ["RUNNER_ARCH", "ARM64"],
+    ["RUNNER_ENVIRONMENT", "self-hosted"],
+    ["ImageOS", "win25"],
+    ["GITHUB_REPOSITORY", "foreign/repo"],
+    ["GITHUB_RUN_ID", "0"],
+    ["GITHUB_SHA", "B".repeat(40)],
+    ["ACT", "true"],
+  ])
+    assert.equal(enabled({ ...ci, [key]: value }), false);
   assert.equal(enabled(ci, "darwin"), false);
   assert.equal(enabled(ci, "win32", "arm64"), false);
   let reads = 0;
   const hostile = { ...ci };
-  Object.defineProperty(hostile, "GITHUB_ACTIONS", { get() { reads++; throw Error("unread getter"); } });
+  Object.defineProperty(hostile, "GITHUB_ACTIONS", {
+    get() {
+      reads++;
+      throw Error("unread getter");
+    },
+  });
   assert.equal(enabled(hostile), false);
   assert.equal(reads, 0);
 });
@@ -349,12 +368,24 @@ test("passive callback order distinguishes exit before SDK cleanup from a live-c
     child.emit("close", child.exitCode, null);
     const value = observation.snapshot();
     assert.equal(value.recordingFailed, false);
-    assert.deepEqual(value.launches[0].events.map((event) => event.kind), [
-      "captured", exited ? "child-exit" : "stderr-close", "sdk-taskkill-suppressed", "child-close",
-    ]);
+    assert.deepEqual(
+      value.launches[0].events.map((event) => event.kind),
+      [
+        "captured",
+        exited ? "child-exit" : "stderr-close",
+        "sdk-taskkill-suppressed",
+        "child-close",
+      ],
+    );
     const events = value.launches[0].events;
-    assert.deepEqual(events.map((event) => event.sequence), [1, 2, 3, 4]);
-    assert.deepEqual(events.map((event) => event.monotonicMs), [0, 1, 2, 3]);
+    assert.deepEqual(
+      events.map((event) => event.sequence),
+      [1, 2, 3, 4],
+    );
+    assert.deepEqual(
+      events.map((event) => event.monotonicMs),
+      [0, 1, 2, 3],
+    );
     assert.equal(sequence, events[2].sequence);
     assert.equal(events[2].cached.exitCode, exited ? 3221225477 : null);
     assert.equal(events[2].cached.killed, false);
@@ -369,17 +400,31 @@ test("errorMonitor records bounded codes without consuming otherwise unhandled c
   for (const emitter of [child, child.stdout, child.stderr]) {
     const original = Object.assign(Error("private error message excluded"), { code: "EPIPE" });
     assert.equal(emitter.listenerCount("error"), 0);
-    assert.throws(() => emitter.emit("error", original), (error) => error === original);
+    assert.throws(
+      () => emitter.emit("error", original),
+      (error) => error === original,
+    );
     assert.equal(emitter.listenerCount("error"), 0);
   }
   const value = observation.snapshot();
   assert.equal(value.recordingFailed, false);
-  assert.deepEqual(value.launches[0].events.slice(1).map((event) => event.errorCode), ["EPIPE", "EPIPE", "EPIPE"]);
+  assert.deepEqual(
+    value.launches[0].events.slice(1).map((event) => event.errorCode),
+    ["EPIPE", "EPIPE", "EPIPE"],
+  );
   assert.equal(JSON.stringify(value).includes("private error"), false);
   let reads = 0;
   const hostile = Error("not projected");
-  Object.defineProperty(hostile, "code", { get() { reads++; throw Error("unread code getter"); } });
-  assert.throws(() => child.emit("error", hostile), (error) => error === hostile);
+  Object.defineProperty(hostile, "code", {
+    get() {
+      reads++;
+      throw Error("unread code getter");
+    },
+  });
+  assert.throws(
+    () => child.emit("error", hostile),
+    (error) => error === hostile,
+  );
   assert.equal(reads, 0);
   assert.equal(observation.snapshot().recordingFailed, true);
 });
@@ -389,7 +434,11 @@ test("passive caps, foreign objects and invalid clocks are explicit and do not c
   for (let index = 0; index < 70; index++) child.stdout.emit("end");
   for (let index = 1; index < 8; index++) observation.captured(diagnosticChild(101 + index));
   assert.equal(observation.captured(diagnosticChild(999)), null);
-  assert.equal(observation.cleanupRequested(diagnosticChild(101)), null, "matching PID grants no child handle");
+  assert.equal(
+    observation.cleanupRequested(diagnosticChild(101)),
+    null,
+    "matching PID grants no child handle",
+  );
   const value = observation.snapshot();
   assert.equal(value.launches.length, 8);
   assert.equal(value.launches[0].events.length, 64);
@@ -408,7 +457,12 @@ test("passive caps, foreign objects and invalid clocks are explicit and do not c
   assert.equal(earlier.observation.snapshot().recordingFailed, true);
   const invalid = diagnosticChild();
   let reads = 0;
-  Object.defineProperty(invalid, "exitCode", { get() { reads++; throw Error("unread exit getter"); } });
+  Object.defineProperty(invalid, "exitCode", {
+    get() {
+      reads++;
+      throw Error("unread exit getter");
+    },
+  });
   const passive = createPackagedLaunchDiagnostics();
   assert.doesNotThrow(() => passive.captured(invalid));
   assert.equal(reads, 0);
@@ -423,7 +477,10 @@ test("successful append tails copy only the last 64KiB per stream and retain spl
   observation.appended(child, "stdout", first);
   assert.equal(observation.snapshot().launches[0].stdout.truncated, false);
   first.fill(98);
-  assert.equal(observation.snapshot().launches[0].stdout.rawTailSHA256, tailHash(Buffer.alloc(cap, 97)));
+  assert.equal(
+    observation.snapshot().launches[0].stdout.rawTailSHA256,
+    tailHash(Buffer.alloc(cap, 97)),
+  );
   observation.appended(child, "stdout", Buffer.from("Z"));
   let value = observation.snapshot().launches[0].stdout;
   assert.equal(value.retainedBytes, cap);
@@ -447,7 +504,11 @@ test("successful append tails copy only the last 64KiB per stream and retain spl
 test("rendered tails bound UTF-8 output, redact known roots and URLs, and isolate snapshot mutation", () => {
   const root = "C:\\private-owned";
   const { observation, child } = diagnosticFixture({ redactRoots: [root] });
-  observation.appended(child, "stderr", Buffer.from(`\x1b[31m${root}\\app.js https://owned.invalid/token?a=secret\x00\n`));
+  observation.appended(
+    child,
+    "stderr",
+    Buffer.from(`\x1b[31m${root}\\app.js https://owned.invalid/token?a=secret\x00\n`),
+  );
   const first = observation.snapshot();
   const tail = first.launches[0].stderr;
   assert.equal(tail.text, "[owned-path]\\app.js [url]\n");
@@ -474,12 +535,29 @@ test("actual transport observes same-child SDK cleanup before terminate and call
     const { observation, child } = diagnosticFixture();
     const order = [];
     const settlement = { status: "cleaned" };
-    const monitor = { completed: Promise.resolve(settlement), terminate() { order.push("terminate"); return this.completed; } };
-    const fake = { spawn: () => child, spawnSync() { throw Error("No native taskkill may execute"); } };
+    const monitor = {
+      completed: Promise.resolve(settlement),
+      terminate() {
+        order.push("terminate");
+        return this.completed;
+      },
+    };
+    const fake = {
+      spawn: () => child,
+      spawnSync() {
+        throw Error("No native taskkill may execute");
+      },
+    };
     const context = {
-      executable: "C:\\owned\\electron.exe", args: ["--inspect-brk=0"],
-      home: "C:\\owned\\home", cwd: "C:\\owned\\home", platform: "win32",
-      onCapturedSpawn: (actual) => { assert.strictEqual(actual, child); return monitor; },
+      executable: "C:\\owned\\electron.exe",
+      args: ["--inspect-brk=0"],
+      home: "C:\\owned\\home",
+      cwd: "C:\\owned\\home",
+      platform: "win32",
+      onCapturedSpawn: (actual) => {
+        assert.strictEqual(actual, child);
+        return monitor;
+      },
       reportFailure: () => order.push("fallback-recorded"),
       onCleanupRequested: (actual) => {
         assert.strictEqual(actual, child);
@@ -489,22 +567,38 @@ test("actual transport observes same-child SDK cleanup before terminate and call
         return observation.cleanupRequested(actual);
       },
     };
-    const transport = installWindowsElectronDirectTransport(context, { children: fake, syncExports: () => {} });
+    const transport = installWindowsElectronDirectTransport(context, {
+      children: fake,
+      syncExports: () => {},
+    });
     try {
       fake.spawn(knownPlaywrightElectronVector(context).command, [], {
-        cwd: context.cwd, env: { HOME: context.home, USERPROFILE: context.home },
-        shell: true, detached: false, stdio: ["ignore", "pipe", "pipe", "pipe", "pipe"],
+        cwd: context.cwd,
+        env: { HOME: context.home, USERPROFILE: context.home },
+        shell: true,
+        detached: false,
+        stdio: ["ignore", "pipe", "pipe", "pipe", "pipe"],
       });
       child.exitCode = 3221225477;
       child.emit("exit", child.exitCode, null);
-      const result = fake.spawnSync(`taskkill /pid ${child.pid} /T /F`, { shell: true, windowsHide: true });
+      const result = fake.spawnSync(`taskkill /pid ${child.pid} /T /F`, {
+        shell: true,
+        windowsHide: true,
+      });
       assert.equal(result.status, null);
       assert.deepEqual(order, ["fallback-recorded", "callback", "terminate"]);
       await monitor.completed;
       await Promise.resolve();
       const request = transport.receipt().cleanupRequests[0];
       assert.equal(request.settlement.status, "cleaned");
-      assert.equal(request.launchDiagnostics.status, outcome === "recorded" ? "recorded" : outcome === "throw" ? "callback-failed" : "unavailable");
+      assert.equal(
+        request.launchDiagnostics.status,
+        outcome === "recorded"
+          ? "recorded"
+          : outcome === "throw"
+            ? "callback-failed"
+            : "unavailable",
+      );
       if (outcome === "recorded") {
         const event = observation.snapshot().launches[0].events.at(-1);
         assert.equal(request.launchDiagnostics.sequence, event.sequence);
@@ -516,6 +610,8 @@ test("actual transport observes same-child SDK cleanup before terminate and call
       assert.equal(transport.receipt().failures.length, 1);
       assert.equal(JSON.stringify(transport.receipt()).includes("private callback"), false);
       assert.equal(JSON.stringify(transport.receipt()).includes("arbitrary output"), false);
-    } finally { transport.restoreSpawn(); }
+    } finally {
+      transport.restoreSpawn();
+    }
   }
 });
