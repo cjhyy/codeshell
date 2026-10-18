@@ -32,7 +32,7 @@ const birth = "2026-10-18T01:02:03.0000001Z";
 const setup = { pid: 42, ppid: 99, birth };
 const collector = { pid: 700, ppid: 99, birth };
 const home = win32.join(root, "private-build", "home");
-const temp = win32.join(root, "private-build", "tmp");
+const temp = win32.join(root, "tmp");
 const environment = {
   SystemRoot: "C:\\Windows",
   HOME: home,
@@ -349,13 +349,20 @@ test("initial watch failure closes the local gate without GO or any unowned sign
   assert.equal(f.observer.receipt.custodyUnproven, true);
   assert.equal(f.observer.receipt.status, "unknown");
 });
-test("foreign isolated HOME fails before any native transport", async () => {
-  const f = fixture({ options: { environment: { ...environment, HOME: "D:\\foreign" } } });
-  f.observe();
-  await f.observer.completed;
-  await f.observer.finish();
-  assert.equal(f.calls.length, 0);
-  assert.equal(f.observer.receipt.status, "unknown");
+test("foreign isolated HOME or the old deep TEMP fails before any native transport", async () => {
+  for (const override of [
+    { HOME: "D:\\foreign" },
+    { TEMP: win32.join(root, "private-build", "tmp") },
+    { TMP: win32.join(root, "private-build", "tmp") },
+    { TMPDIR: win32.join(root, "private-build", "tmp") },
+  ]) {
+    const f = fixture({ options: { environment: { ...environment, ...override } } });
+    f.observe();
+    await f.observer.completed;
+    await f.observer.finish();
+    assert.equal(f.calls.length, 0);
+    assert.equal(f.observer.receipt.status, "unknown");
+  }
 });
 test("source replacement or a malformed/over-cap image never becomes observed", async () => {
   for (const mode of ["source", "width", "bytes"]) {

@@ -447,7 +447,7 @@ export async function runWindowsNsisAcceptance(args) {
   };
   checkpoint("initial-pending");
   const privateBuild = join(root, "private-build");
-  const temporary = join(privateBuild, "tmp");
+  const temporary = join(root, "tmp");
   let environment;
   let replacementDesktopObservation;
   const processStep = (label, executable, argv, env, timeoutMs, replacementRoles) =>

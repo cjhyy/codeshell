@@ -52,9 +52,9 @@ const privateEnvironment = {
   XDG_CACHE_HOME: "D:\\owned\\private-build\\home\\.cache",
   XDG_STATE_HOME: "D:\\owned\\private-build\\home\\.local\\state",
   XDG_RUNTIME_DIR: "D:\\owned\\private-build\\home\\.run",
-  TEMP: "D:\\owned\\private-build\\tmp",
-  TMP: "D:\\owned\\private-build\\tmp",
-  TMPDIR: "D:\\owned\\private-build\\tmp",
+  TEMP: "D:\\owned\\tmp",
+  TMP: "D:\\owned\\tmp",
+  TMPDIR: "D:\\owned\\tmp",
 };
 const options = () => ({
   root: "D:\\owned",
@@ -266,6 +266,7 @@ test("all actual owned HOME/config/temp keys are required; missing/foreign/alias
       undefined,
       "C:\\Users\\foreign",
       "D:\\owned\\private-build\\home\\..\\home",
+      "D:\\owned\\private-build\\tmp",
     ]) {
       const value = options();
       value.environment[key] = replacement;

@@ -75,7 +75,7 @@ function roleHints({ root, setup, uninstaller, temporary } = {}) {
   if (
     !canonicalPath(root) ||
     !Object.values(hints).every(canonicalPath) ||
-    temporary !== win32.join(root, "private-build", "tmp") ||
+    temporary !== win32.join(root, "tmp") ||
     !setup.startsWith(win32.join(root, "artifacts") + "\\") ||
     !uninstaller.startsWith(root + "\\") ||
     setup === uninstaller ||

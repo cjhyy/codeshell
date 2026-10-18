@@ -234,9 +234,9 @@ function ownedQueryEnvironment(environment, root) {
     XDG_CACHE_HOME: win32.join(home, ".cache"),
     XDG_STATE_HOME: win32.join(home, ".local", "state"),
     XDG_RUNTIME_DIR: win32.join(home, ".run"),
-    TEMP: win32.join(privateBuild, "tmp"),
-    TMP: win32.join(privateBuild, "tmp"),
-    TMPDIR: win32.join(privateBuild, "tmp"),
+    TEMP: win32.join(root, "tmp"),
+    TMP: win32.join(root, "tmp"),
+    TMPDIR: win32.join(root, "tmp"),
   };
   const env = {
     SystemRoot: systemRoot,

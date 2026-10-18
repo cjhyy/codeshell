@@ -161,7 +161,7 @@ async function plainFile(io, path, limit) {
 }
 function queryEnvironment(root, base) {
   const home = win32.join(root, "private-build", "home");
-  const temporary = win32.join(root, "private-build", "tmp");
+  const temporary = win32.join(root, "tmp");
   const expected = {
     HOME: home,
     USERPROFILE: home,

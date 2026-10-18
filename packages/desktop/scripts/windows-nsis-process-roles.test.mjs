@@ -34,7 +34,7 @@ const hints = {
   root: "D:\\owned\\nsis",
   setup: "D:\\owned\\nsis\\artifacts\\Setup.exe",
   uninstaller: "D:\\owned\\nsis\\CodeShell\\Uninstall.exe",
-  temporary: "D:\\owned\\nsis\\private-build\\tmp",
+  temporary: "D:\\owned\\nsis\\tmp",
   environment: { SystemRoot: "C:\\Windows" },
 };
 function roleFixture(rows = [rootProcess, oldProcess], roles = []) {
@@ -148,6 +148,7 @@ test("unknown, null, path aliases, foreign TEMP and root-only hints stay unknown
     { setup: "D:\\owned\\nsis\\artifacts\\..\\Setup.exe" },
     { setup: "D:\\OWNED~1\\nsis\\Setup.exe" },
     { temporary: "C:\\Windows\\Temp" },
+    { temporary: "D:\\owned\\nsis\\private-build\\tmp" },
     { root: "D:\\" },
     { temporary: hints.temporary + "\\" },
     { uninstaller: "D:/owned/nsis/Uninstall.exe" },
@@ -529,14 +530,17 @@ test("early roles retain a departed child and a later unknown-to-known change af
     truncated: false,
   });
   observed(f.observer, f.observer.snapshot(), "watching");
-  assert.deepEqual(history.transitions.find((row) => row.pid === oldProcess.pid), {
-    ...oldProcess,
-    querySequence: 11,
-    samplePhase: "watching",
-    sampledElapsedMs: 22,
-    fromRole: "unknown",
-    toRole: "owned-temp-old-uninstaller-candidate",
-  });
+  assert.deepEqual(
+    history.transitions.find((row) => row.pid === oldProcess.pid),
+    {
+      ...oldProcess,
+      querySequence: 11,
+      samplePhase: "watching",
+      sampledElapsedMs: 22,
+      fromRole: "unknown",
+      toRole: "owned-temp-old-uninstaller-candidate",
+    },
+  );
   f.observer.markFailure();
   assert.equal(f.calls.length, 11, "History and failure capture add no query");
   assert.equal(f.observer.receipt.failureObservation.sampleQuerySequence, 11);
@@ -545,10 +549,13 @@ test("early roles retain a departed child and a later unknown-to-known change af
 });
 
 test("early history copies rows and keeps private role state per complete owned identity", () => {
-  const f = roleFixture([rootProcess, oldProcess], [
-    { ...rootProcess, role: "setup-path-match" },
-    { ...oldProcess, role: "owned-temp-old-uninstaller-candidate" },
-  ]);
+  const f = roleFixture(
+    [rootProcess, oldProcess],
+    [
+      { ...rootProcess, role: "setup-path-match" },
+      { ...oldProcess, role: "owned-temp-old-uninstaller-candidate" },
+    ],
+  );
   const current = f.observer.snapshot();
   observed(f.observer, current);
   const history = f.observer.receipt.earlyRoles;
@@ -570,10 +577,10 @@ test("early history copies rows and keeps private role state per complete owned 
     });
     observed(f.observer, f.observer.snapshot(), "watching");
   }
-  assert.deepEqual(history.firstObservations.slice(2).map((row) => row.role), [
-    "unknown",
-    "unknown",
-  ]);
+  assert.deepEqual(
+    history.firstObservations.slice(2).map((row) => row.role),
+    ["unknown", "unknown"],
+  );
   assert.equal(history.firstObservations.length, 4);
   assert.deepEqual(history.transitions, []);
   f.setEnvelope({ processes: identities([oldProcess]), roles: [], truncated: false });
@@ -593,7 +600,7 @@ test("early identity and transition caps are sticky, finite, and do not evict ea
   observed(f.observer, f.observer.snapshot(), "watching");
   const history = f.observer.receipt.earlyRoles;
   assert.ok(history, "Early owned role evidence must expose finite retention limits");
-  const first = structuredClone(history.firstObservations[0]);
+  const first = globalThis.structuredClone(history.firstObservations[0]);
   assert.deepEqual(history.limits, { identities: 32, transitions: 32 });
   assert.equal(history.firstObservations.length, 32);
   assert.equal(history.sourceRowsTruncated, true);
@@ -620,7 +627,8 @@ test("early identity and transition caps are sticky, finite, and do not evict ea
 });
 
 test("history publication faults cannot change rolling samples, original failure or custody", async () => {
-  const enabled = watchdogFixture(), disabled = watchdogFixture(false);
+  const enabled = watchdogFixture(),
+    disabled = watchdogFixture(false);
   const history = enabled.f.observer.receipt.earlyRoles;
   assert.ok(history, "Early owned role evidence must isolate its publication failures");
   Object.freeze(history.firstObservations);
