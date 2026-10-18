@@ -4121,3 +4121,44 @@ binds actual arguments/results, complete streams, seven observed test counts
 and unchanged source pins. These are renderer/static checks, not native Main,
 browser, installer or provider execution. This preparation checkpoint does not
 claim a CI35 push or native pass; Windows release acceptance remains incomplete.
+
+## CI35 preparation — controlled NSIS temporary path
+
+Commit `c38c60232b5bb755c8ab5e4625911e62bb98a4d2` shortens only the owned
+acceptance TEMP/TMP/TMPDIR mapping from `root/private-build/tmp` to `root/tmp`.
+The driver and the three strict consumers use the same exact new mapping. HOME
+and application state remain under `private-build/home`; aliases, foreign paths
+and the previous deep TEMP cannot acquire the new metadata/collector authority.
+Invalid role hints retain the original custody query and produce unknown advisory
+roles; rejected crash metadata uses no query, and rejected desktop collection
+starts no collector. Its fake metadata persistence still records unknown.
+
+This is a controlled acceptance input change. The actual longest installed
+relative path is 161 characters; the first installation's full path is 230.
+Source arithmetic places a backup path at `250 + plugin-directory-leaf-length`
+characters with the old TEMP, and `236 + leaf-length` with the new one. The
+actual plugin directory and failing file operation were not captured. A legacy
+path-length limit is a hypothesis, not the established cause of the warning or
+a production long-path repair. The [source facts and bounded arithmetic](/private/tmp/codeshell-nsis-error2-path-source-investigation-20261018/verified-source-facts-and-path-budget.json)
+retain that distinction. Production NSIS configuration, hook, install/uninstall
+arguments, source-key/public profiles, watchdog identity/custody, 180-second
+budget and original sixteen phases/six normal controllers/26 UI gates do not change.
+
+The first exact four-file isolated Node run passes 66 tests, with no failures,
+skips or cancellations. A subsequent format check finds layout issues in the
+role fixture; after formatting that file, lint finds an existing unqualified
+`structuredClone` global. The fixture qualifies it as `globalThis.structuredClone`.
+Final one-file format check, seven-file lint and the isolated role file's
+seventeen tests pass. The initial format/lint failures remain retained; the
+whole 66-case invocation is not repeated at the final formatted commit.
+The [Root source and actual-result binding](/private/tmp/codeshell-nsis-bounded-temporary-path-proof-20261018/Root-final-native-pure-and-commit-verification.json)
+checks that the other six edited sources remain unchanged from the 66-case run.
+These are pure fake-transport/metadata contracts, not native installer execution.
+
+The [aggregate local gate](/private/tmp/codeshell-real-operation-cycles-20261016/ci35-Root-combined-local-gate-20261018.json)
+binds the actual eleven renderer/static commands at `2cc1270` to identical input
+blobs in `c38c602`, and separately binds the finite NSIS checks and final role
+fixture. It does not claim all commands rerun at the aggregate source head.
+This preparation checkpoint claims no CI35 push or hosted result. Windows Main
+identity and replacement acceptance remain pending; diagnostic timing and the
+later validation without the collector remain separate requirements.
