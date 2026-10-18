@@ -239,30 +239,107 @@ test("the backport changes only the unsafe copy block of the pinned 25.1.8 sette
   assert.ok(secondary.includes("!macroundef setInstallModePerUser"));
 });
 
-test("the assisted hook runs before install/uninstall setter expansion and retains customUnInit", () => {
+test("both early assisted hooks precede page expansion and preserve the existing welcome pages", () => {
   const hook = read("../build/nsis-uninstaller-init.nsh");
   assert.ok(
     hook.startsWith(
       '; RMDir cannot remove the current working directory.\n; Leave $INSTDIR after electron-builder initializes the uninstall mode.\n!macro customUnInit\n  SetOutPath "$TEMP"\n!macroend\n',
     ),
   );
+  for (const [name, body] of [
+    ["customWelcomePage", ['!include "nsis-safe-per-user-install-mode.nsh"']],
+    [
+      "customUnWelcomePage",
+      ['!include "nsis-safe-per-user-install-mode.nsh"', "!insertmacro MUI_UNPAGE_WELCOME"],
+    ],
+  ]) {
+    const matches = [...hook.matchAll(new RegExp(`!macro ${name}\\r?\\n([\\s\\S]*?)!macroend`, "gu"))];
+    assert.equal(matches.length, 1);
+    assert.deepEqual(lines(matches[0][1]), body);
+  }
+  assert.doesNotMatch(hook, /!macro customInstallMode\b/u);
+  assert.doesNotMatch(hook, /!insertmacro MUI_PAGE_WELCOME\b/u);
+  const assisted = vendor("assistedInstaller.nsh");
+  const pages = [...assisted.matchAll(/!insertmacro PAGE_INSTALL_MODE/gu)];
+  assert.equal(pages.length, 2);
+  const installHook = assisted.indexOf("!insertmacro customWelcomePage");
+  const uninstallHook = assisted.indexOf("!insertmacro customUnWelcomePage");
+  assert.ok(installHook >= 0 && installHook < pages[0].index);
+  assert.ok(uninstallHook > pages[0].index && uninstallHook < pages[1].index);
+  assert.match(assisted, /!ifndef BUILD_UNINSTALLER\s+!ifmacrodef customWelcomePage/u);
   assert.match(
-    hook,
-    /!macro customInstallMode\s+!include "nsis-safe-per-user-install-mode\.nsh"\s+!macroend/u,
+    assisted,
+    /!ifmacrodef customUnWelcomePage\s+!insertmacro customUnWelcomePage\s+!else\s+!insertmacro MUI_UNPAGE_WELCOME/u,
   );
-  const ui = vendor("multiUserUi.nsh").toLowerCase();
-  const earlyHook = ui.indexOf("!insertmacro custominstallmode");
-  assert.ok(earlyHook >= 0 && earlyHook < ui.indexOf("!insertmacro setinstallmodeperuser"));
   const installer = vendor("installer.nsi");
   const perUserInclude = installer.indexOf('!include "multiUser.nsh"');
   const assistedInclude = installer.indexOf('!include "assistedInstaller.nsh"');
   assert.ok(perUserInclude >= 0 && perUserInclude < assistedInclude);
   assert.ok(assistedInclude < installer.indexOf("!insertmacro initMultiUser"));
-  assert.ok(vendor("assistedInstaller.nsh").includes("!insertmacro PAGE_INSTALL_MODE"));
+  assert.ok(assistedInclude < installer.indexOf("!insertmacro customHeader"));
   const config = JSON.parse(read("../package.json")).build.nsis;
   assert.equal(config.include, "nsis-uninstaller-init.nsh");
   assert.equal(config.oneClick, false);
   assert.equal(config.perMachine, false);
+});
+
+test("unsupported modes stop at the root without rejecting the required all-users helper", () => {
+  const hook = read("../build/nsis-uninstaller-init.nsh");
+  const firstHook = hook.indexOf("!macro customWelcomePage");
+  for (const flag of ["ONE_CLICK", "INSTALL_MODE_PER_ALL_USERS", "removeDefaultUninstallWelcomePage"]) {
+    const matches = [
+      ...hook.matchAll(new RegExp(`!ifdef ${flag}\\r?\\n\\s*!error "[^"\\r\\n]+"\\r?\\n!endif`, "gu")),
+    ];
+    assert.equal(matches.length, 1);
+    assert.ok(matches[0].index < firstHook);
+  }
+  assert.doesNotMatch(hook, /!ifn?def INSTALL_MODE_PER_ALL_USERS_REQUIRED\b/u);
+  const config = JSON.parse(read("../package.json")).build.nsis;
+  assert.equal(config.oneClick, false);
+  assert.equal(config.perMachine, false);
+  assert.equal(config.removeDefaultUninstallWelcomePage, undefined);
+});
+
+test("the compacting macro-buffer model retains early cursors and exposes the historical late-parent risk", () => {
+  // NSIS v304 scriptpp.cpp:337-350 compacts later entries on !macroundef;
+  // :407-424 adjusts active cursors only for a relocated buffer base.
+  // This bounded packing model checks ordering, not NSIS compilation or ABI.
+  const macros = (source) =>
+    [...source.matchAll(/^\s*!macro (\w+)[^\r\n]*\r?\n([\s\S]*?)^\s*!macroend/gmu)].map(
+      (match) => ({ name: match[1], bytes: Buffer.from(`${match[1]}\0${match[2]}\0\0`) }),
+    );
+  const entries = [
+    ...macros(read("../build/nsis-uninstaller-init.nsh")),
+    ...macros(vendor("multiUser.nsh")),
+    ...macros(vendor("multiUserUi.nsh")),
+  ];
+  assert.ok(entries.length > 4 && entries.length < 32);
+  assert.equal(new Set(entries.map((entry) => entry.name)).size, entries.length);
+  let offset = 0;
+  for (const entry of entries) {
+    entry.offset = offset;
+    offset += entry.bytes.length;
+  }
+  const removed = entries.find((entry) => entry.name === "setInstallModePerUser");
+  assert.ok(removed);
+  const original = Buffer.concat(entries.map((entry) => entry.bytes));
+  const replacement = macros(secondary);
+  assert.equal(replacement.length, 1);
+  const compacted = Buffer.concat([
+    original.subarray(0, removed.offset),
+    original.subarray(removed.offset + removed.bytes.length),
+    replacement[0].bytes,
+  ]);
+  for (const name of ["customWelcomePage", "customUnWelcomePage"]) {
+    const active = entries.find((entry) => entry.name === name);
+    assert.ok(active && active.offset + active.bytes.length <= removed.offset);
+    assert.deepEqual(compacted.subarray(active.offset, active.offset + active.bytes.length), active.bytes);
+  }
+  for (const name of ["PAGE_INSTALL_MODE", "FUNCTION_INSTALL_MODE_PAGE_FUNCTION"]) {
+    const active = entries.find((entry) => entry.name === name);
+    assert.ok(active && active.offset > removed.offset);
+    assert.notDeepEqual(compacted.subarray(active.offset, active.offset + active.bytes.length), active.bytes);
+  }
 });
 
 test("a short redirected Unicode folder is copied before free without disturbing registers or stack", () => {
