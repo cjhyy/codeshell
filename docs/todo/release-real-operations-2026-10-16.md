@@ -8,13 +8,14 @@ The release target is macOS, Windows, Linux Desktop and Web. Authorized native C
 has now executed; its passing and incomplete boundaries are recorded below.
 Cross-platform fixture tests alone are not native acceptance.
 
-The latest completed run, CI34, **FAILED** overall: Web, macOS and Linux pass;
-the Windows matrix fails during Main identity verification before Panel operations,
-and independent Windows installation times out during replacement after first-install
-UI passes. The diagnostic desktop frame shows an old-version installation warning
-with code 2; its underlying file/installer cause remains under investigation.
-See the [CI34 actual results](#ci34--completed-results-and-quickchat-image-capacity).
-The earlier CI33 contract failure remains retained. This is not a release-ready result.
+The latest completed run, CI35, **FAILED** overall: four jobs succeed (Web,
+macOS, Linux and independent Windows NSIS), while the Windows matrix fails in
+its initial NSIS installation. Setup exits with code `3221225477` (`0xC0000005`);
+the queried crash metadata identifies no exact application event or fault module.
+The cause remains unknown. Independent installation success does not transfer
+to the failed matrix or establish the cause of earlier failures.
+See the [CI35 actual results](#ci35--completed-results-and-windows-initial-install-failure).
+Earlier failures remain retained. This is not a release-ready result.
 
 CI29 failed overall across five jobs; its original result remains unchanged. macOS, Linux
 and Web pass their stated audited scopes. The original Windows matrix accepts
@@ -4162,3 +4163,103 @@ fixture. It does not claim all commands rerun at the aggregate source head.
 This preparation checkpoint claims no CI35 push or hosted result. Windows Main
 identity and replacement acceptance remain pending; diagnostic timing and the
 later validation without the collector remain separate requirements.
+
+## CI35 — completed results and Windows initial-install failure
+
+[CI35 run 39088411780](https://github.com/cjhyy/codeshell/actions/runs/39088411780)
+executes immutable source `f47c9e035ef698175896ddbac80eb6d01de6a16a`, attempt one,
+event `push`. The [terminal run snapshot](/private/tmp/codeshell-real-operation-cycles-20261016/ci35-progress8-run-api-20261018.json)
+and [five-job snapshot](/private/tmp/codeshell-real-operation-cycles-20261016/ci35-progress8-jobs-api-20261018.json)
+record **four successful jobs and one failed Windows matrix job**, with overall
+conclusion **failure**. The scopes below remain separate; pure tests, offline
+metadata conditions and PNG integrity checks do not add native operations.
+
+Web passes 31 browser operations. Six independently retained, settled full Host
+RPC arrays match their complete intended payloads and single-call counts. PNG
+chunk CRC checks cover 33 frames; Root actually views two selected frames.
+The [Web result and two-view binding](/private/tmp/codeshell-real-operation-cycles-20261016/ci-39088411780-web-independent-20261018/Root-Web-final-results-and-two-visuals.json)
+retains that distinction rather than claiming all frames were visually reviewed.
+
+Linux passes all nine admitted offline reader stages. Its source-bound native
+scope is the original 83 operations/12 Mains, separate Review drafts three/one,
+Goal deletion one within the existing preferences Main, and AppImage custody,
+source/cache permissions and ten exact GETs with no asset download. Recorded
+process evidence has 22 map copies/231 parent edges and no chronology conflict;
+35 PNG containers pass chunk CRC checks. Root actually views two frames.
+The [Linux result and visual limits](/private/tmp/codeshell-real-operation-cycles-20261016/ci-39088411780-linux-panel-independent-20261018/Root-Linux-final-results-and-two-visuals.json)
+retain faint scope-menu text over the Review file headers. The screenshot
+producer does not wait for menu closure/exit-animation completion, so this frame
+does not establish a stable, overlap-free layout. A closing-animation frame is
+consistent with source, but the actual frame timing and cause are not proved.
+
+macOS retains the first offline reader's failure: its extra assumption that the
+startup cleanup-signal array must be empty rejects one recorded owned-descendant
+request. A new source-aligned strict successor and the other six readers then
+all pass, with original normal-Main, complete recorded ancestry, truncation,
+custody and HOME predicates retained. The Main's recorded normal exit precedes
+that descendant SIGTERM request; the record does not prove signal delivery or
+normal exit of every descendant. The accepted scope is the original 83/12,
+separate drafts three/one, Goal deletion in the existing preferences Main and
+installed/reinstalled DMG thirteen operations each. There are 27 map copies/293
+parent edges with no chronology conflict and 49 PNG chunk CRC checks; Root
+actually views two frames. The [Mac final result and retained first failure](/private/tmp/codeshell-real-operation-cycles-20261016/ci-39088411780-mac-independent-20261018/Root-Mac-final-results-and-two-visuals.json)
+binds both the original error and the seven actual successor results.
+
+Independent Windows NSIS passes all sixteen phases, six normal original
+controllers and 26 installed/replaced UI operations (thirteen each). The strict
+absence, sibling-preservation, registry/cache, final OS-state, full-birth custody,
+source and HOME checks pass in this fixture's scope. The three offline readers
+pass 172, 73 and eight metadata conditions respectively; these are not operation
+counts. The desktop collector reports not-triggered, with no collector process
+or PNG. This is not a claim that instrumentation generally has no timing cost.
+Root actually views two installed/replaced UI frames. The [independent NSIS result](/private/tmp/codeshell-real-operation-cycles-20261016/ci-39088411780-independent-windows-nsis-panel-peer-20261018/Root-final-NSIS-results-and-two-visuals.json)
+binds the strict results and two views. It does not grant the separate Windows
+matrix an installer or native-suite pass.
+
+The Windows matrix fails at its initial NSIS `install`, after only the first six
+phases through `payload-identity`. Its final ZIP is 2,787,274 bytes, SHA-256
+`5722b03910741ffbec03dad55fd4ab9d8ab0f952adc82564f218caea645c82d4`.
+Strict preflight accepts 157 regular members against the exact 186 public
+patterns, with every ZIP member CRC checked; pattern count is not file count.
+The [fixed ZIP and selected-data provenance](/private/tmp/codeshell-real-operation-cycles-20261016/ci35-Windows-initial-install-first-failure-20261018/selected-failure-data-and-preflight.json)
+and [original job log](/private/tmp/codeshell-real-operation-cycles-20261016/ci35-Root-Windows-first-error-joblog-20261018-stdout.log)
+retain the first failure before any failure-specific interpretation.
+
+Setup PID 3000 has recorded parent 2252 and full birth
+`2026-10-18T02:14:48.6347170Z`. Journal sequence 19 records its abnormal
+`3221225477/null` exit before sequence 20's process-first-error and subsequent
+cleanup; no termination request is recorded. Custody settles its one owned
+incarnation to zero remaining, without a query failure or truncation. The
+recorded stdout/stderr are empty. This is an initial-install failure, not the
+earlier 180-second replacement timeout or identity-evaluation GC failure.
+Installed UI, replacement, uninstall, cache cleanup and final OS-state validation
+are not reached; process settlement alone does not establish OS restoration.
+
+The existing bounded crash query actually runs and returns `unknown` with reason
+`no-exact-application-event`. No matched fault module, offset or report ID is
+available. The hexadecimal exit-code conversion is not an independently matched
+exception diagnosis; an empty filtered projection does not prove that Windows
+logged no event anywhere. The [independent source/data assessment](/private/tmp/codeshell-real-operation-cycles-20261016/ci35-Windows-initial-install-first-failure-20261018/independent-install-failure-source-and-data-facts.json)
+binds the five selected raw records, journal order and immutable producers.
+
+The two Windows jobs share the reported source/toolchain pins and controlled
+HOME/TEMP/argument formulas, but their independently built Setup, ASAR and app
+executable hashes differ. They are not a same-binary A/B comparison. Neither
+independent success nor this crash proves a cause or repair associated with the
+shorter TEMP. Root has accepted a minimal bounded count/provenance diagnostic
+implementation plan; it remains a source proposal, with no new actual event query
+or native validation at this checkpoint. No debugger, dump, retry, weaker
+predicate or changed budget is introduced.
+
+Review fixture follow-up `3149e8e78b9adedf0438fce20c8ee901f1d41336` changes exactly
+two files. Its finite Node run passes thirteen tests with no failures, skips or
+cancellations; explicit two-file lint and driver syntax checking also pass.
+The [source follow-up proof](/private/tmp/codeshell-review-scope-menu-settled-proof-20261018/verified-source-summary.json)
+has SHA-256 `0b98a35540ff4ec5153e7509c80acf0e3ca5405c6977dfdd834a216b40278826`.
+It adds a capture barrier without claiming a product overlap cause. Actual
+hosted menu-capture/native validation remains pending; no CI36 result is claimed.
+
+CI35 remains failed and release is not recommended. Only the authorized dedicated
+acceptance branch was pushed; no remote-main, tag, release or publication action
+is claimed. All earlier failure records and preparation checkpoints above keep
+their original time-bound statements.
