@@ -536,29 +536,14 @@ export class SettingsManager {
   saveUserSetting(key: string, value: unknown): void {
     this.clearHookOrigins();
     const path = join(this.userConfigDir(), "settings.json");
-    assertSafeSettingsWriteTarget(path);
-    // Lock spans read → modify → write; see mutateSettingsFile for why the
-    // atomic rename alone was not enough. This path keeps its own sanitizing
-    // read (readJsonObject does not sanitize) so behaviour is unchanged apart
-    // from the added serialization.
-    const release = acquireFileLock(path);
-    try {
-      // Strict read: an existing-but-unreadable user settings file must abort
-      // the write rather than be rewritten from {}. This file can hold plaintext
-      // API keys, so silently replacing it with just the new key is the worst
-      // possible outcome. See readConfigFileForMutation.
-      const current = readConfigFileForMutation(path) ?? {};
-
+    // Read the selected JSON/YAML layer inside the same lock as every other
+    // writer. Starting from an absent JSON file would shadow sibling YAML.
+    this.mutateSettingsFile(path, (current) => {
       setDottedSetting(current, key, value);
-
-      // Atomic write: stage to .tmp, then rename, so a concurrent read can't
-      // catch a half-written file. mode 0o600 — settings.json can hold plaintext
-      // API keys, so it must be owner-only like credentials.json (store.ts:56),
-      // not world-readable (default umask leaves 0o644 otherwise).
-      this.atomicWriteJson(path, current);
-    } finally {
-      release();
-    }
+      // Validate the resolved layer, but persist the raw object so unknown
+      // extension fields and null deletion markers survive the write.
+      validateSettings(merge({}, current));
+    });
 
     this.invalidate();
   }
@@ -580,6 +565,7 @@ export class SettingsManager {
     const path = this.projectSettingsPath(cwd);
     this.mutateSettingsFile(path, (current) => {
       setDottedSetting(current, key, value);
+      validateSettings(merge({}, current));
     });
     this.invalidate();
   }
@@ -598,6 +584,7 @@ export class SettingsManager {
     const path = this.localSettingsPath(cwd);
     this.mutateSettingsFile(path, (current) => {
       setDottedSetting(current, key, value);
+      validateSettings(merge({}, current));
     });
     this.invalidate();
   }
