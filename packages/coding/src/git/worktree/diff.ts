@@ -1,5 +1,5 @@
 /** Git worktree diff support owned by the coding capability. */
-import { gitOutput } from "./git-exec.js";
+import { execGit, gitErrorMessage, gitOutput } from "./git-exec.js";
 
 export interface WorktreeDiffSummary {
   /** Best-effort base used for the branch comparison, usually main/master. */
@@ -16,10 +16,7 @@ export async function getWorktreeDiff(
   worktreePath: string,
   baseRef?: string,
 ): Promise<WorktreeDiffSummary> {
-  const comparisonBase =
-    baseRef && (await commitRefExists(worktreePath, baseRef))
-      ? baseRef
-      : await findComparisonBaseRef(worktreePath);
+  const comparisonBase = await findSummaryComparisonBase(worktreePath, baseRef);
   return diffSummary(worktreePath, comparisonBase);
 }
 
@@ -52,11 +49,35 @@ async function commitRefExists(cwd: string, ref: string): Promise<boolean> {
   return out !== undefined;
 }
 
+async function findSummaryComparisonBase(
+  cwd: string,
+  baseRef?: string,
+): Promise<string | undefined> {
+  const candidates = new Set([
+    ...(baseRef ? [baseRef] : []),
+    "main",
+    "master",
+    "origin/main",
+    "origin/master",
+  ]);
+  for (const ref of candidates) {
+    try {
+      await execGit(cwd, ["rev-parse", "--verify", "--quiet", `${ref}^{commit}`], 5000);
+      return ref;
+    } catch (error) {
+      // --verify --quiet exits with 1 for an absent ref. Infrastructure errors
+      // must reach the UI instead of being reported as a clean workspace.
+      if ((error as { code?: unknown }).code !== 1) throw error;
+    }
+  }
+  return undefined;
+}
+
 async function diffSummary(cwd: string, baseRef: string | undefined): Promise<WorktreeDiffSummary> {
   const [dirtyFiles, committedFiles, aheadCommits] = await Promise.all([
     statusFileSet(cwd),
     baseRef ? changedFilesSinceBase(cwd, baseRef) : Promise.resolve(new Set<string>()),
-    baseRef ? aheadCommitCount(cwd, baseRef) : Promise.resolve(0),
+    baseRef ? readAheadCommitCount(cwd, baseRef) : Promise.resolve(0),
   ]);
   const changedFiles = new Set([...dirtyFiles, ...committedFiles]);
   return {
@@ -68,14 +89,25 @@ async function diffSummary(cwd: string, baseRef: string | undefined): Promise<Wo
 }
 
 async function changedFilesSinceBase(cwd: string, baseRef: string): Promise<Set<string>> {
-  const out = await gitOutput(cwd, ["diff", "--name-only", `${baseRef}...HEAD`]);
-  const raw = out ?? (await gitOutput(cwd, ["diff", "--name-only", `${baseRef}..HEAD`])) ?? "";
-  return new Set(
-    raw
-      .split("\n")
-      .map((line) => line.trim())
-      .filter(Boolean),
-  );
+  let raw: string;
+  try {
+    raw = await execGit(cwd, ["diff", "--name-only", "-z", `${baseRef}...HEAD`]);
+  } catch (error) {
+    // Unrelated histories have no merge base. Keep the existing two-dot
+    // comparison for that case, while surfacing timeouts and other failures.
+    if (!/no merge base/i.test(gitErrorMessage(error))) throw error;
+    raw = await execGit(cwd, ["diff", "--name-only", "-z", `${baseRef}..HEAD`]);
+  }
+  return new Set(raw.split("\0").filter(Boolean));
+}
+
+async function readAheadCommitCount(cwd: string, baseRef: string): Promise<number> {
+  const out = await execGit(cwd, ["rev-list", "--count", `${baseRef}..HEAD`]);
+  const count = Number(out.trim());
+  if (!Number.isSafeInteger(count) || count < 0) {
+    throw new Error("Git returned an invalid ahead commit count");
+  }
+  return count;
 }
 
 async function aheadCommitCount(cwd: string, baseRef: string): Promise<number> {
@@ -85,23 +117,19 @@ async function aheadCommitCount(cwd: string, baseRef: string): Promise<number> {
 }
 
 async function statusFileSet(cwd: string): Promise<Set<string>> {
-  const raw = (await gitOutput(cwd, ["status", "--porcelain=v1"])) ?? "";
+  // Background summaries must not contend with a foreground Git operation for
+  // the optional index refresh lock. NUL records preserve arbitrary file names.
+  const raw = await execGit(cwd, ["--no-optional-locks", "status", "--porcelain=v1", "-z"]);
   const files = new Set<string>();
-  for (const line of raw.split("\n")) {
-    if (!line.trim()) continue;
-    const path = line.slice(3).trim();
+  const records = raw.split("\0");
+  for (let i = 0; i < records.length; i += 1) {
+    const record = records[i];
+    const path = record.slice(3);
     if (!path) continue;
-    const renameTarget = path.includes(" -> ") ? path.split(" -> ").at(-1) : path;
-    if (renameTarget) files.add(unquoteGitPath(renameTarget));
+    files.add(path);
+    // In porcelain -z, the destination comes first and the following NUL
+    // record contains the source of a rename or copy.
+    if (/[RC]/.test(record.slice(0, 2))) i += 1;
   }
   return files;
-}
-
-function unquoteGitPath(path: string): string {
-  if (!path.startsWith('"') || !path.endsWith('"')) return path;
-  try {
-    return JSON.parse(path) as string;
-  } catch {
-    return path.slice(1, -1);
-  }
 }

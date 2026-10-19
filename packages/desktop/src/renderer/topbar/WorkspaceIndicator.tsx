@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { GitBranch, Loader2, MoreHorizontal, Plus } from "lucide-react";
+import { Check, ChevronDown, GitBranch, Loader2, MoreHorizontal, Plus, Search } from "lucide-react";
 import { Button } from "../components/ui/button";
 import {
   Dialog,
@@ -21,6 +21,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../com
 import { useT, type TFunction } from "../i18n";
 import { useToast } from "../ui/ToastProvider";
 import { cn } from "@/lib/utils";
+import { WorkspaceDiffLoader, type WorkspaceDiffState } from "./workspace-diff-loader";
 import type {
   SessionWorkspace,
   SessionWorkspaceAuthority,
@@ -165,6 +166,9 @@ export function WorkspaceIndicator({
   const { t } = useT();
   const toast = useToast();
   const [open, setOpen] = useState(false);
+  const [showStats, setShowStats] = useState(false);
+  const [search, setSearch] = useState("");
+  const [externalExpanded, setExternalExpanded] = useState(false);
   const [authorityState, setAuthorityState] = useState<AuthoritySnapshot | null>(null);
   const [workspaceState, setWorkspaceState] =
     useState<TargetedValue<SessionWorkspace | null> | null>(null);
@@ -187,7 +191,6 @@ export function WorkspaceIndicator({
   const authorityRequestId = useRef(0);
   const currentRequestId = useRef(0);
   const listRequestId = useRef(0);
-  const diffRequestId = useRef(0);
   const gitProbeRequestId = useRef(0);
   const requestTargetKey = `${sessionId ?? ""}\0${projectPath ?? ""}`;
   const requestTargetKeyRef = useRef(requestTargetKey);
@@ -195,7 +198,9 @@ export function WorkspaceIndicator({
   const activeAuthorityRef = useRef<SessionWorkspaceAuthority | null>(null);
   const activeAuthorityStatusRef = useRef<AuthoritySnapshot["status"] | null>(null);
   const openRef = useRef(open);
+  const showStatsRef = useRef(showStats);
   openRef.current = open;
+  showStatsRef.current = showStats;
   if (requestTargetKeyRef.current !== requestTargetKey) {
     requestTargetKeyRef.current = requestTargetKey;
     activeAuthorityTargetKeyRef.current = null;
@@ -204,7 +209,6 @@ export function WorkspaceIndicator({
     authorityRequestId.current += 1;
     currentRequestId.current += 1;
     listRequestId.current += 1;
-    diffRequestId.current += 1;
     gitProbeRequestId.current += 1;
   }
 
@@ -225,6 +229,40 @@ export function WorkspaceIndicator({
   const currentLoading = currentLoadingTarget === requestTargetKey;
   const listLoading = Boolean(activeTargetKey && listLoadingTarget === activeTargetKey);
   const isLoading = currentLoading || listLoading;
+  const [, setDiffVersion] = useState(0);
+  const activeDiffLoaderRef = useRef<WorkspaceDiffLoader | null>(null);
+  const pendingDiffInvalidationRef = useRef<WorkspaceDiffLoader | null>(null);
+  // Cache and pending requests belong to this exact Session/root authority.
+  const diffLoader: WorkspaceDiffLoader = useMemo(
+    () =>
+      new WorkspaceDiffLoader(
+        async (path) => {
+          if (!sessionId || typeof window.codeshell.getSessionWorktreeDiff !== "function") {
+            throw new Error("Worktree diff is unavailable");
+          }
+          return window.codeshell.getSessionWorktreeDiff(sessionId, path);
+        },
+        () => {
+          if (activeDiffLoaderRef.current === diffLoader) setDiffVersion((version) => version + 1);
+        },
+      ),
+    [activeTargetKey, sessionId],
+  );
+  useEffect(() => {
+    activeDiffLoaderRef.current = diffLoader;
+    return () => {
+      activeDiffLoaderRef.current = null;
+      diffLoader.setOpen(false);
+    };
+  }, [diffLoader]);
+  useEffect(() => {
+    diffLoader.setRows(list?.worktrees ?? []);
+    diffLoader.setOpen(open && showStats);
+  }, [diffLoader, list, open, showStats]);
+  const onRowVisibilityChange = useCallback(
+    (path: string, visible: boolean) => diffLoader.setVisible(path, visible),
+    [diffLoader],
+  );
 
   const reportError = useCallback(
     (error: unknown) => {
@@ -278,7 +316,6 @@ export function WorkspaceIndicator({
       if (activeAuthorityTargetKeyRef.current !== nextTargetKey) {
         activeAuthorityTargetKeyRef.current = nextTargetKey;
         listRequestId.current += 1;
-        diffRequestId.current += 1;
         gitProbeRequestId.current += 1;
       }
       activeAuthorityRef.current = nextAuthority;
@@ -307,7 +344,6 @@ export function WorkspaceIndicator({
       if (activeAuthorityTargetKeyRef.current !== unavailableTargetKey) {
         activeAuthorityTargetKeyRef.current = unavailableTargetKey;
         listRequestId.current += 1;
-        diffRequestId.current += 1;
         gitProbeRequestId.current += 1;
       }
       activeAuthorityRef.current = null;
@@ -331,113 +367,80 @@ export function WorkspaceIndicator({
     }
   }, [projectPath, sessionId]);
 
-  const hydrateDiffs = useCallback(
-    (next: SessionWorkspaceList, targetKey: string, requestSessionId: string) => {
-      const getDiff = window.codeshell.getSessionWorktreeDiff;
-      if (typeof getDiff !== "function") return;
-      const requestId = ++diffRequestId.current;
-      for (const row of next.worktrees) {
-        void getDiff(requestSessionId, row.path)
-          .then((diff) => {
-            if (diffRequestId.current !== requestId) return;
-            if (activeAuthorityTargetKeyRef.current !== targetKey) return;
-            setListState((current) => {
-              if (
-                !current ||
-                current.targetKey !== targetKey ||
-                current.value.mainRoot !== next.mainRoot
-              ) {
-                return current;
-              }
-              let changed = false;
-              const worktrees = current.value.worktrees.map((existing) => {
-                if (existing.path !== row.path) return existing;
-                changed = true;
-                return { ...existing, diff };
-              });
-              return changed ? { ...current, value: { ...current.value, worktrees } } : current;
-            });
-          })
-          .catch(() => {
-            // Per-row diff is best-effort. Stale/cancelled requests are ignored
-            // by the requestId guard; real failures leave the row in checking.
-          });
-      }
-    },
-    [],
-  );
-
   const applyWorkspaceList = useCallback(
-    (
-      next: SessionWorkspaceList,
-      targetKey: string,
-      requestSessionId: string,
-      updateCurrent: boolean,
-    ) => {
+    (next: SessionWorkspaceList, targetKey: string, updateCurrent: boolean) => {
       if (activeAuthorityTargetKeyRef.current !== targetKey) return;
       const requestAuthority = activeAuthorityRef.current;
       if (requestAuthority && !samePath(next.mainRoot, requestAuthority.mainRoot)) return;
       setListState({ targetKey, value: next });
       if (updateCurrent) setWorkspaceState({ targetKey, value: next.current });
-      hydrateDiffs(next, targetKey, requestSessionId);
     },
-    [hydrateDiffs],
+    [],
   );
 
-  const refreshList = useCallback(async () => {
-    const requestId = ++listRequestId.current;
-    const targetKey = activeAuthorityTargetKeyRef.current;
-    const requestKey = requestTargetKeyRef.current;
-    const requestAuthority = activeAuthorityRef.current;
-    const currentRequestAtStart = currentRequestId.current;
-    if (
-      !sessionId ||
-      !projectPath ||
-      !targetKey ||
-      activeAuthorityStatusRef.current !== "ready" ||
-      (requestAuthority && requestAuthority.rootStatus !== "ok")
-    ) {
-      setListLoadingTarget(null);
-      return;
-    }
-    setListLoadingTarget(targetKey);
-    try {
-      const next = await window.codeshell.listSessionWorktrees(
-        sessionId,
-        requestAuthority?.mainRoot ?? projectPath,
-      );
-      if (listRequestId.current !== requestId) return;
+  const refreshList = useCallback(
+    async (invalidateDiffs = false) => {
+      const requestId = ++listRequestId.current;
+      const targetKey = activeAuthorityTargetKeyRef.current;
+      const requestKey = requestTargetKeyRef.current;
+      const requestAuthority = activeAuthorityRef.current;
+      const currentRequestAtStart = currentRequestId.current;
       if (
-        requestTargetKeyRef.current !== requestKey ||
-        activeAuthorityTargetKeyRef.current !== targetKey
-      ) {
-        return;
-      }
-      applyWorkspaceList(
-        next,
-        targetKey,
-        sessionId,
-        currentRequestId.current === currentRequestAtStart,
-      );
-    } catch (error) {
-      if (listRequestId.current !== requestId) return;
-      if (
-        requestTargetKeyRef.current !== requestKey ||
-        activeAuthorityTargetKeyRef.current !== targetKey
-      ) {
-        return;
-      }
-      reportError(error);
-    } finally {
-      if (
-        listRequestId.current === requestId &&
-        requestTargetKeyRef.current === requestKey &&
-        activeAuthorityTargetKeyRef.current === targetKey
+        !sessionId ||
+        !projectPath ||
+        !targetKey ||
+        activeAuthorityStatusRef.current !== "ready" ||
+        (requestAuthority && requestAuthority.rootStatus !== "ok")
       ) {
         setListLoadingTarget(null);
+        return;
       }
-    }
-  }, [applyWorkspaceList, projectPath, reportError, sessionId]);
+      // Keep invalidation across superseded/failed list requests. Reopening the
+      // menu must not swallow a file-change refresh while HEAD remains unchanged.
+      if (invalidateDiffs) pendingDiffInvalidationRef.current = diffLoader;
+      setListLoadingTarget(targetKey);
+      try {
+        const next = await window.codeshell.listSessionWorktrees(
+          sessionId,
+          requestAuthority?.mainRoot ?? projectPath,
+        );
+        if (listRequestId.current !== requestId) return;
+        if (
+          requestTargetKeyRef.current !== requestKey ||
+          activeAuthorityTargetKeyRef.current !== targetKey
+        ) {
+          return;
+        }
+        if (pendingDiffInvalidationRef.current === diffLoader) {
+          pendingDiffInvalidationRef.current = null;
+          // Apply metadata and invalidation together before scheduling fresh work.
+          diffLoader.setOpen(false);
+          diffLoader.setRows(next.worktrees);
+          diffLoader.invalidate();
+          diffLoader.setOpen(openRef.current && showStatsRef.current);
+        }
+        applyWorkspaceList(next, targetKey, currentRequestId.current === currentRequestAtStart);
+      } catch (error) {
+        if (listRequestId.current !== requestId) return;
+        if (
+          requestTargetKeyRef.current !== requestKey ||
+          activeAuthorityTargetKeyRef.current !== targetKey
+        ) {
+          return;
+        }
+        reportError(error);
+      } finally {
+        if (
+          listRequestId.current === requestId &&
+          requestTargetKeyRef.current === requestKey &&
+          activeAuthorityTargetKeyRef.current === targetKey
+        ) {
+          setListLoadingTarget(null);
+        }
+      }
+    },
+    [applyWorkspaceList, diffLoader, projectPath, reportError, sessionId],
+  );
 
   const refreshGitProbe = useCallback(async () => {
     const requestId = ++gitProbeRequestId.current;
@@ -490,17 +493,19 @@ export function WorkspaceIndicator({
       authorityRequestId.current += 1;
       currentRequestId.current += 1;
       listRequestId.current += 1;
-      diffRequestId.current += 1;
       gitProbeRequestId.current += 1;
     };
   }, []);
 
   useEffect(() => {
     listRequestId.current += 1;
-    diffRequestId.current += 1;
     setListLoadingTarget(null);
     setBusyAction(null);
     setConfirm(null);
+    setSearch("");
+    setExternalExpanded(false);
+    showStatsRef.current = false;
+    setShowStats(false);
   }, [requestTargetKey]);
 
   useEffect(() => {
@@ -546,21 +551,33 @@ export function WorkspaceIndicator({
 
   useEffect(() => {
     if (!projectPath) return;
+    let filesChangedTimer: ReturnType<typeof setTimeout> | undefined;
+    const refreshVisibleList = () => {
+      if (openRef.current) void refreshListRef.current(true);
+      else diffLoader.invalidate();
+    };
     const onBranchesChanged = (event: Event) => {
       const detail = (event as CustomEvent<{ cwd?: string }>).detail;
-      if (!detail?.cwd || samePath(detail.cwd, authority?.mainRoot ?? projectPath))
+      if (!detail?.cwd || samePath(detail.cwd, authority?.mainRoot ?? projectPath)) {
         void refreshGitProbe();
+        refreshVisibleList();
+      }
     };
     const onFilesChanged = () => {
-      void refreshGitProbe();
+      clearTimeout(filesChangedTimer);
+      filesChangedTimer = setTimeout(() => {
+        void refreshGitProbe();
+        refreshVisibleList();
+      }, 1000);
     };
     window.addEventListener("codeshell:git-branches-changed", onBranchesChanged);
     window.addEventListener("codeshell:files-changed", onFilesChanged);
     return () => {
+      clearTimeout(filesChangedTimer);
       window.removeEventListener("codeshell:git-branches-changed", onBranchesChanged);
       window.removeEventListener("codeshell:files-changed", onFilesChanged);
     };
-  }, [authority?.mainRoot, refreshGitProbe, projectPath]);
+  }, [authority?.mainRoot, diffLoader, refreshGitProbe, projectPath]);
 
   useEffect(() => {
     if (!sessionId) return;
@@ -569,7 +586,7 @@ export function WorkspaceIndicator({
       void refreshCurrent().then((ready) => {
         if (!ready) return;
         void refreshGitProbeRef.current();
-        if (openRef.current) void refreshListRef.current();
+        if (openRef.current) void refreshListRef.current(true);
       });
     };
     const offWorkspace = window.codeshell.onWorkspaceChanged?.((event) => {
@@ -594,6 +611,8 @@ export function WorkspaceIndicator({
   }, [refreshCurrent, requestTargetKey, sessionId]);
 
   const onOpenChange = (next: boolean) => {
+    openRef.current = next;
+    if (!next) diffLoader.setOpen(false);
     setOpen(next);
     if (next) {
       void refreshGitProbe();
@@ -615,7 +634,10 @@ export function WorkspaceIndicator({
       ) {
         return false;
       }
-      applyWorkspaceList(next, targetKey, sessionId, true);
+      diffLoader.setOpen(false);
+      diffLoader.invalidate();
+      applyWorkspaceList(next, targetKey, true);
+      openRef.current = false;
       setOpen(false);
       return true;
     } catch (error) {
@@ -656,7 +678,11 @@ export function WorkspaceIndicator({
       ) {
         return;
       }
-      applyWorkspaceList(next, targetKey, sessionId, true);
+      diffLoader.setOpen(false);
+      diffLoader.setRows(next.worktrees);
+      diffLoader.invalidate();
+      diffLoader.setOpen(openRef.current && showStatsRef.current);
+      applyWorkspaceList(next, targetKey, true);
       setConfirm(null);
     } catch (error) {
       reportError(error);
@@ -674,9 +700,15 @@ export function WorkspaceIndicator({
     [authority?.mainRootName, includeProjectNameInLabel, mainBranch, projectName, workspace],
   );
   const rows = list?.worktrees ?? [];
-  const mainRows = rows.filter((row) => row.isMain);
-  const externalRows = rows.filter((row) => !row.isMain && workspaceIsExternal(row));
-  const managedRows = rows.filter((row) => !row.isMain && !workspaceIsExternal(row));
+  const query = search.trim().toLocaleLowerCase();
+  const matchingRows = query
+    ? rows.filter((row) => `${row.branch}\n${row.path}`.toLocaleLowerCase().includes(query))
+    : rows;
+  const currentRows = matchingRows.filter((row) => workspace && samePath(row.path, workspace.root));
+  const otherRows = matchingRows.filter((row) => !currentRows.includes(row));
+  const mainRows = otherRows.filter((row) => row.isMain);
+  const externalRows = otherRows.filter((row) => !row.isMain && workspaceIsExternal(row));
+  const managedRows = otherRows.filter((row) => !row.isMain && !workspaceIsExternal(row));
   const profileBadge = activeProfileLabel ? (
     <span
       data-active-profile="true"
@@ -686,6 +718,28 @@ export function WorkspaceIndicator({
       {activeProfileLabel}
     </span>
   ) : null;
+
+  const renderRow = (row: SessionWorkspaceWorktreeInfo) => {
+    const diffState = diffLoader.getState(row);
+    const hydratedRow = { ...row, diff: diffState.diff };
+    return (
+      <WorkspaceRow
+        key={row.path}
+        row={hydratedRow}
+        showDiff={showStats}
+        showExternalBadge={currentRows.includes(row)}
+        diffStatus={diffState.status}
+        onVisibilityChange={showStats ? onRowVisibilityChange : undefined}
+        current={workspace}
+        busy={busyAction}
+        sessionBusy={sessionBusy}
+        sessionId={sessionId}
+        mainBranch={mainBranch}
+        onSwitch={switchTo}
+        onCleanup={(action) => setConfirm({ row: hydratedRow, action })}
+      />
+    );
+  };
 
   if (!canLoad) return null;
   const unavailable = visibleAuthorityState?.status === "unavailable";
@@ -743,12 +797,59 @@ export function WorkspaceIndicator({
             {!iconOnly && <span className="min-w-0 truncate">{label}</span>}
           </button>
         </PopoverTrigger>
-        <PopoverContent align="start" className="w-[520px] max-w-[calc(100vw-2rem)] p-0">
+        <PopoverContent
+          align="start"
+          sideOffset={8}
+          className="w-[420px] max-w-[calc(100vw-2rem)] overflow-hidden rounded-xl p-1.5 shadow-xl"
+        >
           <div className="flex max-h-[min(70vh,32rem)] flex-col">
-            <div className="border-b border-border px-3 py-2 text-xs font-medium text-muted-foreground">
-              {t("topbar.workspace.switcherTitle")}
+            <div className="flex items-center justify-between px-2.5 pb-2 pt-1.5">
+              <span className="text-[13px] font-medium text-foreground">
+                {t("topbar.workspace.switcherTitle")}
+              </span>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                aria-pressed={showStats}
+                onClick={() => {
+                  const next = !showStatsRef.current;
+                  showStatsRef.current = next;
+                  if (!next) diffLoader.setOpen(false);
+                  setShowStats(next);
+                }}
+                className="h-7 gap-2 rounded-md px-1.5 text-[11px] font-normal text-muted-foreground hover:text-foreground"
+              >
+                {t("topbar.workspace.changeStats")}
+                <span
+                  aria-hidden="true"
+                  className={cn(
+                    "inline-flex h-3.5 w-6 items-center rounded-full px-0.5",
+                    showStats ? "bg-primary" : "bg-muted-foreground/25",
+                  )}
+                >
+                  <span
+                    className={cn(
+                      "h-2.5 w-2.5 rounded-full shadow-sm",
+                      showStats ? "translate-x-2.5 bg-primary-foreground" : "bg-popover",
+                    )}
+                  />
+                </span>
+              </Button>
             </div>
-            <div className="min-h-0 flex-1 overflow-y-auto p-1">
+            {(rows.length > 6 || Boolean(search)) && (
+              <div className="relative mx-1 mb-1">
+                <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground/70" />
+                <Input
+                  value={search}
+                  onChange={(event) => setSearch(event.target.value)}
+                  placeholder={t("topbar.workspace.search")}
+                  aria-label={t("topbar.workspace.search")}
+                  className="h-8 rounded-md border-transparent bg-muted/60 pl-8 text-xs shadow-none placeholder:text-muted-foreground/70 focus-visible:ring-1"
+                />
+              </div>
+            )}
+            <div data-workspace-scroll className="min-h-0 flex-1 overflow-y-auto px-0.5">
               {listLoading && !list ? (
                 <div className="flex items-center gap-2 px-3 py-4 text-sm text-muted-foreground">
                   <Loader2 className="h-4 w-4 animate-spin" />
@@ -756,66 +857,45 @@ export function WorkspaceIndicator({
                 </div>
               ) : (
                 <>
+                  {currentRows.length > 0 && (
+                    <WorkspaceGroup title={t("topbar.workspace.groupCurrent")}>
+                      {currentRows.map(renderRow)}
+                    </WorkspaceGroup>
+                  )}
                   {mainRows.length > 0 && (
                     <WorkspaceGroup title={t("topbar.workspace.groupMain")}>
-                      {mainRows.map((row) => (
-                        <WorkspaceRow
-                          key={row.path}
-                          row={row}
-                          current={workspace}
-                          busy={busyAction}
-                          sessionBusy={sessionBusy}
-                          sessionId={sessionId}
-                          mainBranch={mainBranch}
-                          onSwitch={switchTo}
-                          onCleanup={(action) => setConfirm({ row, action })}
-                        />
-                      ))}
+                      {mainRows.map(renderRow)}
                     </WorkspaceGroup>
                   )}
                   {managedRows.length > 0 && (
                     <WorkspaceGroup title={t("topbar.workspace.groupWorktrees")}>
-                      {managedRows.map((row) => (
-                        <WorkspaceRow
-                          key={row.path}
-                          row={row}
-                          current={workspace}
-                          busy={busyAction}
-                          sessionBusy={sessionBusy}
-                          sessionId={sessionId}
-                          mainBranch={mainBranch}
-                          onSwitch={switchTo}
-                          onCleanup={(action) => setConfirm({ row, action })}
-                        />
-                      ))}
+                      {managedRows.map(renderRow)}
                     </WorkspaceGroup>
                   )}
                   {externalRows.length > 0 && (
-                    <WorkspaceGroup title={t("topbar.workspace.groupExternal")}>
-                      {externalRows.map((row) => (
-                        <WorkspaceRow
-                          key={row.path}
-                          row={row}
-                          current={workspace}
-                          busy={busyAction}
-                          sessionBusy={sessionBusy}
-                          sessionId={sessionId}
-                          mainBranch={mainBranch}
-                          onSwitch={switchTo}
-                          onCleanup={(action) => setConfirm({ row, action })}
-                        />
-                      ))}
+                    <WorkspaceGroup
+                      title={t("topbar.workspace.groupExternal")}
+                      count={externalRows.length}
+                      expanded={externalExpanded || Boolean(query)}
+                      onToggle={() => setExternalExpanded(!externalExpanded)}
+                    >
+                      {externalRows.map(renderRow)}
                     </WorkspaceGroup>
+                  )}
+                  {query && matchingRows.length === 0 && (
+                    <div className="px-3 py-4 text-center text-xs text-muted-foreground">
+                      {t("topbar.workspace.noMatches")}
+                    </div>
                   )}
                 </>
               )}
             </div>
-            <div className="border-t border-border p-1">
+            <div className="mt-1 border-t border-border/60 pt-1">
               <Button
                 type="button"
                 variant="ghost"
                 size="sm"
-                className="w-full justify-start"
+                className="h-8 w-full justify-start rounded-md px-2.5 text-xs font-normal"
                 onClick={() => setNewOpen(true)}
                 disabled={sessionBusy}
               >
@@ -900,6 +980,10 @@ export function WorkspaceRow({
   onSwitch,
   onCleanup,
   cleanupMenuOpen,
+  showDiff = true,
+  showExternalBadge = true,
+  diffStatus,
+  onVisibilityChange,
 }: {
   row: SessionWorkspaceWorktreeInfo;
   current: SessionWorkspace | null;
@@ -910,8 +994,32 @@ export function WorkspaceRow({
   onSwitch: (target: string) => void;
   onCleanup: (action: CleanupAction) => void;
   cleanupMenuOpen?: boolean;
+  showDiff?: boolean;
+  showExternalBadge?: boolean;
+  diffStatus?: WorkspaceDiffState["status"];
+  onVisibilityChange?: (path: string, visible: boolean) => void;
 }) {
   const { t } = useT();
+  const rowRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const node = rowRef.current;
+    if (!node || !onVisibilityChange) return;
+    // Electron supports IntersectionObserver. The fallback also keeps this
+    // component usable in hosts without visibility observation.
+    if (typeof IntersectionObserver === "undefined") {
+      onVisibilityChange(row.path, true);
+      return () => onVisibilityChange(row.path, false);
+    }
+    const observer = new IntersectionObserver(
+      ([entry]) => onVisibilityChange(row.path, entry.isIntersecting),
+      { root: node.closest("[data-workspace-scroll]") },
+    );
+    observer.observe(node);
+    return () => {
+      observer.disconnect();
+      onVisibilityChange(row.path, false);
+    };
+  }, [onVisibilityChange, row.path]);
   const disabledReason = workspaceRowDisabledReason(row, current, t, sessionBusy);
   const cleanupState = sessionBusy
     ? {
@@ -925,12 +1033,10 @@ export function WorkspaceRow({
   const ownedByCurrentSession =
     !!sessionId && row.occupiedBySessionIds?.includes(sessionId) === true;
   const dirty = row.diff?.hasUncommittedChanges === true;
-  const changedFiles = row.diff?.changedFiles ?? 0;
-  const aheadCommits = row.diff?.aheadCommits ?? 0;
   const external = workspaceIsExternal(row);
   const rowLabel = row.isMain
     ? mainBranch
-      ? `⑃ ${mainBranch}`
+      ? mainBranch
       : t("topbar.workspace.main")
     : row.branch || t("topbar.workspace.detached");
   const path = compactPath(row.path);
@@ -945,7 +1051,7 @@ export function WorkspaceRow({
     <DropdownMenuTrigger asChild>
       <button
         type="button"
-        className="my-2 inline-flex h-8 w-8 items-center justify-center rounded-sm text-muted-foreground opacity-80 hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/25"
+        className="my-auto inline-flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground/60 hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/25"
         title={cleanupDisabledReason ?? t("topbar.workspace.cleanup")}
         aria-label={
           cleanupDisabledReason
@@ -968,8 +1074,8 @@ export function WorkspaceRow({
         onSwitch(target);
       }}
       className={cn(
-        "grid min-h-14 w-full grid-cols-[minmax(0,1fr)_auto] gap-2 rounded-sm px-2 py-2 text-left transition-colors",
-        active && "bg-accent text-accent-foreground ring-1 ring-border",
+        "grid min-h-12 w-full grid-cols-[minmax(0,1fr)_auto] gap-2 rounded-md px-2 py-1.5 text-left transition-colors",
+        active && "bg-accent/70 text-accent-foreground",
         !active && !disabledReason && "hover:bg-accent",
         visuallyMuted
           ? "cursor-default opacity-55"
@@ -977,55 +1083,42 @@ export function WorkspaceRow({
       )}
     >
       <span className="min-w-0">
-        <span className="flex min-w-0 items-center gap-2">
+        <span className="flex min-w-0 items-center gap-1.5">
+          <GitBranch className="h-3.5 w-3.5 shrink-0 text-muted-foreground/70" />
           <span
             className={cn(
-              "truncate text-sm font-medium",
+              "truncate text-[13px] font-medium",
               active ? "text-accent-foreground" : "text-foreground",
             )}
+            title={rowLabel}
           >
             {rowLabel}
           </span>
-          {active && (
-            <span className="shrink-0 rounded-sm bg-primary/10 px-1.5 py-0.5 text-[10px] font-medium text-primary">
-              {t("topbar.workspace.currentBadge")}
-            </span>
-          )}
           {ownedByCurrentSession && !active && (
             <span className="shrink-0 rounded-sm bg-primary/10 px-1.5 py-0.5 text-[10px] font-medium text-primary">
               {t("topbar.workspace.thisSession")}
             </span>
           )}
-          {row.occupiedByOtherSession && (
+          {row.occupiedByOtherSession && !row.isMain && (
             <span className="shrink-0 rounded-sm bg-status-warn/10 px-1.5 py-0.5 text-[10px] font-medium text-status-warn">
               {t("topbar.workspace.occupied")}
             </span>
           )}
-          {external && (
+          {external && showExternalBadge && (
             <span className="shrink-0 rounded-sm bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
               {t("topbar.workspace.external")}
             </span>
           )}
-          {dirty && (
+          {dirty && showDiff && (
             <span className="shrink-0 rounded-sm bg-status-running/10 px-1.5 py-0.5 text-[10px] font-medium text-status-running">
               {t("topbar.workspace.dirty")}
-            </span>
-          )}
-          {row.diff && changedFiles > 0 && (
-            <span className="shrink-0 rounded-sm bg-accent px-1.5 py-0.5 text-[10px] font-medium text-accent-foreground">
-              {t("topbar.workspace.changedFilesBadge", { files: changedFiles })}
-            </span>
-          )}
-          {row.diff && aheadCommits > 0 && (
-            <span className="shrink-0 rounded-sm bg-accent px-1.5 py-0.5 text-[10px] font-medium text-accent-foreground">
-              {t("topbar.workspace.aheadBadge", { commits: aheadCommits })}
             </span>
           )}
         </span>
         <span
           className={cn(
-            "mt-0.5 block truncate text-xs",
-            active ? "text-accent-foreground/80" : "text-muted-foreground",
+            "mt-0.5 block truncate pl-5 text-[11px] leading-4",
+            active ? "text-accent-foreground/60" : "text-muted-foreground/70",
           )}
           title={row.path}
         >
@@ -1034,21 +1127,41 @@ export function WorkspaceRow({
       </span>
       <span
         className={cn(
-          "self-center whitespace-nowrap text-xs",
-          active ? "text-accent-foreground/80" : "text-muted-foreground",
+          "flex items-center gap-2 self-center whitespace-nowrap text-[11px] tabular-nums",
+          active ? "text-accent-foreground/70" : "text-muted-foreground",
         )}
       >
         {switching ? (
           <Loader2 className="h-4 w-4 animate-spin" />
-        ) : (
-          formatWorkspaceDiffSummary(row.diff, t)
+        ) : showDiff ? (
+          <span title={diffStatus === "error" ? t("topbar.workspace.diffFailed") : undefined}>
+            {row.diff
+              ? formatWorkspaceDiffSummary(row.diff, t)
+              : diffStatus === "error"
+                ? t("topbar.workspace.diffFailed")
+                : diffStatus === "idle"
+                  ? t("topbar.workspace.diffUnknown")
+                  : formatWorkspaceDiffSummary(undefined, t)}
+          </span>
+        ) : null}
+        {active && !switching && (
+          <Check
+            className="h-3.5 w-3.5 shrink-0 text-primary"
+            aria-label={t("topbar.workspace.currentBadge")}
+          />
         )}
       </span>
     </button>
   );
 
   return (
-    <div className="group grid grid-cols-[minmax(0,1fr)_2rem] items-stretch gap-1 rounded-sm">
+    <div
+      ref={rowRef}
+      className={cn(
+        "group grid items-stretch gap-0.5 rounded-md",
+        row.isMain ? "grid-cols-1" : "grid-cols-[minmax(0,1fr)_1.75rem]",
+      )}
+    >
       {disabledReason ? (
         <Tooltip>
           <TooltipTrigger asChild>{button}</TooltipTrigger>
@@ -1057,9 +1170,7 @@ export function WorkspaceRow({
       ) : (
         button
       )}
-      {row.isMain ? (
-        <span />
-      ) : (
+      {!row.isMain && (
         <DropdownMenu {...(cleanupMenuOpen === undefined ? {} : { open: cleanupMenuOpen })}>
           {cleanupDisabledReason ? (
             <Tooltip>
@@ -1108,13 +1219,43 @@ export function WorkspaceRow({
   );
 }
 
-function WorkspaceGroup({ title, children }: { title: string; children: React.ReactNode }) {
+function WorkspaceGroup({
+  title,
+  children,
+  expanded = true,
+  onToggle,
+  count,
+}: {
+  title: string;
+  children: React.ReactNode;
+  expanded?: boolean;
+  onToggle?: () => void;
+  count?: number;
+}) {
   return (
     <section className="py-1">
-      <div className="px-2 pb-1 pt-1.5 text-[10px] font-semibold uppercase tracking-normal text-muted-foreground">
-        {title}
-      </div>
-      <div className="space-y-1">{children}</div>
+      {onToggle ? (
+        <button
+          type="button"
+          aria-expanded={expanded}
+          aria-label={count === undefined ? title : `${title} (${count})`}
+          onClick={onToggle}
+          className="flex h-8 w-full items-center gap-1.5 rounded-md px-2 text-left text-[11px] font-medium text-muted-foreground hover:bg-accent hover:text-foreground"
+        >
+          <ChevronDown className={cn("h-3 w-3 shrink-0", !expanded && "-rotate-90")} />
+          <span className="flex-1">{title}</span>
+          {count !== undefined && (
+            <span className="rounded bg-muted px-1.5 py-0.5 text-[10px] tabular-nums text-muted-foreground/80">
+              {count}
+            </span>
+          )}
+        </button>
+      ) : (
+        <div className="px-2 pb-1.5 pt-1 text-[11px] font-medium text-muted-foreground/70">
+          {title}
+        </div>
+      )}
+      {expanded && <div className="space-y-0.5">{children}</div>}
     </section>
   );
 }
