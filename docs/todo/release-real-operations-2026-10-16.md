@@ -8,7 +8,7 @@ The release target is macOS, Windows, Linux Desktop and Web. Authorized native C
 has now executed; its passing and incomplete boundaries are recorded below.
 Cross-platform fixture tests alone are not native acceptance.
 
-The latest completed run, CI40 (`39104976943`, head `01757d1796c6d08b4e81423632eace07f508d281`), **FAILED** overall.
+The latest completed native UI acceptance run, CI40 (`39104976943`, head `01757d1796c6d08b4e81423632eace07f508d281`), **FAILED** overall.
 Web, macOS and Linux pass their recorded scoped audits. The Windows matrix fails
 its 20-second first-window wait after SDK readiness; Main PID 1152 later exits
 normally during failure cleanup and HOME is removed, but zero UI operations pass.
@@ -45,6 +45,56 @@ Windows installer phase/cause and missing Windows receipts remain unverified;
 CI18 skips NSIS after the earlier failure. The
 [CI18 preparation record](#ci18--frozen-candidate-awaiting-native-execution)
 retains its original local-only scope and does not assert native success.
+
+## 2026-10-19 — branch convergence and release readiness
+
+**结论：全平台正式版仍不可发布。** 仓库开发版本为 `0.9.45`（15 个 manifest、
+`bun.lock`、Core VERSION 一致）；GitHub 最新正式发行是
+[v0.9.44](https://github.com/cjhyy/codeshell/releases/tag/v0.9.44)。
+版本号已准备不等于正式包已经发行。
+
+| 剩余事项 | 当前边界与关闭条件 |
+| --- | --- |
+| Windows 原生验收 | CI40 首窗等待 20 秒超时、0 UI 操作；独立 NSIS 在 13 个阶段后无法取得卸载进程初始身份。先定位并修复，保留失败证据，再验证准确最终候选；旧 `0xC0000005` 原因仍未定位。 |
+| 最终组合验证 | 当前集成候选包含此后新增的 Core/Desktop 改动，CI40 的通过范围不能自动沿用。需要完整普通 CI、包 smoke、Desktop 构建和准确候选的三平台原生验收。旧远端 main 普通 [CI 38886852510](https://github.com/cjhyy/codeshell/actions/runs/38886852510) 仍是失败记录，不能当作当前通过。 |
+| 旧聊天恢复 | `readOutputJournalLegacyBase` 仍受普通分页 1 MiB 上限限制；已有真实旧 anchor 结束于 1,963,815 字节，无法恢复。应以独立有界扫描预算修复并补跨页/超限/身份与 journal 衔接回归，不能放宽普通分页或跳过身份校验。 |
+| 正式安装与升级 | Windows 被跳过的打包更新恢复、最终包跨版本升级和回滚仍需补验。签名/公证尚未完成本轮正式验收；若交付无签名包，发行说明必须准确表述。 |
+
+本次把长期留在分支的四项已完成改动适配到当前候选：后台 Shell 的
+`background_behavior` 和工具摘要本地快路径、Desktop 窗口/导航布局、通知历史
+展开详情、按需且最多两并发的工作区 diff 统计。运行时性能规划同步收口，
+后续显式等待与计时基线仍保留为未完成。另包含主线的设置单项写入修复
+`cc0272d6f`。这些改动有独立定向验证，最终组合检查另行记录，不能据此宣称
+Windows 启动问题已修复。
+
+分支收敛的初始快照为 Host 300 个本地分支、50 个远端跟踪分支、55 个 worktree，
+本地 main 比 origin/main 领先 532 个提交。已清理 150 个祖先关系确认合入且没有
+worktree 占用的分支；另 92 个已由 patch 等价或逐项源码/range-diff 核验覆盖的
+历史分支，先建立并验证 Git bundle，再按原 SHA 删除。备份位于 Git common dir
+下 `codex/branch-backups/convergence-20261019.bundle`。没有把未审查的旧分支
+直接重新合并，也没有删除其他任务的 worktree。
+
+仍需独立保留：正在修 Bug 的活跃工作区、[Host 共享服务 PR #190](https://github.com/cjhyy/codeshell/pull/190)、
+quota 的未提交修改、旧实验/回归 worktree，以及主目录已有的删除和未跟踪文件。
+`career-source-read` 的功能已在主线，剩余旧版 changelog/替代 lint 写法保留为
+历史处置项，不重新合入旧版本 bump。外部 fork 的 PR #4 不属于已完成的本地任务，
+本次不代作者改写或合并。
+
+Panel 仓库的本地主线另领先远端 72 个提交；清理了 14 个已合入且未占用的本地分支，
+并将 Design 工作台/原型两份规划整合到
+[Panel 集成 PR #83](https://github.com/cjhyy/codeshell-panel-apps/pull/83)。
+其余历史 Video Studio 分支多数有手工整合账本，不能仅因 `git cherry` 显示 `+`
+就重复合并或判定丢功能；未充分证明覆盖的引用继续保留。
+
+Panel 与 Host 补丁独立发行。如本次同时交付 Panel，需先处理 Video Studio
+`0.7.3`、Quant `0.46.2` 的当前包与原同版本 tag 字节差异，各自使用新的版本；
+Design `0.22.0`、Job Hunt `5.0.0` 的正式发行 tag/资产仍待建立。Design GPU-only
+路径依赖 `capabilities.packageAssets.wasm`，必须验证准确 Host/Panel 组合。
+真实 provider、实体手机弱网、旧数据和目标部署验收继续按各自能力声明记录，
+不把受控 fixture 扩写成全环境验收。
+
+本轮不创建 release tag，不发布 npm 包或安装器。后续平台 v1.0、统一工作台、
+新 provider 和实验功能按既有路线图推进，不为整理分支强行纳入本次发行。
 
 ## Reproduced and repaired
 
