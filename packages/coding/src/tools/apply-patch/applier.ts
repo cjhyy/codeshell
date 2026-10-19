@@ -10,7 +10,7 @@
 // Algorithm uses code adapted from codex-rs/apply-patch/src/lib.rs (Apache-2.0)
 // for the chunk-replacement phase (compute_replacements, apply_replacements).
 
-import { mkdir, readFile, stat, unlink, writeFile } from "node:fs/promises";
+import { chmod, mkdir, open, unlink, writeFile } from "node:fs/promises";
 import { existsSync, realpathSync } from "node:fs";
 import { dirname, isAbsolute, resolve, sep } from "node:path";
 import { Hunk, PlannedFileChange, UpdateFileChunk } from "./types.js";
@@ -59,9 +59,16 @@ export async function applyPatch(
 
 // ─── Phase 1: planning ────────────────────────────────────────────
 
+interface FileSnapshot {
+  content: Buffer;
+  mode: number;
+}
+
 interface PlannedChangeWithSnapshot extends PlannedFileChange {
-  /** Original file content captured during planning, or null if absent. */
-  originalContent: string | null;
+  /** Original bytes and permissions captured during planning, or null if absent. */
+  original: FileSnapshot | null;
+  /** A moved file inherits its source permissions, even when overwriting a target. */
+  newMode?: number;
 }
 
 interface PlannedSet {
@@ -99,43 +106,39 @@ async function planHunks(
     const sourcePath = resolveAgainst(original, cwd, workspaceRoots);
 
     if (hunk.kind === "add") {
-      const existed = await readIfExists(sourcePath);
+      const existed = await readSnapshotIfExists(sourcePath);
       schedule(sourcePath, {
         path: sourcePath,
         newContent: hunk.contents,
-        originalContent: existed,
+        original: existed,
       });
       set.added.push(original);
       continue;
     }
 
     if (hunk.kind === "delete") {
-      const stats = await safeStat(sourcePath);
-      if (!stats) throw new Error(`Failed to delete file: ${sourcePath} not found`);
-      if (stats.isDirectory()) {
-        throw new Error(`Failed to delete file: ${sourcePath} is a directory`);
-      }
-      const content = await readFile(sourcePath, "utf-8");
+      const snapshot = await readSnapshotIfExists(sourcePath);
+      if (!snapshot) throw new Error(`Failed to delete file: ${sourcePath} not found`);
       schedule(sourcePath, {
         path: sourcePath,
         newContent: null,
-        originalContent: content,
+        original: snapshot,
       });
       set.deleted.push(original);
       continue;
     }
 
     // Update (with optional rename).
-    const stats = await safeStat(sourcePath);
-    if (!stats) {
+    const snapshot = await readSnapshotIfExists(sourcePath);
+    if (!snapshot) {
       throw new Error(`Failed to update file: ${sourcePath} does not exist`);
     }
-    const originalRaw = await readFile(sourcePath, "utf-8");
+    const originalRaw = snapshot.content.toString("utf-8");
     // CRLF handling: patch context lines are LF (the model emits LF). Match in
     // LF space, then write back in the file's original EOL so a CRLF file isn't
     // silently converted to LF (which would diff the whole file). originalText
-    // (LF) is what we compare; originalRaw is preserved for rollback so a
-    // restore writes back the exact bytes. See eol.ts.
+    // (LF) is what we compare; the undecoded snapshot is preserved for rollback
+    // so a restore writes back the exact bytes. See eol.ts.
     const eol = detectEol(originalRaw);
     const originalText = toLf(originalRaw);
     const newText = applyEol(applyChunksToText(originalText, hunk.chunks, sourcePath), eol);
@@ -147,19 +150,20 @@ async function planHunks(
         schedule(sourcePath, {
           path: sourcePath,
           newContent: newText,
-          originalContent: originalRaw,
+          original: snapshot,
         });
       } else {
-        const destOriginal = await readIfExists(destPath);
+        const destOriginal = await readSnapshotIfExists(destPath);
         schedule(sourcePath, {
           path: sourcePath,
           newContent: null,
-          originalContent: originalRaw,
+          original: snapshot,
         });
         schedule(destPath, {
           path: destPath,
           newContent: newText,
-          originalContent: destOriginal,
+          original: destOriginal,
+          newMode: snapshot.mode,
         });
       }
       set.modified.push(original);
@@ -167,7 +171,7 @@ async function planHunks(
       schedule(sourcePath, {
         path: sourcePath,
         newContent: newText,
-        originalContent: originalRaw,
+        original: snapshot,
       });
       set.modified.push(original);
     }
@@ -265,24 +269,24 @@ async function commitPlanned(set: PlannedSet, allowPartial: boolean): Promise<Ap
     return { added: set.added, modified: set.modified, deleted: set.deleted };
   }
 
-  // Track which writes have completed so rollback only touches them. We use
-  // the originalContent captured during plan() rather than re-reading from
-  // disk — this avoids a TOCTOU window between planning and committing.
-  const committed: PlannedChangeWithSnapshot[] = [];
+  // Include the current attempt: writeFile may write partially before failing,
+  // and chmod can fail after the new content has already been written. Restore
+  // the bytes and permissions captured during planning, without re-reading.
+  const attempted: PlannedChangeWithSnapshot[] = [];
   try {
     for (const change of ordered) {
+      attempted.push(change);
       await writeChange(change);
-      committed.push(change);
     }
   } catch (err) {
-    for (let i = committed.length - 1; i >= 0; i--) {
-      const c = committed[i];
+    for (let i = attempted.length - 1; i >= 0; i--) {
+      const c = attempted[i];
       try {
-        if (c.originalContent === null) {
+        if (c.original === null) {
           // File did not exist before we wrote it — remove our write.
           if (existsSync(c.path)) await unlink(c.path);
         } else {
-          await writeFile(c.path, c.originalContent, "utf-8");
+          await restoreSnapshot(c.path, c.original);
         }
       } catch {
         // Best-effort restore — surface the original error to the caller.
@@ -294,7 +298,24 @@ async function commitPlanned(set: PlannedSet, allowPartial: boolean): Promise<Ap
   return { added: set.added, modified: set.modified, deleted: set.deleted };
 }
 
-async function writeChange(change: PlannedFileChange): Promise<void> {
+async function restoreSnapshot(path: string, snapshot: FileSnapshot): Promise<void> {
+  const writableMode = snapshot.mode | 0o200;
+  try {
+    // A successful move may have made an existing target read-only. writeFile's
+    // mode only applies to new files, so temporarily allow restoring its bytes.
+    try {
+      await chmod(path, writableMode);
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
+    }
+    await writeFile(path, snapshot.content, { mode: writableMode });
+  } finally {
+    // Also restore a read-only snapshot's mode if writing its bytes fails.
+    await chmod(path, snapshot.mode);
+  }
+}
+
+async function writeChange(change: PlannedChangeWithSnapshot): Promise<void> {
   if (change.newContent === null) {
     if (existsSync(change.path)) await unlink(change.path);
     return;
@@ -303,7 +324,11 @@ async function writeChange(change: PlannedFileChange): Promise<void> {
   if (!existsSync(parent)) {
     await mkdir(parent, { recursive: true });
   }
-  await writeFile(change.path, change.newContent, "utf-8");
+  await writeFile(change.path, change.newContent, { encoding: "utf-8", mode: change.newMode });
+  if (change.newMode !== undefined) {
+    // The creation mode is masked by umask and ignored for existing targets.
+    await chmod(change.path, change.newMode);
+  }
 }
 
 // ─── helpers ──────────────────────────────────────────────────────
@@ -362,18 +387,20 @@ function isInside(child: string, parent: string): boolean {
   return child.startsWith(p);
 }
 
-async function safeStat(path: string) {
+async function readSnapshotIfExists(path: string): Promise<FileSnapshot | null> {
+  let file;
   try {
-    return await stat(path);
-  } catch {
-    return null;
+    file = await open(path, "r");
+  } catch (error) {
+    const code = (error as NodeJS.ErrnoException).code;
+    if (code === "ENOENT" || code === "ENOTDIR") return null;
+    throw error;
   }
-}
-
-async function readIfExists(path: string): Promise<string | null> {
   try {
-    return await readFile(path, "utf-8");
-  } catch {
-    return null;
+    const stats = await file.stat();
+    if (stats.isDirectory()) throw new Error(`Cannot apply patch to directory: ${path}`);
+    return { content: await file.readFile(), mode: stats.mode & 0o7777 };
+  } finally {
+    await file.close();
   }
 }
