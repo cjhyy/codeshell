@@ -931,6 +931,13 @@ export class OpenAIClient extends LLMClientBase {
       };
       this.recordUsage(usage, options, streamUsage !== undefined);
 
+      // SDK iteration can end normally when the transport closes before a
+      // terminal choice arrives. EOF (or a usage-only tail) is not a clean stop.
+      // Keep cancellation on its existing path rather than mislabeling it EOF.
+      if (!finishReason && !sdkSignal?.aborted) {
+        throw new LLMError("OpenAI stream ended before receiving a finish_reason", this.provider);
+      }
+
       const inferredToolArgumentTruncation = didHitToolArgumentOutputLimit({
         finishReason,
         malformedToolArguments,
