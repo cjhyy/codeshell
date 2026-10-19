@@ -209,6 +209,117 @@ export class ToolExecutor {
     }
   }
 
+  private enforceArgumentPolicy(call: ToolCall): ToolResult | undefined {
+    // Same gate for MCP tools: the registry is worker-shared, so it can hold
+    // tools from servers OTHER sessions enabled. Visibility filtering hides
+    // them from this session's tool list; this rejects a direct call anyway.
+    if (this.toolCtx?.allowedMcpServers) {
+      const allowed = this.toolCtx.allowedMcpServers;
+      const reg = this.registry.getTool(call.toolName) as {
+        source?: string;
+        serverName?: string;
+        mcpToolName?: string;
+      } | null;
+      if (reg?.source === "mcp" && !allowed.has(reg.serverName ?? "")) {
+        return {
+          id: call.id,
+          toolName: call.toolName,
+          error: `Tool ${call.toolName} belongs to an MCP server that is not enabled for this project. Do NOT retry this tool call.`,
+          isError: true,
+        };
+      }
+      if (
+        reg?.source === "mcp" &&
+        !isRegisteredMcpToolAllowed(
+          {
+            source: "mcp",
+            serverName: reg.serverName,
+            mcpToolName: reg.mcpToolName,
+          },
+          this.toolCtx.mcpToolPolicies,
+        )
+      ) {
+        return {
+          id: call.id,
+          toolName: call.toolName,
+          error: `MCP tool "${reg.mcpToolName ?? call.toolName}" is disabled by this project's tool policy. Do NOT retry this tool call.`,
+          isError: true,
+        };
+      }
+      // The generic MCP builtins (MCPTool / ReadMcpResource) take the target
+      // server as an ARGUMENT and call MCPManager directly, so the source==="mcp"
+      // check above can't see them — without this a session could invoke a tool
+      // or read a resource on a server only ANOTHER session enabled. Gate on the
+      // server arg. ListMcpResources has an optional server filter and would
+      // otherwise enumerate every connected server's resources. Its trusted
+      // allowlist is injected after hooks, before permission classification.
+      if (call.toolName === "MCPTool" || call.toolName === "ReadMcpResource") {
+        const server = String((call.args as Record<string, unknown>).server ?? "");
+        if (!allowed.has(server)) {
+          return {
+            id: call.id,
+            toolName: call.toolName,
+            error: `MCP server "${server}" is not enabled for this project. Do NOT retry this tool call.`,
+            isError: true,
+          };
+        }
+        if (call.toolName === "MCPTool") {
+          const tool = String((call.args as Record<string, unknown>).tool ?? "");
+          if (!isMcpToolNameAllowed(this.toolCtx.mcpToolPolicies, server, tool)) {
+            return {
+              id: call.id,
+              toolName: call.toolName,
+              error: `MCP tool "${tool}" is disabled by this project's tool policy. Do NOT retry this tool call.`,
+              isError: true,
+            };
+          }
+        }
+      } else if (call.toolName === "ListMcpResources") {
+        const server = String((call.args as Record<string, unknown>).server ?? "");
+        if (server && !allowed.has(server)) {
+          return {
+            id: call.id,
+            toolName: call.toolName,
+            error: `MCP server "${server}" is not enabled for this project. Do NOT retry this tool call.`,
+            isError: true,
+          };
+        }
+      }
+    }
+    // 0. Plan mode: only allow read-only tools — no file writes at all
+    if (this.toolCtx?.planMode) {
+      // Shared with engine.ts's tool-visibility filter so the set the model
+      // SEES and the set the executor RUNS can't drift (they had).
+      // Bash is in the allow-list so the model can SEE it for read-only probing,
+      // but membership alone must NOT grant write access: a Bash command that
+      // modifies files (echo >, sed -i, mv, ...) has to be blocked here too, or it
+      // would slip past plan mode into the normal permission flow (where the user
+      // could approve it) AND leave no diff, since it never touches Write/Edit.
+      const allowed = PLAN_MODE_ALLOWED_TOOLS.has(call.toolName);
+      // Defer to the canonical shell classifier (the same one the permission
+      // flow uses) instead of a second hand-rolled allowlist that drifted and
+      // let find -delete / awk system() / process substitution / git difftool
+      // through. Plan mode is strictly read-only, so ONLY "safe-read" passes —
+      // safe-write (mkdir/touch/cp), unsafe, and dangerous are all blocked.
+      const bashWrite =
+        call.toolName === "Bash" &&
+        classifyBashCommand(String(call.args.command ?? "")) !== "safe-read";
+      if (!allowed || bashWrite) {
+        return {
+          id: call.id,
+          toolName: call.toolName,
+          error:
+            allowed && bashWrite
+              ? `Plan mode is read-only: this Bash command writes or modifies files, which is not allowed while planning. To carry it out, first call ExitPlanMode (after the user approves your plan), then run it. Do NOT retry this command in plan mode.`
+              : `Plan mode: ${call.toolName} is blocked. Only read-only tools (Read, Glob, Grep, WebSearch, WebFetch, Bash read-only) are allowed. You MUST output your plan as text in the conversation instead. Do NOT retry this tool call.`,
+          isError: true,
+        };
+      }
+    }
+
+    return undefined;
+  }
+
   private async executeSingleAuthorized(
     callIn: ToolCall,
     constraint?: { pinnedInput?: string; assertAuthorized?: () => void },
@@ -314,113 +425,8 @@ export class ToolExecutor {
         isError: true,
       };
     }
-    // Same gate for MCP tools: the registry is worker-shared, so it can hold
-    // tools from servers OTHER sessions enabled. Visibility filtering hides
-    // them from this session's tool list; this rejects a direct call anyway.
-    if (this.toolCtx?.allowedMcpServers) {
-      const allowed = this.toolCtx.allowedMcpServers;
-      const reg = this.registry.getTool(call.toolName) as {
-        source?: string;
-        serverName?: string;
-        mcpToolName?: string;
-      } | null;
-      if (reg?.source === "mcp" && !allowed.has(reg.serverName ?? "")) {
-        return {
-          id: call.id,
-          toolName: call.toolName,
-          error: `Tool ${call.toolName} belongs to an MCP server that is not enabled for this project. Do NOT retry this tool call.`,
-          isError: true,
-        };
-      }
-      if (
-        reg?.source === "mcp" &&
-        !isRegisteredMcpToolAllowed(
-          {
-            source: "mcp",
-            serverName: reg.serverName,
-            mcpToolName: reg.mcpToolName,
-          },
-          this.toolCtx.mcpToolPolicies,
-        )
-      ) {
-        return {
-          id: call.id,
-          toolName: call.toolName,
-          error: `MCP tool "${reg.mcpToolName ?? call.toolName}" is disabled by this project's tool policy. Do NOT retry this tool call.`,
-          isError: true,
-        };
-      }
-      // The generic MCP builtins (MCPTool / ReadMcpResource) take the target
-      // server as an ARGUMENT and call MCPManager directly, so the source==="mcp"
-      // check above can't see them — without this a session could invoke a tool
-      // or read a resource on a server only ANOTHER session enabled. Gate on the
-      // server arg. ListMcpResources has an optional server filter and would
-      // otherwise enumerate every connected server's resources, so we inject the
-      // allowlist for it to filter by (see mcp-tools.ts).
-      if (call.toolName === "MCPTool" || call.toolName === "ReadMcpResource") {
-        const server = String((call.args as Record<string, unknown>).server ?? "");
-        if (!allowed.has(server)) {
-          return {
-            id: call.id,
-            toolName: call.toolName,
-            error: `MCP server "${server}" is not enabled for this project. Do NOT retry this tool call.`,
-            isError: true,
-          };
-        }
-        if (call.toolName === "MCPTool") {
-          const tool = String((call.args as Record<string, unknown>).tool ?? "");
-          if (!isMcpToolNameAllowed(this.toolCtx.mcpToolPolicies, server, tool)) {
-            return {
-              id: call.id,
-              toolName: call.toolName,
-              error: `MCP tool "${tool}" is disabled by this project's tool policy. Do NOT retry this tool call.`,
-              isError: true,
-            };
-          }
-        }
-      } else if (call.toolName === "ListMcpResources") {
-        const server = String((call.args as Record<string, unknown>).server ?? "");
-        if (server && !allowed.has(server)) {
-          return {
-            id: call.id,
-            toolName: call.toolName,
-            error: `MCP server "${server}" is not enabled for this project. Do NOT retry this tool call.`,
-            isError: true,
-          };
-        }
-        (call.args as Record<string, unknown>).__allowedMcpServers = allowed;
-      }
-    }
-    // 0. Plan mode: only allow read-only tools — no file writes at all
-    if (this.toolCtx?.planMode) {
-      // Shared with engine.ts's tool-visibility filter so the set the model
-      // SEES and the set the executor RUNS can't drift (they had).
-      // Bash is in the allow-list so the model can SEE it for read-only probing,
-      // but membership alone must NOT grant write access: a Bash command that
-      // modifies files (echo >, sed -i, mv, ...) has to be blocked here too, or it
-      // would slip past plan mode into the normal permission flow (where the user
-      // could approve it) AND leave no diff, since it never touches Write/Edit.
-      const allowed = PLAN_MODE_ALLOWED_TOOLS.has(call.toolName);
-      // Defer to the canonical shell classifier (the same one the permission
-      // flow uses) instead of a second hand-rolled allowlist that drifted and
-      // let find -delete / awk system() / process substitution / git difftool
-      // through. Plan mode is strictly read-only, so ONLY "safe-read" passes —
-      // safe-write (mkdir/touch/cp), unsafe, and dangerous are all blocked.
-      const bashWrite =
-        call.toolName === "Bash" &&
-        classifyBashCommand(String(call.args.command ?? "")) !== "safe-read";
-      if (!allowed || bashWrite) {
-        return {
-          id: call.id,
-          toolName: call.toolName,
-          error:
-            allowed && bashWrite
-              ? `Plan mode is read-only: this Bash command writes or modifies files, which is not allowed while planning. To carry it out, first call ExitPlanMode (after the user approves your plan), then run it. Do NOT retry this command in plan mode.`
-              : `Plan mode: ${call.toolName} is blocked. Only read-only tools (Read, Glob, Grep, WebSearch, WebFetch, Bash read-only) are allowed. You MUST output your plan as text in the conversation instead. Do NOT retry this tool call.`,
-          isError: true,
-        };
-      }
-    }
+    const argumentPolicyError = this.enforceArgumentPolicy(call);
+    if (argumentPolicyError) return argumentPolicyError;
 
     // 0.5. Validate tool args
     const toolDef = this.registry.getTool(call.toolName);
@@ -483,6 +489,20 @@ export class ToolExecutor {
         toolName: call.toolName,
         isError: true,
         error: "Bound tool input cannot be changed by hooks.",
+      };
+    }
+
+    // Detach from input references retained by a rewriting hook before any
+    // further asynchronous observers or approvals can run.
+    call = { ...call, args: structuredClone(call.args) };
+    // Hooks can mutate args in place without returning updatedInput. Recheck
+    // the effective input unconditionally, without emitting the hook again.
+    const effectivePolicyError = this.enforceArgumentPolicy(call);
+    if (effectivePolicyError) return effectivePolicyError;
+    if (this.toolCtx?.allowedMcpServers && call.toolName === "ListMcpResources") {
+      call = {
+        ...call,
+        args: { ...call.args, __allowedMcpServers: this.toolCtx.allowedMcpServers },
       };
     }
 
@@ -553,7 +573,7 @@ export class ToolExecutor {
     // ask are rejected by clampHookDecision.
     const permHook = await this.hooks.emit("on_permission_check", {
       toolName: call.toolName,
-      args: call.args,
+      args: structuredClone(call.args),
       toolCallId: call.id,
       classifierDecision,
       signal: this.signal ?? this.toolCtx?.signal,
@@ -624,7 +644,7 @@ export class ToolExecutor {
     // 2. Pre-tool hook
     await this.hooks.emit("on_tool_start", {
       toolName: call.toolName,
-      args: call.args,
+      args: structuredClone(call.args),
       toolCallId: call.id,
       signal: this.signal ?? this.toolCtx?.signal,
     });
