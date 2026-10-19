@@ -384,7 +384,13 @@ test("cold external leases retain the adopted cost store and auxiliary receipts"
   expect(
     ledger.adoptSession(f.sessionId, f.sessions.readSessionState(f.sessionId)!.costState, f.root),
   ).toBe(true);
-  const usage = { promptTokens: 30, completionTokens: 3, totalTokens: 33 };
+  const usage = {
+    promptTokens: 30,
+    completionTokens: 3,
+    totalTokens: 33,
+    cacheReadTokens: 27,
+    cacheCreationTokens: 1,
+  };
   const receipt = ledger.begin(ledger.owner(f.sessionId, "aux-run", [], "aux_summary", f.root), {
     provider: "openai",
     model: "gpt-4o",
@@ -408,14 +414,19 @@ test("cold external leases retain the adopted cost store and auxiliary receipts"
       title: "retained title",
       workspaceProfile: "fixture-profile",
       tokenUsage: usage,
-      cumulativePromptTokens: 30,
+      cacheUsageVersion: 1,
+      cumulativePromptTokens: 0,
+      cumulativeCacheReadTokens: 0,
+      cumulativeCacheCreationTokens: 0,
     });
     expect(state.costState).toEqual(JSON.parse(JSON.stringify(costState)));
     const restarted = new UsageLedger({ storageDir: join(f.root, ".usage-ledger") });
     expect(restarted.adoptSession(f.sessionId, state.costState, f.root)).toBe(true);
-    expect(restarted.summary({ scope: "session", sessionId: f.sessionId }, f.root)).toEqual(
-      costState.summary,
-    );
+    const summary = restarted.summary({ scope: "session", sessionId: f.sessionId }, f.root);
+    expect(summary).toEqual(costState.summary);
+    expect(summary.byPurpose).toMatchObject([
+      { purpose: "aux_summary", promptTokens: 30, cacheReadTokens: 27, cacheCreationTokens: 1 },
+    ]);
   }
 });
 

@@ -249,14 +249,29 @@ process.env.CODESHELL_OUTPUT_PARTS = "1";
   const manager = new core.SessionManager();
   manager.create(workspace, "codex/synthetic", "codex", id);
   manager.updateSessionState(id, {
-    tokenUsage: { promptTokens: 100, completionTokens: 10, totalTokens: 110 },
+    tokenUsage: {
+      promptTokens: 100,
+      completionTokens: 10,
+      totalTokens: 110,
+      cacheReadTokens: 20,
+      cacheCreationTokens: 0,
+    },
+    cacheUsageVersion: 1,
     cumulativePromptTokens: 100,
+    cumulativeCacheReadTokens: 20,
+    cumulativeCacheCreationTokens: 0,
     title: "retained title",
     workspaceProfile: "fixture-profile",
   });
   const ledgerRoot = manager.getStorageDir();
   const ledger = new core.UsageLedger({ storageDir: join(ledgerRoot, ".usage-ledger") });
-  const auxiliaryUsage = { promptTokens: 30, completionTokens: 3, totalTokens: 33 };
+  const auxiliaryUsage = {
+    promptTokens: 30,
+    completionTokens: 3,
+    totalTokens: 33,
+    cacheReadTokens: 27,
+    cacheCreationTokens: 1,
+  };
   const receipt = ledger.begin(ledger.owner(id, "auxiliary-run", [], "aux_summary", ledgerRoot), {
     provider: "openai",
     model: "gpt-4o",
@@ -270,7 +285,26 @@ process.env.CODESHELL_OUTPUT_PARTS = "1";
     legacyStore: { marker: "preserved" },
   };
   manager.recordAuxiliaryUsage(id, auxiliaryUsage, costState);
-  const { service } = createService();
+  // cacheUsageVersion 1 counts foreground input/cache only. Auxiliary requests
+  // remain in billed tokenUsage and their ledger purpose, even after cold resume.
+  const afterAuxiliary = manager.readSessionState(id);
+  assert.deepEqual(afterAuxiliary.tokenUsage, {
+    promptTokens: 130,
+    completionTokens: 13,
+    totalTokens: 143,
+    cacheReadTokens: 47,
+    cacheCreationTokens: 1,
+  });
+  assert.deepEqual(
+    {
+      version: afterAuxiliary.cacheUsageVersion,
+      prompt: afterAuxiliary.cumulativePromptTokens,
+      read: afterAuxiliary.cumulativeCacheReadTokens,
+      creation: afterAuxiliary.cumulativeCacheCreationTokens,
+    },
+    { version: 1, prompt: 100, read: 20, creation: 0 },
+  );
+  const { service, live } = createService();
   try {
     await start(service, id);
     assert.equal(
@@ -279,14 +313,45 @@ process.env.CODESHELL_OUTPUT_PARTS = "1";
       true,
     );
     const state = manager.readSessionState(id);
+    assert.deepEqual(state.tokenUsage, {
+      promptTokens: 150,
+      completionTokens: 15,
+      totalTokens: 165,
+      cacheReadTokens: 51,
+      cacheCreationTokens: 1,
+    });
     assert.deepEqual(
       {
-        prompt: state.tokenUsage.promptTokens,
-        completion: state.tokenUsage.completionTokens,
-        total: state.tokenUsage.totalTokens,
-        cumulative: state.cumulativePromptTokens,
+        version: state.cacheUsageVersion,
+        prompt: state.cumulativePromptTokens,
+        read: state.cumulativeCacheReadTokens,
+        creation: state.cumulativeCacheCreationTokens,
       },
-      { prompt: 150, completion: 15, total: 165, cumulative: 150 },
+      { version: 1, prompt: 120, read: 24, creation: 0 },
+    );
+    assert.deepEqual(
+      live
+        .filter((item) => item.sessionId === id && item.event.type === "usage_update")
+        .map(({ event }) => ({
+          version: event.cacheUsageVersion,
+          prompt: event.cumulativePromptTokens,
+          read: event.cumulativeCacheReadTokens,
+          creation: event.cumulativeCacheCreationTokens,
+          turnPrompt: event.singleTurnPromptTokens,
+          turnRead: event.singleTurnCacheReadTokens,
+          turnCreation: event.singleTurnCacheCreationTokens,
+        })),
+      [
+        {
+          version: 1,
+          prompt: 120,
+          read: 24,
+          creation: 0,
+          turnPrompt: 20,
+          turnRead: 4,
+          turnCreation: 0,
+        },
+      ],
     );
     assert.equal(state.title, "retained title");
     assert.equal(state.workspaceProfile, "fixture-profile");
@@ -306,6 +371,8 @@ process.env.CODESHELL_OUTPUT_PARTS = "1";
     assert.equal(summary.promptTokens, 30);
     assert.equal(summary.completionTokens, 3);
     assert.equal(summary.totalTokens, 33);
+    assert.equal(summary.cacheReadTokens, 27);
+    assert.equal(summary.cacheCreationTokens, 1);
     assert.equal(summary.knownEstimatedCostUsd, receipt.estimatedCostUsd);
     assert(summary.knownEstimatedCostUsd > 0);
     assert.deepEqual(
@@ -318,6 +385,11 @@ process.env.CODESHELL_OUTPUT_PARTS = "1";
       prompt: 150,
       completion: 15,
       total: 165,
+      foregroundPrompt: 120,
+      foregroundCacheRead: 24,
+      auxiliaryPrompt: 30,
+      auxiliaryCacheRead: 27,
+      cacheUsageVersion: 1,
       metadataRetained: true,
     });
   } finally {
