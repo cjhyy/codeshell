@@ -32,7 +32,7 @@ CodeShell 是同一个编排引擎的三种形态：
 
 核心引擎保持**领域无关**。turn loop、上下文管理、权限、MCP 集成、hooks、tasks、cron、sub-agents、sessions 和 memory 都是通用机制。编码工具、git/worktree、LSP、review、quota 与编码 prompt 位于物理独立的 `@cjhyy/code-shell-capability-coding` 包，由 CLI/Desktop host 组合，不写进 core。
 
-> 状态：**0.6.x，进入 beta 阶段**。桌面应用是当前主产品；CLI 和 SDK 共享同一个核心引擎。
+> 状态：**0.9.x**。桌面应用是当前主产品；CLI 和 SDK 共享同一个核心引擎。已发行版本见 [Releases](https://github.com/cjhyy/codeshell/releases)，候选版状态见[发布验收记录](docs/todo/release-real-operations-2026-10-16.md)。
 
 ---
 

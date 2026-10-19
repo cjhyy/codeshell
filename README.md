@@ -32,7 +32,7 @@ CodeShell is one orchestration engine wearing three faces:
 
 The core is deliberately **domain-agnostic**. The turn loop, context management, permissions, MCP integration, hooks, tasks, cron, sub-agents, sessions, and memory all stay generic. Coding tools, git/worktree behavior, LSP, review, quota, and coding prompts live in the physically separate `@cjhyy/code-shell-capability-coding` package and are composed by the CLI/Desktop hosts. (See `packages/core/CONTRIBUTING.md`: "core only carries mechanism, not policy.")
 
-> Status: **0.6.x, entering beta**. The desktop app is the headline product; the CLI and SDK share the same core engine.
+> Status: **0.9.x**. The desktop app is the headline product; the CLI and SDK share the same core engine. See [published releases](https://github.com/cjhyy/codeshell/releases) and the [current release acceptance record](docs/todo/release-real-operations-2026-10-16.md).
 
 ---
 
