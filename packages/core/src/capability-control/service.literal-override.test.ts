@@ -22,6 +22,22 @@ import { join } from "node:path";
 const attempts: string[] = [],
   probes: Array<{ kind: string; blocked: boolean }> = [];
 const restores: Array<() => void> = [];
+const networkGuardMarker = Symbol.for("codeshell.cost-smoke.network-guard");
+const priorNetworkGuardMarker = Object.getOwnPropertyDescriptor(globalThis, networkGuardMarker);
+const networkSurfaces = [
+  [globalThis, "fetch"],
+  [http, "request"],
+  [http, "get"],
+  [https, "request"],
+  [https, "get"],
+] as const;
+// Capture the outer transport before installing either guard. Restoring only
+// forbid()'s snapshots would leave the exact-origin wrapper in the Bun shard.
+const priorNetwork = networkSurfaces.map(([target, key]) => ({
+  target,
+  key,
+  descriptor: Object.getOwnPropertyDescriptor(target, key),
+}));
 let probing = true;
 const deny = (kind: string): never => {
   if (!probing) attempts.push(kind);
@@ -75,8 +91,18 @@ afterEach(() => {
   expect(attempts).toEqual([]);
 });
 afterAll(() => {
-  for (const restore of restores.reverse()) restore();
-  syncBuiltinESMExports();
+  try {
+    for (const restore of restores.reverse()) restore();
+    for (const { target, key, descriptor } of priorNetwork) {
+      if (descriptor) Object.defineProperty(target, key, descriptor);
+      else Reflect.deleteProperty(target, key);
+    }
+    if (priorNetworkGuardMarker)
+      Object.defineProperty(globalThis, networkGuardMarker, priorNetworkGuardMarker);
+    else Reflect.deleteProperty(globalThis, networkGuardMarker);
+  } finally {
+    syncBuiltinESMExports();
+  }
 });
 const read = (file: string) => JSON.parse(readFileSync(file, "utf8"));
 const write = (file: string, value: unknown) =>

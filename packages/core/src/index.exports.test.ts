@@ -121,6 +121,7 @@ const expectedRuntimeExportsByPartition = {
     "repairProjectSettings",
     "restoreProjectSettings",
   ],
+  sessionUsageAccounting: ["normalizeCumulativeUsageCounters"],
   sessionOutputRecovery: [
     "SessionOutputJournal",
     "SessionOutputPublisher",
@@ -344,6 +345,7 @@ const hostOnlySamples = [
   ...expectedRuntimeExportsByPartition.modelTraces,
   ...expectedRuntimeExportsByPartition.mcpCredentialBinding,
   ...expectedRuntimeExportsByPartition.linkHostServices,
+  ...expectedRuntimeExportsByPartition.sessionUsageAccounting,
   "acquireWorkspaceWriteLock",
   "backupOutputJournal",
   "restoreOutputJournalBackup",
@@ -539,6 +541,7 @@ describe("core public/internal export contract", () => {
       ...expectedRuntimeExportsByPartition.modelTraces,
       ...expectedRuntimeExportsByPartition.mcpCredentialBinding,
       ...expectedRuntimeExportsByPartition.linkHostServices,
+      ...expectedRuntimeExportsByPartition.sessionUsageAccounting,
     ]) {
       expect(extensionApi, `${name} belongs to the host-only contract`).not.toHaveProperty(name);
     }
