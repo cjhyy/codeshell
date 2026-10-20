@@ -84,6 +84,8 @@ export function parseStreamJsonLine(line: string): ResidentAgentEvent[] {
   } catch {
     return [];
   }
+  // A valid but non-record line (e.g. `null`) carries no event.
+  if (!msg || typeof msg !== "object" || Array.isArray(msg)) return [];
   const out: ResidentAgentEvent[] = [];
   if (msg.type === "control_request" && msg.request?.subtype === "can_use_tool") {
     return [

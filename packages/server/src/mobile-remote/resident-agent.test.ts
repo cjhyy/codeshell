@@ -26,6 +26,9 @@ describe("buildControlResponse", () => {
 });
 
 describe("parseStreamJsonLine", () => {
+  test("ignores valid JSON lines that are not records", () => {
+    for (const line of ["null", "42", '"text"', "[]"]) expect(parseStreamJsonLine(line)).toEqual([]);
+  });
   test("ignores system / init / hook / rate-limit noise", () => {
     expect(parseStreamJsonLine(JSON.stringify({ type: "system", subtype: "init" }))).toEqual([]);
     expect(parseStreamJsonLine(JSON.stringify({ type: "system", subtype: "hook_started" }))).toEqual([]);
