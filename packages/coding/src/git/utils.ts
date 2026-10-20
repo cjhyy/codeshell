@@ -113,6 +113,13 @@ export function getGitDiffStat(cwd: string, opts?: { staged?: boolean; file?: st
   return git(cwd, args, 10000);
 }
 
+/** Untracked, non-ignored files under `cwd`, relative to `cwd` (what `git add .` would add). */
+export function getUntrackedFiles(cwd: string): string[] {
+  return gitRaw(cwd, ["ls-files", "--others", "--exclude-standard", "-z"], 10000)
+    .split("\0")
+    .filter(Boolean);
+}
+
 export function getGitLog(cwd: string, n = 10): GitLogEntry[] {
   // `n` is numeric — coerce/validate to keep the argv clean even if a caller
   // hands us a string.
