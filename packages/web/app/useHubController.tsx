@@ -235,8 +235,10 @@ export function useHubController({
         const consumed = restored.items.some(
           (item) => item.kind === "user" && item.clientMessageId === submission.clientMessageId,
         );
-        if (consumed) uncertainSubmissions.current.delete(sessionId);
-        else if (!detail.data.running) {
+        if (consumed) {
+          uncertainSubmissions.current.delete(sessionId);
+          setDraftsRevision((value) => value + 1);
+        } else if (!detail.data.running) {
           uncertainSubmissions.current.delete(sessionId);
           restoreSubmission(submission);
         }
@@ -831,7 +833,9 @@ export function useHubController({
     files,
     uploading,
     uploadBusy: uploadingFor !== null,
-    hasUnsent: draftStore.current.unsent().length > 0,
+    // A submission awaiting delivery confirmation (in any session) exists only
+    // in this page's memory until the Hub confirms it, like an unsent draft.
+    hasUnsent: draftStore.current.unsent().length > 0 || uncertainSubmissions.current.size > 0,
     localDrafts,
     uncertain: uncertainSubmissions.current.has(activeId),
     running,

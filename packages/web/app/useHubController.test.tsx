@@ -689,3 +689,37 @@ test("removing a draft attachment discards its upload in the original project", 
     { path: `/p/${projectA}/api/v1/uploads/draft-file`, method: "DELETE" },
   ]);
 });
+
+test("a submission awaiting delivery confirmation keeps the page-leave guard", async () => {
+  environment();
+  globalThis.fetch = (async () => Response.json({ sessions: [] })) as typeof fetch;
+  Socket.respond = ({ id, method }) =>
+    method === "agent/run"
+      ? undefined
+      : method === "serve/approval.snapshot"
+        ? { id, result: { approvals: [], leases: [] } }
+        : { id, result: { type: "sessions", data: [] } };
+  const hook = await renderHook(() => useHubController({ hub: true }));
+  cleanups.push(() => hook.unmount());
+  const socket = Socket.instances[0];
+  await act(async () => {
+    socket.readyState = 1;
+    socket.onopen?.();
+    await flushMicrotasks();
+    hook.result.current.setDraft("Only copy of this task");
+  });
+  expect(hook.result.current.hasUnsent).toBe(true);
+  await act(async () => {
+    expect(hook.result.current.send()).toBe(true);
+    await flushMicrotasks();
+  });
+  // The run frame was handed to the socket, then the connection dropped
+  // before any reply: the Hub may never have received it.
+  await act(async () => {
+    socket.close();
+    for (let i = 0; i < 4; i++) await flushMicrotasks();
+  });
+  expect(hook.result.current.uncertain).toBe(true);
+  expect(hook.result.current.draft).toBe("");
+  expect(hook.result.current.hasUnsent).toBe(true);
+});
