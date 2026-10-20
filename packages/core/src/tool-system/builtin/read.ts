@@ -75,7 +75,8 @@ export async function readTool(args: Record<string, unknown>, ctx?: ToolContext)
 
     // Skip binary or excessively large files
     if (fileInfo.size > LARGE_TEXT_BYTES) {
-      return `Error: File is too large (${sizeKB}KB). Use Grep to search for specific content, or provide offset and limit to read a portion.`;
+      // The cap applies before offset/limit paging, so do not suggest paging here.
+      return `Error: File is too large (${sizeKB}KB). Read cannot open text files over ${LARGE_TEXT_BYTES / (1024 * 1024)}MB, even with offset and limit. Use Grep to search for specific content instead.`;
     }
 
     // Try cache first, fall back to disk read

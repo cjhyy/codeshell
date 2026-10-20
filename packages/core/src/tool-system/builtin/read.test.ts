@@ -109,4 +109,15 @@ describe("readTool", () => {
     expect(out).toContain("Size: 6291456 bytes");
     expect(out).not.toContain("File is too large");
   });
+
+  it("does not recommend offset/limit paging that the size cap still rejects", async () => {
+    const p = join(dir, "large.txt");
+    writeFileSync(p, "line\n".repeat(1_300_000));
+    const whole = await readTool({ file_path: p }, ctx());
+    expect(whole).toContain("File is too large");
+    expect(whole).toContain("Grep");
+    expect(whole).not.toMatch(/provide offset|to read a portion/);
+    // The cap applies before paging, so a paged request gets the same answer.
+    expect(await readTool({ file_path: p, offset: 1, limit: 2 }, ctx())).toBe(whole);
+  });
 });
