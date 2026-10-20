@@ -116,4 +116,12 @@ describe("MessageContent tables", () => {
     expect(output).toContain("sample");
     expect(output).not.toContain("| --- | --- |");
   });
+
+  test("an escaped pipe stays inside its cell", async () => {
+    const output = await renderMessage(
+      "| expression | result |\n| --- | --- |\n| left \\| right | expected-tail |",
+    );
+    expect(output).toContain("left | right");
+    expect(output).toContain("expected-tail");
+  });
 });

@@ -159,6 +159,28 @@ const TABLE_MIN_COLUMN_WIDTH = 6;
 // closing fence uses the same character, is at least as long, and has no info string.
 const FENCE_RE = /^ {0,3}(`{3,}|~{3,})(.*)$/;
 
+/**
+ * Split a `| a | b |` row into cells. An escaped `\|` is part of the cell
+ * text (GFM tables), not a column boundary.
+ */
+function splitTableRow(line: string): string[] {
+  const cells: string[] = [];
+  let cell = "";
+  for (let i = 0; i < line.length; i++) {
+    if (line[i] === "\\" && line[i + 1] === "|") {
+      cell += "|";
+      i++;
+    } else if (line[i] === "|") {
+      cells.push(cell.trim());
+      cell = "";
+    } else {
+      cell += line[i];
+    }
+  }
+  cells.push(cell.trim());
+  return cells.slice(1, -1);
+}
+
 function extractTable(text: string): { before: string; table: TableData; after: string } | null {
   const lines = text.split("\n");
   let tableStart = -1;
@@ -197,16 +219,10 @@ function extractTable(text: string): { before: string; table: TableData; after: 
 
   if (tableStart === -1 || sepLine === -1 || tableEnd - tableStart < 2) return null;
 
-  const parseRow = (line: string): string[] =>
-    line
-      .split("|")
-      .slice(1, -1)
-      .map((c) => c.trim());
-
-  const headers = parseRow(lines[tableStart]);
+  const headers = splitTableRow(lines[tableStart].trim());
   const rows: string[][] = [];
   for (let i = sepLine + 1; i <= tableEnd; i++) {
-    rows.push(parseRow(lines[i]));
+    rows.push(splitTableRow(lines[i].trim()));
   }
 
   return {
