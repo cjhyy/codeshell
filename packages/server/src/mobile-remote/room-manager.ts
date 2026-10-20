@@ -402,6 +402,9 @@ export interface RoomManagerOptions {
  */
 export class RoomManager {
   private agents = new Map<string, RoomAgent>();
+  /** Permission mode each live agent was spawned with. The mode is a spawn-time
+   * CLI argument, so room metadata alone cannot prove what a process runs. */
+  private agentModes = new WeakMap<RoomAgent, RoomPermissionMode>();
   private modelTraces = new Map<string, ReturnType<typeof createRoomModelTrace>>();
   /** Rooms whose visible output is currently sourced from the external CLI's
    * transcript tail. While present, the resident agent's stdout mirror is
@@ -916,6 +919,9 @@ export class RoomManager {
       this.writeRoomMeta(meta.id, { ...meta, permissionMode: mode });
       this.close(meta.id); // stop the old-mode process so open() respawns fresh
     }
+    // Metadata alone cannot prove the live process mode (a concurrent takeover
+    // may have rewritten it), so also compare the agent's spawn-time mode.
+    this.retireAgentUnlessMode(meta.id, mode);
     const { status } = this.open(meta.id);
     return { roomId: meta.id, status };
   }
@@ -1006,6 +1012,9 @@ export class RoomManager {
       linkedSessionMode: undefined,
     };
     this.writeRoomMeta(roomId, controllableMeta);
+    // Another view may have taken over and reopened this session under a
+    // different mode. Never report default while feeding that process.
+    this.retireAgentUnlessMode(roomId, controllableMeta.permissionMode);
     const { status } = this.open(roomId);
     if (status !== "running") {
       throw new Error("linked session room is unavailable");
@@ -1121,6 +1130,7 @@ export class RoomManager {
         if (agent && this.agents.get(id) === agent) this.onAgentEvent(id, event);
       });
       this.agents.set(id, agent);
+      this.agentModes.set(agent, meta.permissionMode);
       try {
         agent.start();
       } catch (error) {
@@ -1138,6 +1148,12 @@ export class RoomManager {
       if (this.agents.get(id) !== agent || !agent.isRunning()) return { status: "missing" };
     }
     return { status: "running" };
+  }
+
+  /** Stop a live agent whose spawn-time permission mode differs from `mode`. */
+  private retireAgentUnlessMode(id: string, mode: RoomPermissionMode): void {
+    const agent = this.agents.get(id);
+    if (agent && this.agentModes.get(agent) !== mode) this.close(id);
   }
 
   private onAgentEvent(id: string, event: ResidentAgentEvent): void {

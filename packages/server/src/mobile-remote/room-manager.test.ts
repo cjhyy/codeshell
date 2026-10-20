@@ -86,6 +86,7 @@ afterEach(() => {
 class FakeAgent implements RoomAgent {
   running = false;
   sent: string[] = [];
+  mode?: string;
   constructor(private readonly emit: (e: ResidentAgentEvent) => void) {}
   start() {
     this.running = true;
@@ -119,8 +120,9 @@ function makeManager(options?: {
   const mgr = new RoomManager({
     rootDir: dir,
     now: () => clock++,
-    createAgent: (_room, onEvent) => {
+    createAgent: (room, onEvent) => {
       const a = new FakeAgent(onEvent);
+      a.mode = room.permissionMode;
       agents.push(a);
       return a;
     },
@@ -701,6 +703,41 @@ describe("RoomManager", () => {
     ).toMatchObject({ status: "running", mode: "default" });
     expect(mgr.getRoom(existing.id)?.permissionMode).toBe("default");
     expect(agents).toHaveLength(1);
+  });
+
+  test("a stale takeover retires a concurrently reopened bypass agent instead of reusing it", () => {
+    const target: LinkedSessionTarget = {
+      externalSessionId: "cc-shared",
+      cwd: "/tmp/p",
+      kind: "claude-code",
+    };
+    const { mgr, agents } = makeManager({ linkedSessions: [target] });
+    // View A observes the transcript and keeps its takeover button.
+    const observed = mgr.openLinkedSession(target.externalSessionId, target.cwd, target.kind);
+    // View B takes over and then explicitly reopens the session in bypass mode.
+    mgr.takeOverLinkedSession(observed.roomId, target.externalSessionId, target.cwd, target.kind);
+    mgr.openForSession(target.externalSessionId, target.cwd, "bypassPermissions", target.kind);
+    expect(agents.map((agent) => [agent.mode, agent.running])).toEqual([
+      ["default", false],
+      ["bypassPermissions", true],
+    ]);
+
+    const takenOver = mgr.takeOverLinkedSession(
+      observed.roomId,
+      target.externalSessionId,
+      target.cwd,
+      target.kind,
+    );
+    expect(takenOver).toMatchObject({ status: "running", mode: "default" });
+    const live = agents.filter((agent) => agent.running);
+    expect(live.map((agent) => agent.mode)).toEqual(["default"]);
+    mgr.send(observed.roomId, "after takeover");
+    expect(agents[1]?.sent).toEqual([]);
+    expect(live[0]?.sent).toEqual(["after takeover"]);
+
+    // Reopening with the mode now shown keeps the matching agent.
+    mgr.openForSession(target.externalSessionId, target.cwd, "default", target.kind);
+    expect(agents.filter((agent) => agent.running)).toEqual(live);
   });
 
   test("openLinkedSession fails closed for a missing transcript without creating a room", () => {
