@@ -129,7 +129,7 @@ type AutomationSessionLink = {
   needsImport?: boolean;
 };
 
-function automationSessionLinks(
+export function automationSessionLinks(
   job: AutomationSummary,
   sessionIndices: Record<string, SessionIndex>,
   runs: RunSummary[],
@@ -156,10 +156,13 @@ function automationSessionLinks(
       const run = session.runId
         ? runsById.get(session.runId)
         : runsBySessionId.get(session.engineSessionId ?? session.id);
-      const matches =
-        session.title === job.name ||
-        (session.runId ? matchingRunIds.has(session.runId) : false) ||
-        run?.cronJobName === job.name;
+      // A session that records its owning job is claimed by that id alone. The
+      // name match is only for legacy rows written before cronJobId existed.
+      const matches = session.cronJobId
+        ? session.cronJobId === job.id
+        : session.title === job.name ||
+          (session.runId ? matchingRunIds.has(session.runId) : false) ||
+          run?.cronJobName === job.name;
       if (matches) {
         // Locally-present session (found in a repo's session index) → already
         // imported, so never flag it for import. Set explicitly so the render
@@ -199,7 +202,13 @@ function automationSessionLinks(
     });
   }
 
+  // Headless runs persist `automation:<jobId>:<promptHash>` as their
+  // clientMessageId; that identity decides ownership whenever it is present.
+  // Older or later-continued sessions fall back to the job prompt. Sharing a
+  // project and a time window with the job proves nothing: another automation
+  // in the same project would be claimed.
   const promptNeedle = job.prompt.trim().slice(0, 36);
+  const ownRunPrefix = `automation:${job.id}:`;
   for (const disk of diskSessions) {
     if (
       disk.origin !== "automation" ||
@@ -208,10 +217,13 @@ function automationSessionLinks(
     ) {
       continue;
     }
-    const promptMatches = promptNeedle.length > 0 && disk.title.includes(promptNeedle);
-    const timeMatches =
-      job.lastRun != null && Math.abs(disk.updatedAt - job.lastRun) < 24 * 60 * 60 * 1000;
-    if (!promptMatches && !timeMatches) continue;
+    const runIdentity = disk.clientMessageId?.startsWith("automation:")
+      ? disk.clientMessageId
+      : undefined;
+    const matches = runIdentity
+      ? runIdentity.startsWith(ownRunPrefix)
+      : promptNeedle.length > 0 && disk.title.includes(promptNeedle);
+    if (!matches) continue;
     out.push({
       projectId: null,
       disk,
@@ -271,12 +283,16 @@ export function AutomationView({
   const [pending, setPending] = useState<Record<string, boolean>>({});
   const pendingKeys = useRef(new Set<string>());
 
+  const refreshSeq = useRef(0);
   const refresh = async () => {
+    const seq = ++refreshSeq.current;
     try {
       const [list, runList] = await Promise.all([
         window.codeshell.listAutomations(),
         window.codeshell.listRuns(),
       ]);
+      // Action and background refreshes can overlap; only the newest read lands.
+      if (seq !== refreshSeq.current) return;
       setJobs(list);
       setRuns(runList);
     } catch (e) {
@@ -308,6 +324,11 @@ export function AutomationView({
     void refresh();
     void loadConversations();
   }, []);
+
+  // Runs settle in the background (completion, auto-disable after a failed
+  // trigger guard). Every scheduler lifecycle event refreshes the Host task
+  // inbox, whose change feed therefore also keeps this open page current.
+  useEffect(() => window.codeshell.taskInbox?.onChanged(() => void refresh()), []);
 
   const conversations = useMemo(
     () =>
@@ -617,6 +638,8 @@ export function AutomationDetail(props: {
   const t = props.t ?? fallback.t;
   const sessions = props.sessions ?? [];
   const lastSession = sessions[0];
+  // Set only when the scheduler stopped the job itself; a manual pause has none.
+  const autoDisabledReason = job.enabled ? null : job.disabledReason?.trim() || null;
   const conversations = props.conversations ?? [];
   const boundConversation = conversations.find(
     (conversation) => conversation.sessionId === job.resumeSessionId,
@@ -729,7 +752,9 @@ export function AutomationDetail(props: {
                     "inline-flex w-fit items-center gap-1.5 rounded-full px-2 py-0.5 text-xs font-medium",
                     job.enabled
                       ? "bg-status-ok/10 text-status-ok"
-                      : "bg-muted text-muted-foreground",
+                      : autoDisabledReason
+                        ? "bg-status-warn/10 text-status-warn"
+                        : "bg-muted text-muted-foreground",
                   )}
                 >
                   <span
@@ -739,7 +764,11 @@ export function AutomationDetail(props: {
                       job.enabled ? "bg-status-ok" : "bg-muted-foreground",
                     )}
                   />
-                  {job.enabled ? t("auto.detail.statusActive") : t("auto.detail.statusPaused")}
+                  {job.enabled
+                    ? t("auto.detail.statusActive")
+                    : autoDisabledReason
+                      ? t("auto.detail.statusAutoDisabled")
+                      : t("auto.detail.statusPaused")}
                 </span>
                 {job.resumeSessionId && (
                   <span className="inline-flex w-fit items-center gap-1 rounded-full border border-primary/30 bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
@@ -754,6 +783,11 @@ export function AutomationDetail(props: {
                   </span>
                 )}
               </div>
+              {autoDisabledReason && (
+                <p className="mt-2 break-words text-xs leading-relaxed text-status-warn [overflow-wrap:anywhere]">
+                  {t("auto.detail.disabledReason", { reason: autoDisabledReason })}
+                </p>
+              )}
             </div>
           </div>
           <div className="flex flex-wrap items-center gap-2">

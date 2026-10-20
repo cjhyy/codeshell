@@ -119,6 +119,62 @@ describe("DesktopNotifier", () => {
     expect(f.shown).toHaveLength(2);
   });
 
+  it("does not hold urgent notifications behind an ordinary one waiting for a rate slot", async () => {
+    let now = 100;
+    let releaseWait!: () => void;
+    const f = fixture({
+      maxNotificationsPerWindow: 1,
+      rateWindowMs: 10_000,
+      now: () => now,
+      sleep: (delayMs) =>
+        new Promise<void>((resolve) => {
+          releaseWait = () => {
+            now += delayMs;
+            resolve();
+          };
+        }),
+    });
+    const notifier = new DesktopNotifier(f.path, f.dependencies);
+    await notifier.notify({ key: "first", title: "完成", body: "first" });
+    const waiting = notifier.notify({ key: "second", title: "完成", body: "second" });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(
+      await notifier.notify({ key: "urgent", title: "停止", body: "urgent", urgent: true }),
+    ).toBe("shown");
+    expect(f.shown.map((item) => item.body)).toEqual(["first", "urgent"]);
+
+    releaseWait();
+    expect(await waiting).toBe("shown");
+    expect(f.shown.map((item) => item.body)).toEqual(["first", "urgent", "second"]);
+    const receipts = JSON.parse(readFileSync(f.path, "utf8")).map((item: any) => item.key);
+    expect(receipts.sort()).toEqual(["first", "second", "urgent"]);
+  });
+
+  it("re-checks dedupe after an ordinary notification waited for a slot", async () => {
+    let now = 100;
+    let releaseWait!: () => void;
+    const f = fixture({
+      maxNotificationsPerWindow: 1,
+      rateWindowMs: 10_000,
+      now: () => now,
+      sleep: (delayMs) =>
+        new Promise<void>((resolve) => {
+          releaseWait = () => {
+            now += delayMs;
+            resolve();
+          };
+        }),
+    });
+    const notifier = new DesktopNotifier(f.path, f.dependencies);
+    await notifier.notify({ key: "first", title: "完成", body: "first" });
+    const waiting = notifier.notify({ key: "same", title: "完成", body: "ordinary" });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    await notifier.notify({ key: "same", title: "停止", body: "urgent", urgent: true });
+    releaseWait();
+    expect(await waiting).toBe("duplicate");
+    expect(f.shown.map((item) => item.body)).toEqual(["first", "urgent"]);
+  });
+
   it("does not charge urgent notifications against the ordinary burst budget", async () => {
     const f = fixture({
       maxNotificationsPerWindow: 1,

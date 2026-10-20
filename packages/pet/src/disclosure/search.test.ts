@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { mkdtempSync, mkdirSync, writeFileSync } from "node:fs";
+import { mkdtempSync, mkdirSync, utimesSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { searchSessionTranscripts } from "./search.js";
@@ -110,6 +110,27 @@ describe("searchSessionTranscripts", () => {
 
     expect(result.matches.length).toBe(2);
     expect(result.truncated).toBe(false);
+  });
+
+  test("candidates beyond the scanned band mark the result incomplete", async () => {
+    const root = mkdtempSync(join(tmpdir(), "pet-disclosure-search-band-"));
+    for (let i = 0; i < 500; i += 1) {
+      const id = `recent-${i}`;
+      writeSession(root, id, { kind: "work", cwd: "/a", title: id }, [
+        { role: "user", content: "ordinary recent work", turnNumber: 0 },
+      ]);
+      utimesSync(join(root, id, "transcript.jsonl"), 1_700_000_000 + i, 1_700_000_000 + i);
+    }
+    writeSession(root, "older-target", { kind: "work", cwd: "/a", title: "Older" }, [
+      { role: "user", content: "the papaya migration plan", turnNumber: 0 },
+    ]);
+    utimesSync(join(root, "older-target", "transcript.jsonl"), 1_600_000_000, 1_600_000_000);
+
+    const result = await searchSessionTranscripts(root, "papaya", { budgetMs: 60_000 });
+
+    expect(result.scannedSessions).toBe(500);
+    expect(result.matches).toEqual([]);
+    expect(result.truncated).toBe(true);
   });
 
   test("scannedSessions does not count a candidate missing transcript.jsonl", async () => {

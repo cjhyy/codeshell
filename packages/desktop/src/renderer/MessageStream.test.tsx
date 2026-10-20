@@ -157,3 +157,30 @@ describe("MessageStream — goal extension actions", () => {
     expect(html).toContain("再续 50 轮</button>");
   });
 });
+
+describe("MessageStream — restored user attachments", () => {
+  const shot = {
+    kind: "image" as const,
+    path: ".code-shell/attachments/s/modern-shot.png",
+    absPath: "/repo/.code-shell/attachments/s/modern-shot.png",
+    sessionId: "s",
+    mime: "image/png",
+    originalName: "modern-shot.png",
+    size: 68,
+  };
+
+  test("a local session restored from the journal shows its attachment summary", () => {
+    const messages: Message[] = [
+      { kind: "user", id: "u1", text: "what is in this screenshot?", attachments: [shot] },
+    ];
+    const html = renderToStaticMarkup(<MessageStream messages={messages} />);
+    expect(html).toContain("what is in this screenshot?");
+    expect(html).toContain("modern-shot.png");
+  });
+
+  test("an image-only restored message still renders a user bubble", () => {
+    const messages: Message[] = [{ kind: "user", id: "u1", text: "", attachments: [shot] }];
+    const html = renderToStaticMarkup(<MessageStream messages={messages} />);
+    expect(html).toContain("modern-shot.png");
+  });
+});

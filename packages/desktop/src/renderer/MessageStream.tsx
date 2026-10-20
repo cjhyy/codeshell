@@ -238,6 +238,9 @@ export function MessageStream({
   const [selectionError, setSelectionError] = useState<string | null>(null);
   const selectionLoadEpochRef = useRef(0);
   const packagingEpochRef = useRef<number | null>(null);
+  // The source session whose summary is running, and whether the user asked to
+  // stop it; a cancelled package returns to the selection without an error.
+  const packagingCancelRef = useRef<{ sourceSessionId: string; requested: boolean } | null>(null);
   const contextSelectionRequestRef = useRef(contextSelectionRequest);
   const currentSessionIdRef = useRef(engineSessionId);
   currentSessionIdRef.current = engineSessionId;
@@ -268,8 +271,16 @@ export function MessageStream({
     if (
       selectionStatus === "packaging" ||
       packagingEpochRef.current === selectionLoadEpochRef.current
-    )
+    ) {
+      // The summary runs the model under the source session's exclusive lock;
+      // cancelling must stop it there, not just hide this surface.
+      const packaging = packagingCancelRef.current;
+      if (packaging && !packaging.requested) {
+        packaging.requested = true;
+        void window.codeshell.cancel(packaging.sourceSessionId).catch(() => undefined);
+      }
       return;
+    }
     // Invalidate an in-flight raw-event read so cancelling cannot reopen or
     // repopulate this selection surface after it has disappeared.
     selectionLoadEpochRef.current += 1;
@@ -377,6 +388,8 @@ export function MessageStream({
     const operationIsCurrent = () =>
       operationEpoch === selectionLoadEpochRef.current &&
       sourceSessionId === currentSessionIdRef.current;
+    const cancellation = { sourceSessionId, requested: false };
+    packagingCancelRef.current = cancellation;
     setSelectionStatus("packaging");
     setSelectionError(null);
     try {
@@ -399,9 +412,10 @@ export function MessageStream({
       if (!operationIsCurrent()) return;
       setSelectionOpen(false);
     } catch (error) {
-      if (!operationIsCurrent()) return;
+      if (!operationIsCurrent() || cancellation.requested) return;
       setSelectionError(error instanceof Error ? error.message : String(error));
     } finally {
+      if (packagingCancelRef.current === cancellation) packagingCancelRef.current = null;
       if (packagingEpochRef.current === operationEpoch) packagingEpochRef.current = null;
       if (operationIsCurrent()) setSelectionStatus("idle");
     }
@@ -499,7 +513,10 @@ export function MessageStream({
         const images = decoded.images;
         const { block: annotations, text } = extractAnnotations(decoded.text);
         const askedAt = formatMessageTime(m.createdAt);
-        const remoteAttachments = localRuntime ? [] : (m.attachments ?? []);
+        // A local optimistic send carries its images inline in the wire text;
+        // a message restored from the output journal carries only the
+        // attachment summary, which must still be shown.
+        const remoteAttachments = localRuntime && images.length > 0 ? [] : (m.attachments ?? []);
         if (!text && !annotations && images.length === 0 && remoteAttachments.length === 0)
           return null;
         return (
@@ -655,7 +672,6 @@ export function MessageStream({
                 className="size-8 shrink-0 rounded-lg text-muted-foreground"
                 aria-label={t("chat.contextPackage.cancelAria")}
                 title={t("chat.contextPackage.cancel")}
-                disabled={selectionStatus === "packaging"}
                 onClick={closeContextSelection}
               >
                 <X size={16} aria-hidden="true" />
@@ -856,13 +872,7 @@ export function MessageStream({
                   </p>
                 </div>
                 <div className="ml-auto flex min-w-0 flex-wrap items-center justify-end gap-2">
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    disabled={selectionStatus === "packaging"}
-                    onClick={closeContextSelection}
-                  >
+                  <Button type="button" variant="ghost" size="sm" onClick={closeContextSelection}>
                     {t("chat.contextPackage.cancel")}
                   </Button>
                   <Button

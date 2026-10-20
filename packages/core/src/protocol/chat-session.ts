@@ -403,7 +403,15 @@ export class ChatSession {
           return current?.paused !== true && isSameGoalInstance(current, goal);
         },
         onSkipped: () => resolve(false),
-        resolve: () => resolve(true),
+        // A run that never reached a model turn (e.g. missing workspace
+        // authority) did not resume anything; report it as a failure. A user
+        // cancellation is not a failed resume.
+        resolve: (result) =>
+          result.turnCount === 0 &&
+          result.reason !== "aborted_streaming" &&
+          result.reason !== "aborted_tools"
+            ? reject(new Error(result.text || `Goal resume did not start (${result.reason})`))
+            : resolve(true),
         reject,
       });
       void this.pump();

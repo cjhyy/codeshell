@@ -51,6 +51,20 @@ describe("AutomationDetail dedup", () => {
     const html = renderToStaticMarkup(<AutomationDetail {...baseProps} />);
     expect(html).toContain("配置");
   });
+  test("an auto-disabled job shows why it stopped instead of a plain pause", () => {
+    const reason = "resume Session root is unavailable";
+    const paused = renderToStaticMarkup(
+      <AutomationDetail {...({ ...baseProps, job: { ...job, enabled: false } } as never)} />,
+    );
+    expect(paused).toContain("已暂停");
+    const stopped = renderToStaticMarkup(
+      <AutomationDetail
+        {...({ ...baseProps, job: { ...job, enabled: false, disabledReason: reason } } as never)}
+      />,
+    );
+    expect(stopped).toContain("已自动停用");
+    expect(stopped).toContain(reason);
+  });
   test("plugin-created jobs surface immutable template provenance", () => {
     const html = renderToStaticMarkup(
       <AutomationDetail

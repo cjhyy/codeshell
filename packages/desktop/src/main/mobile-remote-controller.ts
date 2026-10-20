@@ -248,6 +248,10 @@ export class MobileRemoteController {
         } else if (mode === "relay") {
           await this.connectRelay(generation, signal);
         }
+        // Relay readiness is published by its connector. LAN and tunnel starts
+        // must announce the running gateway too, or settings views in other
+        // windows keep showing it closed until they remount.
+        if (mode !== "relay") this.publish(this.state);
         return { url: this.status().url!, ...this.pairingUrl(), mode };
       } catch (error) {
         await this.closeTransport();

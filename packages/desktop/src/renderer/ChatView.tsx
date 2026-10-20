@@ -48,10 +48,12 @@ import type {
 import {
   ATTACHMENT_LIMITS,
   buildAttachments,
+  buildPathAttachment,
   decodeWireForDisplay,
   encodeAttachmentsForWire,
   filesFromClipboard,
   CODESHELL_PATH_DND_MIME,
+  sha256FromDataUrl,
   type ImageAttachment,
 } from "./chat/attachments";
 import {
@@ -655,6 +657,7 @@ export function ChatView({
   const mountedRef = useRef(true);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const mediaStreamRef = useRef<MediaStream | null>(null);
+  const voiceStartingRef = useRef(false);
   const audioChunksRef = useRef<Blob[]>([]);
   // Whether a transcription provider is configured (or fallback-reachable). When
   // false the mic button is disabled with a "configure in settings" tooltip,
@@ -752,6 +755,10 @@ export function ChatView({
   );
 
   const startRecording = useCallback(async () => {
+    // Mic permission and getUserMedia are awaited while voiceState is still
+    // idle; a second click in that window must not open a second recorder.
+    if (voiceStartingRef.current || mediaRecorderRef.current) return;
+    voiceStartingRef.current = true;
     try {
       // macOS gates the mic at the OS level — request access first so the user
       // gets the system prompt (and we surface a clear message if denied).
@@ -808,6 +815,8 @@ export function ChatView({
         variant: "error",
       });
       setVoiceState("idle");
+    } finally {
+      voiceStartingRef.current = false;
     }
   }, [transcribeChunks, toast, t]);
 
@@ -1401,6 +1410,52 @@ export function ChatView({
     }
   };
 
+  // An image dragged from the Files Panel. Hosts without their own handler
+  // (Quick Chat) attach it here as a path-backed image, and fall back to a path
+  // reference when it cannot be read as an image: a drop is never discarded.
+  const attachDroppedImagePath = async (absPath: string): Promise<void> => {
+    if (onAttachImagePath) {
+      onAttachImagePath(absPath);
+      return;
+    }
+    const selection = onBeginAttachmentSelection?.();
+    const imageSelection = imageComposer?.beginSelection();
+    const selectionIsCurrent = () =>
+      attachmentSelectionIsCurrent(selection) &&
+      (!imageComposer || Boolean(imageSelection?.isCurrent()));
+    if (!selectionIsCurrent()) return;
+    const context = selection ? selection.prepare() : onPrepareAttachmentSession?.();
+    const dataUrl = context
+      ? await window.codeshell
+          .readImageDataUrl(absPath, { cwd: context.cwd, sessionId: context.sessionId })
+          .catch(() => null)
+      : null;
+    if (!selectionIsCurrent()) return;
+    if (!context || !dataUrl) {
+      addLocalFilePaths([absPath], "file-panel", selection);
+      return;
+    }
+    const sha256 = await sha256FromDataUrl(dataUrl).catch(() => undefined);
+    if (!selectionIsCurrent()) return;
+    const { attachment, error } = buildPathAttachment(absPath, dataUrl, attachments, {
+      path: absPath,
+      absPath,
+      sha256,
+      origin: "file-panel",
+      sessionId: context.sessionId,
+    });
+    const overflow = t("chat.attachment.tooManySimple", {
+      max: ATTACHMENT_LIMITS.maxImagesPerMessage,
+    });
+    if (!attachment) {
+      const message = error?.message ?? t("chat.attachment.readFailedPath", { path: absPath });
+      if (imageSelection) imageSelection.setAttachmentError(message);
+      else updateMetadataField("attachmentError", message, selection);
+    } else if (selection) selection.appendImages([attachment], overflow, []);
+    else if (imageSelection) imageSelection.appendImages([attachment], overflow, []);
+    else setAttachments((cur) => [...cur, attachment]);
+  };
+
   const handlePaste = async (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
     if (compacting) return;
     captureMentionEditSelection(e.currentTarget);
@@ -1826,7 +1881,7 @@ export function ChatView({
     const draggedPath = e.dataTransfer?.getData(CODESHELL_PATH_DND_MIME);
     if (draggedPath && localRuntime) {
       if (classifyPath(draggedPath) === "image") {
-        onAttachImagePath?.(draggedPath);
+        void attachDroppedImagePath(draggedPath);
       } else {
         addLocalFilePaths([draggedPath], "file-panel");
       }

@@ -6,6 +6,7 @@ function setup() {
   let startGate: Promise<void> | undefined;
   let stopped = 0;
   const states: unknown[] = [];
+  const runningAtChange: boolean[] = [];
   const registration = {
     relayOrigin: "https://directory.example",
     publicOrigin: "https://computer.devices.example",
@@ -48,12 +49,16 @@ function setup() {
       },
     } as any,
     environmentDir: "/unused-because-preflight-fails",
-    changed: (state) => states.push(state),
+    changed: (state) => {
+      states.push(state);
+      runningAtChange.push(!!current);
+    },
   });
   return {
     controller,
     registration,
     states,
+    runningAtChange,
     setGate: (gate: Promise<void>) => {
       startGate = gate;
     },
@@ -106,6 +111,16 @@ test("LAN reuse is idempotent; forget stops transports; disposed controllers can
   expect(controller.relayStatus().registered).toBe(false);
   await controller.dispose();
   await expect(controller.start()).rejects.toThrow("取消");
+});
+test("a successful LAN start notifies every settings view of the running gateway", async () => {
+  // No registered relay: closing the previous transport publishes nothing, so
+  // other windows learn about the new listener only from this notification.
+  const { controller, runningAtChange } = setup();
+  await controller.forget();
+  runningAtChange.length = 0;
+  await controller.start({ mode: "lan" });
+  expect(controller.status().running).toBe(true);
+  expect(runningAtChange.at(-1)).toBe(true);
 });
 test("safe-storage preflight runs before enrollment and preserves existing registration on preflight failure", async () => {
   const { controller, failPreflight } = setup();

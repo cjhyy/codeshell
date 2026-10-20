@@ -47,14 +47,12 @@ import { useToast } from "../ui/ToastProvider";
 import type { PanelAppStateChange } from "./PanelAppHost";
 import { PanelLauncher } from "./PanelLauncher";
 import { PANEL_LAUNCHER_KIND } from "./panelLauncherKind";
+import { nextPanelTabId } from "./panelTabIds";
 
 export interface OpenTab {
   id: string;
   kind: PanelTab;
 }
-
-/** Monotonic tab-id counter; module-level so ids stay unique across remounts. */
-let panelTabSeq = 0;
 
 interface Props {
   /** Registered repository root used only as the main-workspace fallback. */
@@ -237,21 +235,7 @@ function ResolvedPanelArea({
     () => enabledPanels.filter((entry) => !entry.internalOnly),
     [enabledPanels],
   );
-  // Fresh, collision-proof tab id. The module counter resets to 0 on a renderer
-  // reload, but tabs are persisted per bucket; bump past ids already present in
-  // this bucket so restored tabs and newly-opened tabs don't collide.
-  const mkId = (kind: PanelTab): string => {
-    const existing: OpenTab[] = [...tabs];
-    const prefix = `${kind}-`;
-    let max = panelTabSeq;
-    for (const tb of existing) {
-      if (tb.kind !== kind || !tb.id.startsWith(prefix)) continue;
-      const n = Number(tb.id.slice(prefix.length));
-      if (Number.isFinite(n) && n > max) max = n;
-    }
-    panelTabSeq = max + 1;
-    return `${prefix}${panelTabSeq}`;
-  };
+  const mkId = (kind: PanelTab): string => nextPanelTabId(kind, tabs);
 
   // Dedup defensively: persisted state from older builds can carry duplicate ids.
   const seenTabIds = new Set<string>();

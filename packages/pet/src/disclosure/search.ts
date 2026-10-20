@@ -104,11 +104,14 @@ export async function searchSessionTranscripts(
   const budgetMs = options.budgetMs ?? DEFAULT_BUDGET_MS;
   const deadline = Date.now() + budgetMs;
 
-  const candidates = await listWorkSessionsOnDisk(sessionsRootDir, { limit: CANDIDATE_LIMIT });
+  // Ask for one extra candidate: older sessions beyond the scanned band are not
+  // searched, so their existence must surface as an incomplete result.
+  const listed = await listWorkSessionsOnDisk(sessionsRootDir, { limit: CANDIDATE_LIMIT + 1 });
+  const candidates = listed.slice(0, CANDIDATE_LIMIT);
 
   const matches: SessionSearchMatch[] = [];
   let scannedSessions = 0;
-  let truncated = false;
+  let truncated = listed.length > CANDIDATE_LIMIT;
   let cursor = 0;
 
   async function worker(): Promise<void> {

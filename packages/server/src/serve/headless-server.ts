@@ -237,8 +237,27 @@ export async function startHeadlessServer(opts: HeadlessServeOptions): Promise<H
   let configurationChanging = false;
   let configurationReloadFailed = false;
   const runUploads = new Map<string, PreparedHubUploads>();
+  // Core also starts top-level runs that never pass through a host agent/run,
+  // e.g. the follow-up turn of an asynchronously answered question. Count them
+  // from their own top-level stream boundaries so archive/export/automation
+  // gates see the session as busy until the run's terminal turn_complete.
+  const streamRuns = new Map<string, number>();
   const isRunning = (sessionId: string): boolean =>
-    [...runningSessions.values()].includes(sessionId) || !!automationWorker?.ownsSession(sessionId);
+    [...runningSessions.values()].includes(sessionId) ||
+    (streamRuns.get(sessionId) ?? 0) > 0 ||
+    !!automationWorker?.ownsSession(sessionId);
+  const observeRunBoundary = (sessionId: string, event: Record<string, unknown> | null): void => {
+    if (!event || event.agentId !== undefined) return;
+    const before = isRunning(sessionId);
+    const count = streamRuns.get(sessionId) ?? 0;
+    if (event.type === "session_started") streamRuns.set(sessionId, count + 1);
+    else if (event.type === "turn_complete" && count > 0) {
+      if (count === 1) streamRuns.delete(sessionId);
+      else streamRuns.set(sessionId, count - 1);
+    } else return;
+    const running = isRunning(sessionId);
+    if (running !== before) notify("serve/sessionStatus", { sessionId, running });
+  };
   let nextTabId = 1;
   let nextWorkerRequestId = 1;
   const outbound = new HubOutboundTransport({
@@ -313,6 +332,7 @@ export async function startHeadlessServer(opts: HeadlessServeOptions): Promise<H
     pendingWorkerResponses.clear();
     pendingResponsesByTab.clear();
     runningSessions.clear();
+    streamRuns.clear();
     runOwners.clear();
     runReplay.clear();
     runInputs.clear();
@@ -384,6 +404,7 @@ export async function startHeadlessServer(opts: HeadlessServeOptions): Promise<H
           let event = params.event;
           let deliveredInput: { echoed: boolean } | undefined;
           const value = event as Record<string, unknown> | null;
+          observeRunBoundary(params.sessionId, value);
           if (value?.type === "session_user_message" && typeof value.clientMessageId === "string") {
             const input = [...runInputs.values()].find(
               (candidate) =>

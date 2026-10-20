@@ -30,6 +30,8 @@ export interface AutomationSummary {
   schedule: string;
   prompt: string;
   enabled: boolean;
+  /** Why the scheduler auto-disabled the job; null when enabled or paused by hand. */
+  disabledReason: string | null;
   cwd: string | null;
   projectId: string | null;
   rootId: string | null;
@@ -90,6 +92,7 @@ export function automationSummary(job: CronJob): AutomationSummary {
     schedule: job.schedule,
     prompt: job.prompt,
     enabled: job.enabled,
+    disabledReason: job.disabledReason ?? null,
     cwd: job.cwd ?? null,
     projectId: job.projectId ?? null,
     rootId: job.rootId ?? null,

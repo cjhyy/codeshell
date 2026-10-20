@@ -13,6 +13,8 @@ export interface DiskSessionMeta {
   cwd: string;
   title: string;
   updatedAt: number;
+  /** Latest turn's client id; headless automation runs write `automation:<jobId>:<hash>`. */
+  clientMessageId?: string;
   /** Session origin from disk; "automation" sessions get the ⚙ source mark. */
   origin?: "desktop" | "automation" | "subagent";
   parentSessionId?: string;

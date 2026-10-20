@@ -40,6 +40,12 @@ readline.createInterface({input:process.stdin}).on('line',line=>{
     for(const [id,run] of pending) if(run.params.task===m.params.task) {
       materialize(run,'complete'); pending.delete(id); output({id,result:{completed:true}});
     }
+  } else if(m.method==='test/followup') {
+    // Core-produced run (an async answer follow-up): no agent/run request.
+    notify('agent/streamEvent',{sessionId:m.params.task,event:{type:'session_started',sessionId:m.params.task}});
+  } else if(m.method==='test/followupEnd') {
+    notify('agent/streamEvent',{sessionId:m.params.task,event:{type:'turn_complete',reason:'completed',agentId:'child'}});
+    notify('agent/streamEvent',{sessionId:m.params.task,event:{type:'turn_complete',reason:'completed'}});
   } else if(m.method==='test/crash') process.exit(3);
   else if(m.method==='agent/cancel') {
     for(const [id,run] of pending) if(run.params.sessionId===m.params.sessionId) {
@@ -107,7 +113,7 @@ async function fixture() {
       headers: { cookie, origin: server.url, "content-type": "application/json" },
       body: JSON.stringify({ name: "fixture", enabled: false }),
     });
-  const control = (method: "finish" | "crash", task?: string) =>
+  const control = (method: "finish" | "crash" | "followup" | "followupEnd", task?: string) =>
     server.bridge.injectWorkerMessage(
       JSON.stringify({ jsonrpc: "2.0", method: `test/${method}`, params: { task } }),
       { origin: "serve", producer: "test" },
@@ -188,6 +194,51 @@ for (const stage of ["absent", "directory", "state"]) {
     expect((await save()).status).toBe(200);
   });
 }
+
+test("a Core-produced follow-up run keeps the session busy until its own completion", async () => {
+  const { server, first, control } = await fixture();
+  const client = await connect(server, first.cookie);
+  client.send("run", "agent/run", { sessionId: "answered", task: "state" });
+  await client.wait((message) => message.method === "test/ready");
+  control("finish", "state");
+  await client.wait((message) => message.id === "run");
+  const archive = (archived: boolean) =>
+    fetch(server.url + "/api/v1/sessions/answered", {
+      method: "PATCH",
+      headers: { cookie: first.cookie, origin: server.url, "content-type": "application/json" },
+      body: JSON.stringify({ archived }),
+    });
+
+  await client.wait(
+    (message) =>
+      message.method === "serve/sessionStatus" &&
+      message.params.sessionId === "answered" &&
+      !message.params.running,
+  );
+  const mark = client.received.length;
+  control("followup", "answered");
+  await client.wait(
+    (message) =>
+      client.received.indexOf(message) >= mark &&
+      message.method === "serve/sessionStatus" &&
+      message.params.sessionId === "answered" &&
+      message.params.running,
+  );
+  expect((await client.detail("busy", "answered")).result.data.running).toBe(true);
+  expect((await archive(true)).status).toBe(409);
+
+  const busyMark = client.received.length;
+  control("followupEnd", "answered");
+  await client.wait(
+    (message) =>
+      client.received.indexOf(message) >= busyMark &&
+      message.method === "serve/sessionStatus" &&
+      message.params.sessionId === "answered" &&
+      !message.params.running,
+  );
+  expect((await client.detail("idle", "answered")).result.data.running).toBe(false);
+  expect((await archive(true)).status).toBe(200);
+});
 
 test("a tracked new run can be cancelled before its first state file exists", async () => {
   const { server, first, save } = await fixture();

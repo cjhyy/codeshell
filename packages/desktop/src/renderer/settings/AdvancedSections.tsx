@@ -77,7 +77,11 @@ export function PersonalizationSection({ scope, activeProjectPath }: ScopedProps
   const targetKey = `${scope}:${projectPath ?? ""}:personalization`;
   const loadGeneration = useRef(0);
 
-  const { schedule, flush } = useTargetedDebouncedSave(targetKey, (value: string) =>
+  const {
+    schedule,
+    flush,
+    error: saveError,
+  } = useTargetedDebouncedSave(targetKey, (value: string) =>
     writeSettings(scope, { agent: { appendSystemPrompt: value } }, projectPath),
   );
 
@@ -114,6 +118,11 @@ export function PersonalizationSection({ scope, activeProjectPath }: ScopedProps
         placeholder={t("settingsX.adv.personalizationPlaceholder")}
         className="min-h-[260px] resize-y leading-relaxed"
       />
+      {saveError && (
+        <p role="alert" className="text-xs text-status-err">
+          {t("settingsX.adv.autosaveFailed", { message: saveError })}
+        </p>
+      )}
     </section>
   );
 }

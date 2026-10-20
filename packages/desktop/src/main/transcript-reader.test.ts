@@ -248,6 +248,33 @@ describe("transcriptToFoldItems", () => {
     });
   });
 
+  it("marks a raw image input so history clients can hide its attachment envelope", () => {
+    const envelope =
+      "look at this\n\n<attached-image-paths>\n/repo/.code-shell/attachments/s/0123456789abcdef-shot.png\n</attached-image-paths>\n(上面附带的图片在工作区的真实路径，如需把它们作为工具输入，直接使用这些路径。)";
+    const items = transcriptToFoldItems(
+      line("message", {
+        role: "user",
+        content: [
+          { type: "text", text: envelope },
+          { type: "image", source: { type: "base64", media_type: "image/png", data: "aW1hZ2U=" } },
+        ],
+        clientMessageId: "legacy-image",
+      }),
+    );
+    expect(items[0]).toMatchObject({ kind: "user", text: envelope, images: 1 });
+    const withDisplay = transcriptToFoldItems(
+      line("message", {
+        role: "user",
+        content: [
+          { type: "text", text: envelope },
+          { type: "image", source: { type: "base64", media_type: "image/png", data: "aW1hZ2U=" } },
+        ],
+        displayText: "look at this",
+      }),
+    );
+    expect(withDisplay[0]).not.toHaveProperty("images");
+  });
+
   it("replays a panel displayText instead of its model-facing context envelope", () => {
     const items = transcriptToFoldItems(
       line("message", {
