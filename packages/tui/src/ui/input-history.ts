@@ -58,6 +58,8 @@ let _pendingEntries: HistoryLogEntry[] = [];
 let _lastAddedEntry: HistoryLogEntry | null = null;
 const _skippedTimestamps = new Set<number>();
 let _flushScheduled = false;
+/** Bumped when an entry is removed, so live navigators drop stale snapshots. */
+let _removalVersion = 0;
 
 /**
  * Configure the history system with session and project context.
@@ -240,6 +242,7 @@ export function removeLastFromHistory(): void {
   if (memIdx !== -1) {
     entries.splice(memIdx, 1);
   }
+  _removalVersion++;
 }
 
 /**
@@ -306,11 +309,19 @@ export function createHistoryNavigator() {
   let history = getProjectHistory();
   let cursor = history.length; // Start past the end (current input)
   let savedCurrent = ""; // Stash the current input when navigating
+  let removalVersion = _removalVersion;
 
   return {
     /** Move up (older). Returns the history entry or null if at top. */
     up(currentInput: string): string | null {
       if (cursor === history.length) {
+        // An entry was undone (ESC interrupt) since this snapshot: re-read
+        // before browsing so the removed input is not offered again.
+        if (removalVersion !== _removalVersion) {
+          history = getProjectHistory();
+          cursor = history.length;
+          removalVersion = _removalVersion;
+        }
         savedCurrent = currentInput; // Stash current input
       }
       if (cursor <= 0) return null;
@@ -337,6 +348,7 @@ export function createHistoryNavigator() {
     /** Refresh after addToHistory mutates the array. */
     refresh(): void {
       history = getProjectHistory();
+      removalVersion = _removalVersion;
       cursor = history.length;
       savedCurrent = "";
     },

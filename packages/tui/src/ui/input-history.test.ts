@@ -67,4 +67,23 @@ describe("input history navigation", () => {
     expect(navigator.up("")).toBeNull();
     expect(navigator.down()).toBe("current input");
   });
+
+  test("an existing navigator stops returning an input removed after interrupt", async () => {
+    const history = await loadInputHistory(homeWithPreviousSession("previous input"));
+    history.initHistory("current", "/workspace");
+    const navigator = history.createHistoryNavigator();
+    history.addToHistory("kept input");
+    navigator.refresh();
+    history.flushHistorySync();
+    history.addToHistory("interrupted input");
+    navigator.refresh();
+    history.flushHistorySync();
+
+    history.removeLastFromHistory();
+
+    expect(navigator.up("draft")).toBe("kept input");
+    expect(navigator.up("draft")).toBe("previous input");
+    expect(navigator.down()).toBe("kept input");
+    expect(navigator.down()).toBe("draft");
+  });
 });
