@@ -116,9 +116,10 @@ function filesFromCodexArgs(name: string, raw: string): string[] {
   if (!raw) return [];
   if (name === "apply_patch" || name === "ApplyPatch") {
     // apply_patch payload wraps a patch; headers look like `*** Update File: <p>`
-    // or `*** Add File: <p>`. Match those directly off the raw text.
+    // or `*** Add File: <p>`, and a rename follows Update with `*** Move to: <p>`.
+    // Match those directly off the raw text so a rename keeps both paths.
     const out: string[] = [];
-    const re = /\*\*\*\s+(?:Update|Add|Delete) File:\s+(.+)/g;
+    const re = /\*\*\*\s+(?:(?:Update|Add|Delete) File|Move to):\s+(.+)/g;
     let m: RegExpExecArray | null;
     while ((m = re.exec(raw)) !== null) {
       const f = m[1]?.trim();

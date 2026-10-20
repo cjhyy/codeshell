@@ -79,6 +79,16 @@ describe("extractChangedFilesFromCodexLines", () => {
     );
   });
 
+  test("attributes an apply_patch rename to both source and destination", () => {
+    const patch =
+      "*** Begin Patch\n*** Update File: src/old.ts\n*** Move to: src/new.ts\n@@\n-old\n+new\n*** End Patch";
+    const line = JSON.stringify({
+      type: "response_item",
+      payload: { type: "custom_tool_call", name: "apply_patch", input: patch },
+    });
+    expect(extractChangedFilesFromCodexLines(line)).toEqual(["src/old.ts", "src/new.ts"]);
+  });
+
   test("malformed / non-response lines skipped", () => {
     expect(extractChangedFilesFromCodexLines("junk\n{ broken")).toEqual([]);
   });
