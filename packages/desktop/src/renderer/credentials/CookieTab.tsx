@@ -24,7 +24,7 @@ import type { MaskedCredentialView } from "./types";
 import { useT } from "../i18n/I18nProvider";
 import { CredentialNoMatches, CredentialSearch, credentialMatchesQuery } from "./CredentialSearch";
 import { CredentialsSectionHeader } from "./CredentialsSectionHeader";
-import { cookiePlatformName } from "./cookie-platform";
+import { cookiePlatformName, newCookieAccountId } from "./cookie-platform";
 import { useCredentialList } from "./useCredentialList";
 import { CredentialListStatus } from "./CredentialListStatus";
 import { useCredentialMutation } from "./useCredentialMutation";
@@ -94,14 +94,14 @@ export function CookieTab({ cwd, activeBucket }: { cwd: string; activeBucket?: s
     searchRef.current?.focus();
   };
 
-  /** platform__slug(label):同一平台多账号不撞键;slug 只保留安全字符。 */
-  const buildId = (platform: string, name: string): string => {
-    const slug = name
-      .trim()
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, "-")
-      .replace(/^-+|-+$/g, "");
-    return `${platform}__${slug || "account"}`;
+  /** 新账号 ID:对照最新凭证列表去重,绝不覆盖已有账号。 */
+  const buildId = async (platform: string, name: string): Promise<string> => {
+    const existing = await window.codeshell.credentials.list(cwd);
+    return newCookieAccountId(
+      platform,
+      name,
+      existing.map((item) => item.id),
+    );
   };
 
   /** 主域:从用户输入里取「站点名」当 platform(去协议 / www. / 端口 / 路径)。 */
@@ -165,7 +165,7 @@ export function CookieTab({ cwd, activeBucket }: { cwd: string; activeBucket?: s
       const accountName = opts.fixed
         ? opts.fixed.label
         : res.suggestedLabel || t("ext.cookie.defaultAccountName");
-      const id = opts.fixed ? opts.fixed.id : buildId(platform, accountName);
+      const id = opts.fixed ? opts.fixed.id : await buildId(platform, accountName);
       await window.codeshell.credentials.save(cwd, opts.fixed?.storeScope ?? "user", {
         id,
         type: "cookie",
@@ -229,7 +229,7 @@ export function CookieTab({ cwd, activeBucket }: { cwd: string; activeBucket?: s
         return;
       }
       await window.codeshell.credentials.save(cwd, "user", {
-        id: buildId("browser", accountName),
+        id: await buildId("browser", accountName),
         type: "cookie",
         label: accountName,
         secret: JSON.stringify(jar),

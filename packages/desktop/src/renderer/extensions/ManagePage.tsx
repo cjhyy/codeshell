@@ -70,17 +70,33 @@ export function ManagePage({
   const [skills, setSkills] = useState<SkillSummary[]>([]);
   const [disabledSkills, setDisabledSkills] = useState<Set<string>>(new Set());
   const [disabledPlugins, setDisabledPlugins] = useState<Set<string>>(new Set());
+  // The switches write whole user-scope arrays. Until the authoritative arrays
+  // (and, for the plugin cascade, the skill list) have loaded, a write would
+  // replace the user's existing disables with this page's empty defaults.
+  const [settingsLoaded, setSettingsLoaded] = useState(false);
+  const [skillsLoaded, setSkillsLoaded] = useState(false);
+  // Bumped by every toggle so a refresh that started earlier never repaints
+  // the arrays over a newer local write.
+  const mutationRef = useRef(0);
 
   const refresh = async () => {
-    const [skillList, settings] = await Promise.all([
-      window.codeshell.listSkills(configurationTarget, { includeDisabled: true }),
-      window.codeshell.getSettings("user"),
+    const mutation = mutationRef.current;
+    await Promise.all([
+      window.codeshell.getSettings("user").then((settings) => {
+        if (mutationRef.current !== mutation) return;
+        const ds = settings?.disabledSkills;
+        setDisabledSkills(new Set(Array.isArray(ds) ? (ds as string[]) : []));
+        const dp = settings?.disabledPlugins;
+        setDisabledPlugins(new Set(Array.isArray(dp) ? (dp as string[]) : []));
+        setSettingsLoaded(true);
+      }),
+      window.codeshell
+        .listSkills(configurationTarget, { includeDisabled: true })
+        .then((skillList) => {
+          setSkills(skillList);
+          setSkillsLoaded(true);
+        }),
     ]);
-    setSkills(skillList);
-    const ds = settings?.disabledSkills;
-    setDisabledSkills(new Set(Array.isArray(ds) ? (ds as string[]) : []));
-    const dp = settings?.disabledPlugins;
-    setDisabledPlugins(new Set(Array.isArray(dp) ? (dp as string[]) : []));
   };
 
   useEffect(() => {
@@ -89,6 +105,8 @@ export function ManagePage({
   }, [configurationTarget]);
 
   const toggleSkill = async (name: string, shouldDisable: boolean) => {
+    if (!settingsLoaded) return;
+    mutationRef.current += 1;
     const next = new Set(disabledSkills);
     if (shouldDisable) next.add(name);
     else next.delete(name);
@@ -102,6 +120,8 @@ export function ManagePage({
    * The disabledPlugins write is the part that suppresses the plugin's hooks.
    */
   const togglePlugin = async (pluginName: string, shouldDisable: boolean) => {
+    if (!settingsLoaded || !skillsLoaded) return;
+    mutationRef.current += 1;
     const groupSkills = skills.filter(
       (s) => s.source === "plugin" && namespaceOf(s) === pluginName,
     );
@@ -228,6 +248,7 @@ export function ManagePage({
           configurationTarget={configurationTarget}
           query={query}
           isEnabled={(p) => !disabledPlugins.has(p.name)}
+          toggleReady={settingsLoaded && skillsLoaded}
           onToggle={(p, next) => void togglePlugin(p.name, !next)}
           onChanged={() => void refresh()}
         />
@@ -240,6 +261,7 @@ export function ManagePage({
           configurationTarget={configurationTarget}
           query={query}
           isEnabled={(s) => !disabledSkills.has(s.name)}
+          toggleReady={settingsLoaded}
           onToggle={(s, next) => void toggleSkill(s.name, !next)}
         />
       )}

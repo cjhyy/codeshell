@@ -171,6 +171,7 @@ import {
   requireRendererProjectPrimary,
   requireRendererProjectRoot,
 } from "./renderer-project-path.js";
+import { requireRendererOrSessionPath, type PtyStartRequest } from "./renderer-session-path.js";
 import { PetStateAggregator } from "./pet/pet-state-aggregator.js";
 import { ExternalSessionAdapter, type ExternalCli } from "./pet/external-session-adapter.js";
 import {
@@ -2800,7 +2801,7 @@ async function createWindow(): Promise<BrowserWindow> {
     loadRenderer();
   }
 
-  await installAppMenu(win);
+  await installAppMenu(win, projectStore);
   return win;
 }
 
@@ -5245,7 +5246,7 @@ ipcMain.handle(
   ): Promise<string | null> => {
     const cwd =
       typeof payload?.cwd === "string" && payload.cwd
-        ? await requireRendererProjectPath(payload.cwd)
+        ? await requireRendererOrSessionPath(payload.cwd, payload.sessionId)
         : undefined;
     return readImageDataUrl(typeof payload?.absPath === "string" ? payload.absPath : "", {
       cwd,
@@ -6583,17 +6584,16 @@ ipcMain.handle("files:redoTurn", async (event, sessionId: unknown) => {
 
 // ── Terminal (pty) — interactive shell panel ───────────────────────────────
 // Output streams back to the requesting webContents via "pty:data"/"pty:exit".
-ipcMain.handle(
-  "pty:start",
-  async (e, opts: { sessionId: string; cwd?: string; cols?: number; rows?: number }) => {
-    if (!opts) {
-      throw new Error("pty:start requires sessionId");
-    }
-    assertValidPtySessionId(opts.sessionId);
-    const cwd = await requireRendererProjectPath(opts.cwd ?? resolveNoRepoCwd());
-    return ptyStart(e.sender, { ...opts, cwd });
-  },
-);
+ipcMain.handle("pty:start", async (e, opts: PtyStartRequest) => {
+  if (!opts) throw new Error("pty:start requires sessionId");
+  assertValidPtySessionId(opts.sessionId);
+  // A Session's managed worktree is authorized only through that Session.
+  const cwd = await requireRendererOrSessionPath(
+    opts.cwd ?? resolveNoRepoCwd(),
+    opts.engineSessionId,
+  );
+  return ptyStart(e.sender, { ...opts, cwd });
+});
 ipcMain.handle("pty:write", (e, sessionId: string, data: string) => {
   assertValidPtySessionId(sessionId);
   if (typeof data !== "string" || data.length > 1024 * 1024) {

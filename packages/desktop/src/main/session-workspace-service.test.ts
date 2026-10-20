@@ -5,6 +5,7 @@ import {
   mkdirSync,
   mkdtempSync,
   readFileSync,
+  realpathSync,
   rmSync,
   symlinkSync,
   writeFileSync,
@@ -27,8 +28,10 @@ import {
   releaseSessionWorkspaceForUi,
   resolveSessionReviewWorkspaceForUi,
   switchSessionWorkspaceForUi,
+  type SessionWorkspaceList,
 } from "./session-workspace-service";
 import { readSessionDirectoryForUi, readSessionFileForUi } from "./session-fs-service";
+import { requireRendererOrSessionPath } from "./renderer-session-path";
 
 const ENV = { ...process.env, GIT_CONFIG_GLOBAL: "/dev/null", GIT_CONFIG_SYSTEM: "/dev/null" };
 
@@ -304,6 +307,46 @@ describe("cleanupSessionWorktreeForUi", () => {
     removeWorktree(wt.worktreePath, true);
   });
 
+  test("authorizes a terminal or image cwd at the Session's managed worktree only through that Session", async () => {
+    const projectStore = await projectStoreForFixture(root, sessionsDir);
+    const project = await projectStore.createFromPath(repo);
+    __setSessionWorkspaceServiceProjectStoreForTests(projectStore);
+    const sessionId = "session-terminal-worktree";
+    const sm = new SessionManager(sessionsDir);
+    sm.create(repo, "m", "p", sessionId);
+    bindSession(sessionsDir, sessionId, project.id, project.primaryRootId);
+    const wt = await createWorktree(repo, "terminal", sessionId);
+    sm.setSessionWorkspace(sessionId, {
+      root: wt.worktreePath,
+      kind: "worktree",
+      worktree: {
+        path: wt.worktreePath,
+        branch: wt.worktreeBranch,
+        baseRef: wt.originalBranch ?? "HEAD",
+        createdBy: "codeshell",
+      },
+    });
+    const registered = { registeredPaths: [repo] };
+
+    await expect(
+      requireRendererOrSessionPath(wt.worktreePath, sessionId, registered),
+    ).resolves.toBe(realpathSync(wt.worktreePath));
+    // Registered roots keep working with or without a Session.
+    await expect(requireRendererOrSessionPath(repo, undefined, registered)).resolves.toBe(
+      realpathSync(repo),
+    );
+    // Without the owning Session, or for any other directory, the gate holds.
+    await expect(
+      requireRendererOrSessionPath(wt.worktreePath, undefined, registered),
+    ).rejects.toThrow(/not registered/);
+    const other = join(root, "unrelated");
+    mkdirSync(other);
+    await expect(requireRendererOrSessionPath(other, sessionId, registered)).rejects.toThrow(
+      /not registered/,
+    );
+    removeWorktree(wt.worktreePath, true);
+  });
+
   test("discard partial branch-delete failure still moves the active session back to main", async () => {
     const sessionId = "desktopbranchfail";
     const sm = new SessionManager(sessionsDir);
@@ -514,6 +557,27 @@ describe("cleanupSessionWorktreeForUi", () => {
     expect(list.current.root).toBe(wt.worktreePath);
     expect(sm.getSessionWorkspace(sessionId)?.root).toBe(wt.worktreePath);
     removeWorktree(wt.worktreePath, true);
+  });
+
+  test("a concurrent duplicate new-worktree switch fails without undoing the first", async () => {
+    const sessionId = "desktopduplicateswitch";
+    const sm = new SessionManager(sessionsDir);
+    sm.create(repo, "m", "p", sessionId);
+
+    const results = await Promise.allSettled([
+      switchSessionWorkspaceForUi(sessionId, repo, "dupe"),
+      switchSessionWorkspaceForUi(sessionId, repo, "dupe"),
+    ]);
+
+    expect(results[0]!.status).toBe("fulfilled");
+    expect(results[1]!.status).toBe("rejected");
+    const created = (results[0] as PromiseFulfilledResult<SessionWorkspaceList>).value.current;
+    expect(created.kind).toBe("worktree");
+    expect(existsSync(created.root)).toBe(true);
+    const branch = created.worktree!.branch;
+    expect(git(repo, ["branch", "--list", branch])).toContain(branch);
+    expect(new SessionManager(sessionsDir).getSessionWorkspace(sessionId)?.root).toBe(created.root);
+    removeWorktree(created.root, true);
   });
 
   test("cleanup rebases an active session to main before removing its worktree", async () => {

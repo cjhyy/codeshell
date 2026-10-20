@@ -6,7 +6,7 @@ import { requireMountedProjectRoot, validateMountedProjectRoot } from "./mounted
 
 const MAX_RENDERER_PATH_LENGTH = 32_768;
 
-interface RendererProjectPathOptions {
+export interface RendererProjectPathOptions {
   registeredPaths?: readonly string[];
   noRepoPath?: string;
 }

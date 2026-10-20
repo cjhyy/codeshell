@@ -364,7 +364,11 @@ export class ProjectStore {
       projectId: project.id,
       mainRootId: target.id,
       mainRoot: target.path,
-      workspaceContext: workspaceContextFor(project, target, target.path),
+      // A repair moves the Session off a folder that may be missing; that
+      // folder must not have to exist for the repair to proceed.
+      workspaceContext: workspaceContextFor(project, target, target.path, {
+        omitMissingSecondaries: true,
+      }),
     };
 
     if (options.owner) {
@@ -881,15 +885,24 @@ function workspaceContextFor(
   project: LocalProject,
   mainRoot: LocalProjectRoot,
   runtimeMainPath: string,
+  options: { omitMissingSecondaries?: boolean } = {},
 ): WorkspaceContext {
+  // Missing (never replaced) secondary folders can be left out when asked:
+  // nothing can be read there, and a replaced folder still fails closed.
+  const roots = project.roots.filter(
+    (root) =>
+      !options.omitMissingSecondaries ||
+      root.id === mainRoot.id ||
+      validateMountedProjectRoot(root).status !== "dir_missing",
+  );
   const mountedPaths = new Map(
-    project.roots.map((root) => [root.id, requireMountedProjectRoot(root)] as const),
+    roots.map((root) => [root.id, requireMountedProjectRoot(root)] as const),
   );
   return createWorkspaceContext({
     projectId: project.id,
     projectRevision: project.revision,
     sessionMainRootId: mainRoot.id,
-    roots: project.roots.map((root) => ({
+    roots: roots.map((root) => ({
       id: root.id,
       path: root.id === mainRoot.id ? runtimeMainPath : mountedPaths.get(root.id)!,
       role: root.id === mainRoot.id ? ("primary" as const) : ("secondary" as const),

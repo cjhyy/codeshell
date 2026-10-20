@@ -147,6 +147,13 @@ export class SessionPersistence {
   private canonical: SessionCatalogSnapshot = { revision: -1, indices: {} };
   private projection: Record<string, SessionIndex> = {};
   private pending: SessionCatalogPatch[] = [];
+  /**
+   * This window's current Session per project. The catalog's activeSessionId
+   * is shared by every window (the last selection anywhere); it only seeds a
+   * project the first time this window sees it, so another window's ordinary
+   * selection never moves this one.
+   */
+  private readonly windowActive = new Map<string, string | null>();
   private readonly transcriptValues = new Map<
     string,
     {
@@ -268,6 +275,9 @@ export class SessionPersistence {
   }
 
   saveIndex(projectKey: string, next: SessionIndex): void {
+    if (next.activeSessionId !== this.getIndex(projectKey).activeSessionId) {
+      this.windowActive.set(projectKey, next.activeSessionId);
+    }
     const patch = projectPatch(projectKey, this.getIndex(projectKey), next);
     if (!patch) return;
     this.pending.push(patch);
@@ -285,6 +295,19 @@ export class SessionPersistence {
     const next = { ...this.canonical.indices };
     for (const patch of this.pending) {
       next[patch.projectKey] = projectPatchOn(next[patch.projectKey] ?? EMPTY_INDEX, patch);
+    }
+    for (const [projectKey, index] of Object.entries(next)) {
+      if (!this.windowActive.has(projectKey)) {
+        this.windowActive.set(projectKey, index.activeSessionId);
+        continue;
+      }
+      const active = this.windowActive.get(projectKey) ?? null;
+      const row = active ? index.sessions.find((session) => session.id === active) : undefined;
+      // A deleted or archived current Session exits to a draft.
+      const visible = row && !row.archived ? active : null;
+      if (visible !== active) this.windowActive.set(projectKey, visible);
+      if (index.activeSessionId !== visible)
+        next[projectKey] = { ...index, activeSessionId: visible };
     }
     this.projection = next;
     this.notify();

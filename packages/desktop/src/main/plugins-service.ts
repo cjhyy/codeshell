@@ -36,6 +36,7 @@ import {
 } from "@cjhyy/code-shell-core/internal";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import * as path from "node:path";
+import { reconcilePluginInstallJobs } from "./marketplace-service.js";
 import { normalizePluginDisplayMetadata } from "./plugin-display-metadata.js";
 import { pluginMediaAvailability } from "./plugin-media-service.js";
 import type { PluginMediaAvailability } from "../shared/plugin-media.js";
@@ -210,7 +211,9 @@ export function uninstallPluginEntry(
   if (typeof marketplaceName !== "string" || !marketplaceName) {
     throw new Error("uninstallPluginEntry requires marketplaceName");
   }
-  return uninstallPlugin(pluginName, marketplaceName);
+  const result = uninstallPlugin(pluginName, marketplaceName);
+  reconcilePluginInstallJobs();
+  return result;
 }
 
 /**

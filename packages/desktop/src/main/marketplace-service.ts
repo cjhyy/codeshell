@@ -15,7 +15,7 @@
  * IPC layer can report a clear message.
  */
 
-import { invalidateSkillCache } from "@cjhyy/code-shell-core";
+import { invalidateSkillCache, loadPluginCatalog } from "@cjhyy/code-shell-core";
 import {
   listMarketplaces,
   loadMarketplace,
@@ -386,6 +386,11 @@ function installJobId(pluginName: string, marketplaceName: string): string {
 }
 
 export function listPluginInstallJobsForUi(): PluginInstallJobDTO[] {
+  pruneUninstalledJobs();
+  return snapshotInstallJobs();
+}
+
+function snapshotInstallJobs(): PluginInstallJobDTO[] {
   return [...installJobs.values()].sort((a, b) => a.requestedAt - b.requestedAt);
 }
 
@@ -395,7 +400,7 @@ export function onPluginInstallJobsChanged(cb: (jobs: PluginInstallJobDTO[]) => 
 }
 
 function emitPluginInstallJobsChanged(): void {
-  const snapshot = listPluginInstallJobsForUi();
+  const snapshot = snapshotInstallJobs();
   for (const cb of installListeners) {
     try {
       cb(snapshot);
@@ -403,6 +408,28 @@ function emitPluginInstallJobsChanged(): void {
       // Listener isolation: one bad window must not stop updates to others.
     }
   }
+}
+
+/**
+ * Drop completed install jobs whose plugin is no longer installed (e.g. it was
+ * uninstalled since). A retained success would otherwise keep reporting the
+ * plugin as installed and short-circuit every reinstall for this process.
+ */
+export function reconcilePluginInstallJobs(): void {
+  if (pruneUninstalledJobs()) emitPluginInstallJobsChanged();
+}
+
+function pruneUninstalledJobs(): boolean {
+  const completed = [...installJobs.values()].filter((job) => job.status === "installed");
+  if (completed.length === 0) return false;
+  const installedKeys = new Set(loadPluginCatalog().map((entry) => entry.installKey));
+  let changed = false;
+  for (const job of completed) {
+    if (installedKeys.has(`${job.pluginName}@${job.marketplaceName}`)) continue;
+    installJobs.delete(job.id);
+    changed = true;
+  }
+  return changed;
 }
 
 function queueInstallJob(job: PluginInstallJobDTO): void {
@@ -471,6 +498,7 @@ export async function installPluginForUi(
     throw new Error("installPluginForUi requires marketplaceName");
   }
   const id = installJobId(pluginName, marketplaceName);
+  reconcilePluginInstallJobs();
   const existing = installJobs.get(id);
   if (existing) {
     if (

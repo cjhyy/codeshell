@@ -50,7 +50,6 @@ import {
   saveSessionIndex,
   unbindWorkspaceProfileEverywhere,
   createSession,
-  archiveSession,
   bindEngineSession,
   setActiveSession,
   NO_REPO_KEY,
@@ -1279,6 +1278,7 @@ function App() {
     handleRenameSession,
     handlePinSession,
     handleArchiveSession,
+    handleRestoreArchivedSession,
     handleDeleteSession,
     handleOpenAutomationRunSession,
     handleOpenAutomationDiskSession,
@@ -2861,13 +2861,7 @@ function App() {
                 initialModule={settingsInitialModule}
                 projects={projects}
                 sessionIndices={sessionIndices}
-                onRestoreArchivedSession={(projectId, sessionId) => {
-                  const next = archiveSession(projectId, sessionId, false);
-                  setSessionIndices((prev) => ({
-                    ...prev,
-                    [projectBucketSegmentFor(projectId)]: next,
-                  }));
-                }}
+                onRestoreArchivedSession={handleRestoreArchivedSession}
                 onDeleteArchivedSession={handleDeleteSession}
                 isMac={isMac}
                 isFullscreen={isFullscreen}
@@ -2886,13 +2880,7 @@ function App() {
                 initialProjectPath={activeProject.path}
                 projects={projects}
                 sessionIndices={sessionIndices}
-                onRestoreArchivedSession={(projectId, sessionId) => {
-                  const next = archiveSession(projectId, sessionId, false);
-                  setSessionIndices((prev) => ({
-                    ...prev,
-                    [projectBucketSegmentFor(projectId)]: next,
-                  }));
-                }}
+                onRestoreArchivedSession={handleRestoreArchivedSession}
                 onDeleteArchivedSession={handleDeleteSession}
                 isMac={isMac}
                 isFullscreen={isFullscreen}

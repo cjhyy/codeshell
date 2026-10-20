@@ -143,6 +143,9 @@ export function HubMcp({
     controller: AbortController;
   } | null>(null);
   const revision = React.useRef(0);
+  // Bumped whenever a different configuration snapshot is shown. A probe answer
+  // belongs to the snapshot it started under and is dropped after a change.
+  const configurationGeneration = React.useRef(0);
   const refreshQueued = React.useRef(false);
   const previousVersion = React.useRef(configurationVersion);
   const focus = useMcpOperationFocus();
@@ -204,6 +207,7 @@ export function HubMcp({
     void readMcpConfiguration(controller.signal)
       .then((value) => {
         if (!controller.signal.aborted && current === revision.current) {
+          configurationGeneration.current += 1;
           setConfiguration(value);
           setResults((previous) =>
             Object.fromEntries(
@@ -241,6 +245,7 @@ export function HubMcp({
       const value = await operation(controller.signal);
       if (!mounted.current || controller.signal.aborted || current !== revision.current)
         return false;
+      configurationGeneration.current += 1;
       setConfiguration(value);
       setResults({});
       setNotice(message);
@@ -282,9 +287,14 @@ export function HubMcp({
       delete next[name];
       return next;
     });
+    const generation = configurationGeneration.current;
     try {
       const result = await probeMcpServer(name, controller.signal);
-      if (mounted.current && !controller.signal.aborted)
+      if (
+        mounted.current &&
+        !controller.signal.aborted &&
+        generation === configurationGeneration.current
+      )
         setResults((previous) => ({ ...previous, [name]: result }));
     } catch (cause) {
       if (mounted.current && !controller.signal.aborted) report(cause);

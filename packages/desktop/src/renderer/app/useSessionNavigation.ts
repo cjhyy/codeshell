@@ -41,6 +41,8 @@ import type { ViewState } from "../view";
 import { revealSidebarProject } from "../sidebarSessionVisibility";
 import { forgetExternalRuntimeSession } from "../externalRuntimeRun";
 import { openActivitySession } from "../activity/openActivitySession";
+import { useT } from "../i18n/I18nProvider";
+import { useToast } from "../ui/ToastProvider";
 
 interface Params {
   projects: TrackedProject[];
@@ -87,6 +89,8 @@ export function useSessionNavigation({
   onOpenTrace,
   beforeSelectLocalSession,
 }: Params) {
+  const { t } = useT();
+  const toast = useToast();
   const selectionRequest = useRef(0);
   const selectSession = async (
     projectId: string | null,
@@ -170,12 +174,30 @@ export function useSessionNavigation({
 
   const removeProject = async (id: string): Promise<void> => {
     const project = projects.find((candidate) => candidate.id === id);
-    if (project) {
-      markProjectPathRemoved(project.path);
-      void window.codeshell.projectRegistry.remove(project.id);
-    }
     const index = sessionIndices[projectBucketSegment(id)] ?? loadSessionIndex(id);
-    if (project) await releaseWorkspacesForArchiveMany(index.sessions, window.codeshell);
+    if (project) {
+      // Main releases a Session's worktree through its live project authority,
+      // so detach and archive every Session before that authority is removed.
+      await releaseWorkspacesForArchiveMany(index.sessions, window.codeshell);
+      try {
+        await window.codeshell.projectRegistry.remove(project.id);
+      } catch (error) {
+        window.codeshell.log("repo.remove_failed", { id, error: String(error) });
+        toast({
+          message: t("sidebar.removeProjectFailed"),
+          detail: String(error),
+          variant: "error",
+        });
+        // The Sessions are already archived in Core; keep the row's catalog in step.
+        let working = loadSessionIndex(id);
+        for (const session of working.sessions) {
+          if (!session.archived) working = archiveSession(id, session.id, true);
+        }
+        setSessionIndices((prev) => ({ ...prev, [projectBucketSegment(id)]: working }));
+        return;
+      }
+      markProjectPathRemoved(project.path);
+    }
     const archived = project ? archiveAllSessions(id, projectLabel(project)) : undefined;
     setProjects((prev) => prev.filter((candidate) => candidate.id !== id));
     if (activeProjectId === id) setActiveProjectId(null);
@@ -204,11 +226,25 @@ export function useSessionNavigation({
     if (project) void window.codeshell.projectRegistry.setPinned(project.id, pinned);
   };
 
-  const renameProject = (id: string, name: string): void => {
+  const renameProject = async (id: string, name: string): Promise<void> => {
+    const previous = projects.find((project) => project.id === id)?.displayName;
     setProjects((prev) =>
       prev.map((project) => (project.id === id ? { ...project, displayName: name } : project)),
     );
-    void window.codeshell.projectRegistry.rename(id, name);
+    try {
+      await window.codeshell.projectRegistry.rename(id, name);
+    } catch (error) {
+      window.codeshell.log("repo.rename_failed", { id, error: String(error) });
+      // Roll back only this request's optimistic name; a newer rename wins.
+      setProjects((prev) =>
+        prev.map((project) =>
+          project.id === id && project.displayName === name
+            ? { ...project, displayName: previous }
+            : project,
+        ),
+      );
+      toast({ message: t("sidebar.renameProjectFailed"), detail: String(error), variant: "error" });
+    }
   };
 
   const archiveAllProjectSessions = async (id: string): Promise<void> => {
@@ -280,7 +316,18 @@ export function useSessionNavigation({
     const summary = sessionIndices[projectBucketSegment(projectId)]?.sessions.find(
       (session) => session.id === sessionId,
     );
-    await releaseWorkspaceForArchive(summary, archived, window.codeshell);
+    try {
+      await releaseWorkspaceForArchive(summary, archived, window.codeshell);
+    } catch (error) {
+      // Core still holds the old marker; leave the catalog matching it.
+      window.codeshell.log("session.archive.failed", { sessionId, archived, error: String(error) });
+      toast({
+        message: t("sidebar.archiveSessionFailed"),
+        detail: String(error),
+        variant: "error",
+      });
+      return;
+    }
     const next = archiveSession(projectId, sessionId, archived);
     setSessionIndices((prev) => ({
       ...prev,
@@ -288,10 +335,33 @@ export function useSessionNavigation({
     }));
   };
 
-  const deleteSession = (projectId: string | null, sessionId: string): void => {
+  const deleteSession = async (projectId: string | null, sessionId: string): Promise<void> => {
     const summary = sessionIndices[projectBucketSegment(projectId)]?.sessions.find(
       (session) => session.id === sessionId,
     );
+    const plan = planSessionDeletion(
+      summary ?? { id: sessionId, title: "", createdAt: 0, updatedAt: 0 },
+    );
+    if (plan.cancelCronJobId) {
+      await window.codeshell.cancelAutomationRun(plan.cancelCronJobId).catch((error) =>
+        window.codeshell.log("session.delete.cancel.failed", {
+          cronJobId: plan.cancelCronJobId,
+          error: String(error),
+        }),
+      );
+    }
+    // The local delete writes a permanent catalog tombstone, so commit it only
+    // after Main has deleted the Session. A refusal keeps the row for a retry.
+    try {
+      await window.codeshell.deleteSession(plan.deleteEngineId);
+    } catch (error) {
+      window.codeshell.log("session.delete.session.failed", {
+        engineId: plan.deleteEngineId,
+        error: String(error),
+      });
+      toast({ message: t("sidebar.deleteSessionFailed"), detail: String(error), variant: "error" });
+      return;
+    }
     const next = deleteSessionLocal(projectId, sessionId);
     setSessionIndices((prev) => ({
       ...prev,
@@ -305,38 +375,18 @@ export function useSessionNavigation({
       delete rest[deletedBucket];
       return rest;
     });
-
-    const plan = planSessionDeletion(
-      summary ?? { id: sessionId, title: "", createdAt: 0, updatedAt: 0 },
-    );
-    void (async () => {
-      if (plan.cancelCronJobId) {
-        await window.codeshell.cancelAutomationRun(plan.cancelCronJobId).catch((error) =>
-          window.codeshell.log("session.delete.cancel.failed", {
-            cronJobId: plan.cancelCronJobId,
-            error: String(error),
-          }),
-        );
-      }
-      await window.codeshell.deleteSession(plan.deleteEngineId).catch((error) =>
-        window.codeshell.log("session.delete.session.failed", {
-          engineId: plan.deleteEngineId,
+    // Drop the renderer's "already started on this runtime" binding. Main
+    // stops the runtime itself, but a stale binding here would make a future
+    // session reusing this id skip start() and send into nothing.
+    forgetExternalRuntimeSession(plan.deleteEngineId);
+    if (plan.deleteRunId) {
+      await window.codeshell.deleteRun(plan.deleteRunId).catch((error) =>
+        window.codeshell.log("session.delete.run.failed", {
+          runId: plan.deleteRunId,
           error: String(error),
         }),
       );
-      // Drop the renderer's "already started on this runtime" binding. Main
-      // stops the runtime itself, but a stale binding here would make a future
-      // session reusing this id skip start() and send into nothing.
-      forgetExternalRuntimeSession(plan.deleteEngineId);
-      if (plan.deleteRunId) {
-        await window.codeshell.deleteRun(plan.deleteRunId).catch((error) =>
-          window.codeshell.log("session.delete.run.failed", {
-            runId: plan.deleteRunId,
-            error: String(error),
-          }),
-        );
-      }
-    })();
+    }
   };
 
   const openAutomationRunSession = async (run: RunSummary): Promise<void> => {
@@ -482,6 +532,9 @@ export function useSessionNavigation({
     handleRenameSession: renameSession,
     handlePinSession: pinSession,
     handleArchiveSession: setSessionArchived,
+    /** Settings "Restore" goes through Core's durable archive marker too. */
+    handleRestoreArchivedSession: (projectId: string | null, sessionId: string) =>
+      setSessionArchived(projectId, sessionId, false),
     handleDeleteSession: deleteSession,
     handleOpenAutomationRunSession: openAutomationRunSession,
     handleOpenAutomationDiskSession: openAutomationDiskSession,
