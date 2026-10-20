@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { EventEmitter } from "node:events";
+import { runInNewContext } from "node:vm";
 import { createBrowserInspector } from "./index.js";
 
 class FakePage extends EventEmitter {
@@ -133,5 +134,149 @@ describe("bounded developer inspector", () => {
     });
     inspector.dispose();
     expect(page.eventNames()).toEqual([]);
+  });
+});
+
+describe("DOM summary traversal", () => {
+  class FixtureElement {
+    tagName = "DIV";
+    children: ArrayLike<FixtureElement> = [];
+    shadowRoot?: { children: ArrayLike<FixtureElement> };
+    childNodes: ArrayLike<{ nodeType: number; textContent: string | null }>;
+    isContentEditable = false;
+    constructor(
+      public id: string,
+      public style: { display?: string; visibility?: string } = {},
+      text = id,
+    ) {
+      this.childNodes = [{ nodeType: 3, textContent: text }];
+    }
+    matches() {
+      return false;
+    }
+    getAttribute() {
+      return null;
+    }
+    getBoundingClientRect() {
+      return { x: 0, y: 0, width: 10, height: 10 };
+    }
+  }
+
+  // Runs the real page-evaluation callback against a minimal DOM in a VM.
+  class DomPage extends FakePage {
+    constructor(private root: FixtureElement) {
+      super();
+    }
+    override async evaluate(fn: any, arg?: any): Promise<any> {
+      return runInNewContext(`(${fn.toString()})(argument)`, {
+        argument: arg,
+        document: { querySelector: () => this.root },
+        getComputedStyle: (element: FixtureElement) => ({
+          display: element.style.display ?? "block",
+          visibility: element.style.visibility ?? "visible",
+          position: "static",
+          overflow: "visible",
+          color: "black",
+          fontSize: "16px",
+          zIndex: "auto",
+        }),
+        HTMLElement: FixtureElement,
+        Node: { TEXT_NODE: 3 },
+      });
+    }
+  }
+
+  function countedCollection<T>(items: T[]) {
+    const counter = { reads: 0 };
+    const collection = new Proxy(items, {
+      get(target, property, receiver) {
+        if (typeof property === "string" && /^\d+$/.test(property)) counter.reads++;
+        return Reflect.get(target, property, receiver);
+      },
+    });
+    return { counter, collection };
+  }
+
+  async function domSummary(root: FixtureElement, maxEntries = 50) {
+    const inspector = createBrowserInspector(new DomPage(root));
+    try {
+      const result = await inspector.inspect({ mode: "dom", maxEntries });
+      expect(result.ok).toBe(true);
+      return result.data as { nodes: { id: string; text?: string }[]; truncated: boolean };
+    } finally {
+      inspector.dispose();
+    }
+  }
+
+  // Regression (CDP-R3-03): visibility:hidden does not hide descendants that
+  // set visibility:visible, unlike display:none which removes the subtree.
+  test("visibility:hidden ancestor is omitted but its visible descendants are kept", async () => {
+    const root = new FixtureElement("hidden-parent", { visibility: "hidden" });
+    root.children = [
+      new FixtureElement("visible-child"),
+      new FixtureElement("hidden-child", { visibility: "hidden" }),
+    ];
+    const data = await domSummary(root);
+    expect(data.nodes.map((node) => node.id)).toEqual(["visible-child"]);
+    expect(data.truncated).toBe(false);
+  });
+
+  test("display:none still removes the whole subtree", async () => {
+    const root = new FixtureElement("none-parent", { display: "none" });
+    root.children = [new FixtureElement("visible-child")];
+    expect((await domSummary(root)).nodes).toEqual([]);
+  });
+
+  test("a hidden editable ancestor still does not expose its descendants", async () => {
+    const root = new FixtureElement("editor", { visibility: "hidden" });
+    root.isContentEditable = true;
+    root.children = [new FixtureElement("draft", {}, "secret draft")];
+    expect((await domSummary(root)).nodes).toEqual([]);
+  });
+
+  // Regression (DIAG-R10-01): wide child collections were copied in full with
+  // Array.from before the queue cap was checked.
+  test.each(["light", "shadow"] as const)(
+    "wide %s child collections are read only up to the traversal budget",
+    async (kind) => {
+      const root = new FixtureElement("wide-root");
+      const { counter, collection } = countedCollection(
+        Array.from({ length: 20000 }, (_, i) => new FixtureElement(`${kind}-${i}`)),
+      );
+      if (kind === "light") root.children = collection;
+      else root.shadowRoot = { children: collection };
+      const data = await domSummary(root, 1);
+      expect(data.nodes.map((node) => node.id)).toEqual(["wide-root"]);
+      expect(data.truncated).toBe(true);
+      expect(counter.reads).toBeLessThanOrEqual(1000);
+    },
+  );
+
+  test("direct text extraction stops reading text nodes once the snippet is full", async () => {
+    const root = new FixtureElement("text-root");
+    const { counter, collection } = countedCollection(
+      Array.from({ length: 20000 }, (_, i) => ({ nodeType: 3, textContent: `t${i}` })),
+    );
+    root.childNodes = collection;
+    const data = await domSummary(root, 1);
+    expect(data.nodes[0]!.text).toBe(
+      Array.from({ length: 20000 }, (_, i) => `t${i}`)
+        .join(" ")
+        .slice(0, 160),
+    );
+    expect(counter.reads).toBeLessThanOrEqual(1000);
+  });
+
+  test("small child collections are summarised completely and in order", async () => {
+    const root = new FixtureElement("small-root");
+    root.children = [0, 1, 2].map((i) => new FixtureElement(`child-${i}`));
+    const data = await domSummary(root, 10);
+    expect(data.nodes.map((node) => node.id)).toEqual([
+      "small-root",
+      "child-0",
+      "child-1",
+      "child-2",
+    ]);
+    expect(data.truncated).toBe(false);
   });
 });
