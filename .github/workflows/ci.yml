@@ -138,12 +138,18 @@ jobs:
           - shard: desktop
             paths: packages/desktop
             # The issuer proof runs alone above so its receipt precedes the first SDK/Core import.
+            # The attachment suites run alone below: their App-level module stubs
+            # (MessageStream, ChatView, ...) outlive mock.restore() in a shared process.
             ignore: >-
               --path-ignore-patterns '**/browser-driver/cdp-actions.integration.test.ts'
               --path-ignore-patterns '**/browser-runtime/playwright-driver.test.ts'
               --path-ignore-patterns '**/browser-library/puppeteer-browser-driver.test.ts'
               --path-ignore-patterns '**/browser-library/browser-inspector.integration.test.ts'
               --path-ignore-patterns '**/src/main/mcp-oauth-issuer.test.ts'
+              --path-ignore-patterns '**/renderer/App.attachment-ownership.test.tsx'
+              --path-ignore-patterns '**/renderer/App.attachment-quantity.test.tsx'
+              --path-ignore-patterns '**/renderer/App.no-repo-attachments.test.tsx'
+              --path-ignore-patterns '**/renderer/ChatView.attachment-quantity-fallback.test.tsx'
           - shard: rest
             paths: >-
               tests packages/coding packages/tui packages/pet packages/server
@@ -190,6 +196,13 @@ jobs:
         run: bun run build
       - name: test shard
         run: node scripts/run-bun-test-shard.mjs --timeout 30000 ${{ matrix.ignore }} ${{ matrix.paths }}
+      - name: test attachment suites with App-level module stubs in their own processes
+        if: matrix.shard == 'desktop'
+        run: |
+          node scripts/run-bun-test-shard.mjs --timeout 30000 packages/desktop/src/renderer/App.attachment-ownership.test.tsx
+          node scripts/run-bun-test-shard.mjs --timeout 30000 packages/desktop/src/renderer/App.attachment-quantity.test.tsx
+          node scripts/run-bun-test-shard.mjs --timeout 30000 packages/desktop/src/renderer/App.no-repo-attachments.test.tsx
+          node scripts/run-bun-test-shard.mjs --timeout 30000 packages/desktop/src/renderer/ChatView.attachment-quantity-fallback.test.tsx
       - name: test responsive overlays and settings menus
         if: matrix.shard == 'desktop'
         run: bun run --cwd packages/desktop test:ui:overlays

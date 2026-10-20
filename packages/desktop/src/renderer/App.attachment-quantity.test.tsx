@@ -9,7 +9,11 @@ import type { RendererConfigurationTarget, SessionWorkspaceAuthority } from "../
 // No Main/Core, native transport, browser, media device, or provider is invoked.
 const deniedCalls: string[] = [];
 const children = createRequire(import.meta.url)("node:child_process");
-for (const name of ["spawn", "spawnSync", "exec", "execSync", "execFile", "execFileSync", "fork"]) {
+const childNames = ["spawn", "spawnSync", "exec", "execSync", "execFile", "execFileSync", "fork"];
+// The shard shares one process, so these denials must not outlive this file.
+const originalChildren = Object.fromEntries(childNames.map((name) => [name, children[name]]));
+const originalKill = process.kill;
+for (const name of childNames) {
   children[name] = () => {
     deniedCalls.push(`child_process.${name}`);
     throw new Error(`Native transport denied: ${name}`);
@@ -377,6 +381,9 @@ afterEach(async () => {
 afterAll(() => {
   expect(deniedCalls).toEqual([]);
   mock.restore();
+  Object.assign(children, originalChildren);
+  process.kill = originalKill;
+  syncBuiltinESMExports();
   globalThis.fetch = originalFetch;
   if (originalWorker) Object.defineProperty(globalThis, "Worker", originalWorker);
   else Reflect.deleteProperty(globalThis, "Worker");
