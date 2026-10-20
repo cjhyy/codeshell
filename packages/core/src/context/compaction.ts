@@ -321,10 +321,7 @@ export function adjustIndexToPreserveAPIInvariants(
  * its tool_result in the prefix too. The counterpart of
  * adjustIndexToPreserveAPIInvariants for slices that keep the beginning.
  */
-function adjustPrefixEndToPreserveAPIInvariants(
-  messages: Message[],
-  endIndex: number,
-): number {
+function adjustPrefixEndToPreserveAPIInvariants(messages: Message[], endIndex: number): number {
   let end = Math.min(endIndex, messages.length);
   for (;;) {
     const useIndexById = new Map<string, number>();
@@ -876,8 +873,7 @@ export function buildSummarizationPrompt(
           const args = JSON.stringify(block.input).slice(0, 500);
           parts.push(`[tool_use]: ${block.name}(${args})`);
         } else if (block.type === "tool_result") {
-          const content = typeof block.content === "string" ? block.content : "";
-          parts.push(`[tool_result]: ${content.slice(0, 1500)}`);
+          parts.push(`[tool_result]: ${summaryToolResultText(block.content).slice(0, 1500)}`);
         }
       }
     }
@@ -910,6 +906,20 @@ export function buildSummarizationPrompt(
     "\nConversation:\n\n" +
     parts.join("\n")
   );
+}
+
+/** Text of a scalar or structured tool result, with media named rather than dropped. */
+function summaryToolResultText(content: ContentBlock["content"]): string {
+  if (typeof content === "string") return content;
+  return (content ?? [])
+    .map((part) =>
+      part.type === "text"
+        ? (part.text ?? "")
+        : part.type === "image"
+          ? `[image ${part.source?.media_type ?? "unknown"}]`
+          : `[${part.type}]`,
+    )
+    .join("\n");
 }
 
 /** Target size for a portable context package (roughly one background page). */

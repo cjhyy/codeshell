@@ -224,3 +224,27 @@ describe("snipCompact", () => {
     expect(result[1]).toBe(msgs[1]);
   });
 });
+
+describe("buildSummarizationPrompt structured tool results", () => {
+  it("keeps the text of array tool_result content", () => {
+    const msgs: Message[] = [
+      {
+        role: "user",
+        content: [
+          {
+            type: "tool_result",
+            tool_use_id: "call-1",
+            content: [
+              { type: "text", text: "measured latency 417ms" },
+              { type: "image", source: { type: "base64", media_type: "image/png", data: "AAAA" } },
+            ],
+          },
+        ],
+      },
+    ];
+    const prompt = buildSummarizationPrompt(msgs);
+    expect(prompt).toContain("measured latency 417ms");
+    expect(prompt).toContain("image/png");
+    expect(prompt).not.toContain("AAAA");
+  });
+});
