@@ -152,4 +152,20 @@ describe("searchSessionTranscripts", () => {
       expect(result.matches[0]?.snippets[0]?.text).toContain(query);
     },
   );
+
+  // Regression (PET-R10-01): workers already reading when the cap was reached
+  // still appended matches, and the final slice dropped them silently.
+  test("truncated is true when more sessions match than maxSessions returns", async () => {
+    const root = mkdtempSync(join(tmpdir(), "pet-disclosure-search-overflow-"));
+    for (let i = 0; i < 21; i++) {
+      writeSession(root, `work-${i}`, { kind: "work", cwd: "/a", title: `Work ${i}` }, [
+        { role: "user", content: "guava smoothie recipe", turnNumber: 0 },
+      ]);
+    }
+
+    const result = await searchSessionTranscripts(root, "guava", {});
+
+    expect(result.matches.length).toBe(20);
+    expect(result.truncated).toBe(true);
+  });
 });

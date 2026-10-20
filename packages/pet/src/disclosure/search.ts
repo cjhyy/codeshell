@@ -155,5 +155,8 @@ export async function searchSessionTranscripts(
   await Promise.all(workers);
 
   matches.sort((a, b) => b.updatedAt - a.updatedAt);
+  // Workers already reading when the cap was reached can still append matches;
+  // dropping them here leaves the result incomplete.
+  if (matches.length > maxSessions) truncated = true;
   return { matches: matches.slice(0, maxSessions), scannedSessions, truncated };
 }
