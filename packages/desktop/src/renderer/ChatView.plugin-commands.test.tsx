@@ -308,6 +308,112 @@ describe("ChatView plugin slash commands", () => {
     );
   });
 
+  test("a late expansion started in one session never replaces another session's draft", async () => {
+    ensureMiniDom();
+    let resolveExpansion!: (value: { prompt: string }) => void;
+    Object.defineProperty(window, "codeshell", {
+      configurable: true,
+      writable: true,
+      value: {
+        sttAvailable: async () => ({ available: false }),
+        listPluginCommands: async () => [
+          { name: "demo:review", pluginName: "demo", description: "Review code" },
+        ],
+        getProjectGitBranches: async () => ({ current: "main", branches: ["main"] }),
+        onPluginCommandsChanged: () => () => undefined,
+        expandPluginCommand: () =>
+          new Promise((resolve) => {
+            resolveExpansion = resolve;
+          }),
+      },
+    });
+    const container = document.createElement("div");
+    root = createRoot(container);
+    let switchSession!: (id: string) => void;
+    let drafts!: Record<string, string>;
+    function Host() {
+      const [sessionId, setSessionId] = React.useState("A");
+      switchSession = setSessionId;
+      const active = React.useRef(sessionId);
+      active.current = sessionId;
+      const [values, setValues] = React.useState<Record<string, string>>({
+        A: "/demo:review src/A.ts",
+        B: "B's unsent draft",
+      });
+      drafts = values;
+      // Like App: a draft write lands in whichever session is active at that time.
+      const onDraftChange = (next: React.SetStateAction<string>) =>
+        setValues((current) => {
+          const target = active.current;
+          return {
+            ...current,
+            [target]: typeof next === "function" ? next(current[target] ?? "") : next,
+          };
+        });
+      return (
+        <ChatView
+          variant="main"
+          messages={[]}
+          sendBucket={`project-1::${sessionId}`}
+          engineSessionId={sessionId}
+          onSend={() => undefined}
+          onStop={() => undefined}
+          busy={false}
+          activeProjectId="project-1"
+          permissionMode="default"
+          onPermissionChange={() => undefined}
+          goalEnabled={false}
+          onGoalToggle={() => undefined}
+          modelOptions={[
+            { key: "test-model", label: "Test", provider: "test", supportsVision: true },
+          ]}
+          activeModelKey="test-model"
+          onModelChange={() => undefined}
+          contextTokens={0}
+          projects={[]}
+          onSelectProject={() => undefined}
+          onAddProject={() => undefined}
+          configurationTarget={{ sessionId }}
+          configurationAvailable
+          conversationRoot="/tmp/project"
+          conversationRootId="root-1"
+          draft={values[sessionId] ?? ""}
+          onDraftChange={onDraftChange}
+          attachments={[]}
+          onAttachmentsChange={() => undefined}
+        />
+      );
+    }
+    await act(async () => {
+      root?.render(<Host />);
+      await flushMicrotasks();
+    });
+    await act(async () => {
+      reactProps(findComposer(container)).onKeyDown({
+        key: "Enter",
+        shiftKey: false,
+        metaKey: false,
+        ctrlKey: false,
+        altKey: false,
+        nativeEvent: { isComposing: false },
+        preventDefault: () => undefined,
+      });
+      await flushMicrotasks();
+    });
+    expect(resolveExpansion).toBeDefined();
+    await act(async () => {
+      switchSession("B");
+      await flushMicrotasks();
+    });
+    await act(async () => {
+      resolveExpansion({ prompt: "Expanded review prompt for A" });
+      await flushMicrotasks();
+    });
+    expect(drafts.B).toBe("B's unsent draft");
+    // The command stays in A's draft so it can be expanded again there.
+    expect(drafts.A).toBe("/demo:review src/A.ts");
+  });
+
   test("fails closed when Session root authority is unavailable", async () => {
     ensureMiniDom();
     const listPluginCommands = mock(async () => []);

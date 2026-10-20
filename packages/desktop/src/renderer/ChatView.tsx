@@ -844,6 +844,11 @@ export function ChatView({
       : "projectId" in configurationTarget
         ? `project:${configurationTarget.projectId}`
         : "no-repo";
+  // Whose draft this composer edits now. An asynchronous result started for
+  // one conversation must not be written into another's draft.
+  const draftOwner = `${sendBucket ?? ""}\u0000${configurationTargetKey}`;
+  const draftOwnerRef = useRef(draftOwner);
+  draftOwnerRef.current = draftOwner;
   const pluginCommandTarget = useMemo(
     () => configurationTarget,
     // Stable identity avoids re-running discovery when a wrapper recreates the
@@ -1152,6 +1157,7 @@ export function ChatView({
     }
     setExpandingPluginCommand(true);
     closeSlash();
+    const owner = draftOwnerRef.current;
     try {
       const result = await window.codeshell.expandPluginCommand(
         pluginCommandTarget,
@@ -1159,6 +1165,10 @@ export function ChatView({
         rawArguments,
       );
       if (!mountedRef.current) return;
+      if (draftOwnerRef.current !== owner) {
+        toast({ message: t("chat.slash.pluginExpandStale") });
+        return;
+      }
       setDraft(result.prompt);
       setHistoryCursor(-1);
       liveDraftStash.current = "";
