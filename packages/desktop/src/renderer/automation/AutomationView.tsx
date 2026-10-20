@@ -129,7 +129,7 @@ type AutomationSessionLink = {
   needsImport?: boolean;
 };
 
-function automationSessionLinks(
+export function automationSessionLinks(
   job: AutomationSummary,
   sessionIndices: Record<string, SessionIndex>,
   runs: RunSummary[],
@@ -156,10 +156,13 @@ function automationSessionLinks(
       const run = session.runId
         ? runsById.get(session.runId)
         : runsBySessionId.get(session.engineSessionId ?? session.id);
-      const matches =
-        session.title === job.name ||
-        (session.runId ? matchingRunIds.has(session.runId) : false) ||
-        run?.cronJobName === job.name;
+      // A session that records its owning job is claimed by that id alone. The
+      // name match is only for legacy rows written before cronJobId existed.
+      const matches = session.cronJobId
+        ? session.cronJobId === job.id
+        : session.title === job.name ||
+          (session.runId ? matchingRunIds.has(session.runId) : false) ||
+          run?.cronJobName === job.name;
       if (matches) {
         // Locally-present session (found in a repo's session index) → already
         // imported, so never flag it for import. Set explicitly so the render
@@ -199,7 +202,13 @@ function automationSessionLinks(
     });
   }
 
+  // Headless runs persist `automation:<jobId>:<promptHash>` as their
+  // clientMessageId; that identity decides ownership whenever it is present.
+  // Older or later-continued sessions fall back to the job prompt. Sharing a
+  // project and a time window with the job proves nothing: another automation
+  // in the same project would be claimed.
   const promptNeedle = job.prompt.trim().slice(0, 36);
+  const ownRunPrefix = `automation:${job.id}:`;
   for (const disk of diskSessions) {
     if (
       disk.origin !== "automation" ||
@@ -208,10 +217,13 @@ function automationSessionLinks(
     ) {
       continue;
     }
-    const promptMatches = promptNeedle.length > 0 && disk.title.includes(promptNeedle);
-    const timeMatches =
-      job.lastRun != null && Math.abs(disk.updatedAt - job.lastRun) < 24 * 60 * 60 * 1000;
-    if (!promptMatches && !timeMatches) continue;
+    const runIdentity = disk.clientMessageId?.startsWith("automation:")
+      ? disk.clientMessageId
+      : undefined;
+    const matches = runIdentity
+      ? runIdentity.startsWith(ownRunPrefix)
+      : promptNeedle.length > 0 && disk.title.includes(promptNeedle);
+    if (!matches) continue;
     out.push({
       projectId: null,
       disk,

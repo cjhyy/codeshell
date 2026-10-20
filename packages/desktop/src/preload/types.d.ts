@@ -1751,6 +1751,7 @@ export interface CodeshellApi
       cwd: string;
       title: string;
       updatedAt: number;
+      clientMessageId?: string;
       origin: "desktop" | "automation" | "subagent";
       parentSessionId?: string;
       status?: "active" | "paused" | "completed" | "failed" | "cancelled";
