@@ -185,11 +185,19 @@ export class HubRunReplay {
     this.persistence?.forget(sessionId);
   }
 
-  snapshot<T>(sessionId: string, durableEvents: readonly T[]) {
+  /**
+   * `endsBeforeRun` marks events that already stop before the active run (an
+   * output journal's legacy base). The pre-run cut exists to drop the run's own
+   * durable events, which the live overlay repeats; applied to such a prefix it
+   * would instead strip a first run's session_meta written after the baseline.
+   */
+  snapshot<T>(sessionId: string, durableEvents: readonly T[], endsBeforeRun = false) {
     const log = this.sessions.get(sessionId);
     return {
       transcript:
-        log && !log.truncated ? durableEvents.slice(0, log.baselineEvents) : durableEvents.slice(),
+        log && !log.truncated && !endsBeforeRun
+          ? durableEvents.slice(0, log.baselineEvents)
+          : durableEvents.slice(),
       streamCursor: { epoch: this.epoch, sequence: this.sequence },
       outputCoverage: this.outputCoverage(sessionId),
       ...(log

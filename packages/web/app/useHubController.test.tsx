@@ -657,3 +657,112 @@ test("all files in one pending upload retain its initial project scope", async (
   for (const path of requests) expect(path).toStartWith(`/p/${projectA}/api/v1/uploads/`);
   expect(hook.result.current.files).toHaveLength(2);
 });
+
+test("removing a draft attachment discards its upload in the original project", async () => {
+  environment();
+  setApiProject(projectA);
+  const requests: Array<{ path: string; method: string }> = [];
+  globalThis.fetch = (async (path, init) => {
+    requests.push({ path: String(path), method: init?.method ?? "GET" });
+    if (init?.method === "DELETE") return new Response(null, { status: 204 });
+    return Response.json({
+      id: "draft-file",
+      name: "fixture.txt",
+      mimeType: "text/plain",
+      size: 3,
+      path: "/workspace/fixture.txt",
+    });
+  }) as typeof fetch;
+  const hook = await renderHook(() => useHubController({ hub: true }));
+  cleanups.push(() => hook.unmount());
+  await act(async () => {
+    await hook.result.current.addFiles([new File(["a"], "one.txt")] as unknown as FileList);
+  });
+  expect(hook.result.current.files.map((file) => file.id)).toEqual(["draft-file"]);
+  setApiProject(projectB);
+  await act(async () => {
+    hook.result.current.removeFile("draft-file");
+    await flushMicrotasks();
+  });
+  expect(hook.result.current.files).toEqual([]);
+  expect(requests.filter((request) => request.method === "DELETE")).toEqual([
+    { path: `/p/${projectA}/api/v1/uploads/draft-file`, method: "DELETE" },
+  ]);
+});
+
+test("a submission awaiting delivery confirmation keeps the page-leave guard", async () => {
+  environment();
+  globalThis.fetch = (async () => Response.json({ sessions: [] })) as typeof fetch;
+  Socket.respond = ({ id, method }) =>
+    method === "agent/run"
+      ? undefined
+      : method === "serve/approval.snapshot"
+        ? { id, result: { approvals: [], leases: [] } }
+        : { id, result: { type: "sessions", data: [] } };
+  const hook = await renderHook(() => useHubController({ hub: true }));
+  cleanups.push(() => hook.unmount());
+  const socket = Socket.instances[0];
+  await act(async () => {
+    socket.readyState = 1;
+    socket.onopen?.();
+    await flushMicrotasks();
+    hook.result.current.setDraft("Only copy of this task");
+  });
+  expect(hook.result.current.hasUnsent).toBe(true);
+  await act(async () => {
+    expect(hook.result.current.send()).toBe(true);
+    await flushMicrotasks();
+  });
+  // The run frame was handed to the socket, then the connection dropped
+  // before any reply: the Hub may never have received it.
+  await act(async () => {
+    socket.close();
+    for (let i = 0; i < 4; i++) await flushMicrotasks();
+  });
+  expect(hook.result.current.uncertain).toBe(true);
+  expect(hook.result.current.draft).toBe("");
+  expect(hook.result.current.hasUnsent).toBe(true);
+});
+
+test("a rejected send keeps its task when a follow-up was typed meanwhile", async () => {
+  environment();
+  globalThis.fetch = (async () => Response.json({ sessions: [] })) as typeof fetch;
+  const runs: Array<{ id: number }> = [];
+  Socket.respond = (request) => {
+    if (request.method === "agent/run") {
+      runs.push(request);
+      return undefined;
+    }
+    return request.method === "serve/approval.snapshot"
+      ? { id: request.id, result: { approvals: [], leases: [] } }
+      : { id: request.id, result: { type: "sessions", data: [] } };
+  };
+  const hook = await renderHook(() => useHubController({ hub: true }));
+  cleanups.push(() => hook.unmount());
+  const socket = Socket.instances[0];
+  await act(async () => {
+    socket.readyState = 1;
+    socket.onopen?.();
+    await flushMicrotasks();
+    hook.result.current.setDraft("Original long task");
+  });
+  await act(async () => {
+    expect(hook.result.current.send()).toBe(true);
+    await flushMicrotasks();
+  });
+  await act(async () => {
+    hook.result.current.setDraft("Follow-up question");
+  });
+  await act(async () => {
+    socket.onmessage?.({
+      data: JSON.stringify({
+        jsonrpc: "2.0",
+        id: runs[0]!.id,
+        error: { code: -32000, message: "Configuration is being updated" },
+      }),
+    });
+    for (let i = 0; i < 4; i++) await flushMicrotasks();
+  });
+  expect(hook.result.current.draft).toBe("Original long task\n\nFollow-up question");
+  expect(hook.result.current.error).toContain("之后输入的内容也已保留");
+});

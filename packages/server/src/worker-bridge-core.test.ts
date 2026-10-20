@@ -516,6 +516,48 @@ describe("WorkerBridgeCore", () => {
     expect(receivedMeta).toEqual(TEST_META);
   });
 
+  test("an asynchronous stdin pipe error retires the worker instead of escaping", async () => {
+    const logged: string[] = [];
+    const exits: WorkerExitInfo[] = [];
+    const core = makeCore({
+      log: (event) => logged.push(event),
+      onExit: (info) => exits.push(info),
+    });
+    await waitForHello(core);
+    const pending = core.request("test/never", undefined, {
+      timeoutMs: 10_000,
+      meta: TEST_META,
+      settleOnExit: true,
+    });
+    const stdin = (core as unknown as { child: { stdin: NodeJS.WritableStream } }).child.stdin;
+    const epipe = Object.assign(new Error("write EPIPE"), { code: "EPIPE" });
+    // Without a stream error listener this emit throws, which in a Node Host is
+    // an uncaught exception that terminates the process.
+    expect(() => stdin.emit("error", epipe)).not.toThrow();
+    expect(await pending).toEqual({ status: "workerExit" });
+    expect(logged).toContain("child.stdin.error");
+    expect(core.canSend()).toBe(false);
+    expect(exits).toHaveLength(1);
+    expect(exits[0]!.clean).toBe(false);
+  });
+
+  test("a worker that exits while a large line is being written settles the request", async () => {
+    const exitingEntry = join(dir, "exit-on-input.cjs");
+    writeFileSync(
+      exitingEntry,
+      `process.stdin.on("data", () => process.exit(23));
+process.stdout.write(JSON.stringify({ method: "test/hello" }) + "\\n");`,
+    );
+    const core = makeCore({ entryPath: exitingEntry });
+    await waitForHello(core);
+    const result = await core.request(
+      "agent/run",
+      { task: "x".repeat(256 * 1024) },
+      { timeoutMs: 10_000, meta: TEST_META, settleOnExit: true },
+    );
+    expect(result).toEqual({ status: "workerExit" });
+  });
+
   test("injectWorkerMessage() and sendLine() drop safely with no live worker", () => {
     const dropped: Array<Record<string, unknown> | undefined> = [];
     const core = makeCore({

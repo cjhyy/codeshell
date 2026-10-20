@@ -231,6 +231,11 @@ export function useDesktopController(
   activeIdRef.current = activeId;
   const [sendingId, setSendingId] = React.useState<string | null>(null);
   const sendingRef = React.useRef<string | null>(null);
+  /** Per draft: a sent message whose acceptance never arrived. Retrying the
+   *  unchanged draft reuses its intent ID so the host cannot run it twice. */
+  const uncertainIntents = React.useRef(
+    new Map<string, { clientMessageId: string; revision: number }>(),
+  );
   const [error, setError] = React.useState("");
   const draft = drafts.current.get(activeId);
   const changed = () => setDraftRevision((value) => value + 1);
@@ -264,10 +269,30 @@ export function useDesktopController(
     for (const file of moved.files) drafts.current.addFile(app.activeSessionId, file);
     changed();
   }, [app.activeSessionId, app.activeRoom, draftRevision]);
+  // Reconnect recovery shows whether an unconfirmed message was recorded. If
+  // it was, its untouched restored copy would only invite a second send.
+  React.useLayoutEffect(() => {
+    const intent = uncertainIntents.current.get(activeId);
+    if (
+      !intent ||
+      !app.chat.items.some(
+        (item) => item.kind === "user" && item.clientMessageId === intent.clientMessageId,
+      )
+    )
+      return;
+    uncertainIntents.current.delete(activeId);
+    if (drafts.current.get(activeId).revision === intent.revision) drafts.current.take(activeId);
+    changed();
+    setError("");
+  }, [app.chat.items, activeId]);
   const selectedProject = workspaceCwd ? projectForCwd(workspaceCwd, app.projects) : undefined;
   const actions: RemoteApp = {
     ...app,
     selectProject: (id) => {
+      if (app.status !== "online") {
+        setError("连接已断开，重新连接后才能切换项目。");
+        return;
+      }
       navigationRevision.current += 1;
       const project = app.projects.find((item) => item.id === id || item.path === id);
       setWorkspaceOverride(project?.path ?? id);
@@ -291,6 +316,10 @@ export function useDesktopController(
       setError("");
     },
     newSession: (target, name) => {
+      if (app.status !== "online") {
+        setError("连接已断开，重新连接后才能新建任务。");
+        return;
+      }
       navigationRevision.current += 1;
       const selected = target === undefined ? targetForCwd(app, workspaceCwd) : target;
       setWorkspaceOverride(selectedTargetCwd(app, selected));
@@ -356,24 +385,45 @@ export function useDesktopController(
         ? { draftId: id, navigationRevision: navigationRevision.current, accepted: false }
         : null;
     pendingNewSend.current = pending;
+    const retry = uncertainIntents.current.get(id);
+    uncertainIntents.current.delete(id);
+    const retryId = retry?.revision === current.revision ? retry.clientMessageId : undefined;
     const submitted = drafts.current.take(id);
     changed();
     sendingRef.current = id;
     setSendingId(id);
     setError("");
+    let uncertainId: string | undefined;
     void app
       .sendChat({
         text: submitted.draft.text,
         attachments,
         ...(options?.modelTraceSource ? { modelTraceSource: options.modelTraceSource } : {}),
+        ...(retryId ? { clientMessageId: retryId } : {}),
+        onUncertain: (clientMessageId) => {
+          uncertainId = clientMessageId;
+        },
       })
       .then((accepted) => {
         if (!accepted) {
           if (pendingNewSend.current === pending) pendingNewSend.current = null;
-          drafts.current.restore(submitted);
+          const restored = drafts.current.restore(submitted);
+          // Only an untouched draft can be the same intent; merged text with
+          // later typing is a new message when the user sends it.
+          if (uncertainId && restored === "restored")
+            uncertainIntents.current.set(id, {
+              clientMessageId: uncertainId,
+              revision: drafts.current.get(id).revision,
+            });
           if (mounted.current) {
             changed();
-            setError("消息未确认送达，内容和附件已保留。请检查连接后重试。");
+            setError(
+              uncertainId
+                ? "连接中断，无法确认消息是否已送达。内容已放回输入框；直接重试不会重复执行同一条消息。"
+                : restored === "merged"
+                  ? "消息未送达。原内容和附件已放回输入框，之后输入的内容也已保留。"
+                  : "消息未送达，内容和附件已保留。请检查连接后重试。",
+            );
           }
         } else {
           for (const file of submitted.draft.files) localFiles.current.delete(file.id);
@@ -383,6 +433,7 @@ export function useDesktopController(
       })
       .catch((cause) => {
         if (pendingNewSend.current === pending) pendingNewSend.current = null;
+        // restore() never drops the submission: it is merged before later typing.
         drafts.current.restore(submitted);
         if (mounted.current) {
           changed();
@@ -436,6 +487,10 @@ export function useDesktopController(
   );
   const selectSession = (id: string) => {
     if (id.startsWith("desktop-new-")) {
+      if (app.status !== "online") {
+        setError("连接已断开，重新连接后才能继续这个新任务。");
+        return;
+      }
       navigationRevision.current += 1;
       pendingCreate.current = {
         draftId: id,
@@ -481,7 +536,7 @@ export function useDesktopController(
     uploading: sendingId === activeId,
     uploadBusy: sendingId !== null,
     hasUnsent: drafts.current.unsent().length > 0,
-    uncertain: false,
+    uncertain: uncertainIntents.current.has(activeId),
     running,
     localDrafts,
     approvals: app.approvals.map((approval) => ({
@@ -555,9 +610,11 @@ export function useDesktopController(
     accountName: app.deviceName,
     showTurnCounts: false,
     logout: () => {
-      void post("/api/v1/auth/logout")
-        .catch(() => undefined)
-        .finally(app.logout);
+      // The request already carries this browser's cookie, so the host revokes
+      // the HTTP session whenever it arrives; a stalled network must not keep
+      // the device signed in and connected locally.
+      void post("/api/v1/auth/logout").catch(() => undefined);
+      app.logout();
     },
     onHostNotification: (method, params) => {
       if (method === "serve/sessionsChanged") {

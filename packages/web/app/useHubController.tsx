@@ -23,13 +23,20 @@ import {
   sessionTitle,
 } from "./chat.js";
 import { compareOutputCursors } from "../src/lib/outputJournalRecovery.js";
-import { ApiError, browserId, uploadFile, type AuthSession, type UploadedFile } from "./auth.js";
+import {
+  ApiError,
+  browserId,
+  discardUpload,
+  uploadFile,
+  type AuthSession,
+  type UploadedFile,
+} from "./auth.js";
 import { reduceApprovals, type ApprovalState } from "./approvals.js";
 import { readConfiguration, type HubConfiguration } from "./configuration.js";
 import { SessionDrafts, type SubmittedDraft } from "./drafts.js";
 import { readManagedSessions } from "./HubSessions.js";
 import { HubApprovalCard } from "./HubApprovalCard.js";
-import { captureApiScope } from "./api-context.js";
+import { captureApiScope, type ApiScope } from "./api-context.js";
 import type { WorkbenchController } from "./workbench-types.js";
 function newSessionId(): string {
   return browserId();
@@ -118,6 +125,8 @@ export function useHubController({
   const approvalRevision = React.useRef(0);
   const mounted = React.useRef(false);
   const uploadController = React.useRef<AbortController | null>(null);
+  /** The project/workspace each draft upload was spooled in, to release it there. */
+  const uploadScopes = React.useRef(new Map<string, ApiScope>());
   const loadingTranscript = React.useRef<{
     sessionId: string;
     events: StreamEventPayload[];
@@ -147,7 +156,11 @@ export function useHubController({
       syncDraft(submission.draft.sessionId);
       if (restored)
         setError(
-          `${reason ? `${reason} ` : "消息未送达。"}内容和附件已恢复，可以重试。`,
+          `${reason ? `${reason} ` : "消息未送达。"}${
+            restored === "merged"
+              ? "原内容和附件已放回输入框，之后输入的内容也已保留。"
+              : "内容和附件已恢复，可以重试。"
+          }`,
           submission.draft.sessionId,
         );
       if (activeIdRef.current === submission.draft.sessionId) {
@@ -226,8 +239,10 @@ export function useHubController({
         const consumed = restored.items.some(
           (item) => item.kind === "user" && item.clientMessageId === submission.clientMessageId,
         );
-        if (consumed) uncertainSubmissions.current.delete(sessionId);
-        else if (!detail.data.running) {
+        if (consumed) {
+          uncertainSubmissions.current.delete(sessionId);
+          setDraftsRevision((value) => value + 1);
+        } else if (!detail.data.running) {
           uncertainSubmissions.current.delete(sessionId);
           restoreSubmission(submission);
         }
@@ -757,6 +772,7 @@ export function useHubController({
         if (!mounted.current || controller.signal.aborted) break;
         const uploaded = await uploadFile(file, { signal: controller.signal, scope });
         if (mounted.current && !controller.signal.aborted) {
+          uploadScopes.current.set(uploaded.id, scope);
           draftStore.current.addFile(sessionId, uploaded);
           syncDraft(sessionId);
         }
@@ -821,7 +837,9 @@ export function useHubController({
     files,
     uploading,
     uploadBusy: uploadingFor !== null,
-    hasUnsent: draftStore.current.unsent().length > 0,
+    // A submission awaiting delivery confirmation (in any session) exists only
+    // in this page's memory until the Hub confirms it, like an unsent draft.
+    hasUnsent: draftStore.current.unsent().length > 0 || uncertainSubmissions.current.size > 0,
     localDrafts,
     uncertain: uncertainSubmissions.current.has(activeId),
     running,
@@ -857,6 +875,11 @@ export function useHubController({
     removeFile: (id) => {
       draftStore.current.removeFile(activeIdRef.current, id);
       syncDraft(activeIdRef.current);
+      // Each spooled upload holds server quota until sent or expired; release it
+      // now so an emptied composer can attach again. Best effort: expiry remains.
+      const scope = uploadScopes.current.get(id);
+      uploadScopes.current.delete(id);
+      void discardUpload(id, scope).catch(() => {});
     },
     selectSession: loadSelectedSession,
     newSession: createNewSession,

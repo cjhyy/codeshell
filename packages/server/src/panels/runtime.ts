@@ -2008,8 +2008,11 @@ export function createPanelRuntime(options: PanelRuntimeOptions) {
         await toolJobs?.shutdown();
         await taskCookies?.shutdown();
       } finally {
-        processes.close();
-        await Promise.all([resources.shutdown(), Promise.resolve(agentTasks?.close())]);
+        await Promise.all([
+          processes.close(),
+          resources.shutdown(),
+          Promise.resolve(agentTasks?.close()),
+        ]);
       }
     },
     async handle(request: IncomingMessage, response: ServerResponse): Promise<boolean> {

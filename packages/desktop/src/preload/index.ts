@@ -38,6 +38,7 @@ import { createProjectAuthorityApi } from "./project-authority-api";
 import { createProjectPanelVersionApi } from "./project-panel-version-api";
 import { createSessionCatalogApi } from "./session-catalog-api";
 import { createPreloadRpcIdFactory, takePreloadRpcResponse } from "./rpc-identity";
+import { rpcResult } from "./rpc-result";
 import type { AgentPanelHostRequest, AgentPanelHostResponse } from "../shared/agent-panels";
 import type { ExpandedPluginCommand, PluginCommandDescriptor } from "../shared/plugin-commands";
 import type { PluginMediaDto } from "../shared/plugin-media";
@@ -373,17 +374,6 @@ ipcRenderer.on(
 const RPC_TIMEOUT_MS = 30_000;
 
 /**
- * Unwrap a JSON-RPC reply: `rpc()` resolves with the whole `{id, result|error}`
- * envelope, so data-returning callers must reach into `.result` (and surface
- * `.error`). Older bindings that ignore the payload can skip this.
- */
-function rpcResult<T = unknown>(msg: unknown): T {
-  const m = (msg ?? {}) as { result?: unknown; error?: { message?: string } };
-  if (m.error) throw new Error(m.error.message ?? "RPC error");
-  return m.result as T;
-}
-
-/**
  * Send a JSON-RPC request to main and resolve with its reply.
  *
  * `timeoutMs` guards against main never replying so the caller doesn't hang
@@ -559,7 +549,9 @@ contextBridge.exposeInMainWorld("codeshell", {
   ) =>
     // No timeout: a run resolves only when the whole turn completes (can be
     // minutes). The Stop button (agent/cancel) is the abort path, not a clock.
-    rpc("agent/run", { task, ...(opts ?? {}) }, 0),
+    // Resolve the RunResult itself (the external runtime's shape) and reject an
+    // error reply, such as Main's configuration gate, so the caller shows it.
+    rpc("agent/run", { task, ...(opts ?? {}) }, 0).then(rpcResult),
   /**
    * Cancel a session's running turn. sessionId is required for the
    * multi-session worker; legacy callers that omitted it routed through

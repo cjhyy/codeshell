@@ -158,6 +158,7 @@ export const chat = {
         pluginExpanded: "插件命令已展开到输入框，请检查后再发送。",
         pluginExpandUnavailable: "当前版本无法展开插件命令，请重启 CodeShell 后重试。",
         pluginExpandFailed: "插件命令展开失败：{error}",
+        pluginExpandStale: "已切换会话，插件命令的展开结果未写入；原命令仍保留在原会话的输入框中。",
       },
       queue: {
         heading: "后续变更",
@@ -473,6 +474,8 @@ export const chat = {
         pluginExpandUnavailable:
           "Plugin command expansion is unavailable. Restart CodeShell and try again.",
         pluginExpandFailed: "Failed to expand plugin command: {error}",
+        pluginExpandStale:
+          "The conversation changed, so the expanded plugin command was not inserted. The original command is still in that conversation's composer.",
       },
       queue: {
         heading: "Follow-up changes",

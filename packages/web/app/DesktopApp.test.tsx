@@ -199,7 +199,9 @@ describe("Desktop workbench controller", () => {
       ack.resolve(true);
       await flushMicrotasks();
     });
-    expect(sent).toEqual([{ text: "first task", attachments: [] }]);
+    expect(sent).toEqual([
+      { text: "first task", attachments: [], onUncertain: expect.any(Function) },
+    ]);
     expect(hook.result.current.activeId).toBe("mobile-real-1");
     expect(hook.result.current.draft).toBe("next task while accepting");
     expect(hook.result.current.files.map((file) => file.name)).toEqual(["next.png"]);
@@ -289,7 +291,7 @@ describe("Desktop workbench controller", () => {
     await hook.unmount();
   });
 
-  test("failed send restores untouched text and images but never overwrites later edits", async () => {
+  test("failed send restores text and images and keeps later edits after them", async () => {
     let pending = deferred<boolean>();
     const app = remoteApp({ activeSessionId: "existing", sendChat: () => pending.promise });
     const hook = await renderHook(() => useDesktopController(app, undefined, noop));
@@ -317,8 +319,9 @@ describe("Desktop workbench controller", () => {
       pending.resolve(false);
       await flushMicrotasks();
     });
-    expect(hook.result.current.draft).toBe("replacement");
-    expect(hook.result.current.files).toHaveLength(0);
+    // The failed task is put back before the newer text; neither is lost.
+    expect(hook.result.current.draft).toBe("keep on failure\n\nreplacement");
+    expect(hook.result.current.files.map((file) => file.name)).toEqual(["kept.png"]);
     await hook.unmount();
   });
 
@@ -467,6 +470,33 @@ describe("Desktop workbench controller", () => {
     expect(selectedProjects).toEqual(["b"]);
     expect(hook.result.current.workspaceCwd).toBe("/b");
     await hook.unmount();
+  });
+
+  test("leaving this device is immediate even while the HTTP logout is still pending", async () => {
+    const logoutResponse = deferred<Response>();
+    const requests: string[] = [];
+    globalThis.fetch = (async (path: string | URL | Request) => {
+      requests.push(String(path));
+      return logoutResponse.promise;
+    }) as typeof fetch;
+    let loggedOut = 0;
+    const app = remoteApp({ logout: () => loggedOut++ });
+    const hook = await renderHook(() => useDesktopController(app, undefined, noop));
+    try {
+      await act(async () => {
+        hook.result.current.logout?.();
+        await flushMicrotasks();
+      });
+      expect(requests).toEqual(["/api/v1/auth/logout"]);
+      expect(loggedOut).toBe(1);
+      await act(async () => {
+        logoutResponse.resolve(Response.json({ ok: true }));
+        await flushMicrotasks();
+      });
+      expect(loggedOut).toBe(1);
+    } finally {
+      await hook.unmount();
+    }
   });
 
   test("offline approvals cannot be submitted and CLI roots remain available", () => {

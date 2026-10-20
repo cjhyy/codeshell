@@ -250,3 +250,13 @@ export async function uploadFile(
     signal: options.signal,
   });
 }
+
+/** Release an unsent upload's server quota; the server ignores unknown or claimed IDs. */
+export async function discardUpload(
+  id: string,
+  scope: ApiScope = captureApiScope(),
+): Promise<void> {
+  await api(apiUrl(`/api/v1/uploads/${encodeURIComponent(id)}`, scope.workspace, scope.projectId), {
+    method: "DELETE",
+  });
+}

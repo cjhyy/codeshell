@@ -237,6 +237,17 @@ export class WorkerBridgeCore {
       this.settlePendingOnExit();
       this.opts.onSpawnError?.(err);
     });
+    // A write that overlaps worker exit fails asynchronously (EPIPE) on the
+    // stdin stream, after sendLine() already returned. Unlistened, that stream
+    // error is an uncaught exception that terminates the whole Host. The pipe
+    // is unusable either way: retire this exact child so its exit path
+    // settles pending requests like any other crash.
+    child.stdin.on("error", (err) => {
+      this.log("child.stdin.error", { error: String(err), pid: child.pid });
+      if (this.child === child && child.exitCode === null && child.signalCode === null) {
+        child.kill("SIGTERM");
+      }
+    });
     child.on("exit", (code, signal) => {
       // Close the readline interface bound to the dead child's stdout so it
       // (and its "line" listener) doesn't leak across restarts.

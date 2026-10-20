@@ -139,7 +139,8 @@ require('node:readline').createInterface({input:process.stdin}).on('line',line=>
 const id=m.params.sessionId;
 if(m.params.task==='before-state'){
  send({method:'agent/runAccepted',params:{requestId:m.id,sessionId:id}});
- const pending=setInterval(()=>{const fresh=JSON.parse(fs.readFileSync(${JSON.stringify(join(dir, "events.json"))},'utf8'));if(fresh[id]){clearInterval(pending);for(const event of fresh[id])send({method:'agent/streamEvent',params:{sessionId:id,event}});send({id:m.id,result:{completed:true}})}},2);
+ const pending=setInterval(()=>{const fresh=JSON.parse(fs.readFileSync(${JSON.stringify(join(dir, "events.json"))},'utf8'));if(fresh[id]){clearInterval(pending);for(const event of fresh[id])send({method:'agent/streamEvent',params:{sessionId:id,event}});
+ const release=setInterval(()=>{if(fs.existsSync(${JSON.stringify(join(dir, "release-prestate"))})){clearInterval(release);send({id:m.id,result:{completed:true}})}},2)}},2);
  return;
 }
 if(m.params.task==='gap'||m.params.task==='locked')send({method:'agent/streamEvent',params:{sessionId:id,event:{type:'background_agent_completed',agentId:'late',description:'done',finalText:'controlled late result',status:'completed',enqueuedAt:1}}});
@@ -266,6 +267,26 @@ send({id:m.id,result:{completed:true}});
         prestate: prestate.events,
       }),
     );
+    const streamedDeadline = Date.now() + 3000;
+    while (
+      !client.messages.some(
+        (x) =>
+          x.method === "agent/streamEvent" &&
+          x.params.sessionId === "prestate" &&
+          x.params.event.type === "turn_complete",
+      )
+    ) {
+      if (Date.now() > streamedDeadline) throw Error("Missing prestate stream events");
+      await Bun.sleep(2);
+    }
+    // A refresh during the session's very first run: the journal's legacy
+    // anchor (session_meta) was written after the run's empty pre-run baseline.
+    expect(
+      (await client.recover("prestate"))?.chat.items.some(
+        (x) => x.kind === "assistant" && x.text === "actual durable answer",
+      ),
+    ).toBe(true);
+    writeFileSync(join(dir, "release-prestate"), "");
     expect((await prestateRun).result.completed).toBe(true);
     expect(
       client.messages.some(

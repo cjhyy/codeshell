@@ -49,6 +49,9 @@ import {
   type SessionStreamCursor,
 } from "./remoteAppSync.js";
 
+/** The host explicitly refused a message, so it was not admitted. */
+class MessageRejectedError extends Error {}
+
 /** Which external coding-CLI the CC pane drives. Mirrors desktop CCRoomView. */
 export type CcCliKind = "claude-code" | "codex";
 
@@ -99,10 +102,17 @@ export interface RemoteApp {
   notice?: string;
   logout: () => void;
   // actions
+  /** Resolves true once the host accepted the message. */
   sendChat: (input: {
     text: string;
     attachments: MobileComposerAttachment[];
     modelTraceSource?: string;
+    /** Retry an earlier intent whose delivery could not be confirmed. The host
+     *  ignores an ID it already recorded, so the task never runs twice. */
+    clientMessageId?: string;
+    /** The frame reached the socket but neither acceptance nor rejection
+     *  arrived (lost connection or timeout): the host may have run it. */
+    onUncertain?: (clientMessageId: string) => void;
   }) => Promise<boolean>;
   stopRun: () => void;
   selectSession: (id: string) => void;
@@ -277,6 +287,8 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
     | null
   >(null);
   const connectionGenerationRef = useRef(0);
+  /** Image PUTs in flight; a lost connection aborts them so sending recovers. */
+  const uploadAbortsRef = useRef(new Set<AbortController>());
   const uploadWaitersRef = useRef(
     new Map<
       string,
@@ -396,6 +408,8 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
 
   useEffect(
     () => () => {
+      for (const upload of uploadAbortsRef.current) upload.abort(new Error("Remote app closed"));
+      uploadAbortsRef.current.clear();
       for (const waiter of uploadWaitersRef.current.values()) {
         clearTimeout(waiter.timer);
         waiter.reject(new Error("Remote app closed"));
@@ -559,6 +573,8 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
     if (activeRoomIdRef.current) return; // rooms don't surface chat approvals
     if (a.sessionId) {
       if (boundSessionRef.current && a.sessionId !== boundSessionRef.current) return;
+      // A pending creation owns the unbound view; only its acceptance binds it.
+      if (!boundSessionRef.current && pendingCreateRef.current) return;
       if (!boundSessionRef.current) {
         boundSessionRef.current = a.sessionId;
         setActiveSessionId(a.sessionId);
@@ -817,6 +833,11 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
               );
               break;
             }
+          } else if (pendingCreateRef.current) {
+            // Another task's output while a new session awaits its acceptance:
+            // binding it would move the new conversation (and its draft) there.
+            setUnreadSessionIds((prev) => markSessionUnread(prev, event.sessionId));
+            break;
           } else {
             boundSessionRef.current = event.sessionId;
             setActiveSessionId(event.sessionId);
@@ -1037,7 +1058,7 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
             setLoadingKey("roomHistory", false);
           }
           if (event.clientMessageId) {
-            settleMessageAck(event.clientMessageId, new Error(event.message));
+            settleMessageAck(event.clientMessageId, new MessageRejectedError(event.message));
           }
           setNotice(event.message || t("mobile.notice.roomError"));
           break;
@@ -1046,7 +1067,7 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
             submittingAsyncApprovalsRef.current.delete(event.approvalId);
           }
           if (event.clientMessageId) {
-            settleMessageAck(event.clientMessageId, new Error(event.message));
+            settleMessageAck(event.clientMessageId, new MessageRejectedError(event.message));
           }
           setNotice(event.message);
           setLoading({
@@ -1308,6 +1329,8 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
         const sid = typeof params.sessionId === "string" ? params.sessionId : undefined;
         if (boundSessionRef.current) {
           if (sid && sid !== boundSessionRef.current) return;
+        } else if (pendingCreateRef.current) {
+          return; // the pending creation's acceptance decides the binding
         } else if (sid) {
           // Auto-bind to the first session we see so the feed is coherent.
           boundSessionRef.current = sid;
@@ -1381,6 +1404,8 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
     outputClient.cancel(false);
     submittingAsyncApprovalsRef.current.clear();
     const error = new Error("Remote connection was lost");
+    for (const upload of uploadAbortsRef.current) upload.abort(error);
+    uploadAbortsRef.current.clear();
     for (const waiter of uploadWaitersRef.current.values()) {
       clearTimeout(waiter.timer);
       waiter.reject(error);
@@ -1399,6 +1424,8 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
       text: string;
       attachments: MobileComposerAttachment[];
       modelTraceSource?: string;
+      clientMessageId?: string;
+      onUncertain?: (clientMessageId: string) => void;
     }): Promise<boolean> => {
       const text = input.text.trim();
       if (!text && input.attachments.length === 0) return false;
@@ -1408,6 +1435,7 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
       const roomId = activeRoomIdRef.current;
       const sessionId = boundSessionRef.current;
       const clientMessageId =
+        input.clientMessageId ??
         globalThis.crypto?.randomUUID?.() ??
         `mobile-message-${Date.now()}-${Math.random().toString(36).slice(2)}`;
       let attachments;
@@ -1415,10 +1443,13 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
         setNotice(t("mobile.notice.ccRoomObserving"));
         return false;
       }
+      const upload = new AbortController();
+      uploadAbortsRef.current.add(upload);
       try {
         attachments = await prepareMobileAttachments(input.attachments, {
           beginUpload: (metadata) => beginMobileUpload(metadata, connectionGeneration),
           fetch: window.fetch.bind(window),
+          signal: upload.signal,
         });
       } catch (error) {
         setNotice(
@@ -1427,6 +1458,8 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
           }),
         );
         return false;
+      } finally {
+        uploadAbortsRef.current.delete(upload);
       }
       if (conversationRevision !== conversationRevisionRef.current) return false;
       const summaries = attachments.map(({ name, mime, size }) => ({ name, mime, size }));
@@ -1472,6 +1505,8 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
       try {
         await acknowledged;
       } catch (error) {
+        // Only an explicit host rejection proves the message was not admitted.
+        if (!(error instanceof MessageRejectedError)) input.onUncertain?.(clientMessageId);
         setNotice(
           t("mobile.notice.attachmentSendFailed", {
             error: error instanceof Error ? error.message : String(error),
@@ -1589,11 +1624,35 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
 
   const newSession = useCallback(
     (target?: MobileSessionCreateTarget, name?: string) => {
-      outputClient.cancel();
-      conversationRevisionRef.current += 1;
       const clientRequestId =
         globalThis.crypto?.randomUUID?.() ??
         `mobile-create-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+      const stableTarget =
+        target === undefined && activeProjectIdRef.current
+          ? { projectId: activeProjectIdRef.current }
+          : target;
+      // Creation needs the host's acceptance. Send it before switching the
+      // view: offline, a dropped frame used to leave the view on the new target
+      // while a later first send fell back to the previous (possibly another
+      // project's) session.
+      const created = socket.send(
+        stableTarget && typeof stableTarget === "object"
+          ? { type: "session.create", clientRequestId, ...stableTarget, ...(name ? { name } : {}) }
+          : stableTarget === undefined
+            ? { type: "session.create", clientRequestId, ...(name ? { name } : {}) }
+            : {
+                type: "session.create",
+                clientRequestId,
+                cwd: stableTarget,
+                ...(name ? { name } : {}),
+              },
+      );
+      if (!created) {
+        setNotice(t("mobile.notice.createOffline"));
+        return;
+      }
+      outputClient.cancel();
+      conversationRevisionRef.current += 1;
       pendingCreateRef.current = {
         clientRequestId,
         conversationRevision: conversationRevisionRef.current,
@@ -1605,10 +1664,6 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
           roomId: activeRoomIdRef.current,
         });
       }
-      const stableTarget =
-        target === undefined && activeProjectIdRef.current
-          ? { projectId: activeProjectIdRef.current }
-          : target;
       const selectedProject =
         stableTarget && typeof stableTarget === "object" && stableTarget.projectId
           ? projectsRef.current.find((project) => project.id === stableTarget.projectId)
@@ -1653,27 +1708,8 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
       setApprovals([]);
       setLoadingKey("sessionHistory", false);
       dispatchChat({ kind: "reset" });
-      if (stableTarget && typeof stableTarget === "object") {
-        socket.send({
-          type: "session.create",
-          clientRequestId,
-          ...stableTarget,
-          ...(name ? { name } : {}),
-        });
-      } else {
-        socket.send(
-          stableTarget === undefined
-            ? { type: "session.create", clientRequestId, ...(name ? { name } : {}) }
-            : {
-                type: "session.create",
-                clientRequestId,
-                cwd: stableTarget,
-                ...(name ? { name } : {}),
-              },
-        );
-      }
     },
-    [socket, setLoadingKey],
+    [socket, setLoadingKey, setNotice],
   );
 
   const respondApproval = useCallback(
