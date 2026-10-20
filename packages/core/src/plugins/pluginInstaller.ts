@@ -6,7 +6,7 @@
  */
 
 import { existsSync, realpathSync, rmSync, rmdirSync } from "node:fs";
-import { cp, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { cp, mkdir, mkdtemp, readFile, rename, rm, writeFile } from "node:fs/promises";
 import { dirname, join, sep } from "node:path";
 import { homedir, tmpdir } from "node:os";
 import { gitClone, gitRevParseHead, gitSparseCheckoutAdd, githubRepoToCloneUrl } from "./gitOps.js";
@@ -235,17 +235,37 @@ export function shaMatches(declared: string, actual: string): boolean {
   return a.startsWith(d);
 }
 
+/**
+ * Move a validated staged tree to `finalDir`, replacing any previous tree
+ * there. The previous tree is set aside first and restored if the move fails.
+ */
+async function replaceDirectory(stagingDir: string, finalDir: string): Promise<void> {
+  await mkdir(dirname(finalDir), { recursive: true });
+  const previous = existsSync(finalDir)
+    ? `${finalDir}.previous-${process.pid}-${Date.now()}`
+    : null;
+  if (previous) await rename(finalDir, previous);
+  try {
+    await rename(stagingDir, finalDir);
+  } catch (error) {
+    if (previous) await rename(previous, finalDir).catch(() => {});
+    throw error;
+  }
+  if (previous) await rm(previous, { recursive: true, force: true });
+}
+
 async function materialize(
   source: PluginEntrySource,
   marketplaceInstallLocation: string,
   marketplace: string,
   plugin: string,
 ): Promise<
-  | { ok: true; cacheDir: string; version: string; sha: string | undefined }
+  | { ok: true; stagingDir: string; cacheDir: string; version: string; sha: string | undefined }
   | { ok: false; error: string }
 > {
-  // First pass: install into a placeholder dir, then rename to the SHA dir
-  // once we know it. For path sources there's no SHA — use "local".
+  // Materialize into a placeholder dir and report the final SHA dir once we
+  // know it (path sources have no SHA — use "local"). The caller validates the
+  // staged tree before it replaces any installed version at that final dir.
   const placeholder = pluginCacheDir(marketplace, plugin, "_pending_");
 
   if (typeof source === "string") {
@@ -265,11 +285,13 @@ async function materialize(
     const r = await materializePath(marketplaceInstallLocation, source, placeholder);
     if (!r.ok) return r;
     const finalDir = pluginCacheDir(marketplace, plugin, "local");
-    if (existsSync(finalDir)) await rm(finalDir, { recursive: true, force: true });
-    await mkdir(dirname(finalDir), { recursive: true });
-    await cp(placeholder, finalDir, { recursive: true, verbatimSymlinks: true });
-    await rm(placeholder, { recursive: true, force: true });
-    return { ok: true, cacheDir: finalDir, version: "local", sha: undefined };
+    return {
+      ok: true,
+      stagingDir: placeholder,
+      cacheDir: finalDir,
+      version: "local",
+      sha: undefined,
+    };
   }
 
   if (source.source === "git" || source.source === "github") {
@@ -291,11 +313,7 @@ async function materialize(
     }
     const version = shortSha(r.sha);
     const finalDir = pluginCacheDir(marketplace, plugin, version);
-    if (existsSync(finalDir)) await rm(finalDir, { recursive: true, force: true });
-    await mkdir(dirname(finalDir), { recursive: true });
-    await cp(placeholder, finalDir, { recursive: true, verbatimSymlinks: true });
-    await rm(placeholder, { recursive: true, force: true });
-    return { ok: true, cacheDir: finalDir, version, sha: r.sha };
+    return { ok: true, stagingDir: placeholder, cacheDir: finalDir, version, sha: r.sha };
   }
 
   if (source.source === "git-subdir") {
@@ -313,11 +331,7 @@ async function materialize(
     }
     const version = shortSha(r.sha);
     const finalDir = pluginCacheDir(marketplace, plugin, version);
-    if (existsSync(finalDir)) await rm(finalDir, { recursive: true, force: true });
-    await mkdir(dirname(finalDir), { recursive: true });
-    await cp(placeholder, finalDir, { recursive: true, verbatimSymlinks: true });
-    await rm(placeholder, { recursive: true, force: true });
-    return { ok: true, cacheDir: finalDir, version, sha: r.sha };
+    return { ok: true, stagingDir: placeholder, cacheDir: finalDir, version, sha: r.sha };
   }
 
   return {
@@ -377,18 +391,20 @@ export async function installPlugin(
 
   // Project Codex package components into the same runtime-native layout used
   // by local/direct installs, then validate and freeze the author manifest
-  // before the install becomes visible in installed_plugins.json.
+  // before the install becomes visible in installed_plugins.json. All of this
+  // happens in the staging dir: an update whose new content is invalid must
+  // leave the installed version (often at the same final dir) untouched.
   try {
-    const format = detectPluginFormat(mat.cacheDir);
-    await projectMarketplacePluginRuntime(mat.cacheDir, pluginName, format);
-    await normalizePluginManifest(mat.cacheDir, {
+    const format = detectPluginFormat(mat.stagingDir);
+    await projectMarketplacePluginRuntime(mat.stagingDir, pluginName, format);
+    await normalizePluginManifest(mat.stagingDir, {
       name: pluginName,
       version: entry.version ?? mat.version,
       format,
-      destinationRoot: mat.cacheDir,
+      destinationRoot: mat.stagingDir,
     });
   } catch (error) {
-    await rm(mat.cacheDir, { recursive: true, force: true });
+    await rm(mat.stagingDir, { recursive: true, force: true });
     return {
       ok: false,
       error: `invalid plugin manifest: ${error instanceof Error ? error.message : String(error)}`,
@@ -399,7 +415,13 @@ export async function installPlugin(
   // in the materialized tree. The runtime exposes CodeShell-native names plus
   // Codex aliases, while keeping Claude host-detection variables unset. The
   // breadcrumb documents the rewrite for users debugging upstream diffs.
-  const rewriteSummary = rewritePluginVars(mat.cacheDir);
+  const rewriteSummary = rewritePluginVars(mat.stagingDir);
+  try {
+    await replaceDirectory(mat.stagingDir, mat.cacheDir);
+  } catch (error) {
+    await rm(mat.stagingDir, { recursive: true, force: true });
+    return { ok: false, error: error instanceof Error ? error.message : String(error) };
+  }
 
   // Remove old install entries for the same key so we don't pile up
   // historical versions (Phase A: single-scope only).

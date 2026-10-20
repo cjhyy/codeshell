@@ -4,6 +4,8 @@ import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { installPlugin } from "./pluginInstaller.js";
 import { writeKnownMarketplaces } from "./knownMarketplaces.js";
+import { readInstalledPlugins } from "./installedPlugins.js";
+import { loadPluginCatalog } from "./pluginCatalog.js";
 
 describe("installPlugin marketplace source path containment", () => {
   let home: string;
@@ -75,6 +77,33 @@ describe("installPlugin marketplace source path containment", () => {
 
     if (res.ok) throw new Error("expected git-subdir traversal path to be rejected");
     expect(res.error).toMatch(/parent-directory/);
+  });
+
+  test("a failed path-source update keeps the previously installed plugin", async () => {
+    mkdirSync(join(mpDir, "payload", ".claude-plugin"), { recursive: true });
+    mkdirSync(join(mpDir, "payload", "skills", "hello"), { recursive: true });
+    writeFileSync(
+      join(mpDir, "payload", "skills", "hello", "SKILL.md"),
+      "---\nname: hello\ndescription: v1\n---\nv1\n",
+    );
+    writeFileSync(
+      join(mpDir, "payload", ".claude-plugin", "plugin.json"),
+      JSON.stringify({ name: "p", version: "1.0.0" }),
+    );
+    writeMarketplace("./payload");
+    const first = await installPlugin("p", "shop");
+    if (!first.ok) throw new Error(first.error);
+    const installedPath = readInstalledPlugins().plugins["p@shop"]![0]!.installPath;
+
+    writeFileSync(join(mpDir, "payload", ".claude-plugin", "plugin.json"), "{ not json");
+    const update = await installPlugin("p", "shop");
+
+    expect(update.ok).toBe(false);
+    expect(readInstalledPlugins().plugins["p@shop"]![0]!.installPath).toBe(installedPath);
+    expect(readFileSync(join(installedPath, "skills", "hello", "SKILL.md"), "utf8")).toContain(
+      "v1",
+    );
+    expect(loadPluginCatalog().map((entry) => entry.installKey)).toContain("p@shop");
   });
 
   test("rejects a marketplace Agent Plugin that tries to bundle Desktop UI", async () => {
