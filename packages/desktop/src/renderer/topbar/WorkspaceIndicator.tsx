@@ -176,6 +176,10 @@ export function WorkspaceIndicator({
   const [currentLoadingTarget, setCurrentLoadingTarget] = useState<string | null>(null);
   const [listLoadingTarget, setListLoadingTarget] = useState<string | null>(null);
   const [busyAction, setBusyAction] = useState<string | null>(null);
+  // Synchronous companion to busyAction: a repeated Enter or click can fire
+  // before React re-renders with the busy state, and a duplicate create must
+  // never reach Main while the first is still pending.
+  const mutationInFlightRef = useRef(false);
   const [newOpen, setNewOpen] = useState(false);
   const [slug, setSlug] = useState("");
   const [confirm, setConfirm] = useState<CleanupConfirm | null>(null);
@@ -625,6 +629,8 @@ export function WorkspaceIndicator({
     const requestKey = requestTargetKeyRef.current;
     const targetKey = activeAuthorityTargetKeyRef.current;
     if (!targetKey || activeAuthorityStatusRef.current !== "ready") return false;
+    if (mutationInFlightRef.current) return false;
+    mutationInFlightRef.current = true;
     setBusyAction(target);
     try {
       const next = await window.codeshell.switchSessionWorkspace(sessionId, projectPath, target);
@@ -644,6 +650,7 @@ export function WorkspaceIndicator({
       reportError(error);
       return false;
     } finally {
+      mutationInFlightRef.current = false;
       setBusyAction(null);
     }
   };
@@ -663,6 +670,8 @@ export function WorkspaceIndicator({
     const requestKey = requestTargetKeyRef.current;
     const targetKey = activeAuthorityTargetKeyRef.current;
     if (!targetKey || activeAuthorityStatusRef.current !== "ready") return;
+    if (mutationInFlightRef.current) return;
+    mutationInFlightRef.current = true;
     const { row, action } = confirm;
     setBusyAction(`${action}:${row.path}`);
     try {
@@ -687,6 +696,7 @@ export function WorkspaceIndicator({
     } catch (error) {
       reportError(error);
     } finally {
+      mutationInFlightRef.current = false;
       setBusyAction(null);
     }
   };

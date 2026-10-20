@@ -27,6 +27,7 @@ import {
   releaseSessionWorkspaceForUi,
   resolveSessionReviewWorkspaceForUi,
   switchSessionWorkspaceForUi,
+  type SessionWorkspaceList,
 } from "./session-workspace-service";
 import { readSessionDirectoryForUi, readSessionFileForUi } from "./session-fs-service";
 
@@ -514,6 +515,27 @@ describe("cleanupSessionWorktreeForUi", () => {
     expect(list.current.root).toBe(wt.worktreePath);
     expect(sm.getSessionWorkspace(sessionId)?.root).toBe(wt.worktreePath);
     removeWorktree(wt.worktreePath, true);
+  });
+
+  test("a concurrent duplicate new-worktree switch fails without undoing the first", async () => {
+    const sessionId = "desktopduplicateswitch";
+    const sm = new SessionManager(sessionsDir);
+    sm.create(repo, "m", "p", sessionId);
+
+    const results = await Promise.allSettled([
+      switchSessionWorkspaceForUi(sessionId, repo, "dupe"),
+      switchSessionWorkspaceForUi(sessionId, repo, "dupe"),
+    ]);
+
+    expect(results[0]!.status).toBe("fulfilled");
+    expect(results[1]!.status).toBe("rejected");
+    const created = (results[0] as PromiseFulfilledResult<SessionWorkspaceList>).value.current;
+    expect(created.kind).toBe("worktree");
+    expect(existsSync(created.root)).toBe(true);
+    const branch = created.worktree!.branch;
+    expect(git(repo, ["branch", "--list", branch])).toContain(branch);
+    expect(new SessionManager(sessionsDir).getSessionWorkspace(sessionId)?.root).toBe(created.root);
+    removeWorktree(created.root, true);
   });
 
   test("cleanup rebases an active session to main before removing its worktree", async () => {

@@ -107,6 +107,32 @@ export function selectPlatformScript(
   return trimmed ? candidate : undefined;
 }
 
+/** Tail of the pending creations per canonical repository root. */
+const creationQueues = new Map<string, Promise<void>>();
+
+/**
+ * Run one worktree creation at a time per repository. The prechecks and the
+ * rollback below assume that an absent branch/path seen by this call stays
+ * this call's to create; two concurrent identical requests would otherwise
+ * both pass the prechecks, and the loser's rollback would force-remove the
+ * winner's worktree, branch and uncommitted files.
+ */
+async function withRepositoryCreationLock<T>(gitRoot: string, run: () => Promise<T>): Promise<T> {
+  const previous = creationQueues.get(gitRoot) ?? Promise.resolve();
+  let release!: () => void;
+  const tail = previous.then(
+    () => new Promise<void>((resolveRelease) => (release = resolveRelease)),
+  );
+  creationQueues.set(gitRoot, tail);
+  await previous;
+  try {
+    return await run();
+  } finally {
+    release();
+    if (creationQueues.get(gitRoot) === tail) creationQueues.delete(gitRoot);
+  }
+}
+
 /**
  * Create an isolated git worktree for an agent session.
  */
@@ -120,6 +146,19 @@ export async function createWorktree(
   throwIfAborted(opts.signal);
 
   const gitRoot = await findGitRoot(cwd);
+  throwIfAborted(opts.signal);
+  return await withRepositoryCreationLock(gitRoot, () =>
+    createWorktreeLocked(cwd, gitRoot, slug, sessionId, opts),
+  );
+}
+
+async function createWorktreeLocked(
+  cwd: string,
+  gitRoot: string,
+  slug: string,
+  sessionId: string,
+  opts: CreateWorktreeOptions,
+): Promise<WorktreeSession> {
   throwIfAborted(opts.signal);
   const branchName = applyPrefix(opts.prefix, slug, sessionId);
   const worktreePath = resolve(gitRoot, "..", `.worktrees/${slug}-${sessionId.slice(0, 8)}`);
