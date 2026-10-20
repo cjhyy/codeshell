@@ -83,6 +83,14 @@ describe("editTool", () => {
     expect(readFileSync(p, "utf-8")).toBe("foo QUX baz");
   });
 
+  it("writes replacement-pattern tokens literally in a single replacement", async () => {
+    const literal = "a$&b$$c$`d$'e";
+    const p = fresh("before TARGET after");
+    const out = await editTool({ file_path: p, old_string: "TARGET", new_string: literal }, ctx());
+    expect(out).toContain("1 replacement");
+    expect(readFileSync(p, "utf-8")).toBe(`before ${literal} after`);
+  });
+
   it("refuses an ambiguous (non-unique) old_string without replace_all", async () => {
     const p = fresh("x x x");
     const out = await editTool({ file_path: p, old_string: "x", new_string: "y" }, ctx());
