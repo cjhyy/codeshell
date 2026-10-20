@@ -294,10 +294,11 @@ try {
             `${label}: exact inclusive raw range`,
           );
           assert.ok(await merge.isDisabled());
-          assert.ok(await cancel.isDisabled());
+          // Both cancel controls stay available to stop the running summary (R74).
+          assert.ok(await cancel.isEnabled(), `${label}: header cancel can stop packaging`);
           assert.ok(
-            await page.getByRole("button", { name: labels.cancelText, exact: true }).isDisabled(),
-            `${label}: footer cancel also freezes during packaging`,
+            await page.getByRole("button", { name: labels.cancelText, exact: true }).isEnabled(),
+            `${label}: footer cancel can stop packaging`,
           );
           for (const button of await page.locator("[data-context-turn-index]").all())
             assert.ok(await button.isDisabled(), `${label}: selection freezes during packaging`);
