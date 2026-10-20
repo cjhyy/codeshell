@@ -225,11 +225,14 @@ function parsePluginCommandArguments(input: string): ParsedPluginCommandArgument
   let current = "";
   let quote: "'" | '"' | null = null;
   let escaping = false;
+  // An explicitly quoted empty string ("" or '') is still an argument.
+  let quoted = false;
 
   const push = () => {
-    if (current.length === 0) return;
+    if (current.length === 0 && !quoted) return;
     tokens.push(current);
     current = "";
+    quoted = false;
   };
 
   for (const character of input.trim()) {
@@ -249,6 +252,7 @@ function parsePluginCommandArguments(input: string): ParsedPluginCommandArgument
     }
     if (character === "'" || character === '"') {
       quote = character;
+      quoted = true;
       continue;
     }
     if (/\s/u.test(character)) {
