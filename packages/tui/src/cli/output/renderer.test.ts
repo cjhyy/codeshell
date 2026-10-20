@@ -1,4 +1,5 @@
 import { describe, test, expect, beforeEach, afterEach } from "bun:test";
+import { stripVTControlCharacters } from "node:util";
 import { createRenderer } from "./renderer.js";
 import type { StreamEvent, TerminalReason } from "@cjhyy/code-shell-core";
 
@@ -131,7 +132,7 @@ describe("output renderers — schema contracts", () => {
     const many = Array.from({ length: 200 }, (_, i) => `f${i}.ts  (1B)`).join("\n");
     glob(`${many}\n\n... and 5 more files (205 total)`);
     restore();
-    const out = stderrChunks.join("");
+    const out = stripVTControlCharacters(stderrChunks.join(""));
     expect(out).toContain("Glob 1 files");
     expect(out).toContain("Glob 0 files");
     expect(out).toContain("Glob 205 files");

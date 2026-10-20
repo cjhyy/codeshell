@@ -75,6 +75,8 @@ describe("input history navigation", () => {
     history.addToHistory("kept input");
     navigator.refresh();
     history.flushHistorySync();
+    // Flushed removals are keyed by timestamp; real submissions are not in the same millisecond.
+    await new Promise((resolve) => setTimeout(resolve, 5));
     history.addToHistory("interrupted input");
     navigator.refresh();
     history.flushHistorySync();
