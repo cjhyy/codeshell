@@ -54,6 +54,7 @@ export async function runAdjudication(
 
   if (contestedClaims.length === 0 && verifiedClaims.length === 0) {
     logger.info("arena.adjudication_skip", { reason: "no claims to adjudicate" });
+    sweepRemainingToUnresolved(ledger);
     return [];
   }
 
@@ -126,11 +127,7 @@ export async function runAdjudication(
     allAdjudications.push(adjudication);
   }
 
-  // Any remaining proposed/under_review claims → mark unresolved
-  const remaining = ledger.getClaimsByStatus("proposed", "under_review");
-  for (const claim of remaining) {
-    markUnresolved(claim);
-  }
+  sweepRemainingToUnresolved(ledger);
 
   const accepted = allAdjudications.filter((a) =>
     a.outcome === "accepted" || a.outcome === "accepted_with_revision",
@@ -146,6 +143,17 @@ export async function runAdjudication(
   onProgress?.({ type: "adjudication_done", accepted, unresolved });
 
   return allAdjudications;
+}
+
+/**
+ * Close any claims still proposed/under_review as unresolved so they stay in
+ * the consensus claim-status summary. Runs on every exit path, including the
+ * early return when nothing needs a ruling.
+ */
+function sweepRemainingToUnresolved(ledger: ArenaLedger): void {
+  for (const claim of ledger.getClaimsByStatus("proposed", "under_review")) {
+    markUnresolved(claim);
+  }
 }
 
 /**
