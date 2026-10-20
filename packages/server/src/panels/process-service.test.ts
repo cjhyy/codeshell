@@ -1,5 +1,6 @@
 import { PanelExecutionGate } from "./execution-gate.js";
 import { afterEach, describe, expect, test } from "bun:test";
+import { readFileSync } from "node:fs";
 import { chmod, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
@@ -97,6 +98,44 @@ describe("shared Panel process lifecycle", () => {
     await new Promise((done) => setTimeout(done, 0));
     await mutate();
   });
+
+  test.skipIf(process.platform === "win32")(
+    "close resolves only after a process group that ignores SIGTERM is gone",
+    async () => {
+      const f = await fixture();
+      await writeFile(
+        f.binary,
+        "#!/bin/sh\ntrap '' TERM\necho $$ > pid\nwhile :; do /bin/sleep 1; done\n",
+      );
+      await f.service.start(f.owner, f.params);
+      let pid = 0;
+      await eventually(() => {
+        try {
+          pid = Number(readFileSync(join(f.root, "pid"), "utf8"));
+        } catch {
+          return false;
+        }
+        return pid > 1;
+      });
+      const alive = () => {
+        try {
+          process.kill(pid, 0);
+          return true;
+        } catch {
+          return false;
+        }
+      };
+      try {
+        await f.service.close();
+        // A Host exits right after close resolves, which would cancel any
+        // later SIGKILL escalation timer and leave the group running.
+        expect(alive()).toBe(false);
+      } finally {
+        if (alive()) process.kill(-pid, "SIGKILL");
+      }
+    },
+    15_000,
+  );
 
   test("refused execution releases admission, and a package write prevents spawning", async () => {
     const gate = new PanelExecutionGate();

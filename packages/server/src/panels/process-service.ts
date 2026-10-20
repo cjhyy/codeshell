@@ -1099,9 +1099,20 @@ export class PanelAppProcessService {
     }
   }
 
-  /** Permanently shut down all guests, including operations awaiting approval. */
-  close(): void {
-    if (this.closed) return;
+  /**
+   * Permanently shut down all guests, including operations awaiting approval.
+   * Resolves once every native process group has exited or been force-killed:
+   * escalation runs on a Host timer, so a Host that exits earlier would leave
+   * a process ignoring SIGTERM running.
+   */
+  close(): Promise<void> {
+    if (!this.closed) this.shutDown();
+    return Promise.all(
+      [...this.retiring.values()].map((running) => running.termination ?? Promise.resolve()),
+    ).then(() => undefined);
+  }
+
+  private shutDown(): void {
     this.closed = true;
     const guests = new Set([
       ...this.guestEpochs.keys(),
