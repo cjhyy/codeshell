@@ -131,4 +131,25 @@ describe("searchSessionTranscripts", () => {
     expect(result.matches.length).toBe(1);
     expect(result.matches[0]?.sessionId).toBe("work-1");
   });
+
+  // Regression (PET-01): the raw-file prefilter compared the plain query with
+  // JSON-encoded text, so quotes and backslashes in the message never matched.
+  test.each([['console.log("hello")'], ["C:\\work\\notes.txt"]])(
+    "finds %s even though JSON encodes it differently on disk",
+    async (query) => {
+      const root = mkdtempSync(join(tmpdir(), "pet-disclosure-search-json-"));
+      writeSession(root, "work-1", { kind: "work", cwd: "/a", title: "Work 1" }, [
+        {
+          role: "user",
+          content: 'Use console.log("hello") and file C:\\work\\notes.txt',
+          turnNumber: 0,
+        },
+      ]);
+
+      const result = await searchSessionTranscripts(root, query, {});
+
+      expect(result.matches.map((match) => match.sessionId)).toEqual(["work-1"]);
+      expect(result.matches[0]?.snippets[0]?.text).toContain(query);
+    },
+  );
 });

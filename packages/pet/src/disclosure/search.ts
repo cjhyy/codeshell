@@ -76,6 +76,10 @@ export async function searchSessionTranscripts(
   if (!normalizedQuery) {
     return { matches: [], scannedSessions: 0, truncated: false };
   }
+  // The cheap whole-file prefilter runs on JSON text, where quotes, backslashes
+  // and control characters in message content are escaped. Compare against the
+  // query in the same encoding so it never rejects a real match.
+  const encodedQuery = JSON.stringify(normalizedQuery).slice(1, -1);
 
   const maxSessions = options.maxSessions ?? DEFAULT_MAX_SESSIONS;
   const maxSnippetsPerSession = options.maxSnippetsPerSession ?? DEFAULT_MAX_SNIPPETS_PER_SESSION;
@@ -120,7 +124,7 @@ export async function searchSessionTranscripts(
       }
       scannedSessions += 1;
 
-      if (!text.toLowerCase().includes(normalizedQuery)) continue;
+      if (!text.toLowerCase().includes(encodedQuery)) continue;
 
       const events: DiskTranscriptEvent[] = [];
       for (const rawLine of text.split("\n")) {
