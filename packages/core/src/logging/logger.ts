@@ -66,6 +66,7 @@ export function setLogsDir(dir: string | null): void {
   _logsDir = dir;
 }
 
+/** Daily log files kept per bucket (engine, ui-ink): the last seven days. */
 const MAX_LOG_FILES = 7;
 const MAX_IN_MEMORY_ERRORS = 100;
 
@@ -436,15 +437,23 @@ export function rotateLogs(): void {
   try {
     const dir = logsDir();
     if (!existsSync(dir)) return;
-    const files = readdirSync(dir)
-      .filter((f) => f.endsWith(".log"))
-      .sort();
-    if (files.length <= MAX_LOG_FILES) return;
-    for (const f of files.slice(0, files.length - MAX_LOG_FILES)) {
-      try {
-        unlinkSync(join(dir, f));
-      } catch {
-        /* ignore */
+    // Retain per bucket: sorting all names together would put every
+    // `engine-*` before `ui-ink-*` and delete today's engine history first.
+    const buckets = new Map<string, string[]>();
+    for (const f of readdirSync(dir).filter((name) => name.endsWith(".log"))) {
+      const bucket = f.replace(/-\d{4}-\d{2}-\d{2}\.log$/, "");
+      const files = buckets.get(bucket) ?? [];
+      files.push(f);
+      buckets.set(bucket, files);
+    }
+    for (const files of buckets.values()) {
+      files.sort();
+      for (const f of files.slice(0, Math.max(0, files.length - MAX_LOG_FILES))) {
+        try {
+          unlinkSync(join(dir, f));
+        } catch {
+          /* ignore */
+        }
       }
     }
   } catch {

@@ -31,7 +31,7 @@ export function reduceAgentProgress(
     return {
       ...previous,
       phase: "tool",
-      lastTool: { name, state: "running", startedAt: now },
+      lastTool: { name, toolCallId: event.toolCall.id, state: "running", startedAt: now },
       summary: safeSummary(`正在运行 ${name}`),
       observedAt: now,
     };
@@ -44,13 +44,19 @@ export function reduceAgentProgress(
         ? "failed"
         : "completed";
     const name = safeSummary(event.result.toolName) || previous.lastTool?.name || "tool";
+    // Parallel tools interleave: only reuse the start time recorded for this
+    // same call, never one belonging to another tool that started later.
+    const sameCall =
+      previous.lastTool?.toolCallId !== undefined &&
+      previous.lastTool.toolCallId === event.result.id;
     return {
       ...previous,
       phase: "tool",
       lastTool: {
         name,
+        toolCallId: event.result.id,
         state,
-        startedAt: previous.lastTool?.startedAt,
+        startedAt: sameCall ? previous.lastTool?.startedAt : undefined,
         finishedAt: now,
       },
       summary: safeSummary(`${name} ${state}`),

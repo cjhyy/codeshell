@@ -4,7 +4,7 @@
 
 import type { ClientDefaults, LLMConfig, LLMResponse, TokenUsage } from "../types.js";
 import type { CreateMessageOptions, LLMUsageTracker } from "./types.js";
-import { LLMError, ContextLimitError, LLMRateLimitError } from "../exceptions.js";
+import { LLMError, ContextLimitError, LLMQuotaError, LLMRateLimitError } from "../exceptions.js";
 import { logger } from "../logging/logger.js";
 import { requestBoundaryFetch } from "../model-request-boundary/context.js";
 import { currentUsageAttempt, markCurrentUsageAttemptNotSent } from "../cost-ledger/context.js";
@@ -265,7 +265,7 @@ export abstract class LLMClientBase {
       } catch (err) {
         lastError = err as Error;
 
-        if (err instanceof ContextLimitError) throw err;
+        if (err instanceof ContextLimitError || err instanceof LLMQuotaError) throw err;
         if (opts?.shouldRetry?.(err) === false) throw err;
 
         // Distinguish a deadline tear-down from a user cancel. When the caller

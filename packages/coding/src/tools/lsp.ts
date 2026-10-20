@@ -5,7 +5,7 @@
 import type { ToolContext, ToolDefinition } from "@cjhyy/code-shell-core/extension";
 import { getLSPManager } from "../lsp/manager.js";
 import { detectLSPServer } from "../lsp/servers.js";
-import { pathToFileURL } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import { isAbsolute, resolve } from "node:path";
 
 /**
@@ -23,6 +23,13 @@ const DIAGNOSTIC_SEVERITY: Record<number, string> = {
   3: "info",
   4: "hint",
 };
+
+/**
+ * Documents this tool has opened on each client, with their last synced
+ * version. LSP allows one didOpen per document; later reads must sync the
+ * current disk text with didChange instead of reopening it.
+ */
+const openDocuments = new WeakMap<object, Map<string, number>>();
 
 interface LspDiagnostic {
   message: string;
@@ -153,9 +160,21 @@ export async function lspTool(args: Record<string, unknown>, ctx?: ToolContext):
           };
           const timer = setTimeout(() => finish(undefined), DIAGNOSTICS_TIMEOUT_MS);
           client.on?.("notification", onNotification);
-          void client.notify("textDocument/didOpen", {
-            textDocument: { uri, languageId: serverConfig.language, version: 1, text },
-          });
+          let versions = openDocuments.get(client);
+          if (!versions) openDocuments.set(client, (versions = new Map()));
+          const openVersion = versions.get(uri);
+          if (openVersion === undefined) {
+            versions.set(uri, 1);
+            void client.notify("textDocument/didOpen", {
+              textDocument: { uri, languageId: serverConfig.language, version: 1, text },
+            });
+          } else {
+            versions.set(uri, openVersion + 1);
+            void client.notify("textDocument/didChange", {
+              textDocument: { uri, version: openVersion + 1 },
+              contentChanges: [{ text }],
+            });
+          }
         });
 
         if (diagnostics === undefined) {
@@ -205,12 +224,22 @@ function formatLocationResult(result: unknown, label: string): string {
   const lines = locations.map((loc: any) => {
     const uri = loc.uri ?? loc.targetUri ?? "";
     const range = loc.range ?? loc.targetRange ?? {};
-    const path = uri.replace("file://", "");
+    const path = locationPath(uri);
     const line = (range.start?.line ?? 0) + 1;
     return `  ${path}:${line}`;
   });
 
   return `${label} (${locations.length}):\n${lines.join("\n")}`;
+}
+
+/** Decode a `file:` URI to a filesystem path; keep other URIs as reported. */
+function locationPath(uri: string): string {
+  if (!uri.startsWith("file:")) return uri;
+  try {
+    return fileURLToPath(uri);
+  } catch {
+    return uri;
+  }
 }
 
 const SYMBOL_KINDS: Record<number, string> = {

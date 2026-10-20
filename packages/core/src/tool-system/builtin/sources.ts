@@ -683,8 +683,28 @@ export async function readSourceTool(
     const provenance = `source=${source} scope=${scope} resource=${resource}${
       truncated ? " (truncated)" : ""
     }`;
-    return wrapUntrustedInput(scrubSecrets(capped.text), provenance);
+    const structured = typeof query === "string" || typeof chunk === "string";
+    return wrapUntrustedInput(redactReadText(capped.text, structured), provenance);
   } catch (error) {
     return `Error: read failed: ${error instanceof Error ? error.message : String(error)}`;
   }
+}
+
+/**
+ * Query and chunk reads return serialized JSON. Free-text redaction would
+ * treat a JSON closing quote as part of a secret value and corrupt the
+ * document, so redact the parsed values and serialize again.
+ */
+function redactReadText(text: string, structured: boolean): string {
+  if (structured) {
+    try {
+      const parsed: unknown = JSON.parse(text);
+      if (parsed !== null && typeof parsed === "object") {
+        return JSON.stringify(scrubSecretValue(parsed));
+      }
+    } catch {
+      // Not (complete) JSON, e.g. truncated or adapter-defined text.
+    }
+  }
+  return scrubSecrets(text);
 }

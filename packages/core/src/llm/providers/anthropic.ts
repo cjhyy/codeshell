@@ -344,10 +344,15 @@ export class AnthropicClient extends LLMClientBase {
         emit({ type: "text", text, tokens: countTokens(text) });
       });
 
-      stream.on("contentBlock", (block) => {
+      // Track the open block from content_block_start: the SDK emits
+      // `inputJson` while the block streams and `contentBlock` only at its
+      // stop, so keying deltas off `contentBlock` lags one tool behind.
+      stream.on("streamEvent", (event) => {
+        if (event.type !== "content_block_start") return;
+        const block = event.content_block;
+        currentToolId = block.type === "tool_use" ? block.id : "";
+        currentToolName = block.type === "tool_use" ? block.name : "";
         if (block.type === "tool_use") {
-          currentToolName = block.name;
-          currentToolId = block.id;
           emit({
             type: "tool_use_start",
             toolCall: { id: block.id, toolName: block.name, args: {} },

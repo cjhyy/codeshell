@@ -121,6 +121,35 @@ describe("CronCreate tool — conversational config", () => {
     expect(out).toContain("一次"); // 一次性任务文案
   });
 
+  test("shows the next run as wall-clock time in the job's own timezone", async () => {
+    // Pick a job timezone whose wall clock differs from the host formatter's.
+    const probe = Date.UTC(2026, 9, 17, 12);
+    const timezone = ["Pacific/Kiritimati", "Etc/GMT+12"].find(
+      (tz) =>
+        new Date(probe).toLocaleString() !==
+        new Date(probe).toLocaleString(undefined, { timeZone: tz }),
+    )!;
+    const once = await cronCreateTool({
+      name: "tz once",
+      schedule: "0 9 * * *",
+      prompt: "p",
+      once: true,
+      timezone,
+    });
+    const recurring = await cronCreateTool({
+      name: "tz recurring",
+      schedule: "0 9 * * *",
+      prompt: "p",
+      timezone,
+    });
+    const jobText = (name: string) => {
+      const job = cronScheduler.list().find((j) => j.name === name)!;
+      return new Date(job.nextRun!).toLocaleString(undefined, { timeZone: timezone });
+    };
+    expect(once).toContain(`将于 ${jobText("tz once")} (${timezone}) 执行一次`);
+    expect(recurring).toContain(`Next run: ${jobText("tz recurring")} (${timezone}).`);
+  });
+
   test("不传 once 时 job.once 不为 true(循环语义)", async () => {
     await cronCreateTool({ name: "loop", schedule: "10m", prompt: "p" });
     const job = cronScheduler.list().find((j) => j.name === "loop");

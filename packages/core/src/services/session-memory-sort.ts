@@ -9,5 +9,7 @@ import type { SessionMemoryEntry } from "./session-memory.js";
 export function sortSessionMemoriesByRecency(
   entries: SessionMemoryEntry[],
 ): SessionMemoryEntry[] {
-  return [...entries].sort((a, b) => (a.createdAt < b.createdAt ? 1 : a.createdAt > b.createdAt ? -1 : 0));
+  // Compare instants, not strings: valid timestamps may carry different UTC
+  // offsets, which string order does not respect.
+  return [...entries].sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt));
 }

@@ -41,6 +41,12 @@ const RULES: Rule[] = [
     suggestion:
       "Check the provider's apiKey/authCommand in settings (run /login to reconfigure), then retry.",
   },
+  // Before the 429 rule: providers also report exhausted quota/billing as 429.
+  {
+    test: /\b(insufficient_quota|quota|billing|payment|credit)\b/i,
+    message: () => "The provider rejected the request for billing/quota reasons.",
+    suggestion: "Check the provider account's quota/billing, then retry.",
+  },
   {
     test: /\b(429|rate.?limit|too many requests)\b/i,
     message: () => "Rate limited by the provider.",
@@ -63,11 +69,6 @@ const RULES: Rule[] = [
     message: () => "The conversation exceeded the model's context window.",
     suggestion:
       "Start a new session, /compact the history, or switch to a model with a larger context window.",
-  },
-  {
-    test: /\b(insufficient_quota|quota|billing|payment|credit)\b/i,
-    message: () => "The provider rejected the request for billing/quota reasons.",
-    suggestion: "Check the provider account's quota/billing, then retry.",
   },
   {
     test: /\b(500|502|503|504|overloaded|server error|service unavailable)\b/i,
