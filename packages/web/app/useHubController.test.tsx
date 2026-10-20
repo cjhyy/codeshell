@@ -657,3 +657,35 @@ test("all files in one pending upload retain its initial project scope", async (
   for (const path of requests) expect(path).toStartWith(`/p/${projectA}/api/v1/uploads/`);
   expect(hook.result.current.files).toHaveLength(2);
 });
+
+test("removing a draft attachment discards its upload in the original project", async () => {
+  environment();
+  setApiProject(projectA);
+  const requests: Array<{ path: string; method: string }> = [];
+  globalThis.fetch = (async (path, init) => {
+    requests.push({ path: String(path), method: init?.method ?? "GET" });
+    if (init?.method === "DELETE") return new Response(null, { status: 204 });
+    return Response.json({
+      id: "draft-file",
+      name: "fixture.txt",
+      mimeType: "text/plain",
+      size: 3,
+      path: "/workspace/fixture.txt",
+    });
+  }) as typeof fetch;
+  const hook = await renderHook(() => useHubController({ hub: true }));
+  cleanups.push(() => hook.unmount());
+  await act(async () => {
+    await hook.result.current.addFiles([new File(["a"], "one.txt")] as unknown as FileList);
+  });
+  expect(hook.result.current.files.map((file) => file.id)).toEqual(["draft-file"]);
+  setApiProject(projectB);
+  await act(async () => {
+    hook.result.current.removeFile("draft-file");
+    await flushMicrotasks();
+  });
+  expect(hook.result.current.files).toEqual([]);
+  expect(requests.filter((request) => request.method === "DELETE")).toEqual([
+    { path: `/p/${projectA}/api/v1/uploads/draft-file`, method: "DELETE" },
+  ]);
+});

@@ -818,6 +818,12 @@ export async function startHeadlessServer(opts: HeadlessServeOptions): Promise<H
           );
           return;
         }
+        if (upload && req.method === "DELETE") {
+          // Removing a draft attachment releases its quota; idempotent for retries.
+          await uploads!.discard(upload[1]!, session.id);
+          res.writeHead(204, { "cache-control": "no-store" }).end();
+          return;
+        }
         hubJson(res, 404, { error: "API endpoint not found" });
         return;
       }

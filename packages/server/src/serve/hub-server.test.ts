@@ -469,6 +469,71 @@ test("uploads are device-owned, staged inside the session and cannot supply arbi
   expect((await own.wait((m) => m.id === "replay")).error).toBeDefined();
 });
 
+test("removing a draft upload releases it only for its owner", async () => {
+  const { server } = await fixture();
+  const first = await login(server, true);
+  const second = await login(server);
+  const request = (cookie: string, method: string, body?: string) =>
+    fetch(server.url + "/api/v1/uploads/draft-123456", {
+      method,
+      headers: {
+        cookie,
+        origin: server.url,
+        "x-file-name": "notes.txt",
+        "content-type": "text/plain",
+      },
+      ...(body === undefined ? {} : { body }),
+    });
+  expect((await request(first.cookie, "PUT", "draft")).status).toBe(201);
+  expect((await request(second.cookie, "DELETE")).status).toBe(204);
+  const own = await connect(server, first.cookie);
+  own.send("still-owned", "agent/run", {
+    sessionId: "files",
+    task: "read",
+    uploadIds: ["draft-123456"],
+  });
+  expect((await own.wait((m) => m.id === "still-owned")).result.echo.attachments).toHaveLength(1);
+  expect((await request(first.cookie, "PUT", "replacement")).status).toBe(201);
+  expect((await request(first.cookie, "DELETE")).status).toBe(204);
+  own.send("discarded", "agent/run", {
+    sessionId: "files",
+    task: "read",
+    uploadIds: ["draft-123456"],
+  });
+  expect((await own.wait((m) => m.id === "discarded")).error.message).toMatch(/not found/);
+});
+
+test("a duplicate launch that cannot bind keeps the running Hub's uploads", async () => {
+  const { server, dir } = await fixture();
+  const { cookie } = await login(server, true);
+  const put = await fetch(server.url + "/api/v1/uploads/live-123456", {
+    method: "PUT",
+    headers: { cookie, origin: server.url, "x-file-name": "a.txt", "content-type": "text/plain" },
+    body: "live",
+  });
+  expect(put.status).toBe(201);
+  const occupied = await startHeadlessServer({
+    cwd: join(dir, "workspace"),
+    dataDir: join(dir, "data"),
+    workerEntryPath: join(dir, "worker.cjs"),
+    authMode: "hub",
+    port: server.port,
+  }).then(
+    (duplicate) => duplicate,
+    (error: unknown) => error,
+  );
+  expect(occupied).toBeInstanceOf(Error);
+  const client = await connect(server, cookie);
+  client.send("live", "agent/run", {
+    sessionId: "files",
+    task: "read",
+    uploadIds: ["live-123456"],
+  });
+  const attachments = (await client.wait((m) => m.id === "live")).result.echo.attachments;
+  expect(attachments).toHaveLength(1);
+  expect(readFileSync(attachments[0].absPath, "utf8")).toBe("live");
+});
+
 test("upload path traversal and workspace attachment symlinks cannot overwrite outside files", async () => {
   const { server, cwd, dir } = await fixture();
   const { cookie } = await login(server, true);

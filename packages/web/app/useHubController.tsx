@@ -23,13 +23,20 @@ import {
   sessionTitle,
 } from "./chat.js";
 import { compareOutputCursors } from "../src/lib/outputJournalRecovery.js";
-import { ApiError, browserId, uploadFile, type AuthSession, type UploadedFile } from "./auth.js";
+import {
+  ApiError,
+  browserId,
+  discardUpload,
+  uploadFile,
+  type AuthSession,
+  type UploadedFile,
+} from "./auth.js";
 import { reduceApprovals, type ApprovalState } from "./approvals.js";
 import { readConfiguration, type HubConfiguration } from "./configuration.js";
 import { SessionDrafts, type SubmittedDraft } from "./drafts.js";
 import { readManagedSessions } from "./HubSessions.js";
 import { HubApprovalCard } from "./HubApprovalCard.js";
-import { captureApiScope } from "./api-context.js";
+import { captureApiScope, type ApiScope } from "./api-context.js";
 import type { WorkbenchController } from "./workbench-types.js";
 function newSessionId(): string {
   return browserId();
@@ -118,6 +125,8 @@ export function useHubController({
   const approvalRevision = React.useRef(0);
   const mounted = React.useRef(false);
   const uploadController = React.useRef<AbortController | null>(null);
+  /** The project/workspace each draft upload was spooled in, to release it there. */
+  const uploadScopes = React.useRef(new Map<string, ApiScope>());
   const loadingTranscript = React.useRef<{
     sessionId: string;
     events: StreamEventPayload[];
@@ -757,6 +766,7 @@ export function useHubController({
         if (!mounted.current || controller.signal.aborted) break;
         const uploaded = await uploadFile(file, { signal: controller.signal, scope });
         if (mounted.current && !controller.signal.aborted) {
+          uploadScopes.current.set(uploaded.id, scope);
           draftStore.current.addFile(sessionId, uploaded);
           syncDraft(sessionId);
         }
@@ -857,6 +867,11 @@ export function useHubController({
     removeFile: (id) => {
       draftStore.current.removeFile(activeIdRef.current, id);
       syncDraft(activeIdRef.current);
+      // Each spooled upload holds server quota until sent or expired; release it
+      // now so an emptied composer can attach again. Best effort: expiry remains.
+      const scope = uploadScopes.current.get(id);
+      uploadScopes.current.delete(id);
+      void discardUpload(id, scope).catch(() => {});
     },
     selectSession: loadSelectedSession,
     newSession: createNewSession,

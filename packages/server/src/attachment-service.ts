@@ -172,6 +172,11 @@ const IMAGE_MIME_EXT: Record<string, string> = {
 
 const ALLOWED_IMAGE_MIMES = new Set(Object.keys(IMAGE_MIME_EXT));
 
+/** Whether image staging accepts this MIME type (after normalization). */
+export function isStageableImageMime(mime: string): boolean {
+  return ALLOWED_IMAGE_MIMES.has(normalizeMime(mime));
+}
+
 export async function stageImageDataUrl(
   input: StageImageDataUrlInput,
 ): Promise<InputAttachmentMeta> {
