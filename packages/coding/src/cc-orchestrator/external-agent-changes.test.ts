@@ -1,11 +1,12 @@
 import { describe, test, expect, beforeEach, afterEach } from "bun:test";
-import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from "node:fs";
+import { mkdtempSync, mkdirSync, writeFileSync, rmSync, utimesSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import {
   extractChangedFilesFromClaudeLines,
   extractChangedFilesFromCodexLines,
   readClaudeChangedFiles,
+  readCodexChangedFiles,
 } from "./external-agent-changes.js";
 
 /**
@@ -125,5 +126,46 @@ describe("readClaudeChangedFiles (locates the transcript by cwd + sid)", () => {
 
   test("missing transcript → empty list (no throw)", () => {
     expect(readClaudeChangedFiles("/no/where", "nope", home)).toEqual([]);
+  });
+});
+
+describe("readCodexChangedFiles (locates the rollout by cwd + thread)", () => {
+  let home: string;
+  beforeEach(() => {
+    home = mkdtempSync(join(tmpdir(), "cs-extchg-codex-"));
+  });
+  afterEach(() => rmSync(home, { recursive: true, force: true }));
+
+  test("reads the newest rollout of a resumed thread", () => {
+    const cwd = "/repo";
+    const dir = join(home, "sessions", "2026", "10", "17");
+    mkdirSync(dir, { recursive: true });
+    const write = (name: string, path: string): string => {
+      const file = join(dir, name);
+      writeFileSync(
+        file,
+        [
+          JSON.stringify({ type: "session_meta", payload: { id: "thread-1", cwd } }),
+          JSON.stringify({
+            type: "response_item",
+            payload: { type: "function_call", name: "write_file", arguments: `{"path":"${path}"}` },
+          }),
+        ].join("\n"),
+      );
+      return file;
+    };
+    const fileA = write("rollout-a.jsonl", "/repo/a.ts");
+    const fileB = write("rollout-b.jsonl", "/repo/b.ts");
+    const older = new Date("2026-10-16T00:00:00Z");
+    const newer = new Date("2026-10-17T00:00:00Z");
+    // Exercise both mtime orders so the result cannot depend on readdir order.
+    for (const [oldFile, newFile, expected] of [
+      [fileA, fileB, "/repo/b.ts"],
+      [fileB, fileA, "/repo/a.ts"],
+    ] as const) {
+      utimesSync(oldFile, older, older);
+      utimesSync(newFile, newer, newer);
+      expect(readCodexChangedFiles(cwd, "thread-1", home)).toEqual([expected]);
+    }
   });
 });
