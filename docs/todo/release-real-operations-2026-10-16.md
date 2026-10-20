@@ -96,6 +96,54 @@ Design `0.22.0`、Job Hunt `5.0.0` 的正式发行 tag/资产仍待建立。Desi
 本轮不创建 release tag，不发布 npm 包或安装器。后续平台 v1.0、统一工作台、
 新 provider 和实验功能按既有路线图推进，不为整理分支强行纳入本次发行。
 
+## 2026-10-20 — integrated Panels and remaining Host gates
+
+Panel [PR #83](https://github.com/cjhyy/codeshell-panel-apps/pull/83) 已合入远端
+`main`，本地主线也已快进到 `c7eeee3`。准确候选 `b56dac8` 的两轮完整
+[Validate Panel Apps](https://github.com/cjhyy/codeshell-panel-apps/actions/runs/39267347494)
+以及 real-speech 全部成功。期间修复了大文档验收遗漏的 Canvas/Wasm/GPU 迁移，
+并固定文字像素验收的字体与实际合法 inset；原零外溢与位移反例断言保留。
+这关闭了本次发现的两项 Panel CI 失败，仍不等于 Panel 正式发行、版本 tag/资产
+核对或全部真实服务商/实体设备验收。
+
+Host 集成保留在 [PR #191](https://github.com/cjhyy/codeshell/pull/191)，**尚未合入主线**。
+其首轮完整普通 [CI 39265218539](https://github.com/cjhyy/codeshell/actions/runs/39265218539)
+绑定 `1e7379483`，终态为 **6 success / 6 failure**；没有把失败覆盖为通过。
+
+随后已完成的窄修复：Core exact-origin guard 精确恢复与内部导出清单、重启后真实
+ToolSearch 回执读取、外部 CLI 缓存/计费域断言，以及等待原生 `scrollend` 后再验
+真实滚轮。计费仍含辅助请求，缓存分母只含前台/子 Agent；没有为旧测试把辅助
+token 混回缓存分母。独立验证分别保留：同进程隔离回归 38/0、外部运行时回归
+65/0 和完整 18 场景 smoke；History 八场景在 Chromium 148 与 Chrome 155 各
+8/8。旧失败及因果对照日志保留。
+
+Host 本地产品组合的检查已通过：10 个 tarball / 48 个 typed entries、完整
+workspace typecheck、Desktop main/preload/renderer/mobile/extension 构建，以及
+2,405 项组合测试（0 failure、3 skipped）。后续改动仅为验收代码和文档，不能
+据这些局部通过把完整普通 CI 或原生 UI 验收写成全绿。
+
+仍待单独关闭的普通 CI 范围：
+
+- Desktop 大分片中 Node 原生 transport/signal 探针未成立，且后续真实进程清理
+  仍收到前一纯测试的 `Pure initial identity test denied process.kill`；同时有组件
+  mock/接口形状失败。应修复执行环境和隔离，保留全部探针，不能跳过后算通过。
+- active-close 验收仍有旧聚合缓存断言，需按 `c938007c2` 的主/辅助分域迁移，
+  保持总账单、CAS、ownership 与去重断言，并重新验证完整消费者。
+- 架构预算在该准确输入下分别为 Main 7330/7314、preload types 2984/2983、
+  App 3179/2932、Engine 5082/5050、IPC 362/361、internal exports 121/120。
+  除本次 App 增加 5 行外，超限均已存在于 `bfc23abf`。需要提取/兼容面审阅，
+  不能整体抬高预算来使检查变绿。
+- Operation-resolution E2E 仍要求已本地化的 ToolSearch 辅助摘要。候选已改为
+  精确验证三次 main + 一次真实 LinkAction 摘要，并保留持久化/冷恢复门槛。
+  本机复验在更早的 guarded Main 启动 30 秒超时，目标断言未到达，私有 HOME
+  与首错证据保留；此适配目前只有语法/格式检查，实际运行仍须 CI 验证。
+
+其他聊天仍在持续提交 Bug 修复。上述候选固定本次范围，不自动宣称随后发生的
+主线提交已纳入或通过同一轮验证。其活跃分支、Host 共享服务 PR #190、未提交
+工作和未充分证明覆盖的历史引用继续保留。全平台正式发行还需解决前述 Windows
+启动/卸载/原生异常、旧历史恢复及最终安装升级验收；本次未打 tag、未发布 npm
+包或安装器。
+
 ## Reproduced and repaired
 
 | Area                                       | Real trigger and failure                                                                                                                                                                                                                                           | Repair and regression                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
