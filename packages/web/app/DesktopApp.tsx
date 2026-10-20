@@ -289,6 +289,10 @@ export function useDesktopController(
   const actions: RemoteApp = {
     ...app,
     selectProject: (id) => {
+      if (app.status !== "online") {
+        setError("连接已断开，重新连接后才能切换项目。");
+        return;
+      }
       navigationRevision.current += 1;
       const project = app.projects.find((item) => item.id === id || item.path === id);
       setWorkspaceOverride(project?.path ?? id);
@@ -312,6 +316,10 @@ export function useDesktopController(
       setError("");
     },
     newSession: (target, name) => {
+      if (app.status !== "online") {
+        setError("连接已断开，重新连接后才能新建任务。");
+        return;
+      }
       navigationRevision.current += 1;
       const selected = target === undefined ? targetForCwd(app, workspaceCwd) : target;
       setWorkspaceOverride(selectedTargetCwd(app, selected));
@@ -479,6 +487,10 @@ export function useDesktopController(
   );
   const selectSession = (id: string) => {
     if (id.startsWith("desktop-new-")) {
+      if (app.status !== "online") {
+        setError("连接已断开，重新连接后才能继续这个新任务。");
+        return;
+      }
       navigationRevision.current += 1;
       pendingCreate.current = {
         draftId: id,

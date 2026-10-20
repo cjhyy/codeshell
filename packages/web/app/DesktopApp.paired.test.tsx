@@ -242,3 +242,30 @@ test("background output before a new session is confirmed cannot take its draft"
     await hook.unmount();
   }
 });
+
+test("creating a session while offline changes nothing instead of losing the request", async () => {
+  const { hook, ws, online } = await pairedController();
+  try {
+    await act(async () => {
+      ws.close();
+      await flushMicrotasks();
+    });
+    expect(hook.result.current.app.status).toBe("offline");
+    await act(async () => {
+      hook.result.current.controller.newSession();
+      await flushMicrotasks();
+    });
+    expect(hook.result.current.app.activeSessionId).toBe("native");
+    expect(hook.result.current.controller.activeId).toBe("native");
+    expect(hook.result.current.controller.error).toContain("重新连接");
+    await act(async () => {
+      window.dispatchEvent(new Event("online"));
+      await flushMicrotasks();
+    });
+    const reconnected = await online();
+    expect(ws.sent.some((frame) => frame.type === "session.create")).toBe(false);
+    expect(reconnected.sent.some((frame) => frame.type === "session.create")).toBe(false);
+  } finally {
+    await hook.unmount();
+  }
+});

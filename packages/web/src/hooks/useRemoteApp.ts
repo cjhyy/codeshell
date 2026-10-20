@@ -1613,11 +1613,35 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
 
   const newSession = useCallback(
     (target?: MobileSessionCreateTarget, name?: string) => {
-      outputClient.cancel();
-      conversationRevisionRef.current += 1;
       const clientRequestId =
         globalThis.crypto?.randomUUID?.() ??
         `mobile-create-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+      const stableTarget =
+        target === undefined && activeProjectIdRef.current
+          ? { projectId: activeProjectIdRef.current }
+          : target;
+      // Creation needs the host's acceptance. Send it before switching the
+      // view: offline, a dropped frame used to leave the view on the new target
+      // while a later first send fell back to the previous (possibly another
+      // project's) session.
+      const created = socket.send(
+        stableTarget && typeof stableTarget === "object"
+          ? { type: "session.create", clientRequestId, ...stableTarget, ...(name ? { name } : {}) }
+          : stableTarget === undefined
+            ? { type: "session.create", clientRequestId, ...(name ? { name } : {}) }
+            : {
+                type: "session.create",
+                clientRequestId,
+                cwd: stableTarget,
+                ...(name ? { name } : {}),
+              },
+      );
+      if (!created) {
+        setNotice(t("mobile.notice.createOffline"));
+        return;
+      }
+      outputClient.cancel();
+      conversationRevisionRef.current += 1;
       pendingCreateRef.current = {
         clientRequestId,
         conversationRevision: conversationRevisionRef.current,
@@ -1629,10 +1653,6 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
           roomId: activeRoomIdRef.current,
         });
       }
-      const stableTarget =
-        target === undefined && activeProjectIdRef.current
-          ? { projectId: activeProjectIdRef.current }
-          : target;
       const selectedProject =
         stableTarget && typeof stableTarget === "object" && stableTarget.projectId
           ? projectsRef.current.find((project) => project.id === stableTarget.projectId)
@@ -1677,27 +1697,8 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
       setApprovals([]);
       setLoadingKey("sessionHistory", false);
       dispatchChat({ kind: "reset" });
-      if (stableTarget && typeof stableTarget === "object") {
-        socket.send({
-          type: "session.create",
-          clientRequestId,
-          ...stableTarget,
-          ...(name ? { name } : {}),
-        });
-      } else {
-        socket.send(
-          stableTarget === undefined
-            ? { type: "session.create", clientRequestId, ...(name ? { name } : {}) }
-            : {
-                type: "session.create",
-                clientRequestId,
-                cwd: stableTarget,
-                ...(name ? { name } : {}),
-              },
-        );
-      }
     },
-    [socket, setLoadingKey],
+    [socket, setLoadingKey, setNotice],
   );
 
   const respondApproval = useCallback(
