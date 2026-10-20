@@ -316,7 +316,18 @@ export function useSessionNavigation({
     const summary = sessionIndices[projectBucketSegment(projectId)]?.sessions.find(
       (session) => session.id === sessionId,
     );
-    await releaseWorkspaceForArchive(summary, archived, window.codeshell);
+    try {
+      await releaseWorkspaceForArchive(summary, archived, window.codeshell);
+    } catch (error) {
+      // Core still holds the old marker; leave the catalog matching it.
+      window.codeshell.log("session.archive.failed", { sessionId, archived, error: String(error) });
+      toast({
+        message: t("sidebar.archiveSessionFailed"),
+        detail: String(error),
+        variant: "error",
+      });
+      return;
+    }
     const next = archiveSession(projectId, sessionId, archived);
     setSessionIndices((prev) => ({
       ...prev,
@@ -521,6 +532,9 @@ export function useSessionNavigation({
     handleRenameSession: renameSession,
     handlePinSession: pinSession,
     handleArchiveSession: setSessionArchived,
+    /** Settings "Restore" goes through Core's durable archive marker too. */
+    handleRestoreArchivedSession: (projectId: string | null, sessionId: string) =>
+      setSessionArchived(projectId, sessionId, false),
     handleDeleteSession: deleteSession,
     handleOpenAutomationRunSession: openAutomationRunSession,
     handleOpenAutomationDiskSession: openAutomationDiskSession,

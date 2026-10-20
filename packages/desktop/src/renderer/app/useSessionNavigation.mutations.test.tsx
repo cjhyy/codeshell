@@ -230,4 +230,36 @@ describe("sidebar project and session mutations", () => {
     ).toEqual(["ui-2"]);
     expect(errorToasts()).toEqual([]);
   });
+  test("restoring an archived Session clears Core's archive marker before the catalog", async () => {
+    saveSessionIndex(project.id, {
+      ...index,
+      sessions: index.sessions.map((session) => ({ ...session, archived: true })),
+    });
+    await mount();
+    await act(async () => {
+      await result.current.handleRestoreArchivedSession(project.id, "ui-1");
+    });
+
+    expect(calls).toEqual(["archive:engine-1:false"]);
+    expect(loadSessionIndex(project.id).sessions.find((s) => s.id === "ui-1")?.archived).toBe(
+      false,
+    );
+  });
+
+  test("a refused restore keeps the Session archived and reports the failure", async () => {
+    saveSessionIndex(project.id, {
+      ...index,
+      sessions: index.sessions.map((session) => ({ ...session, archived: true })),
+    });
+    bridge.setSessionArchived = async () => {
+      throw new Error("EACCES: permission denied");
+    };
+    await mount();
+    await act(async () => {
+      await result.current.handleRestoreArchivedSession(project.id, "ui-1");
+    });
+
+    expect(loadSessionIndex(project.id).sessions.find((s) => s.id === "ui-1")?.archived).toBe(true);
+    expect(errorToasts()).toHaveLength(1);
+  });
 });
