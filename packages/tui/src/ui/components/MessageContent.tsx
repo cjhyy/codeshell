@@ -155,13 +155,36 @@ const TABLE_COLUMN_PADDING = 2;
 const TABLE_MAX_COLUMN_WIDTH = 40;
 const TABLE_MIN_COLUMN_WIDTH = 6;
 
+// CommonMark fence: up to 3 spaces of indent, then 3+ backticks or tildes. A
+// closing fence uses the same character, is at least as long, and has no info string.
+const FENCE_RE = /^ {0,3}(`{3,}|~{3,})(.*)$/;
+
 function extractTable(text: string): { before: string; table: TableData; after: string } | null {
   const lines = text.split("\n");
   let tableStart = -1;
   let tableEnd = -1;
   let sepLine = -1;
+  // Open code fence marker; table syntax inside a fence is literal code.
+  let fence: string | null = null;
 
   for (let i = 0; i < lines.length; i++) {
+    const fenceMatch = FENCE_RE.exec(lines[i]);
+    if (fence !== null) {
+      const closer = fenceMatch?.[1];
+      if (
+        closer &&
+        closer[0] === fence[0] &&
+        closer.length >= fence.length &&
+        !fenceMatch![2]!.trim()
+      ) {
+        fence = null;
+      }
+      continue;
+    }
+    if (fenceMatch && tableStart === -1) {
+      fence = fenceMatch[1]!;
+      continue;
+    }
     const line = lines[i].trim();
     if (line.startsWith("|") && line.endsWith("|")) {
       if (tableStart === -1) tableStart = i;
