@@ -469,6 +469,33 @@ describe("Desktop workbench controller", () => {
     await hook.unmount();
   });
 
+  test("leaving this device is immediate even while the HTTP logout is still pending", async () => {
+    const logoutResponse = deferred<Response>();
+    const requests: string[] = [];
+    globalThis.fetch = (async (path: string | URL | Request) => {
+      requests.push(String(path));
+      return logoutResponse.promise;
+    }) as typeof fetch;
+    let loggedOut = 0;
+    const app = remoteApp({ logout: () => loggedOut++ });
+    const hook = await renderHook(() => useDesktopController(app, undefined, noop));
+    try {
+      await act(async () => {
+        hook.result.current.logout?.();
+        await flushMicrotasks();
+      });
+      expect(requests).toEqual(["/api/v1/auth/logout"]);
+      expect(loggedOut).toBe(1);
+      await act(async () => {
+        logoutResponse.resolve(Response.json({ ok: true }));
+        await flushMicrotasks();
+      });
+      expect(loggedOut).toBe(1);
+    } finally {
+      await hook.unmount();
+    }
+  });
+
   test("offline approvals cannot be submitted and CLI roots remain available", () => {
     const app = remoteApp({ status: "offline" });
     const markup = renderToStaticMarkup(

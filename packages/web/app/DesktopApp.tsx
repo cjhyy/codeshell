@@ -555,9 +555,11 @@ export function useDesktopController(
     accountName: app.deviceName,
     showTurnCounts: false,
     logout: () => {
-      void post("/api/v1/auth/logout")
-        .catch(() => undefined)
-        .finally(app.logout);
+      // The request already carries this browser's cookie, so the host revokes
+      // the HTTP session whenever it arrives; a stalled network must not keep
+      // the device signed in and connected locally.
+      void post("/api/v1/auth/logout").catch(() => undefined);
+      app.logout();
     },
     onHostNotification: (method, params) => {
       if (method === "serve/sessionsChanged") {
