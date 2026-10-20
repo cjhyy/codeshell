@@ -336,7 +336,11 @@ if (process.argv[2] === "--cold") {
     assert.equal(replacements, 1);
     assert.equal(replaced.isError, true);
     assert.equal(replaced.result, undefined);
-    assert.match(replaced.error, /Collection file changed/);
+    // The failure names the changed file and keeps the update guidance (R49).
+    assert.match(
+      replaced.error,
+      /Collection file "[^"]+" in scope "[^"]+" changed since selection; update the collection/,
+    );
     console.log(
       JSON.stringify({
         role: "host",
