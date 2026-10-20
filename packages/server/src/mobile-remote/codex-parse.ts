@@ -17,7 +17,8 @@ import type { ResidentAgentEvent } from "./resident-agent.js";
  *       item.type "mcp_tool_call"     → tool(server__tool) on start, tool_result on complete
  *                                        (result.content text blocks, or error.message on failure)
  *       item.type "web_search"        → tool(WebSearch) on start
- *       item.type "file_change"       → tool(Edit) on start
+ *       item.type "file_change"       → tool(Edit) + tool_result on complete (only the
+ *                                        completion carries `changes[]` {path, kind})
  *   {type:"turn.completed", usage}                           → turn_end
  *   {type:"turn.failed", error}                              → error
  *   {type:"error", message}                                  → error
@@ -98,16 +99,23 @@ export function parseCodexJsonLine(line: string): ResidentAgentEvent[] {
         ? [{ type: "tool", id, tool: "WebSearch", summary: String(item.query ?? ""), input: { query: String(item.query ?? "") } }]
         : [];
 
-    case "file_change":
-      return phase === "started"
-        ? [{
-            type: "tool",
-            id,
-            tool: "Edit",
-            summary: String(item.path ?? ""),
-            input: item.kind !== undefined ? { path: String(item.path ?? ""), kind: item.kind } : { path: String(item.path ?? "") },
-          }]
+    case "file_change": {
+      if (phase !== "completed") return [];
+      const changes: { path: string; kind: unknown }[] = Array.isArray(item.changes)
+        ? item.changes
+            .filter((c: any) => c && typeof c === "object" && typeof c.path === "string")
+            .map((c: any) => ({ path: c.path, kind: c.kind }))
         : [];
+      return [
+        { type: "tool", id, tool: "Edit", summary: changes.map((c) => c.path).join(", "), input: { changes } },
+        {
+          type: "tool_result",
+          id,
+          summary: changes.map((c) => `${typeof c.kind === "string" ? c.kind : "update"} ${c.path}`).join("\n").slice(0, 400),
+          isError: item.status === "failed",
+        },
+      ];
+    }
 
     default:
       return [];
