@@ -47,6 +47,7 @@ import { readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 
 import { RELEASE_PACKAGES, packageManifestPath } from "./package-release-audit-config";
+import { releasePushError } from "./release-push-guard";
 import { verifyReleaseVersions } from "./verify-release-versions";
 
 const ROOT = resolve(import.meta.dir, "..");
@@ -128,6 +129,10 @@ if (!VERSION_RE.test(target)) {
 }
 if (target === current) die(`version is already ${target} — nothing to bump`);
 if (dryRun && push) die("--dry-run cannot be combined with --push");
+if (push) {
+  const pushError = releasePushError(ROOT);
+  if (pushError) die(pushError);
+}
 
 console.log(`\x1b[36m→ ${current}  →  ${target}\x1b[0m`);
 
