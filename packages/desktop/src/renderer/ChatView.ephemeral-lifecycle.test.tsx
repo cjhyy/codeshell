@@ -334,6 +334,48 @@ describe("ChatView ephemeral async lifecycle", () => {
     );
   });
 
+  test("attaches a Files Panel image dropped into quick chat", async () => {
+    const png = "data:image/png;base64,iVBORw0KGgo=";
+    const reads: unknown[] = [];
+    const attachmentWrites: ImageAttachment[][] = [];
+    const mounted = await mountChatView({
+      codeshell: {
+        sttAvailable: async () => ({ available: false }),
+        readImageDataUrl: async (path: string, scope: unknown) => {
+          reads.push([path, scope]);
+          return png;
+        },
+      },
+      onAttachmentsChange: (next) => {
+        if (typeof next === "function") attachmentWrites.push(next([]));
+        else attachmentWrites.push(next);
+      },
+    });
+    const chatRoot = findElement(mounted, (props) => props["data-chat-variant"] === "quickChat");
+    await act(async () => {
+      reactProps(chatRoot).onDrop({
+        preventDefault() {},
+        dataTransfer: {
+          files: [],
+          getData: (mime: string) =>
+            mime === "application/x-codeshell-path" ? "/tmp/project/shots/screen.png" : "",
+        },
+      });
+      await flushMicrotasks();
+    });
+
+    expect(reads).toEqual([
+      ["/tmp/project/shots/screen.png", { cwd: "/tmp/project", sessionId: "qchat-lifecycle" }],
+    ]);
+    const attached = attachmentWrites.at(-1) ?? [];
+    expect(attached).toHaveLength(1);
+    expect(attached[0]).toMatchObject({
+      absPath: "/tmp/project/shots/screen.png",
+      origin: "file-panel",
+      dataUrl: png,
+    });
+  });
+
   test("does not persist a quick-chat prompt in main composer history", async () => {
     const setItem = mock(() => undefined);
     Object.defineProperty(globalThis, "localStorage", {
