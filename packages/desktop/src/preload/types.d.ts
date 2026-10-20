@@ -286,6 +286,8 @@ export type FoldItem =
       clientMessageId?: string;
       /** Persisted user-event identity, independent of the loaded history window. */
       sourceEventId?: string;
+      /** Image blocks of raw model-facing text (no displayText) whose envelope clients hide. */
+      images?: number;
       timestamp?: number;
     }
   // User interrupted this turn (Stop). Rebuilt from the core transcript's
