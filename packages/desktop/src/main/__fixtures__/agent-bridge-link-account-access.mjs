@@ -71,6 +71,7 @@ mock.module(join(main, "browser-runtime/index.ts"), () => ({
   builtInBrowserHandoffGrants: {},
   chromeExtensionRuntimeService: {},
   annotateBrowserRuntimeStreamEvent: (event) => event,
+  cancelBrowserActionsForStoppedRun: () => false,
   dispatchInteractiveBrowserRuntimeAction: () => {},
   releaseChildBrowserRuntime: () => {},
   activateChildBrowserRuntime: () => {},

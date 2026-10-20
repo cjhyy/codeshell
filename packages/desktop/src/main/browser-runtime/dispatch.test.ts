@@ -2,6 +2,8 @@ import { describe, expect, spyOn, test } from "bun:test";
 import type { BrowserBridge } from "@cjhyy/code-shell-core";
 import type { BrowserRuntimeLike } from "./runtime.js";
 import {
+  cancelBrowserActionsForStoppedRun,
+  interactiveBrowserRuntimeOwner,
   dispatchInteractiveBrowserRuntimeAction,
   releaseChildBrowserRuntime,
   activateChildBrowserRuntime,
@@ -320,4 +322,45 @@ test("a released child cannot navigate when its pending acquire finishes late", 
   expect(JSON.parse(await pending)).toMatchObject({ ok: false, code: "TARGET_CLOSED" });
   expect(navigations).toBe(0);
   expect(closed).toHaveLength(2);
+});
+
+test("Stop abandons the stopped session's in-flight browser actions, including its children", () => {
+  const cancelled: string[] = [];
+  const runtime = {
+    acquire: async () => {
+      throw new Error("unused");
+    },
+    close: () => undefined,
+    closeAll: () => undefined,
+    cancelPending: (ownerId: string) => cancelled.push(ownerId),
+  } as unknown as BrowserRuntimeLike;
+  const child = { sourceSessionId: "stop-child", bindingId: "stop-run" };
+  activateChildBrowserRuntime("stopped", child);
+  activateChildBrowserRuntime("other", { sourceSessionId: "other-child", bindingId: "other-run" });
+  try {
+    expect(
+      cancelBrowserActionsForStoppedRun(
+        { method: "agent/cancel", params: { sessionId: "stopped" } },
+        runtime,
+      ),
+    ).toBe(true);
+    expect(cancelled).toEqual([
+      interactiveBrowserRuntimeOwner("stopped"),
+      `${interactiveBrowserRuntimeOwner("stopped")}:child:stop-child:stop-run`,
+    ]);
+    expect(
+      cancelBrowserActionsForStoppedRun(
+        { method: "agent/run", params: { sessionId: "stopped" } },
+        runtime,
+      ),
+    ).toBe(false);
+    expect(cancelled).toHaveLength(2);
+  } finally {
+    releaseChildBrowserRuntime("stopped", child, runtime);
+    releaseChildBrowserRuntime(
+      "other",
+      { sourceSessionId: "other-child", bindingId: "other-run" },
+      runtime,
+    );
+  }
 });

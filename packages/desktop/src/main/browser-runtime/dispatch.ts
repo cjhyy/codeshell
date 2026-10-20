@@ -40,6 +40,28 @@ export function releaseChildBrowserRuntime(
 }
 
 /**
+ * Stop (`agent/cancel`) ends a session's run in Core, which stops waiting for
+ * its browser actions. Actions already dispatched here keep running unless
+ * they are abandoned too: a click waiting for its button to become enabled
+ * would otherwise submit real input after Stop. Returns whether `message`
+ * was such a cancellation.
+ */
+export function cancelBrowserActionsForStoppedRun(
+  message: { method?: unknown; params?: unknown },
+  runtime: BrowserRuntimeLike = browserRuntime,
+): boolean {
+  if (message.method !== "agent/cancel") return false;
+  const sessionId = (message.params as { sessionId?: unknown } | undefined)?.sessionId;
+  if (typeof sessionId !== "string" || !sessionId) return false;
+  const ownerId = interactiveBrowserRuntimeOwner(sessionId);
+  runtime.cancelPending?.(ownerId);
+  for (const childOwnerId of activeChildOwners.keys()) {
+    if (childOwnerId.startsWith(`${ownerId}:child:`)) runtime.cancelPending?.(childOwnerId);
+  }
+  return true;
+}
+
+/**
  * Execute one browser tool request against a runtime-owned target.
  *
  * The default target is a task-owned background in-app tab sharing this

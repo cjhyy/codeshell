@@ -36,4 +36,6 @@ export interface BrowserRuntimeBackend {
   acquire(options: BrowserRuntimeBackendAcquireOptions): Promise<BrowserRuntimeBackendLease>;
   close(ownerId: string): void;
   closeAll(): void;
+  /** Abandon the owner's not-yet-submitted actions (its run was stopped). */
+  cancelPending?(ownerId: string): void;
 }

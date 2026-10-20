@@ -117,6 +117,41 @@ function harness(options?: {
 }
 
 describe("BackgroundBrowserRuntime", () => {
+  test("cancelPending abandons a waiting action and every request queued behind it", async () => {
+    const driverCalls: string[] = [];
+    let releaseClick!: () => void;
+    let clickStarted!: () => void;
+    const started = new Promise<void>((resolve) => (clickStarted = resolve));
+    const h = harness({
+      overrides: {
+        click: async (ref) => {
+          driverCalls.push(`click:${ref}`);
+          clickStarted();
+          await new Promise<void>((resolve) => (releaseClick = resolve));
+          return { ok: true };
+        },
+        cancelPendingActions: () => driverCalls.push("cancel"),
+      } as Partial<BrowserBridge>,
+    });
+    const lease = h.runtime.acquire({ ownerId: "stopped-run", partition: "test-stop" });
+    try {
+      const waiting = lease.bridge.click("button");
+      const queued = lease.bridge.click("next");
+      await started;
+      h.runtime.cancelPending("stopped-run");
+      h.runtime.cancelPending("unknown-owner");
+      releaseClick();
+      await waiting;
+      expect(await queued).toMatchObject({ ok: false });
+      expect(driverCalls).toEqual(["click:button", "cancel"]);
+      // The target and its control survive: a new request still runs.
+      expect(await lease.bridge.navigate("about:blank#after")).toMatchObject({ ok: true });
+    } finally {
+      lease.release();
+      h.runtime.closeAll();
+    }
+  });
+
   test("forwards targeted waits without changing the authorized target", async () => {
     const calls: unknown[] = [];
     const h = harness({
