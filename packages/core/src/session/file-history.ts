@@ -103,6 +103,15 @@ export interface TurnUndoPlan {
   filePaths: string[];
 }
 
+/** Whole-session undo plan: every file back to its state before this session's first edit. */
+export interface SessionUndoPlan {
+  /** Earliest snapshot of each file that existed before the session touched it. */
+  snapshots: FileSnapshot[];
+  /** Files this session created; undoing the session deletes them. */
+  createdPaths: string[];
+  filePaths: string[];
+}
+
 const LEGACY_TURN = Number.MIN_SAFE_INTEGER;
 
 export class FileHistory {
@@ -354,17 +363,78 @@ export class FileHistory {
   }
 
   /**
-   * Restore EVERY tracked file to its earliest snapshot — the state before the
-   * first AI edit this session. Powers `/undo all`. Targets are computed up
-   * front (restore() appends a new snapshot, so reading them lazily mid-loop
-   * would be unstable). Returns a per-file result so a partial failure doesn't
-   * hide which files reverted.
+   * Whole-session plan behind `/undo all`, shared by its preview and restore.
+   * A file whose first live record is a create marker (no earlier-turn
+   * snapshot) did not exist before the session, so its baseline is absence.
+   */
+  getSessionUndoPlan(): SessionUndoPlan {
+    const plan = this.sessionUndoPlanInternal();
+    return {
+      snapshots: plan.snapshots.map((snapshot) => ({ ...snapshot })),
+      createdPaths: plan.created.map((marker) => marker.filePath),
+      filePaths: [...plan.filePaths],
+    };
+  }
+
+  /**
+   * Revert EVERY touched file to its state before the first AI edit this
+   * session: restore its earliest snapshot, or delete it when the session
+   * created it. Powers `/undo all`. Targets are computed up front (restore()
+   * appends a new snapshot, so reading them lazily mid-loop would be unstable).
+   * Returns a per-file result so a partial failure doesn't hide which files
+   * reverted.
    */
   restoreAllToEarliest(): Array<{ filePath: string; ok: boolean }> {
     return this.withCurrentIndex(() => {
-      const targets = earliestSnapshotsPerFile(this.snapshots);
-      return targets.map((snap) => ({ filePath: snap.filePath, ok: this.restore(snap) }));
+      const plan = this.sessionUndoPlanInternal();
+      const results = plan.created.map((marker) => ({
+        filePath: marker.filePath,
+        ok: this.removeCreatedFile(marker),
+      }));
+      for (const snap of plan.snapshots) {
+        results.push({ filePath: snap.filePath, ok: this.restore(snap) });
+      }
+      return results;
     });
+  }
+
+  private sessionUndoPlanInternal(): {
+    snapshots: FileSnapshot[];
+    created: CreatedMarker[];
+    filePaths: string[];
+  } {
+    const earliest = earliestSnapshotsPerFile(this.snapshots);
+    const firstSnapshot = new Map(earliest.map((snapshot) => [snapshot.filePath, snapshot]));
+    const created = new Map<string, CreatedMarker>();
+    for (const marker of this.created) {
+      if (marker.undone) continue;
+      const snapshot = firstSnapshot.get(marker.filePath);
+      // An earlier-turn snapshot proves the file existed before it was
+      // (re)created. Within one turn, created wins, as in undoLatestTurn.
+      if (snapshot && this.turnKey(snapshot.turnSeq) < marker.turnSeq) continue;
+      const current = created.get(marker.filePath);
+      if (!current || marker.turnSeq < current.turnSeq) created.set(marker.filePath, marker);
+    }
+    const snapshots = earliest.filter((snapshot) => !created.has(snapshot.filePath));
+    const markers = [...created.values()];
+    return {
+      snapshots,
+      created: markers,
+      filePaths: [
+        ...new Set([...markers.map((m) => m.filePath), ...snapshots.map((s) => s.filePath)]),
+      ],
+    };
+  }
+
+  private removeCreatedFile(marker: CreatedMarker): boolean {
+    try {
+      if (!this.isSafeDestination(marker.filePath)) return false;
+      if (!this.matchesRecordedLocation(marker.filePath, marker.realPath)) return false;
+      if (existsSync(marker.filePath)) rmSync(marker.filePath, { force: true });
+      return true;
+    } catch {
+      return false;
+    }
   }
 
   /**

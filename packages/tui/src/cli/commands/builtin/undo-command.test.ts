@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
@@ -78,5 +78,27 @@ describe("/undo", () => {
 
     expect(readFileSync(file, "utf-8")).toBe("before\n");
     expect(statuses.join("\n")).toContain("已撤销最近一轮的 1 个文件改动");
+  });
+
+  test("all previews and removes files the session created", async () => {
+    const storageDir = join(root, "sessions");
+    const edited = join(root, "edited.txt");
+    const created = join(root, "created.txt");
+    writeFileSync(edited, "edited-before\n");
+    const history = new FileHistory(join(storageDir, "whole"));
+    history.saveSnapshot(edited, 1);
+    writeFileSync(edited, "edited-after\n");
+    history.recordCreated(created, 2);
+    writeFileSync(created, "new file\n");
+    const { ctx, statuses, messages } = await connect("whole", storageDir);
+
+    await undo.execute("all", ctx);
+    expect(messages.at(-1)).toContain("2 个文件");
+    expect(messages.at(-1)).toContain(created);
+
+    await undo.execute("all confirm", ctx);
+    expect(existsSync(created)).toBe(false);
+    expect(readFileSync(edited, "utf-8")).toBe("edited-before\n");
+    expect(statuses.at(-1)).toContain("已撤销全部 2 个文件");
   });
 });

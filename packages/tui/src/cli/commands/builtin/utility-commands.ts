@@ -44,7 +44,7 @@ export const utilityCommands: SlashCommand[] = [
     usage: "/undo [all] [confirm]",
     execute: async (arg, ctx) => {
       try {
-        const { FileHistory, earliestSnapshotsPerFile, renderDiffPreview, sessionsRoot } =
+        const { FileHistory, renderDiffPreview, sessionsRoot } =
           await import("@cjhyy/code-shell-core");
         const { join } = await import("node:path");
         const { readFileSync, existsSync } = await import("node:fs");
@@ -68,27 +68,34 @@ export const utilityCommands: SlashCommand[] = [
         const readFile = (p: string): string => (existsSync(p) ? readFileSync(p, "utf-8") : "");
 
         if (isAll) {
-          // Whole session: each tracked file → its EARLIEST snapshot (content
-          // before the first AI edit this session).
-          const targets = earliestSnapshotsPerFile(history.getAllSnapshots());
-          if (targets.length === 0) {
+          // Whole session: each touched file → its state before the first AI
+          // edit this session (earliest snapshot, or absent if it was created).
+          const plan = history.getSessionUndoPlan();
+          if (plan.filePaths.length === 0) {
             ctx.addStatus("没有可撤销的文件修改。");
             return;
           }
           if (!confirm) {
             const MAX_PREVIEW = 5;
-            const shown = targets.slice(0, MAX_PREVIEW);
-            const blocks = shown.map((t) => {
-              const backup = existsSync(t.backupPath) ? readFileSync(t.backupPath, "utf-8") : "";
-              const diff = renderDiffPreview(readFile(t.filePath), backup);
-              return `\`${t.filePath}\`\n` + (diff ? "```diff\n" + diff + "\n```" : "_(无变化)_");
+            const snapshots = new Map(
+              plan.snapshots.map((snapshot) => [snapshot.filePath, snapshot]),
+            );
+            const shown = plan.filePaths.slice(0, MAX_PREVIEW);
+            const blocks = shown.map((filePath) => {
+              const snapshot = snapshots.get(filePath);
+              const backup =
+                snapshot && existsSync(snapshot.backupPath)
+                  ? readFileSync(snapshot.backupPath, "utf-8")
+                  : "";
+              const diff = renderDiffPreview(readFile(filePath), backup);
+              return `\`${filePath}\`\n` + (diff ? "```diff\n" + diff + "\n```" : "_(无变化)_");
             });
             const more =
-              targets.length > MAX_PREVIEW
-                ? `\n\n…以及另外 ${targets.length - MAX_PREVIEW} 个文件。`
+              plan.filePaths.length > MAX_PREVIEW
+                ? `\n\n…以及另外 ${plan.filePaths.length - MAX_PREVIEW} 个文件。`
                 : "";
             ctx.addMessage(
-              `**/undo all 预览** — 将把 ${targets.length} 个文件还原到本会话首次编辑前:\n\n` +
+              `**/undo all 预览** — 将把 ${plan.filePaths.length} 个文件还原到本会话首次编辑前:\n\n` +
                 blocks.join("\n\n") +
                 more +
                 `\n\n运行 \`/undo all confirm\` 执行。`,
