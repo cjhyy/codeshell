@@ -79,7 +79,15 @@ export const permissionsCommand: SlashCommand = {
     }
 
     try {
-      await ctx.client.query("permission_set", newMode);
+      // Switch this session's engine (the global `permission_set` query only
+      // touches the detached engine), then report the mode the session confirms.
+      await ctx.client.configure({ sessionId: ctx.sessionId, permissionMode: newMode });
+      const confirmed = await ctx.client.query("config", ctx.sessionId);
+      const appliedMode = (confirmed.data as { permissionMode?: string }).permissionMode;
+      if (appliedMode !== newMode) {
+        ctx.addStatus(`Failed to switch mode: session is still ${appliedMode ?? currentMode}.`);
+        return;
+      }
       ctx.addStatus(`Permission mode: ${currentMode} → ${newMode} (live)`);
     } catch (err) {
       ctx.addStatus(`Failed to switch mode: ${(err as Error).message}`);

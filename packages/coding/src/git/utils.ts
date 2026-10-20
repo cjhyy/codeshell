@@ -10,12 +10,14 @@
 
 import { execFileSync } from "node:child_process";
 import { realpathSync } from "node:fs";
-import { parseGitLog, type GitLogEntry } from "./parse-log.js";
+import { GIT_LOG_FORMAT, parseGitLog, type GitLogEntry } from "./parse-log.js";
 import { resolveExecutable, resolveGit } from "@cjhyy/code-shell-core/extension";
 
 export interface GitStatusEntry {
   status: string;
   path: string;
+  /** Source path of a rename/copy entry. */
+  origPath?: string;
 }
 
 export type { GitLogEntry };
@@ -24,9 +26,14 @@ export type { GitLogEntry };
 // (bare execFile doesn't walk PATHEXT). No-op on POSIX. See utils/exec.ts.
 const GH_BIN = resolveExecutable("gh");
 
+/** Run git with an argv array and return its untrimmed stdout. */
+function gitRaw(cwd: string, args: string[], timeoutMs = 10000): string {
+  return execFileSync(resolveGit(), args, { cwd, encoding: "utf-8", timeout: timeoutMs });
+}
+
 /** Run git with an argv array and return its trimmed stdout. */
 function git(cwd: string, args: string[], timeoutMs = 10000): string {
-  return execFileSync(resolveGit(), args, { cwd, encoding: "utf-8", timeout: timeoutMs }).trim();
+  return gitRaw(cwd, args, timeoutMs).trim();
 }
 
 /** Run gh with an argv array and return its trimmed stdout. */
@@ -74,12 +81,20 @@ export function getCurrentBranch(cwd: string): string {
 }
 
 export function getGitStatus(cwd: string): GitStatusEntry[] {
-  const raw = git(cwd, ["status", "--porcelain"], 10000);
-  if (!raw) return [];
-  return raw.split("\n").map((line) => ({
-    status: line.slice(0, 2).trim(),
-    path: line.slice(3),
-  }));
+  // `-z` output is NUL-terminated and unquoted. It must not be trimmed: the
+  // fixed-width `XY ` prefix of an unstaged entry starts with a space.
+  const records = gitRaw(cwd, ["status", "--porcelain", "-z"], 10000).split("\0");
+  const entries: GitStatusEntry[] = [];
+  for (let i = 0; i < records.length; i++) {
+    const record = records[i]!;
+    if (record.length < 4) continue;
+    const xy = record.slice(0, 2);
+    const entry: GitStatusEntry = { status: xy.trim(), path: record.slice(3) };
+    // Rename/copy entries are followed by a separate source-path record.
+    if (xy.includes("R") || xy.includes("C")) entry.origPath = records[++i] ?? "";
+    entries.push(entry);
+  }
+  return entries;
 }
 
 export function getGitDiff(cwd: string, opts?: { staged?: boolean; file?: string }): string {
@@ -98,11 +113,18 @@ export function getGitDiffStat(cwd: string, opts?: { staged?: boolean; file?: st
   return git(cwd, args, 10000);
 }
 
+/** Untracked, non-ignored files under `cwd`, relative to `cwd` (what `git add .` would add). */
+export function getUntrackedFiles(cwd: string): string[] {
+  return gitRaw(cwd, ["ls-files", "--others", "--exclude-standard", "-z"], 10000)
+    .split("\0")
+    .filter(Boolean);
+}
+
 export function getGitLog(cwd: string, n = 10): GitLogEntry[] {
   // `n` is numeric — coerce/validate to keep the argv clean even if a caller
   // hands us a string.
   const count = Number.isFinite(n) && n > 0 ? Math.floor(n) : 10;
-  const raw = git(cwd, ["log", "--oneline", "--format=%H|%s|%an|%ci", `-${count}`], 10000);
+  const raw = git(cwd, ["log", `--format=${GIT_LOG_FORMAT}`, `-${count}`], 10000);
   if (!raw) return [];
   return parseGitLog(raw);
 }

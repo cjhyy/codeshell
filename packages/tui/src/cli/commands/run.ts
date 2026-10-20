@@ -34,6 +34,7 @@ import {
 } from "@cjhyy/code-shell-core/internal";
 import { drainBackgroundNotifications, hasRunningBackgroundWork } from "./drain-notifications.js";
 import { resolveMaxContextTokens } from "./max-context-tokens.js";
+import { applyRunLlmOverrides } from "./run-llm-config.js";
 
 export interface RunOptions {
   task: string;
@@ -105,21 +106,18 @@ export async function runCommand(options: RunOptions): Promise<void> {
     );
     process.exit(1);
   }
-  const llmConfig: LLMConfig = resolved ?? {
-    provider: options.provider ?? "openai",
-    model: options.model ?? "anthropic/claude-opus-4-6",
-    apiKey: options.apiKey!,
-    baseUrl: options.baseUrl ?? "https://openrouter.ai/api/v1",
-    maxTokens: 8192,
-  };
   // CLI flag overrides still apply on top of a resolved connection, so
-  // `--model X` / `--provider X` / `--base-url X` work even when a catalog
-  // connection resolves.
-  if (resolved) {
-    if (options.provider) llmConfig.provider = options.provider;
-    if (options.model) llmConfig.model = options.model;
-    if (options.baseUrl) llmConfig.baseUrl = options.baseUrl;
-  }
+  // `--model X` / `--provider X` / `--base-url X` / `--api-key X` work even
+  // when a catalog connection resolves.
+  const llmConfig: LLMConfig = resolved
+    ? applyRunLlmOverrides(resolved, options)
+    : {
+        provider: options.provider ?? "openai",
+        model: options.model ?? "anthropic/claude-opus-4-6",
+        apiKey: options.apiKey!,
+        baseUrl: options.baseUrl ?? "https://openrouter.ai/api/v1",
+        maxTokens: 8192,
+      };
   // temperature is a ClientDefaults knob now; the seed Engine derives it from
   // the unified catalog and session engines inherit it from the seed's
   // resolved config — no explicit pass needed here.
@@ -168,7 +166,9 @@ export async function runCommand(options: RunOptions): Promise<void> {
   // 2. Extract shared resources
   const modelPool = seedEngine.getModelPool();
   const toolRegistry = seedEngine.getRuntimeToolRegistry();
-  const resolvedLlmConfig = seedEngine.getConfig().llm;
+  // The seed re-resolves the catalog default in its constructor; re-apply the
+  // explicit flags so the session engines run what the user asked for.
+  const resolvedLlmConfig = applyRunLlmOverrides(seedEngine.getConfig().llm, options);
   // Cross-model knobs (temperature/imageDetail) the seed engine derived from
   // settings — inherited by every session engine so they don't each re-read.
   const resolvedClientDefaults = seedEngine.getConfig().clientDefaults;

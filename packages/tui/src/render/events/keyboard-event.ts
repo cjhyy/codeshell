@@ -29,9 +29,18 @@ export class KeyboardEvent extends TerminalEvent {
   }
 }
 
+function isPrintable(char: string): boolean {
+  const code = char.charCodeAt(0)
+  return code >= 0x20 && code !== 0x7f
+}
+
 function keyFromParsed(parsed: ParsedKey): string {
   const seq = parsed.sequence ?? ''
   const name = parsed.name ?? ''
+
+  // Encoded space (CSI u / modifyOtherKeys) is named 'space'; the key is the
+  // literal character, as browsers report e.key === ' ' with modifiers.
+  if (name === 'space') return ' '
 
   // Ctrl combos: sequence is a control byte (\x03 for ctrl+c), name is the
   // letter. Browsers report e.key === 'c' with e.ctrlKey === true.
@@ -39,10 +48,11 @@ function keyFromParsed(parsed: ParsedKey): string {
 
   // Single printable char (space through ~, plus anything above ASCII):
   // use the literal char. Browsers report e.key === '3', not 'Digit3'.
-  if (seq.length === 1) {
-    const code = seq.charCodeAt(0)
-    if (code >= 0x20 && code !== 0x7f) return seq
-  }
+  if (seq.length === 1 && isPrintable(seq)) return seq
+
+  // Legacy Alt+printable arrives ESC-prefixed (\x1bz); the key is the
+  // character, with Alt carried by `meta`.
+  if (seq.length === 2 && seq[0] === '\x1b' && isPrintable(seq[1]!)) return seq[1]!
 
   // Special keys (arrows, F-keys, return, tab, escape, etc.): sequence is
   // either an escape sequence (\x1b[B) or a control byte (\r, \t), so use

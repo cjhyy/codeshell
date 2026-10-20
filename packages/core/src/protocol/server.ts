@@ -91,7 +91,8 @@ import type { ChatSession } from "./chat-session.js";
 import type { ChatSessionManager, EngineConfigSlice } from "./chat-session-manager.js";
 import { wakeSessionForBackgroundResults } from "./background-result-wakeup.js";
 import { assertSafeSessionId, SessionManager } from "../session/session-manager.js";
-import { redactLlmConfig, maskSecretValue } from "./redact.js";
+import { maskSecretValue } from "./redact.js";
+import { configQueryData } from "./config-query.js";
 import { redactSecrets } from "../logging/sanitize-messages.js";
 import type {
   ExtensionQueryHandler,
@@ -3183,27 +3184,8 @@ export class AgentServer {
           "config",
         );
         if (!configEngine) return;
-        const config = configEngine.getConfig();
         this.transport.send(
-          createResponse(req.id, {
-            type: "config",
-            data: {
-              permissionMode: config.permissionMode ?? "default",
-              planMode: configEngine.planMode ?? false,
-              preset: config.preset,
-              model: config.llm.model,
-              cwd: config.cwd,
-              maxContextTokens: config.maxContextTokens,
-              // apiKey is redacted at this boundary: clients only get
-              // hasApiKey + optional apiKeyPreview. See protocol/redact.ts.
-              llm: redactLlmConfig(config.llm),
-              // Resolved feature flags (defaults merged with settings overlay)
-              // so the /features command can list current state.
-              featureFlags: configEngine.getFeatureFlags(),
-              // Effective permission rules so /permissions can list them (TODO 5.1).
-              permissionRules: configEngine.getPermissionRules(),
-            },
-          }),
+          createResponse(req.id, { type: "config", data: configQueryData(configEngine) }),
         );
         break;
       }

@@ -1,8 +1,11 @@
 import { describe, expect, test } from "bun:test";
+import React from "react";
+import { flush, mount, plainText } from "../../../../../tests/render-fixtures.js";
 import {
   __renderMarkdownForTest,
   __resetMarkdownRenderCacheForTest,
   calculateMarkdownTableColumnWidths,
+  MessageContent,
   type TableData,
 } from "./MessageContent.js";
 
@@ -81,5 +84,44 @@ describe("markdown render cache width", () => {
 
     expect(narrow).not.toBe(wide);
     expect(narrow.split("\n").length).toBeGreaterThan(wide.split("\n").length);
+  });
+});
+
+async function renderMessage(text: string): Promise<string> {
+  const harness = mount(React.createElement(MessageContent, { text }), { columns: 80, rows: 30 });
+  try {
+    await flush();
+    await flush();
+    return plainText(harness);
+  } finally {
+    harness.unmount();
+  }
+}
+
+describe("MessageContent tables", () => {
+  test("keeps a table inside a code fence as literal source", async () => {
+    const output = await renderMessage(
+      "Example:\n\n```md\n```js\n| field | value |\n| --- | --- |\n| key | sample |\n```",
+    );
+    expect(output).toContain("| field | value |");
+    expect(output).toContain("| --- | --- |");
+    expect(output).toContain("```js");
+  });
+
+  test("still renders a real table after a fenced block", async () => {
+    const output = await renderMessage(
+      "```txt\nleft | right\n```\n\n| field | value |\n| --- | --- |\n| key | sample |",
+    );
+    expect(output).toContain("left | right");
+    expect(output).toContain("sample");
+    expect(output).not.toContain("| --- | --- |");
+  });
+
+  test("an escaped pipe stays inside its cell", async () => {
+    const output = await renderMessage(
+      "| expression | result |\n| --- | --- |\n| left \\| right | expected-tail |",
+    );
+    expect(output).toContain("left | right");
+    expect(output).toContain("expected-tail");
   });
 });

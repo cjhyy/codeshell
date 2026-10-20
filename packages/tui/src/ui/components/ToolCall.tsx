@@ -26,6 +26,7 @@ import {
   classifyBashLines,
 } from "@cjhyy/code-shell-core/internal";
 import { truncate } from "../truncate.js";
+import { parseGlobResult } from "../glob-result.js";
 import { DiffLine, classifyDiffLine } from "./DiffLine.js";
 
 /** Max visible output lines in collapsed mode (matches CC's MAX_LINES_TO_SHOW). */
@@ -242,23 +243,22 @@ function renderToolOutput(toolName: string, content: string, expanded: boolean):
     }
 
     case "Glob": {
-      // Strip the "N files matched:" header glob.ts emits so the count is accurate.
-      const files = rawLines
-        .filter((l) => l.trim())
-        .filter((l) => !/^\d+\s+files?\s+matched/i.test(l));
-      const count = files.length;
+      // Header, trailer and no-match status are not file rows; the count is
+      // the real match total, which can exceed the listed rows.
+      const { files, total } = parseGlobResult(content);
+      const summary = `${total} files`;
       if (expanded) {
-        return { summary: `${count} files`, lines: files, hiddenCount: 0 };
+        return { summary, lines: files, hiddenCount: 0 };
       }
       // Few results: show them inline — making the user ctrl+o for a 2-file
       // match was a regression. Many results: summary + first N + "+M lines".
-      if (count <= COLLAPSED_LINES) {
-        return { summary: `${count} files`, lines: files, hiddenCount: 0 };
+      if (files.length <= COLLAPSED_LINES) {
+        return { summary, lines: files, hiddenCount: 0 };
       }
       return {
-        summary: `${count} files`,
+        summary,
         lines: files.slice(0, COLLAPSED_LINES),
-        hiddenCount: count - COLLAPSED_LINES,
+        hiddenCount: files.length - COLLAPSED_LINES,
       };
     }
 

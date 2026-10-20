@@ -58,6 +58,8 @@ let _pendingEntries: HistoryLogEntry[] = [];
 let _lastAddedEntry: HistoryLogEntry | null = null;
 const _skippedTimestamps = new Set<number>();
 let _flushScheduled = false;
+/** Bumped when an entry is removed, so live navigators drop stale snapshots. */
+let _removalVersion = 0;
 
 /**
  * Configure the history system with session and project context.
@@ -123,8 +125,9 @@ function ensureLoaded(): HistoryLogEntry[] {
 }
 
 /**
- * Get the display strings for history (most recent last),
- * with current session entries prioritized first.
+ * Get the display strings for history (most recent last). Current session
+ * entries are prioritized: they sit after older sessions' entries, so the
+ * navigator's Up (walking from the end) reaches them first.
  */
 function getProjectHistory(): string[] {
   const entries = ensureLoaded();
@@ -158,8 +161,8 @@ function getProjectHistory(): string[] {
     if (seen.size >= MAX_HISTORY_ITEMS) break;
   }
 
-  // Reverse to get chronological order (oldest first), session entries first
-  return [...currentSessionEntries.reverse(), ...otherEntries.reverse()];
+  // Reverse to get chronological order (oldest first); current session last
+  return [...otherEntries.reverse(), ...currentSessionEntries.reverse()];
 }
 
 // ─── Write ─────────────────────────────────────────────────────────
@@ -239,6 +242,7 @@ export function removeLastFromHistory(): void {
   if (memIdx !== -1) {
     entries.splice(memIdx, 1);
   }
+  _removalVersion++;
 }
 
 /**
@@ -305,11 +309,19 @@ export function createHistoryNavigator() {
   let history = getProjectHistory();
   let cursor = history.length; // Start past the end (current input)
   let savedCurrent = ""; // Stash the current input when navigating
+  let removalVersion = _removalVersion;
 
   return {
     /** Move up (older). Returns the history entry or null if at top. */
     up(currentInput: string): string | null {
       if (cursor === history.length) {
+        // An entry was undone (ESC interrupt) since this snapshot: re-read
+        // before browsing so the removed input is not offered again.
+        if (removalVersion !== _removalVersion) {
+          history = getProjectHistory();
+          cursor = history.length;
+          removalVersion = _removalVersion;
+        }
         savedCurrent = currentInput; // Stash current input
       }
       if (cursor <= 0) return null;
@@ -336,6 +348,7 @@ export function createHistoryNavigator() {
     /** Refresh after addToHistory mutates the array. */
     refresh(): void {
       history = getProjectHistory();
+      removalVersion = _removalVersion;
       cursor = history.length;
       savedCurrent = "";
     },

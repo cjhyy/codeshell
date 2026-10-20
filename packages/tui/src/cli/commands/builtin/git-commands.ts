@@ -9,6 +9,7 @@ import {
   getGitDiff,
   getGitDiffStat,
   getGitLog,
+  getUntrackedFiles,
   gitAdd,
   gitCommit,
   gitListBranches,
@@ -67,8 +68,19 @@ export const gitCommands: SlashCommand[] = [
       const ac = new AbortController();
       ctx.queryGuard.tryStart(ac, guardToken);
       try {
-        const stat = getGitDiffStat(ctx.cwd);
-        const diff = getGitDiff(ctx.cwd);
+        // Describe exactly what `git add .` + commit will record: everything
+        // already staged (repo-wide) plus unstaged and untracked changes under cwd.
+        const unstagedScope = { file: "." };
+        const stat = [
+          getGitDiffStat(ctx.cwd, { staged: true }),
+          getGitDiffStat(ctx.cwd, unstagedScope),
+        ]
+          .filter(Boolean)
+          .join("\n");
+        const diff = [getGitDiff(ctx.cwd, { staged: true }), getGitDiff(ctx.cwd, unstagedScope)]
+          .filter(Boolean)
+          .join("\n");
+        const untracked = getUntrackedFiles(ctx.cwd);
         const log = getGitLog(ctx.cwd, 5);
         const recentMessages = log.map((l) => l.message).join("\n");
 
@@ -76,6 +88,7 @@ export const gitCommands: SlashCommand[] = [
           `Generate a concise git commit message for the following changes.\n\n` +
           `## Recent commit messages (follow this style):\n${recentMessages}\n\n` +
           `## Diff stat:\n${stat}\n\n` +
+          (untracked.length > 0 ? `## New files:\n${untracked.join("\n")}\n\n` : "") +
           `## Diff (first 3000 chars):\n${diff.slice(0, 3000)}\n\n` +
           `Respond with ONLY the commit message, nothing else. ` +
           `Use conventional commit format if the recent messages use it. ` +
@@ -83,6 +96,12 @@ export const gitCommands: SlashCommand[] = [
 
         const result = await ctx.client.run(prompt, ctx.sessionId);
         ctx.setSessionId(result.sessionId);
+        // A failed or interrupted run may still carry text from an earlier
+        // round; never turn that into a commit.
+        if (result.reason !== "completed") {
+          ctx.addStatus(`Commit message generation ${result.reason}; nothing was committed.`);
+          return;
+        }
 
         const commitMsg = result.text.trim().replace(/^["'`]+|["'`]+$/g, "");
         if (commitMsg) {

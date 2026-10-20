@@ -246,6 +246,50 @@ test("restoreAllToEarliest reverts every file to its pre-first-edit content", ()
   expect(readFileSync(b, "utf-8")).toBe("b-orig\n");
 });
 
+test("restoreAllToEarliest deletes files the session created, even if later edited", () => {
+  const existing = join(workDir, "existing.txt");
+  const createdOnly = join(workDir, "created-only.txt");
+  const createdThenEdited = join(workDir, "created-then-edited.txt");
+  writeFileSync(existing, "existing-orig\n", "utf-8");
+
+  const fh = FileHistory.loadFromDir(sessionDir);
+  fh.saveSnapshot(existing, 1);
+  writeFileSync(existing, "existing-edit\n", "utf-8");
+  fh.recordCreated(createdOnly, 1);
+  writeFileSync(createdOnly, "new\n", "utf-8");
+  fh.recordCreated(createdThenEdited, 1);
+  writeFileSync(createdThenEdited, "first\n", "utf-8");
+  fh.saveSnapshot(createdThenEdited, 2);
+  writeFileSync(createdThenEdited, "second\n", "utf-8");
+
+  const plan = fh.getSessionUndoPlan();
+  expect(plan.createdPaths.sort()).toEqual([createdOnly, createdThenEdited].sort());
+  expect(plan.snapshots.map((snapshot) => snapshot.filePath)).toEqual([existing]);
+  expect(plan.filePaths.sort()).toEqual([existing, createdOnly, createdThenEdited].sort());
+
+  const results = fh.restoreAllToEarliest();
+  expect(results.every((r) => r.ok)).toBe(true);
+  expect(results.map((r) => r.filePath).sort()).toEqual(plan.filePaths.sort());
+  expect(readFileSync(existing, "utf-8")).toBe("existing-orig\n");
+  expect(existsSync(createdOnly)).toBe(false);
+  expect(existsSync(createdThenEdited)).toBe(false);
+});
+
+test("restoreAllToEarliest restores a pre-existing file recreated in a later turn", () => {
+  const file = join(workDir, "recreated.txt");
+  writeFileSync(file, "orig\n", "utf-8");
+
+  const fh = FileHistory.loadFromDir(sessionDir);
+  fh.saveSnapshot(file, 1);
+  rmSync(file);
+  fh.recordCreated(file, 2);
+  writeFileSync(file, "recreated\n", "utf-8");
+
+  expect(fh.getSessionUndoPlan().createdPaths).toEqual([]);
+  expect(fh.restoreAllToEarliest()).toEqual([{ filePath: file, ok: true }]);
+  expect(readFileSync(file, "utf-8")).toBe("orig\n");
+});
+
 test("latestUndoTarget picks the most recently edited of several files", () => {
   const a = join(workDir, "a.txt");
   const b = join(workDir, "b.txt");

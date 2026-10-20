@@ -29,6 +29,7 @@ import { FullscreenModeContext, INITIAL_FULLSCREEN_MODE } from "./fullscreen-mod
 import { AgentClient } from "@cjhyy/code-shell-core";
 import { formatUsageCost } from "@cjhyy/code-shell-core";
 import { useSessionUsage } from "./hooks/useSessionUsage.js";
+import { useRunStart } from "./hooks/useRunStart.js";
 import { PermissionPrompt } from "./components/PermissionPrompt.js";
 import type { ModelEntry } from "./components/ModelSelector.js";
 import type { ProviderManagerEntry } from "./components/ModelManager.js";
@@ -390,7 +391,7 @@ export function App({
   // Provider emits tokens per text delta (real cl100k_base count, not chars/4).
   // StatusLine reads this ref directly via its own internal interval.
   const streamingTokensRef = useRef(0);
-  const runStartRef = useRef(0);
+  const runStartRef = useRunStart(isQueryActive, hasRunningBgAgents);
   const [streamMode, setStreamMode] = useState<"responding" | "tool-use" | "thinking">("thinking");
   const [thinkingContent, setThinkingContent] = useState<string | null>(null);
   // Optimistic-cancel guard — set true on ESC so the in-flight `await
@@ -434,9 +435,6 @@ export function App({
   }, [clearUnseen]);
 
   useEffect(() => {
-    if (isRunning) {
-      runStartRef.current = Date.now();
-    }
     uiLog.info("debug.app.isRunning_change", {
       isRunning,
       isQueryActive,

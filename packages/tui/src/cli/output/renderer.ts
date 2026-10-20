@@ -10,6 +10,7 @@ import {
   formatBytes,
 } from "@cjhyy/code-shell-core/internal";
 import { truncate } from "../../ui/truncate.js";
+import { parseGlobResult } from "../../ui/glob-result.js";
 
 export type OutputFormat = "text" | "json" | "jsonl" | "stream-json";
 
@@ -91,7 +92,9 @@ export class TextRenderer implements OutputRenderer {
 export class JsonRenderer implements OutputRenderer {
   private text = "";
   onEvent(event: StreamEvent): void {
-    if (event.type === "text_delta") this.text += event.text;
+    // Only the main agent's text can stand in for its final result; sub-agent
+    // deltas carry an agentId (TextRenderer hides them the same way).
+    if (event.type === "text_delta" && !(event as any).agentId) this.text += event.text;
   }
   onComplete(text: string, reason: TerminalReason, meta: Record<string, unknown>): void {
     process.stdout.write(JSON.stringify({ result: text || this.text, reason, ...meta }, null, 2) + "\n");
@@ -143,7 +146,7 @@ function compactSummary(toolName: string, content: string): string {
     case "Read":
       return `${total} lines, ${formatBytes(content.length)}`;
     case "Glob":
-      return `${lines.filter((l) => l.trim()).length} files`;
+      return `${parseGlobResult(content).total} files`;
     case "Grep":
       return `${lines.filter((l) => l.trim()).length} matches`;
     case "Write":
