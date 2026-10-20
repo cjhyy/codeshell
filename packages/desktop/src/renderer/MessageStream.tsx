@@ -513,7 +513,10 @@ export function MessageStream({
         const images = decoded.images;
         const { block: annotations, text } = extractAnnotations(decoded.text);
         const askedAt = formatMessageTime(m.createdAt);
-        const remoteAttachments = localRuntime ? [] : (m.attachments ?? []);
+        // A local optimistic send carries its images inline in the wire text;
+        // a message restored from the output journal carries only the
+        // attachment summary, which must still be shown.
+        const remoteAttachments = localRuntime && images.length > 0 ? [] : (m.attachments ?? []);
         if (!text && !annotations && images.length === 0 && remoteAttachments.length === 0)
           return null;
         return (
