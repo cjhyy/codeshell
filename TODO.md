@@ -2,7 +2,7 @@
 
 > 本文件只保留**未完成**的待办；已完成实现与历史验收见 Git 历史和 [能力盘点](docs/architecture/11-feature-inventory.md)。
 > 分区规则：**小 feature = 体量 M 及以下（M/S/XS），可单会话直接着手**；**大功能升级 = 体量 L**，需先方案设计再分阶段落地。
-> **当前发布核对：2026-10-19。** 开发版本为 `0.9.45`，GitHub 最新正式发行仍为 `v0.9.44`。最新 [CI40](https://github.com/cjhyy/codeshell/actions/runs/39104976943) 整体失败：Windows 首窗超时和 NSIS 卸载身份校验未通过；此前原生异常、最终包更新/升级等范围尚未关闭。准确范围及本次分支收敛见[当前发布验收记录](docs/todo/release-real-operations-2026-10-16.md)。以下 2026-10-14 段落保留历史基线，不能代表今天未发行 0.9.41 或尚未执行后续三平台验收。
+> **当前发布核对：2026-10-20。** 开发版本为 `0.9.45`，GitHub 最新正式发行仍为 `v0.9.44`。最新 [CI40](https://github.com/cjhyy/codeshell/actions/runs/39104976943) 整体失败：Windows 首窗超时和 NSIS 卸载身份校验未通过；此前原生异常、最终包更新/升级等范围尚未关闭。准确范围及本次分支收敛见[当前发布验收记录](docs/todo/release-real-operations-2026-10-16.md)。以下 2026-10-14 段落保留历史基线，不能代表今天未发行 0.9.41 或尚未执行后续三平台验收。
 >
 > 历史核对：2026-10-14。已完成的 Hook 路径、静态 Composer SVG 和 0.9.41 版本准备已随 PR #176/#177/#178 合入。早先验收的产品基线为 `bfebd1a4`（首轮自然 [CI 38503640164](https://github.com/cjhyy/codeshell/actions/runs/38503640164) 十二项全部成功）；PR #181 合入后 main head 已为 `7047ace6`，其推送 [CI 38534752446](https://github.com/cjhyy/codeshell/actions/runs/38534752446) 十二项全部成功，`bfebd1a4` 的 CI 结论不能沿用。源码合入、正式发行及真实环境验收分别记录；本轮尚未正式发布 0.9.41。完整标准与历史原件见[交付检查点](docs/todo/p0-p1-release-2026-10-12.md)。
 >

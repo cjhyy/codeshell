@@ -138,6 +138,13 @@ workspace typecheck、Desktop main/preload/renderer/mobile/extension 构建，�
   本机复验在更早的 guarded Main 启动 30 秒超时，目标断言未到达，私有 HOME
   与首错证据保留；此适配目前只有语法/格式检查，实际运行仍须 CI 验证。
 
+最终候选另已正常合入远端主线 `df2ca0bda` 的四项 Bug 修复（补丁回滚字节/权限、
+提前结束的流式响应、Hook 改写输入权限复核、可执行搜索参数/审计权限）。源码合并点
+`7b94e9a14` 再次通过 10 tarball / 48 typed-entry smoke、完整 typecheck、完整
+Desktop 构建及六文件 133 项回归（0 failure、0 skipped）。这次没有改动上述仍待
+处理的 Desktop 大分片、active-close 和架构预算；Host PR 继续保持草稿，最新提交
+的完整 CI 不能借用前述本地结果填为通过。
+
 其他聊天仍在持续提交 Bug 修复。上述候选固定本次范围，不自动宣称随后发生的
 主线提交已纳入或通过同一轮验证。其活跃分支、Host 共享服务 PR #190、未提交
 工作和未充分证明覆盖的历史引用继续保留。全平台正式发行还需解决前述 Windows
