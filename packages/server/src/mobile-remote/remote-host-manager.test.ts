@@ -675,6 +675,84 @@ describe("RemoteHostManager", () => {
     }
   });
 
+  test.each([
+    [
+      "broadcast",
+      (host: RemoteHostManager, _id: string, line: string) => host.broadcast(JSON.parse(line)),
+    ],
+    [
+      "broadcastRaw",
+      (host: RemoteHostManager, _id: string, line: string) => host.broadcastRaw(line),
+    ],
+    [
+      "sendToDevice",
+      (host: RemoteHostManager, id: string, line: string) =>
+        host.sendToDevice(id, JSON.parse(line)),
+    ],
+    [
+      "sendRawToDevice",
+      (host: RemoteHostManager, id: string, line: string) => host.sendRawToDevice(id, line),
+    ],
+  ] as const)("%s retires a socket whose outbound backlog is full", async (_name, send) => {
+    dir = mkdtempSync(join(tmpdir(), "remote-host-backlog-"));
+    const store = new TrustedDeviceStore(join(dir, "devices.json"));
+    const device = store.addDevice({ name: "Phone", secretHash: "secret" });
+    const host = new RemoteHostManager({ devices: store, onClientEvent: () => {} });
+    const offline: string[] = [];
+    host.on("device-offline", (deviceId: string) => offline.push(deviceId));
+    const started = await host.start({ host: "127.0.0.1", port: 0 });
+    const { WebSocket: WS } = await import("ws");
+    const connect = () =>
+      new Promise<import("ws").WebSocket>((resolve) => {
+        const socket = new WS(`${started.url.replace(/^http/, "ws")}/ws`);
+        socket.on("message", (raw) => {
+          if (JSON.parse(String(raw)).type === "auth.ok") resolve(socket);
+        });
+        socket.on("open", () =>
+          socket.send(
+            JSON.stringify({ type: "auth.device", deviceId: device.id, secretHash: "secret" }),
+          ),
+        );
+      });
+    const slow = await connect();
+    const healthy = await connect();
+    try {
+      const slowClosed = new Promise<void>((resolve, reject) => {
+        const timer = setTimeout(() => reject(new Error("slow socket stayed open")), 2_000);
+        slow.on("close", () => {
+          clearTimeout(timer);
+          resolve();
+        });
+      });
+      const received: unknown[] = [];
+      healthy.on("message", (raw) => received.push(JSON.parse(String(raw))));
+      const slowServerSide = [
+        ...(host as unknown as { wss: import("ws").WebSocketServer }).wss.clients,
+      ][0]!;
+      // A peer that stopped reading keeps its socket OPEN while the queue grows.
+      Object.defineProperty(slowServerSide, "bufferedAmount", {
+        configurable: true,
+        get: () => 4 * 1024 * 1024,
+      });
+      const event = {
+        type: "session.stream",
+        sessionId: "native",
+        event: { type: "text_delta", text: "x" },
+      };
+      send(host, device.id, JSON.stringify(event));
+      await slowClosed;
+      await new Promise((resolve) => setTimeout(resolve, 20));
+      expect(received).toEqual([event]);
+      // The device stays online through its healthy socket.
+      expect(host.onlineDeviceIds()).toEqual([device.id]);
+      expect(offline).toEqual([]);
+    } finally {
+      slow.terminate();
+      healthy.terminate();
+      await host.stop();
+    }
+  });
+
   test("async dispatcher rejection becomes a socket error instead of an unhandled rejection", async () => {
     dir = mkdtempSync(join(tmpdir(), "remote-host-"));
     const store = new TrustedDeviceStore(join(dir, "devices.json"));

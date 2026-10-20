@@ -16,6 +16,9 @@ import type { DesktopWebHttpApi } from "../desktop-web/http-api.js";
 import type { RelayLocalTarget } from "../remote-relay/connector.js";
 import { isRelayOrigin } from "../remote-relay/protocol.js";
 
+/** Outbound bytes one paired socket may leave unread before it is retired. */
+const MAX_SOCKET_BACKLOG_BYTES = 4 * 1024 * 1024;
+
 /**
  * Pick the Mac's real LAN IPv4 so a phone on the same Wi-Fi can reach the
  * remote host. We bind to a concrete LAN address (NOT 0.0.0.0) per the design's
@@ -493,7 +496,7 @@ export class RemoteHostManager extends EventEmitter {
     const payload = JSON.stringify(event);
     for (const client of this.wss?.clients ?? []) {
       if (client.readyState === client.OPEN && this.authed.get(client) === deviceId) {
-        client.send(payload);
+        this.sendBounded(client, payload);
       }
     }
   }
@@ -521,12 +524,7 @@ export class RemoteHostManager extends EventEmitter {
       ) {
         // A selected viewer cannot accumulate an unbounded outbound page queue
         // by issuing new reads while refusing to consume prior replies.
-        if (client.bufferedAmount + Buffer.byteLength(payload) > 4 * 1024 * 1024) {
-          this.releaseSocket(client);
-          client.terminate();
-          return;
-        }
-        client.send(payload);
+        if (!this.sendBounded(client, payload)) return;
       }
     }
   }
@@ -535,7 +533,7 @@ export class RemoteHostManager extends EventEmitter {
   sendRawToDevice(deviceId: string, payload: string): void {
     for (const client of this.wss?.clients ?? []) {
       if (client.readyState === client.OPEN && this.authed.get(client) === deviceId) {
-        client.send(payload);
+        this.sendBounded(client, payload);
       }
     }
   }
@@ -546,9 +544,29 @@ export class RemoteHostManager extends EventEmitter {
   broadcastRaw(payload: string): void {
     for (const client of this.wss?.clients ?? []) {
       if (client.readyState === client.OPEN && this.authed.has(client)) {
-        client.send(payload);
+        this.sendBounded(client, payload);
       }
     }
+  }
+
+  /**
+   * Queue one frame unless the peer already stopped reading. A paused tab or
+   * stalled network keeps its socket OPEN while ws buffers every live frame in
+   * Host memory; retire that socket instead so the client reconnects and
+   * recovers through its normal resume path. One large frame on a drained
+   * socket is still delivered. Returns false when retired.
+   */
+  private sendBounded(client: WebSocket, payload: string): boolean {
+    if (
+      client.bufferedAmount > 0 &&
+      client.bufferedAmount + Buffer.byteLength(payload) > MAX_SOCKET_BACKLOG_BYTES
+    ) {
+      this.releaseSocket(client);
+      client.terminate();
+      return false;
+    }
+    client.send(payload);
+    return true;
   }
 
   private releaseSocket(ws: WebSocket): void {
