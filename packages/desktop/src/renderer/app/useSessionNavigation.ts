@@ -41,6 +41,8 @@ import type { ViewState } from "../view";
 import { revealSidebarProject } from "../sidebarSessionVisibility";
 import { forgetExternalRuntimeSession } from "../externalRuntimeRun";
 import { openActivitySession } from "../activity/openActivitySession";
+import { useT } from "../i18n/I18nProvider";
+import { useToast } from "../ui/ToastProvider";
 
 interface Params {
   projects: TrackedProject[];
@@ -87,6 +89,8 @@ export function useSessionNavigation({
   onOpenTrace,
   beforeSelectLocalSession,
 }: Params) {
+  const { t } = useT();
+  const toast = useToast();
   const selectionRequest = useRef(0);
   const selectSession = async (
     projectId: string | null,
@@ -170,12 +174,30 @@ export function useSessionNavigation({
 
   const removeProject = async (id: string): Promise<void> => {
     const project = projects.find((candidate) => candidate.id === id);
-    if (project) {
-      markProjectPathRemoved(project.path);
-      void window.codeshell.projectRegistry.remove(project.id);
-    }
     const index = sessionIndices[projectBucketSegment(id)] ?? loadSessionIndex(id);
-    if (project) await releaseWorkspacesForArchiveMany(index.sessions, window.codeshell);
+    if (project) {
+      // Main releases a Session's worktree through its live project authority,
+      // so detach and archive every Session before that authority is removed.
+      await releaseWorkspacesForArchiveMany(index.sessions, window.codeshell);
+      try {
+        await window.codeshell.projectRegistry.remove(project.id);
+      } catch (error) {
+        window.codeshell.log("repo.remove_failed", { id, error: String(error) });
+        toast({
+          message: t("sidebar.removeProjectFailed"),
+          detail: String(error),
+          variant: "error",
+        });
+        // The Sessions are already archived in Core; keep the row's catalog in step.
+        let working = loadSessionIndex(id);
+        for (const session of working.sessions) {
+          if (!session.archived) working = archiveSession(id, session.id, true);
+        }
+        setSessionIndices((prev) => ({ ...prev, [projectBucketSegment(id)]: working }));
+        return;
+      }
+      markProjectPathRemoved(project.path);
+    }
     const archived = project ? archiveAllSessions(id, projectLabel(project)) : undefined;
     setProjects((prev) => prev.filter((candidate) => candidate.id !== id));
     if (activeProjectId === id) setActiveProjectId(null);
