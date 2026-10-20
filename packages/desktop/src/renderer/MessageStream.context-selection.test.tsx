@@ -164,6 +164,61 @@ describe("MessageStream context selection session boundary", () => {
     expect(contextTurnButtons(container)).toHaveLength(0);
   });
 
+  test("cancelling while the summary is packaging cancels the source session run", async () => {
+    const pendingFork = deferred<SummaryForkSessionResult>();
+    const cancelled: Array<string | undefined> = [];
+    const created: string[] = [];
+    Object.assign(window.codeshell, {
+      forkSession: () => pendingFork.promise,
+      cancel: async (sessionId?: string) => {
+        cancelled.push(sessionId);
+        pendingFork.reject(new Error("Run aborted"));
+      },
+    });
+    const render = async (contextSelectionRequest: number) => {
+      await act(async () => {
+        root?.render(
+          <MessageStream
+            messages={displayMessages}
+            engineSessionId="old-session"
+            liveTurnActive={false}
+            onContextPackageCreated={(result) => {
+              created.push(result.sessionId);
+            }}
+            contextSelectionRequest={contextSelectionRequest}
+          />,
+        );
+        await flushMicrotasks();
+      });
+    };
+    await render(0);
+    await render(1);
+    await act(async () => {
+      reactPropsOf(contextTurnButtons(container)[0]).onClick();
+      await flushMicrotasks();
+    });
+    await act(async () => {
+      reactPropsOf(mergeButton(container)).onClick();
+      await flushMicrotasks();
+    });
+    expect(reactPropsOf(mergeButton(container)).disabled).toBe(true);
+
+    const cancelButton = findElements(container, "BUTTON").find(
+      (button) => renderedText(button) === "取消",
+    );
+    expect(reactPropsOf(cancelButton).disabled).toBeFalsy();
+    await act(async () => {
+      reactPropsOf(cancelButton).onClick();
+      await flushMicrotasks();
+    });
+
+    expect(cancelled).toEqual(["old-session"]);
+    expect(created).toEqual([]);
+    expect(renderedText(container)).not.toContain("Run aborted");
+    expect(reactPropsOf(mergeButton(container)).disabled).toBe(false);
+    expect(contextTurnButtons(container)).toHaveLength(1);
+  });
+
   test("registers a deferred package without activating it after the source session changes", async () => {
     const pendingFork = deferred<SummaryForkSessionResult>();
     const registered: string[] = [];

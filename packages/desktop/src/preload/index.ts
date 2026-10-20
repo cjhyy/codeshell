@@ -777,7 +777,7 @@ contextBridge.exposeInMainWorld("codeshell", {
     fromEventId?: string;
     toEventId?: string;
     quickChatClaimId?: string;
-  }) => rpc("agent/forkSession", params).then(rpcResult),
+  }) => rpc("agent/forkSession", params, params.mode === "summary" ? 0 : undefined).then(rpcResult),
   compactSession: (sessionId: string) =>
     rpc("agent/query", { type: "compact", sessionId }).then(rpcResult) as Promise<{
       type: "compact";
