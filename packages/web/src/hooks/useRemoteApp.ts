@@ -254,6 +254,10 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
   const approvalsRef = useRef(approvals);
   approvalsRef.current = approvals;
   const submittingAsyncApprovalsRef = useRef(new Set<string>());
+  /** Synchronous approvals whose card was consumed on send. A correlated
+   *  delivery error asks Main to replay them if Core still holds the request. */
+  const submittedApprovalsRef = useRef(new Set<string>());
+  const requestActiveResyncRef = useRef<() => void>(() => undefined);
   // The SELECTED project (one-true-source for "what am I looking at"), distinct
   // from activeSessionCwd which is derived from the bound session. Drives session
   // list filtering AND ccRoom.listSessions.
@@ -477,6 +481,7 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
 
   const clearApproval = useCallback((requestId: string) => {
     submittingAsyncApprovalsRef.current.delete(requestId);
+    submittedApprovalsRef.current.delete(requestId);
     approvalsRef.current = removeResolvedApproval(approvalsRef.current, requestId);
     setApprovals((prev) => removeResolvedApproval(prev, requestId));
   }, []);
@@ -1050,6 +1055,11 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
         case "error":
           if (event.approvalId) {
             submittingAsyncApprovalsRef.current.delete(event.approvalId);
+            // The decision did not reach Core. The request may still be
+            // pending there; an authoritative resync replays its card.
+            if (submittedApprovalsRef.current.delete(event.approvalId)) {
+              requestActiveResyncRef.current();
+            }
           }
           if (event.clientMessageId) {
             settleMessageAck(event.clientMessageId, new Error(event.message));
@@ -1376,6 +1386,7 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
       ...(cursor.epoch ? { epoch: cursor.epoch } : {}),
     });
   }, [setLoadingKey, sessionCursor, requestRoomCatchup]);
+  requestActiveResyncRef.current = requestActiveResync;
 
   const socket = useRemoteSocket({
     onServerEvent,
@@ -1389,6 +1400,7 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
     if (socket.status === "online") return;
     outputClient.cancel(false);
     submittingAsyncApprovalsRef.current.clear();
+    submittedApprovalsRef.current.clear();
     const error = new Error("Remote connection was lost");
     for (const waiter of uploadWaitersRef.current.values()) {
       clearTimeout(waiter.timer);
@@ -1721,6 +1733,7 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
         submittingAsyncApprovalsRef.current.add(requestId);
         return;
       }
+      submittedApprovalsRef.current.add(requestId);
       // Update the ref synchronously too so a second tap in the same tick (before
       // the async setApprovals commits) sees it gone and no-ops above.
       approvalsRef.current = approvalsRef.current.filter((p) => p.requestId !== requestId);

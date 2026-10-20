@@ -1302,6 +1302,71 @@ describe("useRemoteApp approval replay", () => {
   });
 });
 
+describe("useRemoteApp synchronous approval delivery", () => {
+  test("a failed delivery immediately resyncs so a still-pending request regains its card", async () => {
+    setupBrowser();
+    const hook = await renderHook(() => useRemoteApp());
+    const ws = FakeWebSocket.instances[0]!;
+    const approvalLine = {
+      jsonrpc: "2.0",
+      method: "agent/approvalRequest",
+      params: {
+        sessionId: "s1",
+        requestId: "write-1",
+        request: { toolName: "Write", description: "Write a.txt", args: {}, riskLevel: "medium" },
+      },
+    };
+    try {
+      await act(async () => {
+        ws.open();
+        ws.message({ type: "auth.ok", device: { id: "device-1", name: "Phone" } });
+        await flushMicrotasks();
+      });
+      await act(async () => {
+        hook.result.current.selectSession("s1");
+        ws.message(approvalLine);
+        await flushMicrotasks();
+      });
+      await act(async () => {
+        hook.result.current.respondApproval("write-1", "approve");
+        await flushMicrotasks();
+      });
+      expect(hook.result.current.approvals).toEqual([]);
+      const sentBefore = ws.sent.length;
+
+      await act(async () => {
+        ws.message({
+          type: "error",
+          approvalId: "write-1",
+          message: "Approval delivery timed out",
+        });
+        await flushMicrotasks();
+      });
+      const resync = ws.sent.slice(sentBefore).map((payload) => JSON.parse(payload));
+      expect(resync).toContainEqual(
+        expect.objectContaining({ type: "session.sync", sessionId: "s1" }),
+      );
+
+      // Main replays the request because Core still holds it.
+      await act(async () => {
+        ws.message(approvalLine);
+        await flushMicrotasks();
+      });
+      expect(hook.result.current.approvals.map((a) => a.requestId)).toEqual(["write-1"]);
+
+      // An unrelated error for an approval this tab never submitted does not resync.
+      const sentAfter = ws.sent.length;
+      await act(async () => {
+        ws.message({ type: "error", approvalId: "someone-else", message: "No pending approval" });
+        await flushMicrotasks();
+      });
+      expect(ws.sent.slice(sentAfter)).toEqual([]);
+    } finally {
+      await hook.unmount();
+    }
+  });
+});
+
 describe("useRemoteApp cc transcript streaming", () => {
   test("marks an observing room read-only and refuses phone sends", async () => {
     setupBrowser();
