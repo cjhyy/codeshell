@@ -723,3 +723,46 @@ test("a submission awaiting delivery confirmation keeps the page-leave guard", a
   expect(hook.result.current.draft).toBe("");
   expect(hook.result.current.hasUnsent).toBe(true);
 });
+
+test("a rejected send keeps its task when a follow-up was typed meanwhile", async () => {
+  environment();
+  globalThis.fetch = (async () => Response.json({ sessions: [] })) as typeof fetch;
+  const runs: Array<{ id: number }> = [];
+  Socket.respond = (request) => {
+    if (request.method === "agent/run") {
+      runs.push(request);
+      return undefined;
+    }
+    return request.method === "serve/approval.snapshot"
+      ? { id: request.id, result: { approvals: [], leases: [] } }
+      : { id: request.id, result: { type: "sessions", data: [] } };
+  };
+  const hook = await renderHook(() => useHubController({ hub: true }));
+  cleanups.push(() => hook.unmount());
+  const socket = Socket.instances[0];
+  await act(async () => {
+    socket.readyState = 1;
+    socket.onopen?.();
+    await flushMicrotasks();
+    hook.result.current.setDraft("Original long task");
+  });
+  await act(async () => {
+    expect(hook.result.current.send()).toBe(true);
+    await flushMicrotasks();
+  });
+  await act(async () => {
+    hook.result.current.setDraft("Follow-up question");
+  });
+  await act(async () => {
+    socket.onmessage?.({
+      data: JSON.stringify({
+        jsonrpc: "2.0",
+        id: runs[0]!.id,
+        error: { code: -32000, message: "Configuration is being updated" },
+      }),
+    });
+    for (let i = 0; i < 4; i++) await flushMicrotasks();
+  });
+  expect(hook.result.current.draft).toBe("Original long task\n\nFollow-up question");
+  expect(hook.result.current.error).toContain("之后输入的内容也已保留");
+});

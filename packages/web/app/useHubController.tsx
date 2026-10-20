@@ -156,7 +156,11 @@ export function useHubController({
       syncDraft(submission.draft.sessionId);
       if (restored)
         setError(
-          `${reason ? `${reason} ` : "消息未送达。"}内容和附件已恢复，可以重试。`,
+          `${reason ? `${reason} ` : "消息未送达。"}${
+            restored === "merged"
+              ? "原内容和附件已放回输入框，之后输入的内容也已保留。"
+              : "内容和附件已恢复，可以重试。"
+          }`,
           submission.draft.sessionId,
         );
       if (activeIdRef.current === submission.draft.sessionId) {

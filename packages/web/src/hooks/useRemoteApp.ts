@@ -49,6 +49,9 @@ import {
   type SessionStreamCursor,
 } from "./remoteAppSync.js";
 
+/** The host explicitly refused a message, so it was not admitted. */
+class MessageRejectedError extends Error {}
+
 /** Which external coding-CLI the CC pane drives. Mirrors desktop CCRoomView. */
 export type CcCliKind = "claude-code" | "codex";
 
@@ -99,10 +102,17 @@ export interface RemoteApp {
   notice?: string;
   logout: () => void;
   // actions
+  /** Resolves true once the host accepted the message. */
   sendChat: (input: {
     text: string;
     attachments: MobileComposerAttachment[];
     modelTraceSource?: string;
+    /** Retry an earlier intent whose delivery could not be confirmed. The host
+     *  ignores an ID it already recorded, so the task never runs twice. */
+    clientMessageId?: string;
+    /** The frame reached the socket but neither acceptance nor rejection
+     *  arrived (lost connection or timeout): the host may have run it. */
+    onUncertain?: (clientMessageId: string) => void;
   }) => Promise<boolean>;
   stopRun: () => void;
   selectSession: (id: string) => void;
@@ -1037,7 +1047,7 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
             setLoadingKey("roomHistory", false);
           }
           if (event.clientMessageId) {
-            settleMessageAck(event.clientMessageId, new Error(event.message));
+            settleMessageAck(event.clientMessageId, new MessageRejectedError(event.message));
           }
           setNotice(event.message || t("mobile.notice.roomError"));
           break;
@@ -1046,7 +1056,7 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
             submittingAsyncApprovalsRef.current.delete(event.approvalId);
           }
           if (event.clientMessageId) {
-            settleMessageAck(event.clientMessageId, new Error(event.message));
+            settleMessageAck(event.clientMessageId, new MessageRejectedError(event.message));
           }
           setNotice(event.message);
           setLoading({
@@ -1399,6 +1409,8 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
       text: string;
       attachments: MobileComposerAttachment[];
       modelTraceSource?: string;
+      clientMessageId?: string;
+      onUncertain?: (clientMessageId: string) => void;
     }): Promise<boolean> => {
       const text = input.text.trim();
       if (!text && input.attachments.length === 0) return false;
@@ -1408,6 +1420,7 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
       const roomId = activeRoomIdRef.current;
       const sessionId = boundSessionRef.current;
       const clientMessageId =
+        input.clientMessageId ??
         globalThis.crypto?.randomUUID?.() ??
         `mobile-message-${Date.now()}-${Math.random().toString(36).slice(2)}`;
       let attachments;
@@ -1472,6 +1485,8 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
       try {
         await acknowledged;
       } catch (error) {
+        // Only an explicit host rejection proves the message was not admitted.
+        if (!(error instanceof MessageRejectedError)) input.onUncertain?.(clientMessageId);
         setNotice(
           t("mobile.notice.attachmentSendFailed", {
             error: error instanceof Error ? error.message : String(error),
