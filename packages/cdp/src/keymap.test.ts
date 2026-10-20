@@ -69,6 +69,24 @@ describe("planKeySequence", () => {
     expect(mainDown?.modifiers).toBe(2);
   });
 
+  // Regression (CDP-R3-02): with Shift the logical key must describe the same
+  // character as the generated text; the physical code stays unshifted.
+  test.each([
+    ["Shift+a", "A", "KeyA"],
+    ["Shift+1", "!", "Digit1"],
+    ["Shift+/", "?", "Slash"],
+  ])("%s uses the shifted logical key on keyDown and keyUp", (spec, key, code) => {
+    const seq = planKeySequence(spec);
+    expect(seq.map((e) => `${e.type}:${e.key}`)).toEqual([
+      "keyDown:Shift",
+      `keyDown:${key}`,
+      `keyUp:${key}`,
+      "keyUp:Shift",
+    ]);
+    expect(seq[1]).toMatchObject({ key, code, modifiers: 8, text: key });
+    expect(seq[2]).toMatchObject({ key, code, modifiers: 8 });
+  });
+
   test("multi-modifier bitmask OR (Meta+Shift+z)", () => {
     const seq = planKeySequence("Meta+Shift+z");
     const mainDown = seq.find((e) => e.key === "z" && e.type === "keyDown");

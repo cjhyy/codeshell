@@ -313,7 +313,10 @@ export function planKeySequence(spec: string, platform: KeyboardPlatform = "othe
 
   const ev = (type: "keyDown" | "keyUp", key: string, modifiers?: number): KeyEvent => {
     const info = keyInfo(key);
-    const e: KeyEvent = { type, key, code: info.code };
+    // The logical key names the character the modifiers produce (Shift+a → "A",
+    // Shift+1 → "!"), matching `text`; `code` stays the physical key.
+    const produced = key.length === 1 ? printableText(key, modifiers) : null;
+    const e: KeyEvent = { type, key: produced ?? key, code: info.code };
     if (info.windowsVirtualKeyCode !== null) {
       e.windowsVirtualKeyCode = info.windowsVirtualKeyCode;
       e.nativeVirtualKeyCode = info.windowsVirtualKeyCode;
