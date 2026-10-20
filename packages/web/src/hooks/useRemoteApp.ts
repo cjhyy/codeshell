@@ -452,8 +452,10 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
    * subscription cwd from activeProjectCwd. */
   const ccHistoryCwdRef = useRef<string | undefined>(undefined);
   /** openSession replies do not echo cwd. Keep it keyed by the requested
-   * session until ccRoom.opened confirms which room acquired it. */
-  const pendingCcOpenCwdsRef = useRef<Map<string, string>>(new Map());
+   * session until ccRoom.opened confirms which room acquired it. The
+   * conversation revision of the request lets a reply that arrives after the
+   * user navigated elsewhere be discarded instead of navigating back. */
+  const pendingCcOpensRef = useRef<Map<string, { cwd: string; revision: number }>>(new Map());
   const ccBacklogLoadedRef = useRef(false);
   /** Which CLI the currently-open cc session belongs to — selects the on-disk
    *  history reader (claude vs codex rollout) for ccRoom.readHistory. Captured
@@ -1097,9 +1099,12 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
             setLoadingKey("ccSessions", false);
           }
           break;
-        case "ccRoom.opened":
+        case "ccRoom.opened": {
+          const request = pendingCcOpensRef.current.get(event.sessionId);
+          pendingCcOpensRef.current.delete(event.sessionId);
+          // Only this browser's latest open request may change navigation.
+          if (!request || request.revision !== conversationRevisionRef.current) break;
           if (event.status === "missing") {
-            pendingCcOpenCwdsRef.current.delete(event.sessionId);
             setNotice(t("mobile.notice.ccRoomOpenFailed"));
             break;
           }
@@ -1132,11 +1137,7 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
           // room.list snapshot, so the mobile view can display read-only state.
           sendRef.current?.({ type: "room.list" });
           ccHistorySessionRef.current = event.sessionId;
-          ccHistoryCwdRef.current =
-            pendingCcOpenCwdsRef.current.get(event.sessionId) ??
-            activeProjectCwdRef.current ??
-            undefined;
-          pendingCcOpenCwdsRef.current.delete(event.sessionId);
+          ccHistoryCwdRef.current = request.cwd;
           ccBacklogLoadedRef.current = false;
           boundSessionRef.current = undefined;
           setApprovals([]);
@@ -1158,6 +1159,7 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
             requestRoomCatchup(event.roomId, 0);
           }
           break;
+        }
         case "ccRoom.transcriptSubscribed":
           // Atomic snapshot + live subscription. roomCursor identifies exactly
           // where the snapshot ended in the shared room log; the incremental
@@ -1571,7 +1573,10 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
       // Pin the CLI this session belongs to so its on-disk backlog is read with
       // the right reader even if the user switches the pane's CLI afterward.
       ccHistoryKindRef.current = ccCliKindRef.current;
-      pendingCcOpenCwdsRef.current.set(sessionId, cwd);
+      pendingCcOpensRef.current.set(sessionId, {
+        cwd,
+        revision: conversationRevisionRef.current,
+      });
       socket.send({ type: "ccRoom.openSession", sessionId, cwd, mode, kind: ccCliKindRef.current });
     },
     [socket],

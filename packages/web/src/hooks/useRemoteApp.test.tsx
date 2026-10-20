@@ -1588,6 +1588,7 @@ describe("useRemoteApp cc transcript streaming", () => {
         await flushMicrotasks();
       });
       await act(async () => {
+        hook.result.current.openCcSession("thread-A", "/repo", "default");
         ws.message({
           type: "ccRoom.opened",
           roomId: "room-A",
@@ -1595,6 +1596,7 @@ describe("useRemoteApp cc transcript streaming", () => {
           status: "running",
         });
         await flushMicrotasks();
+        hook.result.current.openCcSession("thread-B", "/repo", "default");
         ws.message({
           type: "ccRoom.opened",
           roomId: "room-B",
@@ -2551,6 +2553,47 @@ describe("useRemoteApp CLI room controls", () => {
       expect(hook.result.current.approvals.map((a) => [a.roomId, a.requestId])).toEqual([
         [room.id, "read-1"],
       ]);
+    } finally {
+      await hook.unmount();
+    }
+  });
+
+  test("a late or unrequested CLI open reply cannot replace a newer selection", async () => {
+    setupBrowser();
+    const hook = await renderHook(() => useRemoteApp());
+    const ws = FakeWebSocket.instances[0]!;
+    try {
+      await act(async () => {
+        ws.open();
+        ws.message({ type: "auth.ok", device: { id: "device-1", name: "Phone" } });
+        ws.message({ type: "room.projects.ok", projects: [{ path: "/repo", name: "repo" }] });
+        await flushMicrotasks();
+      });
+      await act(async () => {
+        hook.result.current.selectProject("/repo");
+        hook.result.current.openCcSession("thread-late", "/repo", "default");
+        await flushMicrotasks();
+      });
+      await act(async () => {
+        hook.result.current.selectSession("native-newer");
+        await flushMicrotasks();
+      });
+      await act(async () => {
+        for (const [roomId, sessionId] of [
+          ["room-late", "thread-late"],
+          ["room-other-tab", "thread-other-tab"],
+        ]) {
+          ws.message({ type: "ccRoom.opened", roomId, sessionId, status: "running" });
+        }
+        await flushMicrotasks();
+      });
+      expect(hook.result.current.activeSessionId).toBe("native-newer");
+      expect(hook.result.current.activeRoom).toBeUndefined();
+      expect(
+        ws.sent
+          .map((payload) => JSON.parse(payload))
+          .filter((event) => event.type === "ccRoom.subscribeTranscript"),
+      ).toEqual([]);
     } finally {
       await hook.unmount();
     }
