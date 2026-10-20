@@ -933,6 +933,7 @@ export const settingsNs = {
         personalizationTitle: "自定义指令",
         personalizationDesc: "为 CodeShell 提供额外的说明和上下文,会附加到每次对话的系统提示中。",
         personalizationPlaceholder: "添加自定义指令…",
+        autosaveFailed: "自动保存失败：{message}。修改仍保留，失焦或离开时会重试。",
         responsePrefsTitle: "个性化",
         responsePrefsDesc: "回复语言与称呼会作为稳定偏好注入每次对话(主对话与子代理均生效)。",
         responseLangPlaceholder: "回复语言,如:始终用简体中文",
@@ -2180,6 +2181,8 @@ export const settingsNs = {
         personalizationDesc:
           "Give CodeShell extra instructions and context, appended to the system prompt of every conversation.",
         personalizationPlaceholder: "Add custom instructions…",
+        autosaveFailed:
+          "Auto-save failed: {message}. Your changes are kept and will be retried on blur or when you leave.",
         responsePrefsTitle: "Personalization",
         responsePrefsDesc:
           "Reply language and how to address you are injected as stable preferences into every conversation (both the main agent and sub-agents).",

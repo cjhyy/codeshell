@@ -66,4 +66,90 @@ describe("useTargetedDebouncedSave", () => {
     expect(writes).toEqual([{ language: "zh", profile: "latest" }]);
     await hook.unmount();
   });
+
+  test("a rejected save keeps its value and reports the error until a retry succeeds", async () => {
+    const writes: Array<{ target: string; value: string }> = [];
+    let fail = true;
+    const hook = await renderHook(() =>
+      useTargetedDebouncedSave(
+        "user:personalization",
+        async (value: string) => {
+          writes.push({ target: "user:personalization", value });
+          if (fail) throw new Error("EISDIR: settings.json");
+        },
+        600,
+      ),
+    );
+
+    act(() => hook.result.current.schedule("new instructions"));
+    await act(async () => {
+      hook.result.current.flush();
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    expect(hook.result.current.error).toContain("EISDIR");
+
+    fail = false;
+    await act(async () => {
+      hook.result.current.flush();
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    expect(writes.map((write) => write.value)).toEqual(["new instructions", "new instructions"]);
+    expect(hook.result.current.error).toBeNull();
+    await hook.unmount();
+  });
+
+  test("leaving after a rejected save retries the unsaved value for its original target", async () => {
+    const writes: string[] = [];
+    let fail = true;
+    const hook = await renderHook(() =>
+      useTargetedDebouncedSave(
+        "user:personalization",
+        async (value: string) => {
+          writes.push(value);
+          if (fail) throw new Error("disk full");
+        },
+        600,
+      ),
+    );
+    act(() => hook.result.current.schedule("draft"));
+    await act(async () => {
+      hook.result.current.flush();
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    fail = false;
+    await hook.unmount();
+    expect(writes).toEqual(["draft", "draft"]);
+  });
+
+  test("a newer edit replaces a failed value instead of being overwritten by it", async () => {
+    const writes: string[] = [];
+    let rejectFirst!: (error: Error) => void;
+    const hook = await renderHook(() =>
+      useTargetedDebouncedSave(
+        "user:personalization",
+        (value: string) => {
+          writes.push(value);
+          if (writes.length === 1)
+            return new Promise<void>((_resolve, reject) => {
+              rejectFirst = reject;
+            });
+        },
+        600,
+      ),
+    );
+    act(() => hook.result.current.schedule("old"));
+    act(() => hook.result.current.flush());
+    act(() => hook.result.current.schedule("newer"));
+    await act(async () => {
+      rejectFirst(new Error("transient"));
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    act(() => hook.result.current.flush());
+    expect(writes).toEqual(["old", "newer"]);
+    await hook.unmount();
+  });
 });
