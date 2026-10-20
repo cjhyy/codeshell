@@ -82,6 +82,36 @@ describe("parseCodexJsonLine", () => {
     ]);
   });
 
+  test("mcp_tool_call completed → readable text from structured result content", () => {
+    const done = JSON.stringify({
+      type: "item.completed",
+      item: {
+        id: "m1",
+        type: "mcp_tool_call",
+        server: "fs",
+        tool: "read",
+        arguments: {},
+        result: { content: [{ type: "text", text: "line one" }, { type: "image", data: "x" }, { type: "text", text: "line two" }], structured_content: { count: 1 } },
+        status: "completed",
+      },
+    });
+    expect(parseCodexJsonLine(done)).toEqual([{ type: "tool_result", id: "m1", summary: "line one\nline two", isError: false }]);
+
+    const structuredOnly = JSON.stringify({
+      type: "item.completed",
+      item: { id: "m2", type: "mcp_tool_call", result: { content: [], structured_content: { count: 1 } }, status: "completed" },
+    });
+    expect(parseCodexJsonLine(structuredOnly)).toEqual([{ type: "tool_result", id: "m2", summary: '{"count":1}', isError: false }]);
+  });
+
+  test("mcp_tool_call failed → error.message as the result summary", () => {
+    const failed = JSON.stringify({
+      type: "item.completed",
+      item: { id: "m3", type: "mcp_tool_call", server: "fs", tool: "read", arguments: {}, error: { message: "file is unavailable" }, status: "failed" },
+    });
+    expect(parseCodexJsonLine(failed)).toEqual([{ type: "tool_result", id: "m3", summary: "file is unavailable", isError: true }]);
+  });
+
   test("non-object JSON records are ignored like malformed lines", () => {
     for (const line of ["null", "42", '"text"', "[]"]) expect(parseCodexJsonLine(line)).toEqual([]);
   });

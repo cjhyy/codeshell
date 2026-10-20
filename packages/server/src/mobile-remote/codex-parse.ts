@@ -15,6 +15,7 @@ import type { ResidentAgentEvent } from "./resident-agent.js";
  *       item.type "reasoning"         → []      (thinking noise)
  *       item.type "command_execution" → tool(Bash) on start, tool_result on complete
  *       item.type "mcp_tool_call"     → tool(server__tool) on start, tool_result on complete
+ *                                        (result.content text blocks, or error.message on failure)
  *       item.type "web_search"        → tool(WebSearch) on start
  *       item.type "file_change"       → tool(Edit) on start
  *   {type:"turn.completed", usage}                           → turn_end
@@ -78,7 +79,7 @@ export function parseCodexJsonLine(line: string): ResidentAgentEvent[] {
         return [{
           type: "tool_result",
           id,
-          summary: String(item.result ?? item.output ?? "").slice(0, 400),
+          summary: mcpResultText(item).slice(0, 400),
           isError: item.status === "failed" || Boolean(item.is_error),
         }];
       }
@@ -130,6 +131,24 @@ export function extractThreadId(line: string): string | undefined {
     return undefined;
   }
   return msg.type === "thread.started" && typeof msg.thread_id === "string" ? msg.thread_id : undefined;
+}
+
+/** Readable MCP outcome: the failure message, else the result's text content
+ *  blocks, else its structured content (an older plain-string result passes). */
+function mcpResultText(item: any): string {
+  const failure = errText(item.error);
+  if (failure) return failure;
+  const result = item.result ?? item.output;
+  if (result === undefined || result === null) return "";
+  if (typeof result !== "object") return String(result);
+  if (Array.isArray(result.content)) {
+    const text = result.content
+      .map((block: any) => (block?.type === "text" && typeof block.text === "string" ? block.text : ""))
+      .filter(Boolean)
+      .join("\n");
+    if (text) return text;
+  }
+  return JSON.stringify(result.structured_content ?? result) ?? "";
 }
 
 function errText(e: unknown): string {
