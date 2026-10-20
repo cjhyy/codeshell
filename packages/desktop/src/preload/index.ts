@@ -47,13 +47,14 @@ import type { InstalledThemePack, ThemeImportKind, ThemePickPreview } from "../s
 import type { RendererConfigurationTarget } from "../shared/renderer-configuration";
 import type { ExternalRuntimeModelEntry } from "../shared/external-runtime-models";
 import type { PanelAppWindowTarget } from "../shared/panel-apps";
-import type { GoalConfig } from "@cjhyy/code-shell-core";
+import type { GoalConfig, MobileServerEvent } from "@cjhyy/code-shell-core";
 import type {
   LocalPluginPreview,
   PluginHookApprovalResult,
   PluginMcpApprovalResult,
 } from "./types";
 import { forwardAgentSideEffectEvent } from "./agent-side-effect-events";
+type CcAskUser = Extract<MobileServerEvent, { type: "ccRoom.approvalRequest" }>["req"]["askUser"];
 
 const invokeRoomHistory = (roomId: string, request: unknown) =>
   ipcRenderer.invoke("ccRoom:roomHistory", roomId, request);
@@ -1847,7 +1848,7 @@ contextBridge.exposeInMainWorld("codeshell", {
         displayName?: string;
         input: unknown;
         description?: string;
-        askUser?: { question: string; header?: string; options: string[]; multiSelect: boolean };
+        askUser?: CcAskUser;
       }) => void,
     ): (() => void) => {
       const h = (
@@ -1859,7 +1860,7 @@ contextBridge.exposeInMainWorld("codeshell", {
           displayName?: string;
           input: unknown;
           description?: string;
-          askUser?: { question: string; header?: string; options: string[]; multiSelect: boolean };
+          askUser?: CcAskUser;
         },
       ) => cb(req);
       ipcRenderer.on("ccRoom:approvalRequest", h);

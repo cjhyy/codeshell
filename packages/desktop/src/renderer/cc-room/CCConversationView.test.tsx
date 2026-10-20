@@ -834,4 +834,67 @@ describe("CCConversationView asynchronous recovery", () => {
     expect(responses).toBe(2);
     expect(findElementByProp(container, "data-cc-room-approval")).toBeUndefined();
   });
+
+  test("a multi-question clarification collects every answer before responding once", async () => {
+    const decisions: unknown[] = [];
+    const receive = installRoomApi({
+      respondApproval: async (_roomId: string, _requestId: string, decision: unknown) => {
+        decisions.push(decision);
+        return true;
+      },
+    });
+    const container = await mount();
+    const question = (text: string) => ({
+      question: text,
+      options: ["A", "B"],
+      multiSelect: false,
+    });
+    await act(async () => {
+      receive.approval({
+        roomId: "room",
+        requestId: "ask-many",
+        toolName: "AskUserQuestion",
+        input: {},
+        askUser: { ...question("First?"), questions: [question("First?"), question("Second?")] },
+      });
+      await flushMicrotasks();
+    });
+    const card = () => findElementByProp(container, "data-cc-room-approval");
+    expect(renderedText(card())).toContain("First?");
+    expect(renderedText(card())).toContain("Second?");
+    const click = async (node: unknown) => {
+      await act(async () => {
+        reactPropsOf(node).onClick();
+        await flushMicrotasks();
+      });
+    };
+    const optionButtons = () => elements(card(), "BUTTON").filter((n) => renderedText(n) === "B");
+    await click(optionButtons()[0]);
+    expect(decisions).toEqual([]);
+    const submit = () => elements(card(), "BUTTON").find((n) => renderedText(n) === "提交回答");
+    expect(reactPropsOf(submit()).disabled).toBe(true);
+    const custom = elements(card(), "INPUT")[1];
+    await act(async () => {
+      reactPropsOf(custom).onChange({ target: { value: "My own" } });
+      await flushMicrotasks();
+    });
+    await click(submit());
+    expect(decisions).toEqual([
+      { behavior: "allow", answers: { "First?": "B", "Second?": "My own" } },
+    ]);
+  });
+
+  test("a remounted view restores approvals the room is still waiting on", async () => {
+    installRoomApi({
+      subscribeTranscript: async () => ({
+        active: true,
+        messages: [],
+        roomCursor: 0,
+        approvals: [{ requestId: "missed", toolName: "Bash", input: { command: "pwd" } }],
+      }),
+    });
+    const container = await mount();
+    const card = findElementByProp(container, "data-cc-room-approval");
+    expect(reactPropsOf(card)["data-cc-room-approval"]).toBe("missed");
+  });
 });

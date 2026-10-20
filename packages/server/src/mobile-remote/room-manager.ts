@@ -234,31 +234,49 @@ export function buildAskUserUpdatedInput(
   return { ...obj, answers };
 }
 
-/**
- * Parse an AskUserQuestion input into the first question's prompt/header/options
- * so the UI can render a choice card. The room UI answers one question at a time
- * (the first); returns undefined for a non-AskUser / malformed input (no
- * questions), which the caller treats as "fall back to auto-allow".
- */
-export function askUserPrompt(
-  input: unknown,
-): { question: string; header?: string; options: string[]; multiSelect: boolean } | undefined {
-  const obj = (input ?? {}) as Record<string, unknown>;
-  const q0 = (Array.isArray(obj.questions) ? obj.questions[0] : undefined) as
+type AskUserQuestionPrompt = {
+  question: string;
+  header?: string;
+  options: string[];
+  multiSelect: boolean;
+};
+
+function parseAskUserQuestion(value: unknown): AskUserQuestionPrompt | undefined {
+  const q = value as
     | { question?: unknown; header?: unknown; options?: unknown; multiSelect?: unknown }
     | undefined;
-  if (!q0 || typeof q0.question !== "string") return undefined;
-  const options = Array.isArray(q0.options)
-    ? q0.options
+  if (!q || typeof q.question !== "string") return undefined;
+  const options = Array.isArray(q.options)
+    ? q.options
         .map((o) => (o as { label?: unknown })?.label)
         .filter((l): l is string => typeof l === "string")
     : [];
   return {
-    question: q0.question,
-    header: typeof q0.header === "string" ? q0.header : undefined,
+    question: q.question,
+    header: typeof q.header === "string" ? q.header : undefined,
     options,
-    multiSelect: q0.multiSelect === true,
+    multiSelect: q.multiSelect === true,
   };
+}
+
+/**
+ * Parse an AskUserQuestion input into the first question's prompt/header/options
+ * so the UI can render a choice card. Returns undefined for a non-AskUser /
+ * malformed input (no questions), which the caller treats as "fall back to
+ * auto-allow".
+ */
+export function askUserPrompt(input: unknown): AskUserQuestionPrompt | undefined {
+  const obj = (input ?? {}) as Record<string, unknown>;
+  return parseAskUserQuestion(Array.isArray(obj.questions) ? obj.questions[0] : undefined);
+}
+
+/** Every well-formed question of one AskUserQuestion request, in order. One
+ * control request carries them all and is answered exactly once, so the UI
+ * must collect every answer before responding. */
+function askUserQuestions(input: unknown): AskUserQuestionPrompt[] {
+  const obj = (input ?? {}) as Record<string, unknown>;
+  if (!Array.isArray(obj.questions)) return [];
+  return obj.questions.flatMap((q) => parseAskUserQuestion(q) ?? []);
 }
 
 /** Which external CLI backs the room. "claude-code" drives `claude` (long-lived
@@ -407,7 +425,7 @@ export interface RoomManagerOptions {
       displayName?: string;
       input: unknown;
       description?: string;
-      askUser?: { question: string; header?: string; options: string[]; multiSelect: boolean };
+      askUser?: AskUserQuestionPrompt & { questions?: AskUserQuestionPrompt[] };
     },
   ) => void;
   /** Called after a room's resident process exits or the room is explicitly
@@ -424,6 +442,9 @@ export interface RoomManagerOptions {
  */
 export class RoomManager {
   private agents = new Map<string, RoomAgent>();
+  /** Permission mode each live agent was spawned with. The mode is a spawn-time
+   * CLI argument, so room metadata alone cannot prove what a process runs. */
+  private agentModes = new WeakMap<RoomAgent, RoomPermissionMode>();
   private modelTraces = new Map<string, ReturnType<typeof createRoomModelTrace>>();
   /** Rooms whose visible output is currently sourced from the external CLI's
    * transcript tail. While present, the resident agent's stdout mirror is
@@ -938,6 +959,9 @@ export class RoomManager {
       this.writeRoomMeta(meta.id, { ...meta, permissionMode: mode });
       this.close(meta.id); // stop the old-mode process so open() respawns fresh
     }
+    // Metadata alone cannot prove the live process mode (a concurrent takeover
+    // may have rewritten it), so also compare the agent's spawn-time mode.
+    this.retireAgentUnlessMode(meta.id, mode);
     const { status } = this.open(meta.id);
     return { roomId: meta.id, status };
   }
@@ -1028,6 +1052,9 @@ export class RoomManager {
       linkedSessionMode: undefined,
     };
     this.writeRoomMeta(roomId, controllableMeta);
+    // Another view may have taken over and reopened this session under a
+    // different mode. Never report default while feeding that process.
+    this.retireAgentUnlessMode(roomId, controllableMeta.permissionMode);
     const { status } = this.open(roomId);
     if (status !== "running") {
       throw new Error("linked session room is unavailable");
@@ -1072,7 +1099,12 @@ export class RoomManager {
     roomId: string,
     requestId: string,
     decision:
-      | { behavior: "allow"; updatedInput?: unknown; answer?: string }
+      | {
+          behavior: "allow";
+          updatedInput?: unknown;
+          answer?: string;
+          answers?: Record<string, string>;
+        }
       | { behavior: "deny"; message: string },
   ): boolean {
     // Reap the stashed AskUser input FIRST, before the agent-existence check.
@@ -1107,8 +1139,11 @@ export class RoomManager {
         agent.respondControl(requestId, decision);
         return true;
       }
+      // `answers` (keyed by question text) answers every question of a
+      // multi-question request; the legacy single `answer` maps to the first.
       const prompt = askUserPrompt(pending);
-      const answersByQuestion = prompt ? { [prompt.question]: decision.answer ?? "" } : {};
+      const answersByQuestion =
+        decision.answers ?? (prompt ? { [prompt.question]: decision.answer ?? "" } : {});
       agent.respondControl(requestId, {
         behavior: "allow",
         updatedInput: buildAskUserUpdatedInput(pending, answersByQuestion),
@@ -1143,6 +1178,7 @@ export class RoomManager {
         if (agent && this.agents.get(id) === agent) this.onAgentEvent(id, event);
       });
       this.agents.set(id, agent);
+      this.agentModes.set(agent, meta.permissionMode);
       try {
         agent.start();
       } catch (error) {
@@ -1160,6 +1196,12 @@ export class RoomManager {
       if (this.agents.get(id) !== agent || !agent.isRunning()) return { status: "missing" };
     }
     return { status: "running" };
+  }
+
+  /** Stop a live agent whose spawn-time permission mode differs from `mode`. */
+  private retireAgentUnlessMode(id: string, mode: RoomPermissionMode): void {
+    const agent = this.agents.get(id);
+    if (agent && this.agentModes.get(agent) !== mode) this.close(id);
   }
 
   private onAgentEvent(id: string, event: ResidentAgentEvent): void {
@@ -1229,8 +1271,10 @@ export class RoomManager {
         // `answers` record the CLI requires. Auto-allowing the unanswered input
         // is what made claude report "The user did not answer the questions".
         if (event.toolName === "AskUserQuestion") {
-          const askUser = askUserPrompt(event.input);
-          if (askUser) {
+          const prompt = askUserPrompt(event.input);
+          if (prompt) {
+            const questions = askUserQuestions(event.input);
+            const askUser = questions.length > 1 ? { ...prompt, questions } : prompt;
             this.pendingAskUser.set(`${id}:${event.requestId}`, event.input);
             this.append(id, {
               from: "agent",

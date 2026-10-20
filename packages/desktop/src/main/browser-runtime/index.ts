@@ -50,6 +50,7 @@ export {
 } from "./chrome-native-protocol.js";
 export type { BuiltInBrowserHandoffStatus, GrantBuiltInBrowserInput } from "./built-in-handoff.js";
 export {
+  cancelBrowserActionsForStoppedRun,
   dispatchInteractiveBrowserRuntimeAction,
   activateChildBrowserRuntime,
   releaseChildBrowserRuntime,

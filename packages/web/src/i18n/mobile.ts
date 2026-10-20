@@ -99,6 +99,7 @@ export const mobile = {
         ccRoomObserving: "此 CC 会话当前为只读查看，消息未发送",
         attachmentSendFailed: "图片发送失败：{error}",
         createOffline: "连接已断开，重新连接后才能新建任务。",
+        approvalSendFailed: "审批未送达，请检查连接后重试",
       },
       permissionMode: {
         default: "默认",
@@ -268,6 +269,7 @@ export const mobile = {
         ccRoomObserving: "This CC session is read-only; the message was not sent",
         attachmentSendFailed: "Could not send images: {error}",
         createOffline: "Disconnected. Reconnect before starting a new task.",
+        approvalSendFailed: "The approval was not delivered. Check the connection and try again.",
       },
       permissionMode: {
         default: "Default",

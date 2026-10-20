@@ -1015,7 +1015,24 @@ export async function startHeadlessServer(opts: HeadlessServeOptions): Promise<H
           );
           return;
         }
+        // Retryable admission gates run before an approval lease is submitted:
+        // a submitted lease is excluded from snapshots until the worker ACKs.
+        if (hubAuth && (configurationChanging || configurationReloadFailed)) {
+          sendToTab(
+            ws,
+            hostQueryError(
+              parsed.id ?? null,
+              -32009,
+              configurationReloadFailed
+                ? "请先重新保存配置或重启服务，再发送任务。"
+                : "配置正在保存，请稍后重新发送任务。",
+            ),
+            "configuration-changing",
+          );
+          return;
+        }
         let approvalId: string | undefined;
+        let approvalRouted = false;
         if (hubAuth && parsed.method === "agent/approve") {
           const requestId = parsed.params?.requestId;
           const approval = typeof requestId === "string" ? leases.get(requestId) : undefined;
@@ -1065,20 +1082,6 @@ export async function startHeadlessServer(opts: HeadlessServeOptions): Promise<H
         let preparedUploads: PreparedHubUploads | undefined;
         let uploadsTransferred = false;
         const preparingRun = !!hubAuth && parsed.method === "agent/run";
-        if (hubAuth && (configurationChanging || configurationReloadFailed)) {
-          sendToTab(
-            ws,
-            hostQueryError(
-              parsed.id ?? null,
-              -32009,
-              configurationReloadFailed
-                ? "请先重新保存配置或重启服务，再发送任务。"
-                : "配置正在保存，请稍后重新发送任务。",
-            ),
-            "configuration-changing",
-          );
-          return;
-        }
         if (preparingRun) preparingRuns++;
         try {
           if (hubAuth && parsed.method === "agent/run") {
@@ -1232,6 +1235,8 @@ export async function startHeadlessServer(opts: HeadlessServeOptions): Promise<H
               method: parsed.method,
               ...(approvalId ? { approvalId } : {}),
             });
+            // The worker response route now owns the submitted lease.
+            approvalRouted = true;
             pendingResponsesByTab.set(tabId, (pendingResponsesByTab.get(tabId) ?? 0) + 1);
             workerMessage.id = workerRequestId;
             if (preparedUploads?.attachments.length) {
@@ -1278,6 +1283,11 @@ export async function startHeadlessServer(opts: HeadlessServeOptions): Promise<H
         } finally {
           if (preparingRun) preparingRuns--;
           if (!uploadsTransferred) preparedUploads?.release();
+          if (approvalId && !approvalRouted) {
+            // Rejected before dispatch: the worker never saw this decision.
+            leases.retry(approvalId);
+            notify("serve/approvalSnapshot", { approvals: leases.snapshot() });
+          }
         }
       };
       let queued = 0;

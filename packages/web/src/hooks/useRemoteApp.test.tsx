@@ -1302,6 +1302,71 @@ describe("useRemoteApp approval replay", () => {
   });
 });
 
+describe("useRemoteApp synchronous approval delivery", () => {
+  test("a failed delivery immediately resyncs so a still-pending request regains its card", async () => {
+    setupBrowser();
+    const hook = await renderHook(() => useRemoteApp());
+    const ws = FakeWebSocket.instances[0]!;
+    const approvalLine = {
+      jsonrpc: "2.0",
+      method: "agent/approvalRequest",
+      params: {
+        sessionId: "s1",
+        requestId: "write-1",
+        request: { toolName: "Write", description: "Write a.txt", args: {}, riskLevel: "medium" },
+      },
+    };
+    try {
+      await act(async () => {
+        ws.open();
+        ws.message({ type: "auth.ok", device: { id: "device-1", name: "Phone" } });
+        await flushMicrotasks();
+      });
+      await act(async () => {
+        hook.result.current.selectSession("s1");
+        ws.message(approvalLine);
+        await flushMicrotasks();
+      });
+      await act(async () => {
+        hook.result.current.respondApproval("write-1", "approve");
+        await flushMicrotasks();
+      });
+      expect(hook.result.current.approvals).toEqual([]);
+      const sentBefore = ws.sent.length;
+
+      await act(async () => {
+        ws.message({
+          type: "error",
+          approvalId: "write-1",
+          message: "Approval delivery timed out",
+        });
+        await flushMicrotasks();
+      });
+      const resync = ws.sent.slice(sentBefore).map((payload) => JSON.parse(payload));
+      expect(resync).toContainEqual(
+        expect.objectContaining({ type: "session.sync", sessionId: "s1" }),
+      );
+
+      // Main replays the request because Core still holds it.
+      await act(async () => {
+        ws.message(approvalLine);
+        await flushMicrotasks();
+      });
+      expect(hook.result.current.approvals.map((a) => a.requestId)).toEqual(["write-1"]);
+
+      // An unrelated error for an approval this tab never submitted does not resync.
+      const sentAfter = ws.sent.length;
+      await act(async () => {
+        ws.message({ type: "error", approvalId: "someone-else", message: "No pending approval" });
+        await flushMicrotasks();
+      });
+      expect(ws.sent.slice(sentAfter)).toEqual([]);
+    } finally {
+      await hook.unmount();
+    }
+  });
+});
+
 describe("useRemoteApp cc transcript streaming", () => {
   test("marks an observing room read-only and refuses phone sends", async () => {
     setupBrowser();
@@ -1588,6 +1653,7 @@ describe("useRemoteApp cc transcript streaming", () => {
         await flushMicrotasks();
       });
       await act(async () => {
+        hook.result.current.openCcSession("thread-A", "/repo", "default");
         ws.message({
           type: "ccRoom.opened",
           roomId: "room-A",
@@ -1595,6 +1661,7 @@ describe("useRemoteApp cc transcript streaming", () => {
           status: "running",
         });
         await flushMicrotasks();
+        hook.result.current.openCcSession("thread-B", "/repo", "default");
         ws.message({
           type: "ccRoom.opened",
           roomId: "room-B",
@@ -2401,6 +2468,285 @@ describe("useRemoteApp native output journal", () => {
       expect(text(hook.result.current.chat)).toBe("visible");
       expect(hook.result.current.chat.run).toBe("running");
       expect(hook.result.current.notice).toBeTruthy();
+    } finally {
+      await hook.unmount();
+    }
+  });
+});
+
+describe("useRemoteApp CLI room controls", () => {
+  const room = {
+    id: "room-cli",
+    name: "CLI",
+    cwd: "/repo",
+    kind: "claude-code" as const,
+    permissionMode: "bypassPermissions" as const,
+    createdAt: 1,
+    lastActiveAt: 1,
+    open: true,
+    observing: false,
+  };
+
+  async function openRoom() {
+    setupBrowser();
+    const hook = await renderHook(() => useRemoteApp());
+    const ws = FakeWebSocket.instances[0]!;
+    await act(async () => {
+      ws.open();
+      ws.message({ type: "auth.ok", device: { id: "device-1", name: "Phone" } });
+      ws.message({ type: "room.projects.ok", projects: [{ path: "/repo", name: "repo" }] });
+      await flushMicrotasks();
+    });
+    await act(async () => {
+      hook.result.current.selectProject("/repo");
+      hook.result.current.openCcSession("thread-cli", "/repo", "bypassPermissions");
+      await flushMicrotasks();
+      ws.message({
+        type: "ccRoom.opened",
+        roomId: room.id,
+        sessionId: "thread-cli",
+        status: "running",
+      });
+      ws.message({ type: "room.list.ok", rooms: [room] });
+      await flushMicrotasks();
+    });
+    const sent = () => ws.sent.map((payload) => JSON.parse(payload));
+    const approval = (requestId: string, askUser?: unknown) =>
+      ws.message({
+        type: "ccRoom.approvalRequest",
+        roomId: room.id,
+        req: { requestId, toolName: askUser ? "AskUserQuestion" : "Read", input: {}, askUser },
+      });
+    return { hook, ws, sent, approval };
+  }
+
+  test("a multi-question CLI approval keeps every question for one response", async () => {
+    const { hook, approval } = await openRoom();
+    try {
+      const question = (text: string) => ({ question: text, options: ["A"], multiSelect: false });
+      await act(async () => {
+        approval("ask-many", {
+          ...question("First?"),
+          questions: [question("First?"), question("Second?")],
+        });
+        await flushMicrotasks();
+      });
+      expect(hook.result.current.approvals[0]?.questions?.map((q) => q.question)).toEqual([
+        "First?",
+        "Second?",
+      ]);
+    } finally {
+      await hook.unmount();
+    }
+  });
+
+  test("a CLI approval response that cannot be sent keeps its card for retry", async () => {
+    const { hook, ws, sent, approval } = await openRoom();
+    try {
+      await act(async () => {
+        approval("read-1");
+        await flushMicrotasks();
+      });
+      expect(hook.result.current.approvals.map((a) => a.requestId)).toEqual(["read-1"]);
+      const responses = () => sent().filter((event) => event.type === "ccRoom.respondApproval");
+      // The socket is already closing while the UI still renders as online.
+      ws.readyState = 2;
+      await act(async () => {
+        hook.result.current.respondCcApproval(room.id, "read-1", { behavior: "allow" });
+        await flushMicrotasks();
+      });
+      expect(responses()).toEqual([]);
+      expect(hook.result.current.approvals.map((a) => a.requestId)).toEqual(["read-1"]);
+      expect(hook.result.current.notice).toBeTruthy();
+
+      ws.readyState = FakeWebSocket.OPEN;
+      await act(async () => {
+        hook.result.current.respondCcApproval(room.id, "read-1", { behavior: "allow" });
+        await flushMicrotasks();
+      });
+      expect(responses()).toHaveLength(1);
+      expect(hook.result.current.approvals).toEqual([]);
+    } finally {
+      await hook.unmount();
+    }
+  });
+
+  test("leaving a CLI room drops its approval cards so they cannot block other work", async () => {
+    const { hook, approval } = await openRoom();
+    try {
+      await act(async () => {
+        approval("read-1");
+        await flushMicrotasks();
+      });
+      expect(hook.result.current.approvals.map((a) => a.roomId)).toEqual([room.id]);
+      await act(async () => {
+        hook.result.current.leaveRoom();
+        await flushMicrotasks();
+      });
+      expect(hook.result.current.activeRoom).toBeUndefined();
+      expect(hook.result.current.approvals).toEqual([]);
+    } finally {
+      await hook.unmount();
+    }
+  });
+
+  test("reopening a CLI room shows the approvals the host replays for it", async () => {
+    const { hook, ws, approval } = await openRoom();
+    try {
+      await act(async () => {
+        approval("read-1");
+        await flushMicrotasks();
+      });
+      await act(async () => {
+        hook.result.current.selectSession("native-b");
+        await flushMicrotasks();
+      });
+      expect(hook.result.current.approvals).toEqual([]);
+      await act(async () => {
+        hook.result.current.openCcSession("thread-cli", "/repo", "bypassPermissions");
+        await flushMicrotasks();
+        // Main answers the open, then replays the request the CLI still waits on.
+        ws.message({
+          type: "ccRoom.opened",
+          roomId: room.id,
+          sessionId: "thread-cli",
+          status: "running",
+        });
+        approval("read-1");
+        await flushMicrotasks();
+      });
+      expect(hook.result.current.approvals.map((a) => [a.roomId, a.requestId])).toEqual([
+        [room.id, "read-1"],
+      ]);
+    } finally {
+      await hook.unmount();
+    }
+  });
+
+  test("a late or unrequested CLI open reply cannot replace a newer selection", async () => {
+    setupBrowser();
+    const hook = await renderHook(() => useRemoteApp());
+    const ws = FakeWebSocket.instances[0]!;
+    try {
+      await act(async () => {
+        ws.open();
+        ws.message({ type: "auth.ok", device: { id: "device-1", name: "Phone" } });
+        ws.message({ type: "room.projects.ok", projects: [{ path: "/repo", name: "repo" }] });
+        await flushMicrotasks();
+      });
+      await act(async () => {
+        hook.result.current.selectProject("/repo");
+        hook.result.current.openCcSession("thread-late", "/repo", "default");
+        await flushMicrotasks();
+      });
+      await act(async () => {
+        hook.result.current.selectSession("native-newer");
+        await flushMicrotasks();
+      });
+      await act(async () => {
+        for (const [roomId, sessionId] of [
+          ["room-late", "thread-late"],
+          ["room-other-tab", "thread-other-tab"],
+        ]) {
+          ws.message({ type: "ccRoom.opened", roomId, sessionId, status: "running" });
+        }
+        await flushMicrotasks();
+      });
+      expect(hook.result.current.activeSessionId).toBe("native-newer");
+      expect(hook.result.current.activeRoom).toBeUndefined();
+      expect(
+        ws.sent
+          .map((payload) => JSON.parse(payload))
+          .filter((event) => event.type === "ccRoom.subscribeTranscript"),
+      ).toEqual([]);
+    } finally {
+      await hook.unmount();
+    }
+  });
+
+  test("a CLI room reports the mode it runs in and never changes the native mode", async () => {
+    const { hook, ws, sent } = await openRoom();
+    try {
+      expect(hook.result.current.activeRoomId).toBe(room.id);
+      expect(hook.result.current.activeRoom?.permissionMode).toBe("bypassPermissions");
+      await act(async () => {
+        hook.result.current.setPermissionMode("default");
+        await flushMicrotasks();
+      });
+      expect(sent().filter((event) => event.type === "permission.setMode")).toEqual([]);
+
+      // Reopening in another mode restarts the CLI; the reply carries the mode
+      // in effect so stale room metadata is never shown meanwhile.
+      await act(async () => {
+        hook.result.current.openCcSession("thread-cli", "/repo", "acceptEdits");
+        ws.message({
+          type: "ccRoom.opened",
+          roomId: room.id,
+          sessionId: "thread-cli",
+          status: "running",
+          permissionMode: "acceptEdits",
+        });
+        await flushMicrotasks();
+      });
+      expect(hook.result.current.activeRoom?.permissionMode).toBe("acceptEdits");
+    } finally {
+      await hook.unmount();
+    }
+  });
+
+  test("Stop in a running CLI room stops that room instead of a native session", async () => {
+    const { hook, ws, sent } = await openRoom();
+    try {
+      await act(async () => {
+        ws.message({
+          type: "ccRoom.transcriptSubscribed",
+          roomId: room.id,
+          sessionId: "thread-cli",
+          active: true,
+          messages: [],
+          hasMore: false,
+          totalCount: 0,
+          roomCursor: 0,
+        });
+        await flushMicrotasks();
+        const history = sent().findLast((event) => event.type === "room.history");
+        ws.message({
+          type: "room.history.ok",
+          roomId: room.id,
+          requestId: history.requestId,
+          messages: [],
+          latestSeq: 0,
+          page: { snapshotId: "snapshot", throughSeq: 0, complete: true },
+        });
+        ws.message({
+          type: "room.message",
+          roomId: room.id,
+          msg: {
+            seq: 1,
+            from: "agent",
+            type: "tool",
+            tool: "Bash",
+            toolId: "t1",
+            summary: "sleep",
+          },
+        });
+        await flushMicrotasks();
+      });
+      expect(hook.result.current.chat.run).toBe("running");
+
+      await act(async () => {
+        hook.result.current.stopRun();
+        await flushMicrotasks();
+      });
+      expect(sent().filter((event) => event.type === "run.stop")).toEqual([]);
+      expect(sent()).toContainEqual({ type: "room.close", roomId: room.id });
+
+      await act(async () => {
+        ws.message({ type: "room.closed", roomId: room.id });
+        await flushMicrotasks();
+      });
+      expect(hook.result.current.chat.run).not.toBe("running");
+      expect(hook.result.current.activeRoom).toMatchObject({ id: room.id, open: false });
     } finally {
       await hook.unmount();
     }

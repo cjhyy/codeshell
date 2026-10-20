@@ -58,7 +58,10 @@ interface TargetContinuity {
   expiresAt: number;
 }
 
-type BrowserDriver = BrowserBridge & { dispose?: () => void };
+type BrowserDriver = BrowserBridge & {
+  dispose?: () => void;
+  cancelPendingActions?: () => void;
+};
 
 export interface BackgroundBrowserAcquireOptions {
   /** Stable task/session identity. Re-acquiring the same owner reuses its target. */
@@ -245,6 +248,18 @@ export class BackgroundBrowserRuntime implements BackgroundBrowserRuntimeLike {
     this.continuity.delete(ownerId);
     const entry = this.entries.get(ownerId);
     if (entry) this.disposeEntry(entry);
+  }
+
+  /**
+   * The run that issued this owner's in-flight actions was stopped. Requests
+   * still queued here and an action waiting inside the driver are abandoned
+   * before they submit input; the target, its page and its control remain.
+   */
+  cancelPending(ownerId: string): void {
+    const entry = this.entries.get(ownerId);
+    if (!entry) return;
+    entry.controlEpoch += 1;
+    entry.target?.driver.cancelPendingActions?.();
   }
 
   /** Small observable surface for tests/diagnostics; never exposes cookies or page data. */

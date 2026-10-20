@@ -5827,14 +5827,10 @@ ipcMain.handle(
         transcriptSubscriptions?.unsubscribeSubscriber(subscriberId);
       });
     }
-    return transcriptSubscriptions!.subscribe({
-      subscriberId,
-      roomId,
-      cwd,
-      sessionId,
-      kind,
-      limit,
-    });
+    return {
+      ...transcriptSubscriptions!.subscribe({ subscriberId, roomId, cwd, sessionId, kind, limit }),
+      approvals: approvalBridge.pendingRequests(roomId), // cards a remounted view missed
+    };
   },
 );
 ipcMain.handle("ccRoom:unsubscribeTranscript", async (event, roomId: string) => {

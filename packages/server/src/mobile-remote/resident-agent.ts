@@ -206,6 +206,13 @@ export class ResidentAgentProcess {
       if (/error/i.test(text))
         this.opts.onEvent({ type: "error", error: text.trim().slice(0, 400) });
     });
+    let exited = false;
+    const finish = (code: number | null, signal: NodeJS.Signals | null): void => {
+      if (exited) return;
+      exited = true;
+      if (this.child === child) this.child = undefined;
+      this.opts.onEvent({ type: "exit", code, signal });
+    };
     child.on("error", (err) => {
       const isMissing = (err as NodeJS.ErrnoException).code === "ENOENT";
       this.opts.onEvent({
@@ -214,11 +221,11 @@ export class ResidentAgentProcess {
           ? `未找到命令 "${this.opts.command}"。请先安装 Claude Code CLI 并确保它在 PATH 中。`
           : err.message,
       });
+      // A failed spawn (ENOENT/EACCES/missing cwd) emits `error` without
+      // `exit`. Retire that child so the room can start a replacement.
+      if (child.pid === undefined) finish(null, null);
     });
-    child.on("exit", (code, signal) => {
-      this.child = undefined;
-      this.opts.onEvent({ type: "exit", code, signal });
-    });
+    child.on("exit", (code, signal) => finish(code, signal));
   }
 
   /** Feed one user turn. Returns false if the process isn't running. */

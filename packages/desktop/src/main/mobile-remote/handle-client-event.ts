@@ -62,7 +62,7 @@ export interface OrchestratorCtx {
   remote: RemoteHostManager;
   uploads: MobileUploadService;
   roomManager: RoomManager;
-  approvalBridge: Pick<ApprovalBridge, "respond">;
+  approvalBridge: Pick<ApprovalBridge, "respond" | "pendingRequests">;
   transcriptSubscriptions: TranscriptSubscriptionManager;
   getBridge: () => AgentBridge | null;
   mobileSessionCwds: Map<string, string | null>;

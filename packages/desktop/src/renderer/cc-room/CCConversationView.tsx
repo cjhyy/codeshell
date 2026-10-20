@@ -30,6 +30,7 @@ import {
   normalizeLocalFilePaths,
   pathForRendererFile,
 } from "../chat/localFilePaths";
+import { CcAskUserQuestions, type CcAskUserQuestion } from "./CcAskUserQuestions";
 
 /**
  * CCConversationView — one resident Claude Code (external CLI) conversation.
@@ -64,9 +65,9 @@ interface ApprovalReq {
   input: unknown;
   description?: string;
   /** AskUserQuestion only: parsed by main, so the card renders a choice list.
-   *  The chosen label is sent back as the decision's `answer`; main bakes it
-   *  into the CLI's `answers` record. */
-  askUser?: { question: string; header?: string; options: string[]; multiSelect: boolean };
+   *  The chosen label is sent back as the decision's `answer` (or `answers`
+   *  when `questions` lists several); main bakes it into the CLI's `answers`. */
+  askUser?: CcAskUserQuestion & { questions?: CcAskUserQuestion[] };
 }
 
 type SubagentItem = Extract<ChatItem, { kind: "subagent" | "tool" }>;
@@ -303,6 +304,14 @@ export function CCConversationView({
         if (cancelled) return;
         if (blocked) throw new Error("Room transcript recovery is required");
         if (!snapshot.active) throw new Error("External transcript is not being followed");
+        // Approval prompts are pushed once; restore those this view missed
+        // while unmounted. The CLI is still waiting for them.
+        const missed = (snapshot.approvals ?? []).map((req) => ({ ...req, roomId }));
+        if (missed.length)
+          setPending((current) => [
+            ...current,
+            ...missed.filter((req) => !current.some((item) => item.requestId === req.requestId)),
+          ]);
         dispatch({ kind: "replayHistory", messages: snapshot.messages as HistoryMessage[] });
         seenSeq = snapshot.roomCursor;
         const catchup = await readCatchup(snapshot.roomCursor);
@@ -438,7 +447,12 @@ export function CCConversationView({
     async (
       req: ApprovalReq,
       decision:
-        | { behavior: "allow"; updatedInput?: unknown; answer?: string }
+        | {
+            behavior: "allow";
+            updatedInput?: unknown;
+            answer?: string;
+            answers?: Record<string, string>;
+          }
         | { behavior: "deny"; message: string },
     ) => {
       if (req.roomId !== roomId || approvalRequestsRef.current.has(req.requestId)) return;
@@ -834,7 +848,12 @@ function CcApprovalCard({
   onResolve: (
     req: ApprovalReq,
     decision:
-      | { behavior: "allow"; updatedInput?: unknown; answer?: string }
+      | {
+          behavior: "allow";
+          updatedInput?: unknown;
+          answer?: string;
+          answers?: Record<string, string>;
+        }
       | { behavior: "deny"; message: string },
   ) => void;
 }) {
@@ -857,7 +876,14 @@ function CcApprovalCard({
       </div>
       {req.description && <p className="mb-2 text-xs text-muted-foreground">{req.description}</p>}
 
-      {ask ? (
+      {ask?.questions && ask.questions.length > 1 ? (
+        <CcAskUserQuestions
+          questions={ask.questions}
+          resolving={resolving}
+          onAnswer={(answers) => onResolve(req, { behavior: "allow", answers })}
+          onCancel={() => onResolve(req, { behavior: "deny", message: "用户取消" })}
+        />
+      ) : ask ? (
         <div className="flex flex-col gap-2">
           {ask.question && <p className="text-sm">{ask.question}</p>}
           <div className="flex flex-wrap gap-2">

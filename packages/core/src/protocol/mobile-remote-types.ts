@@ -61,7 +61,13 @@ export interface CcHistoryMessage {
 /** Mirror of cc-room ApprovalDecision. `answer` carries the user's
  *  AskUserQuestion choice (string; multiSelect joins labels with ", "). */
 export type CcApprovalDecision =
-  | { behavior: "allow"; updatedInput?: unknown; answer?: string }
+  | {
+      behavior: "allow";
+      updatedInput?: unknown;
+      answer?: string;
+      /** AskUserQuestion with several questions: answer text keyed by question text. */
+      answers?: Record<string, string>;
+    }
   | { behavior: "deny"; message: string };
 
 export interface MobilePermissionModeSnapshotEntry {
@@ -357,8 +363,20 @@ export type MobileServerEvent =
         displayName?: string;
         input: unknown;
         description?: string;
-        /** AskUserQuestion only: parsed prompt + option labels for a choice card. */
-        askUser?: { question: string; header?: string; options: string[]; multiSelect: boolean };
+        /** AskUserQuestion only: parsed prompt + option labels for a choice card.
+         * `questions` lists every question when the request asks more than one. */
+        askUser?: {
+          question: string;
+          header?: string;
+          options: string[];
+          multiSelect: boolean;
+          questions?: Array<{
+            question: string;
+            header?: string;
+            options: string[];
+            multiSelect: boolean;
+          }>;
+        };
       };
     }
   | {
@@ -380,6 +398,8 @@ export type MobileServerEvent =
       roomId: string;
       sessionId: string;
       status: "running" | "missing" | "observing";
+      /** Mode the room's CLI runs in (a spawn-time argument); omitted by older hosts. */
+      permissionMode?: "default" | "acceptEdits" | "bypassPermissions";
     }
   | {
       type: "ccRoom.transcriptSubscribed";

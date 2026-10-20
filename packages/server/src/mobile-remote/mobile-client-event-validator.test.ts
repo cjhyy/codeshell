@@ -31,6 +31,14 @@ describe("parseMobileClientEvent", () => {
     ).toBe("ccRoom.respondApproval");
     expect(
       parseMobileClientEvent({
+        type: "ccRoom.respondApproval",
+        roomId: "r1",
+        requestId: "q2",
+        decision: { behavior: "allow", answers: { "Lang?": "Go", "Tests?": "unit, e2e" } },
+      })?.type,
+    ).toBe("ccRoom.respondApproval");
+    expect(
+      parseMobileClientEvent({
         type: "session.create",
         projectId: "project-1",
         rootId: "root-2",
@@ -91,6 +99,14 @@ describe("parseMobileClientEvent", () => {
         roomId: "r1",
         requestId: "q1",
         decision: { behavior: "allow", updatedInput: "not-an-object" },
+      }),
+    ).toBeUndefined();
+    expect(
+      parseMobileClientEvent({
+        type: "ccRoom.respondApproval",
+        roomId: "r1",
+        requestId: "q1",
+        decision: { behavior: "allow", answers: { "Which?": 1 } },
       }),
     ).toBeUndefined();
   });

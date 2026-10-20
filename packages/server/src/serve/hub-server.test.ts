@@ -376,6 +376,53 @@ test("failed hot reload blocks tasks until a successful save and never terminate
   expect(client.received.some((m) => m.method === "serve/workerExit")).toBe(false);
 });
 
+test("an asynchronous answer rejected while configuration saves stays retryable", async () => {
+  const { server, cwd } = await fixture({
+    script: WORKER.replace(
+      "    if (task === 'approval' || task === 'slow') pendingRun = m;",
+      "    if (task === 'async') { reply(m.id,{completed:true}); notify('agent/approvalRequest',{sessionId,requestId:'async-question',request:{toolName:'__ask_user__',args:{question:'Later?',asynchronous:true},description:'Later?',riskLevel:'low'}}); return; }\n    if (task === 'approval' || task === 'slow') pendingRun = m;",
+    ).replace(
+      "} else reply(m.id,{echo:m.params});",
+      "} else if(m.method === 'agent/configure') { notify('test/configuring', {}); setTimeout(() => reply(m.id,{ok:true}),200); } else reply(m.id,{echo:m.params});",
+    ),
+  });
+  mkdirSync(join(cwd, ".code-shell"));
+  writeFileSync(
+    join(cwd, ".code-shell", "settings.local.json"),
+    JSON.stringify({
+      defaults: { text: "hub-model" },
+      modelConnections: [{ id: "hub-model", catalogId: "openai", tag: "text", model: "fixture" }],
+    }),
+  );
+  const { cookie } = await login(server, true);
+  const client = await connect(server, cookie);
+  client.send("ask", "agent/run", { sessionId: "async-session", task: "async" });
+  await client.wait((m) => m.id === "ask");
+  await client.wait((m) => m.method === "agent/approvalRequest");
+  const answer = {
+    sessionId: "async-session",
+    requestId: "async-question",
+    decision: { approved: true, answer: "yes" },
+  };
+  const saving = fetch(server.url + "/api/v1/configuration/defaults", {
+    method: "PUT",
+    headers: { cookie, origin: server.url, "content-type": "application/json" },
+    body: JSON.stringify({ text: "hub-model" }),
+  });
+  await client.wait((m) => m.method === "test/configuring");
+  client.send("during-config", "agent/approve", answer);
+  expect((await client.wait((m) => m.id === "during-config")).error.code).toBe(-32009);
+  expect((await saving).status).toBe(200);
+
+  // The rejected answer never reached the worker, so it must still be pending.
+  const reconnected = await connect(server, cookie);
+  const snapshot = await reconnected.wait((m) => m.method === "serve/approvalSnapshot");
+  expect(snapshot.params.approvals.map((a: any) => a.requestId)).toEqual(["async-question"]);
+  client.send("after-config", "agent/approve", answer);
+  expect((await client.wait((m) => m.id === "after-config")).result).toEqual({ accepted: true });
+  expect(client.received.filter((m) => m.method === "test/decision")).toHaveLength(1);
+});
+
 test("long-running turns outlive response TTL and persistent sessions survive host restart", async () => {
   const item = await fixture();
   const { cookie } = await login(item.server, true);

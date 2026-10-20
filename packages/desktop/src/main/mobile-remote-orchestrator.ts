@@ -87,7 +87,7 @@ export interface MobileRemoteOrchestratorDeps {
   uploads: MobileUploadService;
   pendingApprovals: PendingMobileApprovals;
   roomManager: RoomManager;
-  approvalBridge: Pick<ApprovalBridge, "respond">;
+  approvalBridge: Pick<ApprovalBridge, "respond" | "pendingRequests">;
   transcriptSubscriptions: TranscriptSubscriptionManager;
   /** The agent worker bridge; null until the first window creates it. */
   getBridge: () => AgentBridge | null;

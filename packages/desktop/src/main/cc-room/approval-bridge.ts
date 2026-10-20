@@ -1,8 +1,21 @@
 export type ApprovalDecision =
   // `answer` carries the user's AskUserQuestion choice (string; multiSelect joins
   // labels with ", "); RoomManager bakes it into the CLI's `answers` record.
-  | { behavior: "allow"; updatedInput?: unknown; answer?: string }
+  // `answers` (keyed by question text) answers every question of a request.
+  | {
+      behavior: "allow";
+      updatedInput?: unknown;
+      answer?: string;
+      answers?: Record<string, string>;
+    }
   | { behavior: "deny"; message: string };
+
+interface AskUserPrompt {
+  question: string;
+  header?: string;
+  options: string[];
+  multiSelect: boolean;
+}
 
 export interface ApprovalRequestPayload {
   toolName: string;
@@ -10,13 +23,16 @@ export interface ApprovalRequestPayload {
   input: unknown;
   description?: string;
   /** Present for AskUserQuestion: the parsed prompt + selectable option labels,
-   *  so the UI renders a choice card instead of a yes/no permission card. */
-  askUser?: { question: string; header?: string; options: string[]; multiSelect: boolean };
+   *  so the UI renders a choice card instead of a yes/no permission card.
+   *  `questions` lists every question when one request asks several. */
+  askUser?: AskUserPrompt & { questions?: AskUserPrompt[] };
 }
 
 interface Pending {
   resolve: (d: ApprovalDecision) => void;
   timer: ReturnType<typeof setTimeout>;
+  /** The pushed prompt, kept so a viewer that missed it can rebuild the card. */
+  request: ApprovalRequestPayload & { requestId: string };
 }
 
 const MAX_CONFLICT_DECISIONS = 1024;
@@ -79,9 +95,10 @@ export class ApprovalBridge {
           resolve(decision);
         }
       }, this.timeoutMs);
-      this.pending.set(k, { resolve, timer });
+      const request = { ...payload, requestId };
+      this.pending.set(k, { resolve, timer, request });
       try {
-        this.opts.onPush(roomId, { ...payload, requestId });
+        this.opts.onPush(roomId, request);
       } catch {
         if (!this.pending.delete(k)) return;
         clearTimeout(timer);
@@ -104,6 +121,15 @@ export class ApprovalBridge {
     this.publishResolution(roomId, requestId, decision);
     p.resolve(decision);
     return true;
+  }
+
+  /** Requests the room is still waiting on, oldest first. A viewer that was
+   *  away from the room or offline when they were pushed replays these. */
+  pendingRequests(roomId: string): Array<ApprovalRequestPayload & { requestId: string }> {
+    const prefix = `${roomId}:`;
+    return [...this.pending]
+      .filter(([key]) => key.startsWith(prefix))
+      .map(([, pending]) => pending.request);
   }
 
   /** Deny every request owned by a room that can no longer answer controls. */

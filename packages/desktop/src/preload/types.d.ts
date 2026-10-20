@@ -37,6 +37,7 @@ import type {
   PanelAppSourceInput,
   PanelAppPreview,
   PanelAppUpdateCheck,
+  MobileServerEvent,
 } from "@cjhyy/code-shell-core";
 import type {
   ApprovalRequest,
@@ -2486,14 +2487,12 @@ export interface CodeshellApi
       limit: number,
     ): Promise<{
       active: boolean;
-      messages: {
-        role: "user" | "assistant";
-        text: string;
-        tools?: { name: string; summary: string; args?: Record<string, unknown> }[];
-      }[];
+      messages: Extract<MobileServerEvent, { type: "ccRoom.transcriptSubscribed" }>["messages"];
       hasMore: boolean;
       totalCount: number;
       roomCursor: number;
+      /** CLI approvals the room is still waiting on (a remounted view missed their push). */
+      approvals?: Array<Extract<MobileServerEvent, { type: "ccRoom.approvalRequest" }>["req"]>;
     }>;
     unsubscribeTranscript(roomId: string): Promise<void>;
     closeSession(roomId: string): Promise<void>;
@@ -2507,8 +2506,7 @@ export interface CodeshellApi
         displayName?: string;
         input: unknown;
         description?: string;
-        /** AskUserQuestion only: parsed prompt + option labels for a choice card. */
-        askUser?: { question: string; header?: string; options: string[]; multiSelect: boolean };
+        askUser?: Extract<MobileServerEvent, { type: "ccRoom.approvalRequest" }>["req"]["askUser"];
       }) => void,
     ): () => void;
     onApprovalResolved(
