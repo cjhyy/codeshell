@@ -692,7 +692,7 @@ export function useRunController({
       });
   };
 
-  // !busy: send a bucket's next serialized queued turn. Either a 引导打断
+  // Idle bucket: send its next serialized queued turn. Either a 引导打断
   // relay handoff (drain the WHOLE queue as one merged re-send) or a leftover
   // queue (take the next item). Clear the relay marker once we fire.
   const sendNextQueued = (bucket: string): void => {
@@ -828,6 +828,7 @@ export function useRunController({
       return;
     }
 
+    // !busy: no live run in the viewed conversation; send its next queued turn.
     sendNextQueued(activeBucket);
   }, [busy, activeBucket, activeSessionId, queuedInputs, relayingBuckets]);
 
