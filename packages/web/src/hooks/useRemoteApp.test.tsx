@@ -2693,4 +2693,62 @@ describe("useRemoteApp CLI room controls", () => {
       await hook.unmount();
     }
   });
+
+  test("Stop in a running CLI room stops that room instead of a native session", async () => {
+    const { hook, ws, sent } = await openRoom();
+    try {
+      await act(async () => {
+        ws.message({
+          type: "ccRoom.transcriptSubscribed",
+          roomId: room.id,
+          sessionId: "thread-cli",
+          active: true,
+          messages: [],
+          hasMore: false,
+          totalCount: 0,
+          roomCursor: 0,
+        });
+        await flushMicrotasks();
+        const history = sent().findLast((event) => event.type === "room.history");
+        ws.message({
+          type: "room.history.ok",
+          roomId: room.id,
+          requestId: history.requestId,
+          messages: [],
+          latestSeq: 0,
+          page: { snapshotId: "snapshot", throughSeq: 0, complete: true },
+        });
+        ws.message({
+          type: "room.message",
+          roomId: room.id,
+          msg: {
+            seq: 1,
+            from: "agent",
+            type: "tool",
+            tool: "Bash",
+            toolId: "t1",
+            summary: "sleep",
+          },
+        });
+        await flushMicrotasks();
+      });
+      expect(hook.result.current.chat.run).toBe("running");
+
+      await act(async () => {
+        hook.result.current.stopRun();
+        await flushMicrotasks();
+      });
+      expect(sent().filter((event) => event.type === "run.stop")).toEqual([]);
+      expect(sent()).toContainEqual({ type: "room.close", roomId: room.id });
+
+      await act(async () => {
+        ws.message({ type: "room.closed", roomId: room.id });
+        await flushMicrotasks();
+      });
+      expect(hook.result.current.chat.run).not.toBe("running");
+      expect(hook.result.current.activeRoom).toMatchObject({ id: room.id, open: false });
+    } finally {
+      await hook.unmount();
+    }
+  });
 });

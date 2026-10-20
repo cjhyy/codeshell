@@ -1030,6 +1030,11 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
         case "room.closed":
           // Keep the internal room snapshot in sync (resolves activeRoom metadata).
           setRooms((prev) => prev.map((r) => (r.id === event.roomId ? { ...r, open: false } : r)));
+          // The room's process is gone, so no turn is running any more. Its
+          // stopped process cannot report its own turn end.
+          if (event.roomId === activeRoomIdRef.current) {
+            dispatchChat({ kind: "raw", raw: { type: "turn_complete", reason: "aborted_tools" } });
+          }
           break;
         case "room.recovery":
           if (event.roomId === activeRoomIdRef.current) {
@@ -1519,6 +1524,14 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
   );
 
   const stopRun = useCallback(() => {
+    const roomId = activeRoomIdRef.current;
+    if (roomId) {
+      // A CLI room runs in its own resident process, not a native session.
+      // Closing it stops the process; the next message resumes the same CLI
+      // conversation.
+      socket.send({ type: "room.close", roomId });
+      return;
+    }
     socket.send({ type: "run.stop", sessionId: boundSessionRef.current });
   }, [socket]);
 
