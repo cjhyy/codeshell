@@ -12,8 +12,12 @@ class FakeTerminal {
   focus() {}
   write() {}
   dispose() {}
-  onData() { return { dispose() {} }; }
-  registerLinkProvider() { return { dispose() {} }; }
+  onData() {
+    return { dispose() {} };
+  }
+  registerLinkProvider() {
+    return { dispose() {} };
+  }
 }
 
 class FakeFitAddon {
@@ -27,7 +31,13 @@ const { TerminalPanel } = await import("./TerminalPanel");
 
 let root: Root | null = null;
 let container: HTMLElement;
-const starts: Array<{ sessionId: string; cwd?: string; cols: number; rows: number }> = [];
+const starts: Array<{
+  sessionId: string;
+  cwd?: string;
+  cols: number;
+  rows: number;
+  engineSessionId?: string;
+}> = [];
 
 beforeEach(() => {
   ensureMiniDom();
@@ -96,5 +106,27 @@ describe("TerminalPanel workspace root", () => {
       await flushMicrotasks();
     });
     expect(starts).toHaveLength(1);
+  });
+  test("names the conversation's Session so Main can authorize its managed worktree", async () => {
+    await act(async () => {
+      root?.render(
+        <TerminalPanel
+          cwd="/repo/.worktrees/feature"
+          sessionId="term:bucket:2"
+          engineSessionId="engine-1"
+        />,
+      );
+      await flushMicrotasks();
+    });
+
+    expect(starts).toEqual([
+      {
+        sessionId: "term:bucket:2@window-7",
+        cwd: "/repo/.worktrees/feature",
+        engineSessionId: "engine-1",
+        cols: 80,
+        rows: 24,
+      },
+    ]);
   });
 });

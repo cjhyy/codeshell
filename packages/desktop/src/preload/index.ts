@@ -48,6 +48,7 @@ import type { ExternalRuntimeModelEntry } from "../shared/external-runtime-model
 import type { PanelAppWindowTarget } from "../shared/panel-apps";
 import type { GoalConfig } from "@cjhyy/code-shell-core";
 import type {
+  CodeshellApi,
   LocalPluginPreview,
   PluginHookApprovalResult,
   PluginMcpApprovalResult,
@@ -1472,7 +1473,7 @@ contextBridge.exposeInMainWorld("codeshell", {
    * its pid is a stable per-window discriminator for the window's lifetime.
    */
   windowToken: String(process.pid),
-  ptyStart: (opts: { sessionId: string; cwd?: string; cols?: number; rows?: number }) =>
+  ptyStart: (opts: Parameters<CodeshellApi["ptyStart"]>[0]) =>
     ipcRenderer.invoke("pty:start", opts) as Promise<PtyStartResult>,
   ptyWrite: (sessionId: string, data: string) => ipcRenderer.invoke("pty:write", sessionId, data),
   ptyResize: (sessionId: string, cols: number, rows: number) =>

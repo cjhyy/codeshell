@@ -10,6 +10,8 @@ interface Props {
   cwd: string | null;
   /** Stable id so the pty survives panel re-mounts within a session. */
   sessionId: string;
+  /** The conversation's Session, which authorizes a managed-worktree cwd. */
+  engineSessionId?: string | null;
 }
 
 /**
@@ -17,7 +19,7 @@ interface Props {
  * node-pty in main over IPC. term.onData → pty:write; pty:data → term.write;
  * a ResizeObserver keeps the pty's cols/rows in sync via FitAddon.
  */
-export function TerminalPanel({ cwd, sessionId: baseId }: Props) {
+export function TerminalPanel({ cwd, sessionId: baseId, engineSessionId }: Props) {
   const { t } = useT();
   // Capture in a ref so the xterm-building effect (keyed on sessionId only) can
   // read the latest translator without re-running on a language switch (which
@@ -32,6 +34,7 @@ export function TerminalPanel({ cwd, sessionId: baseId }: Props) {
   // the terminal (that would destroy xterm while the pty keeps running, losing
   // all scrollback). The session id already changes when the repo changes.
   const spawnCwdRef = useRef(cwd);
+  const spawnSessionRef = useRef(engineSessionId);
   const spawnCwd = spawnCwdRef.current;
 
   useEffect(() => {
@@ -81,6 +84,7 @@ export function TerminalPanel({ cwd, sessionId: baseId }: Props) {
       .ptyStart({
         sessionId,
         cwd: spawnCwdRef.current ?? undefined,
+        ...(spawnSessionRef.current ? { engineSessionId: spawnSessionRef.current } : {}),
         cols: term.cols,
         rows: term.rows,
       })

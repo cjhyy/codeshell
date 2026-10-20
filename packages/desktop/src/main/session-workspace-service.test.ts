@@ -5,6 +5,7 @@ import {
   mkdirSync,
   mkdtempSync,
   readFileSync,
+  realpathSync,
   rmSync,
   symlinkSync,
   writeFileSync,
@@ -30,6 +31,7 @@ import {
   type SessionWorkspaceList,
 } from "./session-workspace-service";
 import { readSessionDirectoryForUi, readSessionFileForUi } from "./session-fs-service";
+import { requireRendererOrSessionPath } from "./renderer-session-path";
 
 const ENV = { ...process.env, GIT_CONFIG_GLOBAL: "/dev/null", GIT_CONFIG_SYSTEM: "/dev/null" };
 
@@ -301,6 +303,46 @@ describe("cleanupSessionWorktreeForUi", () => {
     });
     await expect(readSessionDirectoryForUi(sessionId, mainRoot.id)).rejects.toThrow(
       /authorized worktree/i,
+    );
+    removeWorktree(wt.worktreePath, true);
+  });
+
+  test("authorizes a terminal or image cwd at the Session's managed worktree only through that Session", async () => {
+    const projectStore = await projectStoreForFixture(root, sessionsDir);
+    const project = await projectStore.createFromPath(repo);
+    __setSessionWorkspaceServiceProjectStoreForTests(projectStore);
+    const sessionId = "session-terminal-worktree";
+    const sm = new SessionManager(sessionsDir);
+    sm.create(repo, "m", "p", sessionId);
+    bindSession(sessionsDir, sessionId, project.id, project.primaryRootId);
+    const wt = await createWorktree(repo, "terminal", sessionId);
+    sm.setSessionWorkspace(sessionId, {
+      root: wt.worktreePath,
+      kind: "worktree",
+      worktree: {
+        path: wt.worktreePath,
+        branch: wt.worktreeBranch,
+        baseRef: wt.originalBranch ?? "HEAD",
+        createdBy: "codeshell",
+      },
+    });
+    const registered = { registeredPaths: [repo] };
+
+    await expect(
+      requireRendererOrSessionPath(wt.worktreePath, sessionId, registered),
+    ).resolves.toBe(realpathSync(wt.worktreePath));
+    // Registered roots keep working with or without a Session.
+    await expect(requireRendererOrSessionPath(repo, undefined, registered)).resolves.toBe(
+      realpathSync(repo),
+    );
+    // Without the owning Session, or for any other directory, the gate holds.
+    await expect(
+      requireRendererOrSessionPath(wt.worktreePath, undefined, registered),
+    ).rejects.toThrow(/not registered/);
+    const other = join(root, "unrelated");
+    mkdirSync(other);
+    await expect(requireRendererOrSessionPath(other, sessionId, registered)).rejects.toThrow(
+      /not registered/,
     );
     removeWorktree(wt.worktreePath, true);
   });

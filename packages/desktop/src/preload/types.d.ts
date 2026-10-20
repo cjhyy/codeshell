@@ -1301,12 +1301,7 @@ export interface CodeshellApi
   /** Token unique to this window's renderer process (for window-unique ids). */
   windowToken: string;
   /** Start (or reattach) the pty for sessionId. */
-  ptyStart(opts: {
-    sessionId: string;
-    cwd?: string;
-    cols?: number;
-    rows?: number;
-  }): Promise<PtyStartResult>;
+  ptyStart(opts: import("../shared/pty.js").PtyStartRequest): Promise<PtyStartResult>;
   /** Send user keystrokes to the shell. */
   ptyWrite(sessionId: string, data: string): Promise<void>;
   /** Tell the shell the viewport changed. */

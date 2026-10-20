@@ -191,7 +191,9 @@ export function FilesPanel({
   const fileSystem = useMemo<FileSystemReader>(() => {
     if (engineSessionId && sessionMainRootId && activeRoot) {
       return {
-        readImage: UNAVAILABLE_FILE_SYSTEM.readImage,
+        // The Session authorizes its managed worktree, which is not a project root.
+        readImage: (root, path) =>
+          window.codeshell.readImageDataUrl(path, { cwd: root, sessionId: engineSessionId }),
         readDir: (_root, dir) =>
           window.codeshell.readSessionDir(engineSessionId, activeRoot.id, dir),
         readFile: (_root, path) =>
