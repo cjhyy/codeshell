@@ -140,6 +140,8 @@ jobs:
             # The issuer proof runs alone above so its receipt precedes the first SDK/Core import.
             # The attachment suites run alone below: their App-level module stubs
             # (MessageStream, ChatView, ...) outlive mock.restore() in a shared process.
+            # node:test suites that deny OS/network transports at load run under node --test
+            # below, one process per file; Bun's node:test shim can skip their restore hooks.
             ignore: >-
               --path-ignore-patterns '**/browser-driver/cdp-actions.integration.test.ts'
               --path-ignore-patterns '**/browser-runtime/playwright-driver.test.ts'
@@ -150,6 +152,16 @@ jobs:
               --path-ignore-patterns '**/renderer/App.attachment-quantity.test.tsx'
               --path-ignore-patterns '**/renderer/App.no-repo-attachments.test.tsx'
               --path-ignore-patterns '**/renderer/ChatView.attachment-quantity-fallback.test.tsx'
+              --path-ignore-patterns '**/scripts/composer-operation-diagnostics.test.mjs'
+              --path-ignore-patterns '**/scripts/nsis-initial-identity-observation.test.mjs'
+              --path-ignore-patterns '**/scripts/owned-electron-control.test.mjs'
+              --path-ignore-patterns '**/scripts/packaged-startup-observation.test.mjs'
+              --path-ignore-patterns '**/scripts/process-lineage-custody.test.mjs'
+              --path-ignore-patterns '**/scripts/windows-nsis-desktop-observation.test.mjs'
+              --path-ignore-patterns '**/scripts/windows-nsis-process-roles.test.mjs'
+              --path-ignore-patterns '**/scripts/windows-packaged-main-crash-evidence.test.mjs'
+              --path-ignore-patterns '**/scripts/windows-source-harness.test.mjs'
+              --path-ignore-patterns '**/scripts/preference-goal-delete-acceptance.test.mjs'
           - shard: rest
             paths: >-
               tests packages/coding packages/tui packages/pet packages/server
@@ -203,6 +215,20 @@ jobs:
           node scripts/run-bun-test-shard.mjs --timeout 30000 packages/desktop/src/renderer/App.attachment-quantity.test.tsx
           node scripts/run-bun-test-shard.mjs --timeout 30000 packages/desktop/src/renderer/App.no-repo-attachments.test.tsx
           node scripts/run-bun-test-shard.mjs --timeout 30000 packages/desktop/src/renderer/ChatView.attachment-quantity-fallback.test.tsx
+      - name: test transport-denying node:test suites in their own processes
+        if: matrix.shard == 'desktop'
+        run: >-
+          node scripts/run-isolated-node-smoke.mjs --test
+          packages/desktop/scripts/composer-operation-diagnostics.test.mjs
+          packages/desktop/scripts/nsis-initial-identity-observation.test.mjs
+          packages/desktop/scripts/owned-electron-control.test.mjs
+          packages/desktop/scripts/packaged-startup-observation.test.mjs
+          packages/desktop/scripts/process-lineage-custody.test.mjs
+          packages/desktop/scripts/windows-nsis-desktop-observation.test.mjs
+          packages/desktop/scripts/windows-nsis-process-roles.test.mjs
+          packages/desktop/scripts/windows-packaged-main-crash-evidence.test.mjs
+          packages/desktop/scripts/windows-source-harness.test.mjs
+          packages/desktop/scripts/preference-goal-delete-acceptance.test.mjs
       - name: test responsive overlays and settings menus
         if: matrix.shard == 'desktop'
         run: bun run --cwd packages/desktop test:ui:overlays
