@@ -10,6 +10,7 @@ import {
   formatBytes,
 } from "@cjhyy/code-shell-core/internal";
 import { truncate } from "../../ui/truncate.js";
+import { parseGlobResult } from "../../ui/glob-result.js";
 
 export type OutputFormat = "text" | "json" | "jsonl" | "stream-json";
 
@@ -145,7 +146,7 @@ function compactSummary(toolName: string, content: string): string {
     case "Read":
       return `${total} lines, ${formatBytes(content.length)}`;
     case "Glob":
-      return `${lines.filter((l) => l.trim()).length} files`;
+      return `${parseGlobResult(content).total} files`;
     case "Grep":
       return `${lines.filter((l) => l.trim()).length} matches`;
     case "Write":
