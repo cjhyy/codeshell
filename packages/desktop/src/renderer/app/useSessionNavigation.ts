@@ -324,10 +324,33 @@ export function useSessionNavigation({
     }));
   };
 
-  const deleteSession = (projectId: string | null, sessionId: string): void => {
+  const deleteSession = async (projectId: string | null, sessionId: string): Promise<void> => {
     const summary = sessionIndices[projectBucketSegment(projectId)]?.sessions.find(
       (session) => session.id === sessionId,
     );
+    const plan = planSessionDeletion(
+      summary ?? { id: sessionId, title: "", createdAt: 0, updatedAt: 0 },
+    );
+    if (plan.cancelCronJobId) {
+      await window.codeshell.cancelAutomationRun(plan.cancelCronJobId).catch((error) =>
+        window.codeshell.log("session.delete.cancel.failed", {
+          cronJobId: plan.cancelCronJobId,
+          error: String(error),
+        }),
+      );
+    }
+    // The local delete writes a permanent catalog tombstone, so commit it only
+    // after Main has deleted the Session. A refusal keeps the row for a retry.
+    try {
+      await window.codeshell.deleteSession(plan.deleteEngineId);
+    } catch (error) {
+      window.codeshell.log("session.delete.session.failed", {
+        engineId: plan.deleteEngineId,
+        error: String(error),
+      });
+      toast({ message: t("sidebar.deleteSessionFailed"), detail: String(error), variant: "error" });
+      return;
+    }
     const next = deleteSessionLocal(projectId, sessionId);
     setSessionIndices((prev) => ({
       ...prev,
@@ -341,38 +364,18 @@ export function useSessionNavigation({
       delete rest[deletedBucket];
       return rest;
     });
-
-    const plan = planSessionDeletion(
-      summary ?? { id: sessionId, title: "", createdAt: 0, updatedAt: 0 },
-    );
-    void (async () => {
-      if (plan.cancelCronJobId) {
-        await window.codeshell.cancelAutomationRun(plan.cancelCronJobId).catch((error) =>
-          window.codeshell.log("session.delete.cancel.failed", {
-            cronJobId: plan.cancelCronJobId,
-            error: String(error),
-          }),
-        );
-      }
-      await window.codeshell.deleteSession(plan.deleteEngineId).catch((error) =>
-        window.codeshell.log("session.delete.session.failed", {
-          engineId: plan.deleteEngineId,
+    // Drop the renderer's "already started on this runtime" binding. Main
+    // stops the runtime itself, but a stale binding here would make a future
+    // session reusing this id skip start() and send into nothing.
+    forgetExternalRuntimeSession(plan.deleteEngineId);
+    if (plan.deleteRunId) {
+      await window.codeshell.deleteRun(plan.deleteRunId).catch((error) =>
+        window.codeshell.log("session.delete.run.failed", {
+          runId: plan.deleteRunId,
           error: String(error),
         }),
       );
-      // Drop the renderer's "already started on this runtime" binding. Main
-      // stops the runtime itself, but a stale binding here would make a future
-      // session reusing this id skip start() and send into nothing.
-      forgetExternalRuntimeSession(plan.deleteEngineId);
-      if (plan.deleteRunId) {
-        await window.codeshell.deleteRun(plan.deleteRunId).catch((error) =>
-          window.codeshell.log("session.delete.run.failed", {
-            runId: plan.deleteRunId,
-            error: String(error),
-          }),
-        );
-      }
-    })();
+    }
   };
 
   const openAutomationRunSession = async (run: RunSummary): Promise<void> => {

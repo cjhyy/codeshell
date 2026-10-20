@@ -201,4 +201,33 @@ describe("sidebar project and session mutations", () => {
     expect(result.current.projects[0]!.displayName).toBe("Renamed");
     expect(errorToasts()).toEqual([]);
   });
+  test("a failed sidebar delete keeps the Session row and reports the failure", async () => {
+    bridge.deleteSession = async () => {
+      throw new Error("EACCES: permission denied");
+    };
+    await mount();
+    await act(async () => {
+      await result.current.handleDeleteSession(project.id, "ui-1");
+    });
+
+    const ids = (value: SessionIndex) => value.sessions.map((session) => session.id);
+    expect(ids(result.current.sessionIndices[project.id]!)).toEqual(["ui-1", "ui-2"]);
+    expect(ids(loadSessionIndex(project.id))).toEqual(["ui-1", "ui-2"]);
+    expect(loadSessionIndex(project.id).activeSessionId).toBe("ui-1");
+    expect(errorToasts()).toHaveLength(1);
+    expect(JSON.stringify(errorToasts()[0]!.data)).toContain("EACCES");
+  });
+
+  test("a sidebar delete removes the row once Main has deleted the Session", async () => {
+    await mount();
+    await act(async () => {
+      await result.current.handleDeleteSession(project.id, "ui-1");
+    });
+
+    expect(calls).toEqual(["delete:engine-1"]);
+    expect(
+      result.current.sessionIndices[project.id]!.sessions.map((session) => session.id),
+    ).toEqual(["ui-2"]);
+    expect(errorToasts()).toEqual([]);
+  });
 });
