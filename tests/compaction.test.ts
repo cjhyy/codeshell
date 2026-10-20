@@ -2,6 +2,7 @@ import { describe, it, expect } from "bun:test";
 import {
   estimateTokens,
   windowCompact,
+  snipCompact,
   microcompact,
   truncateToolResult,
   buildSummarizationPrompt,
@@ -186,5 +187,40 @@ describe("buildSummarizationPrompt", () => {
     expect(prompt).toContain("fix the bug");
     expect(prompt).toContain("found the issue");
     expect(prompt).toContain("Summarize");
+  });
+});
+
+describe("snipCompact", () => {
+  it("does not keep a prefix tool call while snipping its result", () => {
+    const msgs: Message[] = [
+      { role: "user", content: "<system-reminder>standing instructions</system-reminder>" },
+      { role: "user", content: "first task" },
+      {
+        role: "assistant",
+        content: [{ type: "tool_use", id: "call-1", name: "Read", input: { path: "/a" } }],
+      },
+      { role: "user", content: [{ type: "tool_result", tool_use_id: "call-1", content: "ok" }] },
+      ...Array.from(
+        { length: 10 },
+        (_, i): Message => ({
+          role: i % 2 === 0 ? "assistant" : "user",
+          content: `turn ${i}`,
+        }),
+      ),
+    ];
+    const result = snipCompact(msgs, 3, 8);
+    expect(result.length).toBeLessThan(msgs.length);
+    const uses = new Set<string>();
+    const results = new Set<string>();
+    for (const msg of result) {
+      if (!Array.isArray(msg.content)) continue;
+      for (const block of msg.content) {
+        if (block.type === "tool_use" && block.id) uses.add(block.id);
+        if (block.type === "tool_result" && block.tool_use_id) results.add(block.tool_use_id);
+      }
+    }
+    expect([...uses]).toEqual([...results]);
+    expect(result[0]).toBe(msgs[0]);
+    expect(result[1]).toBe(msgs[1]);
   });
 });

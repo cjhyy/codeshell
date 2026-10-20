@@ -317,9 +317,43 @@ export function adjustIndexToPreserveAPIInvariants(
 }
 
 /**
+ * Shrink a kept-prefix end-index so that every tool_use in the prefix keeps
+ * its tool_result in the prefix too. The counterpart of
+ * adjustIndexToPreserveAPIInvariants for slices that keep the beginning.
+ */
+function adjustPrefixEndToPreserveAPIInvariants(
+  messages: Message[],
+  endIndex: number,
+): number {
+  let end = Math.min(endIndex, messages.length);
+  for (;;) {
+    const useIndexById = new Map<string, number>();
+    for (let i = 0; i < end; i++) {
+      const msg = messages[i];
+      if (msg.role !== "assistant" || !Array.isArray(msg.content)) continue;
+      for (const block of msg.content) {
+        if (block.type === "tool_use" && block.id) useIndexById.set(block.id, i);
+      }
+    }
+    let next = end;
+    for (let i = end; i < messages.length && useIndexById.size > 0; i++) {
+      const msg = messages[i];
+      if (!Array.isArray(msg.content)) continue;
+      for (const block of msg.content) {
+        if (block.type !== "tool_result" || !block.tool_use_id) continue;
+        const useIndex = useIndexById.get(block.tool_use_id);
+        if (useIndex !== undefined && useIndex < next) next = useIndex;
+      }
+    }
+    if (next === end) return end;
+    end = next;
+  }
+}
+
+/**
  * Snip strategy: keep first N + last M messages, replace middle with a marker.
  * Less aggressive than windowCompact — preserves initial context AND recent history.
- * Uses adjustIndexToPreserveAPIInvariants on both boundaries.
+ * Protects tool pairs on both boundaries (tail start and kept-prefix end).
  */
 export function snipCompact(messages: Message[], keepFirstN = 3, keepLastM = 8): Message[] {
   if (messages.length <= keepFirstN + keepLastM + 1) return messages;
@@ -331,7 +365,9 @@ export function snipCompact(messages: Message[], keepFirstN = 3, keepLastM = 8):
   // Ensure we don't overlap with the first-N range
   if (lastStart <= keepFirstN) return messages;
 
-  const snippedCount = lastStart - keepFirstN;
+  // A prefix tool call must not lose its result to the snipped middle.
+  const firstEnd = adjustPrefixEndToPreserveAPIInvariants(messages, keepFirstN);
+  const snippedCount = lastStart - firstEnd;
   const snipMarker: Message = {
     role: "user",
     content:
@@ -339,7 +375,7 @@ export function snipCompact(messages: Message[], keepFirstN = 3, keepLastM = 8):
       `Use the transcript file to review details if needed.]</system-reminder>`,
   };
 
-  return [...messages.slice(0, keepFirstN), snipMarker, ...messages.slice(lastStart)];
+  return [...messages.slice(0, firstEnd), snipMarker, ...messages.slice(lastStart)];
 }
 
 /**
