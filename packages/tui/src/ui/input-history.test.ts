@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, mock, test } from "bun:test";
-import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -43,5 +43,28 @@ describe("input history sensitive commands", () => {
     const historyFile = join(home, ".code-shell", "history.jsonl");
     const onDisk = existsSync(historyFile) ? readFileSync(historyFile, "utf-8") : "";
     expect(onDisk).not.toContain("sk-test-secret");
+  });
+});
+
+function homeWithPreviousSession(display: string): string {
+  const home = mkdtempSync(join(tmpdir(), "codeshell-history-home-"));
+  tempHomes.push(home);
+  mkdirSync(join(home, ".code-shell"));
+  const entry = { display, timestamp: 1, project: "/workspace", sessionId: "previous" };
+  writeFileSync(join(home, ".code-shell", "history.jsonl"), `${JSON.stringify(entry)}\n`);
+  return home;
+}
+
+describe("input history navigation", () => {
+  test("Up returns the current session's newest input before older sessions", async () => {
+    const history = await loadInputHistory(homeWithPreviousSession("previous input"));
+    history.initHistory("current", "/workspace");
+    history.addToHistory("current input");
+
+    const navigator = history.createHistoryNavigator();
+    expect(navigator.up("")).toBe("current input");
+    expect(navigator.up("")).toBe("previous input");
+    expect(navigator.up("")).toBeNull();
+    expect(navigator.down()).toBe("current input");
   });
 });

@@ -123,8 +123,9 @@ function ensureLoaded(): HistoryLogEntry[] {
 }
 
 /**
- * Get the display strings for history (most recent last),
- * with current session entries prioritized first.
+ * Get the display strings for history (most recent last). Current session
+ * entries are prioritized: they sit after older sessions' entries, so the
+ * navigator's Up (walking from the end) reaches them first.
  */
 function getProjectHistory(): string[] {
   const entries = ensureLoaded();
@@ -158,8 +159,8 @@ function getProjectHistory(): string[] {
     if (seen.size >= MAX_HISTORY_ITEMS) break;
   }
 
-  // Reverse to get chronological order (oldest first), session entries first
-  return [...currentSessionEntries.reverse(), ...otherEntries.reverse()];
+  // Reverse to get chronological order (oldest first); current session last
+  return [...otherEntries.reverse(), ...currentSessionEntries.reverse()];
 }
 
 // ─── Write ─────────────────────────────────────────────────────────
