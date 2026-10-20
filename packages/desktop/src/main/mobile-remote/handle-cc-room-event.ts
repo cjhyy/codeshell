@@ -80,6 +80,8 @@ export async function handleCcRoomEvent(
         roomId,
         sessionId: event.sessionId,
         status,
+        // openForSession persists and (re)spawns with exactly this mode.
+        permissionMode: mode,
       });
       replayPendingApprovals(roomId);
       return;

@@ -51,6 +51,7 @@ test("returning to a CLI room replays its still-pending approvals to that viewer
     ["tab-1", "ccRoom.opened"],
     ["tab-1", "ccRoom.approvalRequest"],
   ]);
+  expect(viewers[0]![1]).toMatchObject({ roomId: "room-a", permissionMode: "default" });
   expect(viewers[1]![1]).toEqual({
     type: "ccRoom.approvalRequest",
     roomId: "room-a",

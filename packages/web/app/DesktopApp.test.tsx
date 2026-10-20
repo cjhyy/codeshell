@@ -8,7 +8,7 @@ import type { RemoteApp } from "../src/hooks/useRemoteApp.js";
 import { useDesktopController } from "./DesktopApp.js";
 import { getApiWorkspace } from "./api-context.js";
 import { Workbench } from "./Workbench.js";
-import { DesktopApproval, DesktopSidebar } from "./DesktopControls.js";
+import { DesktopApproval, DesktopChatControls, DesktopSidebar } from "./DesktopControls.js";
 
 const noop = () => {};
 const session = { id: "paired-session", username: "synthetic", deviceName: "Fixture" };
@@ -509,6 +509,33 @@ function textOf(node: any): string {
   if (node.nodeType === 3) return node.nodeValue ?? node.textContent ?? "";
   return node.childNodes?.length ? node.childNodes.map(textOf).join("") : (node.textContent ?? "");
 }
+
+test("CLI room chat controls show the room's actual mode and cannot change it natively", () => {
+  const room = {
+    id: "room-1",
+    name: "CLI",
+    cwd: "/repo",
+    kind: "claude-code" as const,
+    permissionMode: "bypassPermissions" as const,
+    createdAt: 1,
+    lastActiveAt: 1,
+    open: true,
+    observing: false,
+  };
+  const markup = (patch: Partial<RemoteApp>) =>
+    renderToStaticMarkup(<DesktopChatControls app={remoteApp(patch)} />);
+  const inRoom = markup({ activeRoomId: room.id, activeRoom: room, permissionMode: "default" });
+  expect(inRoom).toMatch(/<select[^>]*disabled=""/);
+  expect(inRoom).toContain('<option value="bypassPermissions" selected="">');
+  expect(inRoom).not.toContain('<option value="default" selected="">');
+  // Metadata not loaded yet: show no mode rather than the stricter native one.
+  const pending = markup({ activeRoomId: room.id, permissionMode: "default" });
+  expect(pending).toMatch(/<select[^>]*disabled=""/);
+  expect(pending).not.toContain('<option value="default" selected="">');
+  const native = markup({ permissionMode: "acceptEdits" });
+  expect(native).not.toMatch(/<select[^>]*disabled=""/);
+  expect(native).toContain('<option value="acceptEdits" selected="">');
+});
 
 test("a multi-question CLI clarification answers every question in one response", async () => {
   ensureMiniDom();

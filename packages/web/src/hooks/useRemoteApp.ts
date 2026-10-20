@@ -87,6 +87,8 @@ export interface RemoteApp {
   /** The bound room — for the user this is always an external CC (Claude Code)
    *  session. The room is internal transport; there is no user-facing room list. */
   activeRoom?: RoomPublic;
+  /** Set while a CLI room is bound, even before its metadata has loaded. */
+  activeRoomId?: string;
   approvals: PendingApproval[];
   permissionMode: PermissionMode;
   loading: {
@@ -1139,6 +1141,7 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
                     ...room,
                     open: event.status === "running",
                     observing: event.status === "observing",
+                    ...(event.permissionMode ? { permissionMode: event.permissionMode } : {}),
                   }
                 : room,
             ),
@@ -1743,6 +1746,9 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
   );
   const setPermissionMode = useCallback(
     (mode: PermissionMode) => {
+      // A CLI room's mode is a spawn-time argument of its process; the native
+      // session mode does not govern it. Never pretend to change it here.
+      if (activeRoomIdRef.current) return;
       setPermissionModeState(mode);
       socket.send({ type: "permission.setMode", sessionId: boundSessionRef.current, mode });
     },
@@ -1832,6 +1838,7 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
     activeCwd,
     projects,
     activeRoom,
+    activeRoomId,
     approvals,
     permissionMode,
     loading,

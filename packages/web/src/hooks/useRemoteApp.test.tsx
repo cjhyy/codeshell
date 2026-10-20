@@ -2663,4 +2663,34 @@ describe("useRemoteApp CLI room controls", () => {
       await hook.unmount();
     }
   });
+
+  test("a CLI room reports the mode it runs in and never changes the native mode", async () => {
+    const { hook, ws, sent } = await openRoom();
+    try {
+      expect(hook.result.current.activeRoomId).toBe(room.id);
+      expect(hook.result.current.activeRoom?.permissionMode).toBe("bypassPermissions");
+      await act(async () => {
+        hook.result.current.setPermissionMode("default");
+        await flushMicrotasks();
+      });
+      expect(sent().filter((event) => event.type === "permission.setMode")).toEqual([]);
+
+      // Reopening in another mode restarts the CLI; the reply carries the mode
+      // in effect so stale room metadata is never shown meanwhile.
+      await act(async () => {
+        hook.result.current.openCcSession("thread-cli", "/repo", "acceptEdits");
+        ws.message({
+          type: "ccRoom.opened",
+          roomId: room.id,
+          sessionId: "thread-cli",
+          status: "running",
+          permissionMode: "acceptEdits",
+        });
+        await flushMicrotasks();
+      });
+      expect(hook.result.current.activeRoom?.permissionMode).toBe("acceptEdits");
+    } finally {
+      await hook.unmount();
+    }
+  });
 });

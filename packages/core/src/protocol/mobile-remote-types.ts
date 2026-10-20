@@ -398,6 +398,8 @@ export type MobileServerEvent =
       roomId: string;
       sessionId: string;
       status: "running" | "missing" | "observing";
+      /** Mode the room's CLI runs in (a spawn-time argument); omitted by older hosts. */
+      permissionMode?: "default" | "acceptEdits" | "bypassPermissions";
     }
   | {
       type: "ccRoom.transcriptSubscribed";

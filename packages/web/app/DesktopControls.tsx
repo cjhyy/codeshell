@@ -30,14 +30,21 @@ const permissionModes: Array<{
 ];
 
 export function DesktopChatControls({ app }: { app: RemoteApp }) {
+  // A CLI room runs in the mode its process was started with. Show that mode
+  // (or none while its metadata loads), never the native session's mode.
+  const inRoom = Boolean(app.activeRoomId || app.activeRoom);
   return (
     <div className="desktop-chat-controls">
-      <label>
+      <label
+        title={inRoom ? "CLI 会话的权限模式在打开时确定；离开后重新打开即可更改。" : undefined}
+      >
         权限模式
         <select
           aria-label="权限模式"
-          value={app.permissionMode}
+          value={inRoom ? (app.activeRoom?.permissionMode ?? "") : app.permissionMode}
+          disabled={inRoom}
           onChange={(event) => {
+            if (inRoom) return;
             const mode = event.target.value as MobileRemotePermissionMode;
             if (
               mode === "bypassPermissions" &&
@@ -48,6 +55,7 @@ export function DesktopChatControls({ app }: { app: RemoteApp }) {
             app.setPermissionMode(mode);
           }}
         >
+          {inRoom && !app.activeRoom ? <option value="">读取中…</option> : null}
           {permissionModes.map((mode) => (
             <option key={mode.value} value={mode.value}>
               {mode.label}
