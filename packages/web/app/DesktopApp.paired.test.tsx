@@ -199,3 +199,46 @@ test("an explicit rejection keeps the task and a follow-up typed meanwhile", asy
     await hook.unmount();
   }
 });
+
+test("background output before a new session is confirmed cannot take its draft", async () => {
+  const { hook, ws } = await pairedController();
+  try {
+    await act(async () => {
+      hook.result.current.controller.newSession();
+      await flushMicrotasks();
+    });
+    const creation = ws.sent.find((frame) => frame.type === "session.create")!;
+    await act(async () => {
+      hook.result.current.controller.setDraft("task for the new session");
+    });
+    await act(async () => {
+      ws.message({
+        type: "session.stream",
+        sessionId: "unrelated-background",
+        seq: 1,
+        event: { type: "text_delta", text: "other task output" },
+      });
+      ws.message({
+        method: "agent/streamEvent",
+        params: { sessionId: "unrelated-background", event: { type: "text_delta", text: "raw" } },
+      });
+      await flushMicrotasks();
+    });
+    expect(hook.result.current.app.activeSessionId).toBeUndefined();
+    expect(hook.result.current.controller.draft).toBe("task for the new session");
+    await act(async () => {
+      ws.message({
+        type: "chat.accepted",
+        clientRequestId: creation.clientRequestId,
+        sessionId: "actually-created",
+        cwd: null,
+      });
+      await flushMicrotasks();
+    });
+    expect(hook.result.current.controller.activeId).toBe("actually-created");
+    expect(hook.result.current.controller.draft).toBe("task for the new session");
+    expect(hook.result.current.app.unreadSessionIds.has("unrelated-background")).toBe(true);
+  } finally {
+    await hook.unmount();
+  }
+});

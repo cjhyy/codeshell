@@ -569,6 +569,8 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
     if (activeRoomIdRef.current) return; // rooms don't surface chat approvals
     if (a.sessionId) {
       if (boundSessionRef.current && a.sessionId !== boundSessionRef.current) return;
+      // A pending creation owns the unbound view; only its acceptance binds it.
+      if (!boundSessionRef.current && pendingCreateRef.current) return;
       if (!boundSessionRef.current) {
         boundSessionRef.current = a.sessionId;
         setActiveSessionId(a.sessionId);
@@ -827,6 +829,11 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
               );
               break;
             }
+          } else if (pendingCreateRef.current) {
+            // Another task's output while a new session awaits its acceptance:
+            // binding it would move the new conversation (and its draft) there.
+            setUnreadSessionIds((prev) => markSessionUnread(prev, event.sessionId));
+            break;
           } else {
             boundSessionRef.current = event.sessionId;
             setActiveSessionId(event.sessionId);
@@ -1318,6 +1325,8 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
         const sid = typeof params.sessionId === "string" ? params.sessionId : undefined;
         if (boundSessionRef.current) {
           if (sid && sid !== boundSessionRef.current) return;
+        } else if (pendingCreateRef.current) {
+          return; // the pending creation's acceptance decides the binding
         } else if (sid) {
           // Auto-bind to the first session we see so the feed is coherent.
           boundSessionRef.current = sid;
