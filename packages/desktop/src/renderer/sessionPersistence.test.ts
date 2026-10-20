@@ -218,6 +218,50 @@ test("emits only changed row fields and retains local edits while another window
   );
 });
 
+test("another window's selection updates the shared catalog without moving this window's Session", async () => {
+  const calls: SessionCatalogPatch[] = [];
+  const { persistence, changed } = fixture({
+    load: async () => snapshot(1, { ...index(row("s1"), row("s2")), activeSessionId: "s1" }),
+    apply: async (patch) => {
+      calls.push(patch);
+      return snapshot(10 + calls.length, {
+        ...index(row("s1"), row("s2", { title: "Renamed elsewhere" }), row("s3")),
+        activeSessionId: patch.activeSessionId ?? "s2",
+      });
+    },
+  });
+  await persistence.initialize();
+  expect(persistence.getIndex("project").activeSessionId).toBe("s1");
+
+  // Window B selects s2 and renames it; window A keeps viewing s1.
+  changed(
+    snapshot(2, {
+      ...index(row("s1"), row("s2", { title: "Renamed elsewhere" })),
+      activeSessionId: "s2",
+    }),
+  );
+  expect(persistence.getIndex("project").activeSessionId).toBe("s1");
+  expect(persistence.getIndex("project").sessions).toContainEqual(
+    row("s2", { title: "Renamed elsewhere" }),
+  );
+
+  // A local edit keeps A's selection too.
+  const current = persistence.getIndex("project");
+  persistence.saveIndex("project", { ...current, sessions: [...current.sessions, row("s3")] });
+  await persistence.flush();
+  expect(persistence.getIndex("project").activeSessionId).toBe("s1");
+
+  // This window's own selection still moves it.
+  persistence.saveIndex("project", { ...persistence.getIndex("project"), activeSessionId: "s3" });
+  expect(persistence.getIndex("project").activeSessionId).toBe("s3");
+  await persistence.flush();
+  expect(calls.at(-1)?.activeSessionId).toBe("s3");
+
+  // A remote deletion of the current Session exits it.
+  changed(snapshot(50, { ...index(row("s1"), row("s2")), activeSessionId: "s2" }));
+  expect(persistence.getIndex("project").activeSessionId).toBeNull();
+});
+
 test("failed writes remain visible, notify errors, reject flush and retry without losing queued edits", async () => {
   let failed = true;
   const calls: SessionCatalogPatch[] = [];
