@@ -5,7 +5,9 @@ import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 
 test("public Core starts without providers and explicit Host composition installs reviewed executors", async () => {
-  const root = fileURLToPath(new URL("../../../../..", import.meta.url));
+  // The bundle resolves its externals from the server package, which declares
+  // the Link workspace dependency; the repository root does not link it.
+  const root = fileURLToPath(new URL("../../..", import.meta.url));
   const cache = join(root, "node_modules", ".cache");
   mkdirSync(cache, { recursive: true });
   const directory = mkdtempSync(join(cache, "link-provider-sdk-"));
