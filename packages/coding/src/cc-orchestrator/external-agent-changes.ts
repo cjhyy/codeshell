@@ -1,15 +1,8 @@
-import {
-  readFileSync,
-  existsSync,
-  readdirSync,
-  statSync,
-  openSync,
-  readSync,
-  closeSync,
-} from "node:fs";
+import { readFileSync, existsSync } from "node:fs";
 import { join } from "node:path";
 import { homedir } from "node:os";
 import { encodeCwd } from "./session-discovery.js";
+import { findCodexRolloutFile } from "./codex-session-history.js";
 import { logger } from "@cjhyy/code-shell-core/extension";
 
 /**
@@ -116,9 +109,10 @@ function filesFromCodexArgs(name: string, raw: string): string[] {
   if (!raw) return [];
   if (name === "apply_patch" || name === "ApplyPatch") {
     // apply_patch payload wraps a patch; headers look like `*** Update File: <p>`
-    // or `*** Add File: <p>`. Match those directly off the raw text.
+    // or `*** Add File: <p>`, and a rename follows Update with `*** Move to: <p>`.
+    // Match those directly off the raw text so a rename keeps both paths.
     const out: string[] = [];
-    const re = /\*\*\*\s+(?:Update|Add|Delete) File:\s+(.+)/g;
+    const re = /\*\*\*\s+(?:(?:Update|Add|Delete) File|Move to):\s+(.+)/g;
     let m: RegExpExecArray | null;
     while ((m = re.exec(raw)) !== null) {
       const f = m[1]?.trim();
@@ -141,7 +135,8 @@ export function readCodexChangedFiles(
   threadId: string,
   codexHome = join(homedir(), ".codex"),
 ): string[] {
-  const file = findRolloutFile(codexHome, cwd, threadId);
+  // Same locator as history/tails: a resumed thread uses its newest rollout.
+  const file = findCodexRolloutFile(codexHome, cwd, threadId);
   if (!file) return [];
   let text: string;
   try {
@@ -178,62 +173,4 @@ export function readExternalChangedFiles(cli: string, cwd: string, sessionId: st
     });
     return [];
   }
-}
-
-// ── codex rollout location (mirrors codex-session-history.ts) ──────────────
-
-function findRolloutFile(codexHome: string, cwd: string, threadId: string): string | undefined {
-  const root = join(codexHome, "sessions");
-  if (!existsSync(root)) return undefined;
-  for (const file of walkRollouts(root)) {
-    let meta: { id?: string; cwd?: string } | undefined;
-    try {
-      meta = readSessionMeta(file);
-    } catch {
-      continue;
-    }
-    if (meta && meta.id === threadId && meta.cwd === cwd) return file;
-  }
-  return undefined;
-}
-
-function* walkRollouts(root: string): Generator<string> {
-  let entries: string[];
-  try {
-    entries = readdirSync(root);
-  } catch {
-    return;
-  }
-  for (const name of entries) {
-    const full = join(root, name);
-    let st;
-    try {
-      st = statSync(full);
-    } catch {
-      continue;
-    }
-    if (st.isDirectory()) yield* walkRollouts(full);
-    else if (name.startsWith("rollout-") && name.endsWith(".jsonl")) yield full;
-  }
-}
-
-function readSessionMeta(
-  file: string,
-  maxBytes = 1 << 16,
-): { id?: string; cwd?: string } | undefined {
-  const fd = openSync(file, "r");
-  let text: string;
-  try {
-    const buf = Buffer.alloc(maxBytes);
-    const n = readSync(fd, buf, 0, maxBytes, 0);
-    text = buf.toString("utf-8", 0, n);
-  } finally {
-    closeSync(fd);
-  }
-  const nl = text.indexOf("\n");
-  const first = (nl === -1 ? text : text.slice(0, nl)).trim();
-  if (!first) return undefined;
-  const d = JSON.parse(first) as { type?: string; payload?: { id?: string; cwd?: string } };
-  if (d.type !== "session_meta" || !d.payload) return undefined;
-  return { id: d.payload.id, cwd: d.payload.cwd };
 }

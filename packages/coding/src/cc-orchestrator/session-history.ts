@@ -84,6 +84,8 @@ export function parseRecentHistory(
     } catch {
       continue;
     }
+    // A valid JSON scalar (e.g. `null`) is not a record; skip it like noise.
+    if (!d || typeof d !== "object") continue;
     if (d.type === "user") {
       const t = textOf(d.message?.content).trim();
       if (!t || NOISE.some((n) => t.startsWith(n))) continue;
@@ -109,6 +111,7 @@ export function parseClaudeTranscriptLine(line: string): SessionTailEvent[] {
   } catch {
     return [];
   }
+  if (!d || typeof d !== "object") return [];
   const out: SessionTailEvent[] = [];
   if (d.type === "user") {
     const content = d.message?.content;

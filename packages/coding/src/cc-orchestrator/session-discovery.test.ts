@@ -112,6 +112,33 @@ describe("discoverSessions", () => {
     expect(got[0].messageCount).toBe(2);
   });
 
+  it("excludes sessions whose recorded cwd only collides with the lossy project dir", () => {
+    const claudeHome = mkdtempSync(join(tmpdir(), "claude-home-"));
+    const a = "/workspace/foo-bar";
+    const b = "/workspace/foo/bar";
+    expect(encodeCwd(a)).toBe(encodeCwd(b));
+    writeClaudeSession(claudeHome, a, "session-a", [
+      { type: "user", cwd: a, message: { role: "user", content: "project A question" } },
+    ]);
+    writeClaudeSession(claudeHome, b, "session-b", [
+      { type: "user", cwd: b, message: { role: "user", content: "project B question" } },
+    ]);
+    // Legacy transcripts without a recorded cwd cannot be disproven and stay.
+    writeClaudeSession(claudeHome, a, "session-legacy", [
+      { type: "user", message: { role: "user", content: "legacy question" } },
+    ]);
+
+    const got = discoverSessions(a, claudeHome);
+    expect(got.map((s) => s.sessionId).sort()).toEqual(["session-a", "session-legacy"]);
+    expect(got.every((s) => s.cwd === a)).toBe(true);
+    expect(countSessions(a, claudeHome)).toBe(2);
+    expect(
+      discoverSessions(b, claudeHome)
+        .map((s) => s.sessionId)
+        .sort(),
+    ).toEqual(["session-b", "session-legacy"]);
+  });
+
   it("returns [] when the project dir is absent", () => {
     const claudeHome = mkdtempSync(join(tmpdir(), "claude-home-"));
     expect(discoverSessions("/tmp/nope", claudeHome)).toEqual([]);
