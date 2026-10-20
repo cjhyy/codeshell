@@ -177,4 +177,28 @@ describe("sidebar project and session mutations", () => {
     expect(errorToasts()).toHaveLength(1);
     expect(JSON.stringify(errorToasts()[0]!.data)).toContain("EACCES");
   });
+  test("a refused project rename restores the old name and reports the failure", async () => {
+    bridge.projectRegistry.rename = async () => {
+      throw new Error("EACCES: permission denied");
+    };
+    await mount();
+    await act(async () => {
+      await result.current.handleRenameProject(project.id, "Renamed");
+    });
+
+    expect(result.current.projects[0]!.displayName).toBeUndefined();
+    expect(errorToasts()).toHaveLength(1);
+    expect(JSON.stringify(errorToasts()[0]!.data)).toContain("EACCES");
+  });
+
+  test("a saved project rename keeps the new name", async () => {
+    await mount();
+    await act(async () => {
+      await result.current.handleRenameProject(project.id, "Renamed");
+    });
+
+    expect(calls).toEqual([`rename:${project.id}:Renamed`]);
+    expect(result.current.projects[0]!.displayName).toBe("Renamed");
+    expect(errorToasts()).toEqual([]);
+  });
 });

@@ -226,11 +226,25 @@ export function useSessionNavigation({
     if (project) void window.codeshell.projectRegistry.setPinned(project.id, pinned);
   };
 
-  const renameProject = (id: string, name: string): void => {
+  const renameProject = async (id: string, name: string): Promise<void> => {
+    const previous = projects.find((project) => project.id === id)?.displayName;
     setProjects((prev) =>
       prev.map((project) => (project.id === id ? { ...project, displayName: name } : project)),
     );
-    void window.codeshell.projectRegistry.rename(id, name);
+    try {
+      await window.codeshell.projectRegistry.rename(id, name);
+    } catch (error) {
+      window.codeshell.log("repo.rename_failed", { id, error: String(error) });
+      // Roll back only this request's optimistic name; a newer rename wins.
+      setProjects((prev) =>
+        prev.map((project) =>
+          project.id === id && project.displayName === name
+            ? { ...project, displayName: previous }
+            : project,
+        ),
+      );
+      toast({ message: t("sidebar.renameProjectFailed"), detail: String(error), variant: "error" });
+    }
   };
 
   const archiveAllProjectSessions = async (id: string): Promise<void> => {
