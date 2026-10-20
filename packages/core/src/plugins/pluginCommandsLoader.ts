@@ -290,7 +290,7 @@ export function describePluginCommands(
 }
 
 const PLUGIN_COMMAND_PLACEHOLDER =
-  /\$\$|\$ARGUMENTS|\{args\}|\$([1-9])|\$([A-Z][A-Z0-9_]*)(?![A-Z0-9_])/gu;
+  /\$\$|\$ARGUMENTS(?![A-Z0-9_])|\{args\}|\$([1-9])|\$([A-Z][A-Z0-9_]*)(?![A-Z0-9_])/gu;
 
 function pluginCommandReplacement(
   token: string,

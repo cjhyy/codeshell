@@ -46,6 +46,17 @@ describe("expandPluginCommandBody", () => {
     expect(expandPluginCommandBody("<$1>|<$2>", "a   b")).toBe("<a>|<b>");
   });
 
+  // Regression (PLUGIN-R8-02): $ARGUMENTS must not match the prefix of a
+  // longer named placeholder such as $ARGUMENTS_FILE.
+  test("does not expand $ARGUMENTS inside a longer named placeholder", () => {
+    expect(
+      expandPluginCommandBody(
+        "file=$ARGUMENTS_FILE untouched=$ARGUMENTS_UNKNOWN raw=$ARGUMENTS",
+        "ARGUMENTS_FILE=src/example.ts",
+      ),
+    ).toBe("file=src/example.ts untouched=$ARGUMENTS_UNKNOWN raw=ARGUMENTS_FILE=src/example.ts");
+  });
+
   test("removes missing positional placeholders", () => {
     expect(expandPluginCommandBody("$1/$2/$9", "only")).toBe("only//");
   });
