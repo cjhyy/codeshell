@@ -156,7 +156,7 @@ function firstUserMessage(lines: string[]): string {
     } catch {
       continue;
     }
-    if (d.type !== "user") continue;
+    if (d?.type !== "user") continue;
     const c = d.message?.content;
     const text =
       typeof c === "string"

@@ -2,8 +2,12 @@ import { describe, it, expect } from "bun:test";
 import { mkdtempSync, mkdirSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { parseClaudeTranscriptLine, readRecentHistory } from "./session-history.js";
-import { encodeCwd } from "./session-discovery.js";
+import {
+  parseClaudeTranscriptLine,
+  parseRecentHistory,
+  readRecentHistory,
+} from "./session-history.js";
+import { discoverSessions, encodeCwd } from "./session-discovery.js";
 
 function setup(lines: object[]): { cwd: string; home: string; sid: string } {
   const home = mkdtempSync(join(tmpdir(), "claude-home-"));
@@ -75,6 +79,26 @@ describe("readRecentHistory", () => {
     expect(
       readRecentHistory("/tmp/none", "nope", 10, mkdtempSync(join(tmpdir(), "h-"))).messages,
     ).toEqual([]);
+  });
+});
+
+describe("non-object transcript records", () => {
+  const healthy = JSON.stringify({ type: "user", message: { content: "healthy question" } });
+
+  it("skips JSON scalars like malformed lines in snapshots and tails", () => {
+    for (const record of ["null", "42", '"text"']) {
+      expect(parseRecentHistory(`${healthy}\n${record}\n`, 10).messages).toEqual([
+        { role: "user", text: "healthy question" },
+      ]);
+      expect(parseClaudeTranscriptLine(record)).toEqual([]);
+    }
+  });
+
+  it("keeps a session with a null record discoverable", () => {
+    const { cwd, home, sid } = setup([{ type: "user", message: { content: "listed" } }]);
+    const file = join(home, "projects", encodeCwd(cwd), `${sid}.jsonl`);
+    writeFileSync(file, `null\n${healthy}\n`);
+    expect(discoverSessions(cwd, home).map((s) => s.firstMessage)).toEqual(["healthy question"]);
   });
 });
 
