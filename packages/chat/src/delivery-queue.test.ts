@@ -472,6 +472,30 @@ describe("attachment durability", () => {
     queue.stop();
   });
 
+  test("refuses a message whose small attachment cannot be written to the spool", async () => {
+    const path = inboxPath();
+    const spoolDir = `${path}.attachments`;
+    const delivered: string[] = [];
+    const queue = new DeliveryQueue(
+      config(path),
+      async (_adapter, message) => void delivered.push(message.text),
+      () => undefined,
+    );
+    await queue.start();
+    // The spool location is temporarily unusable (here: blocked by a file).
+    mkdirSync(dirname(spoolDir), { recursive: true });
+    writeFileSync(spoolDir, "blocked");
+    await expect(queue.enqueue("line:0", withAttachment("m-io", [7]))).rejects.toThrow();
+    expect(queue.status().pending).toBe(0);
+
+    // Refusing must not wedge the conversation: once the spool recovers the
+    // platform's retry is accepted durably.
+    rmSync(spoolDir);
+    expect(await queue.enqueue("line:0", withAttachment("m-io", [7]))).toBe("queued");
+    await waitUntil(() => delivered.length === 1);
+    queue.stop();
+  });
+
   test("orphaned spool files are reclaimed on startup", async () => {
     // discardSpool covers the normal path, but bytes can still be orphaned: a
     // crash between writing them and persisting the record, or the
