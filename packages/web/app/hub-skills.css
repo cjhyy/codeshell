@@ -346,3 +346,8 @@
     gap: 2px;
   }
 }
+
+.skills-conflict {
+  display: grid;
+  gap: 8px;
+}
