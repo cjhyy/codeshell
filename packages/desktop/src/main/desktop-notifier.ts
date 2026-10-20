@@ -57,19 +57,18 @@ export class DesktopNotifier {
   ) {}
 
   notify(input: DesktopNotificationInput): Promise<DesktopNotificationOutcome> {
-    if (input.urgent) return this.serialized(() => this.notifyLoaded(input));
+    // Urgent notices bypass the rate limit, so their single attempt never waits.
+    if (input.urgent) return this.deliver(input);
     // Ordinary notifications keep their FIFO order among themselves but wait
     // for a rate slot OUTSIDE the mutation queue, so an urgent notice is never
     // held behind a throttled completion. Every attempt re-checks
     // dedupe/focus/support inside the queue before showing.
-    const run = this.ordinaryQueue.catch(() => undefined).then(() => this.notifyOrdinary(input));
+    const run = this.ordinaryQueue.catch(() => undefined).then(() => this.deliver(input));
     this.ordinaryQueue = run.catch(() => undefined);
     return run;
   }
 
-  private async notifyOrdinary(
-    input: DesktopNotificationInput,
-  ): Promise<DesktopNotificationOutcome> {
+  private async deliver(input: DesktopNotificationInput): Promise<DesktopNotificationOutcome> {
     for (;;) {
       const attempt = await this.serialized(() => this.notifyLoaded(input));
       if (typeof attempt === "string") return attempt;
