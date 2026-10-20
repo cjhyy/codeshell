@@ -26,7 +26,24 @@ export function applyRunLlmOverrides(base: LLMConfig, flags: RunLlmFlags): LLMCo
     llm.model = model;
   }
   if (provider) llm.provider = provider;
-  if (baseUrl) llm.baseUrl = baseUrl;
+  if (baseUrl) {
+    // Never send the saved connection's key to a host it was not saved for.
+    if (!apiKey && llm.apiKey && !sameOrigin(baseUrl, llm.baseUrl)) {
+      throw new Error(
+        "--base-url points to a different host than the saved connection; pass --api-key for it",
+      );
+    }
+    llm.baseUrl = baseUrl;
+  }
   if (apiKey) llm.apiKey = apiKey;
   return llm;
+}
+
+function sameOrigin(a: string, b: string | undefined): boolean {
+  if (!b) return false;
+  try {
+    return new URL(a).origin === new URL(b).origin;
+  } catch {
+    return false;
+  }
 }

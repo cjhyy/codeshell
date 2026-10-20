@@ -90,6 +90,27 @@ describe("applyRunLlmOverrides", () => {
     expect(llm).toEqual({ provider: "openai", model: "other-model", apiKey: "saved-api-key" });
   });
 
+  test("a base URL on another origin never inherits the saved API key", () => {
+    const saved = {
+      provider: "openai",
+      model: "gpt-4o",
+      apiKey: "saved-api-key",
+      baseUrl: "https://saved.example.invalid/v1",
+    };
+    expect(() =>
+      applyRunLlmOverrides(saved, { baseUrl: "https://other.example.invalid/v1" }),
+    ).toThrow("--api-key");
+    expect(
+      applyRunLlmOverrides(saved, { baseUrl: "https://saved.example.invalid/proxy/v1" }).apiKey,
+    ).toBe("saved-api-key");
+    expect(
+      applyRunLlmOverrides(saved, {
+        baseUrl: "https://other.example.invalid/v1",
+        apiKey: "flag-api-key",
+      }).apiKey,
+    ).toBe("flag-api-key");
+  });
+
   test("run applies the flags after the seed Engine resolves the catalog", () => {
     const runSource = readFileSync(new URL("./run.ts", import.meta.url), "utf-8");
     expect(runSource).toContain(
