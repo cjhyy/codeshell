@@ -2472,4 +2472,35 @@ describe("useRemoteApp CLI room controls", () => {
       await hook.unmount();
     }
   });
+
+  test("a CLI approval response that cannot be sent keeps its card for retry", async () => {
+    const { hook, ws, sent, approval } = await openRoom();
+    try {
+      await act(async () => {
+        approval("read-1");
+        await flushMicrotasks();
+      });
+      expect(hook.result.current.approvals.map((a) => a.requestId)).toEqual(["read-1"]);
+      const responses = () => sent().filter((event) => event.type === "ccRoom.respondApproval");
+      // The socket is already closing while the UI still renders as online.
+      ws.readyState = 2;
+      await act(async () => {
+        hook.result.current.respondCcApproval(room.id, "read-1", { behavior: "allow" });
+        await flushMicrotasks();
+      });
+      expect(responses()).toEqual([]);
+      expect(hook.result.current.approvals.map((a) => a.requestId)).toEqual(["read-1"]);
+      expect(hook.result.current.notice).toBeTruthy();
+
+      ws.readyState = FakeWebSocket.OPEN;
+      await act(async () => {
+        hook.result.current.respondCcApproval(room.id, "read-1", { behavior: "allow" });
+        await flushMicrotasks();
+      });
+      expect(responses()).toHaveLength(1);
+      expect(hook.result.current.approvals).toEqual([]);
+    } finally {
+      await hook.unmount();
+    }
+  });
 });

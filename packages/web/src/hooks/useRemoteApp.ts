@@ -1581,11 +1581,16 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
     (roomId: string, requestId: string, decision: CcApprovalDecision) => {
       const a = approvalsRef.current.find((p) => p.requestId === requestId);
       if (!a) return; // approve-once: already resolved
-      socket.send({ type: "ccRoom.respondApproval", roomId, requestId, decision });
+      // An unsent response never reaches the CLI, which is still waiting.
+      // Keep the card so the user can retry once the connection recovers.
+      if (!socket.send({ type: "ccRoom.respondApproval", roomId, requestId, decision })) {
+        setNotice(t("mobile.notice.approvalSendFailed"));
+        return;
+      }
       approvalsRef.current = approvalsRef.current.filter((p) => p.requestId !== requestId);
       setApprovals((prev) => prev.filter((p) => p.requestId !== requestId));
     },
-    [socket],
+    [setNotice, socket],
   );
 
   const newSession = useCallback(
