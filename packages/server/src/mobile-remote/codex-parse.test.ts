@@ -82,6 +82,10 @@ describe("parseCodexJsonLine", () => {
     ]);
   });
 
+  test("non-object JSON records are ignored like malformed lines", () => {
+    for (const line of ["null", "42", '"text"', "[]"]) expect(parseCodexJsonLine(line)).toEqual([]);
+  });
+
   test("turn.completed → turn_end", () => {
     expect(parseCodexJsonLine(JSON.stringify({ type: "turn.completed", usage: {} }))).toEqual([
       { type: "turn_end", reason: "completed" },

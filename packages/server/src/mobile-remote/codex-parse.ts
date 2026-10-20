@@ -33,6 +33,8 @@ export function parseCodexJsonLine(line: string): ResidentAgentEvent[] {
   } catch {
     return [];
   }
+  // A valid JSON scalar (e.g. `null`) is not an event; ignore it like noise.
+  if (!msg || typeof msg !== "object") return [];
 
   if (msg.type === "turn.completed") return [{ type: "turn_end", reason: "completed" }];
   if (msg.type === "turn.failed") {
