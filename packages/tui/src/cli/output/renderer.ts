@@ -91,7 +91,9 @@ export class TextRenderer implements OutputRenderer {
 export class JsonRenderer implements OutputRenderer {
   private text = "";
   onEvent(event: StreamEvent): void {
-    if (event.type === "text_delta") this.text += event.text;
+    // Only the main agent's text can stand in for its final result; sub-agent
+    // deltas carry an agentId (TextRenderer hides them the same way).
+    if (event.type === "text_delta" && !(event as any).agentId) this.text += event.text;
   }
   onComplete(text: string, reason: TerminalReason, meta: Record<string, unknown>): void {
     process.stdout.write(JSON.stringify({ result: text || this.text, reason, ...meta }, null, 2) + "\n");

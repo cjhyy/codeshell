@@ -108,4 +108,14 @@ describe("output renderers — schema contracts", () => {
     expect(stderrChunks.join("")).not.toContain("image/png");
     expect(stderrChunks.join("")).not.toContain("12 KB");
   });
+
+  test("json fallback text excludes sub-agent output", () => {
+    const r = createRenderer("json");
+    r.onEvent({ type: "text_delta", text: "child-only-output", agentId: "agent-1" } as StreamEvent);
+    r.onEvent({ type: "text_delta", text: "parent " } as StreamEvent);
+    r.onEvent({ type: "text_delta", text: "partial" } as StreamEvent);
+    r.onComplete("", "aborted_streaming", meta);
+    restore();
+    expect(JSON.parse(chunks[0]).result).toBe("parent partial");
+  });
 });
