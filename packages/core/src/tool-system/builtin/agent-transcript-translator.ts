@@ -40,6 +40,12 @@ export function createTranscriptTranslator(agentId: string): (event: StreamEvent
   // toolCallId → tool_start entry id. Lets tool_use_args_delta find the right
   // tool_start to patch.
   const toolStartByCallId = new Map<string, string>();
+  // toolCallId → tool_running placeholder, removed if the call is revoked.
+  const toolRunningByCallId = new Map<string, string>();
+  // Assistant text rows of the in-flight model request, keyed by its message
+  // id, so a tombstone for that request can revoke them.
+  let requestMessageId: string | undefined;
+  let requestTextIds: string[] = [];
 
   function patchEntry(
     entryId: string,
@@ -73,6 +79,8 @@ export function createTranscriptTranslator(agentId: string): (event: StreamEvent
     switch (event.type) {
       // ── thinking ─────────────────────────────────────────────────
       case "stream_request_start": {
+        requestMessageId = (event as any).messageId;
+        requestTextIds = [];
         if (thinkingId) {
           dropEntry(thinkingId);
           thinkingId = undefined;
@@ -106,6 +114,7 @@ export function createTranscriptTranslator(agentId: string): (event: StreamEvent
             streaming: true,
             agentId,
           });
+          requestTextIds.push(streamingAssistantId);
         }
         break;
       }
@@ -128,8 +137,11 @@ export function createTranscriptTranslator(agentId: string): (event: StreamEvent
           toolCallId: tc.id,
           agentId,
         });
-        if (tc.id) toolStartByCallId.set(tc.id, startId);
-        append({ type: "tool_running", toolName: tc.toolName, agentId });
+        const runningId = append({ type: "tool_running", toolName: tc.toolName, agentId });
+        if (tc.id) {
+          toolStartByCallId.set(tc.id, startId);
+          toolRunningByCallId.set(tc.id, runningId);
+        }
         break;
       }
 
@@ -160,9 +172,35 @@ export function createTranscriptTranslator(agentId: string): (event: StreamEvent
         break;
       }
 
-      // ── lifecycle: finalize streaming on turn end ───────────────
-      case "turn_complete":
+      // ── revocation: a failed streaming attempt is withdrawn ──────
       case "tombstone": {
+        const messageId = (event as any).messageId as string;
+        if (messageId && messageId === requestMessageId) {
+          for (const id of requestTextIds) dropEntry(id);
+          requestTextIds = [];
+          streamingAssistantId = undefined;
+        }
+        const startId = toolStartByCallId.get(messageId);
+        if (startId) {
+          dropEntry(startId);
+          const runningId = toolRunningByCallId.get(messageId);
+          if (runningId) dropEntry(runningId);
+          toolStartByCallId.delete(messageId);
+          toolRunningByCallId.delete(messageId);
+        }
+        if (streamingAssistantId) {
+          patchEntry(streamingAssistantId, (e) => ({ ...e, streaming: false }));
+          streamingAssistantId = undefined;
+        }
+        if (thinkingId) {
+          dropEntry(thinkingId);
+          thinkingId = undefined;
+        }
+        break;
+      }
+
+      // ── lifecycle: finalize streaming on turn end ───────────────
+      case "turn_complete": {
         if (streamingAssistantId) {
           patchEntry(streamingAssistantId, (e) => ({ ...e, streaming: false }));
           streamingAssistantId = undefined;
