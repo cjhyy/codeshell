@@ -180,6 +180,7 @@ export function defineProduct(
     evaluator,
     defaultTags: contract?.defaultTags,
     defaultMetadata: contract?.defaultMetadata,
+    defaultCwd: runtime.cwd,
   });
 
   return { manager, preset: agentPreset, customTools };
