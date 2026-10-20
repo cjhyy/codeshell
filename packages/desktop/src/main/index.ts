@@ -2800,7 +2800,7 @@ async function createWindow(): Promise<BrowserWindow> {
     loadRenderer();
   }
 
-  await installAppMenu(win);
+  await installAppMenu(win, projectStore);
   return win;
 }
 
