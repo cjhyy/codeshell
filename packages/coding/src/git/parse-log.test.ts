@@ -1,14 +1,16 @@
 import { describe, test, expect } from "bun:test";
-import { parseGitLog } from "./parse-log.js";
+import { GIT_LOG_FIELD_SEPARATOR, parseGitLog } from "./parse-log.js";
 
-// Regression: getGitLog destructured `line.split("|")` without validating the
+// Regression: getGitLog destructured the split fields without validating the
 // shape; a line missing separators yielded undefined fields and risked
 // undefined property access (review-2026-05-30). parseGitLog tolerates
 // malformed lines.
 
 describe("coding parseGitLog", () => {
-  test("parses well-formed --format=%H|%s|%an|%ci lines", () => {
-    const raw = "abcdef1234|fix things|Alice|2026-05-30 10:00:00 +0000";
+  test("parses well-formed GIT_LOG_FORMAT lines", () => {
+    const raw = ["abcdef1234", "fix things", "Alice", "2026-05-30 10:00:00 +0000"].join(
+      GIT_LOG_FIELD_SEPARATOR,
+    );
     expect(parseGitLog(raw)).toEqual([
       {
         hash: "abcdef12",
