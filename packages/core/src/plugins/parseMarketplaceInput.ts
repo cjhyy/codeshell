@@ -82,8 +82,9 @@ export function deriveMarketplaceName(source: MarketplaceSource): string {
   // git: strip protocol, strip trailing .git, take last segment.
   // Local path /tmp/foo/skills.git → name "skills"
   // Local path /tmp/skills.git     → name "skills"
+  // Local path C:\work\skills.git  → name "skills"
   const stripped = source.url.replace(/\.git$/, "");
-  const segments = stripped.split(/[/:]/).filter(Boolean);
+  const segments = stripped.split(/[/:\\]/).filter(Boolean);
   const tail = segments[segments.length - 1] ?? "marketplace";
   return tail.toLowerCase();
 }
