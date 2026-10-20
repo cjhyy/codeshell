@@ -367,29 +367,95 @@ async function walkTextFiles(
   const info = await stat(root).catch(() => null);
   signal?.throwIfAborted();
   if (!info) return;
+  const matchesGlob = fileGlob ? compileFileGlob(fileGlob) : () => true;
   if (info.isFile()) {
-    if (!fileGlob || matchesSimpleGlob(basename(root), fileGlob)) await visit(root);
+    if (matchesGlob(basename(root))) await visit(root);
     return;
   }
   if (!info.isDirectory()) return;
+  await walkDirectory(root, root, matchesGlob, visit, signal);
+}
 
-  const entries = await readdir(root, { withFileTypes: true }).catch(() => []);
+async function walkDirectory(
+  root: string,
+  dir: string,
+  matchesGlob: (relPath: string) => boolean,
+  visit: (file: string) => Promise<void>,
+  signal?: AbortSignal,
+): Promise<void> {
+  const entries = await readdir(dir, { withFileTypes: true }).catch(() => []);
   signal?.throwIfAborted();
   for (const entry of entries) {
     signal?.throwIfAborted();
+    const full = join(dir, entry.name);
     if (entry.isDirectory()) {
       if (IGNORED_DIRS.has(entry.name)) continue;
-      await walkTextFiles(join(root, entry.name), fileGlob, visit, signal);
+      await walkDirectory(root, full, matchesGlob, visit, signal);
     } else if (entry.isFile()) {
-      if (!fileGlob || matchesSimpleGlob(entry.name, fileGlob)) await visit(join(root, entry.name));
+      if (matchesGlob(relative(root, full).split(sep).join("/"))) await visit(full);
     }
   }
 }
 
-function matchesSimpleGlob(name: string, glob: string): boolean {
-  const escaped = glob
-    .replace(/[.+^${}()|[\]\\]/g, "\\$&")
-    .replace(/\*/g, ".*")
-    .replace(/\?/g, ".");
-  return new RegExp(`^${escaped}$`).test(name);
+/**
+ * Compile a `--glob` filter with ripgrep's gitignore-style semantics: a
+ * pattern without `/` matches the file name at any depth, one with `/` is
+ * anchored to the search root, and a leading `!` excludes matches.
+ */
+function compileFileGlob(glob: string): (relPath: string) => boolean {
+  const negated = glob.startsWith("!");
+  const body = negated ? glob.slice(1) : glob;
+  const anchored = body.includes("/");
+  const regex = new RegExp(`^${globToRegexSource(body.replace(/^\//, ""))}$`);
+  return (relPath) => {
+    const subject = anchored ? relPath : relPath.slice(relPath.lastIndexOf("/") + 1);
+    return regex.test(subject) !== negated;
+  };
+}
+
+function globToRegexSource(glob: string): string {
+  let out = "";
+  let braceDepth = 0;
+  for (let i = 0; i < glob.length; i++) {
+    const ch = glob[i];
+    if (ch === "*") {
+      if (glob[i + 1] === "*") {
+        const atSegmentStart = i === 0 || glob[i - 1] === "/";
+        if (atSegmentStart && glob[i + 2] === "/") {
+          out += "(?:.*/)?";
+          i += 2;
+        } else {
+          out += ".*";
+          i += 1;
+        }
+      } else {
+        out += "[^/]*";
+      }
+    } else if (ch === "?") {
+      out += "[^/]";
+    } else if (ch === "{") {
+      braceDepth++;
+      out += "(?:";
+    } else if (ch === "}" && braceDepth > 0) {
+      braceDepth--;
+      out += ")";
+    } else if (ch === "," && braceDepth > 0) {
+      out += "|";
+    } else if (ch === "[" && glob.indexOf("]", i + 2) !== -1) {
+      const close = glob.indexOf("]", i + 2);
+      let cls = glob.slice(i + 1, close).replace(/\\/g, "\\\\");
+      if (cls.startsWith("!")) cls = `^${cls.slice(1)}`;
+      out += `[${cls}]`;
+      i = close;
+    } else if (ch === "\\" && i + 1 < glob.length) {
+      out += escapeRegexChar(glob[++i]);
+    } else {
+      out += escapeRegexChar(ch);
+    }
+  }
+  return out;
+}
+
+function escapeRegexChar(ch: string): string {
+  return /[.+^${}()|[\]\\/*?]/.test(ch) ? `\\${ch}` : ch;
 }

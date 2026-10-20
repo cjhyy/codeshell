@@ -67,6 +67,34 @@ describe("grepTool", () => {
     expect(out).not.toContain("c.md");
   });
 
+  it("matches directory-qualified globs against the relative path in the built-in fallback", async () => {
+    _setGrepExecFileForTest(async () => {
+      const err = new Error("spawn ENOENT") as NodeJS.ErrnoException;
+      err.code = "ENOENT";
+      throw err;
+    });
+    mkdirSync(join(dir, "src", "deep"), { recursive: true });
+    writeFileSync(join(dir, "src", "deep", "answer.ts"), "const needle = 42;\n");
+    writeFileSync(join(dir, "src", "notes.md"), "needle notes\n");
+
+    const scoped = await grepTool(
+      { pattern: "needle", glob: "src/**/*.ts", output_mode: "content" },
+      ctx(),
+    );
+    expect(scoped).toContain(`${join("src", "deep", "answer.ts")}:1:const needle = 42;`);
+    expect(scoped).not.toContain("a.ts:");
+    expect(scoped).not.toContain("notes.md");
+
+    const braces = await grepTool({ pattern: "needle", glob: "*.{md,txt}" }, ctx());
+    expect(braces).toContain("c.md");
+    expect(braces).toContain("notes.md");
+    expect(braces).not.toContain("a.ts");
+
+    const negated = await grepTool({ pattern: "needle", glob: "!*.ts" }, ctx());
+    expect(negated).toContain("c.md");
+    expect(negated).not.toContain("answer.ts");
+  });
+
   it("passes ctx.signal to the search process and stops fallback after abort", async () => {
     const controller = new AbortController();
     const receivedSignals: Array<AbortSignal | undefined> = [];
