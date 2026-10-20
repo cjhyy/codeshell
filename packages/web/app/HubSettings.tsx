@@ -7,6 +7,7 @@ import {
   configurationErrorMessage,
   readConfiguration,
   saveConnection,
+  changedDefaults,
   saveDefaults,
   deleteConnection,
   probeConnection,
@@ -900,7 +901,7 @@ function DefaultModels({
         let reported = false;
         const ok = await save(
           "默认模型",
-          (signal) => saveDefaults({ text, auxText: auxText || null }, signal),
+          (signal) => saveDefaults(changedDefaults(configuration.defaults, text, auxText), signal),
           {
             error: (message) => {
               reported = true;

@@ -111,10 +111,26 @@ export function saveConnection(draft: ConnectionDraft, signal?: AbortSignal) {
 }
 
 export function saveDefaults(
-  defaults: { text: string; auxText?: string | null },
+  defaults: { text?: string; auxText?: string | null },
   signal?: AbortSignal,
 ) {
   return updateConfiguration("defaults", defaults, signal);
+}
+
+/**
+ * Only the defaults this form changed from the saved values it shows. The Hub
+ * merges them under its configuration lock, so a form opened before another
+ * device's save cannot write back that device's field with a stale value.
+ */
+export function changedDefaults(
+  saved: { text?: string | null; auxText?: string | null },
+  text: string,
+  auxText: string,
+): { text?: string; auxText?: string | null } {
+  return {
+    ...(text !== (saved.text ?? "") ? { text } : {}),
+    ...(auxText !== (saved.auxText ?? "") ? { auxText: auxText || null } : {}),
+  };
 }
 
 export function setSkillEnabled(name: string, enabled: boolean, signal?: AbortSignal) {

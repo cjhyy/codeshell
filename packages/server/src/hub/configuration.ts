@@ -216,7 +216,13 @@ export function createHubConfiguration(options: HubConfigurationOptions) {
 
   function updateDefaults(input: JsonObject): void {
     knownFields(input, ["text", "auxText"]);
-    const text = boundedString(input.text, "text", 128);
+    // Each field is optional so a form submits only what it changed; the merge
+    // happens here under the configuration lock, and a stale form can no longer
+    // revert a default another device saved meanwhile.
+    if (input.text === undefined && input.auxText === undefined) {
+      throw new HubConfigurationError(400, "text or auxText is required");
+    }
+    const text = input.text === undefined ? undefined : boundedString(input.text, "text", 128);
     const auxText =
       input.auxText === undefined || input.auxText === null
         ? input.auxText
@@ -224,11 +230,11 @@ export function createHubConfiguration(options: HubConfigurationOptions) {
     const manager = settingsManager();
     manager.mutateSettingsForScope("local", options.cwd, (current) => {
       const effective = settingsManager().get();
-      requireTextConnection(effective, text);
+      if (text !== undefined) requireTextConnection(effective, text);
       if (auxText) requireTextConnection(effective, auxText);
       current.defaults = {
         ...objectOrEmpty(current.defaults),
-        text,
+        ...(text !== undefined ? { text } : {}),
         // Empty means the core background-model resolver follows the main model.
         ...(auxText !== undefined ? { auxText: auxText ?? "" } : {}),
       };
