@@ -223,16 +223,24 @@ export function outgoingAttachments(
 }
 
 export function safeAttachmentName(value: string | undefined, fallback = "attachment"): string {
-  const normalized = (value ?? "")
-    .replaceAll("\\", "/")
-    .split("/")
-    .at(-1)
-    ?.replace(/[\u0000-\u001f\u007f]/gu, "")
-    .trim()
-    .slice(0, 255);
-  return (
-    normalized || fallback.replace(/[\u0000-\u001f\u007f]/gu, "").slice(0, 255) || "attachment"
+  const normalized = truncateLabel(
+    (value ?? "")
+      .replaceAll("\\", "/")
+      .split("/")
+      .at(-1)
+      ?.replace(/[\u0000-\u001f\u007f]/gu, "")
+      .trim() ?? "",
   );
+  return (
+    normalized || truncateLabel(fallback.replace(/[\u0000-\u001f\u007f]/gu, "")) || "attachment"
+  );
+}
+
+/** Cap at 255 UTF-16 units without leaving half of a surrogate pair behind. */
+function truncateLabel(value: string, maximum = 255): string {
+  if (value.length <= maximum) return value;
+  const last = value.charCodeAt(maximum - 1);
+  return value.slice(0, last >= 0xd800 && last <= 0xdbff ? maximum - 1 : maximum);
 }
 
 interface OutgoingDeliveryPlan {

@@ -15,6 +15,22 @@ describe("fixed webhook ingress", () => {
     expect(config).toContain("respond /healthz 404");
   });
 
+  test("accepts an explicit loopback port 80 but still requires a port", () => {
+    for (const upstream of ["127.0.0.1:80", "localhost:80", "[::1]:80"]) {
+      expect(
+        renderWebhookIngress({ format: "caddy", publicHost: "chat.example.com", upstream }),
+      ).toContain(`reverse_proxy @chat_webhooks ${upstream}`);
+      expect(
+        renderWebhookIngress({ format: "nginx", publicHost: "chat.example.com", upstream }),
+      ).toContain(`proxy_pass http://${upstream};`);
+    }
+    for (const upstream of ["127.0.0.1", "localhost:", "[::1]"]) {
+      expect(() =>
+        renderWebhookIngress({ format: "caddy", publicHost: "chat.example.com", upstream }),
+      ).toThrow("loopback host:port");
+    }
+  });
+
   test("refuses public or credential-bearing upstreams", () => {
     expect(() =>
       renderWebhookIngress({

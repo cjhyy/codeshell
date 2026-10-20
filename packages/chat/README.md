@@ -331,8 +331,9 @@ Desktop 的「编辑配置」会生成包含所有渠道的模板；在模板里
 系统只接受 `0600` 权限。
 
 可序列化的文字入站会先原子写入 `~/.code-shell/im-gateway/inbox.json`，webhook 平台随后才会
-收到确认；相同平台 message ID 会持久去重。处理采用有界队列、全局并发和 per-target 串行，
-暂时失败按指数退避重试。含惰性媒体 loader 的消息保留在内存队列，媒体仍受平台重投策略约束。
+收到确认；同一账号的相同平台 message ID 会持久去重。处理采用有界队列、全局并发和 per-target
+串行，暂时失败按指数退避重试。附件字节先写入 inbox 旁的 spool 再确认；spool 本地写入失败时
+拒绝确认，交由平台重投。超出 spool 上限或下载失败的媒体保留在内存队列，仍受平台重投策略约束。
 `notifications.targets` 最多 32 个，只能引用已启用渠道且必须同时位于该渠道 target 白名单。Desktop 主动
 通知游标会按事件流实例原子写入 `~/.code-shell/im-gateway/desktop-events.json`（可用
 `runtime.eventCursorPath` 覆盖）；Gateway 和 Desktop 正常重启后都会续传。只有 Desktop 初始化了全新的

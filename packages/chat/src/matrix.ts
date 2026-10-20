@@ -50,6 +50,8 @@ export class MatrixAdapter implements ChannelAdapter {
   readonly channel = "matrix";
   readonly capabilities = BUILTIN_CHANNEL_CAPABILITIES.matrix;
   private readonly delivery = new OutgoingDeliveryTracker();
+  /** The access token's own user; its room messages must never become input. */
+  private selfUserId?: string;
 
   constructor(
     private readonly config: MatrixAdapterConfig,
@@ -61,6 +63,10 @@ export class MatrixAdapter implements ChannelAdapter {
     let retryMs = 1_000;
     while (!signal.aborted) {
       try {
+        // Every sync returns this bot's own replies. Without the token's real
+        // identity they would re-enter as input and answer themselves, so the
+        // optional botUserId falls back to an authenticated whoami lookup.
+        this.selfUserId ??= this.config.botUserId ?? (await this.whoami(signal));
         const query = new URLSearchParams({ timeout: "30000" });
         if (since) query.set("since", since);
         const sync = await this.call<MatrixSyncResponse>(`/_matrix/client/v3/sync?${query}`, {
@@ -160,7 +166,7 @@ export class MatrixAdapter implements ChannelAdapter {
           event.type !== "m.room.message" ||
           !content?.msgtype ||
           !event.sender ||
-          event.sender === this.config.botUserId ||
+          event.sender === this.selfUserId ||
           (event.origin_server_ts !== undefined && now - event.origin_server_ts > 5 * 60_000)
         ) {
           continue;
@@ -216,6 +222,15 @@ export class MatrixAdapter implements ChannelAdapter {
           allowPrivateNetwork: true,
         }),
     };
+  }
+
+  private async whoami(signal: AbortSignal): Promise<string> {
+    const { user_id: userId } = await this.call<{ user_id?: unknown }>(
+      "/_matrix/client/v3/account/whoami",
+      { method: "GET", signal },
+    );
+    if (typeof userId !== "string" || !userId) throw new Error("Matrix whoami 未返回 user_id");
+    return userId;
   }
 
   private async call<T>(path: string, init: RequestInit): Promise<T> {

@@ -1,6 +1,20 @@
-import { describe, expect, test } from "bun:test";
+import { afterEach, describe, expect, test } from "bun:test";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { dirname, join } from "node:path";
 import { ChatGateway, createRateLimitMiddleware } from "./chat-gateway.js";
-import type { ChannelAdapter, OutgoingMessage } from "./channel.js";
+import type {
+  ChannelAdapter,
+  ChannelMessage,
+  ChannelMessageHandler,
+  OutgoingMessage,
+} from "./channel.js";
+
+const roots: string[] = [];
+
+afterEach(() => {
+  for (const root of roots.splice(0)) rmSync(root, { recursive: true, force: true });
+});
 
 describe("ChatGateway standalone runtime", () => {
   test("runs generic middleware and replies through the source adapter", async () => {
@@ -127,6 +141,158 @@ describe("ChatGateway standalone runtime", () => {
     expect(accepted).toEqual(["first"]);
   });
 });
+
+describe("ChatGateway durable account identity", () => {
+  const delivery = (path: string, maxConcurrent: number) => ({
+    path,
+    maxPending: 10,
+    maxConcurrent,
+    maxPerTarget: 1,
+    retryBaseMs: 5,
+    retryMaxMs: 10,
+    completedTtlMs: 60_000,
+  });
+  const input: ChannelMessage = {
+    channel: "custom",
+    target: "room",
+    senderId: "user",
+    messageId: "m-1",
+    text: "account B input",
+  };
+
+  test("replays a durable record through its own account after the adapters are reordered", async () => {
+    const path = inboxPath();
+    const a = emittingAdapter("custom", "A");
+    const b = emittingAdapter("custom", "B");
+    const stopFirst = new AbortController();
+    const first = new ChatGateway({ adapters: [a, b], delivery: delivery(path, 0) });
+    const firstRun = first.run(stopFirst.signal);
+    await waitUntil(() => b.ready());
+    await b.emit(input);
+    stopFirst.abort();
+    await firstRun;
+
+    const a2 = emittingAdapter("custom", "A");
+    const b2 = emittingAdapter("custom", "B");
+    const stopSecond = new AbortController();
+    const second = new ChatGateway({ adapters: [b2, a2], delivery: delivery(path, 1) });
+    second.use(async ({ message, reply }) => reply({ text: message.text }));
+    const secondRun = second.run(stopSecond.signal);
+    await waitUntil(() => a2.replies.length + b2.replies.length > 0);
+    stopSecond.abort();
+    await secondRun;
+    expect(b2.replies.map(({ message }) => message.text)).toEqual(["account B input"]);
+    expect(a2.replies).toEqual([]);
+  });
+
+  test("refuses a durable multi-account channel whose adapters have no stable identity", async () => {
+    const gateway = new ChatGateway({
+      adapters: [emittingAdapter("custom"), emittingAdapter("custom")],
+      delivery: delivery(inboxPath(), 0),
+    });
+    await expect(gateway.run(new AbortController().signal)).rejects.toThrow(/accountId/);
+  });
+
+  test("refuses duplicate account identities on one channel", async () => {
+    const gateway = new ChatGateway({
+      adapters: [emittingAdapter("custom", "A"), emittingAdapter("custom", "A")],
+    });
+    await expect(gateway.run(new AbortController().signal)).rejects.toThrow(/accountId/);
+  });
+
+  test("routes a legacy ordinal record to the channel's sole adapter", async () => {
+    const path = inboxPath();
+    writeLegacyRecord(path, "custom:0");
+    const only = emittingAdapter("custom", "A");
+    const stop = new AbortController();
+    const gateway = new ChatGateway({ adapters: [only], delivery: delivery(path, 1) });
+    gateway.use(async ({ message, reply }) => reply({ text: message.text }));
+    const running = gateway.run(stop.signal);
+    await waitUntil(() => only.replies.length > 0);
+    stop.abort();
+    await running;
+    expect(only.replies.map(({ message }) => message.text)).toEqual(["legacy input"]);
+  });
+
+  test("keeps an ambiguous legacy ordinal record instead of guessing an account", async () => {
+    const path = inboxPath();
+    writeLegacyRecord(path, "custom:1");
+    const a = emittingAdapter("custom", "A");
+    const b = emittingAdapter("custom", "B");
+    const errors: unknown[] = [];
+    const stop = new AbortController();
+    const gateway = new ChatGateway({
+      adapters: [a, b],
+      delivery: delivery(path, 1),
+      onError: (error) => void errors.push(error),
+    });
+    gateway.use(async ({ message, reply }) => reply({ text: message.text }));
+    const running = gateway.run(stop.signal);
+    await waitUntil(() => errors.length > 0);
+    stop.abort();
+    await running;
+    expect(a.replies).toEqual([]);
+    expect(b.replies).toEqual([]);
+    expect(JSON.parse(readFileSync(path, "utf8")).pending).toHaveLength(1);
+  });
+});
+
+function inboxPath(): string {
+  const root = mkdtempSync(join(tmpdir(), "codeshell-chat-gateway-"));
+  roots.push(root);
+  return join(root, "state", "inbox.json");
+}
+
+function writeLegacyRecord(path: string, adapterId: string): void {
+  mkdirSync(dirname(path), { recursive: true });
+  writeFileSync(
+    path,
+    JSON.stringify({
+      version: 1,
+      pending: [
+        {
+          id: "00000000-0000-4000-8000-000000000001",
+          dedupeKey: "custom\0room\0user\0legacy",
+          adapterId,
+          message: {
+            channel: "custom",
+            target: "room",
+            senderId: "user",
+            messageId: "legacy",
+            text: "legacy input",
+          },
+          attempts: 0,
+          nextAttemptAt: 0,
+        },
+      ],
+      completed: {},
+    }),
+  );
+}
+
+function emittingAdapter(
+  channel: string,
+  accountId?: string,
+): ChannelAdapter & {
+  replies: Array<{ target: string; message: OutgoingMessage }>;
+  ready(): boolean;
+  emit(message: ChannelMessage): Promise<void>;
+} {
+  const replies: Array<{ target: string; message: OutgoingMessage }> = [];
+  let handler: ChannelMessageHandler | undefined;
+  return {
+    channel,
+    ...(accountId ? { accountId } : {}),
+    replies,
+    ready: () => handler !== undefined,
+    emit: (message) => handler!(message),
+    run: async (incoming, signal) => {
+      handler = incoming;
+      await waitForSignal(signal);
+    },
+    send: async (target, message) => void replies.push({ target, message }),
+  };
+}
 
 async function waitForSignal(signal: AbortSignal): Promise<void> {
   if (signal.aborted) return;

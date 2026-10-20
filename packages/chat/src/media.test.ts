@@ -5,9 +5,21 @@ import {
   OutgoingDeliveryTracker,
   outgoingAttachments,
   remoteAttachment,
+  safeAttachmentName,
 } from "./media.js";
 
 describe("shared channel media", () => {
+  test("truncates long attachment labels without splitting a surrogate pair", () => {
+    const label = `${"a".repeat(254)}😀`;
+    const name = safeAttachmentName(label);
+    expect(name).toBe("a".repeat(254));
+    expect(safeAttachmentName(undefined, `${"b".repeat(254)}😀`)).toBe("b".repeat(254));
+    expect(safeAttachmentName(`${"c".repeat(253)}😀`)).toBe(`${"c".repeat(253)}😀`);
+    expect(remoteAttachment({ id: "x", name: label, url: "https://example.test/x" }).name).toBe(
+      "a".repeat(254),
+    );
+  });
+
   test("classifies media consistently from MIME and filename", () => {
     expect(mediaKind("image/png", "x.bin")).toBe("image");
     expect(mediaKind(undefined, "voice.opus")).toBe("audio");
