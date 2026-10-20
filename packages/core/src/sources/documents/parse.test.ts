@@ -50,6 +50,64 @@ test("XLSX resolves shared/rich/inline strings, numeric values and cached formul
   ]);
 });
 
+test("Office relationship targets resolve package-absolute and ./ paths like relative ones", async () => {
+  const sheet = (text: string) =>
+    `<worksheet><sheetData><row><c r="A1" t="inlineStr"><is><t>${text}</t></is></c></row></sheetData></worksheet>`;
+  const xlsx = await parseDocument(
+    officeZip({
+      "xl/workbook.xml":
+        '<workbook xmlns:r="urn:r"><sheets><sheet name="One" r:id="a"/><sheet name="Two" r:id="b"/><sheet name="Three" r:id="c"/></sheets></workbook>',
+      "xl/_rels/workbook.xml.rels":
+        '<Relationships><Relationship Id="a" Target="/xl/worksheets/sheet1.xml"/><Relationship Id="b" Target="./worksheets/sheet2.xml"/><Relationship Id="c" Target="worksheets/sheet3.xml"/></Relationships>',
+      "xl/worksheets/sheet1.xml": sheet("first"),
+      "xl/worksheets/sheet2.xml": sheet("second"),
+      "xl/worksheets/sheet3.xml": sheet("third"),
+    }),
+    "book.xlsx",
+  );
+  expect(xlsx.parts).toEqual([
+    { label: "One", text: "[A1] first" },
+    { label: "Two", text: "[A1] second" },
+    { label: "Three", text: "[A1] third" },
+  ]);
+
+  const pptx = await parseDocument(
+    officeZip({
+      "ppt/presentation.xml":
+        '<p:presentation xmlns:p="urn:p" xmlns:r="urn:r"><p:sldIdLst><p:sldId r:id="one"/><p:sldId r:id="two"/></p:sldIdLst></p:presentation>',
+      "ppt/_rels/presentation.xml.rels":
+        '<Relationships><Relationship Id="one" Target="/ppt/slides/slide1.xml"/><Relationship Id="two" Target="slides/slide2.xml"/></Relationships>',
+      "ppt/slides/slide1.xml": '<a:p xmlns:a="urn:a"><a:r><a:t>First</a:t></a:r></a:p>',
+      "ppt/slides/slide2.xml": '<a:p xmlns:a="urn:a"><a:r><a:t>Second</a:t></a:r></a:p>',
+    }),
+    "deck.pptx",
+  );
+  expect(pptx.parts).toEqual([
+    { label: "slide 1", text: "First\n" },
+    { label: "slide 2", text: "Second\n" },
+  ]);
+});
+
+test("Office relationship ids are matched by namespace, not by the r: prefix", async () => {
+  const rel = "http://schemas.openxmlformats.org/officeDocument/2006/relationships";
+  const sheet = (text: string) =>
+    `<worksheet><sheetData><row><c r="A1" t="inlineStr"><is><t>${text}</t></is></c></row></sheetData></worksheet>`;
+  const result = await parseDocument(
+    officeZip({
+      "xl/workbook.xml": `<workbook xmlns:rel="${rel}"><sheets><sheet name="Second visible sheet" rel:id="two"/><sheet name="First visible sheet" rel:id="one"/></sheets></workbook>`,
+      "xl/_rels/workbook.xml.rels":
+        '<Relationships><Relationship Id="one" Target="worksheets/sheet1.xml"/><Relationship Id="two" Target="worksheets/sheet2.xml"/></Relationships>',
+      "xl/worksheets/sheet1.xml": sheet("one"),
+      "xl/worksheets/sheet2.xml": sheet("two"),
+    }),
+    "alias.xlsx",
+  );
+  expect(result.parts).toEqual([
+    { label: "Second visible sheet", text: "[A1] two" },
+    { label: "First visible sheet", text: "[A1] one" },
+  ]);
+});
+
 test("official PDF.js actually extracts text in a bounded parser process", async () => {
   const result = await parseDocumentIsolated(textPdf(), "sample.pdf");
   expect(result.format).toBe("pdf");
