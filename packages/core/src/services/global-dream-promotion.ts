@@ -96,15 +96,24 @@ function saveProjectDreamCandidate(input: {
     projectDir: input.projectDir,
     scope: "dream",
   });
-  const existing = mm
+  const sameName = mm
     .loadAll()
-    .find(
+    .filter(
       (entry) =>
         entry.name === input.candidate.name &&
         (entry.origin === "auto" || entry.origin === "dream"),
     );
+  // The caller decided ADD: only the same fact seen again refreshes an entry's
+  // evidence. A same-named entry with a different body is a separate memory and
+  // must not be overwritten (that would need an explicit UPDATE decision).
+  const existing = sameName.find(
+    (entry) => entry.content.trim() === input.candidate.content.trim(),
+  );
   const originProjects = unique([...(existing?.originProjects ?? []), input.projectDir]);
-  const promotionStatus = existing?.promotionStatus === "rejected" ? "rejected" : "pending";
+  // Approval rejection is recorded per name; keep honoring it for new bodies.
+  const promotionStatus = sameName.some((entry) => entry.promotionStatus === "rejected")
+    ? "rejected"
+    : "pending";
   const fileName = mm.save(
     {
       id: existing?.id,

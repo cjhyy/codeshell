@@ -152,4 +152,54 @@ describe("global dream promotion gate", () => {
       expect(new MemoryManager({ baseDir, scope: "pending" }).loadAll()).toHaveLength(0);
     });
   });
+
+  it("adds a same-named candidate with a different body instead of overwriting it", () => {
+    withBase((baseDir) => {
+      const projectDir = "/tmp/project-retry";
+      const project = new MemoryManager({ baseDir, projectDir, scope: "dream" });
+      project.save(
+        {
+          id: "original",
+          name: "retry-policy",
+          description: "Retry policy",
+          type: "reference",
+          content: "Do not retry charge requests after an uncertain result.",
+          origin: "auto",
+        },
+        { forceOrigin: "auto" },
+      );
+
+      applyGlobalDreamPromotionGate({
+        baseDir,
+        projectDir,
+        candidate: {
+          type: "reference",
+          scope: "global",
+          name: "retry-policy",
+          description: "Retry policy",
+          content: "Retry read requests twice after a temporary error.",
+        },
+        userDirectGlobal: false,
+      });
+
+      const saved = new MemoryManager({ baseDir, projectDir, scope: "dream" }).loadAll();
+      expect(saved.find((m) => m.id === "original")?.content).toBe(
+        "Do not retry charge requests after an uncertain result.",
+      );
+      expect(saved.map((m) => m.content).sort()).toEqual([
+        "Do not retry charge requests after an uncertain result.",
+        "Retry read requests twice after a temporary error.",
+      ]);
+    });
+  });
+
+  it("refreshes evidence on the existing entry when the same fact is seen again", () => {
+    withBase((baseDir) => {
+      const projectDir = "/tmp/project-repeat";
+      applyGlobalDreamPromotionGate({ baseDir, projectDir, candidate, userDirectGlobal: false });
+      applyGlobalDreamPromotionGate({ baseDir, projectDir, candidate, userDirectGlobal: false });
+      const saved = new MemoryManager({ baseDir, projectDir, scope: "dream" }).loadAll();
+      expect(saved).toHaveLength(1);
+    });
+  });
 });
