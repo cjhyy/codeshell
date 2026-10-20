@@ -2522,4 +2522,37 @@ describe("useRemoteApp CLI room controls", () => {
       await hook.unmount();
     }
   });
+
+  test("reopening a CLI room shows the approvals the host replays for it", async () => {
+    const { hook, ws, approval } = await openRoom();
+    try {
+      await act(async () => {
+        approval("read-1");
+        await flushMicrotasks();
+      });
+      await act(async () => {
+        hook.result.current.selectSession("native-b");
+        await flushMicrotasks();
+      });
+      expect(hook.result.current.approvals).toEqual([]);
+      await act(async () => {
+        hook.result.current.openCcSession("thread-cli", "/repo", "bypassPermissions");
+        await flushMicrotasks();
+        // Main answers the open, then replays the request the CLI still waits on.
+        ws.message({
+          type: "ccRoom.opened",
+          roomId: room.id,
+          sessionId: "thread-cli",
+          status: "running",
+        });
+        approval("read-1");
+        await flushMicrotasks();
+      });
+      expect(hook.result.current.approvals.map((a) => [a.roomId, a.requestId])).toEqual([
+        [room.id, "read-1"],
+      ]);
+    } finally {
+      await hook.unmount();
+    }
+  });
 });

@@ -304,6 +304,14 @@ export function CCConversationView({
         if (cancelled) return;
         if (blocked) throw new Error("Room transcript recovery is required");
         if (!snapshot.active) throw new Error("External transcript is not being followed");
+        // Approval prompts are pushed once; restore those this view missed
+        // while unmounted. The CLI is still waiting for them.
+        const missed = (snapshot.approvals ?? []).map((req) => ({ ...req, roomId }));
+        if (missed.length)
+          setPending((current) => [
+            ...current,
+            ...missed.filter((req) => !current.some((item) => item.requestId === req.requestId)),
+          ]);
         dispatch({ kind: "replayHistory", messages: snapshot.messages as HistoryMessage[] });
         seenSeq = snapshot.roomCursor;
         const catchup = await readCatchup(snapshot.roomCursor);

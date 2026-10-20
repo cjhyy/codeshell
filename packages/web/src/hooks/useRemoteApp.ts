@@ -1758,7 +1758,8 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
     ccHistoryCwdRef.current = undefined;
     ccBacklogLoadedRef.current = false;
     // The room's cards belong to the conversation being left and must not
-    // block other conversations. The host keeps the requests pending.
+    // block other conversations. The host keeps the requests pending and
+    // replays them when the room is opened again.
     approvalsRef.current = approvalsRef.current.filter((approval) => !approval.roomId);
     setApprovals((prev) => prev.filter((approval) => !approval.roomId));
     setLoadingKey("roomHistory", false);

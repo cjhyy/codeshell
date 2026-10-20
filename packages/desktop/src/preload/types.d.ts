@@ -2487,14 +2487,12 @@ export interface CodeshellApi
       limit: number,
     ): Promise<{
       active: boolean;
-      messages: {
-        role: "user" | "assistant";
-        text: string;
-        tools?: { name: string; summary: string; args?: Record<string, unknown> }[];
-      }[];
+      messages: Extract<MobileServerEvent, { type: "ccRoom.transcriptSubscribed" }>["messages"];
       hasMore: boolean;
       totalCount: number;
       roomCursor: number;
+      /** CLI approvals the room is still waiting on (a remounted view missed their push). */
+      approvals?: Array<Extract<MobileServerEvent, { type: "ccRoom.approvalRequest" }>["req"]>;
     }>;
     unsubscribeTranscript(roomId: string): Promise<void>;
     closeSession(roomId: string): Promise<void>;

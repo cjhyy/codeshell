@@ -883,4 +883,18 @@ describe("CCConversationView asynchronous recovery", () => {
       { behavior: "allow", answers: { "First?": "B", "Second?": "My own" } },
     ]);
   });
+
+  test("a remounted view restores approvals the room is still waiting on", async () => {
+    installRoomApi({
+      subscribeTranscript: async () => ({
+        active: true,
+        messages: [],
+        roomCursor: 0,
+        approvals: [{ requestId: "missed", toolName: "Bash", input: { command: "pwd" } }],
+      }),
+    });
+    const container = await mount();
+    const card = findElementByProp(container, "data-cc-room-approval");
+    expect(reactPropsOf(card)["data-cc-room-approval"]).toBe("missed");
+  });
 });
