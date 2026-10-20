@@ -126,6 +126,7 @@ import {
 import {
   buildNoChildFallbackReply,
   compactQuerySessionId,
+  goalResumeSessionId,
   forkSourceSessionId,
   quickChatForkRequest,
   quickChatRunRequest,
@@ -1054,6 +1055,10 @@ export class AgentBridge implements PetStateBridge {
           this.core.ensureWorker(
             this.sessionsForFallback().readSessionMainRoot(compactSessionId) ?? parsed.params?.cwd,
           );
+        }
+        const goalResumeId = goalResumeSessionId(parsed);
+        if (goalResumeId) {
+          this.core.ensureWorker(this.sessionsForFallback().readSessionMainRoot(goalResumeId));
         }
       }
 

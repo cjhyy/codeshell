@@ -114,6 +114,20 @@ export function compactQuerySessionId(parsed: ParsedRpc): string | null {
 }
 
 /**
+ * Un-pausing a goal is a drive request: Core must queue its continuation turn,
+ * so (like run/fork/compact) it has to reach a live worker, not the disk fallback.
+ */
+export function goalResumeSessionId(parsed: ParsedRpc): string | null {
+  const sid = parsed.params?.sessionId;
+  return parsed.method === "agent/goalUpdate" &&
+    parsed.params?.paused === false &&
+    typeof sid === "string" &&
+    sid.length > 0
+    ? sid
+    : null;
+}
+
+/**
  * When no worker subprocess is live, decide whether the bridge can answer a
  * request WITHOUT the worker — and return the JSON-RPC response line to send,
  * or null to fall through to the "dropped" path.
@@ -163,6 +177,17 @@ export function buildNoChildFallbackReply(
         typeof parsed.params?.objective === "string" ? parsed.params.objective : undefined;
       const paused = typeof parsed.params?.paused === "boolean" ? parsed.params.paused : undefined;
       if (objective === undefined && paused === undefined) return null;
+      // Writing paused:false to disk without a worker would report the goal as
+      // resumed while nothing continues it. Keep it paused and say why.
+      if (paused === false)
+        return JSON.stringify({
+          jsonrpc: "2.0",
+          id,
+          error: {
+            code: -32000,
+            message: "The agent worker could not be started; the goal is still paused.",
+          },
+        });
       const expectedGoalId = parsed.params?.expectedGoalId;
       const expectedRevision = parsed.params?.expectedRevision;
       if (

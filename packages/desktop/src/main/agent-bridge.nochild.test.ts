@@ -17,6 +17,7 @@ import {
   buildNoChildFallbackReply,
   compactQuerySessionId,
   forkSourceSessionId,
+  goalResumeSessionId,
   quickChatForkRequest,
   quickChatRunRequest,
   quickChatRunSessionId,
@@ -126,6 +127,40 @@ describe("buildNoChildFallbackReply — no live worker", () => {
     expect(
       buildNoChildFallbackReply({ id: 3, method: "agent/goalClear", params: {} }, sm()),
     ).toBeNull();
+  });
+
+  test("resuming a paused goal needs a worker; the disk fallback refuses and keeps it paused", () => {
+    const m = sm();
+    const { state } = m.create("/p", "gpt-5.5", "openai", "s-goal");
+    state.activeGoal = { objective: "finish the migration", paused: true };
+    m.saveState(state);
+    const goal = m.readActiveGoal("s-goal")!;
+    const resume = {
+      id: 5,
+      method: "agent/goalUpdate",
+      params: {
+        sessionId: "s-goal",
+        paused: false,
+        expectedGoalId: goal.goalId,
+        expectedRevision: goal.revision,
+      },
+    };
+
+    expect(goalResumeSessionId(resume)).toBe("s-goal");
+    const reply = JSON.parse(buildNoChildFallbackReply(resume, m)!);
+    expect(reply.result).toBeUndefined();
+    expect(reply.error.message).toBeTruthy();
+    expect(m.readActiveGoal("s-goal")?.paused).toBe(true);
+
+    const pause = { ...resume, id: 6, params: { ...resume.params, paused: true } };
+    expect(goalResumeSessionId(pause)).toBeNull();
+    const edit = {
+      ...resume,
+      id: 7,
+      params: { ...resume.params, paused: undefined, objective: "finish it" },
+    };
+    expect(goalResumeSessionId(edit)).toBeNull();
+    expect(JSON.parse(buildNoChildFallbackReply(edit, m)!).result.updated).toBe(true);
   });
 
   test("compact query is recognized as worker-spawning, not no-child fallback", () => {
