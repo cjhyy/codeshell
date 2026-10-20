@@ -358,7 +358,9 @@ function parseReview(reviewer: string, raw: any): FindingReview {
 
 function validateVerdict(v: unknown): PeerVerdict {
   if (v === "agree" || v === "refine" || v === "disagree" || v === "needs_evidence") return v;
-  return "agree";
+  // A missing or unrecognised verdict is not an endorsement: verification
+  // requires an explicit "agree", so treat it as still needing evidence.
+  return "needs_evidence";
 }
 
 /** Parse ArenaConsensus from LLM JSON output */
