@@ -138,7 +138,7 @@ if (childMode) {
   if (mode === "crash-final-verification") {
     const { OperationController } = await import("../packages/core/dist/operations/controller.js");
     await new OperationController(ledger).run(
-      retentionPlan("verification", "crash-verification-session"),
+      retentionPlan("verification", "crash-verification-session", "verification-target"),
       {
         assertAuthorized() {},
         async preflight() {},
@@ -488,7 +488,13 @@ if (childMode) {
       decrypt: (value) => cipher.decrypt(value),
       unknown: true,
     });
-    const verificationPlan = retentionPlan("verification", "crash-verification-session");
+    // Seeded unknown attempts fence their own resource across Sessions, so the
+    // verification write targets a separate resource to reach its commit crash.
+    const verificationPlan = retentionPlan(
+      "verification",
+      "crash-verification-session",
+      "verification-target",
+    );
     const httpBeforeFailedCommit = calls.length;
     const failedCommitProcess = await launch(
       "crash-final-verification",
@@ -519,7 +525,11 @@ if (childMode) {
     const controller = new OperationController(new OperationLedger(failedCommitRoot, cipher));
     assert.equal((await controller.run(verificationPlan, adapter)).state, "unknown");
     const blocked = await controller.run(
-      retentionPlan("same-session-after-death", verificationPlan.sessionId),
+      retentionPlan(
+        "same-session-after-death",
+        verificationPlan.sessionId,
+        verificationPlan.target,
+      ),
       adapter,
     );
     assert.equal(blocked.state, "blocked");

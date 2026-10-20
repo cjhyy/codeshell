@@ -251,12 +251,17 @@ try {
     assert.equal(readFileSync(target, "utf8"), "after\n");
     return [];
   });
-  const codeFileBodies = await code.run("read file", (body) => {
-    bounded(body);
-    assert.ok(!names(body).includes("ApplyPatch"));
-    assert.ok(catalog(body).includes("ApplyPatch"));
-    return [];
-  });
+  // Loaded tools persist within a Session, so routing for a new task needs its own Session.
+  const codeFileBodies = await code.run(
+    "read file",
+    (body) => {
+      bounded(body);
+      assert.ok(!names(body).includes("ApplyPatch"));
+      assert.ok(catalog(body).includes("ApplyPatch"));
+      return [];
+    },
+    { sessionId: "s-coding-read" },
+  );
   assert.notDeepEqual(names(codeBodies[0]), names(codeFileBodies[0]));
   assert.deepEqual(catalogNames(codeBodies[0]), catalogNames(codeFileBodies[0]));
   assert.ok(code.engine.getToolRegistry().hasTool("DriveAgent"));
@@ -322,11 +327,18 @@ try {
     "retry uses the identical schema snapshot",
   );
   assert.deepEqual(catalogNames(progressive[0]), catalogNames(progressive.at(-1)));
-  await deferred.run("读取资料集文档", (body) => {
-    assert.ok(!names(body).includes("RoutingAction"), "selection does not leak into another Run");
-    assert.ok(names(body).includes("ReadSource"), JSON.stringify({ initialTools: names(body) }));
-    return [];
-  });
+  await deferred.run(
+    "读取资料集文档",
+    (body) => {
+      assert.ok(
+        !names(body).includes("RoutingAction"),
+        "selection does not leak into another Session",
+      );
+      assert.ok(names(body).includes("ReadSource"), JSON.stringify({ initialTools: names(body) }));
+      return [];
+    },
+    { sessionId: "s-deferred-other" },
+  );
   results.push({
     case: "discovery-next-step-retry-and-run-reset",
     initialTools: names(progressive[0]),

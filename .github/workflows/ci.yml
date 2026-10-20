@@ -138,12 +138,27 @@ jobs:
           - shard: desktop
             paths: packages/desktop
             # The issuer proof runs alone above so its receipt precedes the first SDK/Core import.
+            # The attachment suites run alone below: their App-level module stubs
+            # (MessageStream, ChatView, qrcode, ...) outlive mock.restore() in a shared process,
+            # and Bun keeps the first registration even when a later file re-mocks the real module.
+            # Desktop script suites run below with their own runners: node:test suites
+            # under node --test (Bun's shim ignores skip options, aborts nested tests
+            # before restore hooks and drops setuid modes), the rest in their own Bun run.
+            # The 62 MiB live-writer capture proof runs alone: in the shared shard its event
+            # loop stalled on CI after earlier suites, timing out without a diagnostic.
             ignore: >-
               --path-ignore-patterns '**/browser-driver/cdp-actions.integration.test.ts'
               --path-ignore-patterns '**/browser-runtime/playwright-driver.test.ts'
               --path-ignore-patterns '**/browser-library/puppeteer-browser-driver.test.ts'
               --path-ignore-patterns '**/browser-library/browser-inspector.integration.test.ts'
               --path-ignore-patterns '**/src/main/mcp-oauth-issuer.test.ts'
+              --path-ignore-patterns '**/renderer/App.attachment-ownership.test.tsx'
+              --path-ignore-patterns '**/renderer/App.attachment-quantity.test.tsx'
+              --path-ignore-patterns '**/renderer/App.no-repo-attachments.test.tsx'
+              --path-ignore-patterns '**/renderer/ChatView.attachment-quantity-fallback.test.tsx'
+              --path-ignore-patterns '**/renderer/ChatView.ephemeral-lifecycle.test.tsx'
+              --path-ignore-patterns '**/desktop/scripts/*.test.mjs'
+              --path-ignore-patterns '**/cc-room/transcript-recovery.test.ts'
           - shard: rest
             paths: >-
               tests packages/coding packages/tui packages/pet packages/server
@@ -190,6 +205,22 @@ jobs:
         run: bun run build
       - name: test shard
         run: node scripts/run-bun-test-shard.mjs --timeout 30000 ${{ matrix.ignore }} ${{ matrix.paths }}
+      - name: test Desktop suites that need their own Bun process
+        if: matrix.shard == 'desktop'
+        run: |
+          node scripts/run-bun-test-shard.mjs --timeout 30000 packages/desktop/src/renderer/App.attachment-ownership.test.tsx
+          node scripts/run-bun-test-shard.mjs --timeout 30000 packages/desktop/src/renderer/App.attachment-quantity.test.tsx
+          node scripts/run-bun-test-shard.mjs --timeout 30000 packages/desktop/src/renderer/App.no-repo-attachments.test.tsx
+          node scripts/run-bun-test-shard.mjs --timeout 30000 packages/desktop/src/renderer/ChatView.attachment-quantity-fallback.test.tsx
+          node scripts/run-bun-test-shard.mjs --timeout 30000 packages/desktop/src/renderer/ChatView.ephemeral-lifecycle.test.tsx
+          node scripts/run-bun-test-shard.mjs --timeout 30000 packages/desktop/src/main/cc-room/transcript-recovery.test.ts
+      - name: test Desktop script suites with their own runners
+        if: matrix.shard == 'desktop'
+        run: |
+          node_suites=$(git grep -l 'from "node:test"' -- 'packages/desktop/scripts/*.test.mjs')
+          bun_suites=$(git grep -L 'from "node:test"' -- 'packages/desktop/scripts/*.test.mjs')
+          node scripts/run-isolated-node-smoke.mjs --test $node_suites
+          node scripts/run-bun-test-shard.mjs --timeout 30000 $bun_suites
       - name: test responsive overlays and settings menus
         if: matrix.shard == 'desktop'
         run: bun run --cwd packages/desktop test:ui:overlays

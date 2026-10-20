@@ -34,7 +34,11 @@ function makeDeps(opts: {
       return false;
     },
   } as unknown as TurnLoopDeps["contextManager"];
-  const hooks = { async emit() { return {}; } } as unknown as TurnLoopDeps["hooks"];
+  const hooks = {
+    async emit() {
+      return {};
+    },
+  } as unknown as TurnLoopDeps["hooks"];
   const transcript = {
     appendToolUse() {},
     appendToolResult() {},
@@ -89,9 +93,13 @@ const doneResp = (): LLMResponse => ({
 describe("TurnLoop tool_summary routing contract", () => {
   test("emits toolCallIds for the summarized tool batch", async () => {
     const events: any[] = [];
+    let summaryRequests = 0;
     const deps = makeDeps({
       responses: [toolResp(), doneResp()],
-      summarize: async () => "read and searched",
+      summarize: async () => {
+        summaryRequests += 1;
+        return "read and searched";
+      },
     });
     const config = {
       maxTurns: 5,
@@ -108,8 +116,9 @@ describe("TurnLoop tool_summary routing contract", () => {
     const summary = events.find((event) => event.type === "tool_summary");
     expect(summary).toMatchObject({
       type: "tool_summary",
-      summary: "read and searched",
+      summary: "Read, Searched",
       toolCallIds: ["call-read", "call-grep"],
     });
+    expect(summaryRequests).toBe(0);
   });
 });

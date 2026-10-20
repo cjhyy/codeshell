@@ -237,6 +237,15 @@ async function sessionRecovery(page, lang) {
   const pageRegion = page.getByRole("region", { name: text.sessions, exact: true });
   const retry = page.getByRole("button", { name: text.retry, exact: true });
   await pageRegion.focus();
+  // A hit-testable retry button can appear before native End-key scrolling
+  // finishes. Keep that keyboard sequence separate from the later wheel gesture.
+  const keyboardScroll = await pageRegion.evaluateHandle((node) => {
+    const state = { done: node.scrollHeight <= node.clientHeight };
+    if (!state.done) {
+      node.addEventListener("scrollend", () => (state.done = true), { once: true });
+    }
+    return state;
+  });
   await page.keyboard.press("End");
   await page.waitForFunction((label) => {
     const button = Array.from(document.querySelectorAll("button")).find(
@@ -266,6 +275,8 @@ async function sessionRecovery(page, lang) {
   );
   assert.equal(await focused(retry), true, "Rejected read keeps its retry focus");
   await pageRegion.click({ position: { x: 10, y: 10 } });
+  await page.waitForFunction((state) => state.done, keyboardScroll);
+  await keyboardScroll.dispose();
   await page.mouse.move(100, 120);
   await page.mouse.wheel(0, -5000);
   await page

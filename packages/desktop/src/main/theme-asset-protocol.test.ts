@@ -6,7 +6,16 @@ import { join } from "node:path";
 
 const protocol = { handle: mock(() => undefined) };
 const defaultSession = { protocol };
-mock.module("electron", () => ({ session: { defaultSession } }));
+// One Bun process keeps the first "electron" mock for every later suite, so this
+// stub also provides the shell methods other main-process modules import.
+mock.module("electron", () => ({
+  session: { defaultSession },
+  shell: {
+    openExternal: async () => undefined,
+    showItemInFolder: () => undefined,
+    openPath: async () => "",
+  },
+}));
 const { handleThemeAssetRequest, installThemeAssetProtocol } =
   await import("./theme-asset-protocol.js");
 

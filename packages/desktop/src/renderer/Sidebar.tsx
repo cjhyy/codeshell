@@ -363,7 +363,7 @@ export function Sidebar({
   return (
     <aside
       ref={sidebarRef}
-      className="flex h-full min-h-0 w-60 max-w-full shrink-0 flex-col overflow-hidden border-r border-border/70"
+      className="flex h-full min-h-0 w-[var(--cs-sidebar-width,15rem)] max-w-full shrink-0 flex-col overflow-hidden border-r border-border/70"
       data-theme-surface="sidebar"
     >
       <div
@@ -373,19 +373,21 @@ export function Sidebar({
         tabIndex={0}
         className="min-h-0 flex-1 overflow-y-auto overscroll-contain focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring/50"
       >
-        <nav className="flex flex-col gap-1 px-3 pb-3 pt-2">
-          <PetSidebarEntry
-            active={
-              viewMode === "pet" ||
-              viewMode === "pet_settings" ||
-              viewMode === "pet_personalization" ||
-              viewMode === "pet_memory"
-            }
-            pendingCount={petPendingCount}
-            runningCount={petRunningCount}
-            onOpen={onOpenPetPage}
-          />
-          <div className="my-1 border-t border-border/60" aria-hidden="true" />
+        <nav className="flex flex-col gap-1 px-2 pb-2 pt-2">
+          <div className="[&>button]:rounded-lg [&>button]:px-2 [&>button]:text-[13px]">
+            <PetSidebarEntry
+              active={
+                viewMode === "pet" ||
+                viewMode === "pet_settings" ||
+                viewMode === "pet_personalization" ||
+                viewMode === "pet_memory"
+              }
+              pendingCount={petPendingCount}
+              runningCount={petRunningCount}
+              onOpen={onOpenPetPage}
+            />
+          </div>
+          <div className="my-1 border-t border-border/70" aria-hidden="true" />
           <SidebarItem
             label={t("sidebar.newConversation")}
             Icon={PenSquare}
@@ -431,7 +433,7 @@ export function Sidebar({
             </Button>
           </div>
 
-          <div className="px-3 pb-3">
+          <div className="px-2 pb-2">
             {orderedProjects.length === 0 && noRepoSessions.length === 0 && (
               <div className="mt-1 rounded-xl border border-dashed border-border bg-card/60 px-3 py-5 text-center">
                 <FolderOpen className="mx-auto size-5 text-muted-foreground" aria-hidden />
@@ -531,7 +533,7 @@ export function Sidebar({
         </div>
       </div>
 
-      <div className="shrink-0 border-t border-border/70 bg-card/40 px-3 py-2">
+      <div className="shrink-0 border-t border-border/70 bg-card/40 px-2 py-2">
         <div className="flex items-center gap-1.5">
           <div className="min-w-0 flex-1">
             <AccountSidebarEntry
@@ -790,7 +792,7 @@ function SidebarItem({
       variant="ghost"
       size="sm"
       className={cn(
-        "h-8 w-full justify-start gap-2.5 rounded-lg px-2.5 text-[13px] font-normal transition-colors",
+        "h-8 w-full justify-start gap-2 rounded-lg px-2 text-[13px] font-normal transition-colors",
         prominent
           ? "mb-1 h-9 bg-primary font-medium text-primary-foreground shadow-sm hover:bg-primary/90 hover:text-primary-foreground"
           : active
@@ -1037,7 +1039,7 @@ export function ProjectGroup({
           type="button"
           variant="ghost"
           size="sm"
-          className="h-8 min-w-0 flex-1 justify-start gap-2 px-1.5 text-[13px] hover:bg-transparent"
+          className="h-8 min-w-0 flex-1 justify-start gap-2 px-1 text-[13px] hover:bg-transparent"
           aria-expanded={!collapsed}
           onClick={() => {
             setShowMore(false);
@@ -1047,9 +1049,9 @@ export function ProjectGroup({
           }}
         >
           {collapsed ? (
-            <Folder size={13} className="shrink-0 text-muted-foreground" />
+            <Folder size={14} className="shrink-0 text-muted-foreground" />
           ) : (
-            <FolderOpen size={13} className="shrink-0 text-muted-foreground" />
+            <FolderOpen size={14} className="shrink-0 text-muted-foreground" />
           )}
           <span className="flex-1 truncate text-left font-medium">{projectLabel(project)}</span>
           {project.pinned && (
@@ -1094,7 +1096,7 @@ export function ProjectGroup({
       {!collapsed && (
         <>
           {live.length > 0 && (
-            <ul className="ml-3 mt-1 space-y-0.5 border-l border-border/60 pl-2">
+            <ul className="ml-3 mt-1 space-y-0.5 border-l border-border/70 pl-2">
               {visibleLive.map((s, i) => {
                 const sessionWorkspace =
                   localRuntime && s.engineSessionId
@@ -1212,7 +1214,7 @@ function NoRepoSection({
   if (sessions.length === 0) return null;
   return (
     <div className="mt-2">
-      <div className="px-1 pb-2 pt-1 text-[11px] font-semibold tracking-wide text-muted-foreground">
+      <div className="px-2 pb-2 pt-1 text-[11px] font-semibold tracking-wide text-muted-foreground">
         {t("sidebar.conversations")}
       </div>
       <ul className="space-y-0.5">

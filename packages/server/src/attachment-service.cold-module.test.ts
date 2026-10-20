@@ -1,4 +1,4 @@
-import { afterEach, expect, test } from "bun:test";
+import { afterAll, afterEach, expect, test } from "bun:test";
 import {
   existsSync,
   mkdirSync,
@@ -16,7 +16,20 @@ import { pathToFileURL } from "node:url";
 if (!process.env.CODE_SHELL_TEST_HOME) throw new Error("Use the guarded test runner");
 
 const native = createRequire(import.meta.url)("node:child_process");
-for (const name of ["spawn", "spawnSync", "exec", "execSync", "execFile", "execFileSync", "fork"]) {
+const nativeNames = ["spawn", "spawnSync", "exec", "execSync", "execFile", "execFileSync", "fork"];
+// Bun shards share one process across files, so the guards must not outlive this file.
+const originals = {
+  native: Object.fromEntries(nativeNames.map((name) => [name, native[name]])),
+  kill: process.kill,
+  fetch: globalThis.fetch,
+};
+afterAll(() => {
+  Object.assign(native, originals.native);
+  process.kill = originals.kill;
+  globalThis.fetch = originals.fetch;
+  syncBuiltinESMExports();
+});
+for (const name of nativeNames) {
   native[name] = () => {
     throw new Error(`Native cold-module attachment test transport denied: ${name}`);
   };

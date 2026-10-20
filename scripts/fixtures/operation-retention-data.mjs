@@ -2,14 +2,18 @@ import { createHmac, randomUUID } from "node:crypto";
 import { readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
-export const retentionPlan = (intentId = "original", sessionId = "retention-session") => ({
+export const retentionPlan = (
+  intentId = "original",
+  sessionId = "retention-session",
+  target = "fixture-target",
+) => ({
   sessionId,
   intentId,
   service: "fixture",
   action: "write",
   channel: "link",
   account: "fixture-account",
-  target: "fixture-target",
+  target,
   parameters: { body: "synthetic private body" },
   postcondition: { body: "synthetic private body" },
 });

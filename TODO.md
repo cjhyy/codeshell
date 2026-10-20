@@ -2,7 +2,9 @@
 
 > 本文件只保留**未完成**的待办；已完成实现与历史验收见 Git 历史和 [能力盘点](docs/architecture/11-feature-inventory.md)。
 > 分区规则：**小 feature = 体量 M 及以下（M/S/XS），可单会话直接着手**；**大功能升级 = 体量 L**，需先方案设计再分阶段落地。
-> 最近一次核对：2026-10-14。已完成的 Hook 路径、静态 Composer SVG 和 0.9.41 版本准备已随 PR #176/#177/#178 合入。早先验收的产品基线为 `bfebd1a4`（首轮自然 [CI 38503640164](https://github.com/cjhyy/codeshell/actions/runs/38503640164) 十二项全部成功）；PR #181 合入后 main head 已为 `7047ace6`，其推送 [CI 38534752446](https://github.com/cjhyy/codeshell/actions/runs/38534752446) 十二项全部成功，`bfebd1a4` 的 CI 结论不能沿用。源码合入、正式发行及真实环境验收分别记录；本轮尚未正式发布 0.9.41。完整标准与历史原件见[交付检查点](docs/todo/p0-p1-release-2026-10-12.md)。
+> **当前发布核对：2026-10-20。** 开发版本为 `0.9.45`，GitHub 最新正式发行仍为 `v0.9.44`。最新 [CI40](https://github.com/cjhyy/codeshell/actions/runs/39104976943) 整体失败：Windows 首窗超时和 NSIS 卸载身份校验未通过；此前原生异常、最终包更新/升级等范围尚未关闭。准确范围及本次分支收敛见[当前发布验收记录](docs/todo/release-real-operations-2026-10-16.md)。以下 2026-10-14 段落保留历史基线，不能代表今天未发行 0.9.41 或尚未执行后续三平台验收。
+>
+> 历史核对：2026-10-14。已完成的 Hook 路径、静态 Composer SVG 和 0.9.41 版本准备已随 PR #176/#177/#178 合入。早先验收的产品基线为 `bfebd1a4`（首轮自然 [CI 38503640164](https://github.com/cjhyy/codeshell/actions/runs/38503640164) 十二项全部成功）；PR #181 合入后 main head 已为 `7047ace6`，其推送 [CI 38534752446](https://github.com/cjhyy/codeshell/actions/runs/38534752446) 十二项全部成功，`bfebd1a4` 的 CI 结论不能沿用。源码合入、正式发行及真实环境验收分别记录；本轮尚未正式发布 0.9.41。完整标准与历史原件见[交付检查点](docs/todo/p0-p1-release-2026-10-12.md)。
 >
 > 按本次核查要求，先收口已完成和进行中的工作，新的完整 Linux 候选、三平台打包、Panel 正式发布及目标部署保持未启动，供用户核查下列剩余项。原 **3 P0 + 7 P1** 完整保留，不把某个已通过子项算作整项完成。
 >
@@ -12,7 +14,7 @@
 
 ## 本轮 P0 / P1：待核查与继续交付
 
-- [ ] **P0.1 — 完整候选与正式发版。** 完成准确最终源码的 Linux 全业务、恢复、Link、镜像和归档验收，两个原工件均实际上传并完整下载；交付三平台安装包、更新清单和九个公开包。0.9.41 源码已完成；验收基线自 `bfebd1a4` 改为 `7047ace6`（PR #181 合入后的 main head，推送 [CI 38534752446](https://github.com/cjhyy/codeshell/actions/runs/38534752446) 十二项全部成功），`bfebd1a4` 的十二项 CI 结论不能沿用，候选构建与正式发布未执行。后续 main 变化仍须重新固定准确输入，不能继承旧 head 的 CI 结论。**已知风险：**上一轮完整 Linux [38384214542](https://github.com/cjhyy/codeshell-services/actions/runs/38384214542) 在 Job 最终 `page-errors` 断言失败，具体错误仍未查明，后续业务／重启／恢复／Link／归档未到达且证据上传因 quota 失败；重跑前先定位该失败并确认证据上传容量，否则可能在同一处再次中断。
+- [ ] **P0.1 — 完整候选与正式发版。** 当前源码版本 `0.9.45`，最新正式发行 `v0.9.44`；最终收敛提交仍须通过完整 CI、10 个公开包 smoke、三平台安装包及原生验收。CI40 的 Web/macOS/Linux 各自范围已通过，Windows 首窗、卸载身份与后续打包更新恢复未完成，此前 `0xC0000005` 尚未定位；签名/公证与跨版本升级也未完成本轮正式验收。准确输入、结果及后续收敛见[发布验收记录](docs/todo/release-real-operations-2026-10-16.md)。早期 Linux services 完整验收 [38384214542](https://github.com/cjhyy/codeshell-services/actions/runs/38384214542) 的 `page-errors` 与大工件上传问题仍保留其独立范围，不能用后来的 Host 子项通过替代。
 - [ ] **P0.2 — Panel 正式安装与生产更新。** 正式发布 Design 0.18.2、Quant 0.46.2、Download 0.22.7、Video 0.7.3、Starter 0.1.1；完成含 Job 4.2.1 在内六包的真实安装、更新、加载、项目版本绑定与权限验收。五包远端草稿、完整上传下载、194 文件核对及五轮自然 CI 已完成，正式发布与生产更新链未完成。按 2026-10-14 范围决定，生产更新链只要求 Desktop 与 Hub 上的安装、更新和加载，不再要求云端 Panel 运行时的生产更新。
 - [ ] **P0.3 — 正式包 Pet / Mimi 与插件可靠性。** 用最终正式包验证真实 Electron / worker / Keychain、固定版本真实插件安装审阅与初始化、同 Session 续办和冷重启；完成真实微信长回合、断线与图片验收。早期真实插件 SDK 和 SVG 两次冷启动已通过，保留各自旧输入，仍缺最终正式包证据。
 - [ ] **P1.1 — 六 Panel 的 12 组合完整业务（原 24 组合）。** 补齐电脑 / 手机 × 本地两组合的完整领域流程、真实服务商与项目隔离；实体设备证据单独记录。按 2026-10-14 范围决定，电脑 / 手机 × 云端两组合移出，手机经中继查看电脑上的 Panel；已有的云端组合证据保留为历史记录。受控 CI、窄屏浏览器和局部通过项不关闭完整矩阵。
@@ -38,6 +40,8 @@ P2 / P3、统一工作台等后续增强和新增第三方 Link / OAuth / token 
 - **代码审查对标 Codex / Claude Code**（L，2026-10-17 首轮已落地）。继续实现 Host 授权的独立只读 reviewer、结构化 findings 校验与 diff 行位绑定、问题定位／选择修复／重审闭环，以及大范围完整分批审查。当前 Desktop 是按范围生成对话草稿，TUI 支持未提交／base／commit；只读要求仍是提示词约束，不代表工具权限隔离，也未完成模型审查准确率验收。
 
 - **Link 连接器契约与运行时重构**（L，2026-10-16 实施中）。首批增加统一 Operation 契约、五种 recipe、完整快照 CI 门禁、Figma 新旧动作分离、刷新消费错误分类、各入口状态回执、HTTP provider 注册抽取与跨会话未决写屏障；新记录按 recipe 建立，旧连接可由精确离线工具清理。剩余纯领域 helpers/CLI/MCP/verified-write 的完整迁出、在线清理收口、正式契约包与部署兼容验收。同步/Webhook/浏览器会话继续后置。见[重构方案](docs/todo/link-connector-refactor-plan-2026-10-16.md)与[准确实施边界](docs/todo/link-connector-refactor-delivery-2026-10-16.md)。
+
+- **运行时等待与交互延迟优化**（L，2026-10-15 技术方案，后续实施未启动）。参考 Codex 的句柄、显式等待、工具合批和事件流机制，先建立耗时基线，再补指定对象的等待与逐工具状态，随后治理可选辅助请求、上下文预算和缓存代次。既有按需工具面、notes、输出 journal 与平台 W3 ExecutionService 继续复用。局部修复 `37b390787` 已适配到本轮收敛分支并通过 135 项定向及相邻守护回归；最终主线组合回归、正式消费者验收，以及 A 批计时基线和 B–F 后续工作仍未完成，尚未正式发布。见[实施接口与验收方案](docs/todo/agent-runtime-performance-plan-20261015.md)。
 
 - **Figma Link：MCP 与 REST 统一能力**（L，2026-10-15 重新规划，新增部分尚未实施）。已有 REST 按需节点、导出、素材与评论读取保留；设计上下文、截图、变量和 Make resources 规划接入官方 MCP，独立 OAuth 与连接状态。先验证 CodeShell 客户端合法准入、补每次发送的 endpoint/credential 绑定及通用 MCP 资源协议，再做能力路由和新文件授权优化；不把已有 Link downstream grant 当作 MCP token，不自动启用画布写入。见[能力与分期规划](docs/todo/figma-link-mcp-plan.md)。本项不启动其他 provider 接入或正式发布。
 

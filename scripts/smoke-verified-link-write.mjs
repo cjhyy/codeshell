@@ -105,8 +105,18 @@ if (process.argv[2] === "--worker") {
           ],
         };
       }
+      // A restarted session restores its selected tool schemas. Discovery may
+      // therefore belong to an earlier run, while writes above remain scoped
+      // to the current user intent.
+      const selectionReceipt = request.messages
+        .flatMap((message) =>
+          message.role === "user" && Array.isArray(message.content)
+            ? message.content.filter((block) => block.type === "tool_result")
+            : [],
+        )
+        .findLast((block) => block.tool_use_id === "fixture-select-link");
       assert.match(
-        JSON.stringify(results.find((block) => block.tool_use_id === "fixture-select-link")),
+        JSON.stringify(selectionReceipt),
         /schemaRef: select:LinkAction/,
         "The next provider tool set must follow the actual ToolSearch selection receipt",
       );
