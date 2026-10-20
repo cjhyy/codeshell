@@ -45,6 +45,22 @@ function buildSnippet(text: string, index: number, matchLength: number): string 
   return `${prefix}${text.slice(start, end)}${suffix}`;
 }
 
+/**
+ * Map an offset in `text.toLowerCase()` back to `text`. Lowercasing can
+ * lengthen a string (e.g. "İ" becomes "i" plus a combining dot), so offsets in
+ * the lowered copy drift past the original match.
+ */
+function originalOffset(text: string, loweredOffset: number): number {
+  let lowered = 0;
+  let index = 0;
+  while (index < text.length && lowered < loweredOffset) {
+    const char = String.fromCodePoint(text.codePointAt(index)!);
+    lowered += char.toLowerCase().length;
+    index += char.length;
+  }
+  return index;
+}
+
 function findSnippetsInSession(
   events: DiskTranscriptEvent[],
   query: string,
@@ -59,8 +75,10 @@ function findSnippetsInSession(
     const lowerText = text.toLowerCase();
     const index = lowerText.indexOf(query);
     if (index === -1) continue;
+    const start = originalOffset(text, index);
+    const end = originalOffset(text, index + query.length);
     snippets.push({
-      text: buildSnippet(text, index, query.length),
+      text: buildSnippet(text, start, end - start),
       turnNumber: typeof event.turnNumber === "number" ? event.turnNumber : 0,
     });
   }

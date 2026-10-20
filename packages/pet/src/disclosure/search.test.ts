@@ -168,4 +168,21 @@ describe("searchSessionTranscripts", () => {
     expect(result.matches.length).toBe(20);
     expect(result.truncated).toBe(true);
   });
+
+  // Regression (PET-R10-02): toLowerCase can lengthen text (İ → i + U+0307),
+  // so the lowered-string offset must be mapped back to the original text.
+  test("snippet contains the match after characters that lengthen when lowercased", async () => {
+    const root = mkdtempSync(join(tmpdir(), "pet-disclosure-search-unicode-"));
+    writeSession(root, "work-1", { kind: "work", cwd: "/a", title: "Work 1" }, [
+      {
+        role: "user",
+        content: "İ".repeat(240) + " TARGET " + "z".repeat(240),
+        turnNumber: 0,
+      },
+    ]);
+
+    const result = await searchSessionTranscripts(root, "target", {});
+
+    expect(result.matches[0]?.snippets[0]?.text).toContain(" TARGET ");
+  });
 });
