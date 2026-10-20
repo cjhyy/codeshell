@@ -37,20 +37,27 @@ function useSharedOverrideMap<V>(
   load: () => Record<string, V>,
 ): [Record<string, V>, React.Dispatch<React.SetStateAction<Record<string, V>>>] {
   const [map, setMap] = useState(load);
-  const persisted = useRef(map);
+  // Starts as the raw stored map, so values normalized on load (e.g. a
+  // migrated model key) are written back on mount.
+  const persisted = useRef<Record<string, V>>(loadOverrideMap<V>(namespace));
 
   useEffect(() => {
     const previous = persisted.current;
     if (previous === map) return;
     persisted.current = map;
     const latest = loadOverrideMap<V>(namespace);
+    let changed = false;
     for (const bucket of Object.keys(previous)) {
-      if (!(bucket in map)) delete latest[bucket];
+      if (bucket in map) continue;
+      delete latest[bucket];
+      changed = true;
     }
     for (const [bucket, value] of Object.entries(map)) {
-      if (previous[bucket] !== value) latest[bucket] = value;
+      if (previous[bucket] === value) continue;
+      latest[bucket] = value;
+      changed = true;
     }
-    saveOverrideMap(namespace, latest);
+    if (changed) saveOverrideMap(namespace, latest);
   }, [map, namespace]);
 
   useEffect(() => {
