@@ -38,6 +38,27 @@ describe("notification delivery progress", () => {
     }
   });
 
+  test("retries the initial load after a transient store failure", async () => {
+    const eventKey = `${"e".repeat(32)}:1`;
+    let loads = 0;
+    const saved: NotificationDeliveryProgressState[] = [];
+    const store: NotificationDeliveryProgressStore = {
+      load: async () => {
+        loads += 1;
+        if (loads === 1) throw new Error("EIO");
+        return { version: 3, events: { [eventKey]: { chunks: { target: 2 }, attachments: {} } } };
+      },
+      save: async (state) => void saved.push(state),
+    };
+    const progress = new NotificationDeliveryProgress(store);
+
+    await expect(progress.begin(eventKey)).rejects.toThrow("EIO");
+    await progress.begin(eventKey);
+
+    expect(loads).toBe(2);
+    expect(progress.chunkIndex(eventKey, "target")).toBe(2);
+  });
+
   test("keeps independent progress for queued events and restores legacy state", async () => {
     const root = await mkdtemp(join(tmpdir(), "codeshell-notification-history-"));
     const path = join(root, "progress.json");
