@@ -191,7 +191,9 @@ function argsOf(payload: any): Record<string, unknown> | undefined {
   return undefined;
 }
 
-/** Find the rollout file whose `session_meta` matches both `threadId` and `cwd`. */
+/** Find the rollout file whose `session_meta` matches both `threadId` and `cwd`.
+ *  A resumed thread can own several rollouts; pick the newest by mtime, the
+ *  same file the room list dedupes to, so list title and history agree. */
 export function findCodexRolloutFile(
   codexHome: string,
   cwd: string,
@@ -199,16 +201,20 @@ export function findCodexRolloutFile(
 ): string | undefined {
   const root = join(codexHome, "sessions");
   if (!existsSync(root)) return undefined;
+  let best: { file: string; mtimeMs: number } | undefined;
   for (const file of walkRollouts(root)) {
     let meta: { id?: string; cwd?: string } | undefined;
+    let mtimeMs: number;
     try {
       meta = readSessionMeta(file);
+      mtimeMs = statSync(file).mtimeMs;
     } catch {
       continue;
     }
-    if (meta && meta.id === threadId && meta.cwd === cwd) return file;
+    if (!meta || meta.id !== threadId || meta.cwd !== cwd) continue;
+    if (!best || mtimeMs > best.mtimeMs) best = { file, mtimeMs };
   }
-  return undefined;
+  return best?.file;
 }
 
 /** Recursively yield every `rollout-*.jsonl` file under `root`. */

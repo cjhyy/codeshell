@@ -1,7 +1,8 @@
 import { describe, it, expect } from "bun:test";
-import { mkdtempSync, mkdirSync, writeFileSync } from "node:fs";
+import { mkdtempSync, mkdirSync, utimesSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { listCodexSessionsForCwds } from "./codex-session-discovery.js";
 import { parseCodexTranscriptLine, readCodexRecentHistory } from "./codex-session-history.js";
 
 /** Build one codex rollout JSONL file under <home>/sessions/YYYY/MM/DD/. */
@@ -229,6 +230,31 @@ describe("readCodexRecentHistory", () => {
     writeRollout(home, "2026/06/24", `rollout-${id}.jsonl`, [metaLine(id, cwd), userItem("yes")]);
     const r = readCodexRecentHistory(cwd, id, 10, home);
     expect(r.messages.map((m) => m.text)).toEqual(["yes"]);
+  });
+
+  it("reads the newest resumed rollout of a thread, matching the room list", async () => {
+    const home = mkdtempSync(join(tmpdir(), "codex-home-"));
+    const cwd = "/tmp/resumed";
+    const id = "id-resumed";
+    writeRollout(home, "2026/10/16", "rollout-a.jsonl", [metaLine(id, cwd), userItem("A")]);
+    writeRollout(home, "2026/10/16", "rollout-b.jsonl", [metaLine(id, cwd), userItem("B")]);
+    const fileA = join(home, "sessions", "2026/10/16", "rollout-a.jsonl");
+    const fileB = join(home, "sessions", "2026/10/16", "rollout-b.jsonl");
+    const older = new Date("2026-10-16T00:00:00Z");
+    const newer = new Date("2026-10-17T00:00:00Z");
+    // Exercise both mtime orders so the result cannot depend on readdir order.
+    for (const [oldFile, newFile, newest] of [
+      [fileA, fileB, "B"],
+      [fileB, fileA, "A"],
+    ] as const) {
+      utimesSync(oldFile, older, older);
+      utimesSync(newFile, newer, newer);
+      const list = await listCodexSessionsForCwds([cwd], home);
+      expect(list.sessions.map((s) => s.firstMessage)).toEqual([newest]);
+      expect(readCodexRecentHistory(cwd, id, 10, home).messages.map((m) => m.text)).toEqual([
+        newest,
+      ]);
+    }
   });
 
   it("returns empty when the thread is not found", () => {
