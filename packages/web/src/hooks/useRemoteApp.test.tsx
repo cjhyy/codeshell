@@ -2503,4 +2503,23 @@ describe("useRemoteApp CLI room controls", () => {
       await hook.unmount();
     }
   });
+
+  test("leaving a CLI room drops its approval cards so they cannot block other work", async () => {
+    const { hook, approval } = await openRoom();
+    try {
+      await act(async () => {
+        approval("read-1");
+        await flushMicrotasks();
+      });
+      expect(hook.result.current.approvals.map((a) => a.roomId)).toEqual([room.id]);
+      await act(async () => {
+        hook.result.current.leaveRoom();
+        await flushMicrotasks();
+      });
+      expect(hook.result.current.activeRoom).toBeUndefined();
+      expect(hook.result.current.approvals).toEqual([]);
+    } finally {
+      await hook.unmount();
+    }
+  });
 });
