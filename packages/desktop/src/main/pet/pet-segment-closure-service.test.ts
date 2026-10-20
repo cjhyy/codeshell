@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { mkdtemp, rm } from "node:fs/promises";
+import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { ClosureExtraction, ClosureMessage } from "@cjhyy/code-shell-pet";
@@ -244,6 +244,84 @@ describe("createPetSegmentClosureService", () => {
       ];
       await service.backfill(segments, 999);
       expect(closed).toEqual(["seg-2"]);
+    });
+  });
+
+  // Regression (PET-R57-01): a resumed follow-up wake starts a new topic with
+  // its clientMessageId, but the turn is persisted as injected and dropped by
+  // the transcript reader, so neither neighbouring segment could be located.
+  test("locates segments bounded by an injected follow-up wake in the transcript", async () => {
+    await withStores(async ({ journal, memory }) => {
+      const sessionsRootDir = await mkdtemp(join(tmpdir(), "pet-closure-transcript-"));
+      try {
+        const line = (data: Record<string, unknown>) => JSON.stringify({ type: "message", data });
+        await mkdir(join(sessionsRootDir, "pet"), { recursive: true });
+        await writeFile(
+          join(sessionsRootDir, "pet", "transcript.jsonl"),
+          [
+            line({ role: "user", content: "帮我调试构建", clientMessageId: "c0" }),
+            line({ role: "assistant", content: "在看了" }),
+            line({ role: "user", content: "还是失败" }),
+            line({ role: "assistant", content: "升级 Bun 后通过" }),
+            line({
+              role: "user",
+              content: "The host is waking a previously authorized follow-up.",
+              injected: true,
+              clientMessageId: "pet-followup-f1-1",
+            }),
+            line({ role: "assistant", content: "已继续原会话" }),
+            line({ role: "assistant", content: "构建已经恢复" }),
+            line({ role: "user", content: "好的谢谢", clientMessageId: "c-mid" }),
+            line({ role: "user", content: "顺便看下测试", clientMessageId: "c1" }),
+            line({ role: "assistant", content: "测试通过" }),
+          ].join("\n") + "\n",
+        );
+        const inputs: string[] = [];
+        const service = createPetSegmentClosureService({
+          petSessionId: "pet",
+          sessionsRootDir,
+          journal,
+          memory,
+          autoExtractEnabled: () => true,
+          generate: async (input) => {
+            inputs.push(input);
+            return extraction();
+          },
+        });
+
+        const closed = await service.close({
+          segmentId: "seg-0",
+          closingBoundaryMessageId: "c0",
+          nextBoundaryMessageId: "pet-followup-f1-1",
+          startedAt: 1,
+          endedAt: 2,
+        });
+        expect(closed?.range).toEqual({ start: 0, end: 4 });
+
+        const next = await service.close({
+          segmentId: "seg-1",
+          closingBoundaryMessageId: "pet-followup-f1-1",
+          nextBoundaryMessageId: "c1",
+          startedAt: 2,
+          endedAt: 3,
+        });
+        expect(next?.range).toEqual({ start: 4, end: 7 });
+
+        expect(
+          journal
+            .list()
+            .map((entry) => entry.segmentId)
+            .sort(),
+        ).toEqual(["seg-0", "seg-1"]);
+        expect(inputs.join("\n")).not.toContain("The host is waking");
+        expect(await service.readSegmentMessages({ start: 4, end: 7 })).toEqual([
+          { role: "assistant", text: "已继续原会话" },
+          { role: "assistant", text: "构建已经恢复" },
+          { role: "user", text: "好的谢谢" },
+        ]);
+      } finally {
+        await rm(sessionsRootDir, { recursive: true, force: true });
+      }
     });
   });
 });

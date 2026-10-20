@@ -16,6 +16,12 @@ export interface ClosureMessage {
   text: string;
   /** Cross-process id of the turn (user turns only); used to locate boundaries. */
   clientMessageId?: string;
+  /**
+   * Ids of keyed turns the reader dropped immediately before this message (an
+   * injected follow-up wake can still open a topic). A boundary on one of them
+   * resolves to this message's index.
+   */
+  precedingClientMessageIds?: string[];
 }
 
 export interface ClosureExtraction {
@@ -79,7 +85,11 @@ function indexOfClientMessage(
   messages: readonly ClosureMessage[],
   clientMessageId: string,
 ): number {
-  return messages.findIndex((message) => message.clientMessageId === clientMessageId);
+  return messages.findIndex(
+    (message) =>
+      message.clientMessageId === clientMessageId ||
+      message.precedingClientMessageIds?.includes(clientMessageId) === true,
+  );
 }
 
 /** Render a window of messages as the extraction prompt input (bounded per turn). */

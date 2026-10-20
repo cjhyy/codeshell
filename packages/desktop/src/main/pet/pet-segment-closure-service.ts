@@ -66,6 +66,7 @@ async function defaultReadMessages(transcriptPath: string): Promise<ClosureMessa
     return [];
   }
   const messages: ClosureMessage[] = [];
+  let droppedClientMessageIds: string[] = [];
   for (const raw of text.split("\n")) {
     const line = raw.trim();
     if (!line) continue;
@@ -81,14 +82,25 @@ async function defaultReadMessages(transcriptPath: string): Promise<ClosureMessa
     if (role !== "user" && role !== "assistant") continue;
     // Injected synthetic user turns (background-job notifications) are not real
     // conversation and must not shift indices relative to Engine.toMessages.
-    if (role === "user" && data.injected === true) continue;
+    // A keyed injected turn (a resumed follow-up wake) can still be a topic
+    // boundary, so keep its id as an alias for the next kept message.
+    if (role === "user" && data.injected === true) {
+      if (typeof data.clientMessageId === "string") {
+        droppedClientMessageIds.push(data.clientMessageId);
+      }
+      continue;
+    }
     messages.push({
       role,
       text: contentText(data.content),
       ...(typeof data.clientMessageId === "string"
         ? { clientMessageId: data.clientMessageId }
         : {}),
+      ...(droppedClientMessageIds.length > 0
+        ? { precedingClientMessageIds: droppedClientMessageIds }
+        : {}),
     });
+    droppedClientMessageIds = [];
   }
   return messages;
 }
