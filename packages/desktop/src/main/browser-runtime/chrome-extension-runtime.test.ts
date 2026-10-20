@@ -237,6 +237,20 @@ describe("Chrome high-level grant isolation", () => {
     expect(actions).toEqual(["requestTakeover", "resumeControl"]);
   });
 
+  test("an idle connection end clears the grant from status so the task can reauthorize", async () => {
+    const { service, disconnect } = await runtimeFixture(async () => ({ ok: true }));
+    expect(service.status("session-1").granted?.tabId).toBe(23);
+    disconnect();
+    const status = service.status("session-1");
+    expect(status.connected).toBe(false);
+    expect(status.granted).toBeUndefined();
+    expect(
+      JSON.parse(
+        (await service.dispatch("session-1", { action: "navigate", url: "https://x.test" }))!,
+      ),
+    ).toMatchObject({ ok: false, code: "NEEDS_HUMAN", tabId: "23" });
+  });
+
   for (const end of ["revoke", "expire", "disconnect", "reconnect"] as const) {
     test(`does not execute queued actions after ${end}`, async () => {
       let now = 1_000;
