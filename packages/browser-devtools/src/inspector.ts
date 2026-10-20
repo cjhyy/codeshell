@@ -135,42 +135,49 @@ export function createBrowserInspector(page: BrowserInspectorPage): BrowserInspe
                 const element = queue.shift()!;
                 if (["SCRIPT", "STYLE", "NOSCRIPT", "TEMPLATE"].includes(element.tagName)) continue;
                 const style = getComputedStyle(element);
-                if (style.display === "none" || style.visibility === "hidden") continue;
-                const rect = element.getBoundingClientRect();
+                // display:none removes the subtree; visibility:hidden only hides this
+                // element, and descendants may set visibility:visible again.
+                if (style.display === "none") continue;
                 const secret =
                   element.matches("input,textarea") ||
                   (element instanceof HTMLElement && element.isContentEditable);
-                const text = secret
-                  ? undefined
-                  : Array.from(element.childNodes)
-                      .filter((node) => node.nodeType === Node.TEXT_NODE)
-                      .map((node) => node.textContent ?? "")
-                      .join(" ")
-                      .trim()
-                      .slice(0, 160);
-                nodes.push({
-                  tag: element.tagName.toLowerCase(),
-                  id: element.id.slice(0, 100),
-                  role: element.getAttribute("role")?.slice(0, 100),
-                  text,
-                  rect: { x: rect.x, y: rect.y, width: rect.width, height: rect.height },
-                  styles: {
-                    display: style.display,
-                    position: style.position,
-                    overflow: style.overflow,
-                    color: style.color,
-                    fontSize: style.fontSize,
-                    zIndex: style.zIndex,
-                  },
-                });
-                if (secret) continue;
-                for (const child of Array.from(element.children)) {
-                  if (queue.length >= 1000) break;
-                  queue.push(child);
+                if (style.visibility !== "hidden") {
+                  const rect = element.getBoundingClientRect();
+                  // Read collections by index up to the budget instead of copying
+                  // wide child lists in full before the caps apply.
+                  let text: string | undefined;
+                  if (!secret) {
+                    text = "";
+                    const childNodes = element.childNodes;
+                    for (let i = 0; i < childNodes.length && i < 1000; i++) {
+                      if (text.trim().length >= 160) break;
+                      const node = childNodes[i]!;
+                      if (node.nodeType !== Node.TEXT_NODE) continue;
+                      text += (i === 0 ? "" : " ") + (node.textContent ?? "");
+                    }
+                    text = text.trim().slice(0, 160);
+                  }
+                  nodes.push({
+                    tag: element.tagName.toLowerCase(),
+                    id: element.id.slice(0, 100),
+                    role: element.getAttribute("role")?.slice(0, 100),
+                    text,
+                    rect: { x: rect.x, y: rect.y, width: rect.width, height: rect.height },
+                    styles: {
+                      display: style.display,
+                      position: style.position,
+                      overflow: style.overflow,
+                      color: style.color,
+                      fontSize: style.fontSize,
+                      zIndex: style.zIndex,
+                    },
+                  });
                 }
-                for (const child of Array.from(element.shadowRoot?.children ?? [])) {
-                  if (queue.length >= 1000) break;
-                  queue.push(child);
+                if (secret) continue;
+                for (const children of [element.children, element.shadowRoot?.children]) {
+                  for (let i = 0; children && i < children.length && queue.length < 1000; i++) {
+                    queue.push(children[i]!);
+                  }
                 }
               }
               return { nodes, truncated: queue.length > 0 };

@@ -154,13 +154,9 @@ export class CdpActionsDriver {
       };
       if (!model?.content || model.content.length < 8) return null;
       const viewport = await this.layoutViewportRect();
-      const box = rectFromQuad(model.content);
-      const visible = intersectRects(box, viewport);
-      if (!visible) return null;
-      return {
-        x: visible.x + visible.width / 2,
-        y: visible.y + visible.height / 2,
-      };
+      // Clip the quad itself, not its bounding box: for a rotated element the
+      // bounding box center can lie outside the element.
+      return polygonCentroid(clipQuadToRect(model.content, viewport));
     } catch {
       return null; // node detached / no box → treat as stale
     }
@@ -864,6 +860,54 @@ function rectFromQuad(quad: number[]): { x: number; y: number; width: number; he
   const x = Math.min(...xs);
   const y = Math.min(...ys);
   return { x, y, width: Math.max(...xs) - x, height: Math.max(...ys) - y };
+}
+
+/** Clip a CDP quad [x1,y1,...,x4,y4] to a rect (Sutherland–Hodgman). */
+function clipQuadToRect(
+  quad: number[],
+  rect: { x: number; y: number; width: number; height: number },
+): Array<{ x: number; y: number }> {
+  let points = [0, 1, 2, 3].map((i) => ({ x: quad[i * 2]!, y: quad[i * 2 + 1]! }));
+  const edges: Array<(p: { x: number; y: number }) => number> = [
+    (p) => p.x - rect.x,
+    (p) => rect.x + rect.width - p.x,
+    (p) => p.y - rect.y,
+    (p) => rect.y + rect.height - p.y,
+  ];
+  for (const inside of edges) {
+    const next: Array<{ x: number; y: number }> = [];
+    for (let i = 0; i < points.length; i++) {
+      const a = points[i]!;
+      const b = points[(i + 1) % points.length]!;
+      const da = inside(a);
+      const db = inside(b);
+      if (da >= 0) next.push(a);
+      if (da >= 0 !== db >= 0) {
+        const t = da / (da - db);
+        next.push({ x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t });
+      }
+    }
+    points = next;
+    if (points.length === 0) break;
+  }
+  return points;
+}
+
+/** Area centroid of a convex polygon, or null when it has no area. */
+function polygonCentroid(points: Array<{ x: number; y: number }>): { x: number; y: number } | null {
+  let area = 0;
+  let cx = 0;
+  let cy = 0;
+  for (let i = 0; i < points.length; i++) {
+    const a = points[i]!;
+    const b = points[(i + 1) % points.length]!;
+    const cross = a.x * b.y - b.x * a.y;
+    area += cross;
+    cx += (a.x + b.x) * cross;
+    cy += (a.y + b.y) * cross;
+  }
+  if (Math.abs(area) < 1e-9) return null;
+  return { x: cx / (3 * area), y: cy / (3 * area) };
 }
 
 function intersectRects(

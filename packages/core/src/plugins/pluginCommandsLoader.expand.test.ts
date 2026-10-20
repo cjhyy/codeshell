@@ -36,6 +36,27 @@ describe("expandPluginCommandBody", () => {
     );
   });
 
+  // Regression (PLUGIN-R8-01): an explicitly empty quoted argument is still a
+  // positional argument; dropping it shifted every later position left.
+  test("keeps empty quoted arguments in their positions", () => {
+    expect(expandPluginCommandBody("one=<$1> two=<$2> three=<$3>", '"" next last')).toBe(
+      "one=<> two=<next> three=<last>",
+    );
+    expect(expandPluginCommandBody("<$1>|<$2>|<$3>", "left '' right")).toBe("<left>|<>|<right>");
+    expect(expandPluginCommandBody("<$1>|<$2>", "a   b")).toBe("<a>|<b>");
+  });
+
+  // Regression (PLUGIN-R8-02): $ARGUMENTS must not match the prefix of a
+  // longer named placeholder such as $ARGUMENTS_FILE.
+  test("does not expand $ARGUMENTS inside a longer named placeholder", () => {
+    expect(
+      expandPluginCommandBody(
+        "file=$ARGUMENTS_FILE untouched=$ARGUMENTS_UNKNOWN raw=$ARGUMENTS",
+        "ARGUMENTS_FILE=src/example.ts",
+      ),
+    ).toBe("file=src/example.ts untouched=$ARGUMENTS_UNKNOWN raw=ARGUMENTS_FILE=src/example.ts");
+  });
+
   test("removes missing positional placeholders", () => {
     expect(expandPluginCommandBody("$1/$2/$9", "only")).toBe("only//");
   });

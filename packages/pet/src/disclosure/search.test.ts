@@ -131,4 +131,58 @@ describe("searchSessionTranscripts", () => {
     expect(result.matches.length).toBe(1);
     expect(result.matches[0]?.sessionId).toBe("work-1");
   });
+
+  // Regression (PET-01): the raw-file prefilter compared the plain query with
+  // JSON-encoded text, so quotes and backslashes in the message never matched.
+  test.each([['console.log("hello")'], ["C:\\work\\notes.txt"]])(
+    "finds %s even though JSON encodes it differently on disk",
+    async (query) => {
+      const root = mkdtempSync(join(tmpdir(), "pet-disclosure-search-json-"));
+      writeSession(root, "work-1", { kind: "work", cwd: "/a", title: "Work 1" }, [
+        {
+          role: "user",
+          content: 'Use console.log("hello") and file C:\\work\\notes.txt',
+          turnNumber: 0,
+        },
+      ]);
+
+      const result = await searchSessionTranscripts(root, query, {});
+
+      expect(result.matches.map((match) => match.sessionId)).toEqual(["work-1"]);
+      expect(result.matches[0]?.snippets[0]?.text).toContain(query);
+    },
+  );
+
+  // Regression (PET-R10-01): workers already reading when the cap was reached
+  // still appended matches, and the final slice dropped them silently.
+  test("truncated is true when more sessions match than maxSessions returns", async () => {
+    const root = mkdtempSync(join(tmpdir(), "pet-disclosure-search-overflow-"));
+    for (let i = 0; i < 21; i++) {
+      writeSession(root, `work-${i}`, { kind: "work", cwd: "/a", title: `Work ${i}` }, [
+        { role: "user", content: "guava smoothie recipe", turnNumber: 0 },
+      ]);
+    }
+
+    const result = await searchSessionTranscripts(root, "guava", {});
+
+    expect(result.matches.length).toBe(20);
+    expect(result.truncated).toBe(true);
+  });
+
+  // Regression (PET-R10-02): toLowerCase can lengthen text (İ → i + U+0307),
+  // so the lowered-string offset must be mapped back to the original text.
+  test("snippet contains the match after characters that lengthen when lowercased", async () => {
+    const root = mkdtempSync(join(tmpdir(), "pet-disclosure-search-unicode-"));
+    writeSession(root, "work-1", { kind: "work", cwd: "/a", title: "Work 1" }, [
+      {
+        role: "user",
+        content: "İ".repeat(240) + " TARGET " + "z".repeat(240),
+        turnNumber: 0,
+      },
+    ]);
+
+    const result = await searchSessionTranscripts(root, "target", {});
+
+    expect(result.matches[0]?.snippets[0]?.text).toContain(" TARGET ");
+  });
 });

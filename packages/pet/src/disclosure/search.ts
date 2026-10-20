@@ -45,6 +45,22 @@ function buildSnippet(text: string, index: number, matchLength: number): string 
   return `${prefix}${text.slice(start, end)}${suffix}`;
 }
 
+/**
+ * Map an offset in `text.toLowerCase()` back to `text`. Lowercasing can
+ * lengthen a string (e.g. "İ" becomes "i" plus a combining dot), so offsets in
+ * the lowered copy drift past the original match.
+ */
+function originalOffset(text: string, loweredOffset: number): number {
+  let lowered = 0;
+  let index = 0;
+  while (index < text.length && lowered < loweredOffset) {
+    const char = String.fromCodePoint(text.codePointAt(index)!);
+    lowered += char.toLowerCase().length;
+    index += char.length;
+  }
+  return index;
+}
+
 function findSnippetsInSession(
   events: DiskTranscriptEvent[],
   query: string,
@@ -59,8 +75,10 @@ function findSnippetsInSession(
     const lowerText = text.toLowerCase();
     const index = lowerText.indexOf(query);
     if (index === -1) continue;
+    const start = originalOffset(text, index);
+    const end = originalOffset(text, index + query.length);
     snippets.push({
-      text: buildSnippet(text, index, query.length),
+      text: buildSnippet(text, start, end - start),
       turnNumber: typeof event.turnNumber === "number" ? event.turnNumber : 0,
     });
   }
@@ -76,6 +94,10 @@ export async function searchSessionTranscripts(
   if (!normalizedQuery) {
     return { matches: [], scannedSessions: 0, truncated: false };
   }
+  // The cheap whole-file prefilter runs on JSON text, where quotes, backslashes
+  // and control characters in message content are escaped. Compare against the
+  // query in the same encoding so it never rejects a real match.
+  const encodedQuery = JSON.stringify(normalizedQuery).slice(1, -1);
 
   const maxSessions = options.maxSessions ?? DEFAULT_MAX_SESSIONS;
   const maxSnippetsPerSession = options.maxSnippetsPerSession ?? DEFAULT_MAX_SNIPPETS_PER_SESSION;
@@ -120,7 +142,7 @@ export async function searchSessionTranscripts(
       }
       scannedSessions += 1;
 
-      if (!text.toLowerCase().includes(normalizedQuery)) continue;
+      if (!text.toLowerCase().includes(encodedQuery)) continue;
 
       const events: DiskTranscriptEvent[] = [];
       for (const rawLine of text.split("\n")) {
@@ -151,5 +173,8 @@ export async function searchSessionTranscripts(
   await Promise.all(workers);
 
   matches.sort((a, b) => b.updatedAt - a.updatedAt);
+  // Workers already reading when the cap was reached can still append matches;
+  // dropping them here leaves the result incomplete.
+  if (matches.length > maxSessions) truncated = true;
   return { matches: matches.slice(0, maxSessions), scannedSessions, truncated };
 }

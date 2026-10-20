@@ -26,6 +26,9 @@ export function reflectionInput(
   const devIds = new Set(devCases.map((item) => item.id));
   if (trials.some((trial) => trial.phase !== "baseline" || !devIds.has(trial.caseId)))
     throw new Error("optimizer feedback is outside the development baseline");
+  // Corrections are appended after the record they supersede; like fullyGraded,
+  // the latest record for a trial is the effective one.
+  const latestFeedback = [...feedback].reverse();
   return JSON.stringify({
     objective: plan.objective,
     originalBody: plan.skill.body,
@@ -38,7 +41,7 @@ export function reflectionInput(
           output: trial.output,
           status: trial.status,
           hardAssertions: trial.assertions,
-          semanticFeedback: feedback.find((entry) => entry.trialId === trial.trialId) ?? null,
+          semanticFeedback: latestFeedback.find((entry) => entry.trialId === trial.trialId) ?? null,
         })),
     })),
   });

@@ -157,6 +157,78 @@ describe("CdpActionsDriver.clickNode", () => {
   });
 });
 
+/** True when (x, y) lies inside the convex quad [x1,y1,...,x4,y4]. */
+function insideConvexQuad(quad: number[], x: number, y: number): boolean {
+  let sign = 0;
+  for (let i = 0; i < 4; i++) {
+    const [ax, ay] = [quad[i * 2]!, quad[i * 2 + 1]!];
+    const [bx, by] = [quad[((i + 1) % 4) * 2]!, quad[((i + 1) % 4) * 2 + 1]!];
+    const cross = (bx - ax) * (y - ay) - (by - ay) * (x - ax);
+    if (cross === 0) continue;
+    if (sign === 0) sign = Math.sign(cross);
+    else if (Math.sign(cross) !== sign) return false;
+  }
+  return true;
+}
+
+// Regression (CDP-R3-01): a rotated quad partly outside the viewport was
+// reduced to its axis-aligned bounding box before clipping, so the "center"
+// could land outside the element.
+describe("CdpActionsDriver rotated element targeting", () => {
+  // A thin rectangle rotated 45 degrees whose center (10,10) is in view.
+  const ROTATED = [-100, 110, 110, -100, 120, -90, -90, 120];
+  const metrics = () => ({ layoutViewport: { clientWidth: 100, clientHeight: 100 } });
+
+  test.each(["clickNode", "hoverNode"] as const)(
+    "%s targets a point inside both the quad and the viewport",
+    async (method) => {
+      const { send, calls } = fakeCdp({
+        "DOM.getBoxModel": () => ({ model: { content: ROTATED } }),
+        "Page.getLayoutMetrics": metrics,
+      });
+      const d = new CdpActionsDriver(send, () => ({ url: "u" }));
+
+      expect((await d[method](20)).ok).toBe(true);
+      const events = calls.filter((c) => c.method === "Input.dispatchMouseEvent");
+      expect(events.length).toBeGreaterThan(0);
+      for (const { params } of events) {
+        expect(insideConvexQuad(ROTATED, params.x, params.y)).toBe(true);
+        expect(params.x).toBeGreaterThanOrEqual(0);
+        expect(params.x).toBeLessThanOrEqual(100);
+        expect(params.y).toBeGreaterThanOrEqual(0);
+        expect(params.y).toBeLessThanOrEqual(100);
+      }
+    },
+  );
+
+  test("fully visible rotated quad still uses its center", async () => {
+    const quad = [50, 10, 90, 50, 50, 90, 10, 50];
+    const { send, calls } = fakeCdp({
+      "DOM.getBoxModel": () => ({ model: { content: quad } }),
+      "Page.getLayoutMetrics": metrics,
+    });
+    const d = new CdpActionsDriver(send, () => ({ url: "u" }));
+
+    expect((await d.clickNode(20)).ok).toBe(true);
+    const press = calls.find((c) => c.params?.type === "mousePressed");
+    expect(press?.params.x).toBeCloseTo(50);
+    expect(press?.params.y).toBeCloseTo(50);
+  });
+
+  test("fails when only the bounding box, not the quad, reaches the viewport", async () => {
+    // Diamond whose bounding box overlaps the viewport corner but whose shape does not.
+    const quad = [150, 50, 250, 150, 150, 250, 50, 150];
+    const { send, calls } = fakeCdp({
+      "DOM.getBoxModel": () => ({ model: { content: quad } }),
+      "Page.getLayoutMetrics": metrics,
+    });
+    const d = new CdpActionsDriver(send, () => ({ url: "u" }));
+
+    expect((await d.clickNode(20)).ok).toBe(false);
+    expect(calls.some((c) => c.method === "Input.dispatchMouseEvent")).toBe(false);
+  });
+});
+
 describe("CdpActionsDriver.typeNode", () => {
   test("focuses and replaces text without dispatching an accidental mouse click", async () => {
     const { send, calls } = fakeCdp({

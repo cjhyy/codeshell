@@ -81,21 +81,36 @@ export interface CatalogReadResult {
 }
 
 /**
- * `owner/repo` → 一个安全的目录段。小写化保证同一仓库不同大小写写法命中同一份
- * 缓存；斜杠换成 `-` 后仍需通过 SAFE_SEGMENT_RE，杜绝路径逃逸。
+ * `owner/repo` → 一个安全的目录段 `owner@repo`。小写化保证同一仓库不同大小写写法
+ * 命中同一份缓存；owner 与 repo 各自须通过 SAFE_SEGMENT_RE，杜绝路径逃逸。分隔符
+ * `@` 不会出现在两段名字里，因此不同来源不会映射到同一目录（`-` 会：
+ * `acme-labs/agents` 与 `acme/labs-agents`），也不会与旧版 `owner-repo` 键重名。
  */
 export function sourceToRepoKey(repo: string): string {
   if (!CATALOG_REPO_RE.test(repo)) {
     throw new Error(`invalid digital-human repo "${repo}" (expected owner/repo)`);
   }
+  const [owner, name] = repo
+    .toLowerCase()
+    .replace(/\.git$/, "")
+    .split("/") as [string, string];
+  if (!SAFE_SEGMENT_RE.test(owner) || !SAFE_SEGMENT_RE.test(name)) {
+    throw new Error(`digital-human repo "${repo}" does not map to a safe directory name`);
+  }
+  return `${owner}@${name}`;
+}
+
+/**
+ * 旧版缓存键 `owner-repo`（有歧义）。只用于找到旧版本写下的缓存；无法映射成安全
+ * 目录名时返回 null。
+ */
+export function legacySourceToRepoKey(repo: string): string | null {
+  if (!CATALOG_REPO_RE.test(repo)) return null;
   const key = repo
     .toLowerCase()
     .replace(/\.git$/, "")
     .replace("/", "-");
-  if (!SAFE_SEGMENT_RE.test(key)) {
-    throw new Error(`digital-human repo "${repo}" does not map to a safe directory name`);
-  }
-  return key;
+  return SAFE_SEGMENT_RE.test(key) ? key : null;
 }
 
 /** 解析 humans.json。缺 humans 数组按空目录处理；JSON 坏了才抛。 */
