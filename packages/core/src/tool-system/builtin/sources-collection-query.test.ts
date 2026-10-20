@@ -366,6 +366,25 @@ test("each exact scope is separately approved; last refusal returns no corpus re
   expect(output.error).not.toContain("budget common alpha");
 });
 
+test("an edited original names its file and keeps the update guidance without partial results", async () => {
+  writeFileSync(join(originals, "b.txt"), "budget edited beta");
+  const output = await run(executor().result);
+  expect(output.isError).toBe(true);
+  expect(output.result).toBeUndefined();
+  expect(output.error).toContain('"b"');
+  expect(output.error).toContain("update the collection before reading");
+  expect(output.error).not.toContain("budget common alpha");
+});
+
+test("a refused file is named without suggesting a collection update", async () => {
+  const output = await run(
+    executor({ rules: [], approve: (input) => input.resource !== "b" }).result,
+  );
+  expect(output.isError).toBe(true);
+  expect(output.error).toContain('"b"');
+  expect(output.error).not.toContain("update the collection");
+});
+
 test.each(["pre_tool_use", "on_permission_check"] as const)(
   "child %s denial remains authoritative",
   async (event) => {
