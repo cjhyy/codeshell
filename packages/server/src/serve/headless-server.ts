@@ -1586,7 +1586,7 @@ function replyToHostSessionQuery(
         data: {
           state,
           ...(legacy ? { outputJournal: journal, legacyBaseComplete: legacy.complete } : {}),
-          ...(runReplay ? runReplay.snapshot(sessionId, transcript) : { transcript }),
+          ...(runReplay ? runReplay.snapshot(sessionId, transcript, !!legacy) : { transcript }),
           running: isRunning(sessionId),
         },
       },
