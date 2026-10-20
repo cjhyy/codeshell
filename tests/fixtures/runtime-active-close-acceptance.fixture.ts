@@ -557,12 +557,10 @@ for (const phase of ["before", "after", "both"] as const) {
       });
       return usage;
     };
-    let extraPrompt = 0;
     let extraTotal = 0;
     let auxCalls = 0;
     if (phase !== "after") {
       const usage = addAux("before-close", 5);
-      extraPrompt += usage.promptTokens;
       extraTotal += usage.totalTokens;
       auxCalls++;
     }
@@ -570,7 +568,6 @@ for (const phase of ["before", "after", "both"] as const) {
     await control.aborted.promise;
     if (phase !== "before") {
       const usage = addAux("after-close", 9);
-      extraPrompt += usage.promptTokens;
       extraTotal += usage.totalTokens;
       auxCalls++;
     }
@@ -581,8 +578,9 @@ for (const phase of ["before", "after", "both"] as const) {
     record(f.sid, { after, result, receipt: receipt(f.sessions, f.sid) });
     expect(after.status).toBe("aborted_streaming");
     expect(after.tokenUsage.totalTokens).toBe(18 + extraTotal);
-    expect(after.cumulativePromptTokens).toBe(11 + extraPrompt);
-    expect(after.cumulativeCacheReadTokens).toBe(4 + auxCalls);
+    // Auxiliary usage is billed, but cache-rate counters stay foreground-only (c938007c2).
+    expect(after.cumulativePromptTokens).toBe(11);
+    expect(after.cumulativeCacheReadTokens).toBe(4);
     expect(after.contextUsageAnchor).toEqual(anchor);
     expect(after.costState).toMatchObject({
       summary: { requests: 1 + auxCalls, totalTokens: 18 + extraTotal },
@@ -624,8 +622,8 @@ test("a previous run's real delayed title billing does not become the next run's
   record(f.sid, { first, beforeClose, second, after });
   expect(after.status).toBe("aborted_streaming");
   expect(after.tokenUsage.totalTokens).toBe(41);
-  expect(after.cumulativePromptTokens).toBe(29);
-  expect(after.cumulativeCacheReadTokens).toBe(5);
+  expect(after.cumulativePromptTokens).toBe(24);
+  expect(after.cumulativeCacheReadTokens).toBe(4);
   expect(after.costState).toMatchObject({ summary: { requests: 3, totalTokens: 41 } });
 });
 
@@ -662,11 +660,11 @@ test("a normal next run retains previous-run delayed title usage in disk and liv
   record(f.sid, { first, afterAux, second, after, updates, receipt: receipt(f.sessions, f.sid) });
   expect(second.reason).toBe("completed");
   expect(after.tokenUsage.totalTokens).toBe(41);
-  expect(after.cumulativePromptTokens).toBe(29);
-  expect(after.cumulativeCacheReadTokens).toBe(5);
+  expect(after.cumulativePromptTokens).toBe(24);
+  expect(after.cumulativeCacheReadTokens).toBe(4);
   expect(updates.at(-1)).toMatchObject({
-    cumulativePromptTokens: 29,
-    cumulativeCacheReadTokens: 5,
+    cumulativePromptTokens: 24,
+    cumulativeCacheReadTokens: 4,
   });
   expect(after.costState).toMatchObject({ summary: { requests: 3, totalTokens: 41 } });
 });
@@ -712,11 +710,11 @@ test("normal progress preserves independent usage between checkpoints without co
   });
   expect(result.reason).toBe("completed");
   expect(after.tokenUsage.totalTokens).toBe(41);
-  expect(after.cumulativePromptTokens).toBe(29);
-  expect(after.cumulativeCacheReadTokens).toBe(5);
+  expect(after.cumulativePromptTokens).toBe(24);
+  expect(after.cumulativeCacheReadTokens).toBe(4);
   expect(updates.at(-1)).toMatchObject({
-    cumulativePromptTokens: 29,
-    cumulativeCacheReadTokens: 5,
+    cumulativePromptTokens: 24,
+    cumulativeCacheReadTokens: 4,
   });
   expect(after.costState).toMatchObject({ summary: { totalTokens: 41 } });
 });
@@ -762,7 +760,7 @@ test("repeated successful normal progress and final saves do not count own or in
   expect(result.reason).toBe("completed");
   expect(repeated).toHaveLength(3);
   expect(after.tokenUsage.totalTokens).toBe(41);
-  expect(after.cumulativePromptTokens).toBe(29);
+  expect(after.cumulativePromptTokens).toBe(24);
 });
 
 test("a CAS retry refreshes foreign receipts and checkpoints only its captured own usage", async () => {
@@ -848,8 +846,8 @@ test("a CAS retry refreshes foreign receipts and checkpoints only its captured o
   });
   expect(checkpointAtFinal).toMatchObject({ totalTokens: 34 });
   expect(after.tokenUsage.totalTokens).toBe(50);
-  expect(after.cumulativePromptTokens).toBe(36);
-  expect(after.cumulativeCacheReadTokens).toBe(8);
+  expect(after.cumulativePromptTokens).toBe(24);
+  expect(after.cumulativeCacheReadTokens).toBe(4);
   expect(after.costState).toMatchObject({ summary: { totalTokens: 50 } });
 });
 
@@ -898,8 +896,8 @@ test("a failed progress commit retains its checkpoint and only successful finali
   expect(after.tokenUsage.totalTokens).toBe(41);
   expect(updates).toHaveLength(2); // First successful heartbeat and successful final commit.
   expect(updates.at(-1)).toMatchObject({
-    cumulativePromptTokens: 29,
-    cumulativeCacheReadTokens: 5,
+    cumulativePromptTokens: 24,
+    cumulativeCacheReadTokens: 4,
   });
 });
 
@@ -982,7 +980,7 @@ test("successful late own billing after failed progress and final saves cannot a
   });
   expect(checkpointAfterAux).toMatchObject({ totalTokens: 25 });
   expect(after.tokenUsage.totalTokens).toBe(41);
-  expect(after.cumulativePromptTokens).toBe(29);
+  expect(after.cumulativePromptTokens).toBe(24);
 });
 
 test("a claimed run closed during session activation leaves a cold terminal state", async () => {
@@ -1115,8 +1113,8 @@ test("close waits through final hooks and includes real late billing owned by th
   });
   expect(after.status).toBe("aborted_streaming");
   expect(after.tokenUsage.totalTokens).toBe(41);
-  expect(after.cumulativePromptTokens).toBe(29);
-  expect(after.cumulativeCacheReadTokens).toBe(5);
+  expect(after.cumulativePromptTokens).toBe(24);
+  expect(after.cumulativeCacheReadTokens).toBe(4);
   expect(after.costState).toMatchObject({ summary: { totalTokens: 41 } });
   for (const proof of cumulativeProof as Array<{
     event: { cumulativePromptTokens: number };
