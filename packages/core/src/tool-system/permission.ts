@@ -834,9 +834,9 @@ const SAFE_READ_PATTERNS = [
   // write files. Reject those so `find . -delete` / `find . -exec rm {} +`
   // are NOT classified safe-read. Plain predicates (-name, -type, -print) stay.
   /^find\s(?!.*\s-(delete|exec(dir)?|ok(dir)?|fprintf?|fls)\b)/,
-  /^(grep|rg|ag|ack|fgrep|egrep)\s/,
+  /^(grep|ag|ack|fgrep|egrep)\s/,
   /^(node|python|ruby|go|rustc|java|javac)\s+--version/,
-  /^(npm|pnpm|yarn|cargo|pip|gem|brew)\s+(list|ls|info|show|view|outdated|audit)/,
+  /^(npm|pnpm|yarn|cargo|pip|gem|brew)\s+(list|ls|info|show|view|outdated)(?:\s|$)/,
   /^pwd$/,
   /^whoami$/,
   /^date$/,
@@ -846,18 +846,20 @@ const SAFE_READ_PATTERNS = [
   /^printenv/,
 ];
 
-/** Split a command conservatively enough to validate git's argument shape. */
-function splitShellWords(input: string): string[] | null {
+/** Split a command conservatively enough to validate read-only argument shapes. */
+function splitShellWords(input: string, rejectOptionExpansion = false): string[] | null {
   const words: string[] = [];
   let word = "";
   let quote: "'" | '"' | null = null;
   let hasWord = false;
+  let optionsTerminated = false;
 
   for (let i = 0; i < input.length; i++) {
     const ch = input[i];
     if (quote === null && /\s/.test(ch)) {
       if (hasWord) {
         words.push(word);
+        if (word === "--") optionsTerminated = true;
         word = "";
         hasWord = false;
       }
@@ -869,6 +871,12 @@ function splitShellWords(input: string): string[] | null {
       word += next;
       hasWord = true;
       continue;
+    }
+    // Before the option terminator, shell glob/brace expansion can introduce
+    // new options (for example a filename --pre=processor). Quoted or escaped
+    // metacharacters remain literal; rg/audit opt into this stricter check.
+    if (rejectOptionExpansion && !optionsTerminated && quote === null && /[*?[\]{}]/.test(ch)) {
+      return null;
     }
     // Single quotes make expansion syntax literal. Outside them, reject all
     // parameter/command expansion rather than let expansion change a vetted
@@ -892,6 +900,203 @@ function splitShellWords(input: string): string[] | null {
   if (quote !== null) return null;
   if (hasWord) words.push(word);
   return words;
+}
+
+const RG_READ_FLAGS = new Set([
+  "--auto-hybrid-regex",
+  "--binary",
+  "--block-buffered",
+  "--byte-offset",
+  "--case-sensitive",
+  "--column",
+  "--count",
+  "--count-matches",
+  "--crlf",
+  "--debug",
+  "--files",
+  "--files-with-matches",
+  "--files-without-match",
+  "--fixed-strings",
+  "--follow",
+  "--heading",
+  "--help",
+  "--hidden",
+  "--ignore-case",
+  "--ignore-file-case-insensitive",
+  "--include-zero",
+  "--invert-match",
+  "--json",
+  "--line-buffered",
+  "--line-number",
+  "--line-regexp",
+  "--messages",
+  "--mmap",
+  "--multiline",
+  "--multiline-dotall",
+  "--no-config",
+  "--no-filename",
+  "--no-heading",
+  "--no-ignore",
+  "--no-ignore-dot",
+  "--no-ignore-exclude",
+  "--no-ignore-files",
+  "--no-ignore-global",
+  "--no-ignore-parent",
+  "--no-ignore-vcs",
+  "--no-line-number",
+  "--no-messages",
+  "--no-mmap",
+  "--no-pcre2-unicode",
+  "--no-require-git",
+  "--no-unicode",
+  "--null",
+  "--null-data",
+  "--one-file-system",
+  "--only-matching",
+  "--passthru",
+  "--pcre2",
+  "--pcre2-unicode",
+  "--pretty",
+  "--quiet",
+  "--search-zip",
+  "--smart-case",
+  "--stats",
+  "--text",
+  "--trace",
+  "--trim",
+  "--type-list",
+  "--unicode",
+  "--unrestricted",
+  "--version",
+  "--vimgrep",
+  "--with-filename",
+  "--word-regexp",
+]);
+const RG_READ_VALUES = new Set([
+  "--after-context",
+  "--before-context",
+  "--color",
+  "--colors",
+  "--context",
+  "--context-separator",
+  "--dfa-size-limit",
+  "--encoding",
+  "--engine",
+  "--field-context-separator",
+  "--field-match-separator",
+  "--file",
+  "--glob",
+  "--iglob",
+  "--ignore-file",
+  "--max-columns",
+  "--max-count",
+  "--max-depth",
+  "--max-filesize",
+  "--path-separator",
+  "--regex-size-limit",
+  "--regexp",
+  "--replace",
+  "--sort",
+  "--sortr",
+  "--threads",
+  "--type",
+  "--type-not",
+]);
+const RG_READ_SHORT_FLAGS = new Set("0abcFHhIiLlNnoPpqSsUuvVwzx".split(""));
+// Options whose short spelling consumes a value are handled before flags.
+const RG_READ_SHORT_VALUES = new Set("ABCEefgjmMrtT".split(""));
+
+/** Unknown options are gated rather than inferred safe from a command name. */
+function hasReadOnlyOptions(
+  args: string[],
+  flags: ReadonlySet<string>,
+  values: ReadonlySet<string>,
+  allowOperands: boolean,
+  shortFlags: ReadonlySet<string> = new Set(),
+  shortValues: ReadonlySet<string> = new Set(),
+): boolean {
+  for (let i = 0; i < args.length; i++) {
+    const arg = args[i];
+    if (arg === "--") return allowOperands;
+    if (arg.startsWith("--")) {
+      const equals = arg.indexOf("=");
+      const option = equals < 0 ? arg : arg.slice(0, equals);
+      if (equals < 0 && flags.has(option)) continue;
+      if (!values.has(option)) return false;
+      if (equals >= 0) continue;
+      if (++i >= args.length || args[i].startsWith("-")) return false;
+      continue;
+    }
+    if (arg.startsWith("-") && arg !== "-") {
+      for (let j = 1; j < arg.length; j++) {
+        const option = arg[j];
+        if (shortValues.has(option)) {
+          if (j === arg.length - 1 && (++i >= args.length || args[i].startsWith("-"))) {
+            return false;
+          }
+          break;
+        }
+        if (!shortFlags.has(option)) return false;
+      }
+      continue;
+    }
+    if (!allowOperands) return false;
+  }
+  return true;
+}
+
+function isSafeReadRgCommand(segment: string, allowArgumentless: boolean): boolean {
+  const words = splitShellWords(segment.trim(), true);
+  if (!words || words[0] !== "rg" || (words.length === 1 && !allowArgumentless)) return false;
+  // In particular, --pre and --hostname-bin execute a program; they never
+  // inherit safe-read status from rg's usual search behavior.
+  return hasReadOnlyOptions(
+    words.slice(1),
+    RG_READ_FLAGS,
+    RG_READ_VALUES,
+    true,
+    RG_READ_SHORT_FLAGS,
+    RG_READ_SHORT_VALUES,
+  );
+}
+
+const AUDIT_READ_FLAGS = new Set([
+  "--json",
+  "--parseable",
+  "--production",
+  "--dev",
+  "--no-dev",
+  "--offline",
+  "--prefer-offline",
+  "--ignore-scripts",
+  "--no-progress",
+  "--no-color",
+  "--color",
+  "--verbose",
+  "--quiet",
+  "--workspaces",
+  "--include-workspace-root",
+]);
+const AUDIT_READ_VALUES = new Set([
+  "--audit-level",
+  "--omit",
+  "--include",
+  "--registry",
+  "--workspace",
+  "--groups",
+  "--level",
+  "--severity",
+]);
+
+function isSafeReadAuditCommand(segment: string): boolean {
+  const words = splitShellWords(segment.trim(), true);
+  if (!words || !["npm", "pnpm", "yarn", "cargo", "pip", "gem", "brew"].includes(words[0])) {
+    return false;
+  }
+  if (words[1] !== "audit") return false;
+  // audit fix / --fix / --fix=... are write actions. Only known read flags
+  // and their values pass; positional sub-actions and unknown flags ask.
+  return hasReadOnlyOptions(words.slice(2), AUDIT_READ_FLAGS, AUDIT_READ_VALUES, false);
 }
 
 const GIT_LIST_STANDALONE_OPTIONS = new Set([
@@ -1020,6 +1225,8 @@ function matchesSafeReadPattern(segment: string, allowArgumentless = false): boo
   return (
     isSafeReadGitCommand(segment) ||
     isSafeReadSedCommand(segment) ||
+    isSafeReadRgCommand(segment, allowArgumentless) ||
+    isSafeReadAuditCommand(segment) ||
     SAFE_READ_PATTERNS.some(
       (pattern) => pattern.test(segment) || (allowArgumentless && pattern.test(`${segment} `)),
     )
