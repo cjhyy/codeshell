@@ -18,6 +18,13 @@ describe("sortSessionMemoriesByRecency", () => {
     expect(out.map((e) => e.sessionId)).toEqual(["aaa-new", "zzz-old"]);
   });
 
+  test("compares the instants of timestamps with different UTC offsets", () => {
+    const older = entry("older", "2026-10-17T01:00:00+08:00"); // 2026-10-16T17:00Z
+    const newer = entry("newer", "2026-10-16T23:00:00Z");
+    const out = sortSessionMemoriesByRecency([older, newer]);
+    expect(out.map((e) => e.sessionId)).toEqual(["newer", "older"]);
+  });
+
   test("does not mutate the input array", () => {
     const arr = [entry("a", "2026-01-01T00:00:00Z"), entry("b", "2026-02-01T00:00:00Z")];
     const copy = [...arr];
