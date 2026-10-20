@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+import { transcriptUserDisplay } from "@cjhyy/code-shell-web";
 import { buildSessionHistory } from "./mobile-history.js";
 
 const envelope =
@@ -6,10 +7,14 @@ const envelope =
 
 describe("buildSessionHistory", () => {
   test("a legacy image input replays its text and an attachment summary, not the envelope", async () => {
-    const events = await buildSessionHistory("s", async () => [
-      { kind: "user", text: envelope, images: 1 },
-      { kind: "stream", event: { type: "text_delta", text: "a cat" } },
-    ]);
+    const events = await buildSessionHistory(
+      "s",
+      async () => [
+        { kind: "user", text: envelope, images: 1 },
+        { kind: "stream", event: { type: "text_delta", text: "a cat" } },
+      ],
+      transcriptUserDisplay,
+    );
     expect(events[0]).toEqual({
       type: "user_message",
       text: "look at this",
@@ -27,7 +32,11 @@ describe("buildSessionHistory", () => {
 
   test("text the user typed themselves is replayed verbatim", async () => {
     const typed = "please explain <attached-image-paths>x</attached-image-paths>";
-    const events = await buildSessionHistory("s", async () => [{ kind: "user", text: typed }]);
+    const events = await buildSessionHistory(
+      "s",
+      async () => [{ kind: "user", text: typed }],
+      transcriptUserDisplay,
+    );
     expect(events).toEqual([{ type: "user_message", text: typed }]);
   });
 });

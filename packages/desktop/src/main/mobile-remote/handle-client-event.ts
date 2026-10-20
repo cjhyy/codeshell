@@ -12,6 +12,7 @@ import {
   type RoomPublic,
 } from "@cjhyy/code-shell-server/mobile-remote";
 import type { WorkerFrameMeta } from "@cjhyy/code-shell-server/worker";
+import { transcriptUserDisplay } from "@cjhyy/code-shell-web";
 import { listDiskSessions } from "@cjhyy/code-shell-server/storage";
 import type { AgentBridge } from "../agent-bridge.js";
 import type { ApprovalBridge } from "../cc-room/approval-bridge.js";
@@ -554,7 +555,11 @@ export async function handleClientEvent(
       return;
     }
     try {
-      const events = await buildSessionHistory(event.sessionId, getSessionTranscript);
+      const events = await buildSessionHistory(
+        event.sessionId,
+        getSessionTranscript,
+        transcriptUserDisplay,
+      );
       reply({ type: "session.history.ok", sessionId: event.sessionId, events });
     } catch (err) {
       reply({
