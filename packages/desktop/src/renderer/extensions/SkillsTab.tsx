@@ -23,6 +23,8 @@ interface Props {
   configurationTarget: RendererConfigurationTarget;
   query: string;
   isEnabled: (s: SkillSummary) => boolean;
+  /** False until the enable/disable state is authoritative; switches stay inert. */
+  toggleReady?: boolean;
   onToggle: (s: SkillSummary, next: boolean) => void;
 }
 
@@ -37,7 +39,13 @@ function displaySkillName(s: SkillSummary): string {
   return namespace ? s.name.slice(namespace.length + 1) : s.name;
 }
 
-export function SkillsTab({ configurationTarget, query, isEnabled, onToggle }: Props) {
+export function SkillsTab({
+  configurationTarget,
+  query,
+  isEnabled,
+  toggleReady = true,
+  onToggle,
+}: Props) {
   const { t } = useT();
   const [skills, setSkills] = useState<SkillSummary[] | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -282,6 +290,7 @@ export function SkillsTab({ configurationTarget, query, isEnabled, onToggle }: P
           <Switch
             aria-label={t("ext.skills.toggle", { name: displaySkillName(s) })}
             checked={isEnabled(s)}
+            disabled={!toggleReady}
             onCheckedChange={(v) => onToggle(s, v)}
           />
         </span>
