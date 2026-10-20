@@ -129,6 +129,61 @@ describe("durable delivery queue", () => {
     queue.stop();
   });
 
+  test("deduplicates platform message ids per adapter account", async () => {
+    const path = inboxPath();
+    const delivered: string[] = [];
+    const queue = new DeliveryQueue(
+      config(path),
+      async (adapterId) => void delivered.push(adapterId),
+      () => undefined,
+    );
+    await queue.start();
+    const message = incoming("m-shared", "same id on two accounts");
+    expect(await queue.enqueue("line@a", message)).toBe("queued");
+    expect(await queue.enqueue("line@b", message)).toBe("queued");
+    expect(await queue.enqueue("line@b", message)).toBe("duplicate");
+    await waitUntil(() => delivered.length === 2);
+    expect(delivered.sort()).toEqual(["line@a", "line@b"]);
+    await waitUntil(() => persistedPending(path) === 0);
+    expect(await queue.enqueue("line@a", message)).toBe("duplicate");
+    expect(await queue.enqueue("line@c", message)).toBe("queued");
+    queue.stop();
+  });
+
+  test("keeps honouring dedupe records persisted before keys named the account", async () => {
+    const path = inboxPath();
+    mkdirSync(dirname(path), { recursive: true });
+    const legacyKey = (messageId: string) => ["line", "room", "owner", messageId].join("\0");
+    writeFileSync(
+      path,
+      JSON.stringify({
+        version: 1,
+        pending: [
+          {
+            id: "00000000-0000-4000-8000-000000000001",
+            dedupeKey: legacyKey("m-pending"),
+            adapterId: "line:0",
+            message: incoming("m-pending", "legacy pending"),
+            attempts: 0,
+            nextAttemptAt: 0,
+          },
+        ],
+        completed: { [legacyKey("m-done")]: Date.now() },
+      }),
+    );
+    const queue = new DeliveryQueue(
+      { ...config(path), maxConcurrent: 0 },
+      async () => undefined,
+      () => undefined,
+    );
+    await queue.start();
+    expect(await queue.enqueue("line:0", incoming("m-done", "again"))).toBe("duplicate");
+    expect(await queue.enqueue("line:0", incoming("m-pending", "again"))).toBe("duplicate");
+    expect(await queue.enqueue("line@other", incoming("m-pending", "other"))).toBe("queued");
+    expect(queue.status().pending).toBe(2);
+    queue.stop();
+  });
+
   test("retries a failed terminal state write instead of leaving the queue stuck", async () => {
     const path = inboxPath();
     const delivered = deferred<void>();

@@ -147,7 +147,8 @@ export class DeliveryQueue {
 
   async enqueue(adapterId: string, message: ChannelMessage): Promise<"queued" | "duplicate"> {
     if (this.stopped) throw new Error("Chat Gateway inbox is stopped");
-    const dedupeKey = deliveryDedupeKey(message);
+    const dedupeKey = deliveryDedupeKey(adapterId, message);
+    const legacyDedupeKey = legacyDeliveryDedupeKey(message);
     const id = randomUUID();
     const target = targetKey(message);
     let previousPreparation: Promise<void> | undefined;
@@ -159,6 +160,9 @@ export class DeliveryQueue {
       if (
         dedupeKey &&
         (this.completed.has(dedupeKey) ||
+          // Completed keys persisted before keys named the account cannot say
+          // which account accepted them; stay conservative until they expire.
+          (legacyDedupeKey !== undefined && this.completed.has(legacyDedupeKey)) ||
           this.pending.some((entry) => entry.dedupeKey === dedupeKey) ||
           [...this.preparing.values()].some((candidate) => candidate === dedupeKey))
       ) {
@@ -509,6 +513,12 @@ export class DeliveryQueue {
         const restored = this.rehydrateAttachments(entry.spooled);
         this.pending.push({
           ...entry,
+          // Records persisted before dedupe keys named the account carry the
+          // legacy key; the stored adapterId lets them join the new namespace.
+          ...(entry.dedupeKey !== undefined &&
+          entry.dedupeKey === legacyDeliveryDedupeKey(entry.message)
+            ? { dedupeKey: deliveryDedupeKey(entry.adapterId, entry.message) }
+            : {}),
           message: restored ? { ...entry.message, attachments: restored } : entry.message,
           persistent: true,
           nextAttemptAt: Date.now(),
@@ -592,7 +602,18 @@ export class DeliveryQueue {
   }
 }
 
-function deliveryDedupeKey(message: ChannelMessage): string | undefined {
+/**
+ * Platform message ids are only unique within one account: two accounts on the
+ * same channel can legitimately receive the same id, so the adapter is part of
+ * the key.
+ */
+function deliveryDedupeKey(adapterId: string, message: ChannelMessage): string | undefined {
+  const legacy = legacyDeliveryDedupeKey(message);
+  return legacy === undefined ? undefined : `${adapterId}\0${legacy}`;
+}
+
+/** Account-less key written by earlier versions; read-only compatibility. */
+function legacyDeliveryDedupeKey(message: ChannelMessage): string | undefined {
   return message.messageId
     ? `${message.channel}\0${message.target}\0${message.senderId}\0${message.messageId}`
     : undefined;
