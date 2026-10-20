@@ -18,6 +18,11 @@ export interface InstallLocalOptions {
    * the user's disable flags in settings (an upgrade is not a removal).
    */
   overwrite?: boolean;
+  /**
+   * Durable source to record for later updates when the installed bytes come
+   * from a private copy (e.g. a reviewed snapshot that is deleted afterwards).
+   */
+  source?: string;
 }
 
 export interface LocalPluginSourceInput {
@@ -74,16 +79,17 @@ async function installRootMaybeOverwrite(
   root: string,
   resolvedName: string,
   installedAt: string,
-  overwrite: boolean,
+  options: InstallLocalOptions | undefined,
 ): Promise<string> {
   const finalDir = pluginInstallDir(resolvedName);
-  if (overwrite && existsSync(finalDir)) {
-    await reinstallAtomic(resolvedName, root, () =>
-      installPluginFromPath(root, resolvedName, installedAt),
+  const pathOptions = options?.source ? { source: options.source } : {};
+  if (options?.overwrite && existsSync(finalDir)) {
+    await reinstallAtomic(resolvedName, options.source ?? root, () =>
+      installPluginFromPath(root, resolvedName, installedAt, pathOptions),
     );
     return finalDir;
   }
-  return installPluginFromPath(root, resolvedName, installedAt);
+  return installPluginFromPath(root, resolvedName, installedAt, pathOptions);
 }
 
 /**
@@ -106,12 +112,7 @@ export async function installPluginFromArchive(
 ): Promise<{ dir: string; name: string }> {
   return withLocalPluginSourceRoot({ kind: "zip", path: zipPath }, async (root) => {
     const resolvedName = normalizePluginName(name ?? (await deriveName(root)));
-    const dir = await installRootMaybeOverwrite(
-      root,
-      resolvedName,
-      installedAt,
-      options?.overwrite ?? false,
-    );
+    const dir = await installRootMaybeOverwrite(root, resolvedName, installedAt, options);
     return { dir, name: resolvedName };
   });
 }
@@ -133,12 +134,7 @@ export async function installLocalPlugin(
 ): Promise<{ dir: string; name: string }> {
   return withLocalPluginSourceRoot(input, async (root) => {
     const resolvedName = normalizePluginName(name ?? (await deriveName(root)));
-    const dir = await installRootMaybeOverwrite(
-      root,
-      resolvedName,
-      installedAt,
-      options?.overwrite ?? false,
-    );
+    const dir = await installRootMaybeOverwrite(root, resolvedName, installedAt, options);
     return { dir, name: resolvedName };
   });
 }
