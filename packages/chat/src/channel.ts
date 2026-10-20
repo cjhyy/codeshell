@@ -136,6 +136,12 @@ export interface OutgoingAttachment {
   data: Uint8Array;
 }
 
+/** Placement of a reply within the target conversation, copied from the inbound message. */
+export interface ChannelSendOptions {
+  /** Platform thread to reply in; adapters without threads ignore it. */
+  threadId?: string;
+}
+
 export type ChannelMessageHandler = (message: ChannelMessage) => Promise<void>;
 
 export interface ChannelAdapter {
@@ -157,7 +163,7 @@ export interface ChannelAdapter {
   /** @deprecated Use capabilities.outbound.attachments or supportsOutgoingAttachment(). */
   readonly supportsOutgoingAttachments?: boolean;
   run(handler: ChannelMessageHandler, signal: AbortSignal): Promise<void>;
-  send(target: string, message: OutgoingMessage): Promise<void>;
+  send(target: string, message: OutgoingMessage, options?: ChannelSendOptions): Promise<void>;
 }
 
 export function channelCapabilities(adapter: ChannelAdapter): ChannelCapabilities {

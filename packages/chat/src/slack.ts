@@ -1,6 +1,11 @@
 import { SocketModeClient } from "@slack/socket-mode";
 import { WebClient } from "@slack/web-api";
-import type { ChannelAdapter, ChannelMessageHandler, OutgoingMessage } from "./channel.js";
+import type {
+  ChannelAdapter,
+  ChannelMessageHandler,
+  ChannelSendOptions,
+  OutgoingMessage,
+} from "./channel.js";
 import { BUILTIN_CHANNEL_CAPABILITIES } from "./channel.js";
 import { dispatchSafely, formatOutgoingMarkdown, waitForAbort } from "./lifecycle.js";
 import { mediaKind, outgoingAttachments, remoteAttachment } from "./media.js";
@@ -73,6 +78,11 @@ export class SlackAdapter implements ChannelAdapter {
         ...(event.client_msg_id || event.ts
           ? { messageId: String(event.client_msg_id ?? event.ts) }
           : {}),
+        // Replies must carry the parent thread_ts, or Slack posts them at the
+        // channel top level instead of in the thread the user is using.
+        ...(typeof event.thread_ts === "string" && event.thread_ts
+          ? { threadId: event.thread_ts }
+          : {}),
         ...(attachments.length > 0 ? { attachments } : {}),
       });
       await ack();
@@ -116,13 +126,19 @@ export class SlackAdapter implements ChannelAdapter {
     }
   }
 
-  async send(target: string, message: OutgoingMessage): Promise<void> {
+  async send(
+    target: string,
+    message: OutgoingMessage,
+    options: ChannelSendOptions = {},
+  ): Promise<void> {
     const attachments = outgoingAttachments(message, this.capabilities.outbound.attachments);
+    const thread = options.threadId ? { thread_ts: options.threadId } : {};
     if (attachments.length > 0) {
       // Slack's v2 upload can publish all files and the comment atomically,
       // avoiding a text-first partial send that would duplicate on retry.
       await this.web.filesUploadV2({
         channel_id: target,
+        ...thread,
         initial_comment: formatOutgoingMarkdown(message.text, message.button),
         file_uploads: attachments.map((attachment) => ({
           file: Buffer.from(attachment.data),
@@ -134,6 +150,7 @@ export class SlackAdapter implements ChannelAdapter {
     await this.web.chat.postMessage({
       channel: target,
       text: message.text,
+      ...thread,
       ...(message.button
         ? {
             blocks: [

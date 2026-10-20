@@ -108,7 +108,10 @@ export class ChatGateway {
     const context: ChatContext = {
       message,
       adapter,
-      reply: (outgoing) => adapter.send(message.target, outgoing),
+      reply: (outgoing) =>
+        message.threadId
+          ? adapter.send(message.target, outgoing, { threadId: message.threadId })
+          : adapter.send(message.target, outgoing),
     };
     let index = -1;
     const next = async (position: number): Promise<void> => {
