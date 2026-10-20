@@ -61,12 +61,7 @@ import {
   type SessionIndex,
 } from "./transcripts";
 import { resolveAttachmentSessionId } from "./attachmentSession";
-import {
-  ATTACHMENT_LIMITS,
-  buildPathAttachment,
-  sha256FromDataUrl,
-  type ImageAttachment,
-} from "./chat/attachments";
+import { buildPathAttachment, sha256FromDataUrl, type ImageAttachment } from "./chat/attachments";
 import { findAskUserOrigin } from "./streamRouting";
 import { statusForBucket, type SessionStatus } from "./sessionStatus";
 import type { AgentPanelHostRequest, AgentPanelHostResponse } from "../shared/agent-panels";
@@ -79,7 +74,6 @@ import type {
 } from "../preload/types";
 import {
   loadActiveProjectId,
-  loadProjects,
   saveActiveProjectId,
   unmarkProjectPathRemoved,
   reconcileProjectsFromDiskWithRemap,
@@ -137,6 +131,13 @@ import { useHostSubscriptions } from "./app/useHostSubscriptions";
 import { useRunController } from "./app/useRunController";
 import { createChatLinkReadHandler } from "./chat/linkResourceIntents";
 import { usePanelBuckets } from "./app/usePanelBuckets";
+import { useViewTargets } from "./app/useViewTargets";
+import {
+  createComposerDraftTargets,
+  pinPendingAttachmentRoot,
+  resumePendingAttachmentRoot,
+  type PendingAttachmentRoot,
+} from "./app/composerDraftTargets";
 import { useQuickChatImages } from "./chat/useQuickChatImages";
 import { AppMainView, AppShell } from "./app/AppShell";
 import { switchActiveModel } from "./app/switchActiveModel";
@@ -236,17 +237,14 @@ function App() {
     loadActiveProjectId(),
   );
   const [view, setView] = useState<ViewState>(() => loadView((mode) => PAGE_REGISTRY.has(mode)));
-  const historyViewIntentRef = useRef({ mode: view.viewMode, revision: 0 });
-  if (historyViewIntentRef.current.mode !== view.viewMode) {
-    historyViewIntentRef.current = {
-      mode: view.viewMode,
-      revision: historyViewIntentRef.current.revision + 1,
-    };
-  }
-  const [credentialsInitialTab, setCredentialsInitialTab] = useState<"link" | undefined>();
-  useEffect(() => {
-    if (view.viewMode !== "credentials") setCredentialsInitialTab(undefined);
-  }, [view.viewMode]);
+  const {
+    historyViewIntentRef,
+    credentialsInitialTab,
+    traceTarget,
+    openTrace,
+    navigateTo,
+    openLinkCredentials,
+  } = useViewTargets(view.viewMode, setView);
   // Settings replace the chrome, while the wide-window navigation preference
   // remains independent of the temporary narrow-window drawer.
   const isSettingsPage = view.viewMode === "settings_page" || view.viewMode === "project_config";
@@ -298,24 +296,10 @@ function App() {
   >();
   const [collapsedProjects, setCollapsedProjects] = useState<Set<string>>(new Set());
   const [revealedSessionIds, setRevealedSessionIds] = useState<Record<string, string>>({});
-  const [traceTarget, setTraceTarget] = useState<{ sessionId?: string; traceId?: string }>({});
-  const openTrace = useCallback(
-    (sessionId?: string, traceId?: string) => {
-      setTraceTarget({ sessionId, traceId });
-      setView((current) => ({ ...current, viewMode: "traces" }));
-    },
-    [setView],
-  );
 
   const { sessionIndices, setSessionIndices, archivedPetSessionIds } = useSessionIndices();
   const locallyCreatedSessionIdsRef = useRef<Set<string>>(new Set());
-  const pendingAttachmentRootsRef = useRef(
-    new Map<
-      string,
-      | { kind: "project"; projectId: string; rootId: string; cwd: string }
-      | { kind: "noRepo"; cwd: string }
-    >(),
-  );
+  const pendingAttachmentRootsRef = useRef(new Map<string, PendingAttachmentRoot>());
 
   /**
    * Create a fresh session on demand (lazy: only when the user actually
@@ -441,101 +425,13 @@ function App() {
       return { ...prev, [targetBucket]: { ...current, text } };
     });
   };
-  function isAttachmentTargetCurrent(targetBucket: string, engineSessionId?: string): boolean {
-    if (activeBucketRef.current !== targetBucket) return false;
-    const target = parsePanelBucket(targetBucket);
-    if (
-      target.projectId !== null &&
-      !loadProjects().some((project) => project.id === target.projectId)
-    ) {
-      return false;
-    }
-    if (!target.sessionId) return true;
-    const owner = loadSessionIndex(target.projectId).sessions.find(
-      (session) => session.id === target.sessionId,
-    );
-    return Boolean(
-      owner &&
-      !owner.archived &&
-      (engineSessionId === undefined || (owner.engineSessionId ?? owner.id) === engineSessionId),
-    );
-  }
-  function updateComposerAttachmentsForTarget(
-    targetBucket: string,
-    next: React.SetStateAction<ImageAttachment[]>,
-    isCurrent = () => isAttachmentTargetCurrent(targetBucket),
-  ): void {
-    if (!isCurrent()) return;
-    setComposerDrafts((prev) => {
-      if (!isCurrent()) return prev;
-      const current = prev[targetBucket] ?? { text: "", attachments: EMPTY_ATTACHMENTS };
-      const attachments = typeof next === "function" ? next(current.attachments) : next;
-      if (attachments === current.attachments) return prev;
-      return { ...prev, [targetBucket]: { ...current, attachments } };
-    });
-  }
-  function appendComposerImagesForTarget(
-    targetBucket: string,
-    images: ImageAttachment[],
-    overflowMessage: string,
-    validationMessages: string[],
-    isCurrent: () => boolean,
-  ): void {
-    if (!isCurrent()) return;
-    setComposerDrafts((prev) => {
-      if (!isCurrent()) return prev;
-      const current = prev[targetBucket] ?? { text: "", attachments: EMPTY_ATTACHMENTS };
-      const available = Math.max(
-        0,
-        ATTACHMENT_LIMITS.maxImagesPerMessage - current.attachments.length,
-      );
-      const accepted = images.slice(0, available);
-      const messages =
-        images.length > available ? [...validationMessages, overflowMessage] : validationMessages;
-      if (accepted.length === 0 && messages.length === 0) return prev;
-      return {
-        ...prev,
-        [targetBucket]: {
-          ...current,
-          attachments:
-            accepted.length > 0 ? [...current.attachments, ...accepted] : current.attachments,
-          ...(messages.length > 0
-            ? {
-                metadata: {
-                  ...(current.metadata ?? emptyComposerMetadata(current.text)),
-                  attachmentError: messages.join("；"),
-                },
-              }
-            : {}),
-        },
-      };
-    });
-  }
+  const composerTargets = createComposerDraftTargets(activeBucketRef, setComposerDrafts);
   const setComposerDraftAttachments: React.Dispatch<React.SetStateAction<ImageAttachment[]>> = (
     next,
-  ) => {
-    const targetBucket = activeBucketRef.current;
-    updateComposerAttachmentsForTarget(targetBucket, next);
-  };
-  function updateComposerMetadataForTarget(
-    targetBucket: string,
-    next: React.SetStateAction<ComposerMetadata>,
-    isCurrent = () => isAttachmentTargetCurrent(targetBucket),
-  ): void {
-    if (!isCurrent()) return;
-    setComposerDrafts((prev) => {
-      if (!isCurrent()) return prev;
-      const current = prev[targetBucket] ?? { text: "", attachments: EMPTY_ATTACHMENTS };
-      const metadata = current.metadata ?? emptyComposerMetadata(current.text);
-      const updated = typeof next === "function" ? next(metadata) : next;
-      if (updated === metadata) return prev;
-      return { ...prev, [targetBucket]: { ...current, metadata: updated } };
-    });
-  }
-  const setComposerMetadata: React.Dispatch<React.SetStateAction<ComposerMetadata>> = (next) => {
-    // A render's ordinary editor callback may never adopt a later live bucket.
-    updateComposerMetadataForTarget(activeBucket, next);
-  };
+  ) => composerTargets.updateAttachments(activeBucketRef.current, next);
+  // A render's ordinary editor callback may never adopt a later live bucket.
+  const setComposerMetadata: React.Dispatch<React.SetStateAction<ComposerMetadata>> = (next) =>
+    composerTargets.updateMetadata(activeBucket, next);
   // Attach an on-disk image to the composer by absolute path (file-panel add —
   // TODO 2.1). The staged attachment keeps the real path as its name so the
   // chip shows it and the wire payload carries it. Reads bytes via IPC.
@@ -711,58 +607,17 @@ function App() {
         sessionUiAuthority.configurationTarget.sessionId !== engineSessionId ||
         !sessionUiAuthority.workspaceRoot
       ) {
-        // Only this App's own attachment prepare can continue a pre-send UI
-        // Session. Staging has not created a Core Session or its authority.
-        const summary = loadSessionIndex(projectId).sessions.find(
-          (candidate) => candidate.id === liveBucket.sessionId,
-        );
-        const pin = pendingAttachmentRootsRef.current.get(liveBucket.sessionId);
-        if (pin?.kind === "noRepo") {
-          if (
-            projectId === null &&
-            summary?.pendingFirstRun === true &&
-            summary.engineSessionId === undefined &&
-            !summary.archived &&
-            locallyCreatedSessionIdsRef.current.has(liveBucket.sessionId) &&
-            noRepoCwdRef.current === pin.cwd &&
-            sessionUiAuthority.configurationAvailable &&
-            "noRepo" in sessionUiAuthority.configurationTarget &&
-            sessionUiAuthority.configurationTarget.noRepo === true &&
-            sessionUiAuthority.projectId === null &&
-            sessionUiAuthority.rootStatus === "loading" &&
-            sessionUiAuthority.mainRootId === null &&
-            sessionUiAuthority.mainRoot === pin.cwd &&
-            sessionUiAuthority.workspaceRoot === pin.cwd
-          ) {
-            return { cwd: pin.cwd, sessionId: liveBucket.sessionId };
-          }
-          return null;
-        }
-        const project = loadProjects().find((candidate) => candidate.id === projectId);
-        const root = project?.roots.find((candidate) => candidate.id === project.primaryRootId);
-        if (
-          pin &&
-          project &&
-          root &&
-          summary?.pendingFirstRun === true &&
-          summary.engineSessionId === undefined &&
-          !summary.archived &&
-          locallyCreatedSessionIdsRef.current.has(liveBucket.sessionId) &&
-          pin.projectId === projectId &&
-          pin.rootId === project.primaryRootId &&
-          root.path === project.path &&
-          project.path === pin.cwd &&
-          sessionUiAuthority.configurationAvailable &&
-          "projectId" in sessionUiAuthority.configurationTarget &&
-          sessionUiAuthority.configurationTarget.projectId === projectId &&
-          sessionUiAuthority.rootStatus === "loading" &&
-          sessionUiAuthority.mainRootId === pin.rootId &&
-          sessionUiAuthority.mainRoot === pin.cwd &&
-          sessionUiAuthority.workspaceRoot === pin.cwd
-        ) {
-          return { cwd: pin.cwd, sessionId: liveBucket.sessionId };
-        }
-        return null;
+        return resumePendingAttachmentRoot({
+          pin: pendingAttachmentRootsRef.current.get(liveBucket.sessionId),
+          projectId,
+          sessionId: liveBucket.sessionId,
+          summary: loadSessionIndex(projectId).sessions.find(
+            (candidate) => candidate.id === liveBucket.sessionId,
+          ),
+          locallyCreated: locallyCreatedSessionIdsRef.current.has(liveBucket.sessionId),
+          noRepoCwd: noRepoCwdRef.current,
+          authority: sessionUiAuthority,
+        });
       }
       return { cwd: sessionUiAuthority.workspaceRoot, sessionId: engineSessionId };
     }
@@ -774,43 +629,8 @@ function App() {
     const draftBucket = bucketKey(projectId, null);
     const { index, sessionId } = createSession(projectId);
     locallyCreatedSessionIdsRef.current.add(sessionId);
-    const registered = loadProjects().find((candidate) => candidate.id === projectId);
-    const root = registered?.roots.find((candidate) => candidate.id === registered.primaryRootId);
-    if (
-      registered &&
-      root &&
-      root.path === cwd &&
-      registered.path === cwd &&
-      sessionUiAuthority.configurationAvailable &&
-      "projectId" in sessionUiAuthority.configurationTarget &&
-      sessionUiAuthority.configurationTarget.projectId === projectId &&
-      sessionUiAuthority.rootStatus === "ok" &&
-      sessionUiAuthority.mainRootId === root.id &&
-      sessionUiAuthority.mainRoot === cwd &&
-      sessionUiAuthority.workspaceRoot === cwd
-    ) {
-      pendingAttachmentRootsRef.current.set(sessionId, {
-        kind: "project",
-        projectId: registered.id,
-        rootId: root.id,
-        cwd,
-      });
-    } else if (
-      projectId === null &&
-      noRepoCwdRef.current === cwd &&
-      sessionUiAuthority.configurationAvailable &&
-      "noRepo" in sessionUiAuthority.configurationTarget &&
-      sessionUiAuthority.configurationTarget.noRepo === true &&
-      sessionUiAuthority.projectId === null &&
-      sessionUiAuthority.rootStatus === "ok" &&
-      sessionUiAuthority.mainRootId === null &&
-      sessionUiAuthority.mainRoot === cwd &&
-      sessionUiAuthority.workspaceRoot === cwd
-    ) {
-      // Main supplies this cwd; the token only continues this UI's own draft
-      // staging. It neither creates a Core Session nor proves its absence.
-      pendingAttachmentRootsRef.current.set(sessionId, { kind: "noRepo", cwd });
-    }
+    const pin = pinPendingAttachmentRoot(projectId, cwd, noRepoCwdRef.current, sessionUiAuthority);
+    if (pin) pendingAttachmentRootsRef.current.set(sessionId, pin);
     const nextBucket = bucketKey(projectId, sessionId);
     activeBucketRef.current = nextBucket;
     setSessionIndices((prev) => ({ ...prev, [projectBucketSegmentFor(projectId)]: index }));
@@ -826,57 +646,8 @@ function App() {
     return { cwd, sessionId };
   }
 
-  function beginAttachmentSelection(): AttachmentSelection | null {
-    let targetBucket = activeBucket;
-    const origin = parsePanelBucket(targetBucket);
-    let engineSessionId = resolveAttachmentSessionId(
-      origin.sessionId,
-      loadSessionIndex(origin.projectId).sessions,
-    );
-    let invalidated = false;
-    const isCurrent = (): boolean => {
-      if (!isAttachmentTargetCurrent(targetBucket, engineSessionId)) invalidated = true;
-      return !invalidated;
-    };
-    if (!isCurrent()) return null;
-    return {
-      isCurrent,
-      prepare: () => {
-        if (!isCurrent()) return null;
-        const context = prepareAttachmentSession();
-        if (!context) return null;
-        if (!origin.sessionId) {
-          // Only this synchronous prepare may move its own draft to a Session.
-          const materialized = parsePanelBucket(activeBucketRef.current);
-          if (
-            materialized.projectId !== origin.projectId ||
-            materialized.sessionId !== context.sessionId
-          ) {
-            invalidated = true;
-            return null;
-          }
-          targetBucket = activeBucketRef.current;
-        }
-        engineSessionId = context.sessionId;
-        return isCurrent() ? context : null;
-      },
-      updateAttachments: (next) => {
-        if (isCurrent()) updateComposerAttachmentsForTarget(targetBucket, next, isCurrent);
-      },
-      appendImages: (images, overflowMessage, validationMessages) => {
-        appendComposerImagesForTarget(
-          targetBucket,
-          images,
-          overflowMessage,
-          validationMessages,
-          isCurrent,
-        );
-      },
-      updateMetadata: (next) => {
-        if (isCurrent()) updateComposerMetadataForTarget(targetBucket, next, isCurrent);
-      },
-    };
-  }
+  const beginAttachmentSelection = (): AttachmentSelection | null =>
+    composerTargets.beginSelection(activeBucket, prepareAttachmentSession);
 
   const materializeActiveSessionForPanel = (): string | null => {
     const current = parsePanelBucket(activeBucketRef.current);
@@ -1400,18 +1171,7 @@ function App() {
       sessionIndicesRef,
       setSessionIndices,
       materializeActiveSessionForPanel,
-      appendReviewDraft: (targetBucket, text) => {
-        setComposerDrafts((previous) => {
-          const current = previous[targetBucket] ?? { text: "", attachments: EMPTY_ATTACHMENTS };
-          return {
-            ...previous,
-            [targetBucket]: {
-              ...current,
-              text: current.text.trim() ? `${current.text}\n\n${text}` : text,
-            },
-          };
-        });
-      },
+      appendReviewDraft: composerTargets.appendText,
     },
     quickChat: {
       quickChatSessions,
@@ -2528,12 +2288,7 @@ function App() {
               }
               onNewConversation={() => navigateFromSidebar(() => newVisibleConversation())}
               onOpenSearch={() => navigateFromSidebar(() => setSessionSearchOpen(true))}
-              onNavigate={(mode) =>
-                navigateFromSidebar(() => {
-                  if (mode === "traces") setTraceTarget({});
-                  setViewMode(mode);
-                })
-              }
+              onNavigate={(mode) => navigateFromSidebar(() => navigateTo(mode))}
               onOpenProjectConfig={(projectId) => {
                 navigateFromSidebar(() => {
                   setActiveProjectId(projectId);
@@ -2573,10 +2328,7 @@ function App() {
                   <ActivityNavigation
                     page={view.viewMode}
                     taskInboxEnabled={taskInboxEnabled}
-                    onNavigate={(page) => {
-                      if (page === "traces") setTraceTarget({});
-                      setViewMode(page);
-                    }}
+                    onNavigate={navigateTo}
                   />
                 ) : null
               }
@@ -3061,10 +2813,7 @@ function App() {
           open={paletteOpen}
           onClose={() => setPaletteOpen(false)}
           commands={buildCommands({
-            setViewMode: (mode) => {
-              if (mode === "traces") setTraceTarget({});
-              setViewMode(mode);
-            },
+            setViewMode: navigateTo,
             openPanel,
             gitReviewAvailable: reviewAvailability.available,
             localRuntime: !cloudSelected && projectRuntime.ready,
@@ -3124,10 +2873,7 @@ function App() {
                 isFullscreen={isFullscreen}
                 onBack={() => setViewMode("chat")}
                 onOpenDigitalHumans={() => setViewMode("digital_humans")}
-                onOpenLink={() => {
-                  setCredentialsInitialTab("link");
-                  setViewMode("credentials");
-                }}
+                onOpenLink={openLinkCredentials}
               />
             ) : activeProject ? (
               // project_config: the same settings center, preselected to the
@@ -3152,10 +2898,7 @@ function App() {
                 isFullscreen={isFullscreen}
                 onBack={() => setViewMode("chat")}
                 onOpenDigitalHumans={() => setViewMode("digital_humans")}
-                onOpenLink={() => {
-                  setCredentialsInitialTab("link");
-                  setViewMode("credentials");
-                }}
+                onOpenLink={openLinkCredentials}
               />
             ) : null}
           </React.Suspense>
