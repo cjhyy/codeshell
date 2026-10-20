@@ -32,6 +32,8 @@ export interface MobileUploadTicket {
 interface PrepareOptions {
   beginUpload: (metadata: MobileImageBase) => Promise<MobileUploadTicket>;
   fetch: typeof fetch;
+  /** Aborts an upload already in flight, e.g. when its connection is lost. */
+  signal?: AbortSignal;
 }
 
 function jpegName(name: string): string {
@@ -150,6 +152,7 @@ export async function prepareMobileAttachments(
       headers: { "Content-Type": mime },
       body: file,
       credentials: "same-origin",
+      ...(options.signal ? { signal: options.signal } : {}),
     });
     if (!response.ok) throw new Error(`Image upload failed (${response.status})`);
     descriptors.push({ ...base, transport: "upload", uploadId: ticket.uploadId });

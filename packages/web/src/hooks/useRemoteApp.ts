@@ -287,6 +287,8 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
     | null
   >(null);
   const connectionGenerationRef = useRef(0);
+  /** Image PUTs in flight; a lost connection aborts them so sending recovers. */
+  const uploadAbortsRef = useRef(new Set<AbortController>());
   const uploadWaitersRef = useRef(
     new Map<
       string,
@@ -406,6 +408,8 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
 
   useEffect(
     () => () => {
+      for (const upload of uploadAbortsRef.current) upload.abort(new Error("Remote app closed"));
+      uploadAbortsRef.current.clear();
       for (const waiter of uploadWaitersRef.current.values()) {
         clearTimeout(waiter.timer);
         waiter.reject(new Error("Remote app closed"));
@@ -1400,6 +1404,8 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
     outputClient.cancel(false);
     submittingAsyncApprovalsRef.current.clear();
     const error = new Error("Remote connection was lost");
+    for (const upload of uploadAbortsRef.current) upload.abort(error);
+    uploadAbortsRef.current.clear();
     for (const waiter of uploadWaitersRef.current.values()) {
       clearTimeout(waiter.timer);
       waiter.reject(error);
@@ -1437,10 +1443,13 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
         setNotice(t("mobile.notice.ccRoomObserving"));
         return false;
       }
+      const upload = new AbortController();
+      uploadAbortsRef.current.add(upload);
       try {
         attachments = await prepareMobileAttachments(input.attachments, {
           beginUpload: (metadata) => beginMobileUpload(metadata, connectionGeneration),
           fetch: window.fetch.bind(window),
+          signal: upload.signal,
         });
       } catch (error) {
         setNotice(
@@ -1449,6 +1458,8 @@ export function useRemoteApp(options: RemoteAppOptions = {}): RemoteApp {
           }),
         );
         return false;
+      } finally {
+        uploadAbortsRef.current.delete(upload);
       }
       if (conversationRevision !== conversationRevisionRef.current) return false;
       const summaries = attachments.map(({ name, mime, size }) => ({ name, mime, size }));

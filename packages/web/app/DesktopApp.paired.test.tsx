@@ -269,3 +269,65 @@ test("creating a session while offline changes nothing instead of losing the req
     await hook.unmount();
   }
 });
+
+test("a disconnect cancels a started image upload so text can be sent after reconnecting", async () => {
+  const { hook, ws, online } = await pairedController();
+  const puts: Array<{ url: string; signal?: AbortSignal | null }> = [];
+  define(window, "fetch", (url: string, init?: RequestInit) => {
+    puts.push({ url, signal: init?.signal });
+    // A stalled network: the request settles only if it is aborted.
+    return new Promise<Response>((_resolve, reject) => {
+      init?.signal?.addEventListener("abort", () =>
+        reject(new DOMException("aborted", "AbortError")),
+      );
+    });
+  });
+  try {
+    await act(async () => {
+      hook.result.current.controller.setDraft("photo task");
+      hook.result.current.controller.addFiles([
+        new File([new Uint8Array(300 * 1024)], "large.png", { type: "image/png" }),
+      ] as unknown as FileList);
+    });
+    await act(async () => {
+      expect(hook.result.current.controller.send()).toBe(true);
+      for (let i = 0; i < 4; i++) await flushMicrotasks();
+    });
+    const begin = ws.sent.find((frame) => frame.type === "attachment.upload.begin")!;
+    await act(async () => {
+      ws.message({
+        type: "attachment.upload.ready",
+        clientId: begin.clientId,
+        uploadId: "upload-1",
+        putUrl: "/api/mobile/uploads/upload-1",
+        expiresAt: Date.now() + 300_000,
+      });
+      for (let i = 0; i < 4; i++) await flushMicrotasks();
+    });
+    expect(puts).toHaveLength(1);
+    await act(async () => {
+      ws.close();
+      for (let i = 0; i < 4; i++) await flushMicrotasks();
+    });
+    expect(puts[0]!.signal?.aborted).toBe(true);
+    expect(hook.result.current.controller.uploadBusy).toBe(false);
+    expect(hook.result.current.controller.draft).toBe("photo task");
+    await act(async () => {
+      window.dispatchEvent(new Event("online"));
+      await flushMicrotasks();
+    });
+    const reconnected = await online();
+    await act(async () => {
+      for (const file of hook.result.current.controller.files)
+        hook.result.current.controller.removeFile(file.id);
+      hook.result.current.controller.setDraft("independent text");
+    });
+    await act(async () => {
+      expect(hook.result.current.controller.send()).toBe(true);
+      await flushMicrotasks();
+    });
+    expect(chatSends(reconnected)[0]!.text).toBe("independent text");
+  } finally {
+    await hook.unmount();
+  }
+});
