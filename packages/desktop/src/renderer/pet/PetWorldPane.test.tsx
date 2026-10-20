@@ -193,7 +193,8 @@ describe("PetWorldPane", () => {
       await flushMicrotasks();
     });
     await act(async () => {
-      reactPropsOf(findElementByProp(container, "data-pet-work-drawer")).onClick();
+      const drawer = reactPropsOf(findElementByProp(container, "data-pet-work-drawer"));
+      if (!drawer["aria-expanded"]) drawer.onClick();
       await flushMicrotasks();
     });
     await act(async () => {
@@ -280,7 +281,8 @@ describe("PetWorldPane", () => {
     expect(textOf(container)).not.toContain("已处理的跟进事项");
 
     await act(async () => {
-      reactPropsOf(findElementByProp(container, "data-pet-work-drawer")).onClick();
+      const drawer = reactPropsOf(findElementByProp(container, "data-pet-work-drawer"));
+      if (!drawer["aria-expanded"]) drawer.onClick();
       await flushMicrotasks();
     });
     await act(async () => {
@@ -357,7 +359,8 @@ describe("PetWorldPane", () => {
       await flushMicrotasks();
     });
     await act(async () => {
-      reactPropsOf(findElementByProp(container, "data-pet-work-drawer")).onClick();
+      const drawer = reactPropsOf(findElementByProp(container, "data-pet-work-drawer"));
+      if (!drawer["aria-expanded"]) drawer.onClick();
       await flushMicrotasks();
     });
     expect(textOf(container)).toContain("Completed session");

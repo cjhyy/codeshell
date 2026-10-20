@@ -765,27 +765,69 @@
   }
 
   .mimi-page-shell {
-    background:
-      radial-gradient(circle at 8% 0%, hsl(var(--cs-primary) / 0.09), transparent 34%),
-      radial-gradient(circle at 100% 100%, hsl(var(--cs-status-running) / 0.07), transparent 38%),
-      hsl(var(--cs-muted) / 0.34);
+    background: hsl(var(--cs-muted) / 0.25);
   }
 
   .mimi-surface {
-    border: 1px solid hsl(var(--cs-border) / 0.68);
-    background: hsl(var(--cs-card) / 0.88);
-    box-shadow:
-      0 18px 48px hsl(var(--cs-foreground) / 0.055),
-      0 1px 2px hsl(var(--cs-foreground) / 0.045);
-    backdrop-filter: blur(18px);
+    border: 1px solid hsl(var(--cs-border) / 0.7);
+    background: hsl(var(--cs-card) / 0.96);
+    box-shadow: 0 2px 8px hsl(var(--cs-foreground) / 0.025);
   }
 
   .dark .mimi-surface {
     border-color: hsl(var(--cs-border) / 0.82);
-    background: hsl(var(--cs-card) / 0.82);
-    box-shadow:
-      0 22px 56px rgb(0 0 0 / 0.24),
-      0 1px 2px rgb(0 0 0 / 0.2);
+    background: hsl(var(--cs-card) / 0.96);
+    box-shadow: 0 2px 8px rgb(0 0 0 / 0.08);
+  }
+
+  .mimi-chat-scroll {
+    background: linear-gradient(180deg, hsl(var(--cs-muted) / 0.12), transparent 12rem);
+    scrollbar-gutter: stable;
+  }
+
+  .mimi-composer {
+    box-shadow: 0 3px 12px hsl(var(--cs-foreground) / 0.035);
+  }
+
+  .mimi-welcome-avatar {
+    background: linear-gradient(
+      145deg,
+      hsl(var(--cs-primary) / 0.1),
+      hsl(var(--cs-primary) / 0.025)
+    );
+    box-shadow: 0 8px 28px hsl(var(--cs-primary) / 0.045);
+    transform: rotate(-4deg);
+  }
+
+  .mimi-welcome-avatar img {
+    transform: rotate(4deg);
+  }
+
+  .mimi-quiet-button {
+    transition:
+      background-color 140ms ease,
+      color 140ms ease;
+  }
+
+  .mimi-quiet-button:hover {
+    background: hsl(var(--cs-accent) / 0.7);
+    color: hsl(var(--cs-foreground));
+  }
+
+  .mimi-page-shell button:focus-visible,
+  .mimi-page-shell input:focus-visible {
+    outline: 2px solid hsl(var(--cs-primary) / 0.5);
+    outline-offset: 2px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .mimi-page-shell *,
+    .mimi-page-shell *::before,
+    .mimi-page-shell *::after {
+      animation: none !important;
+      transition: none !important;
+      scroll-behavior: auto !important;
+    }
   }
 
   .cs-control {

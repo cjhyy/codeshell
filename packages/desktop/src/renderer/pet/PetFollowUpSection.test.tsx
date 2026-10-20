@@ -1,9 +1,13 @@
 import { describe, expect, test } from "bun:test";
-import React from "react";
+import React, { act } from "react";
+import { createRoot } from "react-dom/client";
+import type { PetApi } from "../../preload/pet-api";
+import { ensureMiniDom, flushMicrotasks } from "../test-utils/renderHook";
+import { PetStateProvider, usePetState } from "./PetStateProvider";
 import { renderToStaticMarkup } from "react-dom/server";
 import type { PetSessionSummaryRow } from "../../preload/types";
 import { petFollowUpStateId } from "../../shared/pet-work-item-id";
-import PetFollowUpSectionView from "./PetFollowUpSection";
+import PetFollowUpSectionView, { PetFollowUpSection } from "./PetFollowUpSection";
 
 function row(overrides: Partial<PetSessionSummaryRow> = {}): PetSessionSummaryRow {
   return {
@@ -166,5 +170,84 @@ describe("PetFollowUpSectionView", () => {
   test("uses a follow-up-specific state id instead of hiding the completed session", () => {
     expect(petFollowUpStateId("followup-abc")).toBe("follow-up:followup-abc");
     expect(petFollowUpStateId("followup-abc")).not.toBe("completed:abc");
+  });
+});
+
+describe("PetFollowUpSection handoff", () => {
+  test("appends a follow-up to the existing draft, retains paths, and requests composer focus without sending", async () => {
+    ensureMiniDom();
+    const originalCodeshell = window.codeshell;
+    const commands: unknown[] = [];
+    const api = {
+      getSnapshot: async () => ({
+        version: 1,
+        generation: 0,
+        workerState: "active",
+        observedAt: 1,
+        sessions: [],
+        pending: [],
+      }),
+      onProjectionEvent: () => () => {},
+      getAttentionSnapshot: async () => ({ surfaceablePendingCount: 0 }),
+      onAttentionEvent: () => () => {},
+      dispatch: async (command: unknown) => {
+        commands.push(command);
+        return { ok: false, code: "invalid-command" };
+      },
+    } as unknown as PetApi;
+    (window as unknown as Record<string, unknown>).codeshell = { pet: api };
+    const container = document.createElement("div");
+    const root = createRoot(container);
+    let latest: ReturnType<typeof usePetState>;
+    let focusRequests = 0;
+    const onCompose = () => {
+      focusRequests += 1;
+    };
+    window.addEventListener("codeshell:pet-compose", onCompose);
+    function Fixture() {
+      latest = usePetState();
+      return <PetFollowUpSection rows={[row()]} />;
+    }
+    function handoffButton(node: unknown): any {
+      const element = node as Record<string, any>;
+      const propsKey = Object.keys(element).find((name) => name.startsWith("__reactProps$"));
+      const props = propsKey ? element[propsKey] : {};
+      if (props["data-pet-follow-up-ask-mimi"] !== undefined) return props;
+      for (const child of element.childNodes ?? []) {
+        const result = handoffButton(child);
+        if (result) return result;
+      }
+      return undefined;
+    }
+    try {
+      await act(async () => {
+        root.render(
+          <PetStateProvider api={api}>
+            <Fixture />
+          </PetStateProvider>,
+        );
+        await flushMicrotasks();
+      });
+      await act(async () => {
+        latest!.dispatch({ type: "set-chat-draft", draft: "先保留我写到一半的计划" });
+        latest!.dispatch({ type: "set-chat-path-attachments", paths: ["/tmp/notes.md"] });
+        await flushMicrotasks();
+      });
+      const previousCommandCount = commands.length;
+      await act(async () => {
+        handoffButton(container).onClick();
+        await flushMicrotasks();
+      });
+      expect(latest!.state.chatDraft).toStartWith("先保留我写到一半的计划\n\n");
+      expect(latest!.state.chatDraft).toContain("followup-s1");
+      expect(latest!.state.chatDraft).toContain("要不要我再补一版异常场景的单测？");
+      expect(latest!.state.chatPathAttachments).toEqual(["/tmp/notes.md"]);
+      expect(focusRequests).toBe(1);
+      expect(commands.length).toBe(previousCommandCount);
+    } finally {
+      await act(async () => root.unmount());
+      window.removeEventListener("codeshell:pet-compose", onCompose);
+      (window as unknown as Record<string, unknown>).codeshell = originalCodeshell;
+    }
   });
 });

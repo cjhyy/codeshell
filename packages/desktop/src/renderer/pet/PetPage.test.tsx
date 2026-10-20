@@ -19,7 +19,10 @@ describe("PetPage", () => {
     expect(html).toContain("world pane");
     expect(html).toContain("chat slot");
     expect(html).toContain("@container/pet-page");
-    expect(html).toContain("@min-[1100px]/pet-page:grid-cols-[minmax(0,1fr)_minmax(320px,380px)]");
+    expect(html).toContain("<h1");
+    expect(html).toContain('data-pet-workspace-layout="split"');
+    expect(html).toContain('data-pet-focus-mode="toggle"');
+    expect(html).toContain('aria-pressed="false"');
     expect(html).toContain("@min-[1100px]/pet-page:overflow-hidden");
   });
 

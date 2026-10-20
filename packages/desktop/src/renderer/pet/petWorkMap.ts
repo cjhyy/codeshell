@@ -57,6 +57,8 @@ export interface PetWorkspaceWorkGroup {
 
 export interface PetWorkMap {
   groups: PetWorkspaceWorkGroup[];
+  /** All included work, including older rows omitted by the normal display limits. */
+  searchGroups?: PetWorkspaceWorkGroup[];
   counts: Record<PetWorkGroup, number>;
   itemIds: Record<PetWorkGroup, string[]>;
   dismissedCount: number;
@@ -164,6 +166,27 @@ function pendingWithoutSession(pending: PetPendingDecision): PetWorkItem {
   };
 }
 
+function groupWorkItems(items: readonly PetWorkItem[]): PetWorkspaceWorkGroup[] {
+  const groupsByWorkspace = new Map<string, PetWorkspaceWorkGroup>();
+  for (const item of items) {
+    const key = item.workspace ?? "";
+    const group = groupsByWorkspace.get(key) ?? {
+      workspace: item.workspace,
+      buckets: GROUP_ORDER.map((g) => ({ group: g, items: [] as PetWorkItem[] })),
+      latestActivityAt: 0,
+    };
+    group.buckets.find((bucket) => bucket.group === item.group)!.items.push(item);
+    group.latestActivityAt = Math.max(group.latestActivityAt, item.lastActivityAt);
+    groupsByWorkspace.set(key, group);
+  }
+  return [...groupsByWorkspace.values()]
+    .map((group) => ({
+      ...group,
+      buckets: group.buckets.filter((bucket) => bucket.items.length > 0),
+    }))
+    .sort((left, right) => right.latestActivityAt - left.latestActivityAt);
+}
+
 export function buildPetWorkMap(
   sessions: readonly PetSessionProjection[],
   pending: readonly PetPendingDecision[],
@@ -207,26 +230,9 @@ export function buildPetWorkMap(
   const visible = GROUP_ORDER.flatMap((group) =>
     included.filter((item) => item.group === group).slice(0, DISPLAY_LIMITS[group]),
   );
-  const groupsByWorkspace = new Map<string, PetWorkspaceWorkGroup>();
-  for (const item of visible) {
-    const key = item.workspace ?? "";
-    const group = groupsByWorkspace.get(key) ?? {
-      workspace: item.workspace,
-      buckets: GROUP_ORDER.map((g) => ({ group: g, items: [] as PetWorkItem[] })),
-      latestActivityAt: 0,
-    };
-    group.buckets.find((bucket) => bucket.group === item.group)!.items.push(item);
-    group.latestActivityAt = Math.max(group.latestActivityAt, item.lastActivityAt);
-    groupsByWorkspace.set(key, group);
-  }
-
   return {
-    groups: [...groupsByWorkspace.values()]
-      .map((group) => ({
-        ...group,
-        buckets: group.buckets.filter((bucket) => bucket.items.length > 0),
-      }))
-      .sort((left, right) => right.latestActivityAt - left.latestActivityAt),
+    groups: groupWorkItems(visible),
+    searchGroups: groupWorkItems(included),
     counts,
     itemIds,
     dismissedCount,
