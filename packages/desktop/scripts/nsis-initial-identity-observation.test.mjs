@@ -18,20 +18,32 @@ const deny = (name) => () => {
   forbidden.push(name);
   throw new Error(`Pure initial identity test denied ${name}`);
 };
-for (const name of ["spawn", "spawnSync", "exec", "execSync", "execFile", "execFileSync", "fork"])
-  childProcess[name] = deny(`child_process.${name}`);
-process.kill = deny("process.kill");
-globalThis.fetch = deny("fetch");
-http.request = deny("http.request");
-http.get = deny("http.get");
-https.request = deny("https.request");
-https.get = deny("https.get");
-net.connect = deny("net.connect");
-net.createConnection = deny("net.createConnection");
-tls.connect = deny("tls.connect");
+const guarded = [
+  ...["spawn", "spawnSync", "exec", "execSync", "execFile", "execFileSync", "fork"].map((name) => [
+    childProcess,
+    name,
+    `child_process.${name}`,
+  ]),
+  [process, "kill", "process.kill"],
+  [globalThis, "fetch", "fetch"],
+  [http, "request", "http.request"],
+  [http, "get", "http.get"],
+  [https, "request", "https.request"],
+  [https, "get", "https.get"],
+  [net, "connect", "net.connect"],
+  [net, "createConnection", "net.createConnection"],
+  [tls, "connect", "tls.connect"],
+];
+// A Bun shard shares one process across files, so the guards must not outlive this file.
+const originals = guarded.map(([owner, key]) => [owner, key, owner[key]]);
+for (const [owner, key, label] of guarded) owner[key] = deny(label);
 syncBuiltinESMExports();
 const { watchElectronTestProcess } = await import("./electron-test-watchdog.mjs");
-after(() => assert.deepEqual(forbidden, [], "No real transport, query or signal attempted"));
+after(() => {
+  for (const [owner, key, original] of originals) owner[key] = original;
+  syncBuiltinESMExports();
+  assert.deepEqual(forbidden, [], "No real transport, query or signal attempted");
+});
 
 const birth = "2026-10-18T03:01:19.3294400Z";
 const missingIdentity = "Cannot establish Electron test child PID, parent PID and birth identity";

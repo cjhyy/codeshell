@@ -1,6 +1,9 @@
 import { installLocalNetworkGuard } from "../../../../scripts/runtime-cost-smoke-isolation.mjs";
-import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import { afterAll, afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import http from "node:http";
+import https from "node:https";
+import { syncBuiltinESMExports } from "node:module";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { CreateMessageOptions } from "../llm/types.js";
@@ -9,7 +12,19 @@ import type { EngineRunOptions } from "./run-types.js";
 
 // Install confinement before evaluating Core. All provider calls below are
 // scripted locally; no fixture server listens at this exact allowed origin.
+const originalFetch = globalThis.fetch;
+const originalHttp = [http.request, http.get, https.request, https.get];
+const guardMarker = Symbol.for("codeshell.cost-smoke.network-guard");
+const previousGuardMarker = Object.getOwnPropertyDescriptor(globalThis, guardMarker);
 installLocalNetworkGuard("http://127.0.0.1:9");
+// The shard shares one process, so the guard must not outlive this file.
+afterAll(() => {
+  globalThis.fetch = originalFetch;
+  [http.request, http.get, https.request, https.get] = originalHttp;
+  if (previousGuardMarker) Object.defineProperty(globalThis, guardMarker, previousGuardMarker);
+  else delete (globalThis as any)[guardMarker];
+  syncBuiltinESMExports();
+});
 const [
   { Engine },
   { LLMClientBase },
