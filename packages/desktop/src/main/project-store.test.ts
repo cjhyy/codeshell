@@ -5,6 +5,7 @@ import {
   mkdtempSync,
   readFileSync,
   realpathSync,
+  renameSync,
   rmSync,
   statSync,
   symlinkSync,
@@ -540,6 +541,70 @@ describe("ProjectStore", () => {
       project: { projectId: project.id, mainRootId: project.primaryRootId },
       workspace: { root: realpathSync(primary), kind: "main" },
     });
+  });
+
+  test("repairs a Session away from a missing source folder into a healthy root", async () => {
+    const primary = dir("missing-source-primary");
+    const secondary = dir("missing-source-secondary");
+    const sessionsDir = join(fixtureRoot, "sessions");
+    const sessionManager = new SessionManager(sessionsDir);
+    const index = new SessionCwdIndex({ sessionsRoot: sessionsDir });
+    await index.ensureLoaded();
+    const projects = store({ index, sessionManager });
+    const project = await projects.createFromPath(primary);
+    const updated = (await projects.addRoot(project.id, secondary)).project;
+    const secondaryRoot = updated.roots.find((root) => root.id !== project.primaryRootId)!;
+    const sessionId = "missing-source-repair";
+    sessionManager.create(secondaryRoot.path, "m", "p", sessionId);
+    sessionManager.updateSessionState(sessionId, {
+      project: { projectId: project.id, mainRootId: secondaryRoot.id },
+    });
+    index.upsert(sessionId, {
+      cwd: secondaryRoot.path,
+      projectId: project.id,
+      mainRootId: secondaryRoot.id,
+    });
+    // The bound folder was renamed away or its volume went offline.
+    renameSync(secondary, `${secondary}-parked`);
+
+    await projects.migrateSessionMainRoot(sessionId, project.primaryRootId);
+
+    expect(sessionManager.readSessionState(sessionId)).toMatchObject({
+      cwd: realpathSync(primary),
+      project: { projectId: project.id, mainRootId: project.primaryRootId },
+      workspace: { root: realpathSync(primary), kind: "main" },
+    });
+    // No live Session binds the missing folder any more, so it can be removed.
+    await expect(projects.removeRoot(project.id, secondaryRoot.id)).resolves.toMatchObject({
+      id: project.id,
+    });
+  });
+
+  test("still refuses a repair while another project folder was replaced", async () => {
+    const primary = dir("replaced-other-primary");
+    const secondary = dir("replaced-other-secondary");
+    const third = dir("replaced-other-third");
+    const sessionsDir = join(fixtureRoot, "sessions");
+    const sessionManager = new SessionManager(sessionsDir);
+    const index = new SessionCwdIndex({ sessionsRoot: sessionsDir });
+    await index.ensureLoaded();
+    const projects = store({ index, sessionManager });
+    const project = await projects.createFromPath(primary);
+    await projects.addRoot(project.id, secondary);
+    const updated = (await projects.addRoot(project.id, third)).project;
+    const secondaryRoot = updated.roots.find((root) => root.path === realpathSync(secondary))!;
+    const sessionId = "replaced-other-repair";
+    sessionManager.create(secondaryRoot.path, "m", "p", sessionId);
+    sessionManager.updateSessionState(sessionId, {
+      project: { projectId: project.id, mainRootId: secondaryRoot.id },
+    });
+    renameSync(secondary, `${secondary}-parked`);
+    rmSync(third, { recursive: true, force: true });
+    symlinkSync(primary, third);
+
+    await expect(projects.migrateSessionMainRoot(sessionId, project.primaryRootId)).rejects.toThrow(
+      /root_replaced/,
+    );
   });
 
   test("allows root removal after the only bound Session is durably archived", async () => {
