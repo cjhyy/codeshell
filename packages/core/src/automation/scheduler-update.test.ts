@@ -31,6 +31,15 @@ describe("CronScheduler.update", () => {
     s.stopAll();
   });
 
+  test("rejects a schedule with extra cron separators and leaves the job unchanged", () => {
+    const s = new CronScheduler();
+    const job = s.create("j", "1h", "original");
+    expect(() => s.update(job.id, { schedule: "0-1-59 9 * * *", prompt: "updated" })).toThrow();
+    expect(s.get(job.id)?.schedule).toBe("1h");
+    expect(s.get(job.id)?.prompt).toBe("original");
+    s.stopAll();
+  });
+
   test("returns null for an unknown id", () => {
     const s = new CronScheduler();
     expect(s.update("nope", { prompt: "x" })).toBeNull();

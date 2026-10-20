@@ -46,6 +46,11 @@ describe("parseCronExpression — field parsing", () => {
   test("throws on invalid field count", () => {
     expect(() => parseCronExpression("0 9 * *")).toThrow(/cron/i);
   });
+  test("throws on extra range or step separators instead of truncating them", () => {
+    expect(() => parseCronExpression("0-1-59 9 * * *")).toThrow(/cron/i);
+    expect(() => parseCronExpression("*/5/0 9 * * *")).toThrow(/cron/i);
+    expect(() => parseCronExpression("0 1-2/3/4 * * *")).toThrow(/cron/i);
+  });
   test("throws on out-of-range values", () => {
     expect(() => parseCronExpression("99 9 * * *")).toThrow();
     expect(() => parseCronExpression("0 25 * * *")).toThrow();
