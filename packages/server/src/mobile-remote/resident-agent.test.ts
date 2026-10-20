@@ -1,5 +1,13 @@
 import { describe, expect, it, test } from "bun:test";
-import { parseStreamJsonLine, buildControlResponse } from "./resident-agent.js";
+import { chmodSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import {
+  parseStreamJsonLine,
+  buildControlResponse,
+  ResidentAgentProcess,
+} from "./resident-agent.js";
+import { RoomManager } from "./room-manager.js";
 
 describe("buildControlResponse", () => {
   // The stdio control protocol's Zod schema requires `updatedInput` to be a
@@ -11,8 +19,14 @@ describe("buildControlResponse", () => {
     expect(resp.response.response).toEqual({ behavior: "allow", updatedInput: {} });
   });
   it("allow WITH updatedInput preserves it", () => {
-    const resp = buildControlResponse("req2", { behavior: "allow", updatedInput: { file_path: "/a.txt" } });
-    expect(resp.response.response).toEqual({ behavior: "allow", updatedInput: { file_path: "/a.txt" } });
+    const resp = buildControlResponse("req2", {
+      behavior: "allow",
+      updatedInput: { file_path: "/a.txt" },
+    });
+    expect(resp.response.response).toEqual({
+      behavior: "allow",
+      updatedInput: { file_path: "/a.txt" },
+    });
   });
   it("deny is passed through unchanged (no updatedInput injected)", () => {
     const resp = buildControlResponse("req3", { behavior: "deny", message: "no" });
@@ -28,7 +42,9 @@ describe("buildControlResponse", () => {
 describe("parseStreamJsonLine", () => {
   test("ignores system / init / hook / rate-limit noise", () => {
     expect(parseStreamJsonLine(JSON.stringify({ type: "system", subtype: "init" }))).toEqual([]);
-    expect(parseStreamJsonLine(JSON.stringify({ type: "system", subtype: "hook_started" }))).toEqual([]);
+    expect(
+      parseStreamJsonLine(JSON.stringify({ type: "system", subtype: "hook_started" })),
+    ).toEqual([]);
     expect(parseStreamJsonLine(JSON.stringify({ type: "rate_limit_event" }))).toEqual([]);
     expect(parseStreamJsonLine("")).toEqual([]);
     expect(parseStreamJsonLine("not json")).toEqual([]);
@@ -46,11 +62,19 @@ describe("parseStreamJsonLine", () => {
     const line = JSON.stringify({
       type: "assistant",
       message: {
-        content: [{ type: "tool_use", id: "toolu_01", name: "Bash", input: { command: "ls package.json" } }],
+        content: [
+          { type: "tool_use", id: "toolu_01", name: "Bash", input: { command: "ls package.json" } },
+        ],
       },
     });
     expect(parseStreamJsonLine(line)).toEqual([
-      { type: "tool", id: "toolu_01", tool: "Bash", summary: "ls package.json", input: { command: "ls package.json" } },
+      {
+        type: "tool",
+        id: "toolu_01",
+        tool: "Bash",
+        summary: "ls package.json",
+        input: { command: "ls package.json" },
+      },
     ]);
   });
 
@@ -68,7 +92,11 @@ describe("parseStreamJsonLine", () => {
   // sub-agent Task's `prompt`) produced an EMPTY summary, so the UI showed
   // nothing. The full `input` must still flow through so the card can render it.
   test("carries full input even when no summary-whitelist key matches (e.g. Agent prompt)", () => {
-    const input = { description: "build X", prompt: "一大段子任务 prompt……", subagent_type: "general-purpose" };
+    const input = {
+      description: "build X",
+      prompt: "一大段子任务 prompt……",
+      subagent_type: "general-purpose",
+    };
     const line = JSON.stringify({
       type: "assistant",
       message: { content: [{ type: "tool_use", id: "toolu_9", name: "Agent", input }] },
@@ -83,7 +111,11 @@ describe("parseStreamJsonLine", () => {
       type: "user",
       message: {
         content: [
-          { type: "tool_result", tool_use_id: "toolu_01", content: [{ type: "text", text: "package.json\n" }] },
+          {
+            type: "tool_result",
+            tool_use_id: "toolu_01",
+            content: [{ type: "text", text: "package.json\n" }],
+          },
         ],
       },
     });
@@ -95,7 +127,11 @@ describe("parseStreamJsonLine", () => {
   test("flags tool_result errors and carries the id", () => {
     const line = JSON.stringify({
       type: "user",
-      message: { content: [{ type: "tool_result", tool_use_id: "toolu_02", is_error: true, content: "boom" }] },
+      message: {
+        content: [
+          { type: "tool_result", tool_use_id: "toolu_02", is_error: true, content: "boom" },
+        ],
+      },
     });
     expect(parseStreamJsonLine(line)).toEqual([
       { type: "tool_result", id: "toolu_02", summary: "boom", isError: true },
@@ -120,7 +156,13 @@ describe("parseStreamJsonLine", () => {
     });
     expect(parseStreamJsonLine(line)).toEqual([
       { type: "text", text: "let me check" },
-      { type: "tool", id: "toolu_x", tool: "Read", summary: "/a/b.ts", input: { file_path: "/a/b.ts" } },
+      {
+        type: "tool",
+        id: "toolu_x",
+        tool: "Read",
+        summary: "/a/b.ts",
+        input: { file_path: "/a/b.ts" },
+      },
     ]);
   });
 });
@@ -128,9 +170,15 @@ describe("parseStreamJsonLine", () => {
 describe("parseStreamJsonLine approval", () => {
   it("maps control_request can_use_tool to approval_request event", () => {
     const line = JSON.stringify({
-      type: "control_request", request_id: "r1",
-      request: { subtype: "can_use_tool", tool_name: "Write", display_name: "Write",
-        input: { file_path: "/a.txt" }, description: "a.txt" },
+      type: "control_request",
+      request_id: "r1",
+      request: {
+        subtype: "can_use_tool",
+        tool_name: "Write",
+        display_name: "Write",
+        input: { file_path: "/a.txt" },
+        description: "a.txt",
+      },
     });
     const evs = parseStreamJsonLine(line);
     expect(evs).toHaveLength(1);
@@ -138,5 +186,58 @@ describe("parseStreamJsonLine approval", () => {
   });
   it("still ignores system/init noise", () => {
     expect(parseStreamJsonLine(JSON.stringify({ type: "system", subtype: "init" }))).toEqual([]);
+  });
+});
+
+describe("ResidentAgentProcess spawn failure", () => {
+  // Node reports a failed spawn (ENOENT/EACCES/bad cwd) through `error` without
+  // a following `exit`. The failed child must not stay registered as running,
+  // or RoomManager keeps reusing it and a same-mode reopen after installing the
+  // CLI can never start a replacement.
+  test("a failed spawn retires the agent so reopening the room retries", async () => {
+    const root = mkdtempSync(join(tmpdir(), "codeshell-resident-spawn-"));
+    const command = join(root, "fixture-agent");
+    let created = 0;
+    let reportExit!: () => void;
+    const exitSeen = new Promise<void>((resolve) => (reportExit = resolve));
+    const manager = new RoomManager({
+      rootDir: join(root, "rooms"),
+      createAgent: (room, onEvent) => {
+        created += 1;
+        return new ResidentAgentProcess({
+          command,
+          cwd: room.cwd,
+          permissionMode: room.permissionMode,
+          onEvent,
+        });
+      },
+      onMessage: (_id, message) => {
+        if (message.type === "agent_exit") reportExit();
+      },
+    });
+    try {
+      const room = manager.createRoom({ cwd: root });
+      manager.open(room.id);
+      await Promise.race([
+        exitSeen,
+        new Promise((_resolve, reject) =>
+          setTimeout(() => reject(new Error("spawn failure was not terminal")), 2_000),
+        ),
+      ]);
+      const messages = manager.getMessages(room.id).map((message) => message.type);
+      expect(messages).toContain("error");
+      expect(messages.indexOf("error")).toBeLessThan(messages.indexOf("agent_exit"));
+      expect(manager.isOpen(room.id)).toBe(false);
+
+      // Install the CLI at the same path and reopen with the same mode.
+      writeFileSync(command, "#!/bin/sh\ncat >/dev/null\n");
+      chmodSync(command, 0o700);
+      expect(manager.open(room.id).status).toBe("running");
+      expect(created).toBe(2);
+      expect(manager.send(room.id, "retry after installation")).toBe(true);
+    } finally {
+      manager.closeAll();
+      rmSync(root, { recursive: true, force: true });
+    }
   });
 });
