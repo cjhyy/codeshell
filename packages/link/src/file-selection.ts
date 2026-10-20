@@ -87,6 +87,12 @@ export function resolveLinkFileSelection(providerId: string, input: unknown) {
     scopeId: `${providerId}:${capability.action}`,
     params,
     resourceId,
-    label: label ?? defaultLabel.slice(-512),
+    label: label ?? labelTail(defaultLabel, 512),
   };
+}
+
+/** Keep the last `max` UTF-16 units without starting on half a surrogate pair. */
+function labelTail(value: string, max: number): string {
+  const tail = value.slice(-max);
+  return /^[\uDC00-\uDFFF]/.test(tail) ? tail.slice(1) : tail;
 }

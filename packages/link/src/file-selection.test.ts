@@ -88,6 +88,23 @@ describe("reviewed provider file selection", () => {
     expect(() => resolveLinkFileSelection("figma", { kind: "figma-file", fileUrlOrKey })).toThrow();
   });
 
+  // Regression (audit HL-02): the default label kept the last 512 UTF-16 units,
+  // which could start with the low half of an emoji.
+  test("bounds a long default GitHub label without splitting a surrogate pair", () => {
+    const path = "😀/" + "a".repeat(250) + "/" + "b".repeat(250) + "/" + "c".repeat(8);
+    const selected = resolveLinkFileSelection("github", {
+      kind: "github-file",
+      owner: "owner",
+      repo: "repo",
+      path,
+    });
+    expect(selected.params.path).toBe(path);
+    expect(selected.label.isWellFormed()).toBe(true);
+    expect(selected.label.length).toBeLessThanOrEqual(512);
+    expect(`owner/repo/${path}`.endsWith(selected.label)).toBe(true);
+    expect(selected.label.length).toBe(511);
+  });
+
   test("rejects unsupported providers, crossed kinds, and generic JSON", () => {
     expect(() =>
       resolveLinkFileSelection("notion", { kind: "figma-file", fileUrlOrKey: "key" }),
