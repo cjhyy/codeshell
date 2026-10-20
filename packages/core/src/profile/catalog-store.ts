@@ -6,7 +6,10 @@
  *
  * 磁盘布局：
  *   ~/.code-shell/human-repos.json        —— 注册表（owner/repo 列表）
- *   ~/.code-shell/human-repos/<key>/      —— 各仓库的浅克隆
+ *   ~/.code-shell/human-repos/<key>/      —— 各仓库的浅克隆（key 为 owner@repo）
+ *
+ * 旧版本用有歧义的 `owner-repo` 作 key，那些缓存仍可读（见 legacyRepoDirFor），
+ * 下次更新时迁入新布局，删除时只删能确认属于该仓库的那一份。
  */
 import {
   closeSync,
@@ -32,6 +35,7 @@ import { acquireLockOnPath, mutateJsonFile } from "../utils/file-mutex.js";
 import { gitClone, githubRepoToCloneUrl } from "../plugins/gitOps.js";
 import {
   CATALOG_REPO_RE,
+  legacySourceToRepoKey,
   readCatalogFromDir,
   sourceToRepoKey,
   type CatalogEntry,
@@ -65,6 +69,68 @@ function registryPath(): string {
 
 export function humanRepoDir(repo: string): string {
   return join(humanReposRoot(), sourceToRepoKey(repo));
+}
+
+const MAX_GIT_CONFIG_BYTES = 64 * 1024;
+
+function normalizeRepo(repo: string): string {
+  return repo.toLowerCase().replace(/\.git$/, "");
+}
+
+/** `owner/repo` recorded as the origin of a clone made by addHumanRepo, or null. */
+function cloneOriginRepo(dir: string): string | null {
+  try {
+    const path = join(dir, ".git", "config");
+    const metadata = lstatSync(path);
+    if (!metadata.isFile() || metadata.size > MAX_GIT_CONFIG_BYTES) return null;
+    let inOrigin = false;
+    for (const line of readFileSync(path, "utf-8").split("\n")) {
+      const trimmed = line.trim();
+      if (trimmed.startsWith("[")) {
+        inOrigin = trimmed === '[remote "origin"]';
+        continue;
+      }
+      const url = inOrigin ? /^url\s*=\s*https:\/\/github\.com\/(.+)\.git$/.exec(trimmed) : null;
+      if (url) return normalizeRepo(url[1]!);
+    }
+  } catch {
+    // No readable git metadata: the caller falls back to registry uniqueness.
+  }
+  return null;
+}
+
+/**
+ * A cache written by an older version under the lossy `owner-repo` key, when it
+ * provably belongs to `repo`: its git origin names `repo`, or it has no
+ * readable origin and `repo` is the only registered source mapping to that key.
+ * Anything else may belong to another source and is left alone.
+ */
+function legacyRepoDirFor(repo: string, registered: readonly RegisteredHumanRepo[]): string | null {
+  const key = legacySourceToRepoKey(repo);
+  if (!key) return null;
+  const dir = join(humanReposRoot(), key);
+  if (!existsSync(dir)) return null;
+  const origin = cloneOriginRepo(dir);
+  if (origin !== null) return origin === normalizeRepo(repo) ? dir : null;
+  const claimants = registered.filter((r) => legacySourceToRepoKey(r.repo) === key);
+  return claimants.length === 1 && normalizeRepo(claimants[0]!.repo) === normalizeRepo(repo)
+    ? dir
+    : null;
+}
+
+/** The cache tree to read for a registered repo, in the current or legacy layout. */
+function readableRepoDir(repo: string, registered: readonly RegisteredHumanRepo[]): string | null {
+  const dir = humanRepoDir(repo);
+  if (existsSync(dir)) return dir;
+  return legacyRepoDirFor(repo, registered);
+}
+
+/** Move `repo`'s legacy cache into the current layout. Call under the repo lock. */
+function adoptLegacyRepoDir(repo: string, registered: readonly RegisteredHumanRepo[]): void {
+  const dir = humanRepoDir(repo);
+  if (existsSync(dir)) return;
+  const legacy = legacyRepoDirFor(repo, registered);
+  if (legacy) renameSync(legacy, dir);
 }
 
 export function listHumanRepos(): RegisteredHumanRepo[] {
@@ -209,7 +275,7 @@ export async function addHumanRepo(
       // A repo that yields nothing usable is a mistake worth surfacing now
       // rather than leaving an empty row in the list. On update this also keeps
       // the last known good tree in place.
-      const hadPrevious = existsSync(dir);
+      const hadPrevious = readableRepoDir(repo, listHumanRepos()) !== null;
       return {
         ok: false,
         error: hadPrevious
@@ -227,6 +293,9 @@ export async function addHumanRepo(
       if (current.length >= MAX_REPOS && !alreadyRegistered) {
         return { ok: false as const, error: `最多只能添加 ${MAX_REPOS} 个数字人仓库` };
       }
+      // Move a legacy-layout cache into place first so the swap below retires
+      // it like any previous tree instead of leaving it orphaned.
+      adoptLegacyRepoDir(repo, current);
       promoteStagedRepo(staging, dir);
       updateRegistry((repos) => [
         ...repos.filter((r) => r.repo !== repo),
@@ -325,7 +394,7 @@ function reclaimOrphanedTrees(dir: string): void {
  * the recovery cases (interrupted swap, stale retired trees) are tested here
  * directly. Not part of the package's public surface.
  */
-export const __testables = { promoteStagedRepo, reclaimOrphanedTrees };
+export const __testables = { promoteStagedRepo, reclaimOrphanedTrees, adoptLegacyRepoDir };
 
 /**
  * Turn a raw git failure into something a user can act on.
@@ -360,23 +429,27 @@ export function removeHumanRepo(repo: string): void {
   // Same repo lock as add/update: otherwise a remove can delete the tree a
   // concurrent add just published, leaving a registered repo with no clone.
   withHumanRepoLock(repo, () => {
+    // Attribute a legacy-layout cache before the registry row disappears.
+    const legacy = legacyRepoDirFor(repo, listHumanRepos());
     // Filter inside the registry lock so a concurrent add of a DIFFERENT repo
     // is not lost.
     updateRegistry((repos) => repos.filter((r) => r.repo !== repo));
-    const dir = humanRepoDir(repo);
-    rmSync(dir, { recursive: true, force: true });
-    // Drop any tree a crashed swap left behind, so a later re-add does not
-    // resurrect the old contents via reclaimOrphanedTrees.
-    reclaimOrphanedTrees(dir);
-    rmSync(dir, { recursive: true, force: true });
+    for (const dir of legacy ? [humanRepoDir(repo), legacy] : [humanRepoDir(repo)]) {
+      rmSync(dir, { recursive: true, force: true });
+      // Drop any tree a crashed swap left behind, so a later re-add does not
+      // resurrect the old contents via reclaimOrphanedTrees.
+      reclaimOrphanedTrees(dir);
+      rmSync(dir, { recursive: true, force: true });
+    }
   });
 }
 
 /** 注册表 + 每个仓库的读取结果，供设置页展示。 */
 export function listHumanRepoDetails(): HumanRepoListEntry[] {
-  return listHumanRepos().map((registered) => {
-    const dir = humanRepoDir(registered.repo);
-    if (!existsSync(dir)) {
+  const repos = listHumanRepos();
+  return repos.map((registered) => {
+    const dir = readableRepoDir(registered.repo, repos);
+    if (!dir) {
       return { ...registered, count: 0, errors: ["尚未克隆"], cloned: false };
     }
     const read = readCatalogFromDir(dir, registered.repo);
@@ -400,9 +473,10 @@ export function readAllHumanRepoEntries(): {
   const errors: string[] = [];
   const seen = new Map<string, string>();
   const seenTeams = new Map<string, string>();
-  for (const { repo } of listHumanRepos()) {
-    const dir = humanRepoDir(repo);
-    if (!existsSync(dir)) continue;
+  const repos = listHumanRepos();
+  for (const { repo } of repos) {
+    const dir = readableRepoDir(repo, repos);
+    if (!dir) continue;
     const read = readCatalogFromDir(dir, repo);
     errors.push(...read.errors);
     for (const entry of read.entries) {

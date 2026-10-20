@@ -20,8 +20,12 @@ const validProfile = (name: string) => ({
 
 describe("sourceToRepoKey", () => {
   test("derives a stable, path-safe directory name", () => {
-    expect(sourceToRepoKey("cjhyy/mimi-humans")).toBe("cjhyy-mimi-humans");
-    expect(sourceToRepoKey("CJHYY/Mimi-Humans")).toBe("cjhyy-mimi-humans");
+    expect(sourceToRepoKey("cjhyy/mimi-humans")).toBe("cjhyy@mimi-humans");
+    expect(sourceToRepoKey("CJHYY/Mimi-Humans")).toBe("cjhyy@mimi-humans");
+  });
+
+  test("keeps the owner/repo boundary so hyphenated names never collide", () => {
+    expect(sourceToRepoKey("acme-labs/agents")).not.toBe(sourceToRepoKey("acme/labs-agents"));
   });
 
   test("rejects anything that is not owner/repo", () => {
