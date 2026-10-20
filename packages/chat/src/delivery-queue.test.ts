@@ -184,6 +184,45 @@ describe("durable delivery queue", () => {
     queue.stop();
   });
 
+  test("a stopped queue never overwrites the inbox of the next owner", async () => {
+    const path = inboxPath();
+    const releaseOld = deferred<void>();
+    let oldStarted = false;
+    const old = new DeliveryQueue(
+      config(path),
+      async () => {
+        oldStarted = true;
+        await releaseOld.promise;
+      },
+      () => undefined,
+    );
+    await old.start();
+    await old.enqueue("line:0", incoming("m-old", "accepted by the old owner"));
+    await waitUntil(() => oldStarted);
+    // Shutdown: the old owner stops (and would release its lease) while the
+    // delivery it already started is still running.
+    await old.stop();
+
+    const next = new DeliveryQueue(
+      { ...config(path), maxConcurrent: 0 },
+      async () => undefined,
+      () => undefined,
+    );
+    await next.start();
+    await next.enqueue("line:0", incoming("m-new", "accepted by the next owner"));
+
+    releaseOld.resolve();
+    await new Promise((resolve) => setTimeout(resolve, 30));
+    const persisted = JSON.parse(readFileSync(path, "utf-8")) as {
+      pending: Array<{ message: ChannelMessage }>;
+    };
+    expect(persisted.pending.map(({ message }) => message.messageId).sort()).toEqual([
+      "m-new",
+      "m-old",
+    ]);
+    next.stop();
+  });
+
   test("retries a failed terminal state write instead of leaving the queue stuck", async () => {
     const path = inboxPath();
     const delivered = deferred<void>();

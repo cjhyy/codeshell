@@ -128,12 +128,23 @@ export class DeliveryQueue {
     this.pump();
   }
 
-  stop(): void {
+  /**
+   * Stop accepting and scheduling work. Resolves once no state write is in
+   * progress; afterwards this instance never writes the inbox again, so the
+   * caller may release its single-instance lease to a new owner. Deliveries
+   * still running keep their durable record and are replayed by that owner.
+   */
+  async stop(): Promise<void> {
     this.stopped = true;
     if (this.retryTimer) clearTimeout(this.retryTimer);
     this.retryTimer = undefined;
     if (this.persistRetryTimer) clearTimeout(this.persistRetryTimer);
     this.persistRetryTimer = undefined;
+    let tail: Promise<void>;
+    do {
+      tail = this.mutation;
+      await tail;
+    } while (tail !== this.mutation);
   }
 
   status(): DeliveryQueueStatus {
@@ -293,6 +304,10 @@ export class DeliveryQueue {
         const targetCount = (this.targetInFlight.get(key) ?? 1) - 1;
         if (targetCount <= 0) this.targetInFlight.delete(key);
         else this.targetInFlight.set(key, targetCount);
+        // A stopped queue may already have handed the inbox to a new owner.
+        // Writing this instance's snapshot would erase that owner's accepted
+        // messages; leave the record (and its spool) for the owner to replay.
+        if (this.stopped) return;
 
         if (terminal) {
           // Success, or a permanently unroutable record: drop it so a message
@@ -332,6 +347,7 @@ export class DeliveryQueue {
       this.persistRetryTimer = undefined;
       if (this.stopped) return;
       void this.withMutation(async () => {
+        if (this.stopped) return;
         await this.persist();
         for (const [id, pendingCleanup] of this.persistRetryCleanups) {
           await this.discardSpool(pendingCleanup.entry);

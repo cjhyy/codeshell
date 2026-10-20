@@ -162,7 +162,10 @@ export class ChatGateway {
       await Promise.all(runners);
     } finally {
       ownedAbort.abort();
-      queue.stop();
+      // Settle inbox writes before run() resolves: callers release the
+      // single-instance lease afterwards, and a late write from this queue
+      // would overwrite the next owner's accepted messages.
+      await queue.stop();
       this.queue = undefined;
       this.startedAt = undefined;
       signal.removeEventListener("abort", stopOwned);
