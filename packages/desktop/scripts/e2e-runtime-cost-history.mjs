@@ -1,5 +1,5 @@
 /* Compiled Core ledger → production Main IPC/cold restart; per-call trace costs → current UI. No model requests. */
-/* global localStorage, window */
+/* global document, localStorage, window */
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import { execFileSync, spawn } from "node:child_process";
@@ -163,8 +163,12 @@ async function selectTrace(id, sessionId, cost, status, { unknownAttempts = 0 } 
     if (await back.isVisible()) await back.click();
   }
   await session.click();
-  await page.locator(`[data-trace-request="${id}"]`).focus();
-  await win.keyboard.press("Enter");
+  // Session navigation hands focus to the calls heading on the next frame.
+  // Complete that handoff before exercising the request's keyboard activation.
+  await win.waitForFunction(() =>
+    document.activeElement?.matches('[data-model-traces-page] h2[id$="-calls"]'),
+  );
+  await page.locator(`[data-trace-request="${id}"]`).press("Enter");
   const detail = page.locator(`[data-trace-detail-id="${id}"]`);
   await detail.waitFor();
   await detail.getByText(status, { exact: true }).waitFor();
@@ -589,7 +593,30 @@ try {
     console.error(JSON.stringify({ keychainPreflight }));
     process.exitCode = 1;
   } else {
-    if (win) await screenshot("cost-history-failure.png").catch(() => {});
+    if (win) {
+      await screenshot("cost-history-failure.png").catch(() => {});
+      const ui = await win
+        .evaluate(() => ({
+          activeElement: {
+            tag: document.activeElement?.tagName,
+            id: document.activeElement?.id,
+            request: document.activeElement?.getAttribute("data-trace-request"),
+          },
+          selectedRequests: Array.from(
+            document.querySelectorAll('[data-trace-request][aria-pressed="true"]'),
+            (element) => element.getAttribute("data-trace-request"),
+          ),
+          visibleDetails: Array.from(document.querySelectorAll("[data-trace-detail-id]"))
+            .filter((element) => element.getClientRects().length > 0)
+            .map((element) => element.getAttribute("data-trace-detail-id")),
+        }))
+        .catch(() => undefined);
+      await writeFile(
+        join(evidenceDir, "failure.json"),
+        `${JSON.stringify({ stage, error: String(error).slice(0, 2048), ui }, null, 2)}\n`,
+        { mode: 0o600 },
+      );
+    }
     console.error(`Cost GUI failed at ${stage}; private evidence retained: ${root}`);
     throw error;
   }

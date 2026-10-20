@@ -39,6 +39,7 @@ fixtures; no real provider account or paid request is used.
 | Reverse MCP/HTTP/Cookie group | 77 passed, 0 failed, 0 skipped; overlaps the ordered group |
 | Host session-file Node smoke | Passed: bounded retries, identity replacement, closed handles, candidate scan budget and safe size diagnostics |
 | Core compiled-export Node smoke | Passed: 285 runtime and 135 internal type exports |
+| Complete local core-rest shard | 3921 passed, 0 failed, 0 skipped |
 | Lint / baseline | 0 errors, 99 warnings, unchanged baseline |
 | Engine/workflow guards | Passed; 97 literal workflow test paths exist |
 
@@ -47,6 +48,27 @@ new endpoint metadata; the corrected full group above passed. The initial Node
 export smoke retained a missing-type-list failure; the complete corrected smoke
 passed. Both fixes update test contracts without weakening production checks.
 
-The complete core-rest/rest shards and the remote CI result are recorded in the
-PR description after they finish. The earlier 2026-10-15 review record remains
-historical evidence; its EPERM restriction does not describe this execution.
+The first complete local rest shard retained 5394 passes, 73 skips and one failure:
+the temporary Cookie process returned code 1 instead of 0, with no stderr attached
+to the original assertion. The same case passed in both ordered groups above and
+the remote rest shard. Its exit selection now names the exact process and records
+the bounded process receipt on failure, without changing the exit/privacy checks.
+A complete diagnostic rest run remains in progress at this checkpoint; the
+original local failure is not claimed repaired without a captured cause.
+
+Remote CI [39429685158](https://github.com/cjhyy/codeshell/actions/runs/39429685158)
+passed core-rest, rest, Windows, typecheck/SDK smokes and the guards. Electron E2E
+failed waiting for the second cost-trace detail after a global Enter. Session
+navigation schedules heading focus via requestAnimationFrame; the E2E script now
+waits for that focus handoff before pressing Enter on the target request. All
+detail/status/cost assertions remain. A bounded focus/selection diagnostic and
+failure screenshot upload preserve the next failure frontier. The missing remote
+focus snapshot prevents claiming that this race was the proven original cause.
+
+The local cost GUI reached its trace assertions, then its cold restart was blocked
+by the existing Keychain preflight's inode-identity check. That check is unchanged;
+the local run is not recorded as complete Electron acceptance.
+
+Final shard/remote results are recorded in the PR description when they finish.
+The earlier 2026-10-15 review record remains historical evidence; its EPERM
+restriction does not describe this execution.
