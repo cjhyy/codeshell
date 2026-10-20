@@ -3193,6 +3193,9 @@ export class AgentServer {
               preset: config.preset,
               model: config.llm.model,
               cwd: config.cwd,
+              // Session data root this engine writes (incl. file history), so a
+              // client-side /undo reads the same store. Absent = default root.
+              sessionStorageDir: config.sessionStorageDir,
               maxContextTokens: config.maxContextTokens,
               // apiKey is redacted at this boundary: clients only get
               // hasApiKey + optional apiKeyPreview. See protocol/redact.ts.

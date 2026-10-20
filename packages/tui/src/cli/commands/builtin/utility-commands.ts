@@ -44,10 +44,9 @@ export const utilityCommands: SlashCommand[] = [
     usage: "/undo [all] [confirm]",
     execute: async (arg, ctx) => {
       try {
-        const { FileHistory, earliestSnapshotsPerFile, renderDiffPreview } =
+        const { FileHistory, earliestSnapshotsPerFile, renderDiffPreview, sessionsRoot } =
           await import("@cjhyy/code-shell-core");
         const { join } = await import("node:path");
-        const { homedir } = await import("node:os");
         const { readFileSync, existsSync } = await import("node:fs");
 
         if (!ctx.sessionId) {
@@ -57,10 +56,8 @@ export const utilityCommands: SlashCommand[] = [
 
         const configResult = await ctx.client.query("config", ctx.sessionId);
         const config = configResult.data as any;
-        const sessionDir = join(
-          config.sessionStorageDir ?? join(homedir(), ".code-shell", "sessions"),
-          ctx.sessionId,
-        );
+        // Same root the session engine writes file history under.
+        const sessionDir = join(config.sessionStorageDir ?? sessionsRoot(), ctx.sessionId);
         const history = FileHistory.loadFromDir(sessionDir);
 
         // Parse "[all] [confirm]" in any order.
