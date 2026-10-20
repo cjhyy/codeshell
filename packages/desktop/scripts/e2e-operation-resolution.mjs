@@ -252,6 +252,16 @@ try {
       physicalRequests++;
       const usage = { promptTokens: 10, completionTokens: 1, totalTokens: 11 };
       this.recordUsage(usage, request);
+      if (request.usagePurpose === "tool_summary") {
+        assert.deepEqual(request.tools, []);
+        assert.match(request.messages[0]?.content, /^Tool: LinkAction\(/);
+        return {
+          text: "Reviewed synthetic Link operation",
+          usage,
+          stopReason: "stop",
+          toolCalls: [],
+        };
+      }
       const intent = request.messages.findLastIndex(
         (message) =>
           message.role === "user" &&
@@ -367,14 +377,18 @@ try {
         row.runId === state.runId,
     );
     if (
-      physicalRequests === 5 &&
-      own.length === 5 &&
+      physicalRequests === 4 &&
+      own.length === 4 &&
       own.every((row) => row.outcome === "completed") &&
-      own.filter((row) => row.purpose === "tool_summary").length === 2 &&
-      state.costState.summary.requests === 5 &&
-      state.tokenUsage.totalTokens === 55 &&
+      own.filter((row) => row.purpose === "main").length === 3 &&
+      own.filter((row) => row.purpose === "tool_summary").length === 1 &&
+      state.costState.summary.requests === 4 &&
+      state.tokenUsage.totalTokens === 44 &&
       state.status === "unverified_write"
     ) {
+      assert.equal(state.cacheUsageVersion, 1);
+      assert.equal(state.cumulativePromptTokens, 30);
+      assert.equal(state.tokenUsage.promptTokens, 40);
       observations.push({
         phase: "actual idle after auxiliary callbacks",
         stateRevision: state.stateRevision,
