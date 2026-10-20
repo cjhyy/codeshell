@@ -49,6 +49,39 @@ describe("agent progress reducer", () => {
     expect(progress.summary).not.toMatch(/[\r\n\u0000-\u001f]/);
   });
 
+  it("does not give a completed tool the start time of a different parallel tool", () => {
+    let progress = initialAgentProgress(1);
+    progress = reduceAgentProgress(
+      progress,
+      { type: "tool_use_start", toolCall: { id: "a", toolName: "Read", args: {} } },
+      10,
+    );
+    progress = reduceAgentProgress(
+      progress,
+      { type: "tool_use_start", toolCall: { id: "b", toolName: "Search", args: {} } },
+      20,
+    );
+    progress = reduceAgentProgress(
+      progress,
+      { type: "tool_result", result: { id: "a", toolName: "Read", result: "ok" } },
+      30,
+    );
+    expect(progress.lastTool).toMatchObject({ name: "Read", state: "completed", finishedAt: 30 });
+    expect(progress.lastTool?.startedAt).not.toBe(20);
+
+    progress = reduceAgentProgress(
+      progress,
+      { type: "tool_use_start", toolCall: { id: "c", toolName: "Grep", args: {} } },
+      40,
+    );
+    progress = reduceAgentProgress(
+      progress,
+      { type: "tool_result", result: { id: "c", toolName: "Grep", result: "ok" } },
+      50,
+    );
+    expect(progress.lastTool).toMatchObject({ name: "Grep", startedAt: 40, finishedAt: 50 });
+  });
+
   it("tracks waiting-permission and finalizing from trusted runtime callbacks", () => {
     let progress = initialAgentProgress(1);
     progress = applyAgentProgressPhase(progress, "waiting-permission", 2, "Write");
