@@ -74,9 +74,7 @@ export function renderSessionMarkdown(
     }
 
     if (!Array.isArray(content)) {
-      lines.push("```json");
-      lines.push(JSON.stringify(content, null, 2));
-      lines.push("```");
+      lines.push(codeFence(JSON.stringify(content, null, 2), "json"));
       lines.push("");
       continue;
     }
@@ -123,7 +121,7 @@ function renderBlock(item: ContentItem, rctx: RenderCtx): string {
     const argsJson = JSON.stringify(item.input ?? {}, null, 2) ?? "{}";
     const head = `**🛠 tool_use** · \`${name}\``;
     if (argsJson.length <= INLINE_ARG_LIMIT) {
-      return `${head}\n\n\`\`\`json\n${argsJson}\n\`\`\``;
+      return `${head}\n\n${codeFence(argsJson, "json")}`;
     }
     return collapsible(`${name} args (${argsJson.length} bytes)`, argsJson, "json");
   }
@@ -131,7 +129,7 @@ function renderBlock(item: ContentItem, rctx: RenderCtx): string {
     const toolUseId = item.tool_use_id ?? item.id ?? "?";
     const raw = stringifyResult(item.content);
     if (raw.length <= INLINE_RESULT_LIMIT) {
-      return `**◀ tool_result** · ${toolUseId}\n\n\`\`\`\n${raw}\n\`\`\``;
+      return `**◀ tool_result** · ${toolUseId}\n\n${codeFence(raw)}`;
     }
     const sidecarName = `t${rctx.turnNumber}-i${rctx.itemIdx}-${toolUseId.slice(0, 12)}.txt`;
     const sidecarPath = join(rctx.cwd, rctx.sidecarDir, sidecarName);
@@ -141,15 +139,24 @@ function renderBlock(item: ContentItem, rctx: RenderCtx): string {
     return (
       `**◀ tool_result** · ${toolUseId} · ${raw.length.toLocaleString()} bytes · ` +
       `[full → ${rel}](./${rel})\n\n` +
-      `\`\`\`\n${preview}\n…(truncated, see sidecar)\n\`\`\``
+      codeFence(`${preview}\n…(truncated, see sidecar)`)
     );
   }
-  return "```json\n" + JSON.stringify(item, null, 2) + "\n```";
+  return codeFence(JSON.stringify(item, null, 2), "json");
 }
 
 function collapsible(summary: string, body: string, lang = ""): string {
-  const fence = lang ? "```" + lang : "```";
-  return `<details><summary>${summary}</summary>\n\n${fence}\n${body}\n\`\`\`\n\n</details>`;
+  return `<details><summary>${summary}</summary>\n\n${codeFence(body, lang)}\n\n</details>`;
+}
+
+/** Wrap verbatim text in a backtick fence longer than any backtick run inside
+ *  it, so a ``` line in tool output or reasoning cannot close the block early
+ *  (CommonMark closes a fence only with a run at least as long as the opener). */
+function codeFence(body: string, lang = ""): string {
+  let longest = 0;
+  for (const run of body.match(/`+/g) ?? []) longest = Math.max(longest, run.length);
+  const fence = "`".repeat(Math.max(3, longest + 1));
+  return `${fence}${lang}\n${body}\n${fence}`;
 }
 
 function stringifyResult(c: unknown): string {
